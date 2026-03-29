@@ -21,7 +21,7 @@ ends or a context window fills up.
 | Flow Audit and Repair | `/method:flow-audit-and-repair` | Debugging and repairing broken end-to-end flows |
 | Autonomous Ratchet | `/method:autonomous-ratchet` | Overnight unattended quality improvement runs |
 | Janitor | `/method:janitor` | Systematic dead code, stale docs, and codebase cleanup |
-| Method Create | `/method:method-create` | Authoring a new method from a workflow description |
+| Method Create | `/method:create` | Authoring a new method from a workflow description |
 | Dry Run | `/method:dry-run` | Validating a method is mechanically sound before real use |
 
 ## Installation
@@ -230,7 +230,7 @@ When these two files agree, the method is mechanically sound. When they drift,
 Contributions are welcome. The plugin includes built-in tools for extending
 itself:
 
-- **`/method:method-create`** -- author a new method from a natural-language
+- **`/method:create`** -- author a new method from a natural-language
   workflow description. It interviews you about the workflow shape, generates
   both `method.yaml` and `SKILL.md`, cross-validates them, and installs the
   result.

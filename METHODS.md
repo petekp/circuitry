@@ -13,7 +13,7 @@ The method plugin provides structured, artifact-driven workflows for complex eng
 | Flow Audit and Repair | `/method:flow-audit-and-repair` | Debugging and repairing broken end-to-end flows |
 | Autonomous Ratchet | `/method:autonomous-ratchet` | Overnight unattended quality improvement runs |
 | Janitor | `/method:janitor` | Systematic dead code, stale docs, and codebase detritus cleanup |
-| Method Create | `/method:method-create` | Authoring a new method from a natural-language workflow description |
+| Method Create | `/method:create` | Authoring a new method from a natural-language workflow description |
 | Dry Run | `/method:dry-run` | Validating that a method skill is mechanically sound before real use |
 
 ## Method Details
@@ -83,7 +83,7 @@ The method plugin provides structured, artifact-driven workflows for complex eng
 
 ### Method Create
 
-**Invoke:** `/method:method-create`
+**Invoke:** `/method:create`
 **Phases:** Intake, Analysis, Authoring, Validation, Refinement (5 steps)
 **Artifact chain:** `workflow-brief.md` -> `method-analysis.md` -> draft `method.yaml` + draft `SKILL.md` + `cross-validation.md` -> `validation-report.md` -> final `method.yaml` + `SKILL.md` (installed)
 **Example:** You have a proven multi-phase workflow for onboarding new third-party integrations -- intake, compatibility check, adapter scaffolding, integration test, documentation. You want to turn it into a reusable method. Method-create interviews you about the workflow shape, has Codex analyze patterns and generate both files, cross-validates them, runs a quality gate against the full anti-pattern catalog, and installs the final method. It then recommends running dry-run before trusting the new method for real work.
@@ -117,7 +117,7 @@ Use this decision tree to find the right starting point:
 - **"I need to build a non-trivial feature end to end"** -> `research-to-implementation`
 - **"I want overnight autonomous quality improvement"** -> `autonomous-ratchet`
 - **"I need to clean up dead code, stale docs, or codebase detritus"** -> `janitor`
-- **"I want to turn a workflow into a reusable method"** -> `method-create`, then `dry-run`
+- **"I want to turn a workflow into a reusable method"** -> `create`, then `dry-run`
 - **"I want to verify a method works before using it for real"** -> `dry-run`
 - **"I am not sure which method fits"** -> `router`
 
@@ -126,6 +126,6 @@ Common sequences:
 - **Unsettled decision then build:** `decision-pressure-loop` -> `research-to-implementation`
 - **Draft exists but is not build-ready:** `spec-hardening` -> `research-to-implementation`
 - **Broken flow before expansion:** `flow-audit-and-repair` -> then whatever comes next
-- **New method authoring:** `method-create` -> `dry-run`
+- **New method authoring:** `create` -> `dry-run`
 
 If none of these fit -- the task is a single-file change, a config edit, a quick wiring job, or a trivial bug fix -- you probably do not need a method at all.

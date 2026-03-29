@@ -999,7 +999,6 @@ method-plugin/
   hooks/
     hooks.json              # SessionStart hook registration
     session-start.sh        # Prerequisite check + method catalog banner
-    session-start.md        # Static banner content (for reference)
   scripts/
     relay/
       compose-prompt.sh     # Prompt assembly pipeline
