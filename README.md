@@ -1,4 +1,4 @@
-# Circuit
+# Circuit for Claude Code
 
 Structured workflow methods for Claude Code -- disciplined multi-phase approaches to complex engineering tasks.
 
