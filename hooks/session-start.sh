@@ -60,3 +60,15 @@ The router picks the right circuit for your task. Start there.
 
 Use `/manage-codex` to orchestrate workers directly without a circuit wrapper.
 BANNER
+
+# ── Project setup hint (only if relay scripts are missing) ───────────
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+if [[ -n "$PLUGIN_ROOT" && ! -f "./scripts/relay/compose-prompt.sh" ]]; then
+  cat <<SETUP
+
+> **Project setup needed:** Run this to install relay scripts:
+> \`\`\`
+> "${PLUGIN_ROOT}/scripts/setup.sh"
+> \`\`\`
+SETUP
+fi

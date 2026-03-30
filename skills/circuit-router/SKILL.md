@@ -60,8 +60,8 @@ Route only when positive signals match and exclusions do not.
 Use a sequence only when an earlier phase must happen before a later one.
 
 - Broken existing flow: `circuit:repair-flow` before any rebuild or expansion work.
-- Unsettled architecture or protocol choice: `circuit:decide` before `circuit:harden-spec` or `circuit:develop`.
-- Draft exists but is not build-ready: `circuit:harden-spec` before `circuit:develop`.
+- Unsettled architecture or protocol choice: `circuit:decide` before `circuit:harden-spec`, `circuit:develop`, or `circuit:migrate`.
+- Draft exists but is not build-ready: `circuit:harden-spec` before `circuit:develop` or `circuit:migrate`.
 - Large-scale migration with coexistence: `circuit:migrate` instead of `circuit:develop` (migrate handles dual-system coexistence).
 - If both `circuit:migrate` and `circuit:develop` match, start with `circuit:migrate`.
 - Cleanup-only scope: `circuit:cleanup` instead of `circuit:ratchet-quality` (ratchet is for quality improvement, cleanup is for removal).
