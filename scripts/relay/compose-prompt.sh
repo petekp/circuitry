@@ -39,9 +39,12 @@ else
   SKILL_DIR="$HOME/.claude/skills"
 fi
 
-# Resolve MANAGE_CODEX_DIR: env var > sibling skills/ dir > ~/.claude/skills
+# Resolve MANAGE_CODEX_DIR: env var > script-local references/ dir >
+# plugin-relative references/ dir > ~/.claude/skills
 if [[ -n "${CIRCUIT_PLUGIN_CODEX_DIR:-}" ]]; then
   MANAGE_CODEX_DIR="$CIRCUIT_PLUGIN_CODEX_DIR"
+elif [[ -d "$SCRIPT_DIR/references" ]]; then
+  MANAGE_CODEX_DIR="$SCRIPT_DIR/references"
 elif [[ -d "$PLUGIN_ROOT/skills/manage-codex/references" ]]; then
   MANAGE_CODEX_DIR="$PLUGIN_ROOT/skills/manage-codex/references"
 else

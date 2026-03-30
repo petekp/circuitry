@@ -35,6 +35,7 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 **Phases:** Alignment, Evidence, Decision, Preflight, Delivery (10 steps)
 **Artifact chain:** `intent-brief.md` -> `external-digest.md` + `internal-digest.md` -> `constraints.md` -> `options.md` -> `decision-packet.md` -> `adr.md` -> `execution-packet.md` -> `seam-proof.md` -> `implementation-handoff.md` -> `ship-review.md`
 **Example:** You need to add a recording and playback system that spans the Rust core and Swift app layers. The circuit researches external patterns and internal system surface in parallel, generates distinct architectural options, pressure-tests them, gets your tradeoff decision, proves the hardest seam with a thin slice, then delegates implementation to manage-codex and runs a final ship review.
+**Light mode:** For tasks where the approach is clear, invoke `/circuit:develop --light` to run an abbreviated 4-step flow (intent -> contract -> implement -> review), skipping the evidence gathering and adversarial evaluation phases.
 
 ---
 

@@ -7,10 +7,11 @@
 # Checks:
 #   1. Codex CLI is installed
 #   2. Python 3 is available
-#   3. Bash version (3.2+ works; 4+ recommended)
-#   4. All expected skill directories exist
-#   5. Both relay scripts exist and are executable
-#   6. compose-prompt.sh can find its templates (smoke test)
+#   3. PyYAML is available for config-file skill resolution
+#   4. Bash version (3.2+ works; 4+ recommended)
+#   5. All expected skill directories exist
+#   6. Both relay scripts exist and are executable
+#   7. compose-prompt.sh can find its templates (smoke test)
 
 set -uo pipefail
 
@@ -59,7 +60,18 @@ else
   fail "python3 not found — required by update-batch.sh"
 fi
 
-# ── 3. Bash version ──────────────────────────────────────────────────
+# ── 3. PyYAML ────────────────────────────────────────────────────────
+section "PyYAML"
+
+if command -v python3 >/dev/null 2>&1; then
+  if python3 -c "import yaml" >/dev/null 2>&1; then
+    pass "PyYAML available"
+  else
+    warn "PyYAML not found — config-file skill resolution (--circuit flag) will not work. Install with: pip3 install pyyaml"
+  fi
+fi
+
+# ── 4. Bash version ──────────────────────────────────────────────────
 section "Bash version"
 
 bash_version="${BASH_VERSINFO[0]:-0}"
@@ -70,7 +82,7 @@ else
   pass "bash ${BASH_VERSION} (relay scripts are compatible with bash 3.2+)"
 fi
 
-# ── 4. Skill directories ─────────────────────────────────────────────
+# ── 5. Skill directories ─────────────────────────────────────────────
 section "Skill directories"
 
 EXPECTED_SKILLS=(
@@ -101,7 +113,7 @@ for skill in "${EXPECTED_SKILLS[@]}"; do
   fi
 done
 
-# ── 5. Relay scripts ─────────────────────────────────────────────────
+# ── 6. Relay scripts ─────────────────────────────────────────────────
 section "Relay scripts"
 
 for script in compose-prompt.sh dispatch.sh update-batch.sh; do
@@ -117,7 +129,7 @@ for script in compose-prompt.sh dispatch.sh update-batch.sh; do
   fi
 done
 
-# ── 6. compose-prompt.sh template smoke test ──────────────────────────
+# ── 7. compose-prompt.sh template smoke test ──────────────────────────
 section "Template smoke test"
 
 TEMPLATES_DIR="$PLUGIN_ROOT/skills/manage-codex/references"

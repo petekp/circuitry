@@ -29,10 +29,19 @@ ends or a context window fills up.
 
 ## Installation
 
+### Prerequisites
+
+- **Claude Code** -- the host environment
+- **Python 3** -- required by `update-batch.sh` for deterministic state management
+- **AGENTS.md** -- create one in your project root so workers understand your codebase conventions (see `skills/manage-codex/references/agents-md-template.md` for a starter template)
+- **Codex CLI** (optional) -- `npm install -g @openai/codex` for better parallelism.
+  When Codex is not installed, dispatch steps automatically fall back to Claude Code's
+  Agent tool with worktree isolation. All circuits work fully in both modes.
+
 ### From GitHub (recommended)
 
-```
-claude plugin add petekp/circuit
+```bash
+claude plugin install petekp/circuit
 ```
 
 ### Local installation
@@ -41,6 +50,9 @@ claude plugin add petekp/circuit
 git clone https://github.com/petekp/circuit.git ~/.claude/plugins/local/circuit
 ```
 
+> **Tip**: If you installed from the marketplace, find the install directory with:
+> `ls ~/.claude/plugins/cache/*/circuit/*/`
+
 ### Project setup
 
 After installing, set up relay scripts in your project. These are the shell
@@ -48,25 +60,16 @@ scripts that circuits use to assemble Codex worker prompts and manage batch stat
 
 ```bash
 # Use the setup helper (recommended)
-"$(claude plugin path circuit)/scripts/setup.sh"
+~/.claude/plugins/local/circuit/scripts/setup.sh
 
-# Or copy relay scripts manually
-cp -r "$(claude plugin path circuit)/scripts/relay" ./scripts/relay
+# Or if installed from marketplace
+# Check your install path with: ls ~/.claude/plugins/cache/*/circuit/*/
 ```
-
-### Prerequisites
-
-- **Claude Code** -- the host environment
-- **Python 3** -- required by `update-batch.sh` for deterministic state management
-- **AGENTS.md** -- create one in your project root so workers understand your codebase conventions
-- **Codex CLI** (optional) -- `npm install -g @openai/codex` for better parallelism.
-  When Codex is not installed, dispatch steps automatically fall back to Claude Code's
-  Agent tool with worktree isolation. All circuits work fully in both modes.
 
 ### Verify installation
 
 ```bash
-"$(claude plugin path circuit)/scripts/verify-install.sh"
+~/.claude/plugins/local/circuit/scripts/verify-install.sh
 ```
 
 The verification script checks for Codex CLI, Python 3, all skill directories,
@@ -78,14 +81,13 @@ pipeline.
 Start with the router if you're not sure which circuit to use:
 
 ```
-/circuit:router I need to add a recording and playback system that spans our Rust core and Swift app layers
+/circuit:router I need to add user preferences that sync across devices
 ```
 
 Here's what happens:
 
 1. **The router analyzes your task** and recommends the best circuit (or a
-   sequence of circuits). In this case, it might suggest
-   `decide` followed by `develop`.
+   sequence of circuits). In this case, it might suggest `develop`.
 
 2. **The circuit creates an artifact chain** in `.relay/circuit-runs/`. Each phase
    writes a durable file that feeds the next:
@@ -479,7 +481,7 @@ When these two files agree, the circuit is mechanically sound. When they drift,
 
 ## Further Reading
 
-- **[CIRCUITS.md](CIRCUITS.md)** -- detailed catalog of all nine circuits with
+- **[CIRCUITS.md](CIRCUITS.md)** -- detailed catalog of all circuits with
   phase breakdowns, artifact chains, and concrete usage examples
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** -- deep dive into the system design:
   artifact chain model, execution model, gate system, relay infrastructure,
