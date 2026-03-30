@@ -1,4 +1,4 @@
-# Contributing to Circuit
+# Contributing to Circuitry
 
 ## Adding a New Circuit
 

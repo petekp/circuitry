@@ -1,11 +1,11 @@
 {
-  "name": "circuit",
-  "description": "Structured workflow circuits for Claude Code — disciplined multi-phase approaches to complex engineering tasks, powered by Codex workers and artifact chains. The Circuit plugin.",
+  "name": "circuitry",
+  "description": "Structured workflow circuits for Claude Code. Disciplined multi-phase approaches to complex engineering tasks, powered by Codex workers and artifact chains.",
   "version": "1.0.0",
   "author": {
     "name": "Pete Petrash"
   },
-  "repository": "https://github.com/petekp/circuit",
+  "repository": "https://github.com/petekp/circuitry",
   "license": "MIT",
   "keywords": [
     "circuits",

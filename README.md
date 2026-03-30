@@ -1,4 +1,4 @@
-# Circuit for Claude Code
+# Circuitry for Claude Code
 
 Skills tell Claude *how* to do a task. But for complex work with phases,
 competing options, and real research, stacking skills manually and hoping
@@ -46,17 +46,17 @@ product judgment matters. The rest runs on its own.
 ### From GitHub (recommended)
 
 ```bash
-claude plugin install petekp/circuit
+claude plugin install petekp/circuitry
 ```
 
 ### Local installation
 
 ```bash
-git clone https://github.com/petekp/circuit.git ~/.claude/plugins/local/circuit
+git clone https://github.com/petekp/circuitry.git ~/.claude/plugins/local/circuitry
 ```
 
 > **Tip**: If you installed from the marketplace, find the install directory with:
-> `ls ~/.claude/plugins/cache/*/circuit/*/`
+> `ls ~/.claude/plugins/cache/*/circuitry/*/`
 
 ### Project setup
 
@@ -65,16 +65,16 @@ scripts that circuits use to assemble Codex worker prompts and manage batch stat
 
 ```bash
 # Use the setup helper (recommended)
-~/.claude/plugins/local/circuit/scripts/setup.sh
+~/.claude/plugins/local/circuitry/scripts/setup.sh
 
 # Or if installed from marketplace
-# Check your install path with: ls ~/.claude/plugins/cache/*/circuit/*/
+# Check your install path with: ls ~/.claude/plugins/cache/*/circuitry/*/
 ```
 
 ### Verify installation
 
 ```bash
-~/.claude/plugins/local/circuit/scripts/verify-install.sh
+~/.claude/plugins/local/circuitry/scripts/verify-install.sh
 ```
 
 The verification script checks for Codex CLI, Python 3, all skill directories,
@@ -201,7 +201,7 @@ everything works without a config file.
 ## File Structure
 
 ```
-circuit/
+circuitry/
   .claude-plugin/
     plugin.json               # Plugin manifest (name, version, metadata)
     marketplace.json          # Marketplace listing metadata

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# session-start.sh — Outputs the Circuit plugin session banner as markdown
+# session-start.sh -- Outputs the Circuitry plugin session banner as markdown
 #
 # Called by hooks.json on SessionStart. Checks prerequisites and lists
 # available circuits.
@@ -30,7 +30,7 @@ fi
 
 # ── Banner ────────────────────────────────────────────────────────────
 cat <<'BANNER'
-# Circuit
+# Circuitry
 
 ```
 /circuit <describe your task>
