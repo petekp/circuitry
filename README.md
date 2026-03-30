@@ -221,7 +221,7 @@ circuitry/
       references/             # Prompt templates for each worker role
     router/                   # Routes tasks to the best circuit
       SKILL.md
-    default/                  # Default circuit: auto-scope + execute
+    run/                      # Default circuit: auto-scope + execute
       circuit.yaml
       SKILL.md
     develop/
