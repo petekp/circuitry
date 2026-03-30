@@ -20,7 +20,8 @@ Route only when positive signals match and exclusions do not.
 
 - `circuit:develop`
   Match: multi-file or cross-domain feature delivery, unclear approach, or research needed before build.
-  Exclude: bug fixes, config changes, or already-clear tasks.
+  Supports `--light` flag for tasks where the approach is clear but still benefits from structured intent/contract/implement/review flow.
+  Exclude: bug fixes, config changes, or single-file wiring tasks. For clear-approach tasks, recommend `circuit:develop --light` instead of excluding them.
 - `circuit:decide`
   Match: architecture or protocol choices with real downside, serious options, or reopen conditions needed before build.
   Exclude: code delivery, bug fixes, or settled decisions.
@@ -67,6 +68,7 @@ These circuits share surface-level similarity. Use these rules to disambiguate:
 - **decide vs develop:** Decide resolves *which approach* to take when there are meaningful architectural alternatives. Develop *builds the chosen approach*. If the user says "should we use X or Y," route to decide. If they say "build X," route to develop.
 - **decide vs harden-spec:** Decide chooses *between* options. Harden-spec stress-tests *one* spec that already exists. If the decision is unsettled, route to decide first, then harden-spec.
 - **ratchet vs develop:** Ratchet improves *existing* code without adding features. Develop adds *new* capabilities. If the user wants "make this codebase better" without new features, route to ratchet.
+- **develop full vs develop --light:** Full develop is for unclear approaches that need research and decision phases. Light develop (`--light`) is for clear-approach tasks that still span multiple files and benefit from structured intent/contract/implement/review. If the user says "add X following the existing pattern" or "the approach is obvious but non-trivial," recommend `circuit:develop --light`.
 
 ## Recommend
 
