@@ -48,7 +48,7 @@ The split is deliberate and serves different consumers:
 **`circuit.yaml`** is machine-readable topology. It answers structural questions:
 How many phases? What does each step produce? What does it consume? Is this step
 parallel? What gate type guards it? The router, the dry-run validator, and the
-circuit-create compiler all read `circuit.yaml` to reason about circuit shape
+`circuit:create` compiler all read `circuit.yaml` to reason about circuit shape
 without parsing prose.
 
 **`SKILL.md`** is the execution contract. It answers operational questions: What
@@ -95,8 +95,8 @@ This prefix does three things:
    in a different namespace from circuit skills. A circuit can compose domain
    skills without naming collisions.
 
-The directory name drops the prefix: `circuit:ratchet-quality` lives at
-`skills/circuit-ratchet-quality/`. The slug `ratchet-quality` is the
+The directory name matches the slug: `circuit:ratchet-quality` lives at
+`skills/ratchet-quality/`. The slug `ratchet-quality` is the
 canonical identifier used in `circuit.yaml`'s `id` field.
 
 ---
@@ -1015,30 +1015,30 @@ circuit/
         review-preamble.md
         relay-protocol.md
         agents-md-template.md
-    circuit-router/
+    router/
       SKILL.md              # Routes requests to best-fit circuit
-    circuit-develop/
+    develop/
       circuit.yaml
       SKILL.md
-    circuit-decide/
+    decide/
       circuit.yaml
       SKILL.md
-    circuit-harden-spec/
+    harden-spec/
       circuit.yaml
       SKILL.md
-    circuit-repair-flow/
+    repair-flow/
       circuit.yaml
       SKILL.md
-    circuit-ratchet-quality/
+    ratchet-quality/
       circuit.yaml
       SKILL.md
-    circuit-cleanup/
+    cleanup/
       circuit.yaml
       SKILL.md
-    circuit-create/
+    create/
       circuit.yaml
       SKILL.md
-    circuit-dry-run/
+    dry-run/
       circuit.yaml
       SKILL.md
 ```

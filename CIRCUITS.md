@@ -107,7 +107,7 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 **Invoke:** `/circuit:dry-run`
 **Phases:** Collect Inputs, Resolve Constants, Inventory Steps, Simulate and Trace (4 steps, single-session)
 **Artifact chain:** `validation-scope.md` -> `resolved-constants.md` -> `step-inventory.md` -> `dry-run-trace.md`
-**Example:** You just authored a new circuit with circuit-create and want to verify it will actually execute cleanly. Dry-run takes a concrete test feature (e.g., "add vehicle history tracking"), instantiates every variable, simulates prompt assembly for each dispatch step, checks all 10 mechanical dimensions per step (setup completeness, path resolution, command validity, artifact chain closure, header compliance, template contamination, placeholder leaks, action-type consistency, gate validity, topology match), and produces a binary verdict: mechanically sound or has failures with exact citations.
+**Example:** You just authored a new circuit with `/circuit:create` and want to verify it will actually execute cleanly. Dry-run takes a concrete test feature (e.g., "add vehicle history tracking"), instantiates every variable, simulates prompt assembly for each dispatch step, checks all 10 mechanical dimensions per step (setup completeness, path resolution, command validity, artifact chain closure, header compliance, template contamination, placeholder leaks, action-type consistency, gate validity, topology match), and produces a binary verdict: mechanically sound or has failures with exact citations.
 
 ---
 

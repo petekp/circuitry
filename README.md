@@ -219,36 +219,36 @@ circuit/
     manage-codex/             # Batch orchestrator (implement/review/converge)
       SKILL.md
       references/             # Prompt templates for each worker role
-    circuit-router/           # Routes tasks to the best circuit
+    router/                   # Routes tasks to the best circuit
       SKILL.md
-    circuit-develop/
+    develop/
       circuit.yaml            # Topology: phases, steps, artifacts, gates
       SKILL.md                # Execution contract: commands, resume logic
-    circuit-decide/
+    decide/
       circuit.yaml
       SKILL.md
-    circuit-harden-spec/
+    harden-spec/
       circuit.yaml
       SKILL.md
-    circuit-migrate/
+    migrate/
       circuit.yaml
       SKILL.md
-    circuit-repair-flow/
+    repair-flow/
       circuit.yaml
       SKILL.md
-    circuit-ratchet-quality/
+    ratchet-quality/
       circuit.yaml
       SKILL.md
-    circuit-cleanup/
+    cleanup/
       circuit.yaml
       SKILL.md
-    circuit-create/           # Meta-circuit: authors new circuits
+    create/                   # Meta-circuit: authors new circuits
       circuit.yaml
       SKILL.md
-    circuit-dry-run/          # Validates circuit mechanical soundness
+    dry-run/                  # Validates circuit mechanical soundness
       circuit.yaml
       SKILL.md
-    circuit-setup/            # Skill discovery and config generation
+    setup/                    # Skill discovery and config generation
       SKILL.md
   circuit.config.example.yaml # Example config for skill customization
   ARCHITECTURE.md             # Deep dive into system design

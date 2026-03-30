@@ -87,17 +87,17 @@ section "Skill directories"
 
 EXPECTED_SKILLS=(
   manage-codex
-  circuit-cleanup
-  circuit-create
-  circuit-decide
-  circuit-develop
-  circuit-dry-run
-  circuit-harden-spec
-  circuit-migrate
-  circuit-ratchet-quality
-  circuit-repair-flow
-  circuit-router
-  circuit-setup
+  cleanup
+  create
+  decide
+  develop
+  dry-run
+  harden-spec
+  migrate
+  ratchet-quality
+  repair-flow
+  router
+  setup
 )
 
 for skill in "${EXPECTED_SKILLS[@]}"; do

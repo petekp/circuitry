@@ -1,6 +1,6 @@
 schema_version: "1"
 circuit:
-  id: circuit-dry-run
+  id: dry-run
   version: "2026-03-22"
   title: Circuit Dry Run
   description: >
