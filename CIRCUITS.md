@@ -22,12 +22,12 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 
 ### Do
 
-**Invoke:** `/circuit <task>` (routed automatically) or `/circuit:do <task>` (direct)
+**Invoke:** `/circuit <task>` (routed automatically, or direct)
 **Phases:** Scope, Execute, Summary (4 steps)
 **Artifact chain:** `scope.md` -> `scope-confirmed.md` -> `execution-handoff.md` -> `done.md`
 **Example:** You need to add a dark mode toggle to the settings page that persists to localStorage. The circuit reads the codebase, writes a 2-slice scope (theme toggle component + persistence logic), shows you the plan for confirmation. After you confirm, workers implement each slice with independent review, convergence runs verification, and a summary tells you what changed.
 
-The default entry point for Circuit. Start with `/circuit <task>` for any non-trivial work. The router runs silently underneath: if your task needs a specialized circuit (research, architecture decisions, debugging), you get one automatically. Otherwise, circuit:do handles it with auto-scope, confirmation, and implement/review/converge.
+The default entry point for Circuit. Start with `/circuit <task>` for any non-trivial work. The router runs silently underneath: if your task needs a specialized circuit (research, architecture decisions, debugging), you get one automatically. Otherwise, circuit handles it with auto-scope, confirmation, and implement/review/converge.
 
 ---
 
@@ -178,7 +178,7 @@ The key question: *Are you improving living code or removing dead code?*
 Start with `/circuit <task>` for any non-trivial work. The router picks the right
 circuit automatically. If you want to choose manually:
 
-- **"I have a clear task that spans multiple files"** -> `/circuit <task>` (routes to `do`)
+- **"I have a clear task that spans multiple files"** -> `/circuit <task>`
 - **"I have a broken flow or flaky behavior"** -> `repair-flow`
 - **"I need to choose between architectural approaches"** -> `decide`
 - **"I have a draft spec/RFC that needs hardening before build"** -> `harden-spec`

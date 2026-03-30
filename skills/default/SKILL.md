@@ -1,5 +1,5 @@
 ---
-name: circuit:do
+name: circuit
 description: >
   Default circuit for tasks that benefit from structured execution but don't
   match a specialized circuit. 4 steps across 3 phases: Scope -> Execute ->
@@ -39,7 +39,7 @@ Do NOT use for:
 
 If you want to explicitly set priorities, non-goals, and kill criteria before
 execution, use `circuit:develop --light` instead. It has an interactive
-intent-lock step that circuit:do skips.
+intent-lock step that circuit skips.
 
 ## Principles
 
@@ -198,7 +198,7 @@ Amended by user: <brief description of changes>. Proceeding with execution.
 
 ```markdown
 ## Confirmation
-User chose to switch to circuit:<name>. Stopping circuit:do.
+User chose to switch to circuit:<name>. Stopping circuit.
 ```
 
 **Gate:** `scope-confirmed.md` exists. If it contains "switch to circuit:",
@@ -347,7 +347,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 1. Check artifacts in chain order: `scope.md` -> `scope-confirmed.md` ->
    `execution-handoff.md` -> `done.md`
 2. **Check for switch sentinel.** If `scope-confirmed.md` contains
-   "switch to circuit:", the user chose to leave circuit:do. Do NOT resume
+   "switch to circuit:", the user chose to leave circuit. Do NOT resume
    into the execute phase. Report that the circuit was stopped and the user
    switched to a different circuit.
 3. Find the last complete artifact with a passing gate
