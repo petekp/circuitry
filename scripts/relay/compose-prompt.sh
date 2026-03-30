@@ -224,6 +224,8 @@ try:
     skills = entry.get('skills', [])
     if isinstance(skills, list):
         print(','.join(str(s) for s in skills))
+except Exception:
+    pass
 " 2>/dev/null || true)"
     if [[ -n "$CONFIG_SKILLS" ]]; then
       SKILLS="$CONFIG_SKILLS"
