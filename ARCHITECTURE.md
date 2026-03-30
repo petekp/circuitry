@@ -229,14 +229,15 @@ From `develop`, Step 1 (Intent Lock):
 > for non-goals and constraints. Write `intent-brief.md`.
 
 Interactive steps are the only steps that can ask questions and wait for
-answers. They are never dispatched to Codex workers.
+answers. They are never dispatched to workers.
 
 #### 2. Dispatch (`action: dispatch`)
 
 The orchestrator writes a prompt header, assembles the full prompt using
-`compose-prompt.sh`, and dispatches the work to a Codex worker via
-`codex exec --full-auto`. The orchestrator does not do the work itself -- it
-composes the instructions and reads the result.
+`compose-prompt.sh`, and dispatches the work to a worker via `dispatch.sh`.
+The backend is auto-detected: Codex CLI when installed, Claude Code's Agent
+tool (with worktree isolation) otherwise. The orchestrator does not do the
+work itself -- it composes the instructions and reads the result.
 
 The dispatch pipeline:
 
@@ -252,10 +253,10 @@ The dispatch pipeline:
   --root "${STEP_ROOT}" \
   --out "${STEP_ROOT}/prompt.md"
 
-# 3. Dispatch to Codex
-cat "${STEP_ROOT}/prompt.md" | \
-  codex exec --full-auto \
-  -o "${STEP_ROOT}/last-messages/last-message.txt" -
+# 3. Dispatch to worker (auto-detects Codex or Agent backend)
+./scripts/relay/dispatch.sh \
+  --prompt "${STEP_ROOT}/prompt.md" \
+  --output "${STEP_ROOT}/last-messages/last-message.txt"
 
 # 4. Orchestrator reads the handoff and verifies
 test -f "${STEP_ROOT}/handoffs/handoff.md"

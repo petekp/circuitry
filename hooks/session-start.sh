@@ -7,23 +7,25 @@
 set -uo pipefail
 
 # ── Prerequisite check: Codex CLI ─────────────────────────────────────
-if ! command -v codex >/dev/null 2>&1; then
-  cat <<'WARNING'
-> **Warning: Codex CLI not found**
+if command -v codex >/dev/null 2>&1; then
+  DISPATCH_BACKEND="codex"
+else
+  DISPATCH_BACKEND="agent"
+  cat <<'NOTE'
+> **Dispatch backend: Agent (Codex CLI not found)**
 >
-> The Circuit plugin dispatches heavy implementation to Codex workers.
-> Without `codex`, circuits that use `manage-codex` will fail.
+> Dispatch steps will use Claude Code's **Agent tool** (`isolation: "worktree"`)
+> instead of `codex exec`. Circuits work fully in this mode -- the artifact chain,
+> gates, and resume logic are identical regardless of backend.
 >
-> Install it:
+> For better parallelism, you can optionally install Codex CLI:
 > ```
 > npm install -g @openai/codex
 > ```
->
-> Then verify: `codex --version`
 
 ---
 
-WARNING
+NOTE
 fi
 
 # ── Banner ────────────────────────────────────────────────────────────
@@ -34,7 +36,7 @@ cat <<'BANNER'
 /circuit:router <describe your task>
 ```
 
-Circuits are structured, multi-phase workflows that break complex engineering tasks into artifact chains — each phase writes a durable file that feeds the next. Heavy implementation is dispatched to **Codex workers** automatically.
+Circuits are structured, multi-phase workflows that break complex engineering tasks into artifact chains — each phase writes a durable file that feeds the next. Heavy implementation is dispatched to workers automatically — via **Codex CLI** when installed, or **Claude Agent** as a fallback.
 
 The router picks the right circuit for your task. Start there.
 
@@ -55,5 +57,5 @@ The router picks the right circuit for your task. Start there.
 | **Dry Run** | `/circuit:dry-run` | Validate a circuit skill's mechanical soundness |
 | **Setup** | `/circuit:setup` | Discover skills and generate circuit.config.yaml |
 
-Use `/manage-codex` to orchestrate Codex workers directly without a circuit wrapper.
+Use `/manage-codex` to orchestrate workers directly without a circuit wrapper.
 BANNER

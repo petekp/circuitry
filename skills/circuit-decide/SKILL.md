@@ -81,7 +81,31 @@ When a step says `<domain-skills>`, pick 1-2 skills matching the affected system
 Never exceed 4 total skills per dispatch. If a step already names two base skills
 (`solution-explorer` + `architecture-exploration`, or `seam-ripper` + `clean-architecture`),
 add at most one domain skill. Do not append interactive skills (like `proposal-review`
-or `grill-me`) to autonomous `codex exec` dispatches.
+or `grill-me`) to autonomous worker dispatches.
+
+## Dispatch Backend
+
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. The assembled prompt is identical for both backends.
+
+**Codex backend** (when `codex` CLI is installed):
+```bash
+cat ${step_dir}/prompt.md | codex exec --full-auto -o ${step_dir}/last-messages/last-message.txt -
+```
+
+**Agent backend** (when `codex` CLI is NOT installed):
+```
+Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")
+```
+
+Or use the dispatch helper which auto-detects:
+```bash
+./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
+```
+
+The artifact chain, gates, handoff format, and resume logic are identical
+regardless of backend.
 
 ## Canonical Header Schema
 
@@ -234,7 +258,7 @@ Write your primary output to the path above. Also write a standard handoff to
 [What the next phase should focus on]
 ```
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-2/prompt-header.md \
@@ -242,9 +266,9 @@ Write your primary output to the path above. Also write a standard handoff to
   --root ${RUN_ROOT}/phases/step-2 \
   --out ${RUN_ROOT}/phases/step-2/prompt.md
 
-cat ${RUN_ROOT}/phases/step-2/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-2/prompt.md \
+  --output ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -324,7 +348,7 @@ Write your primary output to the path above. Also write a standard handoff to
 [What the next phase should focus on]
 ```
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-3/prompt-header.md \
@@ -332,9 +356,9 @@ Write your primary output to the path above. Also write a standard handoff to
   --root ${RUN_ROOT}/phases/step-3 \
   --out ${RUN_ROOT}/phases/step-3/prompt.md
 
-cat ${RUN_ROOT}/phases/step-3/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-3/prompt.md \
+  --output ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -472,7 +496,7 @@ Write your primary output to the path above. Also write a standard handoff to
 [What the next phase should focus on]
 ```
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-6/prompt-header.md \
@@ -480,9 +504,9 @@ Write your primary output to the path above. Also write a standard handoff to
   --root ${RUN_ROOT}/phases/step-6 \
   --out ${RUN_ROOT}/phases/step-6/prompt.md
 
-cat ${RUN_ROOT}/phases/step-6/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-6/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-6/prompt.md \
+  --output ${RUN_ROOT}/phases/step-6/last-messages/last-message.txt
 ```
 
 **Verify and promote:**

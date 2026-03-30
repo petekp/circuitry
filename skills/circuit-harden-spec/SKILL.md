@@ -93,7 +93,22 @@ counting the fixed skills already required by that step:
 
 Never exceed 3 total skills per dispatch. Steps 4 and 10 already spend two fixed
 skills, so add at most 1 domain skill there. Do not append interactive skills
-(like `proposal-review` or `grill-me`) to autonomous `codex exec` dispatches.
+(like `proposal-review` or `grill-me`) to autonomous worker dispatches.
+
+## Dispatch Backend
+
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. The assembled prompt is identical for both backends.
+
+**Codex backend:** `cat ${step_dir}/prompt.md | codex exec --full-auto -o ${step_dir}/last-messages/last-message.txt -`
+
+**Agent backend:** `Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")`
+
+Or use the dispatch helper: `./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
+
+The artifact chain, gates, handoff format, and resume logic are identical
+regardless of backend.
 
 ## Canonical Header Schema
 
@@ -245,7 +260,7 @@ Use the canonical header schema with:
 - Handoff: The standard handoff block from the canonical header schema, written to
   `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-3/prompt-header.md \
@@ -253,9 +268,9 @@ Use the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-3 \
   --out ${RUN_ROOT}/phases/step-3/prompt.md
 
-cat ${RUN_ROOT}/phases/step-3/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-3/prompt.md \
+  --output ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -303,7 +318,7 @@ Use the canonical header schema with:
 - Handoff: The standard handoff block from the canonical header schema, written to
   `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-4/prompt-header.md \
@@ -311,9 +326,9 @@ Use the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-4 \
   --out ${RUN_ROOT}/phases/step-4/prompt.md
 
-cat ${RUN_ROOT}/phases/step-4/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-4/prompt.md \
+  --output ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -359,7 +374,7 @@ Use the canonical header schema with:
 - Handoff: The standard handoff block from the canonical header schema, written to
   `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
@@ -367,9 +382,9 @@ Use the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-cat ${RUN_ROOT}/phases/step-5/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
+  --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -550,7 +565,7 @@ Use the canonical header schema with:
 - Handoff: The standard handoff block from the canonical header schema, written to
   `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-10/prompt-header.md \
@@ -558,9 +573,9 @@ Use the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-10 \
   --out ${RUN_ROOT}/phases/step-10/prompt.md
 
-cat ${RUN_ROOT}/phases/step-10/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-10/prompt.md \
+  --output ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt
 ```
 
 **Verify and promote:**

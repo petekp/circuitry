@@ -53,12 +53,11 @@ See frontmatter for full negative scope.
 
 ## Principles
 
-- **Codex executes, Claude orchestrates.** All `dispatch` steps run via
-  `codex exec --full-auto`, never via Claude subagents. Claude writes prompt
-  headers, composes prompts with `compose-prompt.sh`, dispatches to Codex, and
-  reads back results. Claude performs `synthesis` and `interactive` steps
-  directly. This is non-negotiable — the relay/Codex execution model is the
-  circuit's core assumption.
+- **Workers execute, Claude orchestrates.** All `dispatch` steps run via
+  the dispatch backend (Codex CLI when installed, Agent fallback otherwise).
+  Claude writes prompt headers, composes prompts with `compose-prompt.sh`,
+  dispatches to workers, and reads back results. Claude performs `synthesis`
+  and `interactive` steps directly.
 - **False-positive aversion.** Better to leave something suspicious than to
   remove something load-bearing. "I couldn't find any references" is evidence;
   "it looks unused" is not.
@@ -91,6 +90,16 @@ When a step says `<domain-skills>`, pick 1-2 skills matching the affected code:
 
 Use zero domain skills rather than filler skills when the step is mostly
 orchestration or evidence gathering. Never exceed 3 total skills per dispatch.
+
+## Dispatch Backend
+
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. Use the dispatch helper:
+`./scripts/relay/dispatch.sh --prompt <prompt> --output <output>`
+
+The artifact chain, gates, handoff format, and resume logic are identical
+regardless of backend.
 
 ## Canonical Header Schema
 
@@ -234,11 +243,10 @@ for category in dead-code stale-docs orphaned-artifacts vestigial-comments redun
     --root "${RUN_ROOT}" \
     --out "${RUN_ROOT}/phases/step-2/prompt-${category}.md"
 
-  cat "${RUN_ROOT}/phases/step-2/prompt-${category}.md" | \
-    codex exec --full-auto \
-    -o "${RUN_ROOT}/last-messages/last-message-survey-${category}.txt" - &
+  ./scripts/relay/dispatch.sh \
+    --prompt "${RUN_ROOT}/phases/step-2/prompt-${category}.md" \
+    --output "${RUN_ROOT}/last-messages/last-message-survey-${category}.txt"
 done
-wait
 ```
 
 **Gate:** All 5 category findings files exist. Each includes candidate paths
@@ -394,7 +402,7 @@ Verdict rules:
 - Triage adjustments are flagged for reopen if they change risk classification
 ```
 
-Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../prompt-header-evidence.md --template implement --root ${RUN_ROOT} --out .../prompt-evidence.md` then `codex exec --full-auto`.
+Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../prompt-header-evidence.md --template implement --root ${RUN_ROOT} --out .../prompt-evidence.md` then `dispatch.sh --prompt .../prompt-evidence.md --output ...`.
 
 **Gate (evidence-reopen):**
 
@@ -468,9 +476,9 @@ verification fails. Include standard relay handoff headings.
   --root "${BATCH_ROOT}" \
   --out "${BATCH_ROOT}/prompt.md"
 
-cat "${BATCH_ROOT}/prompt.md" | \
-  codex exec --full-auto \
-  -o "${BATCH_ROOT}/last-messages/last-message-manage-codex.txt" -
+./scripts/relay/dispatch.sh \
+  --prompt "${BATCH_ROOT}/prompt.md" \
+  --output "${BATCH_ROOT}/last-messages/last-message-manage-codex.txt"
 ```
 
 **d) After manage-codex completes**, read back in this order:
@@ -584,7 +592,7 @@ Write your primary output to the path above. Also write a standard handoff to
 ### Next Steps
 ```
 
-Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../prompt-header-audit.md --root ${RUN_ROOT} --out .../prompt-audit.md` then `codex exec --full-auto`.
+Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../prompt-header-audit.md --root ${RUN_ROOT} --out .../prompt-audit.md` then `dispatch.sh --prompt .../prompt-audit.md --output ...`.
 
 **Gate:** `verification-audit.md` exists with build/test results, warning
 delta (or NOT MEASURABLE), diff sanity findings, manifest cross-check, and a

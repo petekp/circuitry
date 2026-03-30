@@ -83,6 +83,21 @@ When a step says `<domain-skills>`, pick 1-2 skills matching the affected code:
 Never exceed 3 total skills per dispatch. For Step 7, because `manage-codex` and
 `tdd` are already required, pick only 1 domain skill.
 
+## Dispatch Backend
+
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. The assembled prompt is identical for both backends.
+
+**Codex backend:** `cat ${step_dir}/prompt.md | codex exec --full-auto -o ${step_dir}/last-messages/last-message.txt -`
+
+**Agent backend:** `Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")`
+
+Or use the dispatch helper: `./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
+
+The artifact chain, gates, handoff format, and resume logic are identical
+regardless of backend.
+
 ## Canonical Header Schema
 
 Every dispatch step's prompt header MUST include these fields:
@@ -207,7 +222,7 @@ Include the canonical header schema with:
   non-reproduction result, plus enough evidence to explain what was observed
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-2/prompt-header.md \
@@ -215,9 +230,9 @@ Include the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-2 \
   --out ${RUN_ROOT}/phases/step-2/prompt.md
 
-cat ${RUN_ROOT}/phases/step-2/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-2/prompt.md \
+  --output ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -328,7 +343,7 @@ Include the canonical header schema with:
   instrumentation-based proof contract
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
@@ -336,9 +351,9 @@ Include the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-cat ${RUN_ROOT}/phases/step-5/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
+  --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -438,9 +453,9 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
      --root ${REPAIR_ROOT} \
      --out ${REPAIR_ROOT}/prompt.md
 
-   cat ${REPAIR_ROOT}/prompt.md | \
-     codex exec --full-auto \
-     -o ${REPAIR_ROOT}/last-messages/last-message-manage-codex.txt -
+   ./scripts/relay/dispatch.sh \
+     --prompt ${REPAIR_ROOT}/prompt.md \
+     --output ${REPAIR_ROOT}/last-messages/last-message-manage-codex.txt
    ```
 
 4. **After manage-codex completes**, the orchestrator synthesizes `repair-handoff.md`:
@@ -515,7 +530,7 @@ Include the canonical header schema with:
   If the result is `PARTIAL` or `REOPEN`, the exact failing boundary is named.
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-8/prompt-header.md \
@@ -523,9 +538,9 @@ Include the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-8 \
   --out ${RUN_ROOT}/phases/step-8/prompt.md
 
-cat ${RUN_ROOT}/phases/step-8/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-8/prompt.md \
+  --output ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt
 ```
 
 **Verify and promote:**

@@ -39,14 +39,14 @@ section() {
   printf '\n\033[1m%s\033[0m\n' "$1"
 }
 
-# ── 1. Codex CLI ──────────────────────────────────────────────────────
+# ── 1. Codex CLI (optional — Agent fallback available) ────────────────
 section "Codex CLI"
 
 if command -v codex >/dev/null 2>&1; then
   codex_version="$(codex --version 2>/dev/null || echo 'unknown')"
-  pass "codex found: $codex_version"
+  pass "codex found: $codex_version (dispatch backend: codex)"
 else
-  fail "codex not found — install with: npm install -g @openai/codex"
+  warn "codex not found — dispatch will use Agent fallback (install for better parallelism: npm install -g @openai/codex)"
 fi
 
 # ── 2. Python 3 ──────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ done
 # ── 5. Relay scripts ─────────────────────────────────────────────────
 section "Relay scripts"
 
-for script in compose-prompt.sh update-batch.sh; do
+for script in compose-prompt.sh dispatch.sh update-batch.sh; do
   script_path="$PLUGIN_ROOT/scripts/relay/$script"
   if [[ -f "$script_path" ]]; then
     if [[ -x "$script_path" ]]; then
