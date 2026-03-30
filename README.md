@@ -204,6 +204,7 @@ everything works without a config file.
 circuit/
   .claude-plugin/
     plugin.json               # Plugin manifest (name, version, metadata)
+    marketplace.json          # Marketplace listing metadata
   hooks/
     hooks.json                # Hook registration (SessionStart banner)
     session-start.sh          # Prerequisite checks + available circuits table
@@ -252,9 +253,12 @@ circuit/
       SKILL.md
     setup/                    # Skill discovery and config generation
       SKILL.md
+  tests/
+    setup-self-contained.sh   # Self-contained integration test
   circuit.config.example.yaml # Example config for skill customization
   ARCHITECTURE.md             # Deep dive into system design
   CIRCUITS.md                 # Detailed catalog of all circuits with examples
+  CONTRIBUTING.md             # Contributor guidelines
   LICENSE                     # MIT
 ```
 

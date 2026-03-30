@@ -35,7 +35,7 @@ A circuit is a multi-phase workflow encoded as two files:
 | `circuit.yaml` | Topology declaration | Type signature |
 | `SKILL.md` | Runtime truth | Implementation |
 
-Both files live in the same directory under `skills/circuit-<name>/`. The
+Both files live in the same directory under `skills/<name>/`. The
 `circuit.yaml` declares the shape: phases, steps, actions, artifacts, gates, and
 parallel fanout. The `SKILL.md` contains everything the orchestrator actually
 needs to execute: commands, paths, output schemas, prompt headers, resume rules,

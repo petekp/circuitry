@@ -151,15 +151,15 @@ Some circuits look similar on the surface. Here's how to tell them apart:
 | Build a feature from an idea | `develop` | `harden-spec` | Develop handles the full lifecycle; harden-spec only reviews existing specs |
 | Review an existing RFC before building | `harden-spec` | `develop` | Harden-spec stress-tests a document without writing code |
 | Choose between approaches | `decide` | `develop` | Decide resolves which option; develop implements the chosen one |
-| Choose between approaches, then build | `decide` -> `develop` | — | Sequence them: decision first, then implementation |
+| Choose between approaches, then build | `decide` -> `develop` | (none) | Sequence them: decision first, then implementation |
 
 ### Decision Boundaries
 
 **decide vs. develop**
 The key question: *Is the deliverable a decision guide, or shipped code?*
-- Use `decide` when the decision itself is the end product — a durable guide that downstream implementers follow without relitigating. No code is written.
+- Use `decide` when the decision itself is the end product: a durable guide that downstream implementers follow without relitigating. No code is written.
 - Use `develop` when the deliverable is shipped code, even if the approach is uncertain. Develop has its own decision phase built in (Steps 4-6: generate candidates → adversarial evaluation → tradeoff decision).
-- Use `decide → develop` as a sequence only when the decision is so consequential that it deserves its own artifact chain before any implementation begins — e.g., choosing between fundamentally different system architectures that affect multiple teams.
+- Use `decide → develop` as a sequence only when the decision is so consequential that it deserves its own artifact chain before any implementation begins, e.g., choosing between fundamentally different system architectures that affect multiple teams.
 
 **harden-spec vs. develop**
 The key question: *Does a written document already exist?*
@@ -169,8 +169,8 @@ The key question: *Does a written document already exist?*
 
 **ratchet-quality vs. cleanup**
 The key question: *Are you improving living code or removing dead code?*
-- Use `ratchet-quality` when the code is actively used but could be better — refactoring for clarity, improving test coverage, tightening types, reducing complexity.
-- Use `cleanup` when the code, docs, or artifacts are dead weight — unreachable functions, stale README sections, orphaned test fixtures, TODO comments referencing closed issues.
+- Use `ratchet-quality` when the code is actively used but could be better: refactoring for clarity, improving test coverage, tightening types, reducing complexity.
+- Use `cleanup` when the code, docs, or artifacts are dead weight: unreachable functions, stale README sections, orphaned test fixtures, TODO comments referencing closed issues.
 - When unsure: if you'd describe the work as "make this better," it's ratchet. If you'd describe it as "get rid of this," it's cleanup.
 
 ## Choosing a Circuit
