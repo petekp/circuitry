@@ -2,7 +2,7 @@
 
 Structured workflow circuits for Claude Code -- disciplined multi-phase approaches to complex engineering tasks.
 
-This plugin gives Claude Code nine reusable circuits for tackling complex software
+This plugin gives Claude Code reusable circuits for tackling complex software
 engineering work. Each circuit is a multi-phase workflow that produces **artifact
 chains** -- durable files that track progress and survive session restarts. Heavy
 implementation work is dispatched to **workers** -- either via Codex CLI for
@@ -16,12 +16,13 @@ ends or a context window fills up.
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
 | Router | `/circuit:router` | Picking the right circuit when you're not sure which fits |
-| Develop | `/circuit:develop` | Taking a feature from idea to shipped code |
+| Develop | `/circuit:develop` | Taking a feature from idea to shipped code (`--light` for clear-approach tasks) |
 | Decide | `/circuit:decide` | Architecture decisions under real uncertainty |
 | Harden Spec | `/circuit:harden-spec` | Turning a rough RFC or PRD into something safe to build from |
 | Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
 | Ratchet Quality | `/circuit:ratchet-quality` | Overnight unattended quality improvement runs |
 | Cleanup | `/circuit:cleanup` | Systematic dead code, stale docs, and codebase cleanup |
+| Migrate | `/circuit:migrate` | Large-scale migrations: framework swaps, dependency replacements, architecture transitions |
 | Circuit Create | `/circuit:create` | Authoring a new circuit from a workflow description |
 | Dry Run | `/circuit:dry-run` | Validating a circuit is mechanically sound before real use |
 | Setup | `/circuit:setup` | Discover installed skills and generate circuit.config.yaml |
@@ -443,6 +444,9 @@ circuit/
       circuit.yaml
       SKILL.md
     circuit-harden-spec/
+      circuit.yaml
+      SKILL.md
+    circuit-migrate/
       circuit.yaml
       SKILL.md
     circuit-repair-flow/

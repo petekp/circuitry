@@ -53,6 +53,7 @@ The router picks the right circuit for your task. Start there.
 | **Repair Flow** | `/circuit:repair-flow` | Fix a broken or flaky end-to-end flow |
 | **Ratchet Quality** | `/circuit:ratchet-quality` | Autonomous overnight quality improvement |
 | **Cleanup** | `/circuit:cleanup` | Dead code and stale docs sweep |
+| **Migrate** | `/circuit:migrate` | Framework swaps, dependency replacements, architecture transitions |
 | **Circuit Create** | `/circuit:create` | Author a new circuit from a workflow description |
 | **Dry Run** | `/circuit:dry-run` | Validate a circuit skill's mechanical soundness |
 | **Setup** | `/circuit:setup` | Discover skills and generate circuit.config.yaml |

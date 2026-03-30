@@ -13,6 +13,7 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 | Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
 | Ratchet Quality | `/circuit:ratchet-quality` | Overnight unattended quality improvement runs |
 | Cleanup | `/circuit:cleanup` | Systematic dead code, stale docs, and codebase detritus cleanup |
+| Migrate | `/circuit:migrate` | Large-scale migrations, framework swaps, architecture transitions |
 | Circuit Create | `/circuit:create` | Authoring a new circuit from a natural-language workflow description |
 | Dry Run | `/circuit:dry-run` | Validating that a circuit skill is mechanically sound before real use |
 | Setup | `/circuit:setup` | Discover installed skills and generate circuit.config.yaml |
@@ -82,6 +83,15 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 
 ---
 
+### Migrate
+
+**Invoke:** `/circuit:migrate`
+**Phases:** Scope, Inventory, Strategy, Execution, Verification (8 steps)
+**Artifact chain:** `migration-brief.md` -> `dependency-inventory.md` + `risk-assessment.md` -> `coexistence-plan.md` -> `migration-steer.md` -> `batch-log.md` -> `verification-report.md` -> `cutover-report.md`
+**Example:** You need to swap from Express to Fastify across a large API surface. The circuit locks a migration brief with rollback requirements and coexistence constraints, dispatches parallel workers to scan every dependency and assess risk, synthesizes a coexistence plan where old and new routers run side by side, gets your approval on batch order, delegates batched migration to manage-codex (each batch independently verifiable with rollback), runs a full verification pass to confirm no leftover references, and produces a cutover report with a ready/revise verdict.
+
+---
+
 ### Circuit Create
 
 **Invoke:** `/circuit:create`
@@ -125,6 +135,7 @@ Some circuits look similar on the surface. Here's how to tell them apart:
 |-----------------|----------|--------|-----|
 | Make the codebase better | `ratchet-quality` | `cleanup` | Ratchet-quality improves quality; cleanup removes dead weight |
 | Remove dead code and stale docs | `cleanup` | `ratchet-quality` | Cleanup removes; ratchet-quality refactors and improves |
+| Migrate a framework or dependency | `migrate` | `develop` | Migrate handles dual-system coexistence; develop builds greenfield |
 | Build a feature from an idea | `develop` | `harden-spec` | Develop handles the full lifecycle; harden-spec only reviews existing specs |
 | Review an existing RFC before building | `harden-spec` | `develop` | Harden-spec stress-tests a document without writing code |
 | Choose between approaches | `decide` | `develop` | Decide resolves which option; develop implements the chosen one |
@@ -160,6 +171,7 @@ Use this decision tree to find the right starting point:
 - **"I need to build a non-trivial feature end to end"** -> `develop`
 - **"I want overnight autonomous quality improvement"** -> `ratchet-quality`
 - **"I need to clean up dead code, stale docs, or codebase detritus"** -> `cleanup`
+- **"I need to migrate from one framework/library/architecture to another"** -> `migrate`
 - **"I want to turn a workflow into a reusable circuit"** -> `create`, then `dry-run`
 - **"I want to verify a circuit works before using it for real"** -> `dry-run`
 - **"I am not sure which circuit fits"** -> `router`

@@ -81,6 +81,7 @@ EXPECTED_SKILLS=(
   circuit-develop
   circuit-dry-run
   circuit-harden-spec
+  circuit-migrate
   circuit-ratchet-quality
   circuit-repair-flow
   circuit-router
