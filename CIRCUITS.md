@@ -130,6 +130,26 @@ Some circuits look similar on the surface. Here's how to tell them apart:
 | Choose between approaches | `decide` | `develop` | Decide resolves which option; develop implements the chosen one |
 | Choose between approaches, then build | `decide` -> `develop` | — | Sequence them: decision first, then implementation |
 
+### Decision Boundaries
+
+**decide vs. develop**
+The key question: *Is the deliverable a decision guide, or shipped code?*
+- Use `decide` when the decision itself is the end product — a durable guide that downstream implementers follow without relitigating. No code is written.
+- Use `develop` when the deliverable is shipped code, even if the approach is uncertain. Develop has its own decision phase built in (Steps 4-6: generate candidates → adversarial evaluation → tradeoff decision).
+- Use `decide → develop` as a sequence only when the decision is so consequential that it deserves its own artifact chain before any implementation begins — e.g., choosing between fundamentally different system architectures that affect multiple teams.
+
+**harden-spec vs. develop**
+The key question: *Does a written document already exist?*
+- Use `harden-spec` when an RFC, PRD, or design doc exists and needs stress-testing before anyone builds from it. The input is a document; the output is an amended document + implementation plan.
+- Use `develop` when the idea lives in someone's head, a Slack thread, or a brief description. Develop's alignment phase (Step 1: intent lock) extracts and structures the intent from scratch.
+- Rule of thumb: if you can point to a file or URL as the starting artifact, it's harden-spec. If the starting artifact needs to be created, it's develop.
+
+**ratchet-quality vs. cleanup**
+The key question: *Are you improving living code or removing dead code?*
+- Use `ratchet-quality` when the code is actively used but could be better — refactoring for clarity, improving test coverage, tightening types, reducing complexity.
+- Use `cleanup` when the code, docs, or artifacts are dead weight — unreachable functions, stale README sections, orphaned test fixtures, TODO comments referencing closed issues.
+- When unsure: if you'd describe the work as "make this better," it's ratchet. If you'd describe it as "get rid of this," it's cleanup.
+
 ## Choosing a Circuit
 
 Use this decision tree to find the right starting point:

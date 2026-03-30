@@ -1,0 +1,135 @@
+schema_version: "1"
+circuit:
+  id: migrate
+  version: "2026-03-29"
+  title: Migrate
+  description: >
+    Artifact-driven circuit for large-scale migrations and refactors — framework swaps,
+    dependency replacements, architecture transitions, and incremental rewrites.
+    Chains migration brief → dependency inventory + risk assessment → coexistence plan →
+    batched execution → verification → cutover through 5 phases.
+    Topology only — this file does not encode runtime behavior or adapter contracts.
+
+  phases:
+    - id: scope
+      title: Scope
+      execution: serial
+      steps:
+        - id: migration-brief
+          title: Migration Brief
+          action: interactive
+          produces: migration-brief.md
+          gate:
+            type: outputs_present
+            required: [migration-brief.md]
+            checks:
+              - "Migration Target non-empty"
+              - "Rollback Requirements non-empty"
+              - "Success Criteria non-empty"
+              - "Coexistence Constraints non-empty"
+
+    - id: inventory
+      title: Inventory
+      execution: serial
+      steps:
+        - id: inventory-probes
+          title: Dependency Scan + Risk Assessment
+          action: dispatch
+          execution: parallel
+          workers:
+            - id: dependency-scan
+              title: Dependency Scan
+              skills: []
+              produces: dependency-inventory.md
+            - id: risk-assessment
+              title: Risk Assessment
+              skills: []
+              produces: risk-assessment.md
+          consumes: [migration-brief.md]
+          produces: [dependency-inventory.md, risk-assessment.md]
+          gate:
+            type: outputs_present
+            required: [dependency-inventory.md, risk-assessment.md]
+            checks:
+              - "Every dependency has exact file/function reference"
+              - "Every dependency classified by difficulty and risk"
+
+    - id: strategy
+      title: Strategy
+      execution: serial
+      steps:
+        - id: coexistence-plan
+          title: Coexistence Plan
+          action: synthesis
+          consumes: [migration-brief.md, dependency-inventory.md, risk-assessment.md]
+          produces: coexistence-plan.md
+          gate:
+            type: outputs_present
+            required: [coexistence-plan.md]
+            checks:
+              - "Adapter/bridge pattern or routing strategy defined"
+              - "Rollback procedure verified against migration-brief.md requirements"
+              - "Batch order defined with risk-first ordering"
+        - id: migration-steer
+          title: Migration Steer
+          action: interactive
+          consumes: [coexistence-plan.md, risk-assessment.md]
+          produces: migration-steer.md
+          gate:
+            type: outputs_present
+            required: [migration-steer.md]
+            checks:
+              - "User approved batch order"
+              - "User approved coexistence strategy"
+              - "Scope cuts named when present"
+
+    - id: execution
+      title: Execution
+      execution: serial
+      steps:
+        - id: batch-migration
+          title: Batch Migration
+          action: dispatch
+          adapter: manage-codex
+          consumes: [coexistence-plan.md, migration-steer.md, risk-assessment.md]
+          produces: batch-log.md
+          max_attempts: 3
+          notes: >
+            Delegates to manage-codex. Each batch: migrate code, update tests,
+            verify old+new pass, commit. Orchestrator synthesizes batch-log.md
+            from convergence output.
+          gate:
+            type: evidence-reopen
+            outcomes:
+              all_batches_pass: continue
+              coexistence_invalidated: reopen-coexistence-plan
+
+    - id: verification
+      title: Verification
+      execution: serial
+      steps:
+        - id: full-verification
+          title: Full Verification
+          action: dispatch
+          consumes: [migration-brief.md, dependency-inventory.md, batch-log.md]
+          produces: verification-report.md
+          gate:
+            type: outputs_present
+            required: [verification-report.md]
+            checks:
+              - "Full test suite results present"
+              - "Leftover reference scan completed"
+              - "No dual-system artifacts remain or explicitly deferred"
+        - id: cutover-review
+          title: Cutover Review
+          action: dispatch
+          consumes: [coexistence-plan.md, batch-log.md, verification-report.md]
+          produces: cutover-report.md
+          gate:
+            type: verdict-reopen
+            outcomes:
+              ready: continue
+              revise: reopen-batch-migration
+          notes: >
+            Assessment only — worker does not modify source code.
+            If REVISE, orchestrator reopens Step 6 with the governing issue.

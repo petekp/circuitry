@@ -14,7 +14,11 @@ Routing only. This skill is not a circuit.
 
 1. Treat `/circuit:router <text>` as the strongest signal.
 2. If args are empty, read the current thread and any referenced handoff, spec, PRD, bug report, or circuit directory.
-3. If still ambiguous, ask exactly one disambiguating question.
+3. If still ambiguous, ask exactly one disambiguating question. Use the targeted probes below when a specific pair is in conflict:
+   - **decide vs. develop:** "Is the deliverable a decision guide for others to follow, or shipped code?"
+   - **harden-spec vs. develop:** "Does a written document (RFC, PRD, design doc) already exist, or does the idea need to be extracted from scratch?"
+   - **ratchet-quality vs. cleanup:** "Are you improving living code (refactoring, coverage, types) or removing dead weight (unreachable code, stale docs, orphaned files)?"
+   - **decide vs. harden-spec:** "Is the decision still open (multiple viable options), or has one approach been chosen and written up as a spec that needs stress-testing?"
 
 Route only when positive signals match and exclusions do not.
 
