@@ -7,23 +7,25 @@
 set -uo pipefail
 
 # ── Prerequisite check: Codex CLI ─────────────────────────────────────
-if ! command -v codex >/dev/null 2>&1; then
-  cat <<'WARNING'
-> **Warning: Codex CLI not found**
+if command -v codex >/dev/null 2>&1; then
+  DISPATCH_BACKEND="codex"
+else
+  DISPATCH_BACKEND="agent"
+  cat <<'NOTE'
+> **Dispatch backend: Agent (Codex CLI not found)**
 >
-> The Circuit plugin dispatches heavy implementation to Codex workers.
-> Without `codex`, circuits that use `manage-codex` will fail.
+> Dispatch steps will use Claude Code's **Agent tool** (`isolation: "worktree"`)
+> instead of `codex exec`. Circuits work fully in this mode -- the artifact chain,
+> gates, and resume logic are identical regardless of backend.
 >
-> Install it:
+> For better parallelism, you can optionally install Codex CLI:
 > ```
 > npm install -g @openai/codex
 > ```
->
-> Then verify: `codex --version`
 
 ---
 
-WARNING
+NOTE
 fi
 
 # ── Banner ────────────────────────────────────────────────────────────
@@ -49,15 +51,16 @@ You have access to the **Circuit** plugin — structured multi-phase workflows f
 
 ## How It Works
 
-Circuits produce **artifact chains** — each phase writes a durable file that feeds the next. Heavy implementation is dispatched to **Codex workers** via the `manage-codex` orchestrator.
+Circuits produce **artifact chains** — each phase writes a durable file that feeds the next. Heavy implementation is dispatched to workers via the `manage-codex` orchestrator. Workers run via **Codex CLI** when installed, or via Claude Code's **Agent tool** as a fallback.
 
-The relay scripts (`compose-prompt.sh`, `update-batch.sh`) handle prompt assembly and batch state.
+The relay scripts (`compose-prompt.sh`, `dispatch.sh`, `update-batch.sh`) handle prompt assembly, backend dispatch, and batch state.
 
 ## Quick Start
 
 1. Copy relay scripts to your project: `cp -r "$(claude plugin path circuit)/scripts/relay" ./scripts/relay`
-2. Ensure `codex` CLI is installed: `npm install -g @openai/codex`
-3. Invoke a circuit: `/circuit:router <describe your task>`
+2. Invoke a circuit: `/circuit:router <describe your task>`
 
-Use `/manage-codex` to orchestrate Codex workers directly without a circuit wrapper.
+Optionally install Codex CLI for better parallelism: `npm install -g @openai/codex`
+
+Use `/manage-codex` to orchestrate workers directly without a circuit wrapper.
 BANNER

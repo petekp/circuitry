@@ -100,8 +100,14 @@ example, slug `foo-bar` produces `name: circuit:foo-bar` and lives at
 you are compiling includes dispatch steps, author them with these limits:
 
 - Default to 1-2 domain skills and at most 3 total skills per autonomous dispatch
-- Never append interactive skills to `codex exec --full-auto`
+- Never append interactive skills to autonomous worker dispatches
 - Document any exception to the skill-budget ceiling explicitly in the generated circuit
+
+## Dispatch Backend
+
+Generated circuits should use the dispatch helper (`./scripts/relay/dispatch.sh`)
+which auto-detects whether Codex CLI or Agent fallback should be used. The
+artifact chain, gates, and handoff format are identical regardless of backend.
 
 ## Canonical Header Schema
 
@@ -187,7 +193,7 @@ must include all of the following:
 
 - child root creation
 - `CHARTER.md` creation from the parent execution contract
-- the real `compose-prompt.sh` and `codex exec --full-auto` calls
+- the real `compose-prompt.sh` and `dispatch.sh` calls
 - required child files: `CHARTER.md`, `batch.json`,
   `handoffs/handoff-<slice-id>.md`, and `handoffs/handoff-converge.md`
 - readback order: `handoff-converge.md`, then `batch.json`, then the last slice handoff
@@ -457,7 +463,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 10b. **Apply conciseness rules:**
     - Setup must not re-list inputs that Step 1 captures — forward-reference only
     - The canonical header schema should be shown compressed (required section names + relay heading rule), not as a full markdown template
-    - Show the dispatch recipe (compose-prompt + codex exec) in full exactly once; subsequent steps reference it
+    - Show the dispatch recipe (compose-prompt + dispatch.sh) in full exactly once; subsequent steps reference it
     - Tighten adapter seam contracts to required fields, not heredoc templates — keep child-root layout, required CHARTER sections, readback order, and escalation rule; cut the shell heredoc
     - Remove standalone `Verify: test -f` lines — the gate owns existence checks
     - Principles should not restate the intro or the dual-mode description in abstract form
@@ -483,7 +489,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 | `AP-02` | Copy-The-Handoff - a generic handoff is copied verbatim into a semantic artifact |
 | `AP-03` | Template Misbinding - a step uses `review`, `ship-review`, `converge`, or `implement` for the wrong job |
 | `AP-04` | Placeholder Leakage - unresolved placeholders reach the worker prompt |
-| `AP-05` | Interactive Skill In Autonomous Dispatch - an AskUserQuestion-style skill is appended to `codex exec --full-auto` |
+| `AP-05` | Interactive Skill In Autonomous Dispatch - an AskUserQuestion-style skill is appended to an autonomous worker dispatch |
 | `AP-06` | Relay Layout Drift - parent, child, and adapter layouts assume different ownership boundaries |
 | `AP-07` | Resume By Final Artifacts Only - resume logic ignores step-local relay state such as `batch.json` |
 | `AP-08` | Review Overwrites Implementation Evidence - the only implementation story lives in a path reused by review |
@@ -500,7 +506,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 | `AP-19` | Review Step Mutates Source - a verdict step also changes code or rewrites the artifact under review |
 | `AP-20` | Reopen Without Governing Issue - the circuit says "reopen" but never records what issue caused it |
 | `AP-21` | Setup Duplicates Intake - the Setup section lists runtime inputs that Step 1's interactive intake already captures. Keep runtime inputs in one place (the intake step). Setup should only contain `RUN_ROOT` creation and a forward reference to Step 1. |
-| `AP-22` | Repeated Dispatch Shell Blocks - near-identical `compose-prompt.sh \| codex exec --full-auto` blocks appear in every dispatch step. Show the full recipe once (first dispatch step), then reference it. Per-step blocks should only name the header path, skills, and template if non-default. |
+| `AP-22` | Repeated Dispatch Shell Blocks - near-identical `compose-prompt.sh` + `dispatch.sh` blocks appear in every dispatch step. Show the full recipe once (first dispatch step), then reference it. Per-step blocks should only name the header path, skills, and template if non-default. |
 | `AP-23` | Duplicate Readback Orders - the same readback order appears in both the adapter contract and a later summary. Keep it in one location (the adapter contract section). |
 | `AP-24` | Standalone Verify Lines - a `Verify: test -f ...` line that duplicates the gate check immediately below it. Every existence check should live in the gate, not also as a standalone line. |
 | `AP-25` | Circuit Breaker Echoes Alternatives - a "Good alternatives" list at the end that repeats the redirects already named in the circuit breaker bullets. Remove the echo list. |
@@ -604,9 +610,9 @@ Assemble and dispatch:
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-analysis.md"
 
-cat "${RUN_ROOT}/prompt-analysis.md" | \
-  codex exec --full-auto \
-  -o "${RUN_ROOT}/last-messages/last-message-analysis.txt" -
+./scripts/relay/dispatch.sh \
+  --prompt "${RUN_ROOT}/prompt-analysis.md" \
+  --output "${RUN_ROOT}/last-messages/last-message-analysis.txt"
 ```
 
 Verify: `test -f ${RUN_ROOT}/artifacts/circuit-analysis.md`
@@ -655,9 +661,9 @@ Assemble and dispatch:
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-authoring.md"
 
-cat "${RUN_ROOT}/prompt-authoring.md" | \
-  codex exec --full-auto \
-  -o "${RUN_ROOT}/last-messages/last-message-authoring.txt" -
+./scripts/relay/dispatch.sh \
+  --prompt "${RUN_ROOT}/prompt-authoring.md" \
+  --output "${RUN_ROOT}/last-messages/last-message-authoring.txt"
 ```
 
 Verify: `test -f ${STAGING}/circuit.yaml && test -f ${STAGING}/SKILL.md && test -f ${RUN_ROOT}/artifacts/cross-validation.md`
@@ -702,9 +708,9 @@ Assemble and dispatch:
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-validation.md"
 
-cat "${RUN_ROOT}/prompt-validation.md" | \
-  codex exec --full-auto \
-  -o "${RUN_ROOT}/last-messages/last-message-validation.txt" -
+./scripts/relay/dispatch.sh \
+  --prompt "${RUN_ROOT}/prompt-validation.md" \
+  --output "${RUN_ROOT}/last-messages/last-message-validation.txt"
 ```
 
 Verify: `test -f ${RUN_ROOT}/artifacts/validation-report.md`
@@ -762,8 +768,8 @@ Refinement checklist:
    skill discovery? Does it encode trigger phrases, phase count, and negative scope?
    Would a user typing a natural request actually match this skill?
 2. **Dispatch patterns** — Do all `dispatch` steps use the correct
-   `compose-prompt.sh` flags and `codex exec --full-auto` patterns? Are relay
-   headings present in every header?
+   `compose-prompt.sh` flags and `dispatch.sh` patterns? Are relay headings
+   present in every header?
 3. **Session ergonomics** — Will this circuit feel natural when invoked via
    `/circuit:<name>`? Are interactive steps conversational? Are synthesis steps
    clear about what the orchestrator writes?

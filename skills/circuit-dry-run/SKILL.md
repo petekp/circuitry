@@ -121,14 +121,14 @@ is to surface the full mechanical failure set.
 
 | # | Dimension | What to inspect | PASS condition |
 |---|-----------|-----------------|----------------|
-| 1 | Setup completeness | Directories created in setup vs every parent directory needed by prompt headers, outputs, handoffs, `--out`, `codex exec -o` | Every required parent directory is created before that step needs it |
+| 1 | Setup completeness | Directories created in setup vs every parent directory needed by prompt headers, outputs, handoffs, `--out`, dispatch output | Every required parent directory is created before that step needs it |
 | 2 | Path resolution | Every file path and variable reference in setup, action, headers, gates, commands | Every path can exist after concrete substitution; assumptions are recorded |
-| 3 | Command validity | All `compose-prompt.sh` and `codex exec` invocations; interactive/synthesis instructions | Flags match the real script interface; output parent directories exist |
+| 3 | Command validity | All `compose-prompt.sh` and `dispatch.sh` invocations; interactive/synthesis instructions | Flags match the real script interface; output parent directories exist |
 | 4 | Artifact chain closure | `consumes` and `produces` across step boundaries | Every consumed artifact has a prior producer with the exact name. Every produced artifact is either consumed by a later step or explicitly terminal. No orphaned byproducts (e.g., template-emitted files that nothing reads) |
 | 5 | Canonical header compliance | Dispatch step prompt header contract | Header includes `## Mission`, `## Inputs`, `## Output` (with Path + Schema), `## Success Criteria`, `## Handoff Instructions` with `### Files Changed`, `### Tests Run`, `### Completion Claim` |
 | 6 | Template contamination | `--template` use and the template's implied output contract | No template used, OR any template is proven to match the step's expected artifact |
 | 7 | Placeholder leak | Unresolved `{...}` tokens after simulated prompt assembly | No unresolved placeholders remain in the final worker prompt |
-| 8 | Action-type consistency | Match between declared action and actual behavior | Interactive → user prompt; dispatch → `codex exec --full-auto`; synthesis → orchestrator writes. No interactive skills in autonomous dispatches |
+| 8 | Action-type consistency | Match between declared action and actual behavior | Interactive → user prompt; dispatch → worker execution (via Codex or Agent); synthesis → orchestrator writes. No interactive skills in autonomous dispatches |
 | 9 | Gate validity | Gate text vs the output schema actually promised by the step | Every gate references concrete sections the schema contains AND every gate outcome maps cleanly to the circuit's next action (continue, reopen, escalate). Loops like "re-run on failure" must have a concrete artifact path and execution contract |
 | 10 | circuit.yaml topology match | Step ids, titles, actions, consumes, produces, parallel markers, execution mode, gate shape | Every runtime step has a matching topology entry with agreeing metadata on ALL fields. Title drift counts as a failure |
 
@@ -220,7 +220,7 @@ the failure immediately.
 #### 4b. Execute setup mentally
 Write the exact setup commands with resolved paths. Compare what they create against what
 the later action needs. Look for: missing `handoffs/`, missing `last-messages/`, missing
-parent for `prompt-header.md`, `codex exec -o` parents never created.
+parent for `prompt-header.md`, dispatch output parents never created.
 
 #### 4c. Write the concrete prompt header
 For dispatch steps, write out the actual header text the orchestrator would place into
@@ -336,7 +336,7 @@ Format:
 1. [Path][SKILL.md:L142-L151] Step 2A writes
    `${RUN_ROOT}/phases/step-2a/last-messages/last-message.txt`,
    but setup never creates `${RUN_ROOT}/phases/step-2a/last-messages/`.
-   `codex exec -o` would fail before the worker can complete.
+   The dispatch would fail before the worker can complete.
 ```
 
 For drift bugs between files, cite both:

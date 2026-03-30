@@ -5,9 +5,10 @@ Structured workflow circuits for Claude Code -- disciplined multi-phase approach
 This plugin gives Claude Code nine reusable circuits for tackling complex software
 engineering work. Each circuit is a multi-phase workflow that produces **artifact
 chains** -- durable files that track progress and survive session restarts. Heavy
-implementation work is dispatched to **Codex workers** for parallel execution,
-while interactive steps keep you in control of key decisions. The result is
-reliable, resumable engineering workflows that don't lose state when a session
+implementation work is dispatched to **workers** -- either via Codex CLI for
+parallel execution, or via Claude Code's Agent tool as a fallback when Codex is
+not installed. Interactive steps keep you in control of key decisions. The result
+is reliable, resumable engineering workflows that don't lose state when a session
 ends or a context window fills up.
 
 ## What's Inside
@@ -55,9 +56,11 @@ cp -r "$(claude plugin path circuit)/scripts/relay" ./scripts/relay
 ### Prerequisites
 
 - **Claude Code** -- the host environment
-- **Codex CLI** -- `npm install -g @openai/codex` (dispatch engine for worker tasks)
 - **Python 3** -- required by `update-batch.sh` for deterministic state management
-- **AGENTS.md** -- create one in your project root so Codex workers understand your codebase conventions
+- **AGENTS.md** -- create one in your project root so workers understand your codebase conventions
+- **Codex CLI** (optional) -- `npm install -g @openai/codex` for better parallelism.
+  When Codex is not installed, dispatch steps automatically fall back to Claude Code's
+  Agent tool with worktree isolation. All circuits work fully in both modes.
 
 ### Verify installation
 
@@ -90,9 +93,9 @@ Here's what happens:
 3. **Interactive steps ask for your input** at decision points -- you set
    priorities, choose between options, and approve direction.
 
-4. **Dispatch steps run Codex workers** for heavy lifting -- research,
-   implementation, review, and convergence all happen in parallel worker
-   processes.
+4. **Dispatch steps run workers** for heavy lifting -- research,
+   implementation, review, and convergence happen in worker processes
+   (via Codex CLI when installed, or Agent fallback otherwise).
 
 5. **Resume awareness** means a fresh Claude Code session can pick up exactly
    where the last one stopped. The artifact chain is the state -- no chat
@@ -216,7 +219,7 @@ graph LR
     style K fill:#4a3a1a,stroke:#8a6a2a
 ```
 
-**Green** = interactive (you decide) · **Blue** = synthesis (Claude combines) · **Amber** = dispatch (Codex workers execute)
+**Green** = interactive (you decide) · **Blue** = synthesis (Claude combines) · **Amber** = dispatch (workers execute via Codex or Agent)
 
 If a session dies at any point, a fresh session reads the artifacts on disk,
 finds the last completed file, and resumes from the next step. No chat history
@@ -231,7 +234,7 @@ graph TD
     end
     subgraph Dispatch
         D1[Orchestrator writes prompt header] --> D2[compose-prompt.sh assembles full prompt]
-        D2 --> D3[codex exec runs the worker]
+        D2 --> D3[dispatch.sh runs the worker]
         D3 --> D4[Worker writes handoff + artifact]
     end
     subgraph Synthesis
@@ -242,7 +245,7 @@ graph TD
 | Action | Who does the work | When to use |
 |--------|-------------------|-------------|
 | **interactive** | You + Claude together | Alignment, priority setting, approval gates |
-| **dispatch** | Codex worker (separate process) | Research, implementation, code review |
+| **dispatch** | Worker (Codex CLI or Agent fallback) | Research, implementation, code review |
 | **synthesis** | Claude alone | Combining evidence, scoring options, writing contracts |
 
 ### Quality gates
@@ -273,24 +276,25 @@ relevant upstream step and re-derives everything downstream.
 
 ### The relay pipeline
 
-Dispatch steps use two shell scripts to communicate with Codex workers:
+Dispatch steps use three shell scripts to communicate with workers:
 
 ```mermaid
 sequenceDiagram
     participant O as Orchestrator (Claude)
     participant C as compose-prompt.sh
-    participant X as codex exec
-    participant W as Codex Worker
+    participant D as dispatch.sh
+    participant W as Worker (Codex or Agent)
     participant U as update-batch.sh
 
     O->>O: Write prompt header (mission, inputs, output schema)
     O->>C: --header prompt-header.md --skills tdd --template implement
     C->>C: Assemble: header + skill SKILL.md + template
     C-->>O: prompt.md
-    O->>X: cat prompt.md | codex exec --full-auto
-    X->>W: Worker executes in isolated session
-    W-->>X: handoff-slice-001.md
-    X-->>O: Worker complete
+    O->>D: --prompt prompt.md --output last-message.txt
+    D->>D: Auto-detect backend (codex or agent)
+    D->>W: Worker executes in isolated session
+    W-->>D: handoff-slice-001.md
+    D-->>O: Worker complete
     O->>O: Read handoff, spot-check claims
     O->>U: --slice slice-001 --event review_clean
     U->>U: Update batch.json deterministically
@@ -298,6 +302,7 @@ sequenceDiagram
 
 - **`compose-prompt.sh`** assembles a worker prompt from a task-specific header,
   optional domain skills, and a template (implement, review, ship-review, converge)
+- **`dispatch.sh`** auto-detects the backend (Codex CLI or Agent) and executes workers
 - **`update-batch.sh`** manages batch state transitions deterministically --
   the orchestrator never hand-edits JSON
 
@@ -362,9 +367,9 @@ For the full design rationale, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Domain Skills (Optional Companions)
 
-Circuits can dispatch Codex workers with domain-specific skills injected into
-their prompts via `compose-prompt.sh --skills`. These skills are **not bundled**
-with the Circuit plugin -- install them separately if your project uses them.
+Circuits can dispatch workers with domain-specific skills injected into their
+prompts via `compose-prompt.sh --skills`. These skills are **not bundled** with
+the Circuit plugin -- install them separately if your project uses them.
 
 | Skill | Enhances |
 |-------|----------|
@@ -420,7 +425,8 @@ circuit/
     session-start.sh          # Prerequisite checks + available circuits table
   scripts/
     relay/
-      compose-prompt.sh       # Assembles Codex worker prompts from parts
+      compose-prompt.sh       # Assembles worker prompts from parts
+      dispatch.sh             # Backend-agnostic worker dispatch (Codex or Agent)
       update-batch.sh         # Deterministic batch state management
     setup.sh                  # Copies relay scripts into a target project
     verify-install.sh         # Checks all prerequisites and runs smoke tests

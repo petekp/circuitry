@@ -111,6 +111,12 @@ Handoff instructions must include these exact relay headings:
 - `### Completion Claim`
 - `### Issues Found`
 - `### Next Steps`
+### Dispatch Backend
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. The artifact chain, gates, and handoff format are identical
+regardless of backend.
+
 ### Shared Dispatch Recipe
 All non-`manage-codex` dispatch steps use the same relay recipe:
 ```bash
@@ -121,9 +127,9 @@ mkdir -p "${STEP_ROOT}/handoffs" "${STEP_ROOT}/last-messages"
   --skills "<skills>" \
   --root "${STEP_ROOT}" \
   --out "${STEP_ROOT}/prompt.md"
-cat "${STEP_ROOT}/prompt.md" | \
-  codex exec --full-auto \
-  -o "${STEP_ROOT}/last-messages/last-message.txt" -
+./scripts/relay/dispatch.sh \
+  --prompt "${STEP_ROOT}/prompt.md" \
+  --output "${STEP_ROOT}/last-messages/last-message.txt"
 ```
 Parallel steps use per-worker subdirectories to avoid file collisions:
 ```bash

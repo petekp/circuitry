@@ -71,7 +71,55 @@ When a step says `<domain-skills>`, pick 1-2 skills matching the affected code:
 - Both: `rust,swift-apps`
 
 Never exceed 3 total skills per dispatch. Do not append interactive skills
-(like `proposal-review` or `grill-me`) to autonomous `codex exec` dispatches.
+(like `proposal-review` or `grill-me`) to autonomous worker dispatches.
+
+## Dispatch Backend
+
+Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
+backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
+fall back to Agent. The assembled prompt is identical for both backends.
+
+**Codex backend** (when `codex` CLI is installed):
+```bash
+cat ${step_dir}/prompt.md | \
+  codex exec --full-auto \
+  -o ${step_dir}/last-messages/last-message.txt -
+```
+
+**Agent backend** (when `codex` CLI is NOT installed):
+Use the Agent tool with the assembled prompt as the task and `isolation: "worktree"`:
+```
+Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")
+```
+After the Agent completes, verify its output artifacts exist at the expected paths.
+If the Agent did not write to the expected artifact path, check its response for the
+artifact content and write it manually.
+
+**Backend detection:**
+```bash
+if command -v codex >/dev/null 2>&1; then
+  # Use Codex backend
+  cat ${step_dir}/prompt.md | codex exec --full-auto -o ${step_dir}/last-messages/last-message.txt -
+else
+  # Use Agent backend — invoke the Agent tool with the prompt content
+  # Agent(task=<prompt contents>, isolation="worktree")
+fi
+```
+
+Or use the dispatch helper:
+```bash
+./scripts/relay/dispatch.sh \
+  --prompt ${step_dir}/prompt.md \
+  --output ${step_dir}/last-messages/last-message.txt
+```
+
+The artifact chain, gates, handoff format, and resume logic are **identical**
+regardless of backend. The only difference is the execution mechanism.
+
+**Parallel dispatch:** Codex supports true parallel workers (`&` + `wait`). Agent
+backend dispatches sequentially unless the orchestrator uses multiple Agent tool calls
+in one response. When backend is Agent and a step has parallel workers (e.g., Step 2),
+dispatch them as separate sequential Agent calls.
 
 ## Canonical Header Schema
 
@@ -160,7 +208,7 @@ Write their response to `${RUN_ROOT}/artifacts/intent-brief.md`:
 
 **Objective:** Gather external patterns and internal system surface in parallel.
 
-Dispatch two Codex workers. Each header is self-contained (no `--template`).
+Dispatch two workers. Each header is self-contained (no `--template`).
 
 **Setup:**
 ```bash
@@ -196,7 +244,7 @@ Include the canonical header schema with:
 ## Source Confidence
 ```
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-2a/prompt-header.md \
@@ -204,9 +252,9 @@ Include the canonical header schema with:
   --root ${RUN_ROOT}/phases/step-2a \
   --out ${RUN_ROOT}/phases/step-2a/prompt.md
 
-cat ${RUN_ROOT}/phases/step-2a/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-2a/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-2a/prompt.md \
+  --output ${RUN_ROOT}/phases/step-2a/last-messages/last-message.txt
 ```
 
 ```bash
@@ -216,9 +264,9 @@ cat ${RUN_ROOT}/phases/step-2a/prompt.md | \
   --root ${RUN_ROOT}/phases/step-2b \
   --out ${RUN_ROOT}/phases/step-2b/prompt.md
 
-cat ${RUN_ROOT}/phases/step-2b/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-2b/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-2b/prompt.md \
+  --output ${RUN_ROOT}/phases/step-2b/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -291,7 +339,7 @@ mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-me
   boundary, failure surface, data model. At least 3 options.
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-4/prompt-header.md \
@@ -299,9 +347,9 @@ mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-me
   --root ${RUN_ROOT}/phases/step-4 \
   --out ${RUN_ROOT}/phases/step-4/prompt.md
 
-cat ${RUN_ROOT}/phases/step-4/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-4/prompt.md \
+  --output ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -338,7 +386,7 @@ mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-me
   risk dimensions, not just feature comparison.
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
@@ -346,9 +394,9 @@ mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-me
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-cat ${RUN_ROOT}/phases/step-5/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
+  --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -438,7 +486,7 @@ mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-me
 - Success criteria: Code was written and run. Evidence is from execution, not reasoning.
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-8/prompt-header.md \
@@ -446,9 +494,9 @@ mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-me
   --root ${RUN_ROOT}/phases/step-8 \
   --out ${RUN_ROOT}/phases/step-8/prompt.md
 
-cat ${RUN_ROOT}/phases/step-8/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-8/prompt.md \
+  --output ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -510,9 +558,9 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
      --root ${IMPL_ROOT} \
      --out ${IMPL_ROOT}/prompt.md
 
-   cat ${IMPL_ROOT}/prompt.md | \
-     codex exec --full-auto \
-     -o ${IMPL_ROOT}/last-messages/last-message-manage-codex.txt -
+   ./scripts/relay/dispatch.sh \
+     --prompt ${IMPL_ROOT}/prompt.md \
+     --output ${IMPL_ROOT}/last-messages/last-message-manage-codex.txt
    ```
 
 4. **After manage-codex completes**, the orchestrator synthesizes `implementation-handoff.md`:
@@ -581,7 +629,7 @@ mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-
   Findings are categorized by severity, not listed as a flat list.
 - Handoff: `handoffs/handoff.md`
 
-**Dispatch (no --template):**
+**Compose and dispatch (no --template):**
 ```bash
 ./scripts/relay/compose-prompt.sh \
   --header ${RUN_ROOT}/phases/step-10/prompt-header.md \
@@ -589,9 +637,9 @@ mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-
   --root ${RUN_ROOT}/phases/step-10 \
   --out ${RUN_ROOT}/phases/step-10/prompt.md
 
-cat ${RUN_ROOT}/phases/step-10/prompt.md | \
-  codex exec --full-auto \
-  -o ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt -
+./scripts/relay/dispatch.sh \
+  --prompt ${RUN_ROOT}/phases/step-10/prompt.md \
+  --output ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt
 ```
 
 **Verify and promote:**
@@ -601,7 +649,7 @@ cp ${RUN_ROOT}/phases/step-10/ship-review.md ${RUN_ROOT}/artifacts/ship-review.m
 ```
 
 **If verdict is `ISSUES FOUND` with critical findings:**
-1. The orchestrator addresses critical findings (directly or via a targeted Codex worker)
+1. The orchestrator addresses critical findings (directly or via a targeted worker dispatch)
 2. Re-runs Step 10 (max 2 total attempts)
 3. If still `ISSUES FOUND` after 2 attempts → escalate to user
 
