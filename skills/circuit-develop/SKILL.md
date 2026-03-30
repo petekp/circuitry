@@ -1,5 +1,5 @@
 ---
-name: circuit:research-to-implementation
+name: circuit:develop
 description: >
   Artifact-driven circuit for taking a significant feature from idea to shipped code.
   10 steps across 5 phases: Alignment → Evidence → Decision → Preflight → Delivery.
@@ -7,7 +7,7 @@ description: >
   implementation — not for bug fixes, single-file changes, or quick wiring tasks.
 ---
 
-# Research-to-Implementation Circuit
+# Develop Circuit
 
 An artifact-centric workflow that chains intent → constraints → decision → contract → code.
 Each phase produces a named artifact that becomes the next phase's input. The user steers

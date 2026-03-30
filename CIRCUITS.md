@@ -7,14 +7,15 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
 | Router | `/circuit:router` | Picking the right circuit when you are not sure which one fits |
-| Research-to-Implementation | `/circuit:research-to-implementation` | Taking a non-trivial feature from idea to shipped code |
-| Decision Pressure Loop | `/circuit:decision-pressure-loop` | Making architecture or protocol decisions under real uncertainty |
-| Spec Hardening | `/circuit:spec-hardening` | Turning a rough RFC, spec, or PRD into something safe to build from |
-| Flow Audit and Repair | `/circuit:flow-audit-and-repair` | Debugging and repairing broken end-to-end flows |
-| Autonomous Ratchet | `/circuit:autonomous-ratchet` | Overnight unattended quality improvement runs |
-| Janitor | `/circuit:janitor` | Systematic dead code, stale docs, and codebase detritus cleanup |
+| Develop | `/circuit:develop` | Taking a non-trivial feature from idea to shipped code |
+| Decide | `/circuit:decide` | Making architecture or protocol decisions under real uncertainty |
+| Harden Spec | `/circuit:harden-spec` | Turning a rough RFC, spec, or PRD into something safe to build from |
+| Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
+| Ratchet Quality | `/circuit:ratchet-quality` | Overnight unattended quality improvement runs |
+| Cleanup | `/circuit:cleanup` | Systematic dead code, stale docs, and codebase detritus cleanup |
 | Circuit Create | `/circuit:create` | Authoring a new circuit from a natural-language workflow description |
 | Dry Run | `/circuit:dry-run` | Validating that a circuit skill is mechanically sound before real use |
+| Setup | `/circuit:setup` | Discover installed skills and generate circuit.config.yaml |
 
 ## Circuit Details
 
@@ -23,61 +24,61 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 **Invoke:** `/circuit:router` or `/circuit:router <description of what you need>`
 **Phases:** Single-pass routing (not a circuit itself)
 **Artifact chain:** None -- recommends a circuit or sequence, then invokes on confirmation
-**Example:** You have a vague task -- "we need to rethink how sync works and then build the new version." The router identifies this as a decision-pressure-loop followed by research-to-implementation, explains why, and kicks off the first circuit when you confirm.
+**Example:** You have a vague task -- "we need to rethink how sync works and then build the new version." The router identifies this as a decide followed by develop, explains why, and kicks off the first circuit when you confirm.
 
 ---
 
-### Research-to-Implementation
+### Develop
 
-**Invoke:** `/circuit:research-to-implementation`
+**Invoke:** `/circuit:develop`
 **Phases:** Alignment, Evidence, Decision, Preflight, Delivery (10 steps)
 **Artifact chain:** `intent-brief.md` -> `external-digest.md` + `internal-digest.md` -> `constraints.md` -> `options.md` -> `decision-packet.md` -> `adr.md` -> `execution-packet.md` -> `seam-proof.md` -> `implementation-handoff.md` -> `ship-review.md`
 **Example:** You need to add a recording and playback system that spans the Rust core and Swift app layers. The circuit researches external patterns and internal system surface in parallel, generates distinct architectural options, pressure-tests them, gets your tradeoff decision, proves the hardest seam with a thin slice, then delegates implementation to manage-codex and runs a final ship review.
 
 ---
 
-### Decision Pressure Loop
+### Decide
 
-**Invoke:** `/circuit:decision-pressure-loop`
+**Invoke:** `/circuit:decide`
 **Phases:** Framing, Reality Mapping, Option Exploration, Pressure, Publication (8 steps)
 **Artifact chain:** `decision-brief.md` -> `current-system-map.md` -> `decision-options.md` -> `decision-scorecard.md` -> `decision-steer.md` -> `pressure-report.md` -> `decision-choice.md` -> `decision-guide.md`
 **Example:** Your team is debating whether to use WebSockets, SSE, or polling for real-time updates. The circuit frames the decision, maps the current system, generates genuinely distinct options, scores them with explicit weights, lets you set priority order, adversarially attacks the front-runner, and publishes a durable decision guide that downstream implementers can follow without relitigating.
 
 ---
 
-### Spec Hardening
+### Harden Spec
 
-**Invoke:** `/circuit:spec-hardening`
+**Invoke:** `/circuit:harden-spec`
 **Phases:** Intake, Multi-Angle Review, Amendment, Contracting, Planning, Validation (10 steps)
 **Artifact chain:** `spec-brief.md` -> `draft-digest.md` -> `implementer-review.md` + `systems-review.md` + `comparative-review.md` -> `caveat-resolution.md` -> `amended-spec.md` -> `execution-packet.md` -> `implementation-plan.md` -> `plan-review.md`
-**Example:** A colleague wrote an RFC for a new permissions model. It reads well but nobody has checked whether it can actually be built, whether it fits the current system boundaries, or how it compares to prior art. Spec hardening runs three independent review passes (implementer, systems, comparative), you decide which caveats to accept or reject, and it produces both an amended spec and a sequenced implementation plan -- all before anyone writes code.
+**Example:** A colleague wrote an RFC for a new permissions model. It reads well but nobody has checked whether it can actually be built, whether it fits the current system boundaries, or how it compares to prior art. Harden-spec runs three independent review passes (implementer, systems, comparative), you decide which caveats to accept or reject, and it produces both an amended spec and a sequenced implementation plan -- all before anyone writes code.
 
 ---
 
-### Flow Audit and Repair
+### Repair Flow
 
-**Invoke:** `/circuit:flow-audit-and-repair`
+**Invoke:** `/circuit:repair-flow`
 **Phases:** Failure Framing, Forensics, Repair Design, Layered Repair, Reaudit (8 steps)
 **Artifact chain:** `failure-brief.md` -> `audit-trace.md` -> `causal-map.md` -> `repair-steer.md` -> `regression-contract.md` -> `repair-packet.md` -> `repair-handoff.md` -> `flow-verdict.md`
 **Example:** The deal creation flow intermittently fails after a recent deploy -- sometimes the customer record is missing when the deal tries to reference it. The circuit reproduces the failure in the live runtime path, builds a layered causal map separating confirmed causes from hypotheses, writes failing regression tests before any repair begins, implements fixes in dependency order via manage-codex, then re-audits the actual flow (not just the tests) to verify the repair holds.
 
 ---
 
-### Autonomous Ratchet
+### Ratchet
 
-**Invoke:** `/circuit:autonomous-ratchet`
+**Invoke:** `/circuit:ratchet-quality`
 **Phases:** Triage, Stabilize, Envision, Plan, Execute, Finalize (17 steps)
 **Artifact chain:** `mission-brief.md` -> `baseline-report.md` -> ratchet options and scoring -> `ratchet-charter.md` -> batch execution via manage-codex -> `closeout-packet.md`
-**Example:** It is Friday evening and you want the codebase in better shape by Monday. You invoke autonomous-ratchet, it freezes a mission brief with your build/test/verify commands, establishes a trusted baseline, generates improvement options, scores and plans them, executes batches overnight via manage-codex, and publishes a truthful closeout packet showing exactly what improved, what was attempted, and what was left untouched.
+**Example:** It is Friday evening and you want the codebase in better shape by Monday. You invoke ratchet-quality, it freezes a mission brief with your build/test/verify commands, establishes a trusted baseline, generates improvement options, scores and plans them, executes batches overnight via manage-codex, and publishes a truthful closeout packet showing exactly what improved, what was attempted, and what was left untouched.
 
 ---
 
-### Janitor
+### Cleanup
 
-**Invoke:** `/circuit:janitor` (interactive) or `/circuit:janitor --auto` (autonomous)
+**Invoke:** `/circuit:cleanup` (interactive) or `/circuit:cleanup --auto` (autonomous)
 **Phases:** Survey, Triage, Prove, Clean, Verify (8 steps)
 **Artifact chain:** `cleanup-scope.md` -> `survey-inventory.md` -> `triage-report.md` -> `evidence-log.md` -> `cleanup-batches.md` -> `verification-report.md` (+ `deferred-review.md` in autonomous mode)
-**Example:** After a major migration, the codebase has orphaned test fixtures, TODO comments referencing closed issues, wrapper functions with single callsites, and docs describing the old architecture. Janitor dispatches five parallel category scanners (dead code, stale docs, orphaned artifacts, vestigial comments, redundant abstractions), classifies findings by confidence and risk, gathers evidence for ambiguous items, removes confirmed-dead items in ordered batches with build/test verification, and produces a manifest of everything removed and everything deferred for human review.
+**Example:** After a major migration, the codebase has orphaned test fixtures, TODO comments referencing closed issues, wrapper functions with single callsites, and docs describing the old architecture. Cleanup dispatches five parallel category scanners (dead code, stale docs, orphaned artifacts, vestigial comments, redundant abstractions), classifies findings by confidence and risk, gathers evidence for ambiguous items, removes confirmed-dead items in ordered batches with build/test verification, and produces a manifest of everything removed and everything deferred for human review.
 
 ---
 
@@ -99,33 +100,55 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 
 ---
 
+### Setup
+
+**Invoke:** `/circuit:setup`
+**Phases:** Single-pass interactive (not a circuit itself)
+**Artifact chain:** None -- produces `circuit.config.yaml`
+**Example:** You just installed the Circuit plugin and have several skills installed (tdd, deep-research, swift-apps). Setup scans your installed skills, maps them to circuits that benefit from them, suggests additional skills you might want, and writes a `circuit.config.yaml` so every circuit dispatch automatically uses the right domain skills for your project.
+
+---
+
 ## manage-codex (Orchestrator)
 
 **Invoke:** `/manage-codex`
 
 manage-codex is the execution engine that several circuits delegate to for code delivery. It is not a circuit itself -- it is a batch orchestrator that runs an `implement -> review -> converge` loop using Codex workers. The orchestrator plans slices from a CHARTER.md, dispatches implementation workers, dispatches independent review workers (who diagnose but never fix code), and runs a convergence assessment. The loop continues until the convergence worker returns `COMPLETE AND HARDENED` or circuit breakers trigger.
 
-Circuits like research-to-implementation, flow-audit-and-repair, autonomous-ratchet, and janitor all delegate their code-delivery phases to manage-codex rather than reimplementing the implement/review/converge cycle.
+Circuits like develop, repair-flow, ratchet-quality, and cleanup all delegate their code-delivery phases to manage-codex rather than reimplementing the implement/review/converge cycle.
+
+## When Circuits Overlap
+
+Some circuits look similar on the surface. Here's how to tell them apart:
+
+| "I want to..." | Route to | Not to | Why |
+|-----------------|----------|--------|-----|
+| Make the codebase better | `ratchet-quality` | `cleanup` | Ratchet-quality improves quality; cleanup removes dead weight |
+| Remove dead code and stale docs | `cleanup` | `ratchet-quality` | Cleanup removes; ratchet-quality refactors and improves |
+| Build a feature from an idea | `develop` | `harden-spec` | Develop handles the full lifecycle; harden-spec only reviews existing specs |
+| Review an existing RFC before building | `harden-spec` | `develop` | Harden-spec stress-tests a document without writing code |
+| Choose between approaches | `decide` | `develop` | Decide resolves which option; develop implements the chosen one |
+| Choose between approaches, then build | `decide` -> `develop` | — | Sequence them: decision first, then implementation |
 
 ## Choosing a Circuit
 
 Use this decision tree to find the right starting point:
 
-- **"I have a broken flow or flaky behavior"** -> `flow-audit-and-repair`
-- **"I need to choose between architectural approaches"** -> `decision-pressure-loop`
-- **"I have a draft spec/RFC that needs hardening before build"** -> `spec-hardening`
-- **"I need to build a non-trivial feature end to end"** -> `research-to-implementation`
-- **"I want overnight autonomous quality improvement"** -> `autonomous-ratchet`
-- **"I need to clean up dead code, stale docs, or codebase detritus"** -> `janitor`
+- **"I have a broken flow or flaky behavior"** -> `repair-flow`
+- **"I need to choose between architectural approaches"** -> `decide`
+- **"I have a draft spec/RFC that needs hardening before build"** -> `harden-spec`
+- **"I need to build a non-trivial feature end to end"** -> `develop`
+- **"I want overnight autonomous quality improvement"** -> `ratchet-quality`
+- **"I need to clean up dead code, stale docs, or codebase detritus"** -> `cleanup`
 - **"I want to turn a workflow into a reusable circuit"** -> `create`, then `dry-run`
 - **"I want to verify a circuit works before using it for real"** -> `dry-run`
 - **"I am not sure which circuit fits"** -> `router`
 
 Common sequences:
 
-- **Unsettled decision then build:** `decision-pressure-loop` -> `research-to-implementation`
-- **Draft exists but is not build-ready:** `spec-hardening` -> `research-to-implementation`
-- **Broken flow before expansion:** `flow-audit-and-repair` -> then whatever comes next
+- **Unsettled decision then build:** `decide` -> `develop`
+- **Draft exists but is not build-ready:** `harden-spec` -> `develop`
+- **Broken flow before expansion:** `repair-flow` -> then whatever comes next
 - **New circuit authoring:** `create` -> `dry-run`
 
 If none of these fit -- the task is a single-file change, a config edit, a quick wiring job, or a trivial bug fix -- you probably do not need a circuit at all.

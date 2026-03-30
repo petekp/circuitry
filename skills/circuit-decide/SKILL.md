@@ -1,5 +1,5 @@
 ---
-name: circuit:decision-pressure-loop
+name: circuit:decide
 description: >
   Architecture decision workflow for choosing between meaningful architectural or
   protocol options under uncertainty before implementation begins. 8 steps across
@@ -9,7 +9,7 @@ description: >
   goal is already code delivery.
 ---
 
-# Decision-Pressure-Loop Circuit
+# Decide Circuit
 
 An artifact-centric workflow that turns architectural uncertainty into a pressure-tested
 decision before code begins. It chains decision framing -> system reality -> serious options
@@ -52,7 +52,7 @@ Do NOT use for code delivery, bug fixes, or tasks where the decision is already 
   packet or delivery contract.
 - **Skill composition, not redundancy.** `architecture-exploration` and `solution-explorer`
   generate grounded options, `seam-ripper` and `clean-architecture` harden the pressure
-  step, and `circuit:spec-hardening` can follow once the decision is stable.
+  step, and `circuit:harden-spec` can follow once the decision is stable.
 
 ## Setup
 

@@ -1,5 +1,5 @@
 ---
-name: circuit:flow-audit-and-repair
+name: circuit:repair-flow
 description: >
   Forensic debugging workflow for broken end-to-end flows.
   8 steps across 5 phases: Failure Framing → Forensics → Repair Design →
@@ -8,7 +8,7 @@ description: >
   verified repair — not for greenfield features or speculative design work.
 ---
 
-# Flow-Audit-and-Repair Circuit
+# Repair Flow Circuit
 
 An artifact-centric workflow that chains observed failure → live audit → layered
 causality → regression contract → ordered repair → live re-audit. Each phase

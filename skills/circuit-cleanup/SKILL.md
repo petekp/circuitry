@@ -1,17 +1,17 @@
 ---
-name: circuit:janitor
+name: circuit:cleanup
 description: >
   Artifact-centric circuit for systematic codebase cleanup — dead code, stale
   docs, orphaned artifacts, vestigial comments, and redundant abstractions. 8
   steps across 5 phases: Survey -> Triage -> Prove -> Clean -> Verify. Dual-mode:
   interactive (user checkpoints) or autonomous (evidence-gated with deferred
-  review). Use when asked to clean up dead code, do a janitor sweep, improve
+  review). Use when asked to clean up dead code, do a cleanup sweep, improve
   context hygiene for agents, remove stale docs, or find and remove unused code.
   Do not use for refactoring with behavior changes, architecture decisions,
   feature work, one-off deletions, dependency upgrades, or formatting cleanup.
 ---
 
-# Janitor
+# Cleanup Circuit
 
 Systematic codebase cleanup with false-positive protection at every gate.
 Every removal must be backed by evidence, not intuition.
@@ -31,8 +31,8 @@ The circuit operates in two modes:
 - Sweep orphaned test fixtures, config for removed features, vestigial comments
 - Reduce codebase noise to improve coding-agent context quality
 - Systematic cleanup after a major refactor or migration
-- `/circuit:janitor` for interactive mode
-- `/circuit:janitor --auto` or `/circuit:janitor autonomous` for autonomous mode
+- `/circuit:cleanup` for interactive mode
+- `/circuit:cleanup --auto` or `/circuit:cleanup autonomous` for autonomous mode
 
 See frontmatter for full negative scope.
 
@@ -75,12 +75,22 @@ See frontmatter for full negative scope.
 
 ```bash
 RUN_SLUG="<target-slug>"
-RUN_ROOT=".relay/circuit-runs/${RUN_SLUG}-janitor"
+RUN_ROOT=".relay/circuit-runs/${RUN_SLUG}-cleanup"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
 ```
 
 Step 1 captures all runtime inputs (`TARGET_ROOT`, `MODE`, `BUILD_CMD`, etc.)
 into `cleanup-scope.md`.
+
+## Domain Skill Selection
+
+When a step says `<domain-skills>`, pick 1-2 skills matching the affected code:
+- Dead code analysis: `dead-code-sweep`
+- Architecture boundaries: `clean-architecture`
+- Testing residue: `tdd`
+
+Use zero domain skills rather than filler skills when the step is mostly
+orchestration or evidence gathering. Never exceed 3 total skills per dispatch.
 
 ## Canonical Header Schema
 
@@ -706,7 +716,7 @@ Stop and recommend a different path when:
 - The target is a single file or a known specific item — use direct deletion
   instead
 - The cleanup requires behavior changes (refactoring, API migration) — use
-  `circuit:research-to-implementation` instead
+  `circuit:develop` instead
 - The user wants architecture simplification, not detritus removal — use
-  `circuit:decision-pressure-loop` or `improve-codebase-architecture` instead
+  `circuit:decide` or `improve-codebase-architecture` instead
 - Build/test infrastructure does not exist or is broken — fix that first

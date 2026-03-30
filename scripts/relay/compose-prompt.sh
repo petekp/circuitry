@@ -9,6 +9,8 @@
 # Options:
 #   --header FILE    — Task-specific header (required)
 #   --skills LIST    — Comma-separated domain skill names (optional)
+#   --circuit ID     — Circuit id for config-file skill lookup (optional, used when --skills is omitted)
+#   --config FILE    — Path to circuit.config.yaml (optional, auto-discovered from ./circuit.config.yaml or ~/.claude/circuit.config.yaml)
 #   --template NAME  — Template to append: implement, review, ship-review, converge (optional)
 #   --root DIR       — Substitute literal {relay_root} tokens after assembly (optional unless placeholders are used)
 #   --out FILE       — Output path (required)
@@ -17,6 +19,8 @@ set -euo pipefail
 
 HEADER=""
 SKILLS=""
+CIRCUIT=""
+CONFIG=""
 TEMPLATE=""
 ROOT=""
 OUT=""
@@ -142,6 +146,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --header)   HEADER="$2"; shift 2 ;;
     --skills)   SKILLS="$2"; shift 2 ;;
+    --circuit)  CIRCUIT="$2"; shift 2 ;;
+    --config)   CONFIG="$2"; shift 2 ;;
     --template) TEMPLATE="$2"; shift 2 ;;
     --root)     ROOT="$2"; shift 2 ;;
     --out)      OUT="$2"; shift 2 ;;
@@ -167,6 +173,39 @@ fi
 if [[ ! -f "$HEADER" ]]; then
   echo "ERROR: header file not found: $HEADER" >&2
   exit 1
+fi
+
+# Resolve skills from config file when --skills is not provided but --circuit is
+if [[ -z "$SKILLS" && -n "$CIRCUIT" ]]; then
+  # Auto-discover config file if --config not specified
+  if [[ -z "$CONFIG" ]]; then
+    if [[ -f "./circuit.config.yaml" ]]; then
+      CONFIG="./circuit.config.yaml"
+    elif [[ -f "$HOME/.claude/circuit.config.yaml" ]]; then
+      CONFIG="$HOME/.claude/circuit.config.yaml"
+    fi
+  fi
+
+  # Read skills from config if available
+  if [[ -n "$CONFIG" && -f "$CONFIG" ]]; then
+    # Extract skills for the given circuit id using basic YAML parsing
+    # Supports format: circuits.<id>.skills: [skill1, skill2]
+    # or: circuits.<id>.skills:\n  - skill1\n  - skill2
+    CONFIG_SKILLS="$(python3 -c "
+import yaml, sys
+try:
+    with open('$CONFIG') as f:
+        cfg = yaml.safe_load(f)
+    circuits = cfg.get('circuits', {})
+    entry = circuits.get('$CIRCUIT', {})
+    skills = entry.get('skills', [])
+    if isinstance(skills, list):
+        print(','.join(str(s) for s in skills))
+" 2>/dev/null || true)"
+    if [[ -n "$CONFIG_SKILLS" ]]; then
+      SKILLS="$CONFIG_SKILLS"
+    fi
+  fi
 fi
 
 # Start with header

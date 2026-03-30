@@ -1,8 +1,8 @@
 schema_version: "1"
 circuit:
-  id: janitor
-  version: "2026-03-26"
-  title: Janitor
+  id: cleanup
+  version: "2026-03-29"
+  title: Cleanup
   description: >
     Artifact-centric circuit for systematic codebase cleanup: dead code, stale
     docs, orphaned artifacts, vestigial comments, and redundant abstractions.

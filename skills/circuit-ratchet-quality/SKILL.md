@@ -1,5 +1,5 @@
 ---
-name: circuit:autonomous-ratchet
+name: circuit:ratchet-quality
 description: >
   Autonomous-only artifact-centric circuit for overnight quality improvement
   runs on an existing codebase. 17 steps across 6 phases: Triage -> Stabilize
@@ -10,9 +10,9 @@ description: >
   repos without explicit build/test/verify commands.
 ---
 
-# Autonomous Ratchet
+# Ratchet Quality Circuit
 
-Autonomous Ratchet is a bounded overnight improvement loop: freeze the mission,
+Ratchet Quality is a bounded overnight improvement loop: freeze the mission,
 restore baseline trust, generate better options, turn them into an executable
 charter, deliver the work in batches, and publish a truthful closeout packet.
 The artifact chain is the source of truth. Relay handoffs and child roots are
@@ -64,7 +64,7 @@ explicit verification. See the frontmatter for the full negative scope.
 ## Setup
 ```bash
 RUN_SLUG="<scope-slug>"
-RUN_ROOT=".relay/circuit-runs/${RUN_SLUG}-autonomous-ratchet"
+RUN_ROOT=".relay/circuit-runs/${RUN_SLUG}-ratchet-quality"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
 ```
 Setup only defines `RUN_ROOT`. Step 1 captures every runtime input that varies
@@ -748,6 +748,6 @@ Stop and redirect when:
 - The request is really greenfield feature delivery, a major architecture
   choice, cleanup-only scope, or work that needs live user steering.
 Redirects:
-- Greenfield or substantial feature delivery -> `circuit:research-to-implementation`
-- Architecture or protocol choice -> `circuit:decision-pressure-loop`
-- Cleanup-only scope -> `circuit:janitor`
+- Greenfield or substantial feature delivery -> `circuit:develop`
+- Architecture or protocol choice -> `circuit:decide`
+- Cleanup-only scope -> `circuit:cleanup`

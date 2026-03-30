@@ -1,8 +1,8 @@
 schema_version: "1"
 circuit:
-  id: research-to-implementation
-  version: "2026-03-21"
-  title: Research-to-Implementation
+  id: develop
+  version: "2026-03-29"
+  title: Develop
   description: >
     Artifact-driven circuit for taking a significant feature from idea to shipped code.
     Chains intent → constraints → decision → contract → code through 5 phases.

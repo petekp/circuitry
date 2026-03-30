@@ -1,5 +1,5 @@
 ---
-name: circuit:spec-hardening
+name: circuit:harden-spec
 description: >
   Artifact-driven circuit for turning a rough RFC, design spec, PRD, or circuit
   schema into a canonical amended spec, a build-ready execution packet, and a
@@ -9,7 +9,7 @@ description: >
   from.
 ---
 
-# Spec-Hardening Circuit
+# Harden Spec Circuit
 
 An artifact-centric workflow that chains draft -> digest -> critique -> amendment
 -> contract -> plan. Each phase produces a named artifact that becomes the next
@@ -32,7 +32,7 @@ This circuit sits between review and execution: `proposal-review` helps collect
 structured reactions, but this circuit turns critique into canonical amended
 artifacts and a build plan. `pipeline` can host it during align work. It is a
 natural downstream step after a decision loop and an upstream step before
-`circuit:research-to-implementation` or `manage-codex`.
+`circuit:develop` or `manage-codex`.
 
 ## Glossary
 

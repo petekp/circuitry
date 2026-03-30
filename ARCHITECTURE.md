@@ -81,7 +81,7 @@ All circuit skills use a `circuit:` prefix in their frontmatter `name` field:
 
 ```yaml
 # In SKILL.md frontmatter
-name: circuit:autonomous-ratchet
+name: circuit:ratchet-quality
 ```
 
 This prefix does three things:
@@ -95,8 +95,8 @@ This prefix does three things:
    in a different namespace from circuit skills. A circuit can compose domain
    skills without naming collisions.
 
-The directory name drops the prefix: `circuit:autonomous-ratchet` lives at
-`skills/circuit-autonomous-ratchet/`. The slug `autonomous-ratchet` is the
+The directory name drops the prefix: `circuit:ratchet-quality` lives at
+`skills/circuit-ratchet-quality/`. The slug `ratchet-quality` is the
 canonical identifier used in `circuit.yaml`'s `id` field.
 
 ---
@@ -109,7 +109,7 @@ state, not the chat thread.**
 ### Every Step Produces a Named File
 
 Each step in a circuit exits by writing a specific file to a known path. The
-`research-to-implementation` circuit makes this concrete:
+`develop` circuit makes this concrete:
 
 ```text
 intent-brief.md           [Step 1, interactive]
@@ -139,7 +139,7 @@ limits at any point. If progress lives only in the chat thread, a dead session
 means starting over. With artifacts on disk, a new session scans the artifact
 directory and resumes from the first missing file.
 
-**Context overflow.** A 17-step circuit like `autonomous-ratchet` generates far
+**Context overflow.** A 17-step circuit like `ratchet-quality` generates far
 more content than fits in a single context window. The artifact chain means each
 step only needs to read its declared inputs, not the entire history. Step 14
 (Execution Audit) reads `execution-log.md`, `execution-charter.md`,
@@ -162,7 +162,7 @@ session picks up where the last one left off. The algorithm is simple:
 4. For `manage-codex` steps, inspect child state (`batch.json`) before
    deciding to rerun.
 
-Here is the resume logic from `autonomous-ratchet` for the Stabilize phase:
+Here is the resume logic from `ratchet-quality` for the Stabilize phase:
 
 > Inspect `${RUN_ROOT}/phases/step-3/attempts/` before rerunning Step 3.
 > If `stability-findings.md` exists but `stability-gate.md` does not,
@@ -198,10 +198,10 @@ mkdir -p "${RUN_ROOT}/artifacts"
 ```
 
 The `RUN_SLUG` incorporates both the topic and the circuit name. For example,
-an autonomous ratchet run on a feature called "auth-refactor" would use:
+a ratchet-quality run on a feature called "auth-refactor" would use:
 
 ```bash
-RUN_ROOT=".relay/circuit-runs/auth-refactor-autonomous-ratchet"
+RUN_ROOT=".relay/circuit-runs/auth-refactor-ratchet-quality"
 ```
 
 Step-specific relay state (handoffs, last messages, prompt headers) lives under
@@ -223,7 +223,7 @@ are conversations that produce an artifact. They exist at decision points where
 human judgment is required -- choosing tradeoffs, confirming scope, setting
 quality bars.
 
-From `research-to-implementation`, Step 1 (Intent Lock):
+From `develop`, Step 1 (Intent Lock):
 
 > Ask the user to describe the feature and rank their desired outcomes. Probe
 > for non-goals and constraints. Write `intent-brief.md`.
@@ -266,7 +266,7 @@ Dispatch steps come in several flavors:
 - **Simple dispatch**: One worker, one output. Most common.
 - **Parallel dispatch**: Multiple workers run simultaneously, each producing
   its own artifact. Used for independent probes (like the triage probes in
-  `autonomous-ratchet` Step 2, which fan out to baseline, quality, and backlog
+  `ratchet-quality` Step 2, which fan out to baseline, quality, and backlog
   workers).
 - **Dispatch via `manage-codex`**: The `manage-codex` adapter handles a full
   implement-review-converge loop. This is for steps that involve real code
@@ -278,7 +278,7 @@ The orchestrator reads upstream artifacts and writes a new artifact directly,
 without dispatching a worker. Synthesis is for steps where the value is in
 combining and distilling information, not in generating new research or code.
 
-From `autonomous-ratchet`, Step 7 (Proposal Synthesis):
+From `ratchet-quality`, Step 7 (Proposal Synthesis):
 
 > Collapse the exploration fanout into a bounded improvement proposal that is
 > specific enough to review but not yet authoritative.
@@ -343,15 +343,15 @@ an entire class of state-corruption bugs.
 
 Several circuits delegate their heavy-lifting steps to `manage-codex`:
 
-- `research-to-implementation` Step 9 (Implement): Turns the execution packet
+- `develop` Step 9 (Implement): Turns the execution packet
   into working code.
-- `flow-audit-and-repair` Step 6 (Layered Repair): Executes repair slices in
+- `repair` Step 6 (Layered Repair): Executes repair slices in
   dependency order.
-- `autonomous-ratchet` Steps 3, 13, and 15: Baseline repair, batch execution,
+- `ratchet-quality` Steps 3, 13, and 15: Baseline repair, batch execution,
   and execution ratchet respectively.
 
 Each adapter step defines a child root layout and a CHARTER.md contract.
-For example, `autonomous-ratchet` Step 13:
+For example, `ratchet-quality` Step 13:
 
 ```
 ${RUN_ROOT}/phases/step-13/batches/<batch-id>/
@@ -386,7 +386,7 @@ that checks the step's output before the circuit advances.
 The simplest gate. Checks that the expected artifact exists and contains the
 required sections.
 
-From `autonomous-ratchet` Step 1 (Mission Freeze):
+From `ratchet-quality` Step 1 (Mission Freeze):
 
 ```yaml
 gate:
@@ -407,7 +407,7 @@ gate does not route outcomes -- if the checks fail, the step simply re-runs.
 Used when a proof step can validate, adjust, or invalidate the plan. The key
 property is that the evidence might contradict what came before.
 
-From `research-to-implementation` Step 8 (Prove the Hardest Seam):
+From `develop` Step 8 (Prove the Hardest Seam):
 
 ```yaml
 gate:
@@ -432,7 +432,7 @@ foundation that just failed its proof step.
 #### 3. `verdict-consistency`
 
 Used when a terminal verdict must match named evidence boundaries. This is the
-gate type used by ratchet steps in `autonomous-ratchet`.
+gate type used by ratchet steps in `ratchet-quality`.
 
 From Step 5 (Stabilize Ratchet):
 
@@ -456,7 +456,7 @@ each verdict maps to a specific next action.
 Used when a review step decides between continue and upstream revision. Similar
 to `verdict-consistency` but specifically for diagnose-only review steps.
 
-From `autonomous-ratchet` Step 16 (Final Review):
+From `ratchet-quality` Step 16 (Final Review):
 
 ```yaml
 gate:
@@ -497,7 +497,7 @@ Gates have three possible routing actions:
 Every circuit includes a `Circuit Breaker` section that defines when to stop and
 redirect. This is the last line of defense against unbounded loops.
 
-From `autonomous-ratchet`:
+From `ratchet-quality`:
 
 > Stop and redirect when:
 > - The same governing issue reopens the same upstream target twice.
@@ -508,9 +508,9 @@ From `autonomous-ratchet`:
 
 The circuit breaker also handles circuit misrouting:
 
-> - Greenfield feature delivery -> `circuit:research-to-implementation`
-> - Architecture or protocol choice -> `circuit:decision-pressure-loop`
-> - Cleanup-only scope -> `circuit:janitor`
+> - Greenfield feature delivery -> `circuit:develop`
+> - Architecture or protocol choice -> `circuit:decide`
+> - Cleanup-only scope -> `circuit:cleanup`
 
 This creates a safety net: if the circuit discovers mid-execution that the work
 does not actually fit its contract, it stops and suggests the right circuit
@@ -713,26 +713,26 @@ The `circuit:router` skill matches requests to circuits using positive signals a
 exclusions:
 
 ```text
-- circuit:research-to-implementation
+- circuit:develop
   Match: multi-file or cross-domain feature delivery, unclear approach
   Exclude: bug fixes, config changes, or already-clear tasks
 
-- circuit:decision-pressure-loop
+- circuit:decide
   Match: architecture or protocol choices with real downside
   Exclude: code delivery, bug fixes, or settled decisions
 
-- circuit:autonomous-ratchet
+- circuit:ratchet-quality
   Match: overnight autonomous quality improvement
   Exclude: interactive work, greenfield features, architecture decisions
 ```
 
 The router also defines sequencing rules:
 
-- Broken existing flow -> `flow-audit-and-repair` before any rebuild.
-- Unsettled architecture -> `decision-pressure-loop` before `spec-hardening`
-  or `research-to-implementation`.
-- Draft exists but is not build-ready -> `spec-hardening` before
-  `research-to-implementation`.
+- Broken existing flow -> `repair` before any rebuild.
+- Unsettled architecture -> `decide` before `harden`
+  or `develop`.
+- Draft exists but is not build-ready -> `harden` before
+  `develop`.
 - New circuit authoring -> `circuit:create` before `circuit:dry-run`.
 
 If nothing fits, the router says so. It does not force a circuit onto trivial
@@ -754,7 +754,7 @@ bundled into circuits. They are composed at dispatch time via `--skills`:
 
 This design has several advantages:
 
-- **Circuits stay domain-agnostic.** The same `research-to-implementation`
+- **Circuits stay domain-agnostic.** The same `develop`
   circuit works for Rust, Swift, or React projects.
 - **Skill budgets are enforceable.** Circuits declare maximum skill counts
   (typically 2 domain skills, 3 total), preventing prompt bloat.
@@ -762,7 +762,7 @@ This design has several advantages:
   affects all circuits that compose it, without editing any circuit files.
 
 Each circuit includes a `Domain Skill Selection` section that defines the rules
-for choosing skills at dispatch time. `autonomous-ratchet` uses a surface-based
+for choosing skills at dispatch time. `ratchet-quality` uses a surface-based
 mapping:
 
 | Surface | Preferred skills |
@@ -812,8 +812,8 @@ The five phases:
 The compiler distinguishes between two circuit families:
 
 - **Artifact-centric circuits** (the majority): Multi-phase workflows that chain
-  artifacts. Examples: `research-to-implementation`, `autonomous-ratchet`,
-  `flow-audit-and-repair`.
+  artifacts. Examples: `develop`, `ratchet-quality`,
+  `repair`.
 - **Validator circuits**: Circuits whose primary job is symbolic execution or
   mechanical validation. Example: `circuit:dry-run`.
 
@@ -1016,22 +1016,22 @@ circuit/
         agents-md-template.md
     circuit-router/
       SKILL.md              # Routes requests to best-fit circuit
-    circuit-research-to-implementation/
+    circuit-develop/
       circuit.yaml
       SKILL.md
-    circuit-decision-pressure-loop/
+    circuit-decide/
       circuit.yaml
       SKILL.md
-    circuit-spec-hardening/
+    circuit-harden-spec/
       circuit.yaml
       SKILL.md
-    circuit-flow-audit-and-repair/
+    circuit-repair-flow/
       circuit.yaml
       SKILL.md
-    circuit-autonomous-ratchet/
+    circuit-ratchet-quality/
       circuit.yaml
       SKILL.md
-    circuit-janitor/
+    circuit-cleanup/
       circuit.yaml
       SKILL.md
     circuit-create/
@@ -1044,7 +1044,7 @@ circuit/
 
 ### Runtime Relay Layout (Example)
 
-When `circuit:research-to-implementation` executes for a feature called
+When `circuit:develop` executes for a feature called
 "sync-engine":
 
 ```

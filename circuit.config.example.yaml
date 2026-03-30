@@ -1,0 +1,27 @@
+# circuit.config.yaml — Optional per-project skill configuration for Circuit
+#
+# Place this file at your project root (./circuit.config.yaml) or globally
+# at ~/.claude/circuit.config.yaml. Project-level config takes precedence.
+#
+# When compose-prompt.sh is called with --circuit <id> but no --skills flag,
+# it reads the skills list from this file. Explicit --skills always wins.
+#
+# Generate this file automatically with: /circuit:setup
+
+# Map each circuit to the domain skills that should be injected into worker prompts.
+# Skills must be installed in ~/.claude/skills/<name>/ or the plugin's skills/ directory.
+# Maximum 2 domain skills per circuit dispatch (3 total including manage-codex).
+
+circuits:
+  develop:
+    skills: [tdd, deep-research]
+  decide:
+    skills: [architecture-exploration, solution-explorer]
+  harden-spec:
+    skills: [architecture-exploration]
+  repair-flow:
+    skills: [tdd]
+  ratchet-quality:
+    skills: [clean-architecture, tdd]
+  cleanup:
+    skills: [dead-code-sweep]

@@ -1,8 +1,8 @@
 schema_version: "1"
 circuit:
-  id: autonomous-ratchet
-  version: "2026-03-26"
-  title: Autonomous Ratchet
+  id: ratchet-quality
+  version: "2026-03-29"
+  title: Ratchet Quality
   description: >
     Autonomous-only artifact-centric circuit for overnight quality improvement
     runs on an existing codebase. 17 steps across 6 phases: Triage ->

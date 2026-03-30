@@ -15,14 +15,15 @@ ends or a context window fills up.
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
 | Router | `/circuit:router` | Picking the right circuit when you're not sure which fits |
-| Research-to-Implementation | `/circuit:research-to-implementation` | Taking a feature from idea to shipped code |
-| Decision Pressure Loop | `/circuit:decision-pressure-loop` | Architecture decisions under real uncertainty |
-| Spec Hardening | `/circuit:spec-hardening` | Turning a rough RFC or PRD into something safe to build from |
-| Flow Audit and Repair | `/circuit:flow-audit-and-repair` | Debugging and repairing broken end-to-end flows |
-| Autonomous Ratchet | `/circuit:autonomous-ratchet` | Overnight unattended quality improvement runs |
-| Janitor | `/circuit:janitor` | Systematic dead code, stale docs, and codebase cleanup |
+| Develop | `/circuit:develop` | Taking a feature from idea to shipped code |
+| Decide | `/circuit:decide` | Architecture decisions under real uncertainty |
+| Harden Spec | `/circuit:harden-spec` | Turning a rough RFC or PRD into something safe to build from |
+| Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
+| Ratchet Quality | `/circuit:ratchet-quality` | Overnight unattended quality improvement runs |
+| Cleanup | `/circuit:cleanup` | Systematic dead code, stale docs, and codebase cleanup |
 | Circuit Create | `/circuit:create` | Authoring a new circuit from a workflow description |
 | Dry Run | `/circuit:dry-run` | Validating a circuit is mechanically sound before real use |
+| Setup | `/circuit:setup` | Discover installed skills and generate circuit.config.yaml |
 
 ## Installation
 
@@ -80,7 +81,7 @@ Here's what happens:
 
 1. **The router analyzes your task** and recommends the best circuit (or a
    sequence of circuits). In this case, it might suggest
-   `decision-pressure-loop` followed by `research-to-implementation`.
+   `decide` followed by `develop`.
 
 2. **The circuit creates an artifact chain** in `.relay/circuit-runs/`. Each phase
    writes a durable file that feeds the next:
@@ -107,14 +108,14 @@ catches it.
 
 ### Anatomy of a circuit
 
-Here's the topology of `research-to-implementation` -- the circuit for taking a
+Here's the topology of `develop` -- the circuit for taking a
 feature from idea to shipped code:
 
 ```yaml
 # circuit.yaml (simplified)
 schema_version: "1"
 circuit:
-  id: research-to-implementation
+  id: develop
   phases:
     - id: alignment
       steps:
@@ -367,14 +368,46 @@ with the Circuit plugin -- install them separately if your project uses them.
 
 | Skill | Enhances |
 |-------|----------|
-| `tdd` | flow-audit-and-repair, autonomous-ratchet |
-| `deep-research` | research-to-implementation, decision-pressure-loop |
-| `clean-architecture` | autonomous-ratchet, decision-pressure-loop |
+| `tdd` | repair-flow, ratchet-quality |
+| `deep-research` | develop, decide |
+| `clean-architecture` | ratchet-quality, decide |
 | `swift-apps` | Any circuit working on Swift codebases |
 | `rust` | Any circuit working on Rust codebases |
 
 Domain skills are entirely optional. Circuits work without them -- workers just
 receive less specialized guidance.
+
+### Customizing Skills Per Circuit
+
+Instead of passing `--skills` to every dispatch, you can create a
+`circuit.config.yaml` that maps circuits to your preferred skills:
+
+```yaml
+# circuit.config.yaml (project root or ~/.claude/)
+circuits:
+  develop:
+    skills: [tdd, deep-research]
+  decide:
+    skills: [architecture-exploration, solution-explorer]
+  repair-flow:
+    skills: [tdd]
+  ratchet-quality:
+    skills: [clean-architecture, tdd]
+  cleanup:
+    skills: [dead-code-sweep]
+```
+
+Generate this file automatically:
+
+```
+/circuit:setup
+```
+
+The setup skill discovers your installed skills, maps them to circuits, and
+writes the config. See `circuit.config.example.yaml` for the full schema.
+
+Config is optional -- explicit `--skills` flags always take precedence, and
+everything works without a config file.
 
 ## File Structure
 
@@ -397,22 +430,22 @@ circuit/
       references/             # Prompt templates for each worker role
     circuit-router/           # Routes tasks to the best circuit
       SKILL.md
-    circuit-research-to-implementation/
+    circuit-develop/
       circuit.yaml            # Topology: phases, steps, artifacts, gates
       SKILL.md                # Execution contract: commands, resume logic
-    circuit-decision-pressure-loop/
+    circuit-decide/
       circuit.yaml
       SKILL.md
-    circuit-spec-hardening/
+    circuit-harden-spec/
       circuit.yaml
       SKILL.md
-    circuit-flow-audit-and-repair/
+    circuit-repair-flow/
       circuit.yaml
       SKILL.md
-    circuit-autonomous-ratchet/
+    circuit-ratchet-quality/
       circuit.yaml
       SKILL.md
-    circuit-janitor/
+    circuit-cleanup/
       circuit.yaml
       SKILL.md
     circuit-create/           # Meta-circuit: authors new circuits
@@ -421,6 +454,9 @@ circuit/
     circuit-dry-run/          # Validates circuit mechanical soundness
       circuit.yaml
       SKILL.md
+    circuit-setup/            # Skill discovery and config generation
+      SKILL.md
+  circuit.config.example.yaml # Example config for skill customization
   ARCHITECTURE.md             # Deep dive into system design
   CIRCUITS.md                 # Detailed catalog of all circuits with examples
   LICENSE                     # MIT

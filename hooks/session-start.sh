@@ -36,15 +36,16 @@ You have access to the **Circuit** plugin — structured multi-phase workflows f
 
 | Circuit | Invoke | Use When |
 |---------|--------|----------|
-| **Router** | `/circuit:router` | Unsure which circuit fits — routes to the best one |
-| **Research-to-Implementation** | `/circuit:research-to-implementation` | Multi-file feature delivery with unclear approach |
-| **Decision Pressure Loop** | `/circuit:decision-pressure-loop` | Architecture choices with real tradeoffs |
-| **Spec Hardening** | `/circuit:spec-hardening` | Existing RFC/spec that needs to become build-ready |
-| **Flow Audit & Repair** | `/circuit:flow-audit-and-repair` | Broken/flaky end-to-end flow that needs forensic repair |
-| **Autonomous Ratchet** | `/circuit:autonomous-ratchet` | Overnight autonomous quality improvement |
-| **Janitor** | `/circuit:janitor` | Systematic dead code/stale docs cleanup |
+| **Router** | `/circuit:router` | Unsure which circuit fits |
+| **Develop** | `/circuit:develop` | Feature delivery with unclear approach |
+| **Decide** | `/circuit:decide` | Architecture choices with real tradeoffs |
+| **Harden Spec** | `/circuit:harden-spec` | Turn a rough spec into a build-ready plan |
+| **Repair Flow** | `/circuit:repair-flow` | Fix a broken or flaky end-to-end flow |
+| **Ratchet Quality** | `/circuit:ratchet-quality` | Autonomous overnight quality improvement |
+| **Cleanup** | `/circuit:cleanup` | Dead code and stale docs sweep |
 | **Circuit Create** | `/circuit:create` | Author a new circuit from a workflow description |
 | **Dry Run** | `/circuit:dry-run` | Validate a circuit skill's mechanical soundness |
+| **Setup** | `/circuit:setup` | Discover skills and generate circuit.config.yaml |
 
 ## How It Works
 
