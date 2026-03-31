@@ -36,7 +36,7 @@ cat <<'BANNER'
 /circuit:router <describe your task>
 ```
 
-Circuits are structured, multi-phase workflows that break complex engineering tasks into artifact chains — each phase writes a durable file that feeds the next. Heavy implementation is dispatched to workers automatically — via **Codex CLI** when installed, or **Claude Agent** as a fallback.
+Circuits are structured, multi-phase workflows where each step writes a durable file on disk that feeds the next. Heavy implementation is dispatched to isolated worker sessions automatically (via **Codex CLI** when installed, or **Claude Agent** as fallback). If a session crashes, a fresh one reads the files and resumes exactly where it stopped.
 
 The router picks the right circuit for your task. Start there.
 
@@ -47,7 +47,7 @@ The router picks the right circuit for your task. Start there.
 | Circuit | Invoke | Use When |
 |---------|--------|----------|
 | **Router** | `/circuit:router` | Unsure which circuit fits — start here |
-| **Do** | `/circuit:run` | Clear task that benefits from planning and review |
+| **Run** | `/circuit:run` | Clear task that benefits from planning and review |
 | **Develop** | `/circuit:develop` | Feature delivery with unclear approach |
 | **Decide** | `/circuit:decide` | Architecture choices with real tradeoffs |
 | **Harden Spec** | `/circuit:harden-spec` | Turn a rough spec into a build-ready plan |

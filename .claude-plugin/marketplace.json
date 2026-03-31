@@ -1,7 +1,7 @@
 {
   "name": "petekp",
   "metadata": {
-    "description": "Structured workflow circuits for Claude Code. Disciplined multi-phase engineering workflows powered by Codex workers and artifact chains."
+    "description": "Multi-phase workflows for Claude Code that survive session crashes, enforce review gates, and resume exactly where they stopped."
   },
   "owner": {
     "name": "Pete Petrash",
@@ -10,8 +10,8 @@
   "plugins": [
     {
       "name": "circuitry",
-      "description": "Structured workflow circuits for Claude Code. Disciplined multi-phase approaches to complex engineering tasks, powered by Codex workers and artifact chains.",
-      "version": "1.0.0",
+      "description": "Multi-phase workflows for Claude Code that survive session crashes, enforce review gates, and resume exactly where they stopped.",
+      "version": "0.2.0",
       "source": "./",
       "author": {
         "name": "Pete Petrash",

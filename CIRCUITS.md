@@ -6,7 +6,7 @@ The Circuit plugin provides structured, artifact-driven workflows for complex en
 
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
-| Do | `/circuit:run <task>` | The default: any clear task that benefits from planning and review |
+| Run | `/circuit:run <task>` | The default: any clear task that benefits from planning and review |
 | Develop | `/circuit:develop` | Taking a non-trivial feature from idea to shipped code |
 | Decide | `/circuit:decide` | Making architecture or protocol decisions under real uncertainty |
 | Harden Spec | `/circuit:harden-spec` | Turning a rough RFC, spec, or PRD into something safe to build from |
