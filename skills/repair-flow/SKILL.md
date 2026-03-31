@@ -30,8 +30,8 @@ real broken flow needs to be reproduced.
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
-  Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
+- **Worker report** -- The raw output a worker writes to its relay `reports/` directory.
+  Worker reports are inputs to artifact synthesis, not artifacts themselves.
 - **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
 - **Regression contract** -- The executable proof obligation for the prioritized failure:
@@ -45,7 +45,7 @@ real broken flow needs to be reproduced.
   without writing its output artifact.
 - **Self-contained headers.** Dispatch steps do NOT use `--template`. The prompt header
   carries the full worker contract: mission, inputs, output schema, success criteria,
-  and handoff instructions.
+  and report instructions.
 - **Start from observed failure.** This circuit begins with broken behavior in the real flow,
   not product intent, design preference, or speculative cleanup.
 - **Audit before repair.** `exhaustive-systems-analysis` supplies audit rigor, but this
@@ -71,7 +71,7 @@ Record `RUN_ROOT` -- all paths below are relative to it.
 **Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
-mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
+mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 ```
 
 ## Domain Skill Selection
@@ -96,7 +96,7 @@ fall back to Agent. The assembled prompt is identical for both backends.
 
 Or use the dispatch helper: `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
 
-The artifact chain, gates, handoff format, and resume logic are identical
+The artifact chain, gates, report format, and resume logic are identical
 regardless of backend.
 
 ## Canonical Header Schema
@@ -119,9 +119,9 @@ Every dispatch step's prompt header MUST include these fields:
 ## Success Criteria
 [What "done" looks like for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -200,7 +200,7 @@ capture the evidence trail across boundaries.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-2/handoffs" "${RUN_ROOT}/phases/step-2/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2/reports" "${RUN_ROOT}/phases/step-2/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-2/prompt-header.md`):
@@ -221,7 +221,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: The artifact contains either a reproduced failure or an explicit
   non-reproduction result, plus enough evidence to explain what was observed
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -242,7 +242,7 @@ test -f ${RUN_ROOT}/phases/step-2/audit-trace.md
 cp ${RUN_ROOT}/phases/step-2/audit-trace.md ${RUN_ROOT}/artifacts/audit-trace.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `audit-trace.md` manually using the audit trace schema.
 
 **Gate:** `audit-trace.md` records either a reproduced failure or an explicit
@@ -320,7 +320,7 @@ repair begins.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-5/reports" "${RUN_ROOT}/phases/step-5/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-5/prompt-header.md`):
@@ -342,7 +342,7 @@ Include the canonical header schema with:
 - Success criteria: The primary failure has at least one executable failing test or
   probe. If not possible, the artifact explicitly explains why and defines an
   instrumentation-based proof contract
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -363,7 +363,7 @@ test -f ${RUN_ROOT}/phases/step-5/regression-contract.md
 cp ${RUN_ROOT}/phases/step-5/regression-contract.md ${RUN_ROOT}/artifacts/regression-contract.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `regression-contract.md` manually, then confirms that the failing test,
 probe, or instrumentation contract described there actually exists.
 
@@ -417,7 +417,7 @@ converge cycle. The orchestrator must create the workers workspace explicitly.
 
 ```bash
 REPAIR_ROOT="${RUN_ROOT}/phases/step-7"
-mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
+mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/reports" \
   "${REPAIR_ROOT}/last-messages" "${REPAIR_ROOT}/review-findings"
 
 {
@@ -438,11 +438,11 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
      boundary ownership, and regression obligations.
    - Inputs: Full text of `repair-packet.md` and `regression-contract.md`
      (already combined into `CHARTER.md`)
-   - Output path: `${REPAIR_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: workers convergence handoff format
+   - Output path: `${REPAIR_ROOT}/reports/report-converge.md`
+   - Output schema: workers convergence report format
    - Success criteria: The primary regression harness passes, every repair slice is
-     completed or explicitly deferred, and the convergence handoff names residual risks
-   - Handoff: Standard relay handoff headings (`### Files Changed`, `### Tests Run`,
+     completed or explicitly deferred, and the convergence report names residual risks
+   - Report: Standard relay report headings (`### Files Changed`, `### Tests Run`,
      `### Completion Claim`) to prevent relay-protocol.md contamination
    - Also reference: one domain skill and the verification commands from `repair-packet.md`
 
@@ -462,14 +462,14 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
 4. **After workers completes**, the orchestrator synthesizes `repair-handoff.md`:
 
    **Source artifacts (read in this order):**
-   - `${REPAIR_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
+   - `${REPAIR_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
    - `${REPAIR_ROOT}/batch.json` -- slice metadata showing what was built
-   - The last implementation slice handoff at `${REPAIR_ROOT}/handoffs/handoff-<last-slice-id>.md`
+   - The last implementation slice report at `${REPAIR_ROOT}/reports/report-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: workers review workers may overwrite per-slice handoff files. If a slice
-   handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
-   and the convergence handoff to reconstruct what was built.
+   Note: workers review workers may overwrite per-slice report files. If a slice
+   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/repair-handoff.md` with:
    ```markdown
@@ -483,13 +483,13 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
    ```
 
    **Gate:** The primary regression harness passes, every repair slice is either
-   completed or explicitly deferred, and the handoff names residual risks. If
+   completed or explicitly deferred, and the report names residual risks. If
    convergence says `ISSUES REMAIN`, the workers loop should have addressed them --
    escalate to the user if it did not.
 
 **Verify:**
 ```bash
-test -f ${REPAIR_ROOT}/handoffs/handoff-converge.md
+test -f ${REPAIR_ROOT}/reports/report-converge.md
 test -f ${RUN_ROOT}/artifacts/repair-handoff.md
 ```
 
@@ -507,7 +507,7 @@ matches the original failure brief.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-8/reports" "${RUN_ROOT}/phases/step-8/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-8/prompt-header.md`):
@@ -529,7 +529,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: `CLOSED` is used only when the live flow and regression pack agree.
   If the result is `PARTIAL` or `REOPEN`, the exact failing boundary is named.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash

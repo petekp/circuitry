@@ -25,7 +25,7 @@ Done only when the convergence worker says `COMPLETE AND HARDENED`.
 - Review and convergence workers diagnose only; they do not fix code
 - Use `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root {relay_root}`; never hand-edit relay state
 - All relay paths thread through `--root`; standalone default is `--root .circuitry`
-- Spot-check at least one claimed command before trusting a worker handoff
+- Spot-check at least one claimed command before trusting a worker report
 - Preserve `--skills`, repeated `--verification`, and `--criteria` on follow-up slices
 
 ## Dispatch Backend
@@ -41,7 +41,7 @@ auto-detected: if `codex` is on PATH, use Codex; otherwise, fall back to Agent.
 Or use the dispatch helper which auto-detects:
 `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
 
-The implement/review/converge loop, artifact chain, gates, and handoff format are
+The implement/review/converge loop, artifact chain, gates, and report format are
 **identical** regardless of backend.
 
 ## Setup
@@ -49,7 +49,7 @@ The implement/review/converge loop, artifact chain, gates, and handoff format ar
 - Detect dispatch backend: `command -v codex >/dev/null 2>&1` (codex if found, agent otherwise)
 - If codex is found: `codex --version`
 - Determine relay root: use `--root` from caller if provided, otherwise `.circuitry`
-- `mkdir -p {relay_root}/archive {relay_root}/handoffs {relay_root}/last-messages {relay_root}/review-findings`
+- `mkdir -p {relay_root}/archive {relay_root}/reports {relay_root}/last-messages {relay_root}/review-findings`
 - If `AGENTS.md` is missing, create it from `references/agents-md-template.md`
 
 ## Plan
@@ -82,7 +82,7 @@ to append domain skills, the selected template, and substitute relay root paths.
 - `review` slices: `--template ship-review`
 - convergence: `--template converge`
 
-Templates own worker instructions and handoff format.
+Templates own worker instructions and report format.
 
 ## Implement
 
@@ -91,13 +91,13 @@ Skip this phase for `review` slices.
 1. Compose the prompt and dispatch:
    `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
 2. Verify output exists using explicit checks — never zsh globs or `||` chains:
-   `test -f {relay_root}/handoffs/handoff-{slice_id}.md && wc -l {relay_root}/handoffs/handoff-{slice_id}.md`
+   `test -f {relay_root}/reports/report-{slice_id}.md && wc -l {relay_root}/reports/report-{slice_id}.md`
    If the file is missing, check the worker output trace for `file update` diffs before
    concluding the worker failed. The trace is the definitive record.
-3. Read `{relay_root}/handoffs/handoff-{slice_id}.md`; fall back to
+3. Read `{relay_root}/reports/report-{slice_id}.md`; fall back to
    `{relay_root}/last-messages/last-message-{slice_id}.txt`
 4. Spot-check one critical claimed command
-5. Record `impl_dispatched` with `update-batch.sh --root {relay_root}`, the handoff path,
+5. Record `impl_dispatched` with `update-batch.sh --root {relay_root}`, the report path,
    and a one-line summary
 6. Move to review
 
@@ -108,7 +108,7 @@ Skip this phase for `review` slices.
    `test -f {relay_root}/review-findings/review-findings-{slice_id}.md && wc -l {relay_root}/review-findings/review-findings-{slice_id}.md`
    If missing, check the worker output trace for `file update` diffs before re-dispatching.
 3. Read `{relay_root}/review-findings/review-findings-{slice_id}.md` and parse `### VERDICT`
-4. Cross-check that `{relay_root}/handoffs/handoff-{slice_id}.md` echoes the same verdict
+4. Cross-check that `{relay_root}/reports/report-{slice_id}.md` echoes the same verdict
 5. Use:
    - `review_clean` for `CLEAN`
    - `review_rejected` for `ISSUES FOUND` on `implement` slices
@@ -122,11 +122,11 @@ Enter only when all non-converge slices are done.
 
 1. Compose the convergence prompt with the mission, slice summaries, and union of
    verification commands
-2. Dispatch and read `{relay_root}/handoffs/handoff-converge.md`
+2. Dispatch and read `{relay_root}/reports/report-converge.md`
 3. If verdict is `COMPLETE AND HARDENED`, record `converge_complete`
 4. If verdict is `ISSUES REMAIN`, record `converge_failed`, add fix slices with full
    metadata, and loop unless the convergence max is exceeded
-5. If the handoff marks items `SANDBOX_LIMITED`, rerun those commands outside the
+5. If the report marks items `SANDBOX_LIMITED`, rerun those commands outside the
    sandbox before giving the user a final verdict
 
 ## Sandbox Notes
@@ -168,3 +168,11 @@ One-line status between phases. Full briefing only for escalations or batch comp
 
 Workers may run `./scripts/verify/verify.sh`. Workers must never modify `.verifier/` files.
 Offer verification evolution only after human approval of the converged batch.
+
+## Glossary
+
+- **Slice** -- An atomic unit of work within a batch. Each slice has a type (implement, review, or converge), a file scope, verification commands, and attempt tracking.
+- **Batch** -- A set of slices tracked in `batch.json`. The orchestrator creates slices; workers execute them one at a time.
+- **Worker report** -- The markdown file a worker writes to `reports/` when it finishes a slice. Contains `### Files Changed`, `### Tests Run`, and `### Completion Claim` sections.
+- **Convergence** -- The final phase where a dedicated worker reads all prior reports and verification results, then declares the batch `COMPLETE AND HARDENED` or `ISSUES REMAIN`.
+- **Relay root** -- The directory (`{relay_root}`) that anchors all batch state: `batch.json`, `reports/`, `last-messages/`, `review-findings/`, `archive/`.

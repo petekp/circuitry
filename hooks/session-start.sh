@@ -28,6 +28,18 @@ else
 NOTE
 fi
 
+# ── Prerequisite check: Python 3 ────────────────────────────────────
+if ! command -v python3 >/dev/null 2>&1; then
+  cat <<'NOTE'
+> **Python 3 not found** -- relay scripts require Python 3 for batch state
+> management. Install with: `brew install python3` (macOS) or
+> `apt install python3` (Linux).
+
+---
+
+NOTE
+fi
+
 # ── Banner ────────────────────────────────────────────────────────────
 cat <<'BANNER'
 # Circuitry

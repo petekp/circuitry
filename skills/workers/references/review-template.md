@@ -8,7 +8,7 @@ Original task:
 Success criteria: {slice.success_criteria}
 
 Worker claim:
-{handoff_summary}
+{report_summary}
 
 Rerun every verification command from the header. If a command the worker claimed passed
 does not pass for you, verdict = `ISSUES FOUND`.
@@ -25,7 +25,7 @@ Write `{relay_root}/review-findings/review-findings-{slice_id}.md`:
 CLEAN or ISSUES FOUND
 ```
 
-Write `{relay_root}/handoffs/handoff-{slice_id}.md` with:
+Write `{relay_root}/reports/report-{slice_id}.md` with:
 
 ### Files Changed
 None - review only.

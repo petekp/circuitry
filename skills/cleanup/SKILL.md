@@ -98,15 +98,15 @@ backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwi
 fall back to Agent. Use the dispatch helper:
 `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt <prompt> --output <output>`
 
-The artifact chain, gates, handoff format, and resume logic are identical
+The artifact chain, gates, report format, and resume logic are identical
 regardless of backend.
 
 ## Canonical Header Schema
 
 Every dispatch header must include: `## Mission`, `## Inputs`, `## Output`
-(with path and schema), `## Success Criteria`, and `## Handoff Instructions`.
+(with path and schema), `## Success Criteria`, and `## Report Instructions`.
 
-Handoff instructions must include exact relay headings `### Files Changed`,
+Report instructions must include exact relay headings `### Files Changed`,
 `### Tests Run`, and `### Completion Claim` so `compose-prompt.sh` does not
 append `relay-protocol.md`.
 
@@ -453,7 +453,7 @@ REVERTED and move to the next batch.
 ```bash
 BATCH_ID="batch-a"  # or batch-b, etc.
 BATCH_ROOT="${RUN_ROOT}/phases/step-6/batches/${BATCH_ID}"
-mkdir -p "${BATCH_ROOT}/archive" "${BATCH_ROOT}/handoffs" \
+mkdir -p "${BATCH_ROOT}/archive" "${BATCH_ROOT}/reports" \
   "${BATCH_ROOT}/last-messages" "${BATCH_ROOT}/review-findings"
 ```
 
@@ -464,8 +464,8 @@ on any verification failure — no partial reverts).
 
 **b) Write `${BATCH_ROOT}/prompt-header.md`** telling workers to remove
 items per CHARTER, run verification after each slice, write convergence to
-`${BATCH_ROOT}/handoffs/handoff-converge.md`, and revert the whole batch if
-verification fails. Include standard relay handoff headings.
+`${BATCH_ROOT}/reports/report-converge.md`, and revert the whole batch if
+verification fails. Include standard relay report headings.
 
 **c) Compose and dispatch:**
 
@@ -483,15 +483,15 @@ verification fails. Include standard relay handoff headings.
 
 **d) After workers completes**, read back in this order:
 
-1. `${BATCH_ROOT}/handoffs/handoff-converge.md` — convergence verdict (primary)
-2. `${BATCH_ROOT}/batch.json` — slice metadata showing what was removed
-3. The last implementation slice handoff at
-   `${BATCH_ROOT}/handoffs/handoff-<last-slice-id>.md` (find slice id from
+1. `${BATCH_ROOT}/reports/report-converge.md` -- convergence verdict (primary)
+2. `${BATCH_ROOT}/batch.json` -- slice metadata showing what was removed
+3. The last implementation slice report at
+   `${BATCH_ROOT}/reports/report-<last-slice-id>.md` (find slice id from
    `batch.json`)
 
-Note: workers review workers may overwrite per-slice handoff files. If a
-slice handoff is missing or appears to be a review artifact, use `batch.json`
-slice metadata and the convergence handoff to reconstruct what was removed.
+Note: workers review workers may overwrite per-slice report files. If a
+slice report is missing or appears to be a review artifact, use `batch.json`
+slice metadata and the convergence report to reconstruct what was removed.
 
 **Mode-conditional behavior:**
 
@@ -579,9 +579,9 @@ The worker does NOT modify source code. If issues are found, remediation
 happens by reopening Clean (Step 6) or Prove (Step 5), not by letting this
 audit worker fix code.
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 ### Tests Run
@@ -678,7 +678,7 @@ cleanup-scope.md             [Step 1, interactive]
 Non-canonical intermediate outputs:
 - Step 2: 5 category finding files (consumed by Step 3, not canonical chain)
 - Step 7: `verification-audit.md` (consumed by Step 8, not canonical chain)
-- Step 6: per-batch `workers` handoffs (relay state, not canonical)
+- Step 6: per-batch `workers` reports (relay state, not canonical)
 
 ## Resume Awareness
 
@@ -698,8 +698,8 @@ Resume should be relay-first, then artifact-first:
   only for unresolved items. Do not re-prove already-adjudicated items.
 - **Step 6:** Before re-dispatching any batch:
   1. Inspect the batch child root's `batch.json`
-  2. Then `handoffs/handoff-converge.md`
-  3. Then the last slice handoff
+  2. Then `reports/report-converge.md`
+  3. Then the last slice report
   Never rerun a converged batch.
 - **Step 7:** If `verification-audit.md` exists and passes its gate, resume at
   Step 8. Do not re-audit.

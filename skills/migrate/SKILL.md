@@ -32,8 +32,8 @@ or tasks where no dual-system coexistence is needed.
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact (or a parallel pair).
-- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
-  Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
+- **Worker report** -- The raw output a worker writes to its relay `reports/` directory.
+  Worker reports are inputs to artifact synthesis, not artifacts themselves.
 - **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
 - **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
@@ -50,7 +50,7 @@ or tasks where no dual-system coexistence is needed.
   without writing its output artifact.
 - **Self-contained headers.** Dispatch steps do NOT use `--template`. The prompt header
   carries the full worker contract: mission, inputs, output schema, success criteria,
-  and handoff instructions.
+  and report instructions.
 - **Coexistence is a first-class artifact.** Step 4 produces the coexistence plan before
   any code moves. This is not an afterthought bolted onto the execution phase.
 - **Each batch is independently verifiable.** If batch N fails, batches 1 through N-1
@@ -73,7 +73,7 @@ Record `RUN_ROOT` -- all paths below are relative to it.
 **Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
-mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
+mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 ```
 
 ## Domain Skill Selection
@@ -93,7 +93,7 @@ Or use the dispatch helper which auto-detects:
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
 ```
 
-The artifact chain, gates, handoff format, and resume logic are identical
+The artifact chain, gates, report format, and resume logic are identical
 regardless of backend.
 
 ## Canonical Header Schema
@@ -116,9 +116,9 @@ Every dispatch step's prompt header MUST include these fields:
 ## Success Criteria
 [What "done" looks like for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 ### Tests Run
@@ -187,8 +187,8 @@ Dispatch two workers in parallel. Each header is self-contained (no `--template`
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-2a/handoffs" "${RUN_ROOT}/phases/step-2a/last-messages"
-mkdir -p "${RUN_ROOT}/phases/step-2b/handoffs" "${RUN_ROOT}/phases/step-2b/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2a/reports" "${RUN_ROOT}/phases/step-2a/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2b/reports" "${RUN_ROOT}/phases/step-2b/last-messages"
 ```
 
 **Worker A header** (`${RUN_ROOT}/phases/step-2a/prompt-header.md`):
@@ -211,7 +211,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: Every dependency has an exact file path and function/symbol reference.
   No dependency is described generically.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Worker B header** (`${RUN_ROOT}/phases/step-2b/prompt-header.md`):
 Include the canonical header schema with:
@@ -239,7 +239,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: Every discovered dependency is classified by both difficulty and risk.
   The recommended migration order is explicit.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Dispatch (no --template):**
 ```bash
@@ -274,7 +274,7 @@ cp ${RUN_ROOT}/phases/step-2a/dependency-inventory.md ${RUN_ROOT}/artifacts/depe
 cp ${RUN_ROOT}/phases/step-2b/risk-assessment.md ${RUN_ROOT}/artifacts/risk-assessment.md
 ```
 
-If a worker only wrote `handoffs/handoff.md`, the orchestrator reads it and synthesizes
+If a worker only wrote `reports/report.md`, the orchestrator reads it and synthesizes
 the artifact manually using the schema above.
 
 **Gate:** Both artifacts exist. Every dependency has an exact file/function reference.
@@ -368,7 +368,7 @@ converge cycle. The orchestrator must create the workers workspace explicitly.
 
 ```bash
 MIGRATION_ROOT="${RUN_ROOT}/phases/step-6"
-mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
+mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/reports" \
   "${MIGRATION_ROOT}/last-messages" "${MIGRATION_ROOT}/review-findings"
 ```
 
@@ -391,11 +391,11 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
      coexistence plan.
    - Inputs: Full text of `coexistence-plan.md`, `migration-steer.md`, and `risk-assessment.md`
      (already combined into CHARTER.md)
-   - Output path: `${MIGRATION_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: workers convergence handoff format
+   - Output path: `${MIGRATION_ROOT}/reports/report-converge.md`
+   - Output schema: workers convergence report format
    - Success criteria: All approved batches converged with `COMPLETE AND HARDENED` verdict.
      Each batch verified that old+new pass before proceeding to the next.
-   - Handoff: Standard relay handoff headings (`### Files Changed`, `### Tests Run`,
+   - Report: Standard relay report headings (`### Files Changed`, `### Tests Run`,
      `### Completion Claim`) to prevent relay-protocol.md contamination
    - Also reference: domain skills and verification commands from the coexistence plan
 
@@ -415,14 +415,14 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
 4. **After workers completes**, the orchestrator synthesizes `batch-log.md`:
 
    **Source artifacts (read in this order):**
-   - `${MIGRATION_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
+   - `${MIGRATION_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
    - `${MIGRATION_ROOT}/batch.json` -- slice metadata showing what was built
-   - The last implementation slice handoff at `${MIGRATION_ROOT}/handoffs/handoff-<last-slice-id>.md`
+   - The last implementation slice report at `${MIGRATION_ROOT}/reports/report-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: workers review workers may overwrite per-slice handoff files. If a slice
-   handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
-   and the convergence handoff to reconstruct what was built.
+   Note: workers review workers may overwrite per-slice report files. If a slice
+   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/batch-log.md` with:
    ```markdown
@@ -460,7 +460,7 @@ and verify no dual-system artifacts remain.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-7/handoffs" "${RUN_ROOT}/phases/step-7/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-7/reports" "${RUN_ROOT}/phases/step-7/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-7/prompt-header.md`):
@@ -489,7 +489,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: Full test suite passes. Every leftover reference is either removed or
   explicitly deferred. No surprise dual-system artifacts.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Dispatch:** Same compose-prompt + dispatch pattern as Steps 2-3, with
 `--header ${RUN_ROOT}/phases/step-7/prompt-header.md`,
@@ -502,7 +502,7 @@ test -f ${RUN_ROOT}/phases/step-7/verification-report.md
 cp ${RUN_ROOT}/phases/step-7/verification-report.md ${RUN_ROOT}/artifacts/verification-report.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and synthesizes
+If the worker only wrote `reports/report.md`, the orchestrator reads it and synthesizes
 `verification-report.md` manually using the schema above.
 
 **Gate:** `verification-report.md` exists with full test suite results, leftover reference
@@ -522,7 +522,7 @@ the orchestrator handles remediation by reopening Step 6.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-8/reports" "${RUN_ROOT}/phases/step-8/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-8/prompt-header.md`):
@@ -547,7 +547,7 @@ Include the canonical header schema with:
   ```
 - Success criteria: Every finding references a specific artifact or code location. If
   REVISE, the exact governing issue is named.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Dispatch:** Same compose-prompt + dispatch pattern as Steps 2-3, with
 `--header ${RUN_ROOT}/phases/step-8/prompt-header.md`,
@@ -593,7 +593,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 
 1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
    for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's handoff or last-message trace may contain usable output.
+   died mid-dispatch; the worker's report or last-message trace may contain usable output.
 2. Check artifacts in chain order (migration-brief -> dependency-inventory + risk-assessment
    -> coexistence-plan -> migration-steer -> batch-log -> verification-report -> cutover-report)
 3. Find the last complete artifact with a passing gate

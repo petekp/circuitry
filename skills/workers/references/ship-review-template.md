@@ -22,7 +22,7 @@ Write `{relay_root}/review-findings/review-findings-{slice_id}.md`:
 CLEAN or ISSUES FOUND
 ```
 
-Write `{relay_root}/handoffs/handoff-{slice_id}.md` with:
+Write `{relay_root}/reports/report-{slice_id}.md` with:
 
 ### Files Changed
 None - review only.

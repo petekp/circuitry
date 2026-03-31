@@ -34,7 +34,7 @@ If issues remain, list slice candidates in this format:
   **Suggested approach**: [how to address it]
 ```
 
-Write `{relay_root}/handoffs/handoff-converge.md` with:
+Write `{relay_root}/reports/report-converge.md` with:
 
 ### Files Changed
 None - assessment only.

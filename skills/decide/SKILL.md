@@ -29,8 +29,8 @@ Do NOT use for code delivery, bug fixes, or tasks where the decision is already 
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
-  Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
+- **Worker report** -- The raw output a worker writes to its relay `reports/` directory.
+  Worker reports are inputs to artifact synthesis, not artifacts themselves.
 - **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
 - **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
@@ -67,7 +67,7 @@ Record `RUN_ROOT` -- all paths below are relative to it.
 **Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
-mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
+mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 ```
 
 ## Domain Skill Selection
@@ -104,7 +104,7 @@ Or use the dispatch helper which auto-detects:
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
 ```
 
-The artifact chain, gates, handoff format, and resume logic are identical
+The artifact chain, gates, report format, and resume logic are identical
 regardless of backend.
 
 ## Canonical Header Schema
@@ -127,9 +127,9 @@ Every dispatch step's prompt header MUST include these fields:
 ## Success Criteria
 [What "done" looks like for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -207,7 +207,7 @@ and pain points that any serious option must respond to.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-2/handoffs" "${RUN_ROOT}/phases/step-2/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2/reports" "${RUN_ROOT}/phases/step-2/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-2/prompt-header.md`):
@@ -233,8 +233,8 @@ The map is grounded in the current system and includes at least one invariant,
 one operational constraint, and one pain point.
 
 ## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -277,7 +277,7 @@ test -f ${RUN_ROOT}/phases/step-2/current-system-map.md
 cp ${RUN_ROOT}/phases/step-2/current-system-map.md ${RUN_ROOT}/artifacts/current-system-map.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `current-system-map.md` manually using the required schema.
 
 **Gate:** `current-system-map.md` is grounded in the current system and includes at least
@@ -296,7 +296,7 @@ implementation variations.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-3/handoffs" "${RUN_ROOT}/phases/step-3/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-3/reports" "${RUN_ROOT}/phases/step-3/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-3/prompt-header.md`):
@@ -323,8 +323,8 @@ At least three options exist, and each option differs from the others on at
 least two of architecture shape, ownership boundary, migration cost, or failure surface.
 
 ## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -367,7 +367,7 @@ test -f ${RUN_ROOT}/phases/step-3/decision-options.md
 cp ${RUN_ROOT}/phases/step-3/decision-options.md ${RUN_ROOT}/artifacts/decision-options.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `decision-options.md` manually using the required schema.
 
 **Gate:** At least three options exist, and each option differs from the others on at
@@ -444,7 +444,7 @@ and runner-up comparison pressure.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-6/handoffs" "${RUN_ROOT}/phases/step-6/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-6/reports" "${RUN_ROOT}/phases/step-6/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-6/prompt-header.md`):
@@ -471,8 +471,8 @@ The report includes at least one plausible failure scenario, one boundary-level
 objection, and an explicit comparison to the strongest alternative.
 
 ## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -515,7 +515,7 @@ test -f ${RUN_ROOT}/phases/step-6/pressure-report.md
 cp ${RUN_ROOT}/phases/step-6/pressure-report.md ${RUN_ROOT}/artifacts/pressure-report.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `pressure-report.md` manually using the required schema.
 
 **Gate:** The report includes at least one plausible failure scenario, one boundary-level
@@ -609,7 +609,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 
 1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
    for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's handoff or last-message trace may contain usable output.
+   died mid-dispatch; the worker's report or last-message trace may contain usable output.
 2. Check artifacts in chain order (decision-brief -> current-system-map -> ... -> decision-guide)
 3. Find the last complete artifact with a passing gate
 4. If `decision-guide.md` exists but an upstream artifact fails its gate, the downstream

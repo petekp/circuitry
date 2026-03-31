@@ -121,11 +121,11 @@ is to surface the full mechanical failure set.
 
 | # | Dimension | What to inspect | PASS condition |
 |---|-----------|-----------------|----------------|
-| 1 | Setup completeness | Directories created in setup vs every parent directory needed by prompt headers, outputs, handoffs, `--out`, dispatch output | Every required parent directory is created before that step needs it |
+| 1 | Setup completeness | Directories created in setup vs every parent directory needed by prompt headers, outputs, reports, `--out`, dispatch output | Every required parent directory is created before that step needs it |
 | 2 | Path resolution | Every file path and variable reference in setup, action, headers, gates, commands | Every path can exist after concrete substitution; assumptions are recorded |
 | 3 | Command validity | All `compose-prompt.sh` and `dispatch.sh` invocations; interactive/synthesis instructions | Flags match the real script interface; output parent directories exist |
 | 4 | Artifact chain closure | `consumes` and `produces` across step boundaries | Every consumed artifact has a prior producer with the exact name. Every produced artifact is either consumed by a later step or explicitly terminal. No orphaned byproducts (e.g., template-emitted files that nothing reads) |
-| 5 | Canonical header compliance | Dispatch step prompt header contract | Header includes `## Mission`, `## Inputs`, `## Output` (with Path + Schema), `## Success Criteria`, `## Handoff Instructions` with `### Files Changed`, `### Tests Run`, `### Completion Claim` |
+| 5 | Canonical header compliance | Dispatch step prompt header contract | Header includes `## Mission`, `## Inputs`, `## Output` (with Path + Schema), `## Success Criteria`, `## Report Instructions` with `### Files Changed`, `### Tests Run`, `### Completion Claim` |
 | 6 | Template contamination | `--template` use and the template's implied output contract | No template used, OR any template is proven to match the step's expected artifact |
 | 7 | Placeholder leak | Unresolved `{...}` tokens after simulated prompt assembly | No unresolved placeholders remain in the final worker prompt |
 | 8 | Action-type consistency | Match between declared action and actual behavior | Interactive → user prompt; dispatch → worker execution (via Codex or Agent); synthesis → orchestrator writes. No interactive skills in autonomous dispatches |
@@ -177,7 +177,7 @@ Resolve in two passes:
 For each symbol record: concrete value, source, and confidence (`fact` or `assumption`).
 
 Under `## Path Expansions`, expand every mechanically relevant path: prompt headers,
-prompt outputs, worker outputs, handoff destinations, `last-messages/` files,
+prompt outputs, worker outputs, report destinations, `last-messages/` files,
 artifact promotion targets, gate file paths.
 
 **Gate:** At least one symbol resolved. Path Expansions, Undefined Symbols, and Assumptions sections present.
@@ -219,7 +219,7 @@ the failure immediately.
 
 #### 4b. Execute setup mentally
 Write the exact setup commands with resolved paths. Compare what they create against what
-the later action needs. Look for: missing `handoffs/`, missing `last-messages/`, missing
+the later action needs. Look for: missing `reports/`, missing `last-messages/`, missing
 parent for `prompt-header.md`, dispatch output parents never created.
 
 #### 4c. Write the concrete prompt header
@@ -250,7 +250,7 @@ contamination, no review-preamble contamination for non-review steps, no unresol
 
 #### 4e. Simulate the worker's minimal valid output
 Write the artifact a competent worker would produce. Record: exact output path, exact
-headings, companion handoff path, whether filename matches what the orchestrator later
+headings, companion report path, whether filename matches what the orchestrator later
 verifies or promotes.
 
 #### 4f. Verify and promote
@@ -307,7 +307,7 @@ as a contract surface:
 - How does the orchestrator convert that output back into the circuit's artifact chain?
 
 Adapter bugs are often semantic, not just path-based. Example: promoting a convergence
-assessment as though it were an implementation handoff.
+assessment as though it were an implementation report.
 
 ## Targeted Closure Pass
 

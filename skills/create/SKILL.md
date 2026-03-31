@@ -78,7 +78,7 @@ TARGET_CIRCUIT_ROOT="${HOME}/.claude/skills/circuit/${TARGET_CIRCUIT_SLUG}"
 RUN_ROOT=".circuitry/circuit-runs/${TARGET_CIRCUIT_SLUG}-circuit-create"
 STAGING="${RUN_ROOT}/staging"
 mkdir -p "${RUN_ROOT}/artifacts" "${STAGING}" \
-  "${RUN_ROOT}/handoffs" "${RUN_ROOT}/last-messages" \
+  "${RUN_ROOT}/reports" "${RUN_ROOT}/last-messages" \
   "${TARGET_CIRCUIT_ROOT}"
 ```
 
@@ -107,7 +107,7 @@ you are compiling includes dispatch steps, author them with these limits:
 
 Generated circuits should use the dispatch helper (`"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh"`)
 which auto-detects whether Codex CLI or Agent fallback should be used. The
-artifact chain, gates, and handoff format are identical regardless of backend.
+artifact chain, gates, and report format are identical regardless of backend.
 
 ## Canonical Header Schema
 
@@ -130,9 +130,9 @@ the author has a stronger, step-specific reason to inline a fuller variant.
 ## Success Criteria
 [What done means for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 ### Tests Run
@@ -195,8 +195,8 @@ must include all of the following:
 - `CHARTER.md` creation from the parent execution contract
 - the real `compose-prompt.sh` and `dispatch.sh` calls
 - required child files: `CHARTER.md`, `batch.json`,
-  `handoffs/handoff-<slice-id>.md`, and `handoffs/handoff-converge.md`
-- readback order: `handoff-converge.md`, then `batch.json`, then the last slice handoff
+  `reports/report-<slice-id>.md`, and `reports/report-converge.md`
+- readback order: `report-converge.md`, then `batch.json`, then the last slice report
 - outer synthesis rules for the parent artifact
 - escalation behavior if convergence says `ISSUES REMAIN`
 
@@ -320,7 +320,7 @@ Do NOT use for [negative scope].
 
 ## Glossary
 - **Artifact** - Durable circuit output under `${RUN_ROOT}/artifacts/`.
-- **Worker handoff** - Raw relay output, not the canonical artifact chain.
+- **Worker report** - Raw relay output, not the canonical artifact chain.
 - **Synthesis** - Orchestrator-authored artifact created from upstream artifacts.
 
 ## Principles
@@ -397,7 +397,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 
 | Gate type | Use when | Required contract | Bad smells |
 |---|---|---|---|
-| `outputs_present` | Artifact quality can be checked from the file plus explicit content checks | Exact output schema, concrete gate checks, fallback synthesis if a worker wrote only `handoffs/handoff.md` | Gate says only "file exists" or "looks good" |
+| `outputs_present` | Artifact quality can be checked from the file plus explicit content checks | Exact output schema, concrete gate checks, fallback synthesis if a worker wrote only `reports/report.md` | Gate says only "file exists" or "looks good" |
 | `evidence-reopen` | A proof step can validate, adjust, or invalidate the plan | Bounded verdicts, explicit artifact to update, explicit user checkpoint for invalidation | Proof can fail but the circuit only says "revise and continue" |
 | `verdict-consistency` | A terminal verdict is valid only if it matches named evidence boundaries | Verdict meanings, exact evidence threshold, exact failing boundary requirement | "Closed" or equivalent is allowed without naming the checked boundary |
 | `verdict-reopen` | A review step decides between continue and upstream revision | Diagnose-only contract, ready threshold, named reopen targets, user prompt for target plus governing issue | Review both edits code and judges it, or `REVISE` has no named target |
@@ -407,7 +407,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 #### Artifact Chain Integrity
 
 - Name one canonical artifact per topology step or one explicit promoted output
-- Distinguish worker handoffs from canonical circuit artifacts
+- Distinguish worker reports from canonical circuit artifacts
 - Name the exact output path and schema for every dispatch step
 - Declare every external input and the first step that reads it
 - Normalize parallel fanout before downstream synthesis depends on one contract
@@ -419,12 +419,12 @@ Short paragraph explaining the validator's core model and what a passing trace m
 - Preserve the same gate semantics in `SKILL.md` and `circuit.yaml`
 - Record the governing issue whenever a verdict triggers reopen
 
-#### Handoff Contract Compliance
+#### Report Contract Compliance
 
 - Use the canonical header schema and exact relay headings
-- Tell the worker where the primary artifact lives and where the handoff lives
+- Tell the worker where the primary artifact lives and where the report lives
 - Mark diagnose-only review steps explicitly
-- Do not promote a raw handoff into a semantic artifact without synthesis
+- Do not promote a raw worker report into a semantic artifact without synthesis
 
 #### Resume Safety
 
@@ -486,14 +486,14 @@ Short paragraph explaining the validator's core model and what a passing trace m
 | ID | Smell |
 |---|---|
 | `AP-01` | Open Artifact Chain - a step declares an output that no worker or synthesis step actually produces |
-| `AP-02` | Copy-The-Handoff - a generic handoff is copied verbatim into a semantic artifact |
+| `AP-02` | Copy-The-Handoff - a generic worker report is copied verbatim into a semantic artifact |
 | `AP-03` | Template Misbinding - a step uses `review`, `ship-review`, `converge`, or `implement` for the wrong job |
 | `AP-04` | Placeholder Leakage - unresolved placeholders reach the worker prompt |
 | `AP-05` | Interactive Skill In Autonomous Dispatch - an AskUserQuestion-style skill is appended to an autonomous worker dispatch |
 | `AP-06` | Relay Layout Drift - parent, child, and adapter layouts assume different ownership boundaries |
 | `AP-07` | Resume By Final Artifacts Only - resume logic ignores step-local relay state such as `batch.json` |
 | `AP-08` | Review Overwrites Implementation Evidence - the only implementation story lives in a path reused by review |
-| `AP-09` | Ambiguous Final Synthesis - the circuit says "copy the final handoff" without explicit source artifacts and synthesis rules |
+| `AP-09` | Ambiguous Final Synthesis - the circuit says "copy the final report" without explicit source artifacts and synthesis rules |
 | `AP-10` | Weak Gates - a gate checks only existence or generic completion |
 | `AP-11` | No Reopen Rule - disconfirming evidence appears but the circuit only says "revise and continue" |
 | `AP-12` | Guide Instead Of Contract - downstream work gets a guide that drops invariants, tests, or rollback triggers |

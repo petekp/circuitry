@@ -29,8 +29,8 @@ intent/contract/implement/review flow, use `--light` mode (see Mode Selection be
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
-  Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
+- **Worker report** -- The raw output a worker writes to its relay `reports/` directory.
+  Worker reports are inputs to artifact synthesis, not artifacts themselves.
 - **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
 - **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
@@ -42,7 +42,7 @@ intent/contract/implement/review flow, use `--light` mode (see Mode Selection be
   without writing its output artifact.
 - **Self-contained headers.** Dispatch steps do NOT use `--template`. The prompt header
   carries the full worker contract: mission, inputs, output schema, success criteria,
-  and handoff instructions.
+  and report instructions.
 - **User steers tradeoffs, not approvals.** Checkpoints ask the user to choose between
   competing priorities, not rubber-stamp a recommendation.
 - **Digest chaining.** The orchestrator reads prior artifacts and writes a compact digest
@@ -63,7 +63,7 @@ Record `RUN_ROOT` -- all paths below are relative to it.
 **Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
-mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
+mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 ```
 
 ## Mode Selection
@@ -151,7 +151,7 @@ Or use the dispatch helper:
   --output ${step_dir}/last-messages/last-message.txt
 ```
 
-The artifact chain, gates, handoff format, and resume logic are **identical**
+The artifact chain, gates, report format, and resume logic are **identical**
 regardless of backend. The only difference is the execution mechanism.
 
 **Parallel dispatch:** The Codex backend supports true parallel workers (`&` + `wait`). Agent
@@ -179,9 +179,9 @@ Every dispatch step's prompt header MUST include these fields:
 ## Success Criteria
 [What "done" looks like for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -266,8 +266,8 @@ Dispatch two workers. Each header is self-contained (no `--template`).
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-2a/handoffs" "${RUN_ROOT}/phases/step-2a/last-messages"
-mkdir -p "${RUN_ROOT}/phases/step-2b/handoffs" "${RUN_ROOT}/phases/step-2b/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2a/reports" "${RUN_ROOT}/phases/step-2a/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-2b/reports" "${RUN_ROOT}/phases/step-2b/last-messages"
 ```
 
 **Worker A header** (`${RUN_ROOT}/phases/step-2a/prompt-header.md`):
@@ -277,7 +277,7 @@ Include the canonical header schema with:
 - Output path: `${RUN_ROOT}/phases/step-2a/external-digest.md`
 - Output schema: the evidence digest schema (below)
 - Success criteria: Digest covers facts, inferences, unknowns with source confidence
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Worker B header** (`${RUN_ROOT}/phases/step-2b/prompt-header.md`):
 Include the canonical header schema with:
@@ -286,7 +286,7 @@ Include the canonical header schema with:
 - Output path: `${RUN_ROOT}/phases/step-2b/internal-digest.md`
 - Output schema: the evidence digest schema (below)
 - Success criteria: Digest covers all relevant internal seams with certainty labels
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Evidence digest schema (required for both workers):**
 ```markdown
@@ -335,7 +335,7 @@ cp ${RUN_ROOT}/phases/step-2a/external-digest.md ${RUN_ROOT}/artifacts/external-
 cp ${RUN_ROOT}/phases/step-2b/internal-digest.md ${RUN_ROOT}/artifacts/internal-digest.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes the digest artifact manually using the evidence digest schema.
 
 **Gate:** Both digest artifacts exist. Each digest contains non-empty Facts,
@@ -373,7 +373,7 @@ ranked open questions. Every item has a certainty label.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-4/reports" "${RUN_ROOT}/phases/step-4/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-4/prompt-header.md`):
@@ -395,7 +395,7 @@ mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-me
   ```
 - Success criteria: Each option differs on at least 2 of: architecture shape, ownership
   boundary, failure surface, data model. At least 3 options.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -416,7 +416,7 @@ test -f ${RUN_ROOT}/phases/step-4/options.md
 cp ${RUN_ROOT}/phases/step-4/options.md ${RUN_ROOT}/artifacts/options.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, synthesize `options.md` from the handoff.
+If the worker only wrote `reports/report.md`, synthesize `options.md` from the report.
 
 ### Step 5: Adversarial Evaluation + Decision Packet -- `dispatch`
 
@@ -424,7 +424,7 @@ If the worker only wrote `handoffs/handoff.md`, synthesize `options.md` from the
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-5/reports" "${RUN_ROOT}/phases/step-5/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-5/prompt-header.md`):
@@ -442,7 +442,7 @@ mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-me
   ```
 - Success criteria: At least one option materially weakened by critique. Matrix includes
   risk dimensions, not just feature comparison.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -546,7 +546,7 @@ and proceeds directly to Step 9 (Implement).
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-8/reports" "${RUN_ROOT}/phases/step-8/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-8/prompt-header.md`):
@@ -565,7 +565,7 @@ mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-me
   ## Verdict: DESIGN HOLDS / DESIGN INVALIDATED / NEEDS ADJUSTMENT
   ```
 - Success criteria: Code was written and run. Evidence is from execution, not reasoning.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -610,7 +610,7 @@ cycle. The orchestrator must create the workers workspace explicitly.
 
 ```bash
 IMPL_ROOT="${RUN_ROOT}/phases/step-9"
-mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
+mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
   "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/review-findings"
 ```
 
@@ -624,10 +624,10 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
    - Mission: Implement the feature described in CHARTER.md using the workers
      implement → review → converge cycle
    - Inputs: Full text of `execution-packet.md` (already copied as CHARTER.md)
-   - Output path: `${IMPL_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: workers convergence handoff format
+   - Output path: `${IMPL_ROOT}/reports/report-converge.md`
+   - Output schema: workers convergence report format
    - Success criteria: All slices converged with `COMPLETE AND HARDENED` verdict
-   - Handoff: Standard relay handoff headings (### Files Changed, ### Tests Run,
+   - Report: Standard relay report headings (### Files Changed, ### Tests Run,
      ### Completion Claim) to prevent relay-protocol.md contamination
    - Also reference: domain skills and verification commands from the execution packet
 
@@ -647,14 +647,14 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
 4. **After workers completes**, the orchestrator synthesizes `implementation-handoff.md`:
 
    **Source artifacts (read in this order):**
-   - `${IMPL_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
+   - `${IMPL_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
    - `${IMPL_ROOT}/batch.json` -- slice metadata showing what was built
-   - The last implementation slice handoff at `${IMPL_ROOT}/handoffs/handoff-<last-slice-id>.md`
+   - The last implementation slice report at `${IMPL_ROOT}/reports/report-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: workers review workers may overwrite per-slice handoff files. If a slice
-   handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
-   and the convergence handoff to reconstruct what was built.
+   Note: workers review workers may overwrite per-slice report files. If a slice
+   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/implementation-handoff.md` with:
    ```markdown
@@ -671,7 +671,7 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
 
 **Verify:**
 ```bash
-test -f ${IMPL_ROOT}/handoffs/handoff-converge.md
+test -f ${IMPL_ROOT}/reports/report-converge.md
 test -f ${RUN_ROOT}/artifacts/implementation-handoff.md
 ```
 
@@ -684,7 +684,7 @@ found, the orchestrator handles remediation separately before re-running this st
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-10/reports" "${RUN_ROOT}/phases/step-10/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-10/prompt-header.md`):
@@ -708,7 +708,7 @@ mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-
   ```
 - Success criteria: Every finding references a contract section or intent-brief item.
   Findings are categorized by severity, not listed as a flat list.
-- Handoff: `handoffs/handoff.md`
+- Report: `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash

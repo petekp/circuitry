@@ -43,7 +43,7 @@ and an upstream step before `circuit:develop` or `workers`.
   systems, or comparative.
 - **Prompt header** - A self-contained file the orchestrator writes before
   dispatch. Contains the full worker contract: mission, inputs, output path,
-  output schema, success criteria, and handoff instructions.
+  output schema, success criteria, and report instructions.
 - **Synthesis** - When the orchestrator (Claude session) reads prior artifacts and
   writes a new artifact directly, without dispatching a worker.
 
@@ -59,7 +59,7 @@ and an upstream step before `circuit:develop` or `workers`.
   constraints and verification obligations. `implementation-plan.md` sequences the
   work without reinterpreting the contract.
 - **Self-contained headers.** Dispatch steps do NOT use `--template`. The prompt
-  header carries the full worker contract and the standard handoff headings.
+  header carries the full worker contract and the standard report headings.
 - **Stop before code.** This circuit hardens documents only. There is no
   `workers` delegation step and no implementation phase.
 
@@ -77,7 +77,7 @@ Record `SOURCE_DRAFT` and `RUN_ROOT` - all paths below are relative to `RUN_ROOT
 **Per-step scaffolding** - before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
-mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
+mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 ```
 
 ## Domain Skill Selection
@@ -106,7 +106,7 @@ fall back to Agent. The assembled prompt is identical for both backends.
 
 Or use the dispatch helper: `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
 
-The artifact chain, gates, handoff format, and resume logic are identical
+The artifact chain, gates, report format, and resume logic are identical
 regardless of backend.
 
 ## Canonical Header Schema
@@ -129,9 +129,9 @@ Every dispatch step's prompt header MUST include these fields:
 ## Success Criteria
 [What "done" looks like for this step]
 
-## Handoff Instructions
-Write your primary output to the path above. Also write a standard handoff to
-`handoffs/handoff.md` with these exact section headings:
+## Report Instructions
+Write your primary output to the path above. Also write a standard report to
+`reports/report.md` with these exact section headings:
 
 ### Files Changed
 [List files modified or created]
@@ -236,7 +236,7 @@ sequenced by implementers.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-3/handoffs" "${RUN_ROOT}/phases/step-3/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-3/reports" "${RUN_ROOT}/phases/step-3/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-3/prompt-header.md`):
@@ -256,8 +256,8 @@ Use the canonical header schema with:
   ```
 - Success criteria: The review names concrete build seams or explicitly says why
   the draft already looks buildable
-- Handoff: The standard handoff block from the canonical header schema, written to
-  `handoffs/handoff.md`
+- Report: The standard report block from the canonical header schema, written to
+  `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -278,7 +278,7 @@ test -f ${RUN_ROOT}/phases/step-3/implementer-review.md
 cp ${RUN_ROOT}/phases/step-3/implementer-review.md ${RUN_ROOT}/artifacts/implementer-review.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `implementer-review.md` manually using the required schema.
 
 **Gate:** The review names concrete build seams or explicitly says why the draft
@@ -294,7 +294,7 @@ failure modes, and long-term system shape.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-4/reports" "${RUN_ROOT}/phases/step-4/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-4/prompt-header.md`):
@@ -314,8 +314,8 @@ Use the canonical header schema with:
   ```
 - Success criteria: The review covers both architecture and runtime or operational
   concerns
-- Handoff: The standard handoff block from the canonical header schema, written to
-  `handoffs/handoff.md`
+- Report: The standard report block from the canonical header schema, written to
+  `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -336,7 +336,7 @@ test -f ${RUN_ROOT}/phases/step-4/systems-review.md
 cp ${RUN_ROOT}/phases/step-4/systems-review.md ${RUN_ROOT}/artifacts/systems-review.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `systems-review.md` manually using the required schema.
 
 **Gate:** The review covers both architecture and runtime or operational concerns.
@@ -350,7 +350,7 @@ amended spec reflects deliberate choices instead of isolated local taste.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-5/reports" "${RUN_ROOT}/phases/step-5/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-5/prompt-header.md`):
@@ -370,8 +370,8 @@ Use the canonical header schema with:
   ```
 - Success criteria: The review includes at least two meaningful comparisons or
   explicitly records that relevant prior art was not found
-- Handoff: The standard handoff block from the canonical header schema, written to
-  `handoffs/handoff.md`
+- Report: The standard report block from the canonical header schema, written to
+  `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -392,7 +392,7 @@ test -f ${RUN_ROOT}/phases/step-5/comparative-review.md
 cp ${RUN_ROOT}/phases/step-5/comparative-review.md ${RUN_ROOT}/artifacts/comparative-review.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `comparative-review.md` manually using the required schema.
 
 **Gate:** The review includes at least two meaningful comparisons or explicitly
@@ -538,7 +538,7 @@ artifacts directly.
 
 **Setup:**
 ```bash
-mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-messages"
+mkdir -p "${RUN_ROOT}/phases/step-10/reports" "${RUN_ROOT}/phases/step-10/last-messages"
 ```
 
 **Header** (`${RUN_ROOT}/phases/step-10/prompt-header.md`):
@@ -561,8 +561,8 @@ Use the canonical header schema with:
 - Success criteria: `READY` appears only when Blocking Gaps are empty. `REVISE`
   names whether to reopen `caveat-resolution.md`, `amended-spec.md`, or
   `implementation-plan.md`
-- Handoff: The standard handoff block from the canonical header schema, written to
-  `handoffs/handoff.md`
+- Report: The standard report block from the canonical header schema, written to
+  `reports/report.md`
 
 **Compose and dispatch (no --template):**
 ```bash
@@ -583,7 +583,7 @@ test -f ${RUN_ROOT}/phases/step-10/plan-review.md
 cp ${RUN_ROOT}/phases/step-10/plan-review.md ${RUN_ROOT}/artifacts/plan-review.md
 ```
 
-If the worker only wrote `handoffs/handoff.md`, the orchestrator reads it and
+If the worker only wrote `reports/report.md`, the orchestrator reads it and
 synthesizes `plan-review.md` manually using the required schema.
 
 **Gate with reopen:** Read the plan review verdict.
@@ -620,7 +620,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 
 1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
    for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's handoff or last-message trace may contain usable output.
+   died mid-dispatch; the worker's report or last-message trace may contain usable output.
 2. Check artifacts in chain order (spec-brief -> draft-digest -> implementer-review,
    systems-review, comparative-review -> caveat-resolution -> amended-spec ->
    execution-packet -> implementation-plan -> plan-review)

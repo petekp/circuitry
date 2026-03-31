@@ -144,7 +144,7 @@ more content than fits in a single context window. The artifact chain means each
 step only needs to read its declared inputs, not the entire history. Step 14
 (Execution Audit) reads `execution-log.md`, `execution-charter.md`,
 `mission-brief.md`, and `quality-calibration.md` -- not the 600 lines of
-handoffs from Steps 3 through 13.
+reports from Steps 3 through 13.
 
 **Truthfulness.** Workers sometimes claim completion without actually finishing.
 Artifacts give the orchestrator (and the next session) something concrete to
@@ -173,19 +173,19 @@ step might have produced its artifact but left child workers in an inconsistent
 state. Resume must check the step-local state (like `batch.json` or injection
 ledgers) before blindly re-executing.
 
-### Artifact vs. Handoff
+### Artifact vs. Worker Report
 
 The system distinguishes between two kinds of output:
 
 - **Artifacts** (`${RUN_ROOT}/artifacts/*.md`) are canonical circuit outputs.
   They are the durable chain. Each one has a defined schema and a gate.
-- **Handoffs** (`${RUN_ROOT}/phases/step-N/handoffs/*.md`) are raw worker
+- **Worker reports** (`${RUN_ROOT}/phases/step-N/reports/*.md`) are raw worker
   outputs. They follow the relay protocol format but are not the canonical
   chain.
 
-A common anti-pattern (`AP-02: Copy-The-Handoff`) is promoting a raw handoff
+A common anti-pattern (`AP-02: Copy-The-Handoff`) is promoting a raw worker report
 directly into an artifact without synthesis. The correct pattern is for the
-orchestrator to read the handoff, extract the relevant information, and write
+orchestrator to read the report, extract the relevant information, and write
 the canonical artifact with the expected schema.
 
 ### Artifact Location
@@ -204,7 +204,7 @@ a ratchet-quality run on a feature called "auth-refactor" would use:
 RUN_ROOT=".circuitry/circuit-runs/auth-refactor-ratchet-quality"
 ```
 
-Step-specific relay state (handoffs, last messages, prompt headers) lives under
+Step-specific relay state (reports, last messages, prompt headers) lives under
 `${RUN_ROOT}/phases/step-N/`. This separation keeps the canonical artifact
 chain clean while preserving the full execution trace for debugging.
 
@@ -258,8 +258,8 @@ The dispatch pipeline:
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt"
 
-# 4. Orchestrator reads the handoff and verifies
-test -f "${STEP_ROOT}/handoffs/handoff.md"
+# 4. Orchestrator reads the report and verifies
+test -f "${STEP_ROOT}/reports/report.md"
 ```
 
 Dispatch steps come in several flavors:
@@ -358,7 +358,7 @@ For example, `ratchet-quality` Step 13:
 ${RUN_ROOT}/phases/step-13/batches/<batch-id>/
   CHARTER.md
   batch.json
-  handoffs/
+  reports/
   last-messages/
   review-findings/
   archive/
@@ -367,9 +367,9 @@ ${RUN_ROOT}/phases/step-13/batches/<batch-id>/
 The parent step owns the child root. After `workers` completes, the parent
 reads back in a specific order:
 
-1. `handoffs/handoff-converge.md` (the convergence verdict)
+1. `reports/report-converge.md` (the convergence verdict)
 2. `batch.json` (the final state of all slices)
-3. `handoffs/handoff-<last-slice-id>.md` (the last implementation handoff)
+3. `reports/report-<last-slice-id>.md` (the last implementation report)
 
 Then the parent synthesizes the canonical circuit artifact from that evidence.
 
@@ -522,7 +522,7 @@ instead of forcing a bad fit.
 ## Relay Infrastructure
 
 The relay layer is the system's plumbing: two shell scripts and a set of
-templates that handle prompt assembly, state management, and the handoff
+templates that handle prompt assembly, state management, and the report
 protocol between orchestrator and workers.
 
 ### `compose-prompt.sh`: Prompt Assembly
@@ -550,7 +550,7 @@ The assembly pipeline:
    patterns, etc.) without the orchestrator having to inline it.
 
 3. **Append the template.** Templates define the worker's operating contract:
-   - `implement`: Write code, run verification, produce a handoff.
+   - `implement`: Write code, run verification, produce a report.
    - `review`: Inspect the diff, re-run verification, produce findings.
    - `ship-review`: Audit existing code without a preceding diff.
    - `converge`: Final quality gate across all slices.
@@ -562,7 +562,7 @@ The assembly pipeline:
    assembled output already contains the canonical relay headings
    (`### Files Changed`, `### Tests Run`, `### Completion Claim`). If not, it
    appends `relay-protocol.md` as a safety net. This prevents a common failure
-   where workers produce handoffs without the required structure.
+   where workers produce reports without the required structure.
 
 5. **Substitute `{relay_root}` tokens.** If `--root` is provided, all literal
    `{relay_root}` tokens in the assembled output are replaced with the actual
@@ -593,7 +593,7 @@ The script supports these events:
 | Event | What it does |
 |-------|-------------|
 | `attempt_started` | Increment `impl_attempts`, set `attempt_in_progress` |
-| `impl_dispatched` | Clear `attempt_in_progress`, record handoff |
+| `impl_dispatched` | Clear `attempt_in_progress`, record report |
 | `review_clean` | Set slice status to `done` |
 | `review_rejected` | Increment `review_rejections` |
 | `converge_complete` | Set all converge slices to `done`, phase to `complete` |
@@ -619,9 +619,9 @@ to its relay root:
   --slice slice-001 --event review_clean --summary "CLEAN"
 ```
 
-### The Handoff Contract
+### The Worker Report Contract
 
-Every worker writes a handoff file with these exact sections:
+Every worker writes a report file with these exact sections:
 
 ```markdown
 ### Files Changed
@@ -650,7 +650,7 @@ Every worker writes a handoff file with these exact sections:
 These headings are not cosmetic. `compose-prompt.sh` checks for their
 presence. If a template already contains them, the relay protocol file is not
 appended. If they are missing, the script appends the protocol as a fallback.
-Workers that omit these headings produce handoffs that the orchestrator cannot
+Workers that omit these headings produce reports that the orchestrator cannot
 reliably parse.
 
 ### `{relay_root}` Token Substitution
@@ -658,7 +658,7 @@ reliably parse.
 Templates and skill files reference paths using `{relay_root}` tokens:
 
 ```markdown
-Write `{relay_root}/handoffs/handoff-{slice_id}.md`.
+Write `{relay_root}/reports/report-{slice_id}.md`.
 ```
 
 The `compose-prompt.sh` script replaces these tokens with the actual path when
@@ -978,7 +978,7 @@ The system catalogs 25 named anti-patterns. The most important:
 | ID | Name | What goes wrong |
 |----|------|----------------|
 | `AP-01` | Open Artifact Chain | A step declares an output that no one produces |
-| `AP-02` | Copy-The-Handoff | A raw handoff is promoted to artifact without synthesis |
+| `AP-02` | Copy-The-Handoff | A raw worker report is promoted to artifact without synthesis |
 | `AP-04` | Placeholder Leakage | Unresolved `{relay_root}` tokens reach the worker |
 | `AP-05` | Interactive Skill In Autonomous Dispatch | An interactive skill appended to `codex exec --full-auto` |
 | `AP-07` | Resume By Final Artifacts Only | Resume ignores step-local state like `batch.json` |
@@ -1067,31 +1067,31 @@ When `circuit:develop` executes for a feature called
       external/
         prompt-header.md
         prompt.md
-        handoffs/
-          handoff.md
+        reports/
+          report.md
         last-messages/
           last-message.txt
       internal/
         prompt-header.md
         prompt.md
-        handoffs/
-          handoff.md
+        reports/
+          report.md
         last-messages/
           last-message.txt
     generate-candidates/
       prompt-header.md
       prompt.md
-      handoffs/
-        handoff.md
+      reports/
+        report.md
       last-messages/
         last-message.txt
     implement/
       CHARTER.md
       batch.json
       events.ndjson
-      handoffs/
-        handoff-slice-001.md
-        handoff-converge.md
+      reports/
+        report-slice-001.md
+        report-converge.md
       review-findings/
         review-findings-slice-001.md
       last-messages/
@@ -1120,13 +1120,13 @@ SKILL.md (runtime truth)
             |     (header + skills + template + relay_root substitution)
             |
             ├── codex exec --full-auto
-            |     (worker executes, writes handoff)
+            |     (worker executes, writes report)
             |
             ├── [if adapter: workers]
             |     update-batch.sh manages state
             |     plan -> implement -> review -> converge loop
             |
-            └── orchestrator reads handoff -> synthesizes artifact
+            └── orchestrator reads report -> synthesizes artifact
                     |
                     v
               gate check

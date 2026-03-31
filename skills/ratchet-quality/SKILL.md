@@ -15,7 +15,7 @@ description: >
 Ratchet Quality is a bounded overnight improvement loop: freeze the mission,
 restore baseline trust, generate better options, turn them into an executable
 charter, deliver the work in batches, and publish a truthful closeout packet.
-The artifact chain is the source of truth. Relay handoffs and child roots are
+The artifact chain is the source of truth. Relay reports and child roots are
 supporting evidence, not the workflow state.
 This circuit exists to prevent a common unattended-run failure mode: ambitious
 changes built on an untrusted baseline, vague quality bars, hidden reopen logic,
@@ -116,14 +116,14 @@ Handoff instructions must include these exact relay headings:
 ## Dispatch Backend
 Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
 backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
-fall back to Agent. The artifact chain, gates, and handoff format are identical
+fall back to Agent. The artifact chain, gates, and report format are identical
 regardless of backend.
 
 ## Shared Dispatch Recipe
 All non-`workers` dispatch steps use the same relay recipe:
 ```bash
 STEP_ROOT="${RUN_ROOT}/phases/step-<n>"
-mkdir -p "${STEP_ROOT}/handoffs" "${STEP_ROOT}/last-messages"
+mkdir -p "${STEP_ROOT}/reports" "${STEP_ROOT}/last-messages"
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "<skills>" \
@@ -136,7 +136,7 @@ mkdir -p "${STEP_ROOT}/handoffs" "${STEP_ROOT}/last-messages"
 Parallel steps use per-worker subdirectories to avoid file collisions:
 ```bash
 WORKER_ROOT="${STEP_ROOT}/<worker-id>"
-mkdir -p "${WORKER_ROOT}/handoffs" "${WORKER_ROOT}/last-messages"
+mkdir -p "${WORKER_ROOT}/reports" "${WORKER_ROOT}/last-messages"
 ```
 Each worker's `--header`, `--root`, `--out`, and `-o` paths reference its own
 `WORKER_ROOT`. The parent step reads all worker artifacts after all workers finish.
@@ -502,12 +502,12 @@ Use these parent-owned child roots:
 Every child root must contain:
 - `CHARTER.md`
 - `batch.json`
-- `handoffs/handoff-converge.md`
-- `handoffs/handoff-<last-slice-id>.md`
+- `reports/report-converge.md`
+- `reports/report-<last-slice-id>.md`
 - `last-messages/last-message-workers.txt`
 And the parent creates:
 - `archive/`
-- `handoffs/`
+- `reports/`
 - `last-messages/`
 - `review-findings/`
 ### Shared Dispatch and Readback Contract
@@ -519,14 +519,14 @@ For every child root:
    skill string with `workers` plus any domain skills, and writing the
    last message to `last-message-workers.txt`.
 5. Read back in this order:
-   1. `handoffs/handoff-converge.md`
+   1. `reports/report-converge.md`
    2. `batch.json`
-   3. `handoffs/handoff-<last-slice-id>.md`
-If the last slice handoff is missing or clearly looks like review output, use
-`batch.json` plus the convergence handoff to reconstruct the implementation
+   3. `reports/report-<last-slice-id>.md`
+If the last slice report is missing or clearly looks like review output, use
+`batch.json` plus the convergence report to reconstruct the implementation
 story instead of guessing from chat residue.
 ### Shared Failure Handling
-- Missing `handoff-converge.md`: mark the child root `INVALID`, archive it, and
+- Missing `report-converge.md`: mark the child root `INVALID`, archive it, and
   retry only if budget remains.
 - Malformed `batch.json`: mark the child root `INVALID`; if convergence is
   still enough for truthful synthesis, record the limitation, otherwise retry.
@@ -713,7 +713,7 @@ Promotion rules:
 - `execution-charter.md` supersedes `implementation-plan.md`.
 - `execution-report.md` supersedes `execution-log.md` for Finalize.
 Supporting but non-canonical state:
-- Relay handoffs under each step root
+- Relay reports under each step root
 - `workers` child roots and their `batch.json`
 - Admitted injection specs under ratchet step relay directories
 ## Resume Awareness

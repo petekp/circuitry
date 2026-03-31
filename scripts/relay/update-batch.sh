@@ -14,7 +14,7 @@
 #
 # Events:
 #   attempt_started      - Record a worker attempt before dispatch
-#   impl_dispatched      - Record a completed implementation handoff
+#   impl_dispatched      - Record a completed implementation report
 #   review_clean         - Set slice status to "done", record verdict
 #   review_rejected      - Increment review_rejections for the slice
 #   converge_complete    - Set phase to "complete", converge slices to "done"
@@ -26,7 +26,7 @@
 # Options:
 #   --slice ID         - Target slice ID (required for slice-level events)
 #   --event EVENT      - State transition event (required unless --validate/--rebuild)
-#   --handoff PATH     - Archive handoff file after update
+#   --report PATH      - Archive report file after update
 #   --summary TEXT     - Brief note recorded in the slice
 #   --task TEXT        - Task description (for add_slice)
 #   --type TYPE        - Slice type: implement|review|converge (for add_slice)
@@ -59,7 +59,7 @@ ROOT_DIR=".circuitry"
 BATCH_OVERRIDE=""
 SLICE=""
 EVENT=""
-HANDOFF=""
+REPORT=""
 SUMMARY=""
 TASK=""
 SLICE_TYPE=""
@@ -74,7 +74,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --slice)    SLICE="$2"; shift 2 ;;
     --event)    EVENT="$2"; shift 2 ;;
-    --handoff)  HANDOFF="$2"; shift 2 ;;
+    --report)   REPORT="$2"; shift 2 ;;
     --summary)  SUMMARY="$2"; shift 2 ;;
     --task)     TASK="$2"; shift 2 ;;
     --type)     SLICE_TYPE="$2"; shift 2 ;;
@@ -106,7 +106,7 @@ ARCHIVE_DIR="$(root_path "$ROOT_DIR" "archive")"
 EVENTS_FILE="$(root_path "$ROOT_DIR" "events.ndjson")"
 PLAN_FILE="$(root_path "$ROOT_DIR" "plan.json")"
 
-python3 - "$BATCH_FILE" "$ARCHIVE_DIR" "$EVENTS_FILE" "$PLAN_FILE" "$SLICE" "$EVENT" "$HANDOFF" "$SUMMARY" "$TASK" "$SLICE_TYPE" "$SCOPE" "$SKILLS" "$VERIFICATION" "$CRITERIA" "$VALIDATE" "$REBUILD" <<'PY'
+python3 - "$BATCH_FILE" "$ARCHIVE_DIR" "$EVENTS_FILE" "$PLAN_FILE" "$SLICE" "$EVENT" "$REPORT" "$SUMMARY" "$TASK" "$SLICE_TYPE" "$SCOPE" "$SKILLS" "$VERIFICATION" "$CRITERIA" "$VALIDATE" "$REBUILD" <<'PY'
 import json
 import os
 import shutil
@@ -121,7 +121,7 @@ events_file = sys.argv[3]
 plan_file = sys.argv[4]
 slice_id = sys.argv[5]
 event = sys.argv[6]
-handoff = sys.argv[7]
+report = sys.argv[7]
 summary = sys.argv[8]
 task = sys.argv[9]
 slice_type = sys.argv[10]
@@ -489,8 +489,8 @@ def apply_record(batch, record):
         return
 
 
-def archive_handoff_if_present(batch):
-    if not handoff or not os.path.isfile(handoff):
+def archive_report_if_present(batch):
+    if not report or not os.path.isfile(report):
         return
 
     os.makedirs(archive_dir, exist_ok=True)
@@ -501,7 +501,7 @@ def archive_handoff_if_present(batch):
         attempt = current.get("impl_attempts", 0)
     archive_name = f"{batch_id}-{slice_id}-{event}-{attempt}.md"
     archive_path = os.path.join(archive_dir, archive_name)
-    shutil.copy2(handoff, archive_path)
+    shutil.copy2(report, archive_path)
     print(f"Archived: {archive_path}")
 
 
@@ -609,7 +609,7 @@ updated_batch = deepcopy(batch)
 apply_record(updated_batch, record)
 append_event(events_file, record)
 batch = updated_batch
-archive_handoff_if_present(batch)
+archive_report_if_present(batch)
 write_json_atomic(batch_file, batch)
 print_mutation_summary(batch, record)
 PY

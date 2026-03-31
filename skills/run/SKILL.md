@@ -47,8 +47,8 @@ intent-lock step that circuit:run skips.
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
-  Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
+- **Worker report** -- The raw output a worker writes to its relay `reports/` directory.
+  Worker reports are inputs to artifact synthesis, not artifacts themselves.
 - **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
   new artifact directly, without dispatching a worker.
 
@@ -231,7 +231,7 @@ into a CHARTER.md.
 
 ```bash
 IMPL_ROOT="${RUN_ROOT}/phases/implement"
-mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
+mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
   "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/review-findings"
 ```
 
@@ -261,10 +261,10 @@ Use the canonical header schema with:
 - Mission: Implement the work described in CHARTER.md using the workers
   implement -> review -> converge cycle
 - Inputs: Full text of CHARTER.md
-- Output path: `${IMPL_ROOT}/handoffs/handoff-converge.md`
-- Output schema: workers convergence handoff format
+- Output path: `${IMPL_ROOT}/reports/report-converge.md`
+- Output schema: workers convergence report format
 - Success criteria: All slices converged with `COMPLETE AND HARDENED` verdict
-- Handoff: Standard relay handoff headings (`### Files Changed`,
+- Report: Standard relay report headings (`### Files Changed`,
   `### Tests Run`, `### Completion Claim`) to prevent relay-protocol.md
   contamination
 
@@ -285,13 +285,13 @@ Use the canonical header schema with:
 **After workers completes**, synthesize `execution-handoff.md`:
 
 Read (in this order):
-1. `${IMPL_ROOT}/handoffs/handoff-converge.md` (convergence verdict)
+1. `${IMPL_ROOT}/reports/report-converge.md` (convergence verdict)
 2. `${IMPL_ROOT}/batch.json` (slice metadata)
-3. The last implementation slice handoff (find slice id from batch.json)
+3. The last implementation slice report (find slice id from batch.json)
 
-Note: workers review workers may overwrite per-slice handoff files. If a
-slice handoff is missing or appears to be a review artifact, use batch.json
-slice metadata and the convergence handoff to reconstruct what was built.
+Note: workers review workers may overwrite per-slice report files. If a
+slice report is missing or appears to be a review artifact, use batch.json
+slice metadata and the convergence report to reconstruct what was built.
 
 Write `${RUN_ROOT}/artifacts/execution-handoff.md`:
 
@@ -309,7 +309,7 @@ loop should have addressed them. Escalate to user if it didn't.
 
 **Verify:**
 ```bash
-test -f ${IMPL_ROOT}/handoffs/handoff-converge.md
+test -f ${IMPL_ROOT}/reports/report-converge.md
 test -f ${RUN_ROOT}/artifacts/execution-handoff.md
 ```
 
