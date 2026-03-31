@@ -42,7 +42,7 @@ explicit verification. See the frontmatter for the full negative scope.
   or an admitted additional step.
 - **Injection ledger** - The durable record inside a ratchet packet showing
   what extra work was admitted, rejected, executed, or left unused.
-- **Child root** - A parent-owned relay workspace used by `manage-codex`.
+- **Child root** - A parent-owned relay workspace used by `workers`.
 - **Command set** - A named build/test/verify bundle captured in `mission-brief.md`.
 - **Reopen marker** - The root-level redirect artifact that tells a fresh
   session where to resume after downstream state has been archived.
@@ -77,7 +77,7 @@ Domain skills are chosen by rule, not by prompt-time improvisation:
 2. `quality-calibration.md` declares `## Domain Skill Hints`.
 3. `execution-charter.md` freezes the actual per-batch domain skills.
 4. Autonomous dispatches use at most 2 domain skills, and at most 3 total
-   skills including `manage-codex`, unless the current artifact explicitly
+   skills including `workers`, unless the current artifact explicitly
    documents a justified exception.
 Default mapping:
 | Surface | Preferred skills |
@@ -120,16 +120,16 @@ fall back to Agent. The artifact chain, gates, and handoff format are identical
 regardless of backend.
 
 ## Shared Dispatch Recipe
-All non-`manage-codex` dispatch steps use the same relay recipe:
+All non-`workers` dispatch steps use the same relay recipe:
 ```bash
 STEP_ROOT="${RUN_ROOT}/phases/step-<n>"
 mkdir -p "${STEP_ROOT}/handoffs" "${STEP_ROOT}/last-messages"
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "<skills>" \
   --root "${STEP_ROOT}" \
   --out "${STEP_ROOT}/prompt.md"
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt"
 ```
@@ -184,14 +184,14 @@ add one only if the repo's domain would otherwise make the output generic.
 - Every backlog row is ranked and tagged exactly `BASELINE_RESTORE`,
   `IMPROVEMENT`, or `DEFER`, with at least one cited `BA-*` or `MB-*` id.
 ## Phase 2: Stabilize
-### Step 3: Baseline Repair - `dispatch` via `manage-codex`
+### Step 3: Baseline Repair - `dispatch` via `workers`
 **Mission:** Restore trust in the baseline before broader improvement work
 starts. Fix only what belongs to the baseline-restoration boundary.
 **Consumes:** `mission-brief.md`, `baseline-audit.md`, `quality-calibration.md`
 **Writes:** `${RUN_ROOT}/artifacts/stabilization-report.md`
 **Schema:** `Attempt Ledger`; `Issues Addressed`; `Files and Scope Used`;
 `Verification Results`; `Deferred or Blocked Items`; `Revert or Escalation Record`.
-**Adapter:** Use the shared `manage-codex` seam contract below. Step 3 uses
+**Adapter:** Use the shared `workers` seam contract below. Step 3 uses
 attempt roots under `${RUN_ROOT}/phases/step-3/attempts/<attempt-id>` and a
 step-specific charter focused on unresolved `BA-*` issues and residue items.
 **Retry budget:** Maximum 2 attempts. Retry only when convergence says the
@@ -380,7 +380,7 @@ Checks:
 - `Injection Ledger` records admitted, rejected, remaining, and per-injection results.
 - `Verdict`, `Ready Means`, and `Reopen Decision` agree with `plan-review.md`.
 ## Phase 5: Execute
-### Step 13: Execute Batches - `dispatch` via `manage-codex`
+### Step 13: Execute Batches - `dispatch` via `workers`
 **Mission:** Execute the charter in deterministic batch order without
 improvising a new sequence or silently expanding scope.
 **Consumes:** `execution-charter.md`, `quality-calibration.md`, `stability-gate.md`, `mission-brief.md`
@@ -388,7 +388,7 @@ improvising a new sequence or silently expanding scope.
 **Schema:** `Charter Reference`; `Batch Order Applied`; `Batch Ledger`;
 `Per-Batch Details`; `Janitor Passes`; `Scope Rejections`;
 `Deferred or Reverted Batches`; `Aggregate Verification`.
-**Adapter:** Use the shared `manage-codex` seam contract below. Step 13 derives
+**Adapter:** Use the shared `workers` seam contract below. Step 13 derives
 one batch root from each `Ordered Batch Plan` row, preserves charter order, and
 runs janitor after each converged batch and before the next batch starts.
 **Retry budget:** Per batch, use the charter's `Retry Budget` with a default
@@ -421,7 +421,7 @@ dispatch recipe.
 - `Recommended Additional Steps` uses the exact table or explicit `NONE`.
 - `Verdict` is exactly one of `ready`, `partial`, `reopen_plan`.
 - `Reopen Recommendation` is explicit `NONE` or records a governing issue and target.
-### Step 15: Execution Ratchet - `dispatch` via `manage-codex`
+### Step 15: Execution Ratchet - `dispatch` via `workers`
 **Mission:** Consume execution findings, repair only what belongs to Execute,
 and publish the honest delivery packet for Finalize.
 **Consumes:** `execution-log.md`, `execution-audit.md`, `execution-charter.md`, `quality-calibration.md`
@@ -430,7 +430,7 @@ and publish the honest delivery packet for Finalize.
 `Injection Ledger` with `Budget Summary` and `Injection Entries`;
 `Remaining Obligations`; `Verification Summary`; `Verdict`; `Ready Means`;
 `Reopen Decision`.
-**Adapter:** Use the shared `manage-codex` seam contract below. Step 15 derives
+**Adapter:** Use the shared `workers` seam contract below. Step 15 derives
 repair roots only from admitted repair batches or grouped execution findings.
 It may not invent new product scope.
 **Retry budget:** Maximum 2 repair attempts per child root.
@@ -491,8 +491,8 @@ the deferred work surface without hiding partials or reopen state.
 - `Run Verdict` in `overnight-handoff.md` matches `final-review.md`.
 - `deferred-work.md` includes every deferred item named by `final-review.md` or `execution-report.md`.
 - `pr-brief.md` and `overnight-handoff.md` summarize the same delivered scope and verification snapshot.
-## manage-codex Adapter Seam Contract
-The circuit uses one shared `manage-codex` seam with step-specific charters.
+## workers Adapter Seam Contract
+The circuit uses one shared `workers` seam with step-specific charters.
 Parent steps own the child roots and synthesize the canonical parent artifact.
 ### Common Child Root Layout
 Use these parent-owned child roots:
@@ -504,7 +504,7 @@ Every child root must contain:
 - `batch.json`
 - `handoffs/handoff-converge.md`
 - `handoffs/handoff-<last-slice-id>.md`
-- `last-messages/last-message-manage-codex.txt`
+- `last-messages/last-message-workers.txt`
 And the parent creates:
 - `archive/`
 - `handoffs/`
@@ -516,8 +516,8 @@ For every child root:
 2. Write `prompt-header.md` using the canonical header schema.
 3. Derive `DOMAIN_SKILLS` from the child charter's `Domain Skills` section.
 4. Dispatch from the child root with the shared dispatch recipe, replacing the
-   skill string with `manage-codex` plus any domain skills, and writing the
-   last message to `last-message-manage-codex.txt`.
+   skill string with `workers` plus any domain skills, and writing the
+   last message to `last-message-workers.txt`.
 5. Read back in this order:
    1. `handoffs/handoff-converge.md`
    2. `batch.json`
@@ -536,11 +536,11 @@ story instead of guessing from chat residue.
   reopen upstream if the problem repeats or invalidates the plan.
 - Convergence verdict `ISSUES REMAIN`: retry locally only when the issue is
   narrow and fixable; reopen upstream when it invalidates scope, ordering, or mission framing.
-- Inner `manage-codex` user escalation (slice attempt limit exceeded): treat as
+- Inner `workers` user escalation (slice attempt limit exceeded): treat as
   convergence `ISSUES REMAIN` for the parent step. The autonomous adapter must
   not pause for interactive input. Record the inner escalation in the parent
   artifact's `Deferred or Blocked Items` and apply the parent retry/reopen rule.
-- Revert mechanism: every `manage-codex` dispatch must record the pre-dispatch
+- Revert mechanism: every `workers` dispatch must record the pre-dispatch
   commit SHA in the child `CHARTER.md` under `## Baseline Commit`. Revert means
   `git reset --hard <baseline-commit>` for the allowed file scope. The parent
   artifact records the reverted SHA and reason.
@@ -714,7 +714,7 @@ Promotion rules:
 - `execution-report.md` supersedes `execution-log.md` for Finalize.
 Supporting but non-canonical state:
 - Relay handoffs under each step root
-- `manage-codex` child roots and their `batch.json`
+- `workers` child roots and their `batch.json`
 - Admitted injection specs under ratchet step relay directories
 ## Resume Awareness
 Global order:
@@ -722,7 +722,7 @@ Global order:
 2. If it is `OPEN`, resume from the named target.
 3. Otherwise scan non-archived artifacts in canonical chain order.
 4. Resume from the first missing or gate-failing artifact.
-5. For any `manage-codex` step, inspect child roots before deciding to rerun.
+5. For any `workers` step, inspect child roots before deciding to rerun.
 6. For any ratchet step, reconcile existing injection specs against the ledger before admitting more.
 Phase notes:
 - **Triage:** Step 2 is complete only when all 3 triage artifacts exist and
@@ -745,7 +745,7 @@ Phase notes:
 Fresh-session safety:
 - Archived artifacts never satisfy resume.
 - The reopen marker always outranks artifact order.
-- Child-root state is inspected before a `manage-codex` rerun.
+- Child-root state is inspected before a `workers` rerun.
 - Injection ledgers are reconciled before any new admissions.
 ## Circuit Breaker
 Stop and redirect when:

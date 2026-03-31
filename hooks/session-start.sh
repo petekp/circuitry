@@ -59,17 +59,5 @@ The router picks the right circuit for your task. Start there.
 | **Dry Run** | `/circuit:dry-run` | Validate a circuit skill's mechanical soundness |
 | **Setup** | `/circuit:setup` | Discover skills and generate circuit.config.yaml |
 
-Use `/manage-codex` to orchestrate workers directly without a circuit wrapper.
+Use `/circuit:workers` to orchestrate workers directly without a circuit wrapper.
 BANNER
-
-# ── Project setup hint (only if relay scripts are missing) ───────────
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
-if [[ -n "$PLUGIN_ROOT" && ! -f "./scripts/relay/compose-prompt.sh" ]]; then
-  cat <<SETUP
-
-> **Project setup needed:** Run this to install relay scripts:
-> \`\`\`
-> "${PLUGIN_ROOT}/scripts/setup.sh"
-> \`\`\`
-SETUP
-fi

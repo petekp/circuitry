@@ -98,7 +98,7 @@ fi
 
 Or use the dispatch helper:
 ```bash
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${step_dir}/prompt.md \
   --output ${step_dir}/last-messages/last-message.txt
 ```
@@ -166,7 +166,7 @@ Or use the dispatch helper:
 <if detected: which specialized circuit and why. Omit section if no escalation.>
 ```
 
-Each Slice heading becomes a manage-codex batch.json entry. The structured
+Each Slice heading becomes a workers batch.json entry. The structured
 fields (`files`, `verification`, `success_criteria`) map directly to
 `file_scope`, `verification_commands`, and `success_criteria` in batch.json.
 This is not prose inference; each field is first-class data.
@@ -219,11 +219,11 @@ the circuit stops here.
 
 ## Phase 2: Execute
 
-### Step 3: Implement — `dispatch` (via manage-codex)
+### Step 3: Implement — `dispatch` (via workers)
 
 **Objective:** Build against the confirmed scope with independent review.
 
-This step delegates to manage-codex for the full implement -> review -> converge
+This step delegates to workers for the full implement -> review -> converge
 cycle. The orchestrator creates the workspace and translates scope-confirmed.md
 into a CHARTER.md.
 
@@ -258,11 +258,11 @@ Each Slice heading in scope-confirmed.md maps to a batch.json slice with:
 **Write the prompt header** at `${IMPL_ROOT}/prompt-header.md`:
 
 Use the canonical header schema with:
-- Mission: Implement the work described in CHARTER.md using the manage-codex
+- Mission: Implement the work described in CHARTER.md using the workers
   implement -> review -> converge cycle
 - Inputs: Full text of CHARTER.md
 - Output path: `${IMPL_ROOT}/handoffs/handoff-converge.md`
-- Output schema: manage-codex convergence handoff format
+- Output schema: workers convergence handoff format
 - Success criteria: All slices converged with `COMPLETE AND HARDENED` verdict
 - Handoff: Standard relay handoff headings (`### Files Changed`,
   `### Tests Run`, `### Completion Claim`) to prevent relay-protocol.md
@@ -271,25 +271,25 @@ Use the canonical header schema with:
 **Compose and dispatch:**
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${IMPL_ROOT}/prompt-header.md \
-  --skills manage-codex,<domain-skills> \
+  --skills workers,<domain-skills> \
   --root ${IMPL_ROOT} \
   --out ${IMPL_ROOT}/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${IMPL_ROOT}/prompt.md \
   --output ${IMPL_ROOT}/last-messages/last-message.txt
 ```
 
-**After manage-codex completes**, synthesize `execution-handoff.md`:
+**After workers completes**, synthesize `execution-handoff.md`:
 
 Read (in this order):
 1. `${IMPL_ROOT}/handoffs/handoff-converge.md` (convergence verdict)
 2. `${IMPL_ROOT}/batch.json` (slice metadata)
 3. The last implementation slice handoff (find slice id from batch.json)
 
-Note: manage-codex review workers may overwrite per-slice handoff files. If a
+Note: workers review workers may overwrite per-slice handoff files. If a
 slice handoff is missing or appears to be a review artifact, use batch.json
 slice metadata and the convergence handoff to reconstruct what was built.
 
@@ -304,7 +304,7 @@ Write `${RUN_ROOT}/artifacts/execution-handoff.md`:
 ```
 
 **Gate:** `execution-handoff.md` exists AND convergence verdict is
-`COMPLETE AND HARDENED`. If convergence says `ISSUES REMAIN`, the manage-codex
+`COMPLETE AND HARDENED`. If convergence says `ISSUES REMAIN`, the workers
 loop should have addressed them. Escalate to user if it didn't.
 
 **Verify:**
@@ -365,8 +365,8 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
    switched to a different circuit.
 3. Find the last complete artifact with a passing gate
 4. For Step 3 (Implement): check `${RUN_ROOT}/phases/implement/batch.json`
-   for manage-codex resume state. Run
-   `./scripts/relay/update-batch.sh --root ${RUN_ROOT}/phases/implement --validate`
+   for workers resume state. Run
+   `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root ${RUN_ROOT}/phases/implement --validate`
    to confirm batch consistency before resuming.
 5. Compare `head_at_plan` in batch.json with `git rev-parse HEAD`. Match ->
    resume from first pending slice. Mismatch -> warn the user.
@@ -375,7 +375,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 ## Circuit Breaker
 
 Escalate to the user when:
-- Any manage-codex slice hits `impl_attempts > 3` or
+- Any workers slice hits `impl_attempts > 3` or
   `impl_attempts + review_rejections > 5`
 - Convergence fails after max attempts
 - A review reveals the task is more complex than the scope anticipated

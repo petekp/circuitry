@@ -7,7 +7,7 @@
 # orchestrator (Claude) should execute directly.
 #
 # Usage:
-#   ./scripts/relay/dispatch.sh --prompt <file> --output <file> [--backend codex|agent]
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh --prompt <file> --output <file> [--backend codex|agent]
 #
 # Options:
 #   --prompt FILE    — Assembled prompt file to send to the worker (required)

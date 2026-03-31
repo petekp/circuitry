@@ -2,10 +2,10 @@
 # compose-prompt.sh — Assemble a worker prompt from header + skills + template
 #
 # Usage:
-#   ./scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --skills swift-apps,rust --out .circuitry/prompt.md
-#   ./scripts/relay/compose-prompt.sh --header .circuitry/review-header.md --template review --out .circuitry/review-prompt.md
-#   ./scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --template implement --root /tmp/relay-root --out .circuitry/prompt.md
-#   ./scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --backend agent --out .circuitry/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --skills swift-apps,rust --out .circuitry/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/review-header.md --template review --out .circuitry/review-prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --template implement --root /tmp/relay-root --out .circuitry/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --backend agent --out .circuitry/prompt.md
 #
 # Options:
 #   --header FILE    — Task-specific header (required)
@@ -55,16 +55,16 @@ resolve_skill() {
   return 1
 }
 
-# Resolve MANAGE_CODEX_DIR: env var > script-local references/ dir >
+# Resolve WORKERS_DIR: env var > script-local references/ dir >
 # plugin-relative references/ dir > ~/.claude/skills
-if [[ -n "${CIRCUIT_PLUGIN_CODEX_DIR:-}" ]]; then
-  MANAGE_CODEX_DIR="$CIRCUIT_PLUGIN_CODEX_DIR"
+if [[ -n "${CIRCUIT_PLUGIN_WORKERS_DIR:-}" ]]; then
+  WORKERS_DIR="$CIRCUIT_PLUGIN_WORKERS_DIR"
 elif [[ -d "$SCRIPT_DIR/references" ]]; then
-  MANAGE_CODEX_DIR="$SCRIPT_DIR/references"
-elif [[ -d "$PLUGIN_ROOT/skills/manage-codex/references" ]]; then
-  MANAGE_CODEX_DIR="$PLUGIN_ROOT/skills/manage-codex/references"
+  WORKERS_DIR="$SCRIPT_DIR/references"
+elif [[ -d "$PLUGIN_ROOT/skills/workers/references" ]]; then
+  WORKERS_DIR="$PLUGIN_ROOT/skills/workers/references"
 else
-  MANAGE_CODEX_DIR="$HOME/.claude/skills/manage-codex/references"
+  WORKERS_DIR="$HOME/.claude/skills/workers/references"
 fi
 
 RELAY_ROOT_SOURCES=()
@@ -254,18 +254,18 @@ fi
 # Append template
 if [[ -n "$TEMPLATE" ]]; then
   if [[ "$TEMPLATE" == "review" || "$TEMPLATE" == "ship-review" || "$TEMPLATE" == "converge" ]]; then
-    preamble_file="$MANAGE_CODEX_DIR/review-preamble.md"
+    preamble_file="$WORKERS_DIR/review-preamble.md"
     if [[ -f "$preamble_file" ]]; then
       append_section_file "$OUT" "$preamble_file"
     fi
   fi
 
-  template_file="$MANAGE_CODEX_DIR/${TEMPLATE}-template.md"
+  template_file="$WORKERS_DIR/${TEMPLATE}-template.md"
   append_section_file "$OUT" "$template_file"
 fi
 
 # Legacy fallback: older templates rely on a separately appended relay protocol.
-protocol_file="$MANAGE_CODEX_DIR/relay-protocol.md"
+protocol_file="$WORKERS_DIR/relay-protocol.md"
 if ! output_has_inline_relay "$OUT" && [[ -f "$protocol_file" ]]; then
   append_section_file "$OUT" "$protocol_file"
 fi

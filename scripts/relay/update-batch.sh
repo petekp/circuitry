@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# update-batch.sh - Deterministic state mutation for manage-codex batch.json
+# update-batch.sh - Deterministic state mutation for workers batch.json
 #
 # Eliminates LLM bookkeeping: the orchestrator calls this after each phase
 # transition instead of manually editing batch.json.
 #
 # Usage:
-#   ./scripts/relay/update-batch.sh --slice slice-001 --event attempt_started
-#   ./scripts/relay/update-batch.sh --slice slice-001 --event impl_dispatched
-#   ./scripts/relay/update-batch.sh --slice slice-001 --event review_clean
-#   ./scripts/relay/update-batch.sh --event converge_complete
-#   ./scripts/relay/update-batch.sh --validate
-#   ./scripts/relay/update-batch.sh --rebuild
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --slice slice-001 --event attempt_started
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --slice slice-001 --event impl_dispatched
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --slice slice-001 --event review_clean
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --event converge_complete
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --validate
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh --rebuild
 #
 # Events:
 #   attempt_started      - Record a worker attempt before dispatch

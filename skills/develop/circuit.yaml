@@ -123,14 +123,14 @@ circuit:
         - id: implement
           title: Implement
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [execution-packet.md]
           produces: implementation-handoff.md
           max_attempts: 3
           notes: >
-            Delegates to manage-codex skill. Orchestrator creates CHARTER.md
+            Delegates to workers skill. Orchestrator creates CHARTER.md
             from execution-packet.md and synthesizes implementation-handoff.md
-            from manage-codex convergence output.
+            from workers convergence output.
         - id: ship-review
           title: Final Ship Review
           action: dispatch

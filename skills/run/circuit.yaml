@@ -60,7 +60,7 @@ circuit:
         - id: implement
           title: Implement
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [scope-confirmed.md]
           produces: execution-handoff.md
           max_attempts: 3

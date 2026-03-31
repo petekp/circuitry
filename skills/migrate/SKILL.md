@@ -1,7 +1,7 @@
 ---
 name: circuit:migrate
 description: >
-  Artifact-driven circuit for large-scale migrations and refactors — framework swaps,
+  Artifact-driven circuit for large-scale migrations and refactors -- framework swaps,
   dependency replacements, architecture transitions, and incremental rewrites.
   8 steps across 5 phases: Scope -> Inventory -> Strategy -> Execution -> Verification.
   Use when migrating between frameworks, replacing dependencies, transitioning
@@ -32,7 +32,7 @@ or tasks where no dual-system coexistence is needed.
 
 - **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact (or a parallel pair).
-- **Worker handoff** -- The raw output a Codex worker writes to its relay `handoffs/` directory.
+- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
   Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
 - **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
@@ -79,7 +79,7 @@ mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
 ## Domain Skill Selection
 
 When a step says `<domain-skills>`, pick 1-2 skills matching the affected code.
-Never exceed 3 total skills per dispatch. For Step 6, because `manage-codex` is
+Never exceed 3 total skills per dispatch. For Step 6, because `workers` is
 already required, pick at most 2 domain skills.
 
 ## Dispatch Backend
@@ -90,7 +90,7 @@ fall back to Agent. The assembled prompt is identical for both backends.
 
 Or use the dispatch helper which auto-detects:
 ```bash
-./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
 ```
 
 The artifact chain, gates, handoff format, and resume logic are identical
@@ -183,7 +183,7 @@ complexity, or has no rollback plan when a batch fails.
 **Objective:** Map all code that depends on the migration target (Step 2), and classify
 each dependency by migration difficulty and risk (Step 3).
 
-Dispatch two Codex workers in parallel. Each header is self-contained (no `--template`).
+Dispatch two workers in parallel. Each header is self-contained (no `--template`).
 
 **Setup:**
 ```bash
@@ -243,25 +243,25 @@ Include the canonical header schema with:
 
 **Dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2a/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-2a \
   --out ${RUN_ROOT}/phases/step-2a/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2a/prompt.md \
   --output ${RUN_ROOT}/phases/step-2a/last-messages/last-message.txt
 ```
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2b/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-2b \
   --out ${RUN_ROOT}/phases/step-2b/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2b/prompt.md \
   --output ${RUN_ROOT}/phases/step-2b/last-messages/last-message.txt
 ```
@@ -356,13 +356,13 @@ would have rejected, causing rework after code has already moved.
 
 ## Phase 4: Execution
 
-### Step 6: Batch Migration -- `dispatch` (via manage-codex)
+### Step 6: Batch Migration -- `dispatch` (via workers)
 
 **Objective:** Execute the migration in ordered batches. Each batch: migrate code, update
 tests, verify old+new pass, commit.
 
-This step delegates to the `manage-codex` skill for the full implement -> review ->
-converge cycle. The orchestrator must create the manage-codex workspace explicitly.
+This step delegates to the `workers` skill for the full implement -> review ->
+converge cycle. The orchestrator must create the workers workspace explicitly.
 
 **Adapter contract:**
 
@@ -383,16 +383,16 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
    } > "${MIGRATION_ROOT}/CHARTER.md"
    ```
 
-2. **Write the manage-codex prompt header** at `${MIGRATION_ROOT}/prompt-header.md`:
+2. **Write the workers prompt header** at `${MIGRATION_ROOT}/prompt-header.md`:
    Use the canonical header schema with:
-   - Mission: Execute the batched migration described in CHARTER.md using the manage-codex
+   - Mission: Execute the batched migration described in CHARTER.md using the workers
      implement -> review -> converge cycle. Each batch is one or more slices. After each
      batch, verify that both old and new systems pass. Respect batch order from the
      coexistence plan.
    - Inputs: Full text of `coexistence-plan.md`, `migration-steer.md`, and `risk-assessment.md`
      (already combined into CHARTER.md)
    - Output path: `${MIGRATION_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: manage-codex convergence handoff format
+   - Output schema: workers convergence handoff format
    - Success criteria: All approved batches converged with `COMPLETE AND HARDENED` verdict.
      Each batch verified that old+new pass before proceeding to the next.
    - Handoff: Standard relay handoff headings (`### Files Changed`, `### Tests Run`,
@@ -401,18 +401,18 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
 
 3. **Compose and dispatch:**
    ```bash
-   ./scripts/relay/compose-prompt.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
      --header ${MIGRATION_ROOT}/prompt-header.md \
-     --skills manage-codex,<domain-skills> \
+     --skills workers,<domain-skills> \
      --root ${MIGRATION_ROOT} \
      --out ${MIGRATION_ROOT}/prompt.md
 
-   ./scripts/relay/dispatch.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
      --prompt ${MIGRATION_ROOT}/prompt.md \
-     --output ${MIGRATION_ROOT}/last-messages/last-message-manage-codex.txt
+     --output ${MIGRATION_ROOT}/last-messages/last-message-workers.txt
    ```
 
-4. **After manage-codex completes**, the orchestrator synthesizes `batch-log.md`:
+4. **After workers completes**, the orchestrator synthesizes `batch-log.md`:
 
    **Source artifacts (read in this order):**
    - `${MIGRATION_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
@@ -420,7 +420,7 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
    - The last implementation slice handoff at `${MIGRATION_ROOT}/handoffs/handoff-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: manage-codex review workers may overwrite per-slice handoff files. If a slice
+   Note: workers review workers may overwrite per-slice handoff files. If a slice
    handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
    and the convergence handoff to reconstruct what was built.
 
@@ -444,7 +444,7 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/handoffs" \
    - The orchestrator updates `coexistence-plan.md` and returns to Step 6 with a revised plan
 
    If convergence says `ISSUES REMAIN` and the coexistence plan is still valid, the
-   manage-codex loop should have addressed them -- escalate to the user if it did not.
+   workers loop should have addressed them -- escalate to the user if it did not.
 
 **Failure mode:** A batch breaks coexistence and the circuit pushes forward instead of
 revising the plan, leaving a half-migrated state that neither old nor new system handles.
@@ -566,7 +566,7 @@ cp ${RUN_ROOT}/phases/step-8/cutover-report.md ${RUN_ROOT}/artifacts/cutover-rep
 - `REVISE` with governing issues -> Record the governing issue in `cutover-report.md`.
   Reopen Step 6 (Batch Migration) with the governing issue as additional input. The
   orchestrator updates the CHARTER.md with the specific remediation needed and re-runs
-  the manage-codex cycle for the affected batches only.
+  the workers cycle for the affected batches only.
 
 **If verdict is `REVISE` after 2 total attempts** -> escalate to the user.
 
@@ -582,7 +582,7 @@ migration-brief.md                              [Step 1, interactive]
   -> dependency-inventory.md || risk-assessment.md  [Step 2/3, parallel dispatch]
   -> coexistence-plan.md                         [Step 4, synthesis]
   -> migration-steer.md                          [Step 5, interactive]
-  -> batch-log.md                                [Step 6, manage-codex dispatch]
+  -> batch-log.md                                [Step 6, workers dispatch]
   -> verification-report.md                      [Step 7, dispatch]
   -> cutover-report.md                           [Step 8, dispatch]
 ```
@@ -597,7 +597,7 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 2. Check artifacts in chain order (migration-brief -> dependency-inventory + risk-assessment
    -> coexistence-plan -> migration-steer -> batch-log -> verification-report -> cutover-report)
 3. Find the last complete artifact with a passing gate
-4. For Step 6 specifically: check `${RUN_ROOT}/phases/step-6/batch.json` for manage-codex
+4. For Step 6 specifically: check `${RUN_ROOT}/phases/step-6/batch.json` for workers
    resume state before restarting batch migration
 5. If `cutover-report.md` exists with a `REVISE` verdict, read its governing issue and
    resume from Step 6 with that issue as input

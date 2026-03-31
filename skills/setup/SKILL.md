@@ -67,7 +67,7 @@ has installed:
 
 Rules:
 - Only map skills the user actually has installed
-- Maximum 2 skills per circuit (compose-prompt.sh limit is 3 total including manage-codex)
+- Maximum 2 skills per circuit (compose-prompt.sh limit is 3 total including workers)
 - Prefer platform-specific skills when the project has a clear language (check for Cargo.toml, Package.swift, package.json, etc.)
 - If a skill has no clear circuit mapping, skip it
 

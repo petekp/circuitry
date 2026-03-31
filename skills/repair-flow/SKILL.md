@@ -5,7 +5,7 @@ description: >
   8 steps across 5 phases: Failure Framing → Forensics → Repair Design →
   Layered Repair → Reaudit. Use when an existing flow is broken, flaky, or
   operationally unsafe and the team needs a path from observed failure to
-  verified repair — not for greenfield features or speculative design work.
+  verified repair -- not for greenfield features or speculative design work.
 ---
 
 # Repair Flow Circuit
@@ -28,15 +28,15 @@ real broken flow needs to be reproduced.
 
 ## Glossary
 
-- **Artifact** — A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
+- **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** — The raw output a Codex worker writes to its relay `handoffs/` directory.
+- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
   Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
-- **Prompt header** — A self-contained file the orchestrator writes before dispatch. Contains
+- **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
-- **Regression contract** — The executable proof obligation for the prioritized failure:
+- **Regression contract** -- The executable proof obligation for the prioritized failure:
   failing tests, probes, or an explicit instrumentation-based fallback when tests are impossible.
-- **Synthesis** — When the orchestrator (Claude session) reads prior artifacts and writes a
+- **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
   new artifact directly, without dispatching a worker.
 
 ## Principles
@@ -52,7 +52,7 @@ real broken flow needs to be reproduced.
   circuit forces the live-flow evidence pass before repair slicing starts.
 - **Prove repair with executable obligations.** `tdd` is not optional here; it is the
   mechanism that turns symptoms into durable regression obligations.
-- **Repair by layer, then re-audit the real flow.** `manage-codex` executes slices only
+- **Repair by layer, then re-audit the real flow.** `workers` executes slices only
   after a repair packet exists, and closure requires a live re-audit rather than a test pass.
 - **Existing skills are components, not the circuit.** Domain skills like
   `exhaustive-systems-analysis` and `tdd` contribute evidence and proof, but this
@@ -66,9 +66,9 @@ RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts"
 ```
 
-Record `RUN_ROOT` — all paths below are relative to it.
+Record `RUN_ROOT` -- all paths below are relative to it.
 
-**Per-step scaffolding** — before each dispatch step, create:
+**Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
 mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
@@ -81,7 +81,7 @@ When a step says `<domain-skills>`, pick 1-2 skills matching the affected code:
 - Swift app or native UI orchestration: `swift-apps`
 - Cross-boundary repairs spanning both: `rust,swift-apps`
 
-Never exceed 3 total skills per dispatch. For Step 7, because `manage-codex` and
+Never exceed 3 total skills per dispatch. For Step 7, because `workers` and
 `tdd` are already required, pick only 1 domain skill.
 
 ## Dispatch Backend
@@ -94,7 +94,7 @@ fall back to Agent. The assembled prompt is identical for both backends.
 
 **Agent backend:** `Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")`
 
-Or use the dispatch helper: `./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
+Or use the dispatch helper: `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
 
 The artifact chain, gates, handoff format, and resume logic are identical
 regardless of backend.
@@ -154,7 +154,7 @@ Including these headings in the header prevents that contamination.
 
 ## Phase 1: Failure Framing
 
-### Step 1: Failure Brief — `interactive`
+### Step 1: Failure Brief -- `interactive`
 
 **Objective:** Define the broken behavior precisely enough that later audit and repair
 work can stay anchored to observable reality.
@@ -193,7 +193,7 @@ after code changes land.
 
 ## Phase 2: Forensics
 
-### Step 2: Live Flow Audit — `dispatch`
+### Step 2: Live Flow Audit -- `dispatch`
 
 **Objective:** Reproduce the failure in the live or closest-available runtime path and
 capture the evidence trail across boundaries.
@@ -225,13 +225,13 @@ Include the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2/prompt-header.md \
   --skills exhaustive-systems-analysis,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-2 \
   --out ${RUN_ROOT}/phases/step-2/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2/prompt.md \
   --output ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt
 ```
@@ -250,7 +250,7 @@ non-reproduction result, plus enough evidence to explain what was observed.
 
 **Failure mode:** Repair work starts from anecdote instead of observed system behavior.
 
-### Step 3: Layered Causal Map — `synthesis`
+### Step 3: Layered Causal Map -- `synthesis`
 
 **Objective:** Convert the audit evidence into a layer-aware root-cause map that
 separates confirmed causes from plausible hypotheses.
@@ -281,7 +281,7 @@ thrash and accidental regressions.
 
 ## Phase 3: Repair Design
 
-### Step 4: Repair Focus Checkpoint — `interactive`
+### Step 4: Repair Focus Checkpoint -- `interactive`
 
 **Objective:** Let the user choose which failure matters most, which tradeoff is
 acceptable, and where the circuit should draw the line on v1 repair scope.
@@ -313,7 +313,7 @@ and any scope cuts are named rather than implied.
 **Failure mode:** The loop optimizes the wrong part of the flow or quietly drops behavior
 the user cared about.
 
-### Step 5: Regression Contract — `dispatch`
+### Step 5: Regression Contract -- `dispatch`
 
 **Objective:** Turn the prioritized failure into executable proof obligations before
 repair begins.
@@ -346,13 +346,13 @@ Include the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
   --skills tdd,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
   --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
@@ -373,7 +373,7 @@ possible, the artifact states why and defines an explicit instrumentation-based 
 **Failure mode:** The repair cannot prove that the original bug was closed or that the
 same flow will stay closed.
 
-### Step 6: Repair Packet — `synthesis`
+### Step 6: Repair Packet -- `synthesis`
 
 **Objective:** Translate the causal map and regression contract into a layer-ordered
 repair plan with clear ownership and reopen conditions.
@@ -405,13 +405,13 @@ team cannot tell when to reopen the audit.
 
 ## Phase 4: Layered Repair
 
-### Step 7: Layered Repair — `dispatch` (via manage-codex)
+### Step 7: Layered Repair -- `dispatch` (via workers)
 
 **Objective:** Implement the repair slices in dependency order and converge on a coherent
 fix set.
 
-This step delegates to the `manage-codex` skill for the full implement → review →
-converge cycle. The orchestrator must create the manage-codex workspace explicitly.
+This step delegates to the `workers` skill for the full implement → review →
+converge cycle. The orchestrator must create the workers workspace explicitly.
 
 **Adapter contract:**
 
@@ -429,17 +429,17 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
 
 1. **Create CHARTER.md** from the repair packet plus regression contract:
    The `CHARTER.md` written above becomes the single implementation contract for the
-   manage-codex loop.
+   workers loop.
 
-2. **Write the manage-codex prompt header** at `${REPAIR_ROOT}/prompt-header.md`:
+2. **Write the workers prompt header** at `${REPAIR_ROOT}/prompt-header.md`:
    Use the canonical header schema with:
    - Mission: Implement the repair slices described in `CHARTER.md` using the
-     manage-codex implement → review → converge cycle. Respect slice order,
+     workers implement → review → converge cycle. Respect slice order,
      boundary ownership, and regression obligations.
    - Inputs: Full text of `repair-packet.md` and `regression-contract.md`
      (already combined into `CHARTER.md`)
    - Output path: `${REPAIR_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: manage-codex convergence handoff format
+   - Output schema: workers convergence handoff format
    - Success criteria: The primary regression harness passes, every repair slice is
      completed or explicitly deferred, and the convergence handoff names residual risks
    - Handoff: Standard relay handoff headings (`### Files Changed`, `### Tests Run`,
@@ -448,26 +448,26 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
 
 3. **Compose and dispatch:**
    ```bash
-   ./scripts/relay/compose-prompt.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
      --header ${REPAIR_ROOT}/prompt-header.md \
-     --skills manage-codex,tdd,<domain-skills> \
+     --skills workers,tdd,<domain-skills> \
      --root ${REPAIR_ROOT} \
      --out ${REPAIR_ROOT}/prompt.md
 
-   ./scripts/relay/dispatch.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
      --prompt ${REPAIR_ROOT}/prompt.md \
-     --output ${REPAIR_ROOT}/last-messages/last-message-manage-codex.txt
+     --output ${REPAIR_ROOT}/last-messages/last-message-workers.txt
    ```
 
-4. **After manage-codex completes**, the orchestrator synthesizes `repair-handoff.md`:
+4. **After workers completes**, the orchestrator synthesizes `repair-handoff.md`:
 
    **Source artifacts (read in this order):**
-   - `${REPAIR_ROOT}/handoffs/handoff-converge.md` — the convergence verdict (primary source)
-   - `${REPAIR_ROOT}/batch.json` — slice metadata showing what was built
+   - `${REPAIR_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
+   - `${REPAIR_ROOT}/batch.json` -- slice metadata showing what was built
    - The last implementation slice handoff at `${REPAIR_ROOT}/handoffs/handoff-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: manage-codex review workers may overwrite per-slice handoff files. If a slice
+   Note: workers review workers may overwrite per-slice handoff files. If a slice
    handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
    and the convergence handoff to reconstruct what was built.
 
@@ -484,7 +484,7 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/handoffs" \
 
    **Gate:** The primary regression harness passes, every repair slice is either
    completed or explicitly deferred, and the handoff names residual risks. If
-   convergence says `ISSUES REMAIN`, the manage-codex loop should have addressed them —
+   convergence says `ISSUES REMAIN`, the workers loop should have addressed them --
    escalate to the user if it did not.
 
 **Verify:**
@@ -500,7 +500,7 @@ accountability for what remains.
 
 ## Phase 5: Reaudit
 
-### Step 8: Flow Reaudit — `dispatch`
+### Step 8: Flow Reaudit -- `dispatch`
 
 **Objective:** Re-run the real flow after repair and judge whether live behavior now
 matches the original failure brief.
@@ -533,13 +533,13 @@ Include the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-8/prompt-header.md \
   --skills exhaustive-systems-analysis,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-8 \
   --out ${RUN_ROOT}/phases/step-8/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-8/prompt.md \
   --output ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt
 ```
@@ -592,11 +592,11 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 1. Check artifacts in chain order (failure-brief → audit-trace → causal-map → repair-steer
    → regression-contract → repair-packet → repair-handoff → flow-verdict)
 2. Find the last complete artifact with a passing gate
-3. For Step 7 specifically: check `${RUN_ROOT}/phases/step-7/batch.json` for manage-codex
+3. For Step 7 specifically: check `${RUN_ROOT}/phases/step-7/batch.json` for workers
    resume state before restarting layered repair
 4. Continue from the next step
 
-This is best-effort — the circuit has no durable state beyond artifacts on disk and
+This is best-effort -- the circuit has no durable state beyond artifacts on disk and
 step-local relay directories. If a session dies mid-step, check the step's relay
 directory for worker output before concluding the step failed.
 

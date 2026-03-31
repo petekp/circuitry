@@ -10,7 +10,7 @@
 
 # Map each circuit to the domain skills that should be injected into worker prompts.
 # Skills must be installed in ~/.claude/skills/<name>/ or the plugin's skills/ directory.
-# Maximum 2 domain skills per circuit dispatch (3 total including manage-codex).
+# Maximum 2 domain skills per circuit dispatch (3 total including workers).
 
 circuits:
   run:

@@ -95,19 +95,10 @@ claude plugin install petekp/circuitry
 git clone https://github.com/petekp/circuitry.git ~/.claude/plugins/local/circuitry
 ```
 
-### Project setup
-
-After installing, run the setup helper in your project directory. This
-copies a small set of shell scripts into `scripts/relay/` that circuits
-use to assemble worker prompts and track batch state.
-
-```bash
-# The session-start banner shows the exact path for your install method
-# Or for local installs:
-~/.claude/plugins/local/circuitry/scripts/setup.sh
-```
-
 ### Verify installation
+
+No project-local setup is needed. Relay scripts run directly from the
+plugin directory via `$CLAUDE_PLUGIN_ROOT`.
 
 ```bash
 ~/.claude/plugins/local/circuitry/scripts/verify-install.sh

@@ -1,12 +1,12 @@
 ---
-name: manage-codex
+name: workers
 description: >
-  Autonomous batch orchestrator for dispatching workers. Use for "/manage-codex",
-  "manage codex", "use codex", "dispatch to codex", or long-running worker-dispatched
-  work. Workers run via Codex CLI when installed, or via Agent fallback.
+  Autonomous batch orchestrator for dispatching workers. Use for "/circuit:workers",
+  "dispatch workers", "use workers", or long-running worker-dispatched work.
+  Workers run via Codex CLI when installed, or via Agent fallback.
 ---
 
-# Manage Codex
+# Workers
 
 You are the orchestrator. Workers implement, review, and converge. Delegate the
 work unless a tiny orchestration-only fix is lower risk than dispatching a worker.
@@ -23,7 +23,7 @@ Done only when the convergence worker says `COMPLETE AND HARDENED`.
 - Workers never edit `batch.json`
 - Implementation and review always run in separate sessions
 - Review and convergence workers diagnose only; they do not fix code
-- Use `./scripts/relay/update-batch.sh --root {relay_root}`; never hand-edit relay state
+- Use `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root {relay_root}`; never hand-edit relay state
 - All relay paths thread through `--root`; standalone default is `--root .circuitry`
 - Spot-check at least one claimed command before trusting a worker handoff
 - Preserve `--skills`, repeated `--verification`, and `--criteria` on follow-up slices
@@ -39,7 +39,7 @@ auto-detected: if `codex` is on PATH, use Codex; otherwise, fall back to Agent.
 `Agent(task=<contents of {relay_root}/prompt.md>, isolation="worktree")`
 
 Or use the dispatch helper which auto-detects:
-`./scripts/relay/dispatch.sh --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
+`"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
 
 The implement/review/converge loop, artifact chain, gates, and handoff format are
 **identical** regardless of backend.
@@ -74,7 +74,7 @@ Write state to disk on every phase transition. The orchestrator is the only writ
 ## Prompt Assembly
 
 Write only the task-specific header. Use
-`scripts/relay/compose-prompt.sh --header ... --skills ... --template ... --root {relay_root} --out ...`
+`"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" --header ... --skills ... --template ... --root {relay_root} --out ...`
 to append domain skills, the selected template, and substitute relay root paths.
 
 - `implement` slices: `--template implement`
@@ -89,7 +89,7 @@ Templates own worker instructions and handoff format.
 Skip this phase for `review` slices.
 
 1. Compose the prompt and dispatch:
-   `./scripts/relay/dispatch.sh --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
+   `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
 2. Verify output exists using explicit checks — never zsh globs or `||` chains:
    `test -f {relay_root}/handoffs/handoff-{slice_id}.md && wc -l {relay_root}/handoffs/handoff-{slice_id}.md`
    If the file is missing, check the worker output trace for `file update` diffs before
@@ -138,7 +138,7 @@ Enter only when all non-converge slices are done.
 
 ## Direct Resolution Events
 
-Use only via `./scripts/relay/update-batch.sh`.
+Use only via `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh"`.
 
 - `analytically_resolved`: closed by inspection; no code change needed. Put the evidence
   in `--summary`
@@ -157,7 +157,7 @@ failure pattern, and options (adjust scope, skip, raise limit, abort).
 
 If `{relay_root}/batch.json` exists, compare `head_at_plan` with `git rev-parse HEAD`.
 Match → resume from the first pending slice. Mismatch → warn the user.
-Run `./scripts/relay/update-batch.sh --root {relay_root} --validate` after resuming.
+Run `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root {relay_root} --validate` after resuming.
 Never restart completed slices.
 
 ## User Briefing

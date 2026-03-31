@@ -45,7 +45,7 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 **Invoke:** `/circuit:develop`
 **Phases:** Alignment, Evidence, Decision, Preflight, Delivery (10 steps)
 **Artifact chain:** `intent-brief.md` -> `external-digest.md` + `internal-digest.md` -> `constraints.md` -> `options.md` -> `decision-packet.md` -> `adr.md` -> `execution-packet.md` -> `seam-proof.md` -> `implementation-handoff.md` -> `ship-review.md`
-**Example:** You need to add a recording and playback system that spans the Rust core and Swift app layers. The circuit researches external patterns and internal system surface in parallel, generates distinct architectural options, pressure-tests them, gets your tradeoff decision, proves the hardest seam with a thin slice, then delegates implementation to manage-codex and runs a final ship review.
+**Example:** You need to add a recording and playback system that spans the Rust core and Swift app layers. The circuit researches external patterns and internal system surface in parallel, generates distinct architectural options, pressure-tests them, gets your tradeoff decision, proves the hardest seam with a thin slice, then delegates implementation to workers and runs a final ship review.
 **Light mode:** For tasks where the approach is clear, invoke `/circuit:develop --light` to run an abbreviated 4-step flow (intent -> contract -> implement -> review), skipping the evidence gathering and adversarial evaluation phases.
 
 ---
@@ -73,7 +73,7 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 **Invoke:** `/circuit:repair-flow`
 **Phases:** Failure Framing, Forensics, Repair Design, Layered Repair, Reaudit (8 steps)
 **Artifact chain:** `failure-brief.md` -> `audit-trace.md` -> `causal-map.md` -> `repair-steer.md` -> `regression-contract.md` -> `repair-packet.md` -> `repair-handoff.md` -> `flow-verdict.md`
-**Example:** The deal creation flow intermittently fails after a recent deploy -- sometimes the customer record is missing when the deal tries to reference it. The circuit reproduces the failure in the live runtime path, builds a layered causal map separating confirmed causes from hypotheses, writes failing regression tests before any repair begins, implements fixes in dependency order via manage-codex, then re-audits the actual flow (not just the tests) to verify the repair holds.
+**Example:** The deal creation flow intermittently fails after a recent deploy -- sometimes the customer record is missing when the deal tries to reference it. The circuit reproduces the failure in the live runtime path, builds a layered causal map separating confirmed causes from hypotheses, writes failing regression tests before any repair begins, implements fixes in dependency order via workers, then re-audits the actual flow (not just the tests) to verify the repair holds.
 
 ---
 
@@ -82,7 +82,7 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 **Invoke:** `/circuit:ratchet-quality`
 **Phases:** Triage, Stabilize, Envision, Plan, Execute, Finalize (17 steps)
 **Artifact chain:** `mission-brief.md` -> `baseline-audit.md` + `quality-calibration.md` + `improvement-backlog.md` -> `stabilization-report.md` -> `stability-findings.md` -> `stability-gate.md` -> `inside-out-digest.md` + `outside-in-digest.md` -> `improvement-proposal.md` -> `design-review.md` -> `envisioned-packet.md` -> `implementation-plan.md` -> `plan-review.md` -> `execution-charter.md` -> `execution-log.md` -> `execution-audit.md` -> `execution-report.md` -> `final-review.md` -> `overnight-handoff.md` + `pr-brief.md` + `deferred-work.md`
-**Example:** It is Friday evening and you want the codebase in better shape by Monday. You invoke ratchet-quality, it freezes a mission brief with your build/test/verify commands, runs parallel triage probes (baseline, quality calibration, improvement backlog), stabilizes the baseline before improving, explores improvement directions from inside and outside the codebase, synthesizes and reviews a proposal, plans batched execution with verification and rollback, executes batches via manage-codex, audits the result, and publishes a truthful closeout packet showing exactly what improved, what was attempted, and what was left untouched.
+**Example:** It is Friday evening and you want the codebase in better shape by Monday. You invoke ratchet-quality, it freezes a mission brief with your build/test/verify commands, runs parallel triage probes (baseline, quality calibration, improvement backlog), stabilizes the baseline before improving, explores improvement directions from inside and outside the codebase, synthesizes and reviews a proposal, plans batched execution with verification and rollback, executes batches via workers, audits the result, and publishes a truthful closeout packet showing exactly what improved, what was attempted, and what was left untouched.
 
 ---
 
@@ -100,7 +100,7 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 **Invoke:** `/circuit:migrate`
 **Phases:** Scope, Inventory, Strategy, Execution, Verification (8 steps)
 **Artifact chain:** `migration-brief.md` -> `dependency-inventory.md` + `risk-assessment.md` -> `coexistence-plan.md` -> `migration-steer.md` -> `batch-log.md` -> `verification-report.md` -> `cutover-report.md`
-**Example:** You need to swap from Express to Fastify across a large API surface. The circuit locks a migration brief with rollback requirements and coexistence constraints, dispatches parallel workers to scan every dependency and assess risk, synthesizes a coexistence plan where old and new routers run side by side, gets your approval on batch order, delegates batched migration to manage-codex (each batch independently verifiable with rollback), runs a full verification pass to confirm no leftover references, and produces a cutover report with a ready/revise verdict.
+**Example:** You need to swap from Express to Fastify across a large API surface. The circuit locks a migration brief with rollback requirements and coexistence constraints, dispatches parallel workers to scan every dependency and assess risk, synthesizes a coexistence plan where old and new routers run side by side, gets your approval on batch order, delegates batched migration to workers (each batch independently verifiable with rollback), runs a full verification pass to confirm no leftover references, and produces a cutover report with a ready/revise verdict.
 
 ---
 
@@ -109,7 +109,7 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 **Invoke:** `/circuit:create`
 **Phases:** Intake, Analysis, Authoring, Validation, Refinement (5 steps)
 **Artifact chain:** `workflow-brief.md` -> `circuit-analysis.md` -> draft `circuit.yaml` + draft `SKILL.md` + `cross-validation.md` -> `validation-report.md` -> final `circuit.yaml` + `SKILL.md` (installed)
-**Example:** You have a proven multi-phase workflow for onboarding new third-party integrations -- intake, compatibility check, adapter scaffolding, integration test, documentation. You want to turn it into a reusable circuit. Circuit-create interviews you about the workflow shape, has Codex analyze patterns and generate both files, cross-validates them, runs a quality gate against the full anti-pattern catalog, and installs the final circuit. It then recommends running dry-run before trusting the new circuit for real work.
+**Example:** You have a proven multi-phase workflow for onboarding new third-party integrations -- intake, compatibility check, adapter scaffolding, integration test, documentation. You want to turn it into a reusable circuit. Circuit-create interviews you about the workflow shape, has workers analyze patterns and generate both files, cross-validates them, runs a quality gate against the full anti-pattern catalog, and installs the final circuit. It then recommends running dry-run before trusting the new circuit for real work.
 
 ---
 
@@ -131,13 +131,13 @@ The default entry point for Circuitry. Start with `/circuit:run <task>` for any 
 
 ---
 
-## manage-codex (Orchestrator)
+## Workers (Orchestrator)
 
-**Invoke:** `/manage-codex`
+**Invoke:** `/circuit:workers`
 
-manage-codex is the execution engine that several circuits delegate to for code delivery. It is not a circuit itself -- it is a batch orchestrator that runs an `implement -> review -> converge` loop using Codex workers. The orchestrator plans slices from a CHARTER.md, dispatches implementation workers, dispatches independent review workers (who diagnose but never fix code), and runs a convergence assessment. The loop continues until the convergence worker returns `COMPLETE AND HARDENED` or circuit breakers trigger.
+workers is the execution engine that several circuits delegate to for code delivery. It is not a circuit itself -- it is a batch orchestrator that runs an `implement -> review -> converge` loop using workers. The orchestrator plans slices from a CHARTER.md, dispatches implementation workers, dispatches independent review workers (who diagnose but never fix code), and runs a convergence assessment. The loop continues until the convergence worker returns `COMPLETE AND HARDENED` or circuit breakers trigger.
 
-Circuits like develop, repair-flow, ratchet-quality, and cleanup all delegate their code-delivery phases to manage-codex rather than reimplementing the implement/review/converge cycle.
+Circuits like develop, repair-flow, ratchet-quality, and cleanup all delegate their code-delivery phases to workers rather than reimplementing the implement/review/converge cycle.
 
 ## When Circuits Overlap
 

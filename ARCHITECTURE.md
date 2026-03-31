@@ -121,7 +121,7 @@ intent-brief.md           [Step 1, interactive]
   -> adr.md               [Step 6, interactive]
   -> execution-packet.md  [Step 7, synthesis]
   -> seam-proof.md        [Step 8, dispatch]
-  -> implementation-handoff.md [Step 9, dispatch via manage-codex]
+  -> implementation-handoff.md [Step 9, dispatch via workers]
   -> ship-review.md       [Step 10, dispatch]
 ```
 
@@ -159,7 +159,7 @@ session picks up where the last one left off. The algorithm is simple:
    normally expect").
 2. Scan artifacts in canonical chain order.
 3. Resume from the first missing or gate-failing artifact.
-4. For `manage-codex` steps, inspect child state (`batch.json`) before
+4. For `workers` steps, inspect child state (`batch.json`) before
    deciding to rerun.
 
 Here is the resume logic from `ratchet-quality` for the Stabilize phase:
@@ -246,7 +246,7 @@ The dispatch pipeline:
 #    (mission, inputs, output path, schema, success criteria)
 
 # 2. Assemble the full prompt
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -254,7 +254,7 @@ The dispatch pipeline:
   --out "${STEP_ROOT}/prompt.md"
 
 # 3. Dispatch to worker (auto-detects Codex or Agent backend)
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt"
 
@@ -269,7 +269,7 @@ Dispatch steps come in several flavors:
   its own artifact. Used for independent probes (like the triage probes in
   `ratchet-quality` Step 2, which fan out to baseline, quality, and backlog
   workers).
-- **Dispatch via `manage-codex`**: The `manage-codex` adapter handles a full
+- **Dispatch via `workers`**: The `workers` adapter handles a full
   implement-review-converge loop. This is for steps that involve real code
   changes with quality gates. More on this below.
 
@@ -291,7 +291,7 @@ cross-cutting decisions that a single worker could not.
 
 ### Why Implementation and Review Run in Separate Sessions
 
-This is a core principle of `manage-codex`:
+This is a core principle of `workers`:
 
 > Implementation and review always run in separate sessions.
 
@@ -300,13 +300,13 @@ reviews it, the reviewer has already seen (and mentally committed to) the
 implementation choices. The review becomes a rubber stamp rather than an
 adversarial check.
 
-Separate Codex sessions mean the review worker starts fresh. It reads the diff,
+Separate worker sessions mean the review worker starts fresh. It reads the diff,
 re-runs verification commands independently, and judges the code without the
 sunk-cost bias of having written it.
 
-### The `manage-codex` Loop
+### The `workers` Loop
 
-When a dispatch step uses `adapter: manage-codex`, it delegates to a
+When a dispatch step uses `adapter: workers`, it delegates to a
 multi-phase inner loop:
 
 ```text
@@ -332,7 +332,7 @@ The orchestrator never modifies `batch.json` by hand. All state transitions go
 through `update-batch.sh`:
 
 ```bash
-./scripts/relay/update-batch.sh --root "${CHILD_ROOT}" \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root "${CHILD_ROOT}" \
   --slice slice-001 --event review_clean
 ```
 
@@ -340,9 +340,9 @@ This is a critical design decision. LLMs are unreliable at maintaining JSON
 state. Making `batch.json` mutations go through a deterministic script eliminates
 an entire class of state-corruption bugs.
 
-### Circuits That Use `manage-codex`
+### Circuits That Use `workers`
 
-Several circuits delegate their heavy-lifting steps to `manage-codex`:
+Several circuits delegate their heavy-lifting steps to `workers`:
 
 - `develop` Step 9 (Implement): Turns the execution packet
   into working code.
@@ -364,7 +364,7 @@ ${RUN_ROOT}/phases/step-13/batches/<batch-id>/
   archive/
 ```
 
-The parent step owns the child root. After `manage-codex` completes, the parent
+The parent step owns the child root. After `workers` completes, the parent
 reads back in a specific order:
 
 1. `handoffs/handoff-converge.md` (the convergence verdict)
@@ -527,10 +527,10 @@ protocol between orchestrator and workers.
 
 ### `compose-prompt.sh`: Prompt Assembly
 
-This script assembles a Codex worker prompt from modular pieces:
+This script assembles a worker prompt from modular pieces:
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -579,7 +579,7 @@ The skill directory resolution follows a priority chain:
 ### `update-batch.sh`: Deterministic State Machine
 
 This script manages `batch.json` -- the state file that tracks every slice in a
-`manage-codex` run. The key design principle: **the orchestrator never
+`workers` run. The key design principle: **the orchestrator never
 hand-edits `batch.json`**. All mutations go through this script.
 
 Why? LLMs are unreliable at precise JSON manipulation. They miscount array
@@ -615,13 +615,13 @@ The `--root` flag threads through all paths, keeping the batch state isolated
 to its relay root:
 
 ```bash
-./scripts/relay/update-batch.sh --root "${CHILD_ROOT}" \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root "${CHILD_ROOT}" \
   --slice slice-001 --event review_clean --summary "CLEAN"
 ```
 
 ### The Handoff Contract
 
-Every Codex worker writes a handoff file with these exact sections:
+Every worker writes a handoff file with these exact sections:
 
 ```markdown
 ### Files Changed
@@ -679,10 +679,10 @@ prompts with unresolved placeholders.
 Circuits do not exist in isolation. They compose with each other and with
 non-circuit skills through well-defined interfaces.
 
-### How Circuits Call `manage-codex` as an Adapter
+### How Circuits Call `workers` as an Adapter
 
-The `manage-codex` skill is not a circuit -- it is an adapter. Circuits delegate
-their implementation-heavy steps to `manage-codex`, which handles the
+The `workers` skill is not a circuit -- it is an adapter. Circuits delegate
+their implementation-heavy steps to `workers`, which handles the
 plan-implement-review-converge loop.
 
 The composition contract:
@@ -690,14 +690,14 @@ The composition contract:
 1. **The circuit owns the child root.** The circuit creates the directory
    structure, writes `CHARTER.md`, and defines the domain skills.
 
-2. **`manage-codex` owns the inner loop.** Once dispatched, `manage-codex`
+2. **`workers` owns the inner loop.** Once dispatched, `workers`
    handles slicing, worker dispatch, review, and convergence autonomously.
 
-3. **The circuit synthesizes the result.** After `manage-codex` completes, the
+3. **The circuit synthesizes the result.** After `workers` completes, the
    circuit reads back the child state and writes its canonical artifact.
 
-This is a clean adapter boundary. The circuit does not reach into `manage-codex`'s
-inner loop, and `manage-codex` does not know about the circuit's artifact chain.
+This is a clean adapter boundary. The circuit does not reach into `workers`'s
+inner loop, and `workers` does not know about the circuit's artifact chain.
 
 The adapter seam contract requires explicit documentation of:
 - Child root creation and layout
@@ -745,7 +745,7 @@ Domain skills (`rust`, `swift-apps`, `tdd`, `next-best-practices`) are not
 bundled into circuits. They are composed at dispatch time via `--skills`:
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -784,11 +784,11 @@ description into a circuit skill pair. Its artifact chain:
 
 ```text
 workflow-brief.md          [Step 1, interactive intake]
-  -> circuit-analysis.md   [Step 2, Codex dispatch]
-  -> draft-circuit.yaml    [Step 3, Codex dispatch, staging]
-  -> draft-SKILL.md        [Step 3, Codex dispatch, staging]
-  -> cross-validation.md   [Step 3, Codex dispatch]
-  -> validation-report.md  [Step 4, Codex dispatch]
+  -> circuit-analysis.md   [Step 2, dispatch]
+  -> draft-circuit.yaml    [Step 3, dispatch, staging]
+  -> draft-SKILL.md        [Step 3, dispatch, staging]
+  -> cross-validation.md   [Step 3, dispatch]
+  -> validation-report.md  [Step 4, dispatch]
   -> circuit.yaml + SKILL.md [Step 5, Claude refinement, installed]
 ```
 
@@ -797,13 +797,13 @@ The five phases:
 1. **Intake.** Interactive conversation to understand the workflow, its phases,
    judgment checkpoints, artifact chain, and external dependencies.
 
-2. **Analysis.** A Codex worker maps the workflow to existing circuit patterns
+2. **Analysis.** A worker maps the workflow to existing circuit patterns
    and determines whether it is an artifact-centric circuit or a validator.
 
-3. **Authoring.** A Codex worker generates `circuit.yaml` and `SKILL.md` from
+3. **Authoring.** A worker generates `circuit.yaml` and `SKILL.md` from
    the analysis, then cross-validates them field by field.
 
-4. **Validation.** A separate Codex worker walks six quality categories against
+4. **Validation.** A separate worker walks six quality categories against
    the drafts without modifying them. This is diagnose-only.
 
 5. **Refinement.** The orchestrator reads all upstream artifacts, addresses
@@ -880,7 +880,7 @@ circuit:
               - "Concrete check description"
 
           # For dispatch steps:
-          adapter: manage-codex   # optional, for implementation steps
+          adapter: workers   # optional, for implementation steps
           max_attempts: 3         # optional retry budget
           notes: >                # optional prose context
             Additional context
@@ -962,7 +962,7 @@ When authoring or reviewing a circuit, check these six categories:
 
 4. **Resume Safety.** Step-local relay state is checked before artifacts.
    Parallel completeness requires all worker artifacts. Child state like
-   `batch.json` is inspected before restarting `manage-codex`.
+   `batch.json` is inspected before restarting `workers`.
 
 5. **Dispatch Compatibility.** Only real CLI flags and template behavior are
    used. Skill budgets stay within limits. No interactive skills in autonomous
@@ -1005,8 +1005,8 @@ circuit/
       compose-prompt.sh     # Prompt assembly pipeline
       update-batch.sh       # Deterministic batch.json state machine
   skills/
-    manage-codex/
-      SKILL.md              # Codex batch orchestrator
+    workers/
+      SKILL.md              # Batch worker orchestrator
       references/
         implement-template.md
         review-template.md
@@ -1122,7 +1122,7 @@ SKILL.md (runtime truth)
             ├── codex exec --full-auto
             |     (worker executes, writes handoff)
             |
-            ├── [if adapter: manage-codex]
+            ├── [if adapter: workers]
             |     update-batch.sh manages state
             |     plan -> implement -> review -> converge loop
             |

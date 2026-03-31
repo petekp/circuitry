@@ -4,7 +4,7 @@ description: >
   Artifact-driven circuit for taking a significant feature from idea to shipped code.
   10 steps across 5 phases: Alignment → Evidence → Decision → Preflight → Delivery.
   Use when the user describes a non-trivial feature that needs research, design, and
-  implementation — not for bug fixes, single-file changes, or quick wiring tasks.
+  implementation -- not for bug fixes, single-file changes, or quick wiring tasks.
 ---
 
 # Develop Circuit
@@ -27,13 +27,13 @@ intent/contract/implement/review flow, use `--light` mode (see Mode Selection be
 
 ## Glossary
 
-- **Artifact** — A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
+- **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** — The raw output a Codex worker writes to its relay `handoffs/` directory.
+- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
   Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
-- **Prompt header** — A self-contained file the orchestrator writes before dispatch. Contains
+- **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
-- **Synthesis** — When the orchestrator (Claude session) reads prior artifacts and writes a
+- **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
   new artifact directly, without dispatching a worker.
 
 ## Principles
@@ -58,9 +58,9 @@ RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts"
 ```
 
-Record `RUN_ROOT` — all paths below are relative to it.
+Record `RUN_ROOT` -- all paths below are relative to it.
 
-**Per-step scaffolding** — before each dispatch step, create:
+**Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
 mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
@@ -92,10 +92,10 @@ Constraints Synthesis, Generate Distinct Candidates, Adversarial Evaluation,
 Tradeoff Decision, Prove the Hardest Seam.
 
 **Key differences from full mode:**
-- Step 7 (Implementation Contract) reads from `intent-brief.md` directly — there is no
+- Step 7 (Implementation Contract) reads from `intent-brief.md` directly -- there is no
   `adr.md` or `constraints.md` to reference. See the Light Mode Variant under Step 7.
 - The intent-brief MUST include a `## Mode` section (see Step 1 light mode note).
-- Gates still apply to every step — no quality compromise.
+- Gates still apply to every step -- no quality compromise.
 
 If `MODE=full`, ignore all light-mode variants below and follow the standard phases.
 
@@ -139,14 +139,14 @@ if command -v codex >/dev/null 2>&1; then
   # Use Codex backend
   cat ${step_dir}/prompt.md | codex exec --full-auto -o ${step_dir}/last-messages/last-message.txt -
 else
-  # Use Agent backend — invoke the Agent tool with the prompt content
+  # Use Agent backend -- invoke the Agent tool with the prompt content
   # Agent(task=<prompt contents>, isolation="worktree")
 fi
 ```
 
 Or use the dispatch helper:
 ```bash
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${step_dir}/prompt.md \
   --output ${step_dir}/last-messages/last-message.txt
 ```
@@ -154,7 +154,7 @@ Or use the dispatch helper:
 The artifact chain, gates, handoff format, and resume logic are **identical**
 regardless of backend. The only difference is the execution mechanism.
 
-**Parallel dispatch:** Codex supports true parallel workers (`&` + `wait`). Agent
+**Parallel dispatch:** The Codex backend supports true parallel workers (`&` + `wait`). Agent
 backend dispatches sequentially unless the orchestrator uses multiple Agent tool calls
 in one response. When backend is Agent and a step has parallel workers (e.g., Step 2),
 dispatch them as separate sequential Agent calls.
@@ -214,7 +214,7 @@ Including these headings in the header prevents that contamination.
 
 ## Phase 1: Alignment
 
-### Step 1: Intent Lock — `interactive`
+### Step 1: Intent Lock -- `interactive`
 
 **Objective:** Define what success looks like before any research starts.
 
@@ -246,7 +246,7 @@ because the implementation approach is clear. Example:
 ```markdown
 # Intent Brief: <feature>
 ## Mode
-Light mode — evidence/decision phases skipped. Approach is clear because: <reason>.
+Light mode -- evidence/decision phases skipped. Approach is clear because: <reason>.
 ## Ranked Outcomes
 ...
 ```
@@ -258,7 +258,7 @@ readers) understand why artifacts like `constraints.md` and `adr.md` do not exis
 
 ## Phase 2: Evidence
 
-### Step 2: Parallel Evidence Probes — `dispatch`
+### Step 2: Parallel Evidence Probes -- `dispatch`
 
 **Objective:** Gather external patterns and internal system surface in parallel.
 
@@ -300,25 +300,25 @@ Include the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2a/prompt-header.md \
   --skills deep-research \
   --root ${RUN_ROOT}/phases/step-2a \
   --out ${RUN_ROOT}/phases/step-2a/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2a/prompt.md \
   --output ${RUN_ROOT}/phases/step-2a/last-messages/last-message.txt
 ```
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2b/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-2b \
   --out ${RUN_ROOT}/phases/step-2b/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2b/prompt.md \
   --output ${RUN_ROOT}/phases/step-2b/last-messages/last-message.txt
 ```
@@ -342,7 +342,7 @@ synthesizes the digest artifact manually using the evidence digest schema.
 Unknowns, and Implications for This Feature sections. Source Confidence labels
 are present.
 
-### Step 3: Constraints Synthesis — `synthesis`
+### Step 3: Constraints Synthesis -- `synthesis`
 
 **Objective:** Merge parallel research into decision-grade substrate.
 
@@ -367,7 +367,7 @@ ranked open questions. Every item has a certainty label.
 
 ## Phase 3: Decision
 
-### Step 4: Generate Distinct Candidates — `dispatch`
+### Step 4: Generate Distinct Candidates -- `dispatch`
 
 **Objective:** Produce 3-5 approaches that differ on real dimensions.
 
@@ -399,13 +399,13 @@ mkdir -p "${RUN_ROOT}/phases/step-4/handoffs" "${RUN_ROOT}/phases/step-4/last-me
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-4/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-4 \
   --out ${RUN_ROOT}/phases/step-4/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-4/prompt.md \
   --output ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt
 ```
@@ -418,7 +418,7 @@ cp ${RUN_ROOT}/phases/step-4/options.md ${RUN_ROOT}/artifacts/options.md
 
 If the worker only wrote `handoffs/handoff.md`, synthesize `options.md` from the handoff.
 
-### Step 5: Adversarial Evaluation + Decision Packet — `dispatch`
+### Step 5: Adversarial Evaluation + Decision Packet -- `dispatch`
 
 **Objective:** Red-team each option AND synthesize into a decision packet.
 
@@ -446,13 +446,13 @@ mkdir -p "${RUN_ROOT}/phases/step-5/handoffs" "${RUN_ROOT}/phases/step-5/last-me
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
   --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
@@ -463,7 +463,7 @@ test -f ${RUN_ROOT}/phases/step-5/decision-packet.md
 cp ${RUN_ROOT}/phases/step-5/decision-packet.md ${RUN_ROOT}/artifacts/decision-packet.md
 ```
 
-### Step 6: Tradeoff Decision — `interactive`
+### Step 6: Tradeoff Decision -- `interactive`
 
 **Objective:** User chooses based on tradeoffs, not generic approval.
 
@@ -479,7 +479,7 @@ Present `decision-packet.md` to the user. Ask (via AskUserQuestion):
 Write their response to `${RUN_ROOT}/artifacts/adr.md`:
 
 ```markdown
-# ADR: <feature> — <chosen approach>
+# ADR: <feature> -- <chosen approach>
 ## Decision
 ## Rationale (user's tradeoff reasoning)
 ## Accepted Risks
@@ -496,7 +496,7 @@ Rejected Alternative that maps back to `options.md`.
 
 ## Phase 4: Preflight
 
-### Step 7: Implementation Contract — `synthesis`
+### Step 7: Implementation Contract -- `synthesis`
 
 **Objective:** Convert the ADR into an executable build packet.
 
@@ -520,7 +520,7 @@ The orchestrator reads `adr.md`, `constraints.md`, AND `intent-brief.md` and wri
 #### Light Mode Variant (Step 7)
 
 When `MODE=light`, this step consumes **only** `intent-brief.md`. There is no `adr.md`
-or `constraints.md` to reference — those artifacts do not exist in the light chain.
+or `constraints.md` to reference -- those artifacts do not exist in the light chain.
 
 The orchestrator derives the execution packet sections as follows:
 
@@ -528,7 +528,7 @@ The orchestrator derives the execution packet sections as follows:
   Criteria. Frame each outcome as an invariant that must hold.
 - **Interface Boundaries:** Derive from Domain and File Scope.
 - **Slice Order:** Derive from Domain and File Scope, ordered by dependency.
-- **Test Obligations:** Derive from Ranked Outcomes — each outcome needs at least one
+- **Test Obligations:** Derive from Ranked Outcomes -- each outcome needs at least one
   verification method.
 - **Non-Goals:** Carried directly from the intent brief.
 - **Rollback Triggers, Artifact Expectations, Verification Commands:** Derived from
@@ -540,7 +540,7 @@ The execution-packet schema is identical in both modes. The gate is identical:
 After writing the execution-packet, light mode skips Step 8 (Prove the Hardest Seam)
 and proceeds directly to Step 9 (Implement).
 
-### Step 8: Prove the Hardest Seam — `dispatch`
+### Step 8: Prove the Hardest Seam -- `dispatch`
 
 **Objective:** Write a thin slice or failing tests on the highest-risk boundary.
 
@@ -551,7 +551,7 @@ mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-me
 
 **Header** (`${RUN_ROOT}/phases/step-8/prompt-header.md`):
 - Mission: Identify the single riskiest seam in the execution packet and prove it with
-  code — write failing tests, a thin spike, or a minimal integration that exercises the
+  code -- write failing tests, a thin spike, or a minimal integration that exercises the
   boundary. This is proof, not analysis.
 - Inputs: Full `execution-packet.md`
 - Output path: `${RUN_ROOT}/phases/step-8/seam-proof.md`
@@ -569,13 +569,13 @@ mkdir -p "${RUN_ROOT}/phases/step-8/handoffs" "${RUN_ROOT}/phases/step-8/last-me
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-8/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-8 \
   --out ${RUN_ROOT}/phases/step-8/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-8/prompt.md \
   --output ${RUN_ROOT}/phases/step-8/last-messages/last-message.txt
 ```
@@ -599,12 +599,12 @@ cp ${RUN_ROOT}/phases/step-8/seam-proof.md ${RUN_ROOT}/artifacts/seam-proof.md
 
 ## Phase 5: Delivery
 
-### Step 9: Implement — `dispatch` (via manage-codex)
+### Step 9: Implement -- `dispatch` (via workers)
 
 **Objective:** Build against the execution packet with traceability.
 
-This step delegates to the manage-codex skill for the full implement → review → converge
-cycle. The orchestrator must create the manage-codex workspace explicitly.
+This step delegates to the workers skill for the full implement → review → converge
+cycle. The orchestrator must create the workers workspace explicitly.
 
 **Adapter contract:**
 
@@ -619,13 +619,13 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
    cp ${RUN_ROOT}/artifacts/execution-packet.md ${IMPL_ROOT}/CHARTER.md
    ```
 
-2. **Write the manage-codex prompt header** at `${IMPL_ROOT}/prompt-header.md`:
+2. **Write the workers prompt header** at `${IMPL_ROOT}/prompt-header.md`:
    Use the canonical header schema with:
-   - Mission: Implement the feature described in CHARTER.md using the manage-codex
+   - Mission: Implement the feature described in CHARTER.md using the workers
      implement → review → converge cycle
    - Inputs: Full text of `execution-packet.md` (already copied as CHARTER.md)
    - Output path: `${IMPL_ROOT}/handoffs/handoff-converge.md`
-   - Output schema: manage-codex convergence handoff format
+   - Output schema: workers convergence handoff format
    - Success criteria: All slices converged with `COMPLETE AND HARDENED` verdict
    - Handoff: Standard relay handoff headings (### Files Changed, ### Tests Run,
      ### Completion Claim) to prevent relay-protocol.md contamination
@@ -633,26 +633,26 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
 
 3. **Compose and dispatch:**
    ```bash
-   ./scripts/relay/compose-prompt.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
      --header ${IMPL_ROOT}/prompt-header.md \
-     --skills manage-codex,<domain-skills> \
+     --skills workers,<domain-skills> \
      --root ${IMPL_ROOT} \
      --out ${IMPL_ROOT}/prompt.md
 
-   ./scripts/relay/dispatch.sh \
+   "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
      --prompt ${IMPL_ROOT}/prompt.md \
-     --output ${IMPL_ROOT}/last-messages/last-message-manage-codex.txt
+     --output ${IMPL_ROOT}/last-messages/last-message-workers.txt
    ```
 
-4. **After manage-codex completes**, the orchestrator synthesizes `implementation-handoff.md`:
+4. **After workers completes**, the orchestrator synthesizes `implementation-handoff.md`:
 
    **Source artifacts (read in this order):**
-   - `${IMPL_ROOT}/handoffs/handoff-converge.md` — the convergence verdict (primary source)
-   - `${IMPL_ROOT}/batch.json` — slice metadata showing what was built
+   - `${IMPL_ROOT}/handoffs/handoff-converge.md` -- the convergence verdict (primary source)
+   - `${IMPL_ROOT}/batch.json` -- slice metadata showing what was built
    - The last implementation slice handoff at `${IMPL_ROOT}/handoffs/handoff-<last-slice-id>.md`
      (find the slice id from `batch.json`)
 
-   Note: manage-codex review workers may overwrite per-slice handoff files. If a slice
+   Note: workers review workers may overwrite per-slice handoff files. If a slice
    handoff is missing or appears to be a review artifact, use `batch.json` slice metadata
    and the convergence handoff to reconstruct what was built.
 
@@ -666,8 +666,8 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/handoffs" \
    ```
 
    **Gate:** `implementation-handoff.md` exists AND convergence verdict is
-   `COMPLETE AND HARDENED`. If convergence says `ISSUES REMAIN`, the manage-codex
-   loop should have addressed them — escalate to user if it didn't.
+   `COMPLETE AND HARDENED`. If convergence says `ISSUES REMAIN`, the workers
+   loop should have addressed them -- escalate to user if it didn't.
 
 **Verify:**
 ```bash
@@ -675,11 +675,11 @@ test -f ${IMPL_ROOT}/handoffs/handoff-converge.md
 test -f ${RUN_ROOT}/artifacts/implementation-handoff.md
 ```
 
-### Step 10: Final Ship Review — `dispatch`
+### Step 10: Final Ship Review -- `dispatch`
 
 **Objective:** Independent assessment of the shipped work against the execution packet.
 
-This step is assessment only — the worker does NOT modify source code. If issues are
+This step is assessment only -- the worker does NOT modify source code. If issues are
 found, the orchestrator handles remediation separately before re-running this step.
 
 **Setup:**
@@ -690,7 +690,7 @@ mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-
 **Header** (`${RUN_ROOT}/phases/step-10/prompt-header.md`):
 - Mission: Audit the implementation against the execution packet and original intent.
   Check for contract drift, correctness bugs, naming issues, dead code, missing tests,
-  and residue. Do NOT modify source code — diagnose only.
+  and residue. Do NOT modify source code -- diagnose only.
 - Inputs: Full `execution-packet.md`, full `implementation-handoff.md`,
   digested `intent-brief.md` (ranked outcomes + non-goals), current repo state
 - Output path: `${RUN_ROOT}/phases/step-10/ship-review.md`
@@ -712,13 +712,13 @@ mkdir -p "${RUN_ROOT}/phases/step-10/handoffs" "${RUN_ROOT}/phases/step-10/last-
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-10/prompt-header.md \
   --skills <domain-skills> \
   --root ${RUN_ROOT}/phases/step-10 \
   --out ${RUN_ROOT}/phases/step-10/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-10/prompt.md \
   --output ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt
 ```
@@ -758,7 +758,7 @@ intent-brief.md                              [user: intent lock]
 ```
 intent-brief.md (with ## Mode section)   [user: intent lock]
   → execution-packet.md                  [orchestrator: synthesis from intent-brief only]
-  → implementation-handoff.md            [manage-codex: identical to full mode]
+  → implementation-handoff.md            [workers: identical to full mode]
   → ship-review.md                       [worker: identical to full mode]
 ```
 
@@ -768,11 +768,11 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 
 1. Check artifacts in chain order (intent-brief → external-digest → ... → ship-review)
 2. Find the last complete artifact with passing gate
-3. For Step 9 specifically: check `${RUN_ROOT}/phases/step-9/batch.json` for manage-codex
+3. For Step 9 specifically: check `${RUN_ROOT}/phases/step-9/batch.json` for workers
    resume state before restarting implementation
 4. Continue from the next step
 
-This is best-effort — the circuit has no durable state beyond artifacts on disk and
+This is best-effort -- the circuit has no durable state beyond artifacts on disk and
 step-local relay directories. If a session dies mid-step, check the step's relay
 directory for worker output before concluding the step failed.
 
@@ -786,7 +786,7 @@ When `MODE=light`, resume uses the abbreviated artifact chain:
    `internal-digest.md`, `constraints.md`, `options.md`, `decision-packet.md`, `adr.md`,
    `seam-proof.md`). These may exist if the run started in full mode and switched to light.
 3. Find the last complete light-mode artifact with a passing gate.
-4. For Step 9 specifically: check `${RUN_ROOT}/phases/step-9/batch.json` for manage-codex
+4. For Step 9 specifically: check `${RUN_ROOT}/phases/step-9/batch.json` for workers
    resume state (identical to full mode).
 5. Continue from the next light-mode step.
 
@@ -803,7 +803,7 @@ start a new run.
 Escalate to the user when:
 - A dispatch step fails twice (no valid output after 2 attempts)
 - The seam proof returns `DESIGN INVALIDATED` (Step 8 gate)
-- Any manage-codex slice hits `impl_attempts > 3` or
+- Any workers slice hits `impl_attempts > 3` or
   `impl_attempts + review_rejections > 5` (Step 9)
 - Convergence fails after max attempts (Step 9)
 - Ship review says `ISSUES FOUND` after 2 attempts (Step 10)

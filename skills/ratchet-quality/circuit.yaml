@@ -69,7 +69,7 @@ circuit:
         - id: baseline-repair
           title: Baseline Repair
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [mission-brief.md, baseline-audit.md, quality-calibration.md]
           produces: stabilization-report.md
           max_attempts: 2
@@ -281,7 +281,7 @@ circuit:
         - id: execute-batches
           title: Execute Batches
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes:
             - execution-charter.md
             - quality-calibration.md
@@ -320,7 +320,7 @@ circuit:
         - id: execution-ratchet
           title: Execution Ratchet
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes:
             - execution-log.md
             - execution-audit.md

@@ -96,7 +96,7 @@ orchestration or evidence gathering. Never exceed 3 total skills per dispatch.
 Dispatch steps use either **Codex CLI** or **Claude Code Agent** as the worker
 backend. The backend is auto-detected: if `codex` is on PATH, use Codex; otherwise,
 fall back to Agent. Use the dispatch helper:
-`./scripts/relay/dispatch.sh --prompt <prompt> --output <output>`
+`"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt <prompt> --output <output>`
 
 The artifact chain, gates, handoff format, and resume logic are identical
 regardless of backend.
@@ -237,13 +237,13 @@ Assemble and dispatch each worker:
 
 ```bash
 for category in dead-code stale-docs orphaned-artifacts vestigial-comments redundant-abstractions; do
-  ./scripts/relay/compose-prompt.sh \
+  "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
     --header "${RUN_ROOT}/phases/step-2/prompt-header-${category}.md" \
     --template implement \
     --root "${RUN_ROOT}" \
     --out "${RUN_ROOT}/phases/step-2/prompt-${category}.md"
 
-  ./scripts/relay/dispatch.sh \
+  "$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
     --prompt "${RUN_ROOT}/phases/step-2/prompt-${category}.md" \
     --output "${RUN_ROOT}/last-messages/last-message-survey-${category}.txt"
 done
@@ -415,7 +415,7 @@ Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../
 
 ## Phase 4: Clean
 
-### Step 6: Cleanup Batch Execution — `dispatch` via `manage-codex`
+### Step 6: Cleanup Batch Execution — `dispatch` via `workers`
 
 **Objective:** Remove confirmed-dead items in ordered batches with build/test
 verification after each batch.
@@ -436,14 +436,14 @@ Compute ordered batches from `triage-report.md` and `evidence-log.md`:
      triage OR CONFIRMED-DEAD from evidence). High-risk items are deferred even
      if CONFIRMED-DEAD unless the user pre-approved them in cleanup-scope.
 
-3. **Per-batch execution** using `manage-codex`:
+3. **Per-batch execution** using `workers`:
 
-This step delegates to the `manage-codex` skill for the full implement →
-review → converge cycle. The orchestrator creates the manage-codex workspace
+This step delegates to the `workers` skill for the full implement →
+review → converge cycle. The orchestrator creates the workers workspace
 explicitly for each batch.
 
 **Retry contract:** Up to 3 attempts per batch. An attempt is one full
-manage-codex dispatch (implement → review → converge). Retry triggers:
+workers dispatch (implement → review → converge). Retry triggers:
 convergence says `ISSUES REMAIN` and the issues are fixable (not a
 fundamental misclassification). After 3 failed attempts, mark the batch as
 REVERTED and move to the next batch.
@@ -462,7 +462,7 @@ mkdir -p "${BATCH_ROOT}/archive" "${BATCH_ROOT}/handoffs" \
 `## Verification Commands` (build/test/verify), `## Revert Rule` (revert ALL
 on any verification failure — no partial reverts).
 
-**b) Write `${BATCH_ROOT}/prompt-header.md`** telling manage-codex to remove
+**b) Write `${BATCH_ROOT}/prompt-header.md`** telling workers to remove
 items per CHARTER, run verification after each slice, write convergence to
 `${BATCH_ROOT}/handoffs/handoff-converge.md`, and revert the whole batch if
 verification fails. Include standard relay handoff headings.
@@ -470,18 +470,18 @@ verification fails. Include standard relay handoff headings.
 **c) Compose and dispatch:**
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${BATCH_ROOT}/prompt-header.md" \
-  --skills manage-codex \
+  --skills workers \
   --root "${BATCH_ROOT}" \
   --out "${BATCH_ROOT}/prompt.md"
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${BATCH_ROOT}/prompt.md" \
-  --output "${BATCH_ROOT}/last-messages/last-message-manage-codex.txt"
+  --output "${BATCH_ROOT}/last-messages/last-message-workers.txt"
 ```
 
-**d) After manage-codex completes**, read back in this order:
+**d) After workers completes**, read back in this order:
 
 1. `${BATCH_ROOT}/handoffs/handoff-converge.md` — convergence verdict (primary)
 2. `${BATCH_ROOT}/batch.json` — slice metadata showing what was removed
@@ -489,7 +489,7 @@ verification fails. Include standard relay handoff headings.
    `${BATCH_ROOT}/handoffs/handoff-<last-slice-id>.md` (find slice id from
    `batch.json`)
 
-Note: manage-codex review workers may overwrite per-slice handoff files. If a
+Note: workers review workers may overwrite per-slice handoff files. If a
 slice handoff is missing or appears to be a review artifact, use `batch.json`
 slice metadata and the convergence handoff to reconstruct what was removed.
 
@@ -670,7 +670,7 @@ cleanup-scope.md             [Step 1, interactive]
   -> survey-inventory.md     [Step 3, synthesis, from 5 category findings]
   -> triage-report.md        [Step 4, synthesis, mode-conditional approval]
   -> evidence-log.md         [Step 5, dispatch]
-  -> cleanup-batches.md      [Step 6, manage-codex, per-batch execution]
+  -> cleanup-batches.md      [Step 6, workers, per-batch execution]
   -> verification-report.md  [Step 8, synthesis]
   -> deferred-review.md      [Step 8, synthesis, autonomous only]
 ```
@@ -678,7 +678,7 @@ cleanup-scope.md             [Step 1, interactive]
 Non-canonical intermediate outputs:
 - Step 2: 5 category finding files (consumed by Step 3, not canonical chain)
 - Step 7: `verification-audit.md` (consumed by Step 8, not canonical chain)
-- Step 6: per-batch `manage-codex` handoffs (relay state, not canonical)
+- Step 6: per-batch `workers` handoffs (relay state, not canonical)
 
 ## Resume Awareness
 

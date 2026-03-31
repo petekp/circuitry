@@ -131,7 +131,7 @@ circuit:
         - id: cleanup-batch-execution
           title: Cleanup Batch Execution
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [triage-report.md, evidence-log.md, cleanup-scope.md]
           produces: cleanup-batches.md
           gate:
@@ -142,7 +142,7 @@ circuit:
               - "Failed batches show explicit revert evidence"
           notes: >
             One topology step containing an ordered per-batch execution loop.
-            Delegates to manage-codex for implement -> review -> converge per
+            Delegates to workers for implement -> review -> converge per
             batch. Retry contract (up to 3 attempts per batch) lives in
             SKILL.md. Interactive mode pauses before each batch. Autonomous
             mode auto-dispatches eligible batches with build/test gates.

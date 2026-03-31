@@ -86,7 +86,7 @@ fi
 section "Skill directories"
 
 EXPECTED_SKILLS=(
-  manage-codex
+  workers
   cleanup
   create
   decide
@@ -133,7 +133,7 @@ done
 # ── 7. compose-prompt.sh template smoke test ──────────────────────────
 section "Template smoke test"
 
-TEMPLATES_DIR="$PLUGIN_ROOT/skills/manage-codex/references"
+TEMPLATES_DIR="$PLUGIN_ROOT/skills/workers/references"
 EXPECTED_TEMPLATES=(
   implement-template.md
   review-template.md
@@ -146,7 +146,7 @@ EXPECTED_TEMPLATES=(
 templates_ok=true
 for tmpl in "${EXPECTED_TEMPLATES[@]}"; do
   if [[ ! -f "$TEMPLATES_DIR/$tmpl" ]]; then
-    fail "template missing: manage-codex/references/$tmpl"
+    fail "template missing: workers/references/$tmpl"
     templates_ok=false
   fi
 done

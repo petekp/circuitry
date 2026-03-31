@@ -1,9 +1,9 @@
 ---
 name: circuit:create
 description: >
-  Codex-powered compiler for turning a natural-language workflow description into
+  Worker-powered compiler for turning a natural-language workflow description into
   a circuit skill that matches the live corpus. 5 phases: Intake -> Analysis ->
-  Authoring -> Validation -> Refinement. Codex workers handle analysis, file
+  Authoring -> Validation -> Refinement. Workers handle analysis, file
   generation, and quality gate; Claude does intake and a final refinement pass
   optimized for Claude Code. Use when you want to create a circuit, compile a
   circuit, author a circuit skill, or turn this workflow into a circuit. Not for
@@ -17,9 +17,9 @@ This skill compiles a workflow description into a circuit skill pair:
 is `workflow-brief.md -> circuit-analysis.md -> draft-circuit.yaml + draft-SKILL.md
 + cross-validation.md -> validation-report.md -> circuit.yaml + SKILL.md`.
 
-Codex workers do the heavy lifting: pattern analysis, file generation, and
+Workers do the heavy lifting: pattern analysis, file generation, and
 quality validation. The orchestrator handles intake (interactive) and a final
-refinement pass that optimizes the generated circuit for Claude Code — trigger
+refinement pass that optimizes the generated circuit for Claude Code -- trigger
 metadata, dispatch patterns, skill discovery, and session ergonomics.
 
 This is a compiler, not a runtime engine. It can author either artifact-centric
@@ -48,14 +48,14 @@ wrapping a tiny one-off prompt in unnecessary circuit structure.
   validator.
 - **Cross-validation** - The field-by-field comparison that proves the authored
   `circuit.yaml` and `SKILL.md` agree.
-- **Adapter seam** - A dispatch boundary such as `manage-codex` whose runtime
+- **Adapter seam** - A dispatch boundary such as `workers` whose runtime
   contract must be described explicitly in prose.
 
 ## Principles
 
 - **Compiler, not runtime.** `circuit:create` authors a circuit skill. It does not
-  execute the generated workflow and it is not itself a `manage-codex` circuit.
-- **Codex generates, Claude refines.** Codex workers handle analysis, authoring,
+  execute the generated workflow and it is not itself a `workers` circuit.
+- **Workers generate, orchestrator refines.** Workers handle analysis, authoring,
   and quality validation. The orchestrator handles intake and a final refinement
   pass that optimizes for Claude Code.
 - **`SKILL.md` is runtime truth.** Treat `circuit.yaml` as topology only. If the
@@ -64,8 +64,8 @@ wrapping a tiny one-off prompt in unnecessary circuit structure.
   decide whether the skill is discoverable at all.
 - **Step granularity is a contract.** YAML topology steps must match prose
   topology steps. Worker detail may expand inside one step; topology may not drift.
-- **Cross-validate before dry-run.** Codex cross-validates during authoring;
-  Claude verifies during refinement. Both passes are mandatory.
+- **Cross-validate before dry-run.** The cross-validation worker verifies during
+  authoring; Claude verifies during refinement. Both passes are mandatory.
 - **Trip the circuit breaker early.** If the workflow does not fit the live
   circuit contract, say so instead of forcing a fake circuit.
 
@@ -88,7 +88,7 @@ Record these inputs before authoring:
 - `TARGET_CIRCUIT_SLUG` - the generated circuit directory name (under `circuit/`)
 - `TARGET_CIRCUIT_ROOT` - where the final `circuit.yaml` and `SKILL.md` will live
 - `RUN_ROOT` - where relay state, compiler artifacts, and staging drafts live
-- `STAGING` - where Codex workers write draft files (sandbox cannot write to `~/.claude/`)
+- `STAGING` - where workers write draft files (sandbox cannot write to `~/.claude/`)
 
 The `circuit:` prefix is added automatically to the frontmatter `name` field. For
 example, slug `foo-bar` produces `name: circuit:foo-bar` and lives at
@@ -105,7 +105,7 @@ you are compiling includes dispatch steps, author them with these limits:
 
 ## Dispatch Backend
 
-Generated circuits should use the dispatch helper (`./scripts/relay/dispatch.sh`)
+Generated circuits should use the dispatch helper (`"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh"`)
 which auto-detects whether Codex CLI or Agent fallback should be used. The
 artifact chain, gates, and handoff format are identical regardless of backend.
 
@@ -188,7 +188,7 @@ Also define:
 
 ### Adapter Seam Contract
 
-If the generated workflow uses `adapter: manage-codex`, the generated `SKILL.md`
+If the generated workflow uses `adapter: workers`, the generated `SKILL.md`
 must include all of the following:
 
 - child root creation
@@ -275,12 +275,12 @@ circuit:
         - id: implement
           title: Implement
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [packet.md]
           produces: implementation-handoff.md
           max_attempts: 3
           notes: >
-            Delegates to manage-codex. Orchestrator creates CHARTER.md and
+            Delegates to workers. Orchestrator creates CHARTER.md and
             synthesizes the outer handoff from child workflow artifacts.
 
         - id: validate
@@ -430,7 +430,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 
 - Check step-local relay state first and promoted artifacts second
 - Treat parallel completeness as "all worker artifacts exist and satisfy the gate"
-- Inspect child state like `batch.json` before restarting `manage-codex`
+- Inspect child state like `batch.json` before restarting `workers`
 - Resume from the chosen reopen target, not blindly from the verdict step
 
 #### Dispatch Compatibility
@@ -461,11 +461,11 @@ Short paragraph explaining the validator's core model and what a passing trace m
 9. Add resume and circuit-breaker behavior.
 10. Cross-validate `SKILL.md` and `circuit.yaml`.
 10b. **Apply conciseness rules:**
-    - Setup must not re-list inputs that Step 1 captures — forward-reference only
+    - Setup must not re-list inputs that Step 1 captures -- forward-reference only
     - The canonical header schema should be shown compressed (required section names + relay heading rule), not as a full markdown template
     - Show the dispatch recipe (compose-prompt + dispatch.sh) in full exactly once; subsequent steps reference it
-    - Tighten adapter seam contracts to required fields, not heredoc templates — keep child-root layout, required CHARTER sections, readback order, and escalation rule; cut the shell heredoc
-    - Remove standalone `Verify: test -f` lines — the gate owns existence checks
+    - Tighten adapter seam contracts to required fields, not heredoc templates -- keep child-root layout, required CHARTER sections, readback order, and escalation rule; cut the shell heredoc
+    - Remove standalone `Verify: test -f` lines -- the gate owns existence checks
     - Principles should not restate the intro or the dual-mode description in abstract form
     - Body negative scope can reference frontmatter instead of repeating the full list
 11. Run the quality gate and recommend `circuit:dry-run`.
@@ -604,13 +604,13 @@ analysis that will feed directly into file generation.
 Assemble and dispatch:
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${RUN_ROOT}/prompt-header-analysis.md" \
   --template implement \
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-analysis.md"
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${RUN_ROOT}/prompt-analysis.md" \
   --output "${RUN_ROOT}/last-messages/last-message-analysis.txt"
 ```
@@ -624,7 +624,7 @@ Analysis rules (encode in the prompt header):
 - Do not invent a third family
 - Keep phases serial and use worker fanout only inside a single step
 - Mark review steps as diagnose-only when they should not mutate source
-- If `manage-codex` appears, record the full adapter-seam contract now
+- If `workers` appears, record the full adapter-seam contract now
 - If the workflow is too small, too graph-like, or too runtime-dependent for the
   live circuit contract, trip the circuit breaker instead of forcing it
 
@@ -648,20 +648,20 @@ Write a prompt header to `${RUN_ROOT}/prompt-header-authoring.md` that includes:
 - The full circuit analysis digest
 - The Reference Pack (canonical starters, gate table, quality gate, anti-patterns)
 - Instructions to write:
-  - `${STAGING}/circuit.yaml` — from the canonical YAML starter
-  - `${STAGING}/SKILL.md` — from the appropriate family starter
-  - `${RUN_ROOT}/artifacts/cross-validation.md` — field-by-field comparison
+  - `${STAGING}/circuit.yaml` -- from the canonical YAML starter
+  - `${STAGING}/SKILL.md` -- from the appropriate family starter
+  - `${RUN_ROOT}/artifacts/cross-validation.md` -- field-by-field comparison
 
 Assemble and dispatch:
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${RUN_ROOT}/prompt-header-authoring.md" \
   --template implement \
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-authoring.md"
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${RUN_ROOT}/prompt-authoring.md" \
   --output "${RUN_ROOT}/last-messages/last-message-authoring.txt"
 ```
@@ -689,8 +689,8 @@ the embedded reference pack.
 
 ### Step 4: Quality Gate - `dispatch`
 
-**Objective:** Codex review worker walks the six quality categories against the
-draft files. This step is assessment only — the worker does NOT modify the drafts.
+**Objective:** The review worker walks the six quality categories against the
+draft files. This step is assessment only -- the worker does NOT modify the drafts.
 
 Write a prompt header to `${RUN_ROOT}/prompt-header-validation.md` that includes:
 
@@ -702,13 +702,13 @@ Write a prompt header to `${RUN_ROOT}/prompt-header-validation.md` that includes
 Assemble and dispatch:
 
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "${RUN_ROOT}/prompt-header-validation.md" \
   --template ship-review \
   --root "${RUN_ROOT}" \
   --out "${RUN_ROOT}/prompt-validation.md"
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt "${RUN_ROOT}/prompt-validation.md" \
   --output "${RUN_ROOT}/last-messages/last-message-validation.txt"
 ```
@@ -738,10 +738,10 @@ Validation rules (encode in the prompt header):
   contract actually includes inputs, citations, fixed checklist, workflow,
   failure logging, and finish condition
 - If the generated circuit claims adapter support, verify the seam is concrete
-- This step is assessment only — do NOT modify the draft files
+- This step is assessment only -- do NOT modify the draft files
 - Check for AP-21 through AP-25 (conciseness anti-patterns). Pay special attention to:
-  - AP-22 (Repeated Dispatch Shell Blocks) — count the number of full compose+exec blocks. More than one is a smell.
-  - AP-21 (Setup Duplicates Intake) — check if Setup lists runtime inputs that the intake step already collects.
+  - AP-22 (Repeated Dispatch Shell Blocks) -- count the number of full compose+exec blocks. More than one is a smell.
+  - AP-21 (Setup Duplicates Intake) -- check if Setup lists runtime inputs that the intake step already collects.
 
 **Gate:** `validation-report.md` exists with all six quality categories walked
 and a binary READY/REVISE verdict.
@@ -752,32 +752,32 @@ and a binary READY/REVISE verdict.
 
 ### Step 5: Claude Code Refinement - `synthesis`
 
-**Objective:** The orchestrator reads all upstream artifacts and the Codex
+**Objective:** The orchestrator reads all upstream artifacts and the worker
 validation findings, refines the draft files for Claude Code optimization, and
 installs the final circuit to `TARGET_CIRCUIT_ROOT`.
 
 Read these inputs:
 
-- `${STAGING}/circuit.yaml` and `${STAGING}/SKILL.md` (Codex drafts)
+- `${STAGING}/circuit.yaml` and `${STAGING}/SKILL.md` (worker drafts)
 - `${RUN_ROOT}/artifacts/cross-validation.md`
 - `${RUN_ROOT}/artifacts/validation-report.md`
 
 Refinement checklist:
 
-1. **Trigger metadata** — Is the `description` field optimized for Claude Code's
+1. **Trigger metadata** -- Is the `description` field optimized for Claude Code's
    skill discovery? Does it encode trigger phrases, phase count, and negative scope?
    Would a user typing a natural request actually match this skill?
-2. **Dispatch patterns** — Do all `dispatch` steps use the correct
+2. **Dispatch patterns** -- Do all `dispatch` steps use the correct
    `compose-prompt.sh` flags and `dispatch.sh` patterns? Are relay headings
    present in every header?
-3. **Session ergonomics** — Will this circuit feel natural when invoked via
+3. **Session ergonomics** -- Will this circuit feel natural when invoked via
    `/circuit:<name>`? Are interactive steps conversational? Are synthesis steps
    clear about what the orchestrator writes?
-4. **Address REVISE findings** — If the validation report says REVISE, fix every
+4. **Address REVISE findings** -- If the validation report says REVISE, fix every
    named issue in the drafts before installing.
-5. **Cross-validate again** — After any refinement edits, re-verify that
+5. **Cross-validate again** -- After any refinement edits, re-verify that
    `circuit.yaml` and `SKILL.md` still agree on topology.
-5b. **Conciseness pass** — Before installing, verify:
+5b. **Conciseness pass** -- Before installing, verify:
     - No setup/intake duplication (AP-21)
     - Dispatch recipe shown in full once only (AP-22)
     - No duplicate readback orders (AP-23)
@@ -785,7 +785,7 @@ Refinement checklist:
     - No circuit breaker echo lists (AP-25)
     - Canonical header schema is compressed, not templated
     - SKILL.md line count is proportional to corpus norms
-6. **Install** — Copy refined files to `${TARGET_CIRCUIT_ROOT}/circuit.yaml` and
+6. **Install** -- Copy refined files to `${TARGET_CIRCUIT_ROOT}/circuit.yaml` and
    `${TARGET_CIRCUIT_ROOT}/SKILL.md`.
 
 **Gate with reopen:** Read the validation verdict plus refinement results.
@@ -807,10 +807,10 @@ contains hidden gaps, weak gates, or unusable adapter seams.
 
 ```text
 workflow-brief.md                              [Step 1, interactive]
-  -> circuit-analysis.md                       [Step 2, Codex dispatch]
-  -> draft-circuit.yaml + draft-SKILL.md       [Step 3, Codex dispatch, staging]
-  -> cross-validation.md                       [Step 3, Codex dispatch]
-  -> validation-report.md                      [Step 4, Codex dispatch]
+  -> circuit-analysis.md                       [Step 2, dispatch]
+  -> draft-circuit.yaml + draft-SKILL.md       [Step 3, dispatch, staging]
+  -> cross-validation.md                       [Step 3, dispatch]
+  -> validation-report.md                      [Step 4, dispatch]
   -> circuit.yaml + SKILL.md                   [Step 5, Claude refinement, installed]
 ```
 
@@ -834,7 +834,7 @@ If `validation-report.md` exists with a `REVISE` verdict, read its
 rerunning validation.
 
 If the final files exist in `TARGET_CIRCUIT_ROOT` but not in staging, the
-refinement step already completed — do not re-run.
+refinement step already completed -- do not re-run.
 
 This is best-effort. The durable state is the artifact set on disk, not the chat
 thread.

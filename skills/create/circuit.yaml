@@ -4,7 +4,7 @@ circuit:
   version: "2026-03-26"
   title: Circuit Create
   description: >
-    Codex-powered compiler for turning a natural-language workflow description
+    Worker-powered compiler for turning a natural-language workflow description
     into a circuit skill that matches the live corpus. Chains workflow brief ->
     circuit analysis -> draft files -> validation report -> refined install across
     5 phases. Topology only - this file does not encode runtime behavior or
@@ -45,7 +45,7 @@ circuit:
               - "Action types, artifact chain, and external inputs explicit"
               - "Gate, reopen, and resume plan explicit"
           notes: >
-            Codex worker reads the workflow brief and maps it to the live circuit
+            Worker reads the workflow brief and maps it to the live circuit
             patterns. Determines artifact-centric vs validator family.
 
     - id: authoring
@@ -65,7 +65,7 @@ circuit:
               - "Starter templates, decision table, quality gate, and anti-pattern catalog present"
               - "Compiler-only scope, resume rules, and circuit breaker explicit"
           notes: >
-            Codex worker generates draft circuit.yaml and SKILL.md to staging,
+            Worker generates draft circuit.yaml and SKILL.md to staging,
             then cross-validates them field by field.
 
     - id: validation
@@ -85,7 +85,7 @@ circuit:
               - "Anti-patterns named by ID"
               - "Verdict is READY or REVISE with named issues"
           notes: >
-            Codex review worker walks the six quality categories against the
+            Review worker walks the six quality categories against the
             draft files. Assessment only - does not modify the drafts.
 
     - id: refinement

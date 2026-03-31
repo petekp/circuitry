@@ -90,12 +90,12 @@ circuit:
         - id: batch-migration
           title: Batch Migration
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           consumes: [coexistence-plan.md, migration-steer.md, risk-assessment.md]
           produces: batch-log.md
           max_attempts: 3
           notes: >
-            Delegates to manage-codex. Each batch: migrate code, update tests,
+            Delegates to workers. Each batch: migrate code, update tests,
             verify old+new pass, commit. Orchestrator synthesizes batch-log.md
             from convergence output.
           gate:

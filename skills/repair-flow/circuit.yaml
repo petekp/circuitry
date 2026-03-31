@@ -103,13 +103,13 @@ circuit:
         - id: layered-repair
           title: Layered Repair
           action: dispatch
-          adapter: manage-codex
+          adapter: workers
           skills: [tdd] # plus one domain-skill resolved at runtime
           consumes: [repair-packet.md, regression-contract.md]
           produces: repair-handoff.md
           max_attempts: 3
           notes: >
-            Delegates to manage-codex. Orchestrator creates CHARTER.md from
+            Delegates to workers. Orchestrator creates CHARTER.md from
             repair-packet.md + regression-contract.md and synthesizes repair-handoff.md
             from convergence output.
           gate:

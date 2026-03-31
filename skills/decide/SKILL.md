@@ -5,7 +5,7 @@ description: >
   protocol options under uncertainty before implementation begins. 8 steps across
   5 phases: Framing -> Reality Mapping -> Option Exploration -> Pressure ->
   Publication. Use when the team needs a defensible decision with explicit
-  tradeoffs, reopen conditions, and implementation-facing guidance — not when the
+  tradeoffs, reopen conditions, and implementation-facing guidance -- not when the
   goal is already code delivery.
 ---
 
@@ -27,15 +27,15 @@ Do NOT use for code delivery, bug fixes, or tasks where the decision is already 
 
 ## Glossary
 
-- **Artifact** — A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
+- **Artifact** -- A canonical circuit output file in `${RUN_ROOT}/artifacts/`. These are the
   durable chain. Each step produces exactly one artifact.
-- **Worker handoff** — The raw output a Codex worker writes to its relay `handoffs/` directory.
+- **Worker handoff** -- The raw output a worker writes to its relay `handoffs/` directory.
   Worker handoffs are inputs to artifact synthesis, not artifacts themselves.
-- **Prompt header** — A self-contained file the orchestrator writes before dispatch. Contains
+- **Prompt header** -- A self-contained file the orchestrator writes before dispatch. Contains
   the full worker contract: mission, inputs, output path, output schema, success criteria.
-- **Synthesis** — When the orchestrator (Claude session) reads prior artifacts and writes a
+- **Synthesis** -- When the orchestrator (Claude session) reads prior artifacts and writes a
   new artifact directly, without dispatching a worker.
-- **Reopen signal** — Evidence that the current decision should be revisited instead of
+- **Reopen signal** -- Evidence that the current decision should be revisited instead of
   patched around locally.
 
 ## Principles
@@ -62,9 +62,9 @@ RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts"
 ```
 
-Record `RUN_ROOT` — all paths below are relative to it.
+Record `RUN_ROOT` -- all paths below are relative to it.
 
-**Per-step scaffolding** — before each dispatch step, create:
+**Per-step scaffolding** -- before each dispatch step, create:
 ```bash
 step_dir="${RUN_ROOT}/phases/<step-name>"
 mkdir -p "${step_dir}/handoffs" "${step_dir}/last-messages"
@@ -101,7 +101,7 @@ Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")
 
 Or use the dispatch helper which auto-detects:
 ```bash
-./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt
 ```
 
 The artifact chain, gates, handoff format, and resume logic are identical
@@ -162,7 +162,7 @@ Including these headings in the header prevents that contamination.
 
 ## Phase 1: Framing
 
-### Step 1: Decision Frame — `interactive`
+### Step 1: Decision Frame -- `interactive`
 
 **Objective:** Turn a vague "we should rethink this" impulse into a crisp decision question
 with explicit stakes and reopen triggers.
@@ -200,7 +200,7 @@ and Non-Decision Space.
 
 ## Phase 2: Reality Mapping
 
-### Step 2: Current System Map — `dispatch`
+### Step 2: Current System Map -- `dispatch`
 
 **Objective:** Capture the current architecture, boundary ownership, operational constraints,
 and pain points that any serious option must respond to.
@@ -260,13 +260,13 @@ Write your primary output to the path above. Also write a standard handoff to
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-2/prompt-header.md \
   --skills architecture-exploration,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-2 \
   --out ${RUN_ROOT}/phases/step-2/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-2/prompt.md \
   --output ${RUN_ROOT}/phases/step-2/last-messages/last-message.txt
 ```
@@ -289,7 +289,7 @@ one invariant, one operational constraint, and one pain point.
 
 ## Phase 3: Option Exploration
 
-### Step 3: Generate Serious Options — `dispatch`
+### Step 3: Generate Serious Options -- `dispatch`
 
 **Objective:** Produce distinct options that differ on real dimensions rather than cosmetic
 implementation variations.
@@ -350,13 +350,13 @@ Write your primary output to the path above. Also write a standard handoff to
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-3/prompt-header.md \
   --skills solution-explorer,architecture-exploration,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-3 \
   --out ${RUN_ROOT}/phases/step-3/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-3/prompt.md \
   --output ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt
 ```
@@ -375,7 +375,7 @@ least two of architecture shape, ownership boundary, migration cost, or failure 
 
 **Failure mode:** The user gets a false choice among slight variants of the same idea.
 
-### Step 4: Score and Compare — `synthesis`
+### Step 4: Score and Compare -- `synthesis`
 
 **Objective:** Make the comparison logic explicit before the team falls in love with a
 favorite option.
@@ -406,7 +406,7 @@ explicit tradeoffs.
 
 ## Phase 4: Pressure
 
-### Step 5: Tradeoff Weighting Checkpoint — `interactive`
+### Step 5: Tradeoff Weighting Checkpoint -- `interactive`
 
 **Objective:** Let the user consciously choose which quality to optimize now and which
 downside to accept on purpose.
@@ -437,7 +437,7 @@ scorecard dimensions.
 **Failure mode:** The pressure test attacks the wrong dimension or the final
 recommendation silently optimizes the wrong thing.
 
-### Step 6: Pressure Test the Leading Option — `dispatch`
+### Step 6: Pressure Test the Leading Option -- `dispatch`
 
 **Objective:** Attack the front-runner with serious objections, scenario failures,
 and runner-up comparison pressure.
@@ -498,13 +498,13 @@ Write your primary output to the path above. Also write a standard handoff to
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-6/prompt-header.md \
   --skills seam-ripper,clean-architecture,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-6 \
   --out ${RUN_ROOT}/phases/step-6/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-6/prompt.md \
   --output ${RUN_ROOT}/phases/step-6/last-messages/last-message.txt
 ```
@@ -523,7 +523,7 @@ objection, and an explicit comparison to the strongest alternative.
 
 **Failure mode:** The favored option survives only because nobody attacked its weakest seam.
 
-### Step 7: Decision Commit — `interactive`
+### Step 7: Decision Commit -- `interactive`
 
 **Objective:** Turn the pressure-tested tradeoff into an accountable choice with named
 downsides and reopen conditions.
@@ -561,7 +561,7 @@ the same debate.
 
 ## Phase 5: Publication
 
-### Step 8: Publish ADR and Implementation Guide — `synthesis`
+### Step 8: Publish ADR and Implementation Guide -- `synthesis`
 
 **Objective:** Package the outcome into a durable artifact that downstream implementers
 can follow without reopening the decision by accident.

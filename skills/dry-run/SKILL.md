@@ -17,7 +17,7 @@ AND a full simulation of its prompt assembly and worker output. Failures emerge
 from both the systematic checklist and the execution trace.
 
 This is an interactive, single-session skill for the orchestrator. Do not dispatch
-it to Codex workers. The goal is mechanical soundness, not product quality.
+it to workers. The goal is mechanical soundness, not product quality.
 
 ## Core Model
 
@@ -47,21 +47,21 @@ This skill only answers: "Can this circuit execute cleanly as written?"
 
 ## Inputs
 
-- `METHOD_ROOT` — absolute path to the target circuit skill directory
-- `TEST_FEATURE` — concrete feature description (specific enough to generate real slugs, paths, and likely worker outputs)
-- `REPO_ROOT` — repo where the circuit would execute
-- `DOMAIN_SKILLS` — comma-separated domain skills relevant to the feature (or "none")
+- `METHOD_ROOT` -- absolute path to the target circuit skill directory
+- `TEST_FEATURE` -- concrete feature description (specific enough to generate real slugs, paths, and likely worker outputs)
+- `REPO_ROOT` -- repo where the circuit would execute
+- `DOMAIN_SKILLS` -- comma-separated domain skills relevant to the feature (or "none")
 
 Prefer a feature that touches the circuit's hardest seam. Good dry runs use a feature
 that forces the circuit to exercise its adapters and artifact chain honestly.
 
 Read these source files before tracing:
 
-- `METHOD_SKILL="${METHOD_ROOT}/SKILL.md"` — required
-- `METHOD_TOPOLOGY="${METHOD_ROOT}/circuit.yaml"` — if present
-- The prompt assembler the circuit uses (usually `${REPO_ROOT}/scripts/relay/compose-prompt.sh`)
+- `METHOD_SKILL="${METHOD_ROOT}/SKILL.md"` -- required
+- `METHOD_TOPOLOGY="${METHOD_ROOT}/circuit.yaml"` -- if present
+- The prompt assembler the circuit uses (usually `"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh"`)
 - **Every template, adapter, and script the circuit explicitly invokes.** Scan `SKILL.md`
-  for `--template`, `--skills`, adapter references (like `manage-codex`), and any script
+  for `--template`, `--skills`, adapter references (like `workers`), and any script
   paths. Read each one so you can trace their real behavior, not guess from names.
 
 If `circuit.yaml` is missing, record that and keep going. If the circuit uses a prompt
@@ -87,7 +87,7 @@ Artifacts produced:
 - `${TRACE_ROOT}/validation-scope.md`
 - `${TRACE_ROOT}/resolved-constants.md`
 - `${TRACE_ROOT}/step-inventory.md`
-- `${TRACE_ROOT}/dry-run-trace.md` — **primary output**
+- `${TRACE_ROOT}/dry-run-trace.md` -- **primary output**
 
 ## Citation Discipline
 
@@ -138,7 +138,7 @@ count as a failure.
 
 ## Workflow
 
-### Step 1: Collect Inputs and Source Files — `interactive`
+### Step 1: Collect Inputs and Source Files -- `interactive`
 
 Ask for any missing inputs, then write `validation-scope.md`:
 
@@ -157,7 +157,7 @@ If the target circuit lacks `circuit.yaml`, record that in `## Missing Sources` 
 
 **Gate:** Target Circuit, Test Feature, Repo Root, and Source Files are non-empty.
 
-### Step 2: Resolve Constants — `synthesis`
+### Step 2: Resolve Constants -- `synthesis`
 
 Write `resolved-constants.md`:
 
@@ -182,7 +182,7 @@ artifact promotion targets, gate file paths.
 
 **Gate:** At least one symbol resolved. Path Expansions, Undefined Symbols, and Assumptions sections present.
 
-### Step 3: Inventory Steps and Contracts — `synthesis`
+### Step 3: Inventory Steps and Contracts -- `synthesis`
 
 Write `step-inventory.md`:
 
@@ -207,7 +207,7 @@ types, mismatched `consumes`/`produces`, missing parallel markers.
 
 **Gate:** Steps table covers every step from SKILL.md. Topology Mismatches section present.
 
-### Step 4: Simulate and Trace — `synthesis`
+### Step 4: Simulate and Trace -- `synthesis`
 
 Write `dry-run-trace.md`. This is the core of the dry run.
 
@@ -298,7 +298,7 @@ output schema. Fail if the circuit secretly dispatches or if the output schema i
 underspecified for deterministic writing.
 
 #### Adapter Steps
-If a step delegates to another skill (like manage-codex), trace the adapter boundary
+If a step delegates to another skill (like workers), trace the adapter boundary
 as a contract surface:
 
 - What workspace is created?

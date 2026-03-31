@@ -31,7 +31,7 @@ Do NOT use for unformed ideas, bug fixes, or specs that are already implementati
 This circuit sits between review and execution: `proposal-review` helps collect
 structured reactions, but this circuit turns critique into canonical amended
 artifacts and a build plan. It is a natural downstream step after `circuit:decide`
-and an upstream step before `circuit:develop` or `manage-codex`.
+and an upstream step before `circuit:develop` or `workers`.
 
 ## Glossary
 
@@ -61,7 +61,7 @@ and an upstream step before `circuit:develop` or `manage-codex`.
 - **Self-contained headers.** Dispatch steps do NOT use `--template`. The prompt
   header carries the full worker contract and the standard handoff headings.
 - **Stop before code.** This circuit hardens documents only. There is no
-  `manage-codex` delegation step and no implementation phase.
+  `workers` delegation step and no implementation phase.
 
 ## Setup
 
@@ -104,7 +104,7 @@ fall back to Agent. The assembled prompt is identical for both backends.
 
 **Agent backend:** `Agent(task=<contents of ${step_dir}/prompt.md>, isolation="worktree")`
 
-Or use the dispatch helper: `./scripts/relay/dispatch.sh --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
+Or use the dispatch helper: `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt ${step_dir}/prompt.md --output ${step_dir}/last-messages/last-message.txt`
 
 The artifact chain, gates, handoff format, and resume logic are identical
 regardless of backend.
@@ -261,13 +261,13 @@ Use the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-3/prompt-header.md \
   --skills clean-architecture,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-3 \
   --out ${RUN_ROOT}/phases/step-3/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-3/prompt.md \
   --output ${RUN_ROOT}/phases/step-3/last-messages/last-message.txt
 ```
@@ -319,13 +319,13 @@ Use the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-4/prompt-header.md \
   --skills architecture-exploration,clean-architecture,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-4 \
   --out ${RUN_ROOT}/phases/step-4/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-4/prompt.md \
   --output ${RUN_ROOT}/phases/step-4/last-messages/last-message.txt
 ```
@@ -375,13 +375,13 @@ Use the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-5/prompt-header.md \
   --skills deep-research,architecture-exploration \
   --root ${RUN_ROOT}/phases/step-5 \
   --out ${RUN_ROOT}/phases/step-5/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-5/prompt.md \
   --output ${RUN_ROOT}/phases/step-5/last-messages/last-message.txt
 ```
@@ -566,13 +566,13 @@ Use the canonical header schema with:
 
 **Compose and dispatch (no --template):**
 ```bash
-./scripts/relay/compose-prompt.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header ${RUN_ROOT}/phases/step-10/prompt-header.md \
   --skills seam-ripper,clean-architecture,<domain-skills> \
   --root ${RUN_ROOT}/phases/step-10 \
   --out ${RUN_ROOT}/phases/step-10/prompt.md
 
-./scripts/relay/dispatch.sh \
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
   --prompt ${RUN_ROOT}/phases/step-10/prompt.md \
   --output ${RUN_ROOT}/phases/step-10/last-messages/last-message.txt
 ```
