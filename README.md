@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/circuitry.png" alt="Circuitry" width="120" />
+  <img src="assets/circuitry.png" alt="Circuitry" width="100%" />
 </p>
 
 # Circuitry for Claude Code
