@@ -22,11 +22,9 @@ at three checkpoints where product judgment matters most.
 
 Do NOT use for bug fixes, config changes, or single-file wiring tasks.
 
-For tasks where the approach is already clear but the work still benefits from structured
-intent/contract/implement/review flow, use `--light` mode (see Mode Selection below).
-
 For tasks where a written spec, RFC, or PRD already exists and needs review before
 build, use `--spec-review` mode (see Mode Selection below).
+
 
 ## Glossary
 
@@ -73,34 +71,9 @@ mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
 
 Parse the circuit invocation args for mode flags.
 
-- If `--light` is present → `MODE=light`. Log: "Running in light mode (4 steps)."
 - If `--spec-review` is present → `MODE=spec-review`. Log: "Running in spec-review mode."
 - If `--spec <path>` is present → `MODE=spec-review`, set `SOURCE_SPEC=<path>`. Log: "Running in spec-review mode with spec: <path>."
 - If no mode flag is present → `MODE=full` (default). The full 10-step workflow runs unchanged.
-
-**Light mode** runs 4 of the 10 steps:
-
-| Light step | Full step | Action      | Produces                |
-|------------|-----------|-------------|-------------------------|
-| 1          | Step 1    | interactive | intent-brief.md         |
-| 2          | Step 7    | synthesis   | execution-packet.md     |
-| 3          | Step 9    | dispatch    | implementation-handoff.md |
-| 4          | Step 10   | dispatch    | ship-review.md          |
-
-**Light mode artifact chain:**
-```
-intent-brief.md → execution-packet.md → implementation-handoff.md → ship-review.md
-```
-
-Skipped phases: Evidence, Decision. Skipped steps: Parallel Evidence Probes,
-Constraints Synthesis, Generate Distinct Candidates, Adversarial Evaluation,
-Tradeoff Decision, Prove the Hardest Seam.
-
-**Key differences from full mode:**
-- Step 7 (Implementation Contract) reads from `intent-brief.md` directly -- there is no
-  `adr.md` or `constraints.md` to reference. See the Light Mode Variant under Step 7.
-- The intent-brief MUST include a `## Mode` section (see Step 1 light mode note).
-- Gates still apply to every step -- no quality compromise.
 
 ### Spec-Review Mode
 
@@ -150,9 +123,10 @@ packet and implementation plan without writing any code.
 If `MODE=spec-review`, follow the spec-review step descriptions below, then rejoin the
 standard phases at Step 7 (Implementation Contract) using the spec-review variant.
 
-If `MODE=full`, ignore all light-mode and spec-review-mode variants below and follow the standard phases.
+If `MODE=full`, ignore all spec-review-mode variants below and follow the standard phases.
 
 ---
+
 
 ## Domain Skill Selection
 
@@ -290,22 +264,6 @@ Write their response to `${RUN_ROOT}/artifacts/intent-brief.md`:
 ```
 
 **Gate:** `intent-brief.md` exists with non-empty Ranked Outcomes and Non-Goals.
-
-**Light mode note:** When `MODE=light`, the intent-brief MUST include a `## Mode` section
-as the first section after the title heading. This section declares that the evidence
-gathering, option generation, and adversarial evaluation phases were intentionally skipped
-because the implementation approach is clear. Example:
-
-```markdown
-# Intent Brief: <feature>
-## Mode
-Light mode -- evidence/decision phases skipped. Approach is clear because: <reason>.
-## Ranked Outcomes
-...
-```
-
-The `## Mode` section is required in light mode so that downstream steps (and future
-readers) understand why artifacts like `constraints.md` and `adr.md` do not exist.
 
 ---
 
@@ -833,28 +791,6 @@ The execution-packet schema is identical across all modes. The gate is identical
 After writing the execution-packet, spec-review mode continues to Step 8 (Prove the
 Hardest Seam), then Steps 9-10 (Implement, Ship Review) -- identical to full mode.
 
-#### Light Mode Variant (Step 7)
-
-When `MODE=light`, this step consumes **only** `intent-brief.md`. There is no `adr.md`
-or `constraints.md` to reference -- those artifacts do not exist in the light chain.
-
-The orchestrator derives the execution packet sections as follows:
-
-- **Invariants:** Extract from the intent brief's Ranked Outcomes, Non-Goals, and Kill
-  Criteria. Frame each outcome as an invariant that must hold.
-- **Interface Boundaries:** Derive from Domain and File Scope.
-- **Slice Order:** Derive from Domain and File Scope, ordered by dependency.
-- **Test Obligations:** Derive from Ranked Outcomes -- each outcome needs at least one
-  verification method.
-- **Non-Goals:** Carried directly from the intent brief.
-- **Rollback Triggers, Artifact Expectations, Verification Commands:** Derived from
-  context as in full mode.
-
-The execution-packet schema is identical in both modes. The gate is identical:
-`execution-packet.md` must have non-empty Invariants, Slice Order, and Test Obligations.
-
-After writing the execution-packet, light mode skips Step 8 (Prove the Hardest Seam)
-and proceeds directly to Step 9 (Implement).
 
 ### Step 8: Prove the Hardest Seam -- `dispatch`
 
@@ -1087,14 +1023,6 @@ spec-brief.md                                          [user: spec intake]
   → ship-review.md                                     [worker: identical to full mode]
 ```
 
-### Light Mode Artifact Chain
-
-```
-intent-brief.md (with ## Mode section)   [user: intent lock]
-  → execution-packet.md                  [orchestrator: synthesis from intent-brief only]
-  → implementation-handoff.md            [workers: identical to full mode]
-  → ship-review.md                       [worker: identical to full mode]
-```
 
 ## Resume Awareness
 
@@ -1109,28 +1037,6 @@ If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
 This is best-effort -- the circuit has no durable state beyond artifacts on disk and
 step-local relay directories. If a session dies mid-step, check the step's relay
 directory for worker output before concluding the step failed.
-
-## Light Mode Resume Awareness
-
-When `MODE=light`, resume uses the abbreviated artifact chain:
-
-1. Check artifacts in light-mode chain order:
-   `intent-brief.md` → `execution-packet.md` → `implementation-handoff.md` → `ship-review.md`
-2. **Ignore** artifacts from skipped steps if present (`external-digest.md`,
-   `internal-digest.md`, `constraints.md`, `options.md`, `decision-packet.md`, `adr.md`,
-   `seam-proof.md`). These may exist if the run started in full mode and switched to light.
-3. Find the last complete light-mode artifact with a passing gate.
-4. For Step 9 specifically: check `${RUN_ROOT}/phases/step-9/batch.json` for workers
-   resume state (identical to full mode).
-5. Continue from the next light-mode step.
-
-**Full-to-light switch:** If the intent-brief exists but lacks a `## Mode` section (because
-it was written in full mode), add the `## Mode` section before proceeding. Note in it:
-"Switched from full to light mode mid-run. Evidence/decision artifacts exist but are not
-consumed by the remaining light-mode steps."
-
-**Light-to-full switch:** Not supported. If a light-mode run needs the full workflow,
-start a new run.
 
 ## Spec-Review Mode Resume Awareness
 
@@ -1149,6 +1055,7 @@ When `MODE=spec-review`, resume uses the spec-review artifact chain:
 5. For the Implement step: check `${RUN_ROOT}/phases/step-9/batch.json` for workers
    resume state (identical to full mode).
 6. Continue from the next spec-review step.
+
 
 ## Circuit Breaker
 
