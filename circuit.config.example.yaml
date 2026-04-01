@@ -3,30 +3,57 @@
 # Place this file at your project root (./circuit.config.yaml) or globally
 # at ~/.claude/circuit.config.yaml. Project-level config takes precedence.
 #
-# When compose-prompt.sh is called with --circuit <id> but no --skills flag,
-# it reads the skills list from this file. Explicit --skills always wins.
-#
 # Generate this file automatically with: /circuit:setup
 
-# Map each circuit to the domain skills that should be injected into worker prompts.
-# Skills must be installed in ~/.claude/skills/<name>/ or the plugin's skills/ directory.
-# Maximum 2 domain skills per circuit dispatch (3 total including workers).
+# Map semantic capabilities to installed skills.
+# Resolution order: project config -> user config -> built-ins.
+# Required capabilities fail closed; optional degrade gracefully.
 
+capabilities:
+  # Code delivery capabilities
+  code.change: []  # auto-detected from file scope; override here if needed
+  review.independent: []  # auto-detected; override here for specific review skills
+
+  # Testing capabilities
+  testing.tdd: [tdd]  # maps to the tdd skill
+
+  # Research capabilities
+  research.external: [deep-research]  # maps to deep-research skill
+  repo.analysis: []  # auto-detected from codebase structure
+
+  # Architecture capabilities
+  architecture.exploration: [architecture-exploration, solution-explorer]
+  comparative.analysis: [solution-explorer]
+
+# Per-circuit capability overrides (optional).
+# Use when a circuit needs different capability providers than the global defaults.
 circuits:
   run:
-    skills: []  # auto-detected from file scope; override here if needed
-  fix:
-    skills: [tdd]
+    capabilities: {}
   develop:
-    skills: [tdd, deep-research]
+    capabilities: {}
+    # v1 equivalent: skills: [tdd, deep-research]
   decide:
-    skills: [architecture-exploration, solution-explorer]
+    capabilities:
+      architecture.exploration: [architecture-exploration, solution-explorer]
+    # v1 equivalent: skills: [architecture-exploration, solution-explorer]
   repair-flow:
-    skills: [tdd]
+    capabilities:
+      testing.tdd: [tdd]
+    # v1 equivalent: skills: [tdd]
+  fix:
+    capabilities:
+      testing.tdd: [tdd]
+    # v1 equivalent: skills: [tdd]
   ratchet-quality:
-    skills: [clean-architecture, tdd]
+    capabilities:
+      testing.tdd: [tdd]
+      review.independent: [clean-architecture]
+    # v1 equivalent: skills: [clean-architecture, tdd]
   cleanup:
-    skills: [dead-code-sweep]
+    capabilities:
+      repo.analysis: [dead-code-sweep]
+    # v1 equivalent: skills: [dead-code-sweep]
 
 # Dispatch engine configuration (optional).
 # Controls what process runs dispatch steps. Default: auto-detect (codex if

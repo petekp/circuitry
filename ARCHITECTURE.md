@@ -22,8 +22,9 @@ Circuits are the structural answer to all three failure modes.
 4. [The Gate System](#the-gate-system)
 5. [Relay Infrastructure](#relay-infrastructure)
 6. [Circuit Composition](#circuit-composition)
-7. [Protocol Cards](#protocol-cards)
-8. [Extending the System](#extending-the-system)
+7. [Capability Resolution](#capability-resolution)
+8. [Protocol Cards](#protocol-cards)
+9. [Extending the System](#extending-the-system)
 
 ---
 
@@ -747,7 +748,8 @@ work.
 ### Domain Skills as Optional Companions
 
 Domain skills (`rust`, `swift-apps`, `tdd`, `next-best-practices`) are not
-bundled into circuits. They are composed at dispatch time via `--skills`:
+bundled into circuits. They are composed at dispatch time through capability
+resolution (see below) and injected via `--skills`:
 
 ```bash
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
@@ -767,16 +769,130 @@ This design has several advantages:
 - **Domain knowledge stays current.** Updating a domain skill immediately
   affects all circuits that compose it, without editing any circuit files.
 
-Each circuit includes a `Domain Skill Selection` section that defines the rules
-for choosing skills at dispatch time. `ratchet-quality` uses a surface-based
-mapping:
+---
 
-| Surface | Preferred skills |
-|---------|------------------|
-| Rust, systems, persistence | `rust` |
-| Swift, SwiftUI, Apple platforms | `swift-apps`, `swiftui` |
-| React, Next, web UI | `next-best-practices`, `vercel-react-best-practices` |
-| Testing, regressions | `tdd` |
+## Capability Resolution
+
+Circuits do not reference skills by name in their topology. Instead, each
+dispatch step declares the *capabilities* it needs -- semantic descriptors
+like `testing.tdd`, `code.change`, or `review.independent`. At dispatch time,
+the resolution layer maps those capabilities to concrete installed skills.
+
+This indirection is the v2 replacement for the v1 pattern where
+`circuit.config.yaml` mapped circuit names directly to skill names. The old
+model coupled circuit identity to skill identity; the new model couples
+circuit steps to *what they need done*, leaving the binding to runtime
+configuration.
+
+### What Capabilities Are
+
+A capability is a dotted identifier that describes a semantic function:
+
+| Capability | Meaning |
+|------------|---------|
+| `testing.tdd` | Test-driven development: write failing tests first, then implement |
+| `code.change` | Make code changes in a specific language/framework context |
+| `review.independent` | Review code without having written it |
+| `research.external` | Conduct deep external research beyond the codebase |
+| `repo.analysis` | Analyze codebase structure, find dead code, audit patterns |
+| `architecture.exploration` | Explore and compare architectural approaches |
+| `comparative.analysis` | Compare concrete solution options with tradeoff analysis |
+
+Capabilities are not skills. A capability is *what needs to happen*; a skill
+is *who does it*. The mapping between them is many-to-many: one skill can
+provide multiple capabilities (`solution-explorer` provides both
+`architecture.exploration` and `comparative.analysis`), and one capability
+can be provided by multiple skills (`architecture.exploration` can be
+provided by `architecture-exploration` or `solution-explorer`).
+
+### Resolution Order
+
+When a dispatch step declares a required capability, the resolver checks
+three sources in order:
+
+1. **Project config** (`./circuit.config.yaml`). Per-circuit capability
+   overrides take precedence over global capability mappings. This is
+   where project-specific bindings live (e.g., this project uses `rust`
+   for `code.change`).
+
+2. **User config** (`~/.claude/circuit.config.yaml`). Global defaults
+   that apply across all projects. This is where personal skill
+   preferences live.
+
+3. **Engine built-ins**. Hardcoded fallback mappings for capabilities
+   that can be inferred without explicit configuration (e.g.,
+   `code.change` from file scope, `repo.analysis` from codebase
+   structure).
+
+The first source that provides a non-empty mapping wins. Resolution stops
+as soon as a capability is bound to at least one skill.
+
+### Required vs. Optional Capabilities
+
+Circuits declare capabilities in two categories:
+
+- **Required capabilities** must resolve to at least one skill before the
+  step can dispatch. If a required capability is unresolved, the step
+  fails closed -- it stops and reports the missing capability rather than
+  dispatching without the needed skill. This prevents workers from
+  attempting work they are not equipped for.
+
+- **Optional capabilities** degrade gracefully. If an optional capability
+  is unresolved, the step dispatches without it. The worker still runs
+  but without the domain guidance the capability would have provided.
+  This is appropriate for capabilities that improve quality but are not
+  essential (e.g., `research.external` on a step that can still produce
+  useful output from internal codebase analysis alone).
+
+### Resolution Status
+
+After resolution, a step's capability state is one of:
+
+| Status | Meaning |
+|--------|---------|
+| `complete` | All required and optional capabilities resolved |
+| `degraded` | All required capabilities resolved; one or more optional capabilities unresolved |
+| `failed` | One or more required capabilities unresolved; step cannot dispatch |
+
+The resolution outcome is recorded in a structured artifact conforming to
+`schemas/capability-resolution.schema.json`. This artifact captures the
+full resolution trace: what was declared, what resolved (and from which
+source), and what remains unresolved.
+
+### Configuration Format
+
+The `circuit.config.yaml` file maps capabilities to skills at two levels:
+
+```yaml
+# Global capability mappings (apply to all circuits by default)
+capabilities:
+  testing.tdd: [tdd]
+  research.external: [deep-research]
+  architecture.exploration: [architecture-exploration, solution-explorer]
+  code.change: []       # auto-detected
+  review.independent: [] # auto-detected
+
+# Per-circuit overrides (only where the circuit needs something different)
+circuits:
+  ratchet-quality:
+    capabilities:
+      review.independent: [clean-architecture]
+  cleanup:
+    capabilities:
+      repo.analysis: [dead-code-sweep]
+```
+
+An empty list (`[]`) means the capability is auto-detected or provided by
+the engine built-ins. A non-empty list explicitly binds the capability to
+the named skills.
+
+### How `circuit:setup` Uses Capability Resolution
+
+The `circuit:setup` skill scans installed skills, maps them to capabilities
+using built-in pattern matching, and writes the resulting capability
+mappings to `circuit.config.yaml`. It reports which capabilities are
+resolved, which are auto-detected, and which are unresolved (with
+recommendations for skills to install).
 
 ---
 

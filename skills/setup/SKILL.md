@@ -1,17 +1,17 @@
 ---
 name: circuit:setup
 description: >
-  Interactive skill that discovers installed skills, maps them to circuits, and
-  generates a circuit.config.yaml file. Use when the user wants to configure
-  which skills their circuits use, set up Circuitry for a new project, or
-  customize their workflow.
+  Interactive skill that discovers installed skills, maps them to semantic
+  capabilities, and generates a circuit.config.yaml file. Use when the user
+  wants to configure which capabilities their circuits use, set up Circuitry
+  for a new project, or customize their workflow.
 ---
 
 # Circuitry Setup
 
-Set up your Circuitry configuration by discovering installed skills and mapping
-them to the circuits that benefit from them. Produces a `circuit.config.yaml`
-file that circuits use automatically.
+Set up your Circuitry configuration by discovering installed skills, mapping
+them to semantic capabilities, and writing a `circuit.config.yaml` file that
+circuits use automatically.
 
 ## Workflow
 
@@ -35,81 +35,105 @@ done 2>/dev/null
 Read the frontmatter `name` and `description` from each discovered SKILL.md.
 Present a categorized list to the user.
 
-### Step 2: Categorize Skills
+### Step 2: Map Skills to Capabilities
 
-Group discovered skills into these categories:
+Map each discovered skill to one or more semantic capabilities using
+built-in knowledge. Capabilities are dotted identifiers that describe
+*what a skill can do* rather than *what a skill is named*.
 
-| Category | Match Pattern | Example Skills |
-|----------|---------------|----------------|
-| Testing | test, tdd, qa | `tdd`, `manual-testing` |
-| Research | research, deep, explore | `deep-research`, `architecture-exploration`, `solution-explorer` |
-| Architecture | architecture, clean, seam | `clean-architecture`, `seam-ripper`, `improve-codebase-architecture` |
-| Code Quality | review, lint, sweep, dead | `dead-code-sweep`, `code-review`, `exhaustive-systems-analysis` |
-| Frontend | frontend, react, ui, design | `frontend-design`, `react-best-practices`, `shadcn` |
-| Platform | swift, rust, python | `swift-apps`, `rust` |
-| Process | tdd, debug, proposal | `tdd`, `proposal-review`, `grill-me` |
+| Capability | Match Pattern | Example Skills |
+|------------|---------------|----------------|
+| `testing.tdd` | test, tdd, qa | `tdd`, `manual-testing` |
+| `research.external` | research, deep, explore | `deep-research` |
+| `repo.analysis` | analysis, sweep, dead, exhaustive | `dead-code-sweep`, `exhaustive-systems-analysis` |
+| `architecture.exploration` | architecture, explore, solution | `architecture-exploration`, `solution-explorer` |
+| `comparative.analysis` | compare, solution, explorer | `solution-explorer` |
+| `review.independent` | review, clean, architecture | `clean-architecture`, `code-review` |
+| `code.change` | frontend, react, ui, swift, rust, python | `frontend-design`, `swift-apps`, `rust` |
 
-Skills can appear in multiple categories.
+Skills can map to multiple capabilities. For example, `solution-explorer`
+maps to both `architecture.exploration` and `comparative.analysis`.
 
-### Step 3: Map Skills to Circuits
+### Step 3: Resolve Capability Coverage
 
-Use this default mapping as a starting point. Override with whatever the user
-has installed:
+For each capability, determine its resolution status:
 
-| Circuit | Primary Skills | Secondary Skills |
-|---------|---------------|------------------|
-| `develop` | Research skills, Platform skills | Testing skills |
-| `decide` | Architecture skills, Research skills | — |
-| `repair-flow` | Testing skills | Platform skills |
-| `fix` | Testing skills | Platform skills |
-| `ratchet-quality` | Architecture skills, Code Quality skills | Testing skills |
-| `cleanup` | Code Quality skills | — |
+| Status | Meaning |
+|--------|---------|
+| **Resolved** | At least one installed skill provides this capability |
+| **Auto-detected** | No explicit skill, but the capability can be inferred from file scope or codebase structure (e.g., `code.change`, `repo.analysis`) |
+| **Unresolved** | No installed skill provides this capability; recommend installing one |
 
-Rules:
-- Only map skills the user actually has installed
-- Maximum 2 skills per circuit (compose-prompt.sh limit is 3 total including workers)
-- Prefer platform-specific skills when the project has a clear language (check for Cargo.toml, Package.swift, package.json, etc.)
-- If a skill has no clear circuit mapping, skip it
+Present the capability map to the user with resolution status.
 
 ### Step 4: Recommend Additional Skills
 
-Based on the project language and what's NOT installed, suggest useful skills:
+Based on what capabilities are unresolved and the project language, suggest
+useful skills:
 
-| Project Signal | Recommended Skills |
-|----------------|-------------------|
-| `Cargo.toml` exists | `rust` if not installed |
-| `Package.swift` or `.xcodeproj` exists | `swift-apps` if not installed |
-| `package.json` with React | `frontend-design`, `react-best-practices` if not installed |
-| Any project | `tdd`, `deep-research`, `clean-architecture` as baseline recommendations |
+| Unresolved Capability | Project Signal | Recommended Skills |
+|-----------------------|----------------|--------------------|
+| `testing.tdd` | Any project | `tdd` |
+| `research.external` | Any project | `deep-research` |
+| `review.independent` | Any project | `clean-architecture` |
+| `code.change` | `Cargo.toml` exists | `rust` if not installed |
+| `code.change` | `Package.swift` or `.xcodeproj` exists | `swift-apps` if not installed |
+| `code.change` | `package.json` with React | `frontend-design`, `react-best-practices` if not installed |
+| `architecture.exploration` | Any project | `architecture-exploration`, `solution-explorer` |
 
 Present recommendations with install commands.
 
 ### Step 5: Generate Config
 
-Write `circuit.config.yaml` to the project root (or `~/.claude/` for global config).
+Write `circuit.config.yaml` to the project root (or `~/.claude/` for global
+config).
 
 Format:
 
 ```yaml
-# circuit.config.yaml — Generated by /circuit:setup on <date>
-# Customize skills per circuit. Explicit --skills flag always overrides.
+# circuit.config.yaml -- Generated by /circuit:setup on <date>
+# Customize capabilities per circuit. Resolution: project -> user -> built-ins.
 
+capabilities:
+  # Code delivery capabilities
+  code.change: []
+  review.independent: [<matched-skills>]
+
+  # Testing capabilities
+  testing.tdd: [<matched-skills>]
+
+  # Research capabilities
+  research.external: [<matched-skills>]
+  repo.analysis: []
+
+  # Architecture capabilities
+  architecture.exploration: [<matched-skills>]
+  comparative.analysis: [<matched-skills>]
+
+# Per-circuit capability overrides (optional).
 circuits:
-  fix:
-    skills: [<matched-skills>]
   develop:
-    skills: [<matched-skills>]
+    capabilities: {}
   decide:
-    skills: [<matched-skills>]
+    capabilities:
+      architecture.exploration: [<matched-skills>]
   repair-flow:
-    skills: [<matched-skills>]
+    capabilities:
+      testing.tdd: [<matched-skills>]
+  fix:
+    capabilities:
+      testing.tdd: [<matched-skills>]
   ratchet-quality:
-    skills: [<matched-skills>]
+    capabilities:
+      testing.tdd: [<matched-skills>]
+      review.independent: [<matched-skills>]
   cleanup:
-    skills: [<matched-skills>]
+    capabilities:
+      repo.analysis: [<matched-skills>]
 ```
 
-Omit circuits with no matching skills rather than writing empty lists.
+Omit per-circuit overrides when they match the global defaults. Only include
+overrides that differ from the top-level `capabilities:` section.
 
 ### Step 6: Verify
 
@@ -120,12 +144,15 @@ Run a quick smoke test:
   --header /dev/null --circuit develop --out /tmp/circuit-setup-test.md 2>&1
 ```
 
-Report whether config was picked up correctly.
+Report:
+- Which capabilities are resolved and by which skills
+- Which capabilities are unresolved (with install recommendations)
+- Whether the config was picked up correctly by the smoke test
 
 ## Output
 
 - `./circuit.config.yaml` (or `~/.claude/circuit.config.yaml` if user chooses global)
-- Summary of what was mapped and what was recommended
+- Summary of capability resolution status
 
 ## When NOT to Use
 
