@@ -21,6 +21,28 @@ circuit:
       steps: [intent-lock, auto-scope, scope-confirmation, implement, done-summary]
       artifact_chain: [intent-brief.md, scope.md, scope-confirmed.md, execution-handoff.md, done.md]
 
+  artifacts:
+    - id: intent-brief.md
+      type: interactive
+      produced_by: intent-lock
+      consumed_by: [auto-scope]
+    - id: scope.md
+      type: synthesis
+      produced_by: auto-scope
+      consumed_by: [scope-confirmation]
+    - id: scope-confirmed.md
+      type: interactive
+      produced_by: scope-confirmation
+      consumed_by: [implement, done-summary]
+    - id: execution-handoff.md
+      type: dispatch
+      produced_by: implement
+      consumed_by: [done-summary]
+    - id: done.md
+      type: synthesis
+      produced_by: done-summary
+      consumed_by: []
+
   phases:
     - id: intent
       title: Intent
