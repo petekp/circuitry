@@ -224,10 +224,10 @@ as quality boundaries.
 <if detected: which specialized circuit and why. Omit section if no escalation.>
 ```
 
-Each Slice heading becomes a workers batch.json entry. The structured
+Each Slice heading becomes a workers dispatch-request entry. The structured
 fields (`files`, `verification`, `success_criteria`) map directly to
-`file_scope`, `verification_commands`, and `success_criteria` in batch.json.
-This is not prose inference; each field is first-class data.
+`file_scope`, `verification_commands`, and `success_criteria` in the
+dispatch-request. This is not prose inference; each field is first-class data.
 
 **Gate:** `scope.md` exists with non-empty Approach, at least one Slice with
 `files:` and `verification:`, non-empty Verification, and non-empty Out of Scope.
@@ -292,7 +292,7 @@ into a CHARTER.md.
 ```bash
 IMPL_ROOT="${RUN_ROOT}/phases/implement"
 mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
-  "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/review-findings"
+  "${IMPL_ROOT}/last-messages"
 ```
 
 **Create CHARTER.md from scope-confirmed.md:**
@@ -304,11 +304,11 @@ Read `${RUN_ROOT}/artifacts/scope-confirmed.md` and write
 |---------------------|------------|
 | `## Task` | Mission preamble |
 | `## Approach` | Implementation approach |
-| `## Slices` | Slice definitions (each becomes a batch.json entry) |
+| `## Slices` | Slice definitions (each becomes a dispatch-request entry) |
 | `## Verification` | Verification commands (union for convergence) |
 | `## Out of Scope` | Non-goals (enforced during review) |
 
-Each Slice heading in scope-confirmed.md maps to a batch.json slice with:
+Each Slice heading in scope-confirmed.md maps to a dispatch-request entry with:
 - `task`: the Slice heading description
 - `file_scope`: the `files:` field
 - `verification_commands`: the `verification:` field
@@ -346,11 +346,11 @@ Use the canonical header schema with:
 
 Read (in this order):
 1. `${IMPL_ROOT}/reports/report-converge.md` (convergence verdict)
-2. `${IMPL_ROOT}/batch.json` (slice metadata)
-3. The last implementation slice report (find slice id from batch.json)
+2. `${IMPL_ROOT}/job-result.json` (execution status and slice metadata)
+3. The last implementation slice report (find slice id from job-result.json)
 
 Note: workers review workers may overwrite per-slice report files. If a
-slice report is missing or appears to be a review artifact, use batch.json
+slice report is missing or appears to be a review artifact, use job-result.json
 slice metadata and the convergence report to reconstruct what was built.
 
 Write `${RUN_ROOT}/artifacts/execution-handoff.md`:

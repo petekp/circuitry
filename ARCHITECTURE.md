@@ -367,13 +367,15 @@ ${RUN_ROOT}/phases/step-13/batches/<batch-id>/
 ```
 
 The parent step owns the child root. After `workers` completes, the parent
-reads back in a specific order:
+reads back through the public contract in a specific order:
 
 1. `reports/report-converge.md` (the convergence verdict)
-2. `batch.json` (the final state of all slices)
+2. `job-result.json` (execution status and slice metadata)
 3. `reports/report-<last-slice-id>.md` (the last implementation report)
 
 Then the parent synthesizes the canonical circuit artifact from that evidence.
+See [The Sealed Workers Boundary](#the-sealed-workers-boundary) for the full
+public/private contract.
 
 ---
 
@@ -713,6 +715,42 @@ The adapter seam contract requires explicit documentation of:
 - Readback order
 - Synthesis rules for the parent artifact
 - Escalation behavior on failure
+
+### The Sealed Workers Boundary
+
+The `workers-execute@v1` protocol defines a strict public/private boundary.
+Parent circuits interact with workers through a small set of typed contract
+files and must not depend on worker-internal state.
+
+**Public contract (parent circuits may read):**
+
+| File | Direction | Purpose |
+|------|-----------|---------|
+| `dispatch-request.json` | Parent -> Workers | Slice definitions, file scope, verification commands |
+| `dispatch-receipt.json` | Workers -> Parent | Confirmation that workers started |
+| `job-result.json` | Workers -> Parent | Execution status, slice metadata, convergence outcome |
+| `reports/report-converge.md` | Workers -> Parent | Human-readable convergence verdict |
+| `reports/report-<slice-id>.md` | Workers -> Parent | Human-readable per-slice implementation reports |
+
+**Worker-private (parent circuits must not read or depend on):**
+
+- `batch.json` -- internal state machine managed by `update-batch.sh`
+- `plan.json` -- internal planning state
+- `events.ndjson` -- internal event log for recovery
+- `review-findings/` -- internal review worker output
+- Slice-level files in `archive/` -- internal versioning state
+
+This boundary exists because worker internals are an implementation detail
+that may change. `batch.json`, for example, is managed by a deterministic
+Python script and has a specific event-sourced recovery model that is
+meaningless to parent circuits. The public contract files (`dispatch-request`,
+`dispatch-receipt`, `job-result`) expose the same information in a stable
+format designed for parent consumption.
+
+**Why this matters for circuit authors:** When writing a new circuit's adapter
+seam contract, reference only the public contract files in readback order and
+synthesis rules. If you find yourself parsing `batch.json` or reading
+`review-findings/`, you are crossing the boundary.
 
 ### How the Router Selects Circuits
 
@@ -1182,7 +1220,7 @@ When authoring or reviewing a circuit, check these six categories:
 
 4. **Resume Safety.** Step-local relay state is checked before artifacts.
    Parallel completeness requires all worker artifacts. Child state like
-   `batch.json` is inspected before restarting `workers`.
+   `job-result.json` is inspected before restarting `workers`.
 
 5. **Dispatch Compatibility.** Only real CLI flags and template behavior are
    used. Skill budgets stay within limits. No interactive skills in autonomous
@@ -1201,7 +1239,7 @@ The system catalogs 25 named anti-patterns. The most important:
 | `AP-02` | Copy-The-Handoff | A raw worker report is promoted to artifact without synthesis |
 | `AP-04` | Placeholder Leakage | Unresolved `{relay_root}` tokens reach the worker |
 | `AP-05` | Interactive Skill In Autonomous Dispatch | An interactive skill appended to `codex exec --full-auto` |
-| `AP-07` | Resume By Final Artifacts Only | Resume ignores step-local state like `batch.json` |
+| `AP-07` | Resume By Final Artifacts Only | Resume ignores step-local state like `job-result.json` |
 | `AP-10` | Weak Gates | A gate checks only file existence |
 | `AP-11` | No Reopen Rule | Disconfirming evidence appears but the circuit only says "revise and continue" |
 | `AP-15` | Prose/YAML Drift | `SKILL.md` and `circuit.yaml` disagree |

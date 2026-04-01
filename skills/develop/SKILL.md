@@ -865,7 +865,7 @@ cycle. The orchestrator must create the workers workspace explicitly.
 ```bash
 IMPL_ROOT="${RUN_ROOT}/phases/step-9"
 mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
-  "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/review-findings"
+  "${IMPL_ROOT}/last-messages"
 ```
 
 1. **Create CHARTER.md** from the execution packet:
@@ -902,12 +902,12 @@ mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
 
    **Source artifacts (read in this order):**
    - `${IMPL_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
-   - `${IMPL_ROOT}/batch.json` -- slice metadata showing what was built
+   - `${IMPL_ROOT}/job-result.json` -- execution status and slice metadata
    - The last implementation slice report at `${IMPL_ROOT}/reports/report-<last-slice-id>.md`
-     (find the slice id from `batch.json`)
+     (find the slice id from `job-result.json`)
 
    Note: workers review workers may overwrite per-slice report files. If a slice
-   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   report is missing or appears to be a review artifact, use `job-result.json` slice metadata
    and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/implementation-handoff.md` with:

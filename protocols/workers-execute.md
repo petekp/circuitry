@@ -29,13 +29,16 @@ Create the child root with the standard directory layout:
 ```bash
 CHILD_ROOT="${RUN_ROOT}/phases/<step-name>"
 mkdir -p "${CHILD_ROOT}/archive" "${CHILD_ROOT}/reports" \
-  "${CHILD_ROOT}/last-messages" "${CHILD_ROOT}/review-findings"
+  "${CHILD_ROOT}/last-messages"
 ```
 
-All four directories are required. `archive/` holds reverted or superseded
+All three directories are required. `archive/` holds reverted or superseded
 state. `reports/` holds worker output including slice reports and the
 convergence report. `last-messages/` holds raw worker output traces.
-`review-findings/` holds review worker output.
+
+Workers creates its own internal directories (like `review-findings/`,
+`batch.json`, `plan.json`) as needed. Parent circuits should not create or
+read these -- they are worker-private state.
 
 Some circuits use variant child root paths:
 - `ratchet-quality` Step 3: `${RUN_ROOT}/phases/step-3/attempts/<attempt-id>`
@@ -159,14 +162,38 @@ the parent circuit artifact. Always read in this order:
 
 1. `${CHILD_ROOT}/reports/report-converge.md` -- the convergence verdict
    (primary source of truth)
-2. `${CHILD_ROOT}/batch.json` -- slice metadata showing what was built
+2. `${CHILD_ROOT}/job-result.json` -- execution status and slice metadata
 3. `${CHILD_ROOT}/reports/report-<last-slice-id>.md` -- the last
-   implementation slice report (find the slice id from `batch.json`)
+   implementation slice report (find the slice id from `job-result.json`)
 
 **Important:** Workers review workers may overwrite per-slice report files.
 If a slice report is missing or appears to be a review artifact, use
-`batch.json` slice metadata and the convergence report to reconstruct what
-was built. Do not guess from chat residue.
+`job-result.json` slice metadata and the convergence report to reconstruct
+what was built. Do not guess from chat residue.
+
+### Public vs. Private Boundary
+
+The workers-execute protocol defines a sealed boundary between parent
+circuits and the workers skill. Parent circuits interact with workers
+exclusively through these public contract files:
+
+| File | Direction | Purpose |
+|------|-----------|---------|
+| `dispatch-request.json` | Parent -> Workers | What to do (slice definitions, file scope, verification commands) |
+| `dispatch-receipt.json` | Workers -> Parent | Confirmation that workers started processing |
+| `job-result.json` | Workers -> Parent | What happened (execution status, slice metadata, convergence) |
+| `reports/report-converge.md` | Workers -> Parent | Human-readable convergence verdict |
+| `reports/report-<slice-id>.md` | Workers -> Parent | Human-readable per-slice reports |
+| The declared handoff artifact | Workers -> Parent | The output artifact (e.g., `execution-handoff.md`) |
+
+The following are **worker-private** and must not be read or depended on
+by parent circuits:
+
+- `batch.json` -- internal state machine (use `job-result.json` instead)
+- `plan.json` -- internal planning state
+- `events.ndjson` -- internal event log
+- `review-findings/` -- internal review state
+- Slice-level reports in `archive/` -- internal versioning state
 
 ### Writing the Parent Artifact
 
