@@ -232,7 +232,7 @@ slices:
     type: implementation
     name: "Convert run and develop to v2 manifests"
     spec_step: 10
-    status: proposed
+    status: done
     dependencies: [slice-007]
     touched_paths:
       - skills/run/circuit.yaml
@@ -314,7 +314,7 @@ slices:
     type: implementation
     name: "Capability resolution"
     spec_step: 13
-    status: proposed
+    status: done
     dependencies: [slice-007]
     touched_paths:
       - scripts/relay/compose-prompt.sh  # or runtime equivalent
