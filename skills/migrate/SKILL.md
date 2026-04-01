@@ -369,7 +369,7 @@ converge cycle. The orchestrator must create the workers workspace explicitly.
 ```bash
 MIGRATION_ROOT="${RUN_ROOT}/phases/step-6"
 mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/reports" \
-  "${MIGRATION_ROOT}/last-messages" "${MIGRATION_ROOT}/review-findings"
+  "${MIGRATION_ROOT}/last-messages"
 ```
 
 1. **Create CHARTER.md** from the coexistence plan, migration steer, and risk assessment:
@@ -416,12 +416,12 @@ mkdir -p "${MIGRATION_ROOT}/archive" "${MIGRATION_ROOT}/reports" \
 
    **Source artifacts (read in this order):**
    - `${MIGRATION_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
-   - `${MIGRATION_ROOT}/batch.json` -- slice metadata showing what was built
+   - `${MIGRATION_ROOT}/job-result.json` -- execution status and slice metadata
    - The last implementation slice report at `${MIGRATION_ROOT}/reports/report-<last-slice-id>.md`
-     (find the slice id from `batch.json`)
+     (find the slice id from `job-result.json`)
 
    Note: workers review workers may overwrite per-slice report files. If a slice
-   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   report is missing or appears to be a review artifact, use `job-result.json` slice metadata
    and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/batch-log.md` with:
@@ -586,25 +586,6 @@ migration-brief.md                              [Step 1, interactive]
   -> verification-report.md                      [Step 7, dispatch]
   -> cutover-report.md                           [Step 8, dispatch]
 ```
-
-## Resume Awareness
-
-If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
-
-1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
-   for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's report or last-message trace may contain usable output.
-2. Check artifacts in chain order (migration-brief -> dependency-inventory + risk-assessment
-   -> coexistence-plan -> migration-steer -> batch-log -> verification-report -> cutover-report)
-3. Find the last complete artifact with a passing gate
-4. For Step 6 specifically: check `${RUN_ROOT}/phases/step-6/batch.json` for workers
-   resume state before restarting batch migration
-5. If `cutover-report.md` exists with a `REVISE` verdict, read its governing issue and
-   resume from Step 6 with that issue as input
-6. Continue from the next step
-
-This is best-effort -- the circuit has no durable state beyond artifacts on disk and
-step-local relay directories.
 
 ## Circuit Breaker
 

@@ -204,7 +204,7 @@ contract into a CHARTER.md.
 ```bash
 IMPL_ROOT="${RUN_ROOT}/phases/implement"
 mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" \
-  "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/review-findings"
+  "${IMPL_ROOT}/last-messages"
 ```
 
 **Create CHARTER.md from bug-brief.md and regression-contract.md:**
@@ -242,7 +242,7 @@ The CHARTER must include:
 
 Read (in this order):
 1. `${IMPL_ROOT}/reports/report-converge.md` (convergence verdict)
-2. `${IMPL_ROOT}/batch.json` (slice metadata)
+2. `${IMPL_ROOT}/job-result.json` (execution status and slice metadata)
 3. The last implementation slice report
 
 Write `${RUN_ROOT}/artifacts/fix-handoff.md`:
@@ -313,17 +313,6 @@ bug-brief.md -> regression-contract.md -> fix-handoff.md -> fix-review.md
 Four artifacts. The bug brief is the problem statement. The regression contract is
 the test-first proof. The fix handoff is the implementation result. The fix review
 is the independent verdict.
-
-## Resume Awareness
-
-If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
-
-1. Check artifacts in chain order: `bug-brief.md` -> `regression-contract.md`
-   -> `fix-handoff.md` -> `fix-review.md`.
-2. Find the last complete artifact with a passing gate.
-3. For Step 3 (Implement): check `${RUN_ROOT}/phases/implement/batch.json`
-   for workers resume state.
-4. Continue from the next step after the last complete artifact.
 
 ## Circuit Breaker
 

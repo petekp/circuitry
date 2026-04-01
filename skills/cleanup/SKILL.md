@@ -458,7 +458,7 @@ REVERTED and move to the next batch.
 BATCH_ID="batch-a"  # or batch-b, etc.
 BATCH_ROOT="${RUN_ROOT}/phases/step-6/batches/${BATCH_ID}"
 mkdir -p "${BATCH_ROOT}/archive" "${BATCH_ROOT}/reports" \
-  "${BATCH_ROOT}/last-messages" "${BATCH_ROOT}/review-findings"
+  "${BATCH_ROOT}/last-messages"
 ```
 
 **a) Create `${BATCH_ROOT}/CHARTER.md`** with required sections:
@@ -488,13 +488,13 @@ verification fails. Include standard relay report headings.
 **d) After workers completes**, read back in this order:
 
 1. `${BATCH_ROOT}/reports/report-converge.md` -- convergence verdict (primary)
-2. `${BATCH_ROOT}/batch.json` -- slice metadata showing what was removed
+2. `${BATCH_ROOT}/job-result.json` -- execution status and slice metadata
 3. The last implementation slice report at
    `${BATCH_ROOT}/reports/report-<last-slice-id>.md` (find slice id from
-   `batch.json`)
+   `job-result.json`)
 
 Note: workers review workers may overwrite per-slice report files. If a
-slice report is missing or appears to be a review artifact, use `batch.json`
+slice report is missing or appears to be a review artifact, use `job-result.json`
 slice metadata and the convergence report to reconstruct what was removed.
 
 **Mode-conditional behavior:**
@@ -685,41 +685,6 @@ Non-canonical intermediate outputs:
 - Step 2: 5 category finding files (consumed by Step 3, not canonical chain)
 - Step 7: `verification-audit.md` (consumed by Step 8, not canonical chain)
 - Step 6: per-batch `workers` reports (relay state, not canonical)
-
-## Resume Awareness
-
-Resume should be relay-first, then artifact-first:
-
-1. Check the current step's relay directory for in-flight worker output
-2. Validate any step-local promoted artifact against its gate
-3. Resume from the first step whose artifact is missing or fails its gate
-
-### Step-specific resume notes
-
-- **Step 2:** Inspect each worker output separately. Rerun only missing or
-  gate-failing categories. Do not restart all 5 workers if 3 already completed.
-- **Step 4:** If `triage-report.md` exists but interactive approval is absent
-  (interactive mode), resume inside Step 4 rather than restarting Survey.
-- **Step 5:** If some proved items have verdicts and others do not, rerun proof
-  only for unresolved items. Do not re-prove already-adjudicated items.
-- **Step 6:** Before re-dispatching any batch:
-  1. Inspect the batch child root's `batch.json`
-  2. Then `reports/report-converge.md`
-  3. Then the last slice report
-  Never rerun a converged batch.
-- **Step 7:** If `verification-audit.md` exists and passes its gate, resume at
-  Step 8. Do not re-audit.
-
-### Reopen routing
-
-- Reopen to `triage-report.md` when evidence changes item classification or
-  reveals wrong risk labels.
-- Reopen to `evidence-log.md` when verification says a removed item lacked
-  sufficient proof.
-- Reopen to `cleanup-batches.md` when a verification failure is caused by a
-  concrete executed batch.
-- Reopen to `cleanup-scope.md` only when build/test/verify commands or
-  target-root assumptions were wrong.
 
 ## Circuit Breaker
 

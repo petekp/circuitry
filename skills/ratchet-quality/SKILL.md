@@ -519,7 +519,7 @@ Use these parent-owned child roots:
 - Step 15: `${RUN_ROOT}/phases/step-15/repairs/<repair-id>`
 Every child root must contain:
 - `CHARTER.md`
-- `batch.json`
+- `dispatch-request.json` (what to do -- the workers public contract)
 - `reports/report-converge.md`
 - `reports/report-<last-slice-id>.md`
 - `last-messages/last-message-workers.txt`
@@ -527,7 +527,6 @@ And the parent creates:
 - `archive/`
 - `reports/`
 - `last-messages/`
-- `review-findings/`
 ### Shared Dispatch and Readback Contract
 For every child root:
 1. Write `CHARTER.md` from the authoritative parent packet.
@@ -538,15 +537,15 @@ For every child root:
    last message to `last-message-workers.txt`.
 5. Read back in this order:
    1. `reports/report-converge.md`
-   2. `batch.json`
+   2. `job-result.json`
    3. `reports/report-<last-slice-id>.md`
 If the last slice report is missing or clearly looks like review output, use
-`batch.json` plus the convergence report to reconstruct the implementation
+`job-result.json` plus the convergence report to reconstruct the implementation
 story instead of guessing from chat residue.
 ### Shared Failure Handling
 - Missing `report-converge.md`: mark the child root `INVALID`, archive it, and
   retry only if budget remains.
-- Malformed `batch.json`: mark the child root `INVALID`; if convergence is
+- Malformed `job-result.json`: mark the child root `INVALID`; if convergence is
   still enough for truthful synthesis, record the limitation, otherwise retry.
 - Missing verification commands in `CHARTER.md`: treat this as a parent
   contract failure and reopen upstream instead of inventing commands.
@@ -732,39 +731,8 @@ Promotion rules:
 - `execution-report.md` supersedes `execution-log.md` for Finalize.
 Supporting but non-canonical state:
 - Relay reports under each step root
-- `workers` child roots and their `batch.json`
+- `workers` child roots and their `job-result.json`
 - Admitted injection specs under ratchet step relay directories
-## Resume Awareness
-Global order:
-1. Check `${RUN_ROOT}/artifacts/reopen-marker.md`.
-2. If it is `OPEN`, resume from the named target.
-3. Otherwise scan non-archived artifacts in canonical chain order.
-4. Resume from the first missing or gate-failing artifact.
-5. For any `workers` step, inspect child roots before deciding to rerun.
-6. For any ratchet step, reconcile existing injection specs against the ledger before admitting more.
-Phase notes:
-- **Triage:** Step 2 is complete only when all 3 triage artifacts exist and
-  pass gate. Missing workers rerun individually.
-- **Stabilize:** Inspect `${RUN_ROOT}/phases/step-3/attempts/` before rerunning
-  Step 3. If `stability-findings.md` exists but `stability-gate.md` does not,
-  resume at Step 5 and reconcile any existing injections first.
-- **Envision:** Treat `inside-out-digest.md` and `outside-in-digest.md` as a
-  pair. If `design-review.md` exists but `envisioned-packet.md` does not,
-  resume at Step 9 and reconcile its injection ledger before admitting more.
-- **Plan:** If `implementation-plan.md` exists but `execution-charter.md` does
-  not, continue at Step 11 or Step 12 based on the last valid artifact. Archived
-  packets never satisfy resume.
-- **Execute:** Reconcile batch roots into `execution-log.md` before rerunning
-  Step 13. If `execution-audit.md` exists but `execution-report.md` does not,
-  inspect `${RUN_ROOT}/phases/step-15/repairs/` before rerunning Step 15.
-- **Finalize:** Never reuse an archived `final-review.md`. If any closeout
-  artifact is missing, rerun Step 17 from the latest valid `final-review.md`
-  and `execution-report.md`.
-Fresh-session safety:
-- Archived artifacts never satisfy resume.
-- The reopen marker always outranks artifact order.
-- Child-root state is inspected before a `workers` rerun.
-- Injection ledgers are reconciled before any new admissions.
 ## Circuit Breaker
 Stop and redirect when:
 - The same governing issue reopens the same upstream target twice.

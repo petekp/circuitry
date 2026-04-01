@@ -603,22 +603,6 @@ decision-brief.md                           [user: decision frame]
   -> decision-guide.md
 ```
 
-## Resume Awareness
-
-If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
-
-1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
-   for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's report or last-message trace may contain usable output.
-2. Check artifacts in chain order (decision-brief -> current-system-map -> ... -> decision-guide)
-3. Find the last complete artifact with a passing gate
-4. If `decision-guide.md` exists but an upstream artifact fails its gate, the downstream
-   artifact is suspect. Resume from the first failing gate.
-5. Continue from the next step
-
-This is best-effort -- the circuit has no durable state beyond artifacts on disk and
-step-local relay directories.
-
 ## Circuit Breaker
 
 Escalate to the user when:

@@ -194,9 +194,9 @@ must include all of the following:
 - child root creation
 - `CHARTER.md` creation from the parent execution contract
 - the real `compose-prompt.sh` and `dispatch.sh` calls
-- required child files: `CHARTER.md`, `batch.json`,
+- required child files: `CHARTER.md`, `dispatch-request.json`,
   `reports/report-<slice-id>.md`, and `reports/report-converge.md`
-- readback order: `report-converge.md`, then `batch.json`, then the last slice report
+- readback order: `report-converge.md`, then `job-result.json`, then the last slice report
 - outer synthesis rules for the parent artifact
 - escalation behavior if convergence says `ISSUES REMAIN`
 
@@ -386,9 +386,6 @@ mkdir -p "${RUN_ROOT}/artifacts"
 ## Artifact Chain Summary
 [Show the durable chain]
 
-## Resume Awareness
-[Artifact order, relay-state precedence, child adapter state]
-
 ## Circuit Breaker
 [When to escalate]
 ````
@@ -464,7 +461,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 
 - Check step-local relay state first and promoted artifacts second
 - Treat parallel completeness as "all worker artifacts exist and satisfy the gate"
-- Inspect child state like `batch.json` before restarting `workers`
+- Inspect child state like `job-result.json` before restarting `workers`
 - Resume from the chosen reopen target, not blindly from the verdict step
 
 #### Dispatch Compatibility
@@ -525,7 +522,7 @@ Short paragraph explaining the validator's core model and what a passing trace m
 | `AP-04` | Placeholder Leakage - unresolved placeholders reach the worker prompt |
 | `AP-05` | Interactive Skill In Autonomous Dispatch - an AskUserQuestion-style skill is appended to an autonomous worker dispatch |
 | `AP-06` | Relay Layout Drift - parent, child, and adapter layouts assume different ownership boundaries |
-| `AP-07` | Resume By Final Artifacts Only - resume logic ignores step-local relay state such as `batch.json` |
+| `AP-07` | Resume By Final Artifacts Only - resume logic ignores step-local relay state such as `job-result.json` |
 | `AP-08` | Review Overwrites Implementation Evidence - the only implementation story lives in a path reused by review |
 | `AP-09` | Ambiguous Final Synthesis - the circuit says "copy the final report" without explicit source artifacts and synthesis rules |
 | `AP-10` | Weak Gates - a gate checks only existence or generic completion |
@@ -851,27 +848,6 @@ workflow-brief.md                              [Step 1, interactive]
 Draft files live in `${STAGING}/`. Final deliverables live in `${TARGET_CIRCUIT_ROOT}/`.
 Compiler artifacts (`cross-validation.md`, `validation-report.md`) stay under
 `${RUN_ROOT}/artifacts/` as the authoring audit trail.
-
-## Resume Awareness
-
-If work already exists, resume in this order:
-
-1. Check `${RUN_ROOT}/artifacts/workflow-brief.md`
-2. Check `${RUN_ROOT}/artifacts/circuit-analysis.md`
-3. Check `${STAGING}/circuit.yaml`, `${STAGING}/SKILL.md`, and
-   `${RUN_ROOT}/artifacts/cross-validation.md`
-4. Check `${RUN_ROOT}/artifacts/validation-report.md`
-5. Check `${TARGET_CIRCUIT_ROOT}/circuit.yaml` and `${TARGET_CIRCUIT_ROOT}/SKILL.md`
-
-If `validation-report.md` exists with a `REVISE` verdict, read its
-`## Reopen Decision` section and resume from the chosen step instead of blindly
-rerunning validation.
-
-If the final files exist in `TARGET_CIRCUIT_ROOT` but not in staging, the
-refinement step already completed -- do not re-run.
-
-This is best-effort. The durable state is the artifact set on disk, not the chat
-thread.
 
 ## Circuit Breaker
 

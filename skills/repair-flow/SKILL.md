@@ -420,7 +420,7 @@ converge cycle. The orchestrator must create the workers workspace explicitly.
 ```bash
 REPAIR_ROOT="${RUN_ROOT}/phases/step-7"
 mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/reports" \
-  "${REPAIR_ROOT}/last-messages" "${REPAIR_ROOT}/review-findings"
+  "${REPAIR_ROOT}/last-messages"
 
 {
   cat "${RUN_ROOT}/artifacts/repair-packet.md"
@@ -465,12 +465,12 @@ mkdir -p "${REPAIR_ROOT}/archive" "${REPAIR_ROOT}/reports" \
 
    **Source artifacts (read in this order):**
    - `${REPAIR_ROOT}/reports/report-converge.md` -- the convergence verdict (primary source)
-   - `${REPAIR_ROOT}/batch.json` -- slice metadata showing what was built
+   - `${REPAIR_ROOT}/job-result.json` -- execution status and slice metadata
    - The last implementation slice report at `${REPAIR_ROOT}/reports/report-<last-slice-id>.md`
-     (find the slice id from `batch.json`)
+     (find the slice id from `job-result.json`)
 
    Note: workers review workers may overwrite per-slice report files. If a slice
-   report is missing or appears to be a review artifact, use `batch.json` slice metadata
+   report is missing or appears to be a review artifact, use `job-result.json` slice metadata
    and the convergence report to reconstruct what was built.
 
    **Write** `${RUN_ROOT}/artifacts/repair-handoff.md` with:
@@ -586,21 +586,6 @@ failure-brief.md
   -> repair-handoff.md
   -> flow-verdict.md
 ```
-
-## Resume Awareness
-
-If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
-
-1. Check artifacts in chain order (failure-brief → audit-trace → causal-map → repair-steer
-   → regression-contract → repair-packet → repair-handoff → flow-verdict)
-2. Find the last complete artifact with a passing gate
-3. For Step 7 specifically: check `${RUN_ROOT}/phases/step-7/batch.json` for workers
-   resume state before restarting layered repair
-4. Continue from the next step
-
-This is best-effort -- the circuit has no durable state beyond artifacts on disk and
-step-local relay directories. If a session dies mid-step, check the step's relay
-directory for worker output before concluding the step failed.
 
 ## Circuit Breaker
 

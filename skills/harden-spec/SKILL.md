@@ -621,27 +621,6 @@ spec-brief.md
   -> plan-review.md
 ```
 
-## Resume Awareness
-
-If `${RUN_ROOT}/artifacts/` already has files, determine the resume point:
-
-1. For each step, check the step's relay directory (`${RUN_ROOT}/phases/<step-name>/`)
-   for in-flight worker output before concluding the step failed. A session may have
-   died mid-dispatch; the worker's report or last-message trace may contain usable output.
-2. Check artifacts in chain order (spec-brief -> draft-digest -> implementer-review,
-   systems-review, comparative-review -> caveat-resolution -> amended-spec ->
-   execution-packet -> implementation-plan -> plan-review)
-3. Treat the multi-angle review phase as complete only when all three review
-   artifacts exist and satisfy their gates
-4. Find the last complete artifact with a passing gate
-5. Continue from the next step
-
-If `plan-review.md` exists with a `REVISE` verdict, resume from the user-selected
-reopen point rather than blindly repeating Step 10.
-
-This is best-effort - the circuit has no durable state beyond artifacts on disk and
-step-local relay directories.
-
 ## Circuit Breaker
 
 Escalate to the user when:
