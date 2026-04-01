@@ -22,6 +22,8 @@ The front door for all circuit work. Routing only; this skill is not a circuit.
    - **migrate vs. develop:** "Must the old and new systems coexist during the transition, or is this purely additive delivery?"
    - **ratchet-quality vs. cleanup:** "Are you improving living code (refactoring, coverage, types) or removing dead weight (unreachable code, stale docs, orphaned files)?"
    - **decide vs. develop --spec-review:** "Is the decision still open (multiple viable options), or has one approach been chosen and written up as a spec that needs stress-testing?"
+   - **fix vs. repair-flow:** "Can you describe the bug in one sentence and reproduce it reliably, or is the root cause unclear across multiple subsystems?"
+   - **fix vs. run:** "Is this a known bug you want to fix with test-first discipline, or a feature/change that happens to touch buggy code?"
 
 Route only when positive signals match and exclusions do not.
 
@@ -35,6 +37,9 @@ Route only when positive signals match and exclusions do not.
 - `circuit:repair-flow`
   Match: a broken, flaky, or unsafe existing flow, especially across boundaries, where repair must start from forensics and end in a verified fix.
   Exclude: feature ideation, greenfield implementation, or cases with no real broken flow to reproduce.
+- `circuit:fix`
+  Match: known bug with clear reproduction path, local bugfix work, regression-test-first discipline needed.
+  Exclude: complex multi-layer failures where root cause is unclear (route to repair-flow), feature work even if it touches buggy code (route to run or develop), one-line typo fixes or config edits (no circuit needed).
 - `circuit:cleanup`
   Match: systematic dead code removal, stale docs cleanup, orphaned artifact sweeps, vestigial comment removal, or codebase hygiene passes.
   Exclude: refactoring with behavior changes, architecture decisions, feature work, one-off deletions, dependency upgrades, or formatting-only cleanup.
@@ -63,6 +68,7 @@ Route only when positive signals match and exclusions do not.
 Use a sequence only when an earlier phase must happen before a later one.
 
 - Broken existing flow: `circuit:repair-flow` before any rebuild or expansion work.
+- Known bug with clear repro: `circuit:fix` before rebuild or expansion work. If the bug is complex or multi-layer, use `circuit:repair-flow` instead.
 - Unsettled architecture or protocol choice: `circuit:decide` before `circuit:develop` or `circuit:migrate`.
 - Draft exists but is not build-ready: `circuit:develop --spec-review` (reviews the spec and continues through to code).
 - Large-scale migration with coexistence: `circuit:migrate` instead of `circuit:develop` (migrate handles dual-system coexistence).
@@ -84,6 +90,8 @@ These circuits share surface-level similarity. Use these rules to disambiguate:
 - **decide vs develop --spec-review:** Decide chooses *between* options. Spec-review stress-tests *one* spec that already exists and then builds it. If the decision is unsettled, route to decide first. If one approach has been chosen and written up, route to `develop --spec-review`.
 - **ratchet vs develop:** Ratchet improves *existing* code without adding features. Develop adds *new* capabilities. If the user wants "make this codebase better" without new features, route to ratchet.
 - **circuit:run vs run --intent:** Both are for clear-approach tasks. The difference is control. `circuit:run` auto-scopes autonomously and shows the scope for a quick confirm/amend. `circuit:run --intent` adds an interactive intent-lock where the user explicitly sets priorities, non-goals, and kill criteria before auto-scope runs. If the user wants to "just do it" with minimal friction, route to `circuit:run`. If they want to shape the intent first, use `--intent`.
+- **fix vs run:** Fix requires regression tests before code changes; run does not enforce test-first discipline. If the user has a known bug and wants test-first proof, route to fix. If the user is building features or making changes that happen to touch buggy code, route to run.
+- **fix vs repair-flow:** Fix is for known bugs with clear reproduction steps. Repair-flow is for complex, multi-layer failures where the root cause is unclear and forensic investigation is needed. If the bug can be described in one sentence and reproduced reliably, route to fix. If the failure spans subsystems and the cause is uncertain, route to repair-flow.
 
 ## Auto-Confirm
 

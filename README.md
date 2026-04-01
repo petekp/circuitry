@@ -36,6 +36,7 @@ claude plugin install petekp/circuitry
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
 | Run | `/circuit:run <task>` | The default: any clear task that benefits from planning and review (`--intent` for explicit intent lock) |
+| Fix | `/circuit:fix <bug>` | Known bugs with test-first discipline |
 | Develop | `/circuit:develop` | Taking a feature from idea to shipped code (`--spec-review` for existing specs) |
 | Decide | `/circuit:decide` | Architecture decisions under real uncertainty |
 | Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
@@ -118,7 +119,7 @@ Circuits can inject domain-specific skills into worker prompts. These are
 
 | Skill | Enhances |
 |-------|----------|
-| `tdd` | repair-flow, ratchet-quality |
+| `tdd` | fix, repair-flow, ratchet-quality |
 | `deep-research` | develop, decide |
 | `clean-architecture` | ratchet-quality, decide |
 

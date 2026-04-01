@@ -61,6 +61,7 @@ has installed:
 | `develop` | Research skills, Platform skills | Testing skills |
 | `decide` | Architecture skills, Research skills | — |
 | `repair-flow` | Testing skills | Platform skills |
+| `fix` | Testing skills | Platform skills |
 | `ratchet-quality` | Architecture skills, Code Quality skills | Testing skills |
 | `cleanup` | Code Quality skills | — |
 
@@ -94,6 +95,8 @@ Format:
 # Customize skills per circuit. Explicit --skills flag always overrides.
 
 circuits:
+  fix:
+    skills: [<matched-skills>]
   develop:
     skills: [<matched-skills>]
   decide:

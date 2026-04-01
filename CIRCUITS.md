@@ -7,6 +7,7 @@ The Circuitry plugin provides structured, artifact-driven workflows for complex 
 | Circuit | Invoke | Best For |
 |---------|--------|----------|
 | Run | `/circuit:run <task>` | The default: any clear task that benefits from planning and review |
+| Fix | `/circuit:fix <bug>` | Known bugs with test-first discipline |
 | Develop | `/circuit:develop` | Taking a non-trivial feature from idea to shipped code (`--spec-review` for existing specs) |
 | Decide | `/circuit:decide` | Making architecture or protocol decisions under real uncertainty |
 | Repair Flow | `/circuit:repair-flow` | Debugging and repairing broken end-to-end flows |
@@ -30,6 +31,17 @@ The Circuitry plugin provides structured, artifact-driven workflows for complex 
 The default entry point for Circuitry. Start with `/circuit:run <task>` for any non-trivial work, or `/circuit:router <task>` to have the router pick the best circuit automatically. If your task needs a specialized circuit (research, architecture decisions, debugging), you get one automatically. Otherwise, circuit:run handles it with auto-scope, confirmation, and implement/review/converge.
 
 **Intent mode:** For tasks where you want to explicitly set priorities, non-goals, and kill criteria before auto-scope runs, invoke `/circuit:run --intent <task>`. This adds an interactive intent-lock step that produces `intent-brief.md`, which auto-scope then uses to constrain the plan.
+
+---
+
+### Fix
+
+**Invoke:** `/circuit:fix <bug>`
+**Phases:** Bug Framing, Regression Contract, Fix Execution, Ship Review (4 steps)
+**Artifact chain:** `bug-brief.md` -> `regression-contract.md` -> `fix-handoff.md` -> `fix-review.md`
+**Example:** A deal creation flow silently drops the customer reference when the name contains an apostrophe. The circuit captures the bug in a brief, writes a failing regression test that creates a deal with an apostrophe in the customer name and asserts the reference persists, dispatches workers to fix the escaping bug, and runs an independent ship review to verify the fix is minimal and the regression test actually covers the reported behavior.
+
+Test-first bug fixing for known bugs with clear reproduction. Stronger than run (requires regression tests before code changes), lighter than repair-flow (no forensic causal mapping). If you can describe the bug in one sentence and reproduce it, use fix. If the failure spans multiple subsystems and the root cause is unclear, use repair-flow instead.
 
 ---
 
@@ -140,6 +152,8 @@ Some circuits look similar on the surface. Here's how to tell them apart:
 |-----------------|----------|--------|-----|
 | Make the codebase better | `ratchet-quality` | `cleanup` | Ratchet-quality improves quality; cleanup removes dead weight |
 | Remove dead code and stale docs | `cleanup` | `ratchet-quality` | Cleanup removes; ratchet-quality refactors and improves |
+| Fix a known bug with clear repro | `fix` | `run` | Fix enforces test-first; run does not require regression tests |
+| Fix a known bug with clear repro | `fix` | `repair-flow` | Fix is for clear bugs; repair-flow is for complex multi-layer failures |
 | Migrate a framework or dependency | `migrate` | `develop` | Migrate handles dual-system coexistence; develop builds greenfield |
 | Build a feature from an idea | `develop` | (none) | Develop handles the full lifecycle from idea to shipped code |
 | Review an existing RFC then build | `develop --spec-review` | `develop` (full) | Spec-review stress-tests the document and then builds; full develop starts from scratch |
@@ -173,6 +187,7 @@ circuit automatically. If you want to choose manually:
 
 - **"I have a clear task that spans multiple files"** -> `/circuit:run <task>`
 - **"I have a broken flow or flaky behavior"** -> `repair-flow`
+- **"I have a known bug I can reproduce"** -> `/circuit:fix <bug>`
 - **"I need to choose between architectural approaches"** -> `decide`
 - **"I have a draft spec/RFC that needs review before build"** -> `develop --spec-review`
 - **"I need to build a non-trivial feature end to end"** -> `develop`
@@ -187,6 +202,7 @@ Common sequences:
 - **Unsettled decision then build:** `decide` -> `develop`
 - **Draft exists but is not build-ready:** `develop --spec-review` (reviews and builds in one circuit)
 - **Broken flow before expansion:** `repair-flow` -> then whatever comes next
+- **Known bug before feature work:** `fix` -> then continue with `run` or `develop`
 - **New circuit authoring:** `create` -> `dry-run`
 
 For single-line changes, config edits, quick wiring, or trivial bug fixes, a raw prompt is faster.

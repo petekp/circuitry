@@ -1,0 +1,95 @@
+schema_version: "1"
+circuit:
+  id: fix
+  version: "2026-04-01"
+  title: Fix
+  description: >
+    Bug fix circuit that enforces test-first discipline. 4 steps across 4 phases:
+    Bug Framing -> Regression Contract -> Fix Execution -> Ship Review. Stronger
+    than run (requires regression tests before code changes), lighter than
+    repair-flow (no forensic causal mapping). Use when you have a known bug
+    with a clear reproduction path.
+
+  artifacts:
+    - id: bug-brief.md
+      type: interactive
+      produced_by: bug-brief
+      consumed_by: [regression-contract, implement, ship-review]
+    - id: regression-contract.md
+      type: synthesis
+      produced_by: regression-contract
+      consumed_by: [implement, ship-review]
+    - id: fix-handoff.md
+      type: dispatch
+      produced_by: implement
+      consumed_by: [ship-review]
+    - id: fix-review.md
+      type: dispatch
+      produced_by: ship-review
+      consumed_by: []
+
+  phases:
+    - id: bug-framing
+      title: Bug Framing
+      execution: serial
+      steps:
+        - id: bug-brief
+          title: Bug Brief
+          action: interactive
+          produces: bug-brief.md
+          gate:
+            type: outputs_present
+            required: [bug-brief.md]
+            checks:
+              - "Expected Behavior non-empty"
+              - "Actual Behavior non-empty"
+              - "Scope non-empty"
+              - "Known Repro non-empty"
+
+    - id: regression
+      title: Regression Contract
+      execution: serial
+      steps:
+        - id: regression-contract
+          title: Regression Contract
+          action: synthesis
+          consumes: [bug-brief.md]
+          produces: regression-contract.md
+          gate:
+            type: outputs_present
+            required: [regression-contract.md]
+            checks:
+              - "At least one failing regression test command OR manual_only exemption"
+
+    - id: execute
+      title: Fix Execution
+      execution: serial
+      steps:
+        - id: implement
+          title: Implement
+          action: dispatch
+          adapter: workers
+          consumes: [bug-brief.md, regression-contract.md]
+          produces: fix-handoff.md
+          max_attempts: 3
+          gate:
+            type: outputs_present
+            required: [fix-handoff.md]
+            checks:
+              - "Convergence verdict is COMPLETE AND HARDENED"
+              - "Regression tests pass"
+
+    - id: review
+      title: Ship Review
+      execution: serial
+      steps:
+        - id: ship-review
+          title: Ship Review
+          action: dispatch
+          consumes: [bug-brief.md, regression-contract.md, fix-handoff.md]
+          produces: fix-review.md
+          gate:
+            type: outputs_present
+            required: [fix-review.md]
+            checks:
+              - "Verdict is SHIP_READY or ISSUES_FOUND"
