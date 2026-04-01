@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/job-result.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "circuit_id",
+    "step_id",
+    "attempt",
+    "protocol",
+    "completion",
+    "verdict",
+    "artifacts_written",
+    "files_changed",
+    "tests",
+    "issues",
+    "sandbox_limited"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "circuit_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "step_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "protocol": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" },
+    "completion": { "enum": ["complete", "partial", "blocked"] },
+    "verdict": {
+      "enum": [
+        "clean",
+        "issues_found",
+        "ship_ready",
+        "complete_and_hardened",
+        "issues_remain",
+        "design_holds",
+        "needs_adjustment",
+        "design_invalidated",
+        "outputs_ready",
+        "options_ready",
+        "decision_packet_ready",
+        "reviews_complete"
+      ]
+    },
+    "summary": { "type": "string" },
+    "artifacts_written": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "files_changed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["pass", "fail", "sandbox_limited", "not_run"] },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "sandbox_limited": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "verdict": { "const": "complete_and_hardened" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "reviews_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "outputs_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "ship_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "design_holds" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "options_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "decision_packet_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "workers-execute@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["complete_and_hardened", "issues_remain"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "final-review@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["ship_ready", "issues_found"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "seam-proof@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["design_holds", "needs_adjustment", "design_invalidated"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "parallel-evidence-probes@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["outputs_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "option-generation@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["options_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "adversarial-evaluation@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["decision_packet_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "parallel-review-fanout@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["reviews_complete"] }
+        }
+      }
+    }
+  ]
+}

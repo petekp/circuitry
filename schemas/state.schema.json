@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/state.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "circuit_id",
+    "manifest_version",
+    "status",
+    "selected_entry_mode",
+    "git",
+    "artifacts",
+    "jobs",
+    "checkpoints"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "circuit_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "manifest_version": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "status": {
+      "enum": [
+        "initialized",
+        "in_progress",
+        "waiting_checkpoint",
+        "waiting_worker",
+        "completed",
+        "stopped",
+        "blocked",
+        "failed",
+        "handed_off"
+      ]
+    },
+    "current_step": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "selected_entry_mode": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "git": {
+      "type": "object",
+      "required": ["head_at_start"],
+      "additionalProperties": false,
+      "properties": {
+        "head_at_start": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "current_head": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "gate"],
+        "additionalProperties": false,
+        "properties": {
+          "status": { "enum": ["pending", "in_progress", "complete", "stale", "failed"] },
+          "gate": {
+            "oneOf": [
+              { "enum": ["pass", "fail", "pending", "skipped"] },
+              { "type": "null" }
+            ]
+          },
+          "produced_by": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["attempt", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "attempt": { "type": "integer", "minimum": 1 },
+          "status": { "enum": ["requested", "running", "complete", "failed", "reconciling"] },
+          "request": { "type": "string" },
+          "receipt": { "type": "string" },
+          "result": { "type": "string" }
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "attempt"],
+        "additionalProperties": false,
+        "properties": {
+          "attempt": { "type": "integer", "minimum": 1 },
+          "status": { "enum": ["requested", "waiting", "resolved"] },
+          "request_path": { "type": "string" },
+          "response_path": { "type": "string" },
+          "selection": { "type": "string" }
+        }
+      }
+    },
+    "terminal_target": { "type": "string" }
+  }
+}

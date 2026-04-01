@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/event.schema.json",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "occurred_at", "run_id", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "enum": [
+        "run_started",
+        "step_started",
+        "dispatch_requested",
+        "dispatch_received",
+        "job_completed",
+        "artifact_written",
+        "gate_passed",
+        "gate_failed",
+        "checkpoint_requested",
+        "checkpoint_resolved",
+        "step_reopened",
+        "run_completed"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "circuit_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "step_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "run_started" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["manifest_path", "entry_mode", "head_at_start"],
+            "properties": {
+              "manifest_path": { "type": "string", "minLength": 1 },
+              "entry_mode": { "type": "string", "minLength": 1 },
+              "head_at_start": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "step_started" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["step_id"],
+            "properties": {
+              "step_id": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "dispatch_requested" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["request_path", "protocol", "attempt"],
+            "properties": {
+              "request_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/dispatch-request\\.json$" },
+              "protocol": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" },
+              "attempt": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "dispatch_received" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["receipt_path", "backend", "job_id", "attempt"],
+            "properties": {
+              "receipt_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/dispatch-receipt\\.json$" },
+              "backend": { "enum": ["codex", "agent", "custom"] },
+              "job_id": { "type": "string", "minLength": 1 },
+              "attempt": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "job_completed" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["result_path", "completion", "verdict", "attempt"],
+            "properties": {
+              "result_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/job-result\\.json$" },
+              "completion": { "enum": ["complete", "partial", "blocked"] },
+              "verdict": {
+                "enum": [
+                  "clean",
+                  "issues_found",
+                  "ship_ready",
+                  "complete_and_hardened",
+                  "issues_remain",
+                  "design_holds",
+                  "needs_adjustment",
+                  "design_invalidated",
+                  "outputs_ready",
+                  "options_ready",
+                  "decision_packet_ready",
+                  "reviews_complete"
+                ]
+              },
+              "attempt": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "artifact_written" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["artifact_path"],
+            "properties": {
+              "artifact_path": { "type": "string", "pattern": "^artifacts/[A-Za-z0-9._/-]+\\.(md|json|ya?ml)$" },
+              "schema": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "gate_passed" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["step_id", "gate_kind", "route"],
+            "properties": {
+              "step_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "gate_kind": {
+                "enum": [
+                  "schema_sections",
+                  "all_outputs_present",
+                  "checkpoint_selection",
+                  "result_verdict",
+                  "option_count"
+                ]
+              },
+              "route": { "type": "string", "pattern": "^(@complete|@stop|@escalate|@handoff|[a-z0-9-]+)$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "gate_failed" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["step_id", "gate_kind", "failure_reason", "route"],
+            "properties": {
+              "step_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "gate_kind": {
+                "enum": [
+                  "schema_sections",
+                  "all_outputs_present",
+                  "checkpoint_selection",
+                  "result_verdict",
+                  "option_count"
+                ]
+              },
+              "failure_reason": { "type": "string", "minLength": 1 },
+              "route": { "type": "string", "pattern": "^(@complete|@stop|@escalate|@handoff|[a-z0-9-]+)$" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "checkpoint_requested" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["request_path", "checkpoint_kind", "attempt"],
+            "properties": {
+              "request_path": { "type": "string", "pattern": "^checkpoints/[A-Za-z0-9._/{}-]+\\.json$" },
+              "checkpoint_kind": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+              "attempt": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "checkpoint_resolved" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["response_path", "selection", "attempt"],
+            "properties": {
+              "response_path": { "type": "string", "pattern": "^checkpoints/[A-Za-z0-9._/{}-]+\\.json$" },
+              "selection": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "attempt": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "step_reopened" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["from_step", "to_step", "reason"],
+            "properties": {
+              "from_step": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "to_step": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "run_completed" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["status", "terminal_target"],
+            "properties": {
+              "status": { "enum": ["completed", "stopped", "blocked", "handed_off"] },
+              "terminal_target": { "enum": ["@complete", "@stop", "@escalate", "@handoff"] },
+              "diagnostic_path": { "type": "string", "pattern": "^capsules/escalation\\.md$" },
+              "handoff_path": { "type": "string", "pattern": "^handoffs/[A-Za-z0-9._/-]+\\.json$" }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "terminal_target": { "const": "@complete" } } },
+                "then": {
+                  "properties": {
+                    "status": { "const": "completed" }
+                  }
+                }
+              },
+              {
+                "if": { "properties": { "terminal_target": { "const": "@stop" } } },
+                "then": {
+                  "properties": {
+                    "status": { "const": "stopped" }
+                  }
+                }
+              },
+              {
+                "if": { "properties": { "terminal_target": { "const": "@escalate" } } },
+                "then": {
+                  "required": ["diagnostic_path"],
+                  "properties": {
+                    "status": { "const": "blocked" }
+                  }
+                }
+              },
+              {
+                "if": { "properties": { "terminal_target": { "const": "@handoff" } } },
+                "then": {
+                  "required": ["handoff_path"],
+                  "properties": {
+                    "status": { "const": "handed_off" }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

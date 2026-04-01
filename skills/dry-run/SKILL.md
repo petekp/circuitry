@@ -12,7 +12,7 @@ description: >
 # Circuit Dry Run
 
 Validate a circuit skill by instantiating it with one concrete feature, then
-symbolically executing every step. Each step gets a fixed 10-dimension checklist
+symbolically executing every step. Each step gets a fixed 11-dimension checklist
 AND a full simulation of its prompt assembly and worker output. Failures emerge
 from both the systematic checklist and the execution trace.
 
@@ -116,7 +116,7 @@ does not define runtime behavior. When they disagree, cite both files and fail t
 
 ## Fixed Checklist (10 Dimensions)
 
-Run all 10 for every step, in order. Do not stop after the first failure. The point
+Run all 11 for every step, in order. Do not stop after the first failure. The point
 is to surface the full mechanical failure set.
 
 | # | Dimension | What to inspect | PASS condition |
@@ -131,6 +131,7 @@ is to surface the full mechanical failure set.
 | 8 | Action-type consistency | Match between declared action and actual behavior | Interactive → user prompt; dispatch → worker execution (via Codex or Agent); synthesis → orchestrator writes. No interactive skills in autonomous dispatches |
 | 9 | Gate validity | Gate text vs the output schema actually promised by the step | Every gate references concrete sections the schema contains AND every gate outcome maps cleanly to the circuit's next action (continue, reopen, escalate). Loops like "re-run on failure" must have a concrete artifact path and execution contract |
 | 10 | circuit.yaml topology match | Step ids, titles, actions, consumes, produces, parallel markers, execution mode, gate shape | Every runtime step has a matching topology entry with agreeing metadata on ALL fields. Title drift counts as a failure |
+| 11 | Schema validation | circuit.yaml parses as valid YAML and validates against `schemas/circuit-manifest.schema.json` when materialized to v2 format | The materialized manifest passes JSON Schema validation with zero errors. If validation fails, each error is cited with the schema path and failing value |
 
 **N/A handling:** Some dimensions don't apply to all step types. Mark as `N/A` with a
 one-word reason (e.g., "interactive step" for Template contamination). N/A does not
@@ -266,7 +267,7 @@ the check is mechanically verifiable.
 Update the live artifact map. Does the next step's `consumes` match what's now in
 `artifacts/`? Does `circuit.yaml` claim the same edge?
 
-After the simulation loop, fill the 10-row checklist table for the step:
+After the simulation loop, fill the 11-row checklist table for the step:
 
 ```markdown
 #### Checklist Results
@@ -282,6 +283,7 @@ After the simulation loop, fill the 10-row checklist table for the step:
 | Action-type consistency | PASS/FAIL/N/A | ... |
 | Gate validity | PASS/FAIL/N/A | ... |
 | circuit.yaml topology match | PASS/FAIL/N/A | ... |
+| Schema validation | PASS/FAIL/N/A | ... |
 ```
 
 ### Special Step Types
@@ -308,6 +310,32 @@ as a contract surface:
 
 Adapter bugs are often semantic, not just path-based. Example: promoting a convergence
 assessment as though it were an implementation report.
+
+## Schema Validation (Dimension 11)
+
+For circuits that have a `circuit.yaml`, validate it against the v2 manifest schema:
+
+1. Parse `circuit.yaml` as YAML. If parsing fails, the dimension is `FAIL` with the
+   parse error.
+2. Materialize the parsed YAML into v2 manifest format by wrapping it:
+   ```json
+   {
+     "schema_version": "2",
+     "circuit": <parsed circuit.yaml content>
+   }
+   ```
+3. Validate the materialized object against `schemas/circuit-manifest.schema.json`
+   using JSON Schema Draft 2020-12.
+4. If validation passes with zero errors, the dimension is `PASS`.
+5. If validation fails, list each error with its schema path and failing value.
+   The dimension is `FAIL`.
+
+For circuits that do not yet have a `circuit.yaml`, mark this dimension as `N/A`
+with reason "no circuit.yaml present".
+
+This dimension catches structural drift between what a circuit declares and what the
+v2 runtime schema requires: missing required fields, wrong types, invalid patterns
+on step ids, unrecognized gate kinds, and similar contract violations.
 
 ## Targeted Closure Pass
 
@@ -401,7 +429,7 @@ The dry run is complete only when:
 
 - Every step has been traced with concrete paths and artifact names
 - Every dispatch step has a fully simulated prompt assembly (4a-4h)
-- Every step has a filled 10-row checklist table
+- Every step has a filled 11-row checklist table
 - Every gate was checked against a real output schema
 - The artifact chain closes from first artifact to last
 - `circuit.yaml` and `SKILL.md` agree on topology, or every disagreement is logged

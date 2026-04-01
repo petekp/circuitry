@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/entry.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "command",
+    "task_text",
+    "selected_circuit",
+    "selected_mode",
+    "routing_signals",
+    "confidence",
+    "expert_override"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1" },
+    "command": { "type": "string", "minLength": 1 },
+    "task_text": { "type": "string", "minLength": 1 },
+    "selected_circuit": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "selected_mode": { "type": "string", "minLength": 1 },
+    "routing_signals": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "expert_override": { "type": "boolean" },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}
