@@ -113,16 +113,57 @@ export function getEntryModeStart(
 export function walkStepOrder(
   manifest: any,
   startStep: string | null,
+  state?: any,
 ): string[] {
   const steps = buildStepGraph(manifest);
   const stepIds = steps.map((s: any) => s.id as string);
+  const linearOrder = (() => {
+    if (startStep && stepIds.includes(startStep)) {
+      const startIdx = stepIds.indexOf(startStep);
+      return stepIds.slice(startIdx);
+    }
 
-  if (startStep && stepIds.includes(startStep)) {
-    const startIdx = stepIds.indexOf(startStep);
-    return stepIds.slice(startIdx);
+    return stepIds;
+  })();
+
+  const recordedRoutes = state?.routes;
+  if (!recordedRoutes || typeof recordedRoutes !== "object") {
+    return linearOrder;
   }
 
-  return stepIds;
+  if (stepIds.length === 0) {
+    return [];
+  }
+
+  if (startStep && !stepIds.includes(startStep)) {
+    return linearOrder;
+  }
+
+  const routeMap = recordedRoutes as Record<string, string>;
+  if (Object.keys(routeMap).length === 0) {
+    return linearOrder;
+  }
+
+  let currentStep = startStep ?? stepIds[0];
+  const visited = new Set<string>();
+  const traversedSteps: string[] = [];
+
+  while (currentStep && stepIds.includes(currentStep) && !visited.has(currentStep)) {
+    traversedSteps.push(currentStep);
+    visited.add(currentStep);
+
+    const nextStep = routeMap[currentStep];
+    if (!nextStep || nextStep.startsWith("@")) {
+      break;
+    }
+    if (!stepIds.includes(nextStep)) {
+      break;
+    }
+
+    currentStep = nextStep;
+  }
+
+  return traversedSteps;
 }
 
 // ─── Step completeness ───────────────────────────────────────────────
@@ -134,6 +175,11 @@ export function walkStepOrder(
  * We check artifacts, jobs, and checkpoints for completion indicators.
  */
 export function isStepComplete(stepId: string, state: any): boolean {
+  const routes: Record<string, string> = state?.routes ?? {};
+  if (stepId in routes) {
+    return true;
+  }
+
   // Check artifacts produced by this step
   const artifacts: Record<string, any> = state.artifacts ?? {};
   let stepHasArtifacts = false;
@@ -221,7 +267,7 @@ export function findResumePoint(manifest: any, state: any): ResumeResult {
   // Get the entry mode and walk from its start
   const selectedMode: string = state.selected_entry_mode ?? "default";
   const startStep = getEntryModeStart(manifest, selectedMode);
-  const stepOrder = walkStepOrder(manifest, startStep);
+  const stepOrder = walkStepOrder(manifest, startStep, state);
 
   if (stepOrder.length === 0) {
     return {

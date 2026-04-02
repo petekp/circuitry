@@ -139,6 +139,7 @@ describe("deriveState", () => {
       expect((state.git as Record<string, unknown>).head_at_start).toBe(
         "abc1234",
       );
+      expect(state.routes).toEqual({});
     });
   });
 
@@ -255,6 +256,81 @@ describe("deriveState", () => {
       expect(art.gate).toBe("pending");
       expect(state.current_step).toBe("step-one");
       expect(state.status).toBe("in_progress");
+      expect(state.routes).toEqual({});
+    });
+  });
+
+  describe("test_gate_routes_persisted", () => {
+    it("should store pass routes in state", () => {
+      resetTs();
+      const events = [
+        makeEvent("run_started", {
+          manifest_path: "circuit.manifest.yaml",
+          entry_mode: "default",
+          head_at_start: "abc1234",
+        }),
+        makeEvent(
+          "step_started",
+          { step_id: "step-one" },
+          { step_id: "step-one" },
+        ),
+        makeEvent(
+          "artifact_written",
+          { artifact_path: "artifacts/step-one-output.md" },
+          { step_id: "step-one" },
+        ),
+        makeEvent(
+          "gate_passed",
+          {
+            step_id: "step-one",
+            gate_kind: "all_outputs_present",
+            route: "step-two",
+          },
+          { step_id: "step-one" },
+        ),
+      ];
+
+      const state = deriveState(MINIMAL_MANIFEST, events);
+
+      expect(state.routes).toEqual({
+        "step-one": "step-two",
+      });
+    });
+
+    it("should store fail routes in state", () => {
+      resetTs();
+      const events = [
+        makeEvent("run_started", {
+          manifest_path: "circuit.manifest.yaml",
+          entry_mode: "default",
+          head_at_start: "abc1234",
+        }),
+        makeEvent(
+          "step_started",
+          { step_id: "step-one" },
+          { step_id: "step-one" },
+        ),
+        makeEvent(
+          "artifact_written",
+          { artifact_path: "artifacts/step-one-output.md" },
+          { step_id: "step-one" },
+        ),
+        makeEvent(
+          "gate_failed",
+          {
+            step_id: "step-one",
+            gate_kind: "all_outputs_present",
+            route: "@stop",
+          },
+          { step_id: "step-one" },
+        ),
+      ];
+
+      const state = deriveState(MINIMAL_MANIFEST, events);
+
+      expect(state.routes).toEqual({
+        "step-one": "@stop",
+      });
     });
   });
 

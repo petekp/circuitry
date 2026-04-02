@@ -100,6 +100,10 @@
         }
       }
     },
+    "routes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
     "terminal_target": { "type": "string" }
   }
 }

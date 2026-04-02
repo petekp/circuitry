@@ -25,6 +25,8 @@
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "version": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
         "purpose": { "type": "string", "minLength": 1 },
+        "deprecated": { "type": "boolean" },
+        "replaced_by": { "type": "string", "minLength": 1 },
         "entry": { "$ref": "#/$defs/entry" },
         "entry_modes": {
           "type": "object",
@@ -199,7 +201,7 @@
       "required": ["path"],
       "additionalProperties": false,
       "properties": {
-        "path": { "type": "string", "pattern": "^artifacts/[A-Za-z0-9._/{}-]+\\.md$" },
+        "path": { "type": "string", "pattern": "^artifacts/[A-Za-z0-9._/{}-]+\\.(md|json|ya?ml)$" },
         "schema": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" }
       }
     },
@@ -322,18 +324,43 @@
     },
     "verdict": {
       "enum": [
+        "analysis_ready",
+        "audit_complete",
         "clean",
-        "issues_found",
-        "ship_ready",
+        "closed",
+        "coexistence_invalidated",
         "complete_and_hardened",
-        "issues_remain",
-        "design_holds",
-        "needs_adjustment",
-        "design_invalidated",
-        "outputs_ready",
-        "options_ready",
+        "contract_ready",
         "decision_packet_ready",
-        "reviews_complete"
+        "design_holds",
+        "design_invalidated",
+        "drafts_ready",
+        "evidence_sufficient",
+        "issues_found",
+        "issues_remain",
+        "map_complete",
+        "needs_adjustment",
+        "needs_more_exploration",
+        "options_ready",
+        "outputs_ready",
+        "partial",
+        "plan_ready",
+        "pressure_complete",
+        "queue_adjustment_required",
+        "re_envision",
+        "ready",
+        "reopen",
+        "reopen_execute",
+        "reopen_plan",
+        "repair_again",
+        "retriage",
+        "reviews_complete",
+        "revise",
+        "risk_boundary_invalidated",
+        "ship_ready",
+        "stable",
+        "validation_complete",
+        "verification_complete"
       ]
     }
   }

@@ -28,18 +28,43 @@
     "completion": { "enum": ["complete", "partial", "blocked"] },
     "verdict": {
       "enum": [
+        "analysis_ready",
+        "audit_complete",
         "clean",
-        "issues_found",
-        "ship_ready",
+        "closed",
+        "coexistence_invalidated",
         "complete_and_hardened",
-        "issues_remain",
-        "design_holds",
-        "needs_adjustment",
-        "design_invalidated",
-        "outputs_ready",
-        "options_ready",
+        "contract_ready",
         "decision_packet_ready",
-        "reviews_complete"
+        "design_holds",
+        "design_invalidated",
+        "drafts_ready",
+        "evidence_sufficient",
+        "issues_found",
+        "issues_remain",
+        "map_complete",
+        "needs_adjustment",
+        "needs_more_exploration",
+        "options_ready",
+        "outputs_ready",
+        "partial",
+        "plan_ready",
+        "pressure_complete",
+        "queue_adjustment_required",
+        "re_envision",
+        "ready",
+        "reopen",
+        "reopen_execute",
+        "reopen_plan",
+        "repair_again",
+        "retriage",
+        "reviews_complete",
+        "revise",
+        "risk_boundary_invalidated",
+        "ship_ready",
+        "stable",
+        "validation_complete",
+        "verification_complete"
       ]
     },
     "summary": { "type": "string" },
@@ -93,6 +118,30 @@
   },
   "allOf": [
     {
+      "if": { "properties": { "verdict": { "const": "analysis_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "audit_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "closed" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
       "if": { "properties": { "verdict": { "const": "complete_and_hardened" } } },
       "then": {
         "properties": {
@@ -101,39 +150,7 @@
       }
     },
     {
-      "if": { "properties": { "verdict": { "const": "reviews_complete" } } },
-      "then": {
-        "properties": {
-          "completion": { "const": "complete" }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "verdict": { "const": "outputs_ready" } } },
-      "then": {
-        "properties": {
-          "completion": { "const": "complete" }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "verdict": { "const": "ship_ready" } } },
-      "then": {
-        "properties": {
-          "completion": { "const": "complete" }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "verdict": { "const": "design_holds" } } },
-      "then": {
-        "properties": {
-          "completion": { "const": "complete" }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "verdict": { "const": "options_ready" } } },
+      "if": { "properties": { "verdict": { "const": "contract_ready" } } },
       "then": {
         "properties": {
           "completion": { "const": "complete" }
@@ -149,10 +166,208 @@
       }
     },
     {
-      "if": { "properties": { "protocol": { "const": "workers-execute@v1" } } },
+      "if": { "properties": { "verdict": { "const": "design_holds" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["complete_and_hardened", "issues_remain"] }
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "drafts_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "evidence_sufficient" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "map_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "options_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "outputs_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "plan_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "pressure_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "reviews_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "ship_ready" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "stable" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "validation_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "verification_complete" } } },
+      "then": {
+        "properties": {
+          "completion": { "const": "complete" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "adversarial-evaluation@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["decision_packet_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "adversarial-pressure-test@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["pressure_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "category-survey-fanout@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["outputs_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "compile-circuit-files@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["drafts_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "cutover-review@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["ready", "revise"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "design-review@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "envision-ratchet@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["needs_more_exploration", "ready", "retriage"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "evidence-adjudication@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": {
+            "enum": [
+              "evidence_sufficient",
+              "queue_adjustment_required",
+              "risk_boundary_invalidated"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "execution-audit@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["partial", "ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "execution-ratchet@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["partial", "ready", "reopen_plan"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "exploration-fanout@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["outputs_ready"] }
         }
       }
     },
@@ -160,20 +375,30 @@
       "if": { "properties": { "protocol": { "const": "final-review@v1" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["ship_ready", "issues_found"] }
+          "verdict": {
+            "enum": ["issues_found", "partial", "reopen_execute", "ship_ready"]
+          }
         }
       }
     },
     {
-      "if": { "properties": { "protocol": { "const": "seam-proof@v1" } } },
+      "if": { "properties": { "protocol": { "const": "forensic-flow-audit@v1" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["design_holds", "needs_adjustment", "design_invalidated"] }
+          "verdict": { "enum": ["audit_complete", "closed", "partial", "reopen"] }
         }
       }
     },
     {
-      "if": { "properties": { "protocol": { "const": "parallel-evidence-probes@v1" } } },
+      "if": { "properties": { "protocol": { "const": "full-verification@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["verification_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "inventory-probes@v1" } } },
       "then": {
         "properties": {
           "verdict": { "enum": ["outputs_ready"] }
@@ -189,10 +414,10 @@
       }
     },
     {
-      "if": { "properties": { "protocol": { "const": "adversarial-evaluation@v1" } } },
+      "if": { "properties": { "protocol": { "const": "parallel-evidence-probes@v1" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["decision_packet_ready"] }
+          "verdict": { "enum": ["outputs_ready"] }
         }
       }
     },
@@ -201,6 +426,110 @@
       "then": {
         "properties": {
           "verdict": { "enum": ["reviews_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "pattern-mapping@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["analysis_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "plan-ratchet@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["re_envision", "ready", "retriage"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "plan-review@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["plan_ready", "ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "quality-gate@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["validation_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "regression-contract@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["contract_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "seam-proof@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": {
+            "enum": ["design_holds", "design_invalidated", "needs_adjustment"]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "stability-audit@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["audit_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "stabilize-ratchet@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["repair_again", "retriage", "stable"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "system-map-exploration@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["map_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "triage-probes@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["outputs_ready"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "verification-audit@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": { "enum": ["audit_complete"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "workers-execute@v1" } } },
+      "then": {
+        "properties": {
+          "verdict": {
+            "enum": [
+              "coexistence_invalidated",
+              "complete_and_hardened",
+              "issues_remain"
+            ]
+          }
         }
       }
     }

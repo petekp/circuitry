@@ -80,6 +80,7 @@ export function deriveState(
     artifacts: {} as Record<string, Record<string, unknown>>,
     jobs: {} as Record<string, Record<string, unknown>>,
     checkpoints: {} as Record<string, Record<string, unknown>>,
+    routes: {} as Record<string, string>,
   };
 
   // Internal tracking for step completion (not serialized to state.json).
@@ -98,6 +99,7 @@ export function deriveState(
     string,
     Record<string, unknown>
   >;
+  const routes = state.routes as Record<string, string>;
 
   for (const event of events) {
     const eventType = (event.event_type ?? "") as string;
@@ -243,6 +245,9 @@ export function deriveState(
       }
       // Track step completion
       stepCompletion[gateStepId] = { gate_evaluated: true, route };
+      if (route) {
+        routes[gateStepId] = route;
+      }
       state.updated_at = occurredAt;
     }
 
@@ -258,6 +263,9 @@ export function deriveState(
       }
       // A gate_failed with a terminal route still marks the step complete
       stepCompletion[gateStepId] = { gate_evaluated: true, route };
+      if (route) {
+        routes[gateStepId] = route;
+      }
       state.updated_at = occurredAt;
     }
 
@@ -267,6 +275,9 @@ export function deriveState(
       // Reset step completion
       if (toStep in stepCompletion) {
         delete stepCompletion[toStep];
+      }
+      if (toStep in routes) {
+        delete routes[toStep];
       }
       // Mark artifacts produced by the reopened step as stale
       for (const artInfo of Object.values(artifacts)) {

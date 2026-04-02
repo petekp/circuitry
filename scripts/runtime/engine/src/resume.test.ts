@@ -82,6 +82,134 @@ const MINIMAL_MANIFEST = {
   },
 };
 
+const BRANCHED_MANIFEST = {
+  schema_version: "2",
+  circuit: {
+    id: "develop-circuit",
+    version: "2026-04-01",
+    purpose: "Branched circuit for resume routing tests",
+    entry: {
+      signals: { include: ["test_signal"] },
+    },
+    entry_modes: {
+      default: {
+        start_at: "evidence-probes",
+        description: "Default develop path",
+      },
+      "spec-review": {
+        start_at: "spec-intake",
+        description: "Spec review path",
+      },
+    },
+    steps: [
+      {
+        id: "spec-intake",
+        title: "Spec Intake",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "spec-reviews", fail: "@stop" },
+      },
+      {
+        id: "spec-reviews",
+        title: "Spec Reviews",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "caveat-resolution", fail: "@stop" },
+      },
+      {
+        id: "caveat-resolution",
+        title: "Caveat Resolution",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "execution-contract", fail: "@stop" },
+      },
+      {
+        id: "evidence-probes",
+        title: "Evidence Probes",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "constraints", fail: "@stop" },
+      },
+      {
+        id: "constraints",
+        title: "Constraints",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "options", fail: "@stop" },
+      },
+      {
+        id: "options",
+        title: "Options",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "decision-packet", fail: "@stop" },
+      },
+      {
+        id: "decision-packet",
+        title: "Decision Packet",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "tradeoff-decision", fail: "@stop" },
+      },
+      {
+        id: "tradeoff-decision",
+        title: "Tradeoff Decision",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "execution-contract", fail: "@stop" },
+      },
+      {
+        id: "execution-contract",
+        title: "Execution Contract",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "@complete", fail: "@stop" },
+      },
+    ],
+  },
+};
+
+const REROUTE_MANIFEST = {
+  schema_version: "2",
+  circuit: {
+    id: "reroute-circuit",
+    version: "2026-04-01",
+    purpose: "Back-edge routing test circuit",
+    entry: {
+      signals: { include: ["test_signal"] },
+    },
+    entry_modes: {
+      default: {
+        start_at: "step-a",
+        description: "Default mode",
+      },
+    },
+    steps: [
+      {
+        id: "step-a",
+        title: "Step A",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "step-c", fail: "@stop" },
+      },
+      {
+        id: "step-b",
+        title: "Step B",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "@complete", fail: "@stop" },
+      },
+      {
+        id: "step-c",
+        title: "Step C",
+        executor: "orchestrator",
+        kind: "synthesis",
+        routes: { pass: "@complete", fail: "step-b" },
+      },
+    ],
+  },
+};
+
 // ─── Test helpers ────────────────────────────────────────────────────
 
 /** Create a fresh temp directory with the manifest written. */
@@ -109,6 +237,7 @@ function baseState(overrides: Record<string, unknown> = {}): any {
     artifacts: {},
     jobs: {},
     checkpoints: {},
+    routes: {},
     ...overrides,
   };
 }
@@ -239,6 +368,76 @@ describe("TestResume", () => {
 
     const result = findResumePoint(MINIMAL_MANIFEST, state);
     expect(result.resumeStep).toBe("step-one");
+  });
+
+  it("follows recorded route skipping unreachable steps", () => {
+    const state = baseState({
+      status: "in_progress",
+      current_step: "caveat-resolution",
+      selected_entry_mode: "spec-review",
+      artifacts: {
+        "artifacts/spec-intake.md": {
+          status: "complete",
+          gate: "pass",
+          produced_by: "spec-intake",
+        },
+        "artifacts/spec-reviews.md": {
+          status: "complete",
+          gate: "pass",
+          produced_by: "spec-reviews",
+        },
+        "artifacts/caveat-resolution.md": {
+          status: "complete",
+          gate: "pass",
+          produced_by: "caveat-resolution",
+        },
+      },
+      routes: {
+        "spec-intake": "spec-reviews",
+        "spec-reviews": "caveat-resolution",
+        "caveat-resolution": "execution-contract",
+      },
+    });
+
+    const result = findResumePoint(BRANCHED_MANIFEST, state);
+    expect(result.resumeStep).toBe("execution-contract");
+    expect(walkStepOrder(BRANCHED_MANIFEST, "spec-intake", state)).toEqual([
+      "spec-intake",
+      "spec-reviews",
+      "caveat-resolution",
+      "execution-contract",
+    ]);
+  });
+
+  it("follows reroute path", () => {
+    const state = baseState({
+      status: "in_progress",
+      current_step: "step-c",
+      artifacts: {
+        "artifacts/step-a.md": {
+          status: "complete",
+          gate: "pass",
+          produced_by: "step-a",
+        },
+        "artifacts/step-c.md": {
+          status: "complete",
+          gate: "fail",
+          produced_by: "step-c",
+        },
+      },
+      routes: {
+        "step-a": "step-c",
+        "step-c": "step-b",
+      },
+    });
+
+    const result = findResumePoint(REROUTE_MANIFEST, state);
+    expect(result.resumeStep).toBe("step-b");
+    expect(walkStepOrder(REROUTE_MANIFEST, "step-a", state)).toEqual([
+      "step-a",
+      "step-c",
+      "step-b",
+    ]);
   });
 });
 
@@ -543,6 +742,21 @@ describe("walkStepOrder", () => {
   it("returns all steps for unknown start", () => {
     const order = walkStepOrder(MINIMAL_MANIFEST, "nonexistent");
     expect(order).toEqual(["step-one", "step-two", "step-three"]);
+  });
+
+  it("falls back to linear order when no state is provided", () => {
+    const order = walkStepOrder(BRANCHED_MANIFEST, "spec-intake");
+    expect(order).toEqual([
+      "spec-intake",
+      "spec-reviews",
+      "caveat-resolution",
+      "evidence-probes",
+      "constraints",
+      "options",
+      "decision-packet",
+      "tradeoff-decision",
+      "execution-contract",
+    ]);
   });
 });
 

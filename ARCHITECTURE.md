@@ -1361,6 +1361,21 @@ When `circuit:develop` executes for a feature called
       archive/
 ```
 
+### Coexistence: Workers Stack and v2 Manifests
+
+Circuit manifests declare `jobs/{step_id}-{attempt}/dispatch-request.json`,
+`dispatch-receipt.json`, and `job-result.json` paths per the v2 schema
+contracts. The workers stack (SKILL.md prose and `scripts/relay/` scripts)
+still operates on `batch.json` plus `reports/*` artifacts.
+
+This is expected. Per Decision 5 (retained dispatch prose), SKILL.md prose
+remains the active execution guide. The manifest job paths become active
+when a v2 engine reads `circuit.yaml` directly and drives
+dispatch/receipt/result lifecycle without SKILL.md prose.
+
+**Exit condition**: Remove this note when the v2 engine consumes manifests
+and the workers stack produces `job-result.json` files.
+
 ### Data Flow Summary
 
 ```
