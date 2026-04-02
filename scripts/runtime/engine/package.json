@@ -1,0 +1,29 @@
+{
+  "name": "@circuitry/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "circuitry-append-event": "dist/cli/append-event.js",
+    "circuitry-derive-state": "dist/cli/derive-state.js",
+    "circuitry-resume": "dist/cli/resume.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "bundle": "node esbuild.config.mjs",
+    "prepare": "tsc && node esbuild.config.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  }
+}
