@@ -25,13 +25,32 @@ claude plugin install petekp/circuitry
 Then run it:
 
 ```
-/circuit add a dark mode toggle that persists to localStorage
+/circuit evaluate CRDTs vs OT vs polling for real-time document sync
 ```
 
-That's it. Circuitry classifies your task, shows you its plan, and runs the
-appropriate workflow.
+That's it. Circuitry classifies your task, picks the right workflow, and runs it.
 
 ## How It Works
+
+The task above triggers a **crucible** -- three competing approaches developed,
+pressure-tested, and converged into one hardened proposal:
+
+```
+  Frame ──────────▶ Diverge ─────────▶ Explore ──────────▶ Converge
+    │                  │                   │                   │
+  problem brief     3 workers           adversarial        select best,
+  (you confirm      develop competing   review + revise,   absorb ideas
+   scope)           approaches          then stress-test   from the rest,
+                                        each one           pre-mortem
+                       │                   │                   │
+                   deep-research        gate: every        gate: every
+                   injected per         weakness           pre-mortem risk
+                   worker               addressed          mitigated
+```
+
+Not every task triggers a tournament. A bug fix gets scoped, tested, and fixed.
+A feature build starts with research. An architecture decision gets adversarial
+evaluation. Circuitry picks the workflow that fits:
 
 1. **Triage classifies your task.** Circuitry matches your task description to
    one of seven workflows: quick fix, full feature, architecture decision, spec

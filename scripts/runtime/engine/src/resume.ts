@@ -1,5 +1,5 @@
 /**
- * Find the resume point for a Circuitry v2 run.
+ * Find the resume point for a Circuitry run.
  *
  * Library module -- exports pure functions, no CLI concerns.
  * Loads the manifest and state, walks steps in graph order,
@@ -237,7 +237,7 @@ export function isStepComplete(stepId: string, state: any): boolean {
 
 // ─── Resume point ────────────────────────────────────────────────────
 
-export interface ResumeResult {
+interface ResumeResult {
   resumeStep: string | null;
   status: string;
   reason: string;

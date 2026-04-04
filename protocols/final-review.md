@@ -9,8 +9,8 @@ severity, and issues a SHIP-READY or ISSUES FOUND verdict. The worker does NOT
 modify source code -- if issues are found, the orchestrator handles remediation
 separately before re-running the review.
 
-Circuits that use this protocol: `develop` (Step 10), `ratchet-quality`
-(Step 16), `harden-spec` (Step 10, as plan review), `cleanup` (Step 7).
+Circuits that use this protocol: `run` (adversarial Step 10, spec-review
+Step 9), `cleanup` (Step 7).
 
 ## Prerequisites
 
@@ -126,15 +126,12 @@ Circuit-specific variants exist:
 
 | Circuit | Review artifact | Variant sections |
 |---------|----------------|-----------------|
-| `develop` | `ship-review.md` | Standard schema above |
-| `ratchet-quality` | `final-review.md` | Scope Reviewed, Review Coverage, Findings By Severity, Deferred Debt, Blockers, Verdict, Ready Means, Reopen Decision |
-| `harden-spec` | `plan-review.md` | Plan Strengths, Blocking Gaps, Sequence Risks, Missing Verification, Approval Conditions, Verdict: READY / REVISE |
+| `run` (adversarial) | `ship-review.md` | Standard schema above |
+| `run` (spec-review) | `ship-review.md` | Standard schema above |
 | `cleanup` | `verification-audit.md` | Build Result, Test Result, Verify Result, Warning Delta, Diff Sanity Check, Manifest Cross-Check, Candidate Verdict |
 
 The verdict vocabulary also varies:
-- `develop`: `SHIP-READY` / `ISSUES FOUND`
-- `ratchet-quality`: `ship_ready` / `partial` / `reopen_execute`
-- `harden-spec`: `READY` / `REVISE`
+- `run`: `SHIP-READY` / `ISSUES FOUND`
 - `cleanup`: `CLEAN` / `ISSUES FOUND`
 
 ## Verdict Handling

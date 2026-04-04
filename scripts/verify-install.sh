@@ -64,7 +64,7 @@ fi
 section "Engine CLIs"
 
 bin_dir="$PLUGIN_ROOT/scripts/runtime/bin"
-for cli_name in append-event derive-state resume; do
+for cli_name in append-event catalog-compiler derive-state resume; do
   cli_path="$bin_dir/${cli_name}.js"
   if [[ -f "$cli_path" ]]; then
     pass "engine CLI: ${cli_name}"
@@ -118,34 +118,20 @@ fi
 # ── 5. Skill directories ─────────────────────────────────────────────
 section "Skill directories"
 
-EXPECTED_SKILLS=(
-  workers
-  cleanup
-  create
-  decide
-  develop
-  run
-  dry-run
-  harden-spec
-  migrate
-  ratchet-quality
-  repair-flow
-  router
-  setup
-)
-
-for skill in "${EXPECTED_SKILLS[@]}"; do
-  skill_dir="$PLUGIN_ROOT/skills/$skill"
-  if [[ -d "$skill_dir" ]]; then
-    if [[ -f "$skill_dir/SKILL.md" ]]; then
-      pass "$skill/"
-    else
-      warn "$skill/ exists but missing SKILL.md"
-    fi
+skill_count=0
+while IFS= read -r -d '' skill_dir; do
+  skill="$(basename "$skill_dir")"
+  if [[ -f "$skill_dir/SKILL.md" ]]; then
+    pass "$skill/"
+    skill_count=$((skill_count + 1))
   else
-    fail "$skill/ not found"
+    warn "$skill/ exists but missing SKILL.md"
   fi
-done
+done < <(find "$PLUGIN_ROOT/skills" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+
+if [[ $skill_count -eq 0 ]]; then
+  fail "no skill directories found in $PLUGIN_ROOT/skills"
+fi
 
 # ── 6. Relay scripts ─────────────────────────────────────────────────
 section "Relay scripts"

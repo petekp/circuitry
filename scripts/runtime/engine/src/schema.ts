@@ -50,7 +50,7 @@ export function loadJsonSchema(relativePath: string): object {
  * the default export as a namespace rather than a class/function, but
  * at runtime the constructor and function are available as expected.
  */
-export function createValidator() {
+function createValidator() {
   // @ts-expect-error -- CJS/ESM interop: constructor exists at runtime
   const ajv = new Ajv2020({ allErrors: true });
   // @ts-expect-error -- CJS/ESM interop: function exists at runtime

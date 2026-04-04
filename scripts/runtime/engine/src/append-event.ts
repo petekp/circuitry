@@ -1,5 +1,5 @@
 /**
- * Append a typed event to events.ndjson for a Circuitry v2 run.
+ * Append a typed event to events.ndjson for a Circuitry run.
  *
  * Library module -- exports pure functions, no CLI concerns.
  */
@@ -21,7 +21,7 @@ export function loadEventSchema(): object {
  * Read circuit_id and run_id from the run root's state.json or
  * circuit.manifest.yaml.  Falls back to directory name for run_id.
  */
-export function readRunIdentity(runRoot: string): {
+function readRunIdentity(runRoot: string): {
   circuitId: string;
   runId: string;
 } {

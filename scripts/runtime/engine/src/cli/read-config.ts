@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node read-config.js --key roles.implementer --fallback auto
- *   node read-config.js --key dispatch.per_circuit.develop --fallback ""
+ *   node read-config.js --key dispatch.per_circuit.run --fallback ""
  *
  * Searches for circuit.config.yaml in:
  *   1. Current working directory

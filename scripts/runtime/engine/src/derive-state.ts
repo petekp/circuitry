@@ -1,11 +1,10 @@
 /**
- * Rebuild state.json from events.ndjson for a Circuitry v2 run.
+ * Rebuild state.json from events.ndjson for a Circuitry run.
  *
  * Library module -- exports pure functions, no CLI concerns.
  *
  * The core function is `deriveState(manifest, events)` which implements
- * the deterministic projection f(events) -> state as specified in
- * Section 5 of the v2 architecture spec.
+ * the deterministic projection f(events) -> state.
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";

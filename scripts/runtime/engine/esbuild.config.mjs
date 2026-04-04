@@ -2,6 +2,7 @@ import { build } from "esbuild";
 
 const ENTRY_POINTS = [
   "src/cli/append-event.ts",
+  "src/cli/catalog-compiler.ts",
   "src/cli/derive-state.ts",
   "src/cli/resume.ts",
 ];

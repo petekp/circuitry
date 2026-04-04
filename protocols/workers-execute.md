@@ -8,9 +8,8 @@ and synthesizing the parent artifact from workers output. Use this protocol
 whenever a circuit step delegates its implementation phase to the `workers`
 skill for an implement -> review -> converge cycle.
 
-Circuits that use this protocol: `develop` (Step 9), `run` (Step 3),
-`repair-flow` (Step 7), `ratchet-quality` (Steps 3, 13, 15), `cleanup`
-(Step 6).
+Circuits that use this protocol: `run` (quick/researched Step 3, adversarial
+Step 9), `cleanup` (Step 6).
 
 ## Prerequisites
 
@@ -41,10 +40,8 @@ Workers creates its own internal directories (like `review-findings/`,
 read these -- they are worker-private state.
 
 Some circuits use variant child root paths:
-- `ratchet-quality` Step 3: `${RUN_ROOT}/phases/step-3/attempts/<attempt-id>`
-- `ratchet-quality` Step 13: `${RUN_ROOT}/phases/step-13/batches/<batch-id>`
-- `ratchet-quality` Step 15: `${RUN_ROOT}/phases/step-15/repairs/<repair-id>`
 - `cleanup` Step 6: `${RUN_ROOT}/phases/step-6/batches/<batch-id>`
+- `run` ratchet mode: `${RUN_ROOT}/phases/<step>/batches/<batch-id>`
 
 The directory layout is identical regardless of path depth.
 
@@ -55,10 +52,8 @@ mapping depends on the circuit:
 
 | Circuit | Source artifact | Mapping |
 |---------|---------------|---------|
-| `develop` | `execution-packet.md` | Direct copy |
-| `run` | `scope-confirmed.md` | Translate scope sections to charter fields |
-| `repair-flow` | `repair-packet.md` + `regression-contract.md` | Concatenate |
-| `ratchet-quality` | Step-specific charter (varies by step) | Per-step schema |
+| `run` (quick/researched) | `scope-confirmed.md` | Translate scope sections to charter fields |
+| `run` (adversarial) | `execution-packet.md` | Direct copy |
 | `cleanup` | Per-batch manifest | Batch Items, Evidence References, Allowed File Scope, Verification Commands, Revert Rule |
 
 The charter is the single source of truth for the workers loop. Everything the
@@ -201,10 +196,8 @@ The parent artifact schema varies by circuit:
 
 | Circuit | Parent artifact | Key sections |
 |---------|----------------|-------------|
-| `develop` | `implementation-handoff.md` | What Was Built, Tests Run, Convergence Verdict, Open Issues |
-| `run` | `execution-handoff.md` | What Was Built, Tests Run, Convergence Verdict, Open Issues |
-| `repair-flow` | `repair-handoff.md` | Slices Implemented, Files Touched, Tests Added, Verification, Residual Risks, Verdict |
-| `ratchet-quality` | Varies by step | Step-specific schema from the circuit's SKILL.md |
+| `run` (quick/researched) | `implementation-handoff.md` | What Was Built, Tests Run, Convergence Verdict, Open Issues |
+| `run` (adversarial) | `implementation-handoff.md` | What Was Built, Tests Run, Convergence Verdict, Open Issues |
 | `cleanup` | `cleanup-batches.md` (appended per batch) | Items, Verification, Disposition |
 
 ## Gate
@@ -242,8 +235,7 @@ circuits, or abort).
 
 ### Retry and Revert
 
-- Retry budgets are circuit-specific. `ratchet-quality` uses per-batch
-  budgets from `execution-charter.md`. Other circuits typically allow 1-2
+- Retry budgets are circuit-specific. Circuits typically allow 1-2
   full workers dispatches per step.
 - Revert means `git reset --hard <baseline-commit>` for the allowed file
   scope. The baseline commit should be recorded in CHARTER.md under

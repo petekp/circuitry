@@ -8,8 +8,8 @@ structured evidence digest. The workers run in parallel when the backend
 supports it. The orchestrator verifies all outputs exist and promotes them to
 the artifact chain.
 
-Circuits that use this protocol: `develop` (Step 2), `harden-spec`
-(Steps 3-5), `ratchet-quality` (Steps 2 and 6), `cleanup` (Step 2).
+Circuits that use this protocol: `run` (researched Step 2, adversarial
+Step 2, spec-review Steps 3-5), `cleanup` (Step 2).
 
 ## Prerequisites
 
@@ -34,10 +34,8 @@ mkdir -p "${STEP_ROOT}/<worker-id>/reports" "${STEP_ROOT}/<worker-id>/last-messa
 ```
 
 Examples of worker id schemes:
-- `develop` Step 2: `step-2a` (external), `step-2b` (internal)
-- `harden-spec` Steps 3-5: `step-3`, `step-4`, `step-5` (each is a separate
-  dispatch step that runs in parallel with the others)
-- `ratchet-quality` Step 2: `baseline`, `quality`, `backlog`
+- `run` researched/adversarial Step 2: `step-2a` (external), `step-2b` (internal)
+- `run` spec-review Steps 3-5: `sr-3a`, `sr-3b`, `sr-3c` (parallel review workers)
 - `cleanup` Step 2: `dead-code`, `stale-docs`, `orphaned-artifacts`,
   `vestigial-comments`, `redundant-abstractions`
 
@@ -81,7 +79,7 @@ do not read each other's output.
 
 ## Evidence Digest Schema
 
-The standard evidence digest format used by `develop` Step 2:
+The standard evidence digest format used by `run` researched/adversarial Step 2:
 
 ```markdown
 # Evidence Digest: <topic>
@@ -96,10 +94,8 @@ Not all circuits use this exact schema. Circuit-specific variants:
 
 | Circuit | Workers | Output schema |
 |---------|---------|--------------|
-| `develop` | External research, internal system surface | Evidence digest (above) |
-| `harden-spec` | Implementer review, systems review, comparative review | Per-review schemas (buildability, boundaries, comparisons) |
-| `ratchet-quality` Step 2 | Baseline, quality calibration, backlog | Domain-specific schemas with stable ids (`BA-*`, `QB-*`, etc.) |
-| `ratchet-quality` Step 6 | Inside-out, outside-in | System shape / external exemplars schemas |
+| `run` (researched/adversarial) | External research, internal system surface | Evidence digest (above) |
+| `run` (spec-review) | Implementer review, systems review, comparative review | Per-review schemas (buildability, boundaries, comparisons) |
 | `cleanup` Step 2 | 5 category workers | Findings table with confidence and uncertainty columns |
 
 The common thread: every probe output must distinguish confirmed facts from

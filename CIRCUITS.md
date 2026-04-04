@@ -85,12 +85,35 @@ independent review.
 **Quick.** Scope the task, confirm with you, implement with independent review,
 done. For clear tasks with a known approach.
 
+```
+  Triage ───▶ Scope ───▶ Confirm ───▶ Implement ───▶ Summarize
+                            │              │
+                        checkpoint      workers
+                        (you confirm    build + review
+                         the plan)      in separate sessions
+                                           │
+                                       tdd injected
+                                       when tests apply
+```
+
 > Example: `/circuit add pagination to the user list`. Triage classifies this
 > as a feature build. The circuit scopes the change, shows you the plan, runs
 > implementation with independent review, and produces a done summary.
 
 **Researched.** Gather external and internal evidence in parallel, synthesize
 constraints, then scope and implement. For features that need investigation first.
+
+```
+  Triage ───▶ Evidence ───▶ Constraints ───▶ Scope ───▶ Confirm ───▶ Implement ───▶ Review ───▶ Done
+                 │               │                         │              │              │
+             2 parallel      synthesis                 checkpoint      workers       separate
+             workers:        from both                 (you confirm    build it      session
+             external +      digests                    the plan)                    reviews
+             internal            │                                        │
+                │            gate: hard                                tdd, clean-
+            deep-research    invariants +                              architecture
+            injected         seams present                             injected
+```
 
 > Example: `/circuit develop: real-time notifications`. The circuit researches
 > delivery mechanisms, audits the existing architecture, synthesizes constraints,
@@ -99,6 +122,19 @@ constraints, then scope and implement. For features that need investigation firs
 **Adversarial.** Full evidence gathering, then generate distinct options,
 pressure-test each through adversarial evaluation, and present a decision packet.
 For architecture decisions where the wrong choice is expensive.
+
+```
+  Triage ──▶ Evidence ──▶ Constraints ──▶ Options ──▶ Decision ──▶ Preflight ──▶ Implement ──▶ Ship Review ──▶ Done
+                │              │              │           │             │              │              │
+            2 parallel     synthesis      generate     you choose   prove seams    workers       separate
+            research       from both      distinct     from the     compile        build it      session
+            workers        digests        options      packet       before code                  reviews
+                │                             │           │             │              │
+            deep-research                 gate:       checkpoint   gate: seam     tdd, clean-
+            injected                      tradeoff    (you pick    proof passes   architecture
+                                          matrix      an option)                  injected
+                                          present
+```
 
 > Example: `/circuit decide: should we use WebSockets or SSE for real-time
 > updates?`. The circuit gathers evidence, generates distinct options with
@@ -120,8 +156,46 @@ quality bar, then run autonomous improvement batches.
 
 **Crucible.** Adversarial tournament. Multiple approaches compete head-to-head.
 
-> Example: `/circuit decide:` with three competing designs. Each gets built to
-> proof-of-concept, then they're evaluated against each other.
+```
+  ┌─ Frame ─────────────────────────────────────────────────────────┐
+  │  Produce a structured problem brief.                            │
+  │  You confirm scope, constraints, and exclusions.                │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  gate: problem statement present
+                             ▼
+  ┌─ Diverge ───────────────────────────────────────────────────────┐
+  │  Three workers develop competing approaches in parallel.        │
+  │  Each commits to a different stance: simplicity, robustness,    │
+  │  or extensibility.                                              │
+  │  skills: deep-research, solution-explorer                       │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  gate: 3 proposals with all sections
+                             ▼
+  ┌─ Explore ───────────────────────────────────────────────────────┐
+  │  Each proposal reviewed by an adversary, then revised by its    │
+  │  original author to address every weakness.                     │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  gate: every weakness addressed
+                             ▼
+  ┌─ Stress-test ───────────────────────────────────────────────────┐
+  │  Red-team attack: seam failures, scale pressure, dependency     │
+  │  failure, assumption inversion, time decay.                     │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  gate: attack surface documented
+                             ▼
+  ┌─ Converge + Harden + Select ────────────────────────────────────┐
+  │  Select the strongest. Absorb the best ideas from the rest.     │
+  │  Pre-mortem: assume it failed six months ago -- explain why.     │
+  │  Final proposal addresses every identified risk.                │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  gate: every risk mitigated or accepted
+                             ▼
+                     final-proposal.md
+```
+
+> Example: `/circuit evaluate three caching strategies for the API layer`.
+> Each approach is developed to full proposal, reviewed by an adversary,
+> stress-tested, and the strongest survives with ideas absorbed from the rest.
 
 **Artifact chains** show the files each workflow writes as it progresses. Each
 one must exist before the next step starts. See
