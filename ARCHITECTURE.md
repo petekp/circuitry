@@ -1,9 +1,9 @@
 # Circuit Architecture
 
 This document explains the design of the circuit system: why it exists, how its
-pieces fit together, and what you need to understand to extend it. It is written
-for an experienced engineer who wants to build new circuits or modify existing
-ones, not someone looking for a quick-start guide.
+pieces fit together, and what you need to understand to extend it. If you're
+looking for a quick-start guide, see [README.md](README.md). This is for
+engineers who want to understand the internals or build new circuits.
 
 The system solves a specific problem: **how do you make an AI agent
 reliably complete multi-phase engineering work across session boundaries, with
@@ -23,7 +23,7 @@ Circuits are the structural answer to all three failure modes.
 5. [Relay Infrastructure](#relay-infrastructure)
 6. [Circuit Composition](#circuit-composition)
 7. [Capability Resolution](#capability-resolution)
-8. [The Supergraph Architecture](#the-supergraph-architecture)
+8. [The Unified Graph](#the-unified-graph)
 9. [Extending the System](#extending-the-system)
 
 ---
@@ -61,7 +61,7 @@ during execution.
 ### What Happens When They Drift
 
 When the two files disagree, the circuit is mechanically broken. This is not a
-documentation nit -- it is the workflow equivalent of a type signature diverging
+documentation nit. It is the workflow equivalent of a type signature diverging
 from its implementation.
 
 Consider a concrete case: `circuit.yaml` says a step has a `result_verdict`
@@ -71,7 +71,7 @@ verdict routing, but the actual execution would skip the routing logic entirely.
 The circuit would silently continue past failures that should trigger upstream
 repair.
 
-Cross-validation between the two files is not optional -- it is a required step
+Cross-validation between the two files is not optional. It is a required step
 in both authoring and validation.
 
 ### The `circuit:` Prefix Convention
@@ -123,7 +123,7 @@ triage-result.md          [triage, synthesis]
   -> done.md              [summarize, synthesis]
 ```
 
-This is not a suggestion -- it is a contract. The `execution-contract` step
+This is not a suggestion. It is a contract. The `execution-contract` step
 cannot begin until `tradeoff-decision` has written `adr.md`. The `implement`
 step reads `execution-packet.md` and nothing else from the decision phase. The
 artifact chain is the workflow's dependency graph made explicit.
@@ -137,10 +137,10 @@ limits at any point. If progress lives only in the chat thread, a dead session
 means starting over. With artifacts on disk, a new session scans the artifact
 directory and resumes from the first missing file.
 
-**Context overflow.** A 43-step supergraph generates far more content than fits
+**Context overflow.** A 43-step workflow graph generates far more content than fits
 in a single context window. The artifact chain means each step only needs to
 read its declared inputs, not the entire history. The `ship-review` step reads
-`execution-packet.md` and `implementation-handoff.md` -- not the hundreds of
+`execution-packet.md` and `implementation-handoff.md`, not the hundreds of
 lines from upstream evidence gathering.
 
 **Truthfulness.** Workers sometimes claim completion without actually finishing.
@@ -227,7 +227,7 @@ single worker could not.
 
 The orchestrator works directly with the user at a decision point. Checkpoint
 steps produce an artifact that records the user's choice. They exist where
-human judgment is required -- choosing tradeoffs, confirming scope, setting
+human judgment is required: choosing tradeoffs, confirming scope, setting
 quality bars.
 
 From `run`, the `confirm` step:
@@ -245,7 +245,7 @@ The orchestrator writes a prompt header, assembles the full prompt using
 `compose-prompt.sh`, and dispatches the work to a worker via `dispatch.sh`.
 The backend is auto-detected: Codex CLI when installed, Claude Code's Agent
 tool (with worktree isolation) otherwise. The orchestrator does not do the
-work itself -- it composes the instructions and reads the result.
+work itself. It composes the instructions and reads the result.
 
 The dispatch pipeline:
 
@@ -430,7 +430,7 @@ Special route targets:
 - **`@stop`**: Terminate the run (used for companion circuit redirects).
 
 The runtime engine reads routes to determine the next step after a gate passes.
-This is the mechanism that enables the supergraph: different routes from the
+This is the mechanism that enables the unified graph: different routes from the
 same step lead to entirely different paths through the graph.
 
 ### The Circuit Breaker Pattern
@@ -448,7 +448,7 @@ From `run`:
 
 Circuit breakers also handle task misrouting. The `run` circuit's triage step
 can redirect tasks to companion circuits (`cleanup`, `migrate`) when the task
-signals don't fit the main supergraph.
+signals don't fit the main graph.
 
 ---
 
@@ -527,7 +527,7 @@ confirms dispatch with a PID.
 
 ### `update-batch.sh`: Deterministic State Machine
 
-This script manages `batch.json` -- the state file that tracks every slice in a
+This script manages `batch.json`, the state file that tracks every slice in a
 `workers` run. The key design principle: **the orchestrator never
 hand-edits `batch.json`**. All mutations go through this script.
 
@@ -573,7 +573,7 @@ well-defined interfaces.
 
 ### How Circuits Call `workers` as an Adapter
 
-The `workers` skill is not a circuit -- it is an adapter. Circuits delegate
+The `workers` skill is not a circuit. It is an adapter. Circuits delegate
 their implementation-heavy steps to `workers`, which handles the
 plan-implement-review-converge loop.
 
@@ -606,10 +606,10 @@ files and must not depend on worker-internal state.
 
 **Worker-private (parent circuits must not read or depend on):**
 
-- `batch.json` -- internal state machine managed by `update-batch.sh`
-- `plan.json` -- internal planning state
-- `events.ndjson` -- internal event log for recovery
-- `review-findings/` -- internal review worker output
+- `batch.json`: internal state machine managed by `update-batch.sh`
+- `plan.json`: internal planning state
+- `events.ndjson`: internal event log for recovery
+- `review-findings/`: internal review worker output
 
 This boundary exists because worker internals are an implementation detail
 that may change. The public contract files expose the same information in a
@@ -618,8 +618,7 @@ stable format designed for parent consumption.
 ### How Triage Routes Tasks
 
 The `run` circuit's triage step classifies tasks and routes them to the
-appropriate workflow path. Triage replaces the standalone router that existed
-in earlier versions.
+appropriate workflow path.
 
 Triage classification:
 
@@ -637,11 +636,11 @@ Triage classification:
 Companion circuit redirects use `@stop` routes. The triage step writes a
 redirect note and tells the user to invoke the companion circuit directly.
 
-### Domain Skills as Optional Companions
+### Domain Skills as Companions
 
-Domain skills (`rust`, `swift-apps`, `tdd`) are not bundled into circuits.
-They are composed at dispatch time through capability resolution and injected
-via `--skills`:
+Domain skills (`rust`, `swift-apps`, `tdd`) are separate from circuits. They are
+composed at dispatch time through capability resolution and injected via
+`--skills`:
 
 ```bash
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
@@ -666,7 +665,7 @@ This design has several advantages:
 ## Capability Resolution
 
 Circuits do not reference skills by name in their topology. Instead, each
-dispatch step declares the *capabilities* it needs -- semantic descriptors
+dispatch step declares the *capabilities* it needs, semantic descriptors
 like `testing.tdd`, `code.change`, or `review.independent`. At dispatch time,
 the resolution layer maps those capabilities to concrete installed skills.
 
@@ -724,32 +723,28 @@ the engine built-ins.
 
 ---
 
-## The Supergraph Architecture
+## The Unified Graph
 
-Circuitry v3 collapsed 14 circuits into 4 using a supergraph model. The
-primary `run` circuit contains 43 steps organized into 7 workflow paths that
-share common steps where their flows converge.
+Circuitry uses a unified graph model: 3 circuits and 2 utilities sharing common
+infrastructure. The primary `run` circuit contains 43 steps organized into 7
+workflow paths that share steps where their flows converge.
 
-### Why a Supergraph
+### Why a Unified Graph
 
-The pre-v3 system had 14 separate circuits, each with its own `circuit.yaml`
-and `SKILL.md`. This caused several problems:
+A naive approach would give each workflow its own circuit. But workflows like
+quick, researched, and adversarial all share steps (evidence gathering, scoping,
+implementation, review). Duplicating those steps across separate circuits creates
+maintenance problems: a fix in the workers adapter would need updating in every
+circuit that uses it, and shared steps would drift over time.
 
-- **Redundancy.** The implement-review-converge pattern was duplicated across
-  6 circuits. A bug fix in the workers adapter needed updating in 6 places.
-- **Triage overhead.** A standalone router skill had to classify tasks and
-  redirect to the right circuit. Classification errors meant starting over.
-- **Shared path drift.** Circuits that should have shared steps (like evidence
-  probes) evolved independently, creating subtle behavioral differences.
-
-The supergraph solves these by encoding all paths in a single graph with shared
+The unified graph solves this by encoding all paths in a single graph with shared
 nodes. The `implement` step, for example, is used by quick, researched,
 adversarial, and spec-review paths. It exists once, with routes that branch
 based on mode context.
 
 ### How Paths Share Steps
 
-The supergraph uses entry modes and routes to create distinct paths through
+The graph uses entry modes and routes to create distinct paths through
 shared infrastructure:
 
 ```
@@ -816,21 +811,22 @@ all start at `triage`) are differentiated by triage classification. Entry modes
 with unique start points (spec-review, ratchet, crucible) enter at their own
 subgraph and may never touch the shared triage/scope/implement path.
 
-### The Four Circuits
+### Three Circuits and Two Utilities
 
-| Circuit | Steps | Entry modes | Purpose |
-|---------|-------|-------------|---------|
-| `run` | 43 | 7 (default, quick, researched, adversarial, spec-review, ratchet, crucible) | Primary supergraph. Handles most tasks. |
-| `cleanup` | 8 | 2 (default, auto) | Systematic dead code and cruft removal with evidence gates. |
-| `migrate` | 7 | 1 (default) | Large-scale migrations with coexistence plans and rollback. |
-| `workers` | -- | -- | Utility skill: dispatch backbone, not a standalone circuit. |
+| Name | Type | Steps | Entry modes | Purpose |
+|------|------|-------|-------------|---------|
+| `run` | Circuit | 43 | 7 (default, quick, researched, adversarial, spec-review, ratchet, crucible) | Primary workflow graph. Handles most tasks. |
+| `cleanup` | Circuit | 8 | 2 (default, auto) | Systematic dead code and cruft removal with evidence gates. |
+| `migrate` | Circuit | 7 | 1 (default) | Large-scale migrations with coexistence plans and rollback. |
+| `workers` | Utility | n/a | n/a | Dispatch backbone for all circuit implementation steps. |
+| `handoff` | Utility | n/a | n/a | Session state persistence for cross-session continuity. |
 
 Companion circuits (`cleanup`, `migrate`) are reached by triage redirect or
 direct invocation. They have specialized topologies that don't fit the
-supergraph's structure (cleanup has a 5-category parallel survey; migrate has
-a coexistence plan artifact that the supergraph doesn't model).
+main graph's structure (cleanup has a 5-category parallel survey; migrate has
+a coexistence plan artifact that the main graph doesn't model).
 
-### The `circuit.yaml` v2 Schema
+### The `circuit.yaml` Schema
 
 ```yaml
 schema_version: "2"
@@ -888,16 +884,6 @@ circuit:
         outcome: next-step-id
         fail: "@escalate"
 ```
-
-Key differences from v1:
-- `steps:` is a flat list (was nested under `phases:`)
-- `executor` + `kind` (was `action`)
-- `reads:` / `writes:` (was `consumes:` / `produces:`)
-- `gate.kind:` (was `gate.type:`)
-- `routes:` on the step (was outcomes in the gate)
-- `capabilities:` / `budgets:` per step
-- `entry_modes:` for supergraph path selection
-- `reroute:` for conditional upstream routing
 
 ---
 
@@ -962,17 +948,32 @@ circuitry/
       dispatch.sh             # Backend-agnostic worker dispatch
       update-batch.sh         # Deterministic batch.json state machine
     runtime/
+      bin/
+        append-event.js       # Bundled CLIs (committed, no build step needed)
+        catalog-compiler.js
+        derive-state.js
+        resume.js
       engine/
         src/
+          append-event.ts     # Event log append
           derive-state.ts     # State derivation from event log
           resume.ts           # Resume logic
+          schema.ts           # Shared JSON-Schema validation
+          catalog/
+            types.ts          # CatalogEntry types (shared contract)
+            extract.ts        # Filesystem -> Catalog
+            generate.ts       # Catalog -> marker blocks
           cli/
+            append-event.ts   # CLI entry point
+            catalog-compiler.ts # generate + catalog subcommands
+            derive-state.ts   # CLI entry point
             read-config.ts    # Config file reader
+            resume.ts         # CLI entry point
     sync-to-cache.sh          # Plugin cache sync
     verify-install.sh         # Installation verification
   skills/
     run/
-      circuit.yaml            # 43-step supergraph
+      circuit.yaml            # 43-step workflow graph
       SKILL.md                # Execution contract
       references/
         mode-quick.md
@@ -1056,7 +1057,7 @@ User Request
     v
 circuit:run triage ──> classifies task
     |
-    ├── quick/researched/adversarial: route through supergraph
+    ├── quick/researched/adversarial: route through workflow graph
     ├── spec-review/ratchet/crucible: route to subgraph entry
     └── redirect: stop, suggest circuit:cleanup or circuit:migrate
     |

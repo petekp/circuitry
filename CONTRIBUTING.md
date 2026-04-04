@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- Familiarity with the circuit system (read [ARCHITECTURE.md](./ARCHITECTURE.md))
+- Read [ARCHITECTURE.md](./ARCHITECTURE.md) to understand how circuits work
 - A workflow that fits the circuit model (multi-phase, artifact-producing)
 
 ### Authoring a Circuit
@@ -26,7 +26,7 @@
 ### Testing
 
 Run the circuit against a concrete task that exercises its hardest seam.
-Pick a real scenario, not a toy example -- the test should stress the gates
+Pick a real scenario, not a toy example. The test should stress the gates
 and artifact handoffs that are most likely to fail in practice.
 
 The runtime engine tests cover schema validation and state derivation:
@@ -46,7 +46,7 @@ cd scripts/runtime/engine && npx vitest run
 `scripts/relay/compose-prompt.sh` and `scripts/relay/dispatch.sh` are the
 shared infrastructure that all circuits depend on.
 
-- Changes here affect **all circuits** -- test thoroughly before committing
+- Changes here affect **all circuits**. Test thoroughly before committing
 - Run `scripts/verify-install.sh` for smoke tests
 - If you change argument parsing or output format, audit every circuit that
   calls the script

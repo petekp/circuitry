@@ -2,24 +2,20 @@
   <img src="assets/circuitry.png" alt="Circuitry" width="100%" />
 </p>
 
-# Circuitry for Claude Code
+# Circuitry
 
-Skills tell Claude *how* to do a task. But for complex work with phases,
-competing options, and real research, stacking skills manually and hoping
-the agent holds it together doesn't cut it. Context windows fill up.
-Sessions crash. The agent forgets what it already decided three steps ago.
+**One command. The right workflow. The right skills. The right rigor. Automatically.**
 
-Circuits sit on top of skills. A circuit is a structured, multi-phase
-workflow where every step writes a durable file on disk that feeds the
-next. Research happens before decisions. Decisions happen before
-implementation. Implementation gets an independent review. And if a
-session dies mid-task, a fresh one reads the files and picks up exactly
-where the last one stopped.
+You've installed skills for TDD, architecture, research, debugging. But when you
+start a task, you're picking which skills to use, in what order, and hoping the
+agent holds it together across steps. Sessions crash. Context overflows. Reviews
+get skipped. Quality depends on how much you babysit.
 
-The result is autonomous coding you don't have to babysit. Circuits
-dispatch heavy work to parallel processes that research, implement,
-review, and converge independently. You step in at interactive checkpoints
-where product judgment matters. The rest runs on its own.
+Circuitry is a Claude Code plugin that turns one command into a structured,
+multi-phase workflow. You describe your task. Circuitry classifies it, picks the
+right workflow shape, injects the right skills at each phase, dispatches parallel
+workers for heavy lifting, and enforces quality gates before anything ships. If a
+session dies mid-task, the next one reads from disk and picks up where it stopped.
 
 ## Get Started
 
@@ -27,116 +23,136 @@ where product judgment matters. The rest runs on its own.
 claude plugin install petekp/circuitry
 ```
 
-```
-/circuit <describe your task>
-```
-
-Triage classifies your task and picks the right workflow shape
-automatically. You can also invoke a specific circuit directly, e.g.
-`/circuit:cleanup <task>`.
-
-## What's Inside
-
-| Circuit | Invoke | Best For |
-|---------|--------|----------|
-| Run | `/circuit <task>` | The default: triage classifies, then executes via quick, researched, adversarial, spec-review, ratchet, or crucible paths |
-| Cleanup | `/circuit:cleanup` | Systematic dead code, stale docs, and codebase detritus cleanup |
-| Migrate | `/circuit:migrate` | Large-scale migrations: framework swaps, dependency replacements, architecture transitions |
-| Workers | `/circuit:workers` | Autonomous batch orchestrator for dispatching parallel workers |
-
-`/circuit <task>` is the primary entry point. Triage analyzes your task,
-classifies it into one of seven workflow shapes, and runs the appropriate
-path through a 43-step supergraph. Use intent hints like `/circuit fix: <bug>`
-or `/circuit decide: <task>` to skip triage and lock a specific mode.
-
-Companion circuits (`cleanup`, `migrate`) are reached by triage redirect or
-direct invocation when the task needs a specialized topology.
-
-## Quick Start
+Then run it:
 
 ```
 /circuit add a dark mode toggle that persists to localStorage
 ```
 
-Here's what happens:
+That's it. Circuitry classifies your task, shows you its plan, and runs the
+appropriate workflow.
 
-1. **Triage classifies your task.** It reads the task, matches signal
-   patterns against a mode selection table, and presents its classification
-   with a diagnostic probe for your confirmation.
+## How It Works
 
-2. **Progress is saved to disk** in `.circuitry/` as a chain of markdown
-   files. Each step writes a durable artifact that feeds the next. If a
-   session crashes, a fresh one reads the files and resumes from the last
-   completed step.
+1. **Triage classifies your task.** Circuitry matches your task description
+   against signal patterns to pick the right workflow shape. It shows the
+   classification and one diagnostic question before proceeding.
 
-3. **Workers handle the heavy lifting.** Implementation, review, and
-   convergence run in isolated worker sessions (via Codex CLI when
-   installed, or Claude Code Agent as fallback).
+2. **Steps run in sequence, each producing a file.** Research before decisions.
+   Decisions before implementation. Implementation gets an independent review
+   from a separate session. Every step writes a durable artifact to disk.
 
-4. **You step in where it matters.** Interactive checkpoints pause for your
-   judgment on scope confirmation and tradeoff decisions. Everything else
-   runs autonomously.
+3. **Progress survives crashes.** All state lives in `.circuitry/` as markdown
+   files. A new session reads the files and resumes from the last completed step.
 
-## Installation
+4. **You step in where it matters.** Circuitry pauses at checkpoints for your
+   judgment (scope confirmation, tradeoff decisions). Everything else runs
+   autonomously.
 
-### Prerequisites
+## What You Can Do
+
+| You type | What happens |
+|----------|-------------|
+| `/circuit <task>` | Triage picks the best workflow automatically |
+| `/circuit fix: <bug>` | Quick bug fix with test-first discipline |
+| `/circuit decide: <choice>` | Architecture decision with adversarial evaluation |
+| `/circuit develop: <feature>` | Full feature build with a research phase |
+| `/circuit repair: <issue>` | Deep investigation with regression testing |
+| `/circuit:cleanup` | Systematic dead code and stale doc removal |
+| `/circuit:migrate` | Framework swap with coexistence planning |
+| `/circuit:handoff` | Save session state so a fresh session can resume |
+
+## Key Features
+
+**Automatic workflow selection.** Triage classifies your task into one of seven
+workflow shapes: quick fix, full feature, architecture decision, spec review,
+overnight quality pass, and more. You don't pick the workflow. Circuitry does.
+
+**Durable artifact chains.** Every step writes a named file that feeds the next.
+If a session crashes, the chain on disk tells the next session exactly where to
+resume. No lost context. No starting over.
+
+**Independent review.** Implementation and review always run in separate sessions.
+The reviewer starts fresh with no knowledge of the implementation choices. Review
+is adversarial by design, not a rubber stamp.
+
+**Parallel workers.** Heavy lifting runs in isolated worker sessions. Research,
+implementation, and review don't compete for your main context window.
+
+**Quality gates.** Every step has a gate that checks the output before the circuit
+advances. Gates verify structure, required sections, and verdict content. Workers
+can't just claim they're done.
+
+**Circuit breakers.** When something goes wrong, Circuitry escalates to you with
+the failure output and your options. A step that fails twice, a review that keeps
+rejecting, a design that doesn't hold up: you see exactly what happened and what
+you can do about it.
+
+## Circuits
+
+<!-- BEGIN CIRCUIT_TABLE -->
+<!-- DO NOT EDIT — generated by catalog-compiler -->
+| Circuit | Invoke | Best For |
+|---------|--------|----------|
+| Cleanup | `/circuit:cleanup` | Systematic codebase cleanup: dead code, stale docs, orphaned artifacts, vestigial comments, and redundant abstractions. |
+| Migrate | `/circuit:migrate` | Large-scale migrations and refactors: framework swaps, dependency replacements, architecture transitions, and incremental rewrites. |
+| Run | `/circuit <task>` | Adaptive workflow circuit. Triage classifies any task into one of seven workflow shapes; the runtime engine walks the selected path. Steps on inactive paths are never visited. |
+<!-- END CIRCUIT_TABLE -->
+
+See [CIRCUITS.md](CIRCUITS.md) for the full catalog with phase breakdowns and
+usage examples.
+
+## Recommended Skills
+
+Circuitry works best with complementary Claude Code skills that get injected into
+the right workflow phases automatically:
+
+| Skill | Used For |
+|-------|----------|
+| `tdd` | Test-first discipline in bug fixes and implementation |
+| `clean-architecture` | Architecture decisions and quality passes |
+| `deep-research` | Evidence gathering and external research |
+| `dead-code-sweep` | Cleanup category surveys |
+| `architecture-exploration` | Evaluating competing design approaches |
+
+Install what's relevant to your stack. Circuitry auto-detects installed skills and
+works without any of them, but each one adds depth to the phases where it applies.
+
+### Bring Your Own Skills
+
+Prefer a different testing methodology? Have your own research tool? Map any
+installed skill to any capability:
+
+```yaml
+# circuit.config.yaml (project root or ~/.claude/)
+capabilities:
+  testing.tdd: [your-testing-skill]
+  research.external: [your-research-skill]
+  architecture.exploration: [your-architecture-skill]
+```
+
+See `circuit.config.example.yaml` for the full configuration reference.
+
+## Optional: Codex CLI
+
+Circuitry dispatches workers using Codex CLI when installed, or Claude Code's
+built-in Agent tool as fallback. Both work. Codex gives better parallelism for
+heavy workloads.
+
+```bash
+npm install -g @openai/codex
+```
+
+## Prerequisites
 
 - **Claude Code** (the host environment)
-- **Node.js** (runtime engine -- bundled CLIs ship with the plugin, no build step needed)
-- **Python 3** (optional, used by `update-batch.sh` only)
-- **Codex CLI** (optional, `npm install -g @openai/codex`) for better
-  parallelism. When Codex is not installed, circuits fall back to Claude
-  Code's Agent tool with worktree isolation. Everything works in both
-  modes.
-
-### From GitHub (recommended)
-
-```bash
-claude plugin install petekp/circuitry
-```
-
-### Local installation
-
-```bash
-git clone https://github.com/petekp/circuitry.git ~/.claude/plugins/local/circuitry
-```
-
-### Verify installation
-
-No project-local setup is needed. Relay scripts run directly from the
-plugin directory via `$CLAUDE_PLUGIN_ROOT`.
-
-```bash
-~/.claude/plugins/local/circuitry/scripts/verify-install.sh
-```
+- **Node.js** (the runtime engine ships bundled, no build step needed)
 
 ## Further Reading
 
-- **[CIRCUITS.md](CIRCUITS.md)** -- full catalog with phase breakdowns,
-  file chains, and usage examples for every circuit.
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** -- system design: how circuits
-  work internally, gate types, the dispatch pipeline, and how to build
-  new circuits.
-
-## Domain Skills (Optional)
-
-Circuits can inject domain-specific skills into worker prompts. These are
-**not bundled** with Circuitry -- install them separately if useful.
-
-| Skill | Enhances |
-|-------|----------|
-| `tdd` | Bug fix (test-first), ratchet batches |
-| `deep-research` | Evidence probes, external research |
-| `clean-architecture` | Ratchet envision, adversarial options |
-| `dead-code-sweep` | Cleanup category surveys |
-
-Map skills to capabilities in `circuit.config.yaml`. See
-`circuit.config.example.yaml` for the full schema.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to extend Circuitry with
-new circuits or modify existing ones.
+- **[CIRCUITS.md](CIRCUITS.md):** Full catalog with artifact chains, entry modes, and usage examples.
+- **[ARCHITECTURE.md](ARCHITECTURE.md):** How circuits work internally, for engineers who want to understand or extend the system.
+- **[CONTRIBUTING.md](CONTRIBUTING.md):** How to build new circuits or modify existing ones.
 
 ## License
 
