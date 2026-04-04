@@ -29,9 +29,20 @@ Run the circuit against a concrete task that exercises its hardest seam.
 Pick a real scenario, not a toy example. The test should stress the gates
 and artifact handoffs that are most likely to fail in practice.
 
-The runtime engine tests cover schema validation and state derivation:
+Run the full verification suite:
 
 ```bash
+# All checks in one pass
+./scripts/verify-install.sh && cd scripts/runtime/engine && npx vitest run
+```
+
+Or run them separately:
+
+```bash
+# Installation and smoke tests
+./scripts/verify-install.sh
+
+# Runtime engine unit tests (schema validation, state derivation)
 cd scripts/runtime/engine && npx vitest run
 ```
 
@@ -61,9 +72,8 @@ testing. Claude Code runs the cached copy, not the local repo.
 1. Fork the repo
 2. Create a feature branch
 3. Make your changes
-4. Run `scripts/verify-install.sh` to confirm nothing broke
-5. Run `cd scripts/runtime/engine && npx vitest run` for engine tests
-6. Open a PR with a clear description of what changed and why
+4. Run the full verification suite: `./scripts/verify-install.sh && cd scripts/runtime/engine && npx vitest run`
+5. Open a PR with a clear description of what changed and why
 
 ## Code of Conduct
 

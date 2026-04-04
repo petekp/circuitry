@@ -795,6 +795,9 @@ circuit:
 
 ## Extending the System
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the practical workflow (fork, branch,
+test, submit). This section covers the design constraints your circuit must satisfy.
+
 ### The Quality Gate Checklist
 
 When authoring or reviewing a circuit, check these six categories:

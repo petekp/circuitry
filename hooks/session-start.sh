@@ -34,4 +34,9 @@ Resume from the handoff above.
 ---
 
 HANDOFF_FOOTER
+else
+  # First run or no pending handoff -- show a brief welcome
+  cat <<'WELCOME'
+Circuitry is active. Run `/circuit <task>` to start a structured workflow. See CIRCUITS.md for available commands.
+WELCOME
 fi

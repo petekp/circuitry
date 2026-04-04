@@ -85,15 +85,9 @@ independent review.
 **Quick.** Scope the task, confirm with you, implement with independent review,
 done. For clear tasks with a known approach.
 
-```
-  Triage ───▶ Scope ───▶ Confirm ───▶ Implement ───▶ Summarize
-                            │              │
-                        checkpoint      workers
-                        (you confirm    build + review
-                         the plan)      in separate sessions
-                                           │
-                                       tdd injected
-                                       when tests apply
+```mermaid
+flowchart LR
+    T[Triage] --> S[Scope] --> C["Confirm\n(checkpoint)"] --> I["Implement\n(workers)"] --> D[Summarize]
 ```
 
 > Example: `/circuit add pagination to the user list`. Triage classifies this
@@ -103,16 +97,9 @@ done. For clear tasks with a known approach.
 **Researched.** Gather external and internal evidence in parallel, synthesize
 constraints, then scope and implement. For features that need investigation first.
 
-```
-  Triage ───▶ Evidence ───▶ Constraints ───▶ Scope ───▶ Confirm ───▶ Implement ───▶ Review ───▶ Done
-                 │               │                         │              │              │
-             2 parallel      synthesis                 checkpoint      workers       separate
-             workers:        from both                 (you confirm    build it      session
-             external +      digests                    the plan)                    reviews
-             internal            │                                        │
-                │            gate: hard                                tdd, clean-
-            deep-research    invariants +                              architecture
-            injected         seams present                             injected
+```mermaid
+flowchart LR
+    T[Triage] --> E["Evidence\n(2 parallel workers)"] --> Con[Constraints] --> S[Scope] --> Cf["Confirm\n(checkpoint)"] --> I["Implement\n(workers)"] --> R["Review\n(separate session)"] --> D[Done]
 ```
 
 > Example: `/circuit develop: real-time notifications`. The circuit researches
@@ -123,17 +110,9 @@ constraints, then scope and implement. For features that need investigation firs
 pressure-test each through adversarial evaluation, and present a decision packet.
 For architecture decisions where the wrong choice is expensive.
 
-```
-  Triage ──▶ Evidence ──▶ Constraints ──▶ Options ──▶ Decision ──▶ Preflight ──▶ Implement ──▶ Ship Review ──▶ Done
-                │              │              │           │             │              │              │
-            2 parallel     synthesis      generate     you choose   prove seams    workers       separate
-            research       from both      distinct     from the     compile        build it      session
-            workers        digests        options      packet       before code                  reviews
-                │                             │           │             │              │
-            deep-research                 gate:       checkpoint   gate: seam     tdd, clean-
-            injected                      tradeoff    (you pick    proof passes   architecture
-                                          matrix      an option)                  injected
-                                          present
+```mermaid
+flowchart LR
+    T[Triage] --> E["Evidence\n(2 parallel workers)"] --> Con[Constraints] --> O[Options] --> DP[Decision Packet] --> TD["Tradeoff Decision\n(checkpoint)"] --> EC[Execution Contract] --> SP[Prove Seams] --> I["Implement\n(workers)"] --> SR["Ship Review\n(separate session)"] --> D[Done]
 ```
 
 > Example: `/circuit decide: should we use WebSockets or SSE for real-time
@@ -145,52 +124,45 @@ For architecture decisions where the wrong choice is expensive.
 from different perspectives (implementer, systems, comparative), caveat
 resolution, then build.
 
+```mermaid
+flowchart LR
+    SI[Spec Intake] --> DD[Draft Digest] --> PR["Parallel Reviews\n(3 independent workers)"] --> CR["Caveat Resolution\n(checkpoint)"] --> AS[Amended Spec] --> EC[Execution Contract] --> SP[Prove Seams] --> I["Implement\n(workers)"] --> SR["Ship Review\n(separate session)"] --> D[Done]
+```
+
 > Example: `/circuit` with an RFC link. The circuit ingests the spec, runs three
 > independent reviews, resolves caveats, then implements.
 
 **Ratchet.** Overnight quality improvement. Survey the codebase, calibrate a
 quality bar, then run autonomous improvement batches.
 
+```mermaid
+flowchart LR
+    SV[Survey] --> TR[Triage] --> ST[Stabilize] --> BL[Baseline]
+    BL --> EV[Envision] --> PL[Plan] --> CF["Confirm\n(auto)"]
+    CF --> B1["Batch 1\n(workers)"] --> V1[Verify 1]
+    V1 --> B2["Batch 2\n(workers)"] --> V2[Verify 2]
+    V2 --> B3["Batch 3\n(workers)"] --> V3[Verify 3]
+    V3 --> IC[Injection Check] --> FA[Final Audit] --> DF[Deferred Review] --> CL[Closeout]
+```
+
 > Example: Run before a release. The circuit audits the codebase, prioritizes
 > improvements, and works through them autonomously while you sleep.
 
 **Crucible.** Adversarial tournament. Multiple approaches compete head-to-head.
 
-```
-  ┌─ Frame ─────────────────────────────────────────────────────────┐
-  │  Produce a structured problem brief.                            │
-  │  You confirm scope, constraints, and exclusions.                │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  gate: problem statement present
-                             ▼
-  ┌─ Diverge ───────────────────────────────────────────────────────┐
-  │  Three workers develop competing approaches in parallel.        │
-  │  Each commits to a different stance: simplicity, robustness,    │
-  │  or extensibility.                                              │
-  │  skills: deep-research, solution-explorer                       │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  gate: 3 proposals with all sections
-                             ▼
-  ┌─ Explore ───────────────────────────────────────────────────────┐
-  │  Each proposal reviewed by an adversary, then revised by its    │
-  │  original author to address every weakness.                     │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  gate: every weakness addressed
-                             ▼
-  ┌─ Stress-test ───────────────────────────────────────────────────┐
-  │  Red-team attack: seam failures, scale pressure, dependency     │
-  │  failure, assumption inversion, time decay.                     │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  gate: attack surface documented
-                             ▼
-  ┌─ Converge + Harden + Select ────────────────────────────────────┐
-  │  Select the strongest. Absorb the best ideas from the rest.     │
-  │  Pre-mortem: assume it failed six months ago -- explain why.     │
-  │  Final proposal addresses every identified risk.                │
-  └──────────────────────────┬──────────────────────────────────────┘
-                             │  gate: every risk mitigated or accepted
-                             ▼
-                     final-proposal.md
+```mermaid
+flowchart TD
+    F["**Frame**\nProblem brief, you confirm\nscope and constraints"]
+    F -- "gate: problem statement present" --> D
+    D["**Diverge**\n3 workers develop competing approaches\n(simplicity, robustness, extensibility)"]
+    D -- "gate: 3 proposals with all sections" --> E
+    E["**Explore**\nEach proposal reviewed by an adversary,\nthen revised to address every weakness"]
+    E -- "gate: every weakness addressed" --> S
+    S["**Stress-test**\nRed-team: seam failures, scale pressure,\ndependency failure, assumption inversion"]
+    S -- "gate: attack surface documented" --> C
+    C["**Converge + Harden + Select**\nSelect strongest, absorb best ideas,\npre-mortem, address every risk"]
+    C -- "gate: every risk mitigated or accepted" --> FP
+    FP([final-proposal.md])
 ```
 
 > Example: `/circuit evaluate three caching strategies for the API layer`.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dispatch.sh — Backend-agnostic dispatch for Circuit workers
+# dispatch.sh -- Backend-agnostic dispatch for Circuit workers
 #
 # Detects whether Codex CLI is available and dispatches accordingly.
 # When Codex is installed, uses `codex exec --full-auto`.
@@ -17,8 +17,8 @@
 #   --role ROLE      -- Worker role: implementer, reviewer, researcher (optional)
 #
 #   Built-in engines:
-#     codex   — Codex CLI (`codex exec --full-auto`)
-#     agent   — Claude Code Agent tool (isolation: "worktree")
+#     codex   -- Codex CLI (`codex exec --full-auto`)
+#     agent   -- Claude Code Agent tool (isolation: "worktree")
 #
 #   Custom engines:
 #     Any other value is treated as a shell command. The prompt file is passed
@@ -28,8 +28,8 @@
 #       --backend "./my-agent.sh"
 #
 # Exit codes:
-#   0  — Dispatch succeeded; machine-readable JSON receipt on stdout
-#   1  — Error (missing args, command not found, etc.)
+#   0  -- Dispatch succeeded; machine-readable JSON receipt on stdout
+#   1  -- Error (missing args, command not found, etc.)
 #
 # All backends emit a JSON receipt to stdout on success. The orchestrator
 # parses this receipt to determine next steps:
@@ -61,12 +61,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PROMPT" || -z "$OUTPUT" ]]; then
-  echo "ERROR: --prompt and --output are required" >&2
+  echo "ERROR: --prompt and --output are required. Run with --prompt <file> --output <file>." >&2
   exit 1
 fi
 
 if [[ ! -f "$PROMPT" ]]; then
-  echo "ERROR: prompt file not found: $PROMPT" >&2
+  echo "ERROR: prompt file not found: $PROMPT. Run compose-prompt.sh first to assemble it." >&2
   exit 1
 fi
 

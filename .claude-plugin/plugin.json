@@ -8,6 +8,8 @@
   "repository": "https://github.com/petekp/circuitry",
   "license": "MIT",
   "keywords": [
+    "claude-code",
+    "plugin",
     "circuits",
     "workflows",
     "codex",

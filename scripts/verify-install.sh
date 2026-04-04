@@ -40,14 +40,14 @@ section() {
   printf '\n\033[1m%s\033[0m\n' "$1"
 }
 
-# ── 1. Codex CLI (optional — Agent fallback available) ────────────────
+# ── 1. Codex CLI (optional -- Agent fallback available) ────────────────
 section "Codex CLI"
 
 if command -v codex >/dev/null 2>&1; then
   codex_version="$(codex --version 2>/dev/null || echo 'unknown')"
   pass "codex found: $codex_version (dispatch backend: codex)"
 else
-  warn "codex not found — dispatch will use Agent fallback (install for better parallelism: npm install -g @openai/codex)"
+  warn "codex not found -- dispatch will use Agent fallback (install for better parallelism: npm install -g @openai/codex)"
 fi
 
 # ── 2. Node.js (engine runtime) ────────────────────────────────────
@@ -57,7 +57,7 @@ if command -v node >/dev/null 2>&1; then
   node_version="$(node --version 2>&1)"
   pass "node found: $node_version (engine runtime)"
 else
-  fail "node not found — required by the engine (scripts/runtime/bin/)"
+  fail "node not found -- required by the engine (scripts/runtime/bin/)"
 fi
 
 # ── 2b. Engine CLIs (shipped bundles) ───────────────────────────────
@@ -69,7 +69,7 @@ for cli_name in append-event catalog-compiler derive-state resume; do
   if [[ -f "$cli_path" ]]; then
     pass "engine CLI: ${cli_name}"
   else
-    fail "engine CLI missing: ${cli_name} — bundled CLIs should ship with the plugin at scripts/runtime/bin/"
+    fail "engine CLI missing: ${cli_name} -- bundled CLIs should ship with the plugin at scripts/runtime/bin/"
   fi
 done
 
@@ -80,7 +80,7 @@ engine_dir="$PLUGIN_ROOT/scripts/runtime/engine"
 if [[ -d "$engine_dir/node_modules" ]]; then
   pass "engine node_modules installed (contributor)"
 else
-  warn "engine node_modules missing — contributors run: cd $engine_dir && npm install"
+  warn "engine node_modules missing -- contributors run: cd $engine_dir && npm install"
 fi
 
 # ── 3. Python 3 (optional, used by update-batch.sh only) ───────────
@@ -90,7 +90,7 @@ if command -v python3 >/dev/null 2>&1; then
   py_version="$(python3 --version 2>&1)"
   pass "python3 found: $py_version (used by update-batch.sh)"
 else
-  warn "python3 not found — update-batch.sh will not work. Core circuits do not require Python."
+  warn "python3 not found -- update-batch.sh will not work. Core circuits do not require Python."
 fi
 
 # ── 3b. PyYAML (optional) ──────────────────────────────────────────
@@ -100,7 +100,7 @@ if command -v python3 >/dev/null 2>&1; then
   if python3 -c "import yaml" >/dev/null 2>&1; then
     pass "PyYAML available"
   else
-    warn "PyYAML not found — update-batch.sh YAML parsing will not work. Install with: pip3 install pyyaml"
+    warn "PyYAML not found -- update-batch.sh YAML parsing will not work. Install with: pip3 install pyyaml"
   fi
 fi
 
@@ -142,7 +142,7 @@ for script in compose-prompt.sh dispatch.sh update-batch.sh; do
     if [[ -x "$script_path" ]]; then
       pass "$script (exists, executable)"
     else
-      fail "$script exists but is NOT executable — run: chmod +x $script_path"
+      fail "$script exists but is NOT executable -- run: chmod +x $script_path"
     fi
   else
     fail "$script not found at scripts/relay/$script"
@@ -184,7 +184,7 @@ if $templates_ok; then
     line_count="$(wc -l < "$smoke_out" | tr -d ' ')"
     pass "compose-prompt.sh smoke test passed ($line_count lines output)"
   else
-    fail "compose-prompt.sh smoke test failed — run manually to debug"
+    fail "compose-prompt.sh smoke test failed -- run manually to debug"
   fi
 
   rm -f "$smoke_header" "$smoke_out"

@@ -7,39 +7,52 @@
 
 # Role-based agent routing. Maps semantic roles to dispatch backends.
 # Supported backends: codex, agent, auto, or any custom shell command.
+#
+# "codex" uses Codex CLI (faster for parallel workers, requires install).
+# "agent" uses Claude Code's built-in Agent tool with worktree isolation.
+# "auto" picks codex if installed, otherwise agent.
+# Any other value is treated as a shell command (e.g., "gemini run").
 roles:
   implementer: codex    # code writing, seam proofs, batch execution
   reviewer: agent       # independent review, audits, ship review
   researcher: agent     # evidence probes, external research
 
 # Dispatch engine configuration (optional).
-# Controls the default process for dispatch steps. The --role flag in
+# Controls the default backend for dispatch steps. The --role flag in
 # dispatch.sh takes precedence over this setting.
 #
 # dispatch:
 #   engine: auto               # global default (auto | codex | agent | <command>)
 #   per_circuit:               # override per circuit
 #     run: codex
+#     cleanup: agent
 
 # Map semantic capabilities to installed skills (optional).
-# Resolution order: project config -> user config -> built-ins.
+# Resolution order: project config -> user config -> engine built-ins.
+#
+# An empty list [] means auto-detected: Circuitry inspects installed skills
+# and file context to find the best match. This works for common capabilities.
+# Explicit mappings (e.g., [tdd]) force a specific skill to fill the role.
 capabilities:
-  code.change: []                    # auto-detected from file scope
-  review.independent: []             # auto-detected
+  code.change: []                    # auto-detected from file extensions in scope
+  review.independent: []             # auto-detected (uses built-in review logic)
   testing.tdd: [tdd]                 # maps to the tdd skill
   research.external: [deep-research] # maps to deep-research skill
   repo.analysis: []                  # auto-detected from codebase structure
   architecture.exploration: [architecture-exploration, solution-explorer]
 
-# Optional: declare expected capabilities for cross-machine consistency.
+# Declare expected capabilities for cross-machine consistency (optional).
 # If present, the session-start hook warns when an expected capability
 # is not detected. Omit this section for fully automatic degradation.
 #
 # expected_capabilities:
 #   - tdd
 #   - deep-research
+#   - dead-code-sweep
 
 # Per-circuit overrides (optional).
+# Use this to give a specific circuit different skill mappings than the
+# global defaults above.
 circuits:
   run:
     capabilities: {}

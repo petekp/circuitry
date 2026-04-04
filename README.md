@@ -22,6 +22,15 @@ where it stopped.
 claude plugin install petekp/circuitry
 ```
 
+Then verify your install:
+
+```bash
+./scripts/verify-install.sh
+```
+
+This checks Node.js, engine CLIs, skill directories, relay scripts, and runs a
+smoke test. Fix any failures before continuing.
+
 Then run it:
 
 ```
@@ -35,17 +44,13 @@ That's it. Circuitry classifies your task, picks the right workflow, and runs it
 The task above triggers a **crucible** -- three competing approaches developed,
 pressure-tested, and converged into one hardened proposal:
 
-```
-  Frame ──────────▶ Diverge ─────────▶ Explore ──────────▶ Converge
-    │                  │                   │                   │
-  problem brief     3 workers           adversarial        select best,
-  (you confirm      develop competing   review + revise,   absorb ideas
-   scope)           approaches          then stress-test   from the rest,
-                                        each one           pre-mortem
-                       │                   │                   │
-                   deep-research        gate: every        gate: every
-                   injected per         weakness           pre-mortem risk
-                   worker               addressed          mitigated
+```mermaid
+flowchart LR
+    F["**Frame**\nProblem brief\nyou confirm scope"]
+    D["**Diverge**\n3 workers develop\ncompeting approaches"]
+    E["**Explore**\nAdversarial review,\nrevise, stress-test"]
+    C["**Converge**\nSelect best, absorb\nideas, pre-mortem"]
+    F --> D --> E --> C
 ```
 
 Not every task triggers a tournament. A bug fix gets scoped, tested, and fixed.
@@ -67,6 +72,17 @@ evaluation. Circuitry picks the workflow that fits:
 4. **You step in where it matters.** Circuitry pauses at checkpoints for your
    judgment (scope confirmation, tradeoff decisions). Everything else runs
    autonomously.
+
+## What Circuitry Is Not
+
+- **Not a CI/CD tool.** Circuitry runs inside Claude Code sessions, not in
+  pipelines. It structures the work you do with Claude, not what happens after
+  you push.
+- **Not for trivial edits.** Renaming a variable or fixing a typo does not need
+  a multi-phase workflow. Just do it directly.
+- **Not a replacement for skills.** Circuitry orchestrates skills -- it does not
+  replace them. If you need TDD discipline, install the `tdd` skill. Circuitry
+  will use it at the right phase.
 
 ## Commands
 
@@ -137,12 +153,30 @@ npm install -g @openai/codex
 ## Prerequisites
 
 - **Claude Code** (the host environment)
-- **Node.js** (no build step required)
+- **Node.js 18+** (no build step required)
+
+## Troubleshooting
+
+**"engine CLI missing" during verify-install.** The bundled CLIs at
+`scripts/runtime/bin/` should ship with the plugin. If missing, reinstall:
+`claude plugin install petekp/circuitry`.
+
+**Changes not taking effect after editing plugin files.** Claude Code runs the
+cached copy, not your local repo. Run `./scripts/sync-to-cache.sh` after any
+edit, then `/clear` to reload.
+
+**"codex not found" warning.** Codex CLI is optional. Circuitry falls back to
+Claude Code's Agent tool for worker dispatch. Install Codex only if you want
+faster parallel execution.
+
+**Circuit resumes from the wrong step.** State lives in `.circuitry/`. If a run
+is corrupt, delete the run directory (`rm -rf .circuitry/circuit-runs/<slug>`)
+and start fresh.
 
 ## Further Reading
 
 - **[CIRCUITS.md](CIRCUITS.md):** Full catalog with phase breakdowns and usage examples.
-- **[ARCHITECTURE.md](ARCHITECTURE.md):** How circuits work internally.
+- **[ARCHITECTURE.md](ARCHITECTURE.md):** How circuits work internally (for contributors).
 - **[CONTRIBUTING.md](CONTRIBUTING.md):** How to build new circuits or modify existing ones.
 
 ## License

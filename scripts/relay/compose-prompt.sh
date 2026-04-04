@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# compose-prompt.sh — Assemble a worker prompt from header + skills + template
+# compose-prompt.sh -- Assemble a worker prompt from header + skills + template
 #
 # Usage:
 #   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --skills swift-apps,rust --out .circuitry/prompt.md
@@ -8,14 +8,14 @@
 #   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --backend agent --out .circuitry/prompt.md
 #
 # Options:
-#   --header FILE    — Task-specific header (required)
-#   --skills LIST    — Comma-separated domain skill names (optional)
-#   --circuit ID     — Circuit id for config-file skill lookup (optional, used when --skills is omitted)
-#   --config FILE    — Path to circuit.config.yaml (optional, auto-discovered from ./circuit.config.yaml or ~/.claude/circuit.config.yaml)
-#   --template NAME  — Template to append: implement, review, ship-review, converge (optional)
-#   --root DIR       — Substitute literal {relay_root} tokens after assembly (optional unless placeholders are used)
-#   --backend MODE   — Dispatch backend hint: "codex" or "agent" (optional; auto-detected if omitted)
-#   --out FILE       — Output path (required)
+#   --header FILE    -- Task-specific header (required)
+#   --skills LIST    -- Comma-separated domain skill names (optional)
+#   --circuit ID     -- Circuit id for config-file skill lookup (optional, used when --skills is omitted)
+#   --config FILE    -- Path to circuit.config.yaml (optional, auto-discovered from ./circuit.config.yaml or ~/.claude/circuit.config.yaml)
+#   --template NAME  -- Template to append: implement, review, ship-review, converge (optional)
+#   --root DIR       -- Substitute literal {relay_root} tokens after assembly (optional unless placeholders are used)
+#   --backend MODE   -- Dispatch backend hint: "codex" or "agent" (optional; auto-detected if omitted)
+#   --out FILE       -- Output path (required)
 
 set -euo pipefail
 
@@ -44,7 +44,7 @@ if [[ -d "$PLUGIN_ROOT/skills" ]]; then
 fi
 SKILL_DIRS+=("$HOME/.claude/skills")
 
-# resolve_skill <name> — prints the SKILL.md path or returns 1
+# resolve_skill <name> -- prints the SKILL.md path or returns 1
 resolve_skill() {
   local name="$1"
   for dir in "${SKILL_DIRS[@]}"; do
@@ -233,7 +233,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$HEADER" || -z "$OUT" ]]; then
-  echo "ERROR: --header and --out are required" >&2
+  echo "ERROR: --header and --out are required. Run with --header <file> --out <file>." >&2
   exit 1
 fi
 
@@ -248,7 +248,7 @@ if is_blank_arg "$OUT"; then
 fi
 
 if [[ ! -f "$HEADER" ]]; then
-  echo "ERROR: header file not found: $HEADER" >&2
+  echo "ERROR: header file not found: $HEADER. The orchestrator should write this file before calling compose-prompt.sh." >&2
   exit 1
 fi
 
