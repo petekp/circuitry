@@ -1,16 +1,7 @@
-# Circuit Architecture
+# Architecture
 
-This document explains the design of the circuit system: why it exists, how its
-pieces fit together, and what you need to understand to extend it. If you're
-looking for a quick-start guide, see [README.md](README.md). This is for
-engineers who want to understand the internals or build new circuits.
-
-The system solves a specific problem: **how do you make an AI agent
-reliably complete multi-phase engineering work across session boundaries, with
-durable state, bounded autonomy, and honest quality gates?**
-
-Chat threads die. Context windows overflow. Workers hallucinate completion.
-Circuits are the structural answer to all three failure modes.
+Reference for circuit authors and contributors. For a user-facing overview of
+what each circuit does, see [CIRCUITS.md](CIRCUITS.md).
 
 ---
 
@@ -23,85 +14,39 @@ Circuits are the structural answer to all three failure modes.
 5. [Relay Infrastructure](#relay-infrastructure)
 6. [Circuit Composition](#circuit-composition)
 7. [Capability Resolution](#capability-resolution)
-8. [The Unified Graph](#the-unified-graph)
+8. [The Workflow Graph](#the-workflow-graph)
 9. [Extending the System](#extending-the-system)
 
 ---
 
 ## What Is a Circuit?
 
-A circuit is a multi-phase workflow encoded as two files:
+A circuit is a multi-phase workflow encoded as two files in `skills/<name>/`:
 
-| File | Role | Analogy |
-|------|------|---------|
-| `circuit.yaml` | Topology declaration | Type signature |
-| `SKILL.md` | Runtime truth | Implementation |
+| File | What it does |
+|------|-------------|
+| `circuit.yaml` | Declares the steps, their order, and how they connect |
+| `SKILL.md` | Contains everything the orchestrator needs to execute each step |
 
-Both files live in the same directory under `skills/<name>/`. The
-`circuit.yaml` declares the shape: steps, artifacts, gates, routes, and
-entry modes. The `SKILL.md` contains everything the orchestrator actually
-needs to execute: commands, paths, output schemas, prompt headers, resume rules,
-adapter seams, and reopen choreography.
+**`circuit.yaml`** is machine-readable topology. The runtime engine reads it to
+derive state and determine the next step.
 
-### Why Two Files?
+**`SKILL.md`** is the execution contract. The orchestrator follows it line by line:
+shell commands, output schemas, review handling, resume rules.
 
-The split is deliberate and serves different consumers:
+The two files must agree. If the YAML says a step requires a structured verdict
+but the SKILL.md only checks for file existence, the circuit silently skips the
+quality check.
 
-**`circuit.yaml`** is machine-readable topology. It answers structural questions:
-How many steps? What does each step produce? What does it consume? What gate
-type guards it? The runtime engine reads `circuit.yaml` to derive state and
-determine the next step.
-
-**`SKILL.md`** is the execution contract. It answers operational questions: What
-shell commands does the orchestrator run? What sections must appear in the output
-artifact? What happens when a review says REVISE? How does a fresh session pick
-up where the last one died? The orchestrator follows `SKILL.md` line by line
-during execution.
-
-### What Happens When They Drift
-
-When the two files disagree, the circuit is mechanically broken. This is not a
-documentation nit. It is the workflow equivalent of a type signature diverging
-from its implementation.
-
-Consider a concrete case: `circuit.yaml` says a step has a `result_verdict`
-gate with pass verdicts `[ship_ready]`, but `SKILL.md` describes a simpler
-gate that just checks file existence. The runtime engine would expect specific
-verdict routing, but the actual execution would skip the routing logic entirely.
-The circuit would silently continue past failures that should trigger upstream
-repair.
-
-Cross-validation between the two files is not optional. It is a required step
-in both authoring and validation.
-
-### The `circuit:` Prefix Convention
-
-All circuit skills use a `circuit:` prefix in their frontmatter `name` field:
-
-```yaml
-# In SKILL.md frontmatter
-name: circuit:run
-```
-
-This prefix does two things:
-
-1. **Discovery.** Claude Code's skill matcher uses the frontmatter `name` and
-   `description` to route slash commands. The prefix groups circuits visually
-   and semantically.
-2. **Namespace separation.** Domain skills (`rust`, `swift-apps`, `tdd`) live
-   in a different namespace from circuit skills. A circuit can compose domain
-   skills without naming collisions.
-
-The directory name matches the slug: `circuit:run` lives at
-`skills/run/`. The slug `run` is the canonical identifier used in
-`circuit.yaml`'s `id` field.
+Circuit skills use a `circuit:` prefix (e.g., `circuit:run`) to separate them
+from domain skills. The directory name matches the slug: `circuit:run` lives at
+`skills/run/`.
 
 ---
 
 ## The Artifact Chain Model
 
-The central design insight of the circuit system is: **artifacts are the durable
-state, not the chat thread.**
+**Artifacts are the durable state, not the chat thread.**
 
 ### Every Step Produces a Named File
 
@@ -123,29 +68,19 @@ triage-result.md          [triage, synthesis]
   -> done.md              [summarize, synthesis]
 ```
 
-This is not a suggestion. It is a contract. The `execution-contract` step
+The `execution-contract` step
 cannot begin until `tradeoff-decision` has written `adr.md`. The `implement`
 step reads `execution-packet.md` and nothing else from the decision phase. The
 artifact chain is the workflow's dependency graph made explicit.
 
-### Why Artifacts Instead of Chat
+Artifacts matter for three reasons:
 
-Three failure modes drive this design:
-
-**Session death.** A Claude session can be interrupted, time out, or hit context
-limits at any point. If progress lives only in the chat thread, a dead session
-means starting over. With artifacts on disk, a new session scans the artifact
-directory and resumes from the first missing file.
-
-**Context overflow.** A 43-step workflow graph generates far more content than fits
-in a single context window. The artifact chain means each step only needs to
-read its declared inputs, not the entire history. The `ship-review` step reads
-`execution-packet.md` and `implementation-handoff.md`, not the hundreds of
-lines from upstream evidence gathering.
-
-**Truthfulness.** Workers sometimes claim completion without actually finishing.
-Artifacts give the orchestrator (and the next session) something concrete to
-verify. The gate system checks artifact contents, not worker claims.
+- **Resumability.** If a session crashes, a new session picks up from the last
+  written artifact.
+- **Bounded context.** Each step reads only its declared inputs, not the full
+  conversation history.
+- **Verified completion.** The gate system checks artifact contents, not worker
+  self-reports.
 
 ### Resume Awareness
 
@@ -158,7 +93,7 @@ where the last one left off. The runtime engine algorithm:
 4. For `workers` steps, inspect child state (`job-result.json`) before
    deciding to rerun.
 
-The key insight is **relay state takes precedence over artifact presence**. A
+**Relay state takes precedence over artifact presence.** A
 step might have produced its artifact but left child workers in an inconsistent
 state. Resume must check the step-local state before blindly re-executing.
 
@@ -172,10 +107,9 @@ The system distinguishes between two kinds of output:
   outputs. They follow the relay protocol format but are not the canonical
   chain.
 
-A common anti-pattern is promoting a raw worker report directly into an artifact
-without synthesis. The correct pattern is for the orchestrator to read the
-report, extract the relevant information, and write the canonical artifact with
-the expected schema.
+The orchestrator reads the report, extracts relevant information, and writes
+the canonical artifact. Raw worker reports should not be promoted directly into
+artifacts.
 
 ### Artifact Location
 
@@ -219,16 +153,14 @@ From `run`, the `constraints` step:
 > Synthesize `constraints.md` with Hard Invariants, Seams and Integration Points,
 > and Open Questions.
 
-Synthesis steps are lightweight and fast. The orchestrator has the full context
-from reading upstream artifacts and can make cross-cutting decisions that a
-single worker could not.
+The orchestrator reads upstream artifacts directly and writes the synthesis
+without dispatching a worker.
 
 #### 2. Orchestrator Checkpoint (`executor: orchestrator, kind: checkpoint`)
 
-The orchestrator works directly with the user at a decision point. Checkpoint
-steps produce an artifact that records the user's choice. They exist where
-human judgment is required: choosing tradeoffs, confirming scope, setting
-quality bars.
+The orchestrator pauses for user input at a decision point. Checkpoint steps
+produce an artifact that records the user's choice: tradeoff selection, scope
+confirmation, quality bar.
 
 From `run`, the `confirm` step:
 
@@ -280,20 +212,11 @@ Dispatch steps come in several flavors:
   implement-review-converge loop. This is for steps that involve real code
   changes with quality gates.
 
-### Why Implementation and Review Run in Separate Sessions
+### Separate Sessions for Implementation and Review
 
-This is a core principle of `workers`:
-
-> Implementation and review always run in separate sessions.
-
-The reason is contamination. If the same session implements code and then
-reviews it, the reviewer has already seen (and mentally committed to) the
-implementation choices. The review becomes a rubber stamp rather than an
-adversarial check.
-
-Separate worker sessions mean the review worker starts fresh. It reads the diff,
-re-runs verification commands independently, and judges the code without the
-sunk-cost bias of having written it.
+Implementation and review always run in separate sessions. The review worker
+starts fresh, reads the diff, re-runs verification independently, and judges the
+code without having written it.
 
 ### The `workers` Loop
 
@@ -326,9 +249,8 @@ through `update-batch.sh`:
   --slice slice-001 --event review_clean
 ```
 
-This is a critical design decision. LLMs are unreliable at maintaining JSON
-state. Making `batch.json` mutations go through a deterministic script eliminates
-an entire class of state-corruption bugs.
+All `batch.json` mutations go through `update-batch.sh` to prevent state
+corruption.
 
 ---
 
@@ -353,9 +275,7 @@ gate:
   required: [Pattern, Mode, Reasoning, Probe]
 ```
 
-This is stronger than just checking file existence. The gate verifies that
-specific sections are present. If the triage result is missing the `Probe`
-section, the step fails.
+If the triage result is missing the `Probe` section, the step fails.
 
 #### 2. `checkpoint_selection`
 
@@ -429,14 +349,13 @@ Special route targets:
 - **`@escalate`**: Stop and involve the user.
 - **`@stop`**: Terminate the run (used for companion circuit redirects).
 
-The runtime engine reads routes to determine the next step after a gate passes.
-This is the mechanism that enables the unified graph: different routes from the
-same step lead to entirely different paths through the graph.
+Different routes from the same step lead to entirely different paths through
+the graph.
 
 ### The Circuit Breaker Pattern
 
 Every circuit includes a Circuit Breaker section that defines when to stop and
-redirect. This is the last line of defense against unbounded loops.
+redirect. These prevent unbounded loops.
 
 From `run`:
 
@@ -454,9 +373,8 @@ signals don't fit the main graph.
 
 ## Relay Infrastructure
 
-The relay layer is the system's plumbing: two shell scripts and a set of
-templates that handle prompt assembly, state management, and the report
-protocol between orchestrator and workers.
+Two shell scripts and a set of templates handle prompt assembly, state
+management, and the report protocol between orchestrator and workers.
 
 ### `compose-prompt.sh`: Prompt Assembly
 
@@ -528,8 +446,8 @@ confirms dispatch with a PID.
 ### `update-batch.sh`: Deterministic State Machine
 
 This script manages `batch.json`, the state file that tracks every slice in a
-`workers` run. The key design principle: **the orchestrator never
-hand-edits `batch.json`**. All mutations go through this script.
+`workers` run. The orchestrator never hand-edits `batch.json`. All mutations go through this
+script.
 
 The script supports these events:
 
@@ -560,9 +478,9 @@ Every worker writes a report file with these exact sections:
 ### Next Steps
 ```
 
-These headings are not cosmetic. `compose-prompt.sh` checks for their
-presence. If missing, it appends `relay-protocol.md` as a fallback. Workers
-that omit these headings produce reports the orchestrator cannot reliably parse.
+`compose-prompt.sh` checks for these headings. If missing, it appends
+`relay-protocol.md` as a fallback. Workers that omit them produce reports the
+orchestrator cannot parse.
 
 ---
 
@@ -588,7 +506,7 @@ The composition contract:
 3. **The circuit synthesizes the result.** After `workers` completes, the
    circuit reads back the child state and writes its canonical artifact.
 
-### The Sealed Workers Boundary
+### What Parent Circuits Can Read
 
 The `workers-execute@v1` protocol defines a strict public/private boundary.
 Parent circuits interact with workers through a small set of typed contract
@@ -611,9 +529,7 @@ files and must not depend on worker-internal state.
 - `events.ndjson`: internal event log for recovery
 - `review-findings/`: internal review worker output
 
-This boundary exists because worker internals are an implementation detail
-that may change. The public contract files expose the same information in a
-stable format designed for parent consumption.
+Worker internals may change. The public contract files are the stable interface.
 
 ### How Triage Routes Tasks
 
@@ -650,8 +566,6 @@ composed at dispatch time through capability resolution and injected via
   --root "${STEP_ROOT}" \
   --out "${STEP_ROOT}/prompt.md"
 ```
-
-This design has several advantages:
 
 - **Circuits stay domain-agnostic.** The same `run` circuit works for Rust,
   Swift, or React projects.
@@ -723,29 +637,21 @@ the engine built-ins.
 
 ---
 
-## The Unified Graph
+## The Workflow Graph
 
-Circuitry uses a unified graph model: 3 circuits and 2 utilities sharing common
+Circuitry uses a workflow graph model: 3 circuits and 2 utilities sharing common
 infrastructure. The primary `run` circuit contains 43 steps organized into 7
 workflow paths that share steps where their flows converge.
 
-### Why a Unified Graph
+### Shared Steps
 
-A naive approach would give each workflow its own circuit. But workflows like
-quick, researched, and adversarial all share steps (evidence gathering, scoping,
-implementation, review). Duplicating those steps across separate circuits creates
-maintenance problems: a fix in the workers adapter would need updating in every
-circuit that uses it, and shared steps would drift over time.
-
-The unified graph solves this by encoding all paths in a single graph with shared
-nodes. The `implement` step, for example, is used by quick, researched,
-adversarial, and spec-review paths. It exists once, with routes that branch
-based on mode context.
+Quick, researched, and adversarial paths share steps like evidence gathering,
+scoping, and implementation. Each shared step is defined once. Routes select
+which path to take through the graph.
 
 ### How Paths Share Steps
 
-The graph uses entry modes and routes to create distinct paths through
-shared infrastructure:
+How the seven workflows share steps in the `run` circuit:
 
 ```
                                     ┌─ quick ──────> scope -> confirm ─┐
@@ -917,17 +823,17 @@ When authoring or reviewing a circuit, check these six categories:
 
 ### Anti-Patterns to Avoid
 
-| ID | Name | What goes wrong |
-|----|------|----------------|
-| `AP-01` | Open Artifact Chain | A step declares an output that no one produces |
-| `AP-02` | Copy-The-Handoff | A raw worker report is promoted to artifact without synthesis |
-| `AP-04` | Placeholder Leakage | Unresolved `{relay_root}` tokens reach the worker |
-| `AP-05` | Interactive Skill In Autonomous Dispatch | An interactive skill appended to `codex exec --full-auto` |
-| `AP-07` | Resume By Final Artifacts Only | Resume ignores step-local state like `job-result.json` |
-| `AP-10` | Weak Gates | A gate checks only file existence |
-| `AP-11` | No Reopen Rule | Disconfirming evidence appears but the circuit only says "revise and continue" |
-| `AP-15` | Prose/YAML Drift | `SKILL.md` and `circuit.yaml` disagree |
-| `AP-19` | Review Step Mutates Source | A verdict step also changes code |
+| Name | What goes wrong |
+|------|----------------|
+| Open Artifact Chain | A step declares an output that no one produces |
+| Copy-The-Handoff | A raw worker report is promoted to artifact without synthesis |
+| Placeholder Leakage | Unresolved `{relay_root}` tokens reach the worker |
+| Interactive Skill In Autonomous Dispatch | An interactive skill appended to `codex exec --full-auto` |
+| Resume By Final Artifacts Only | Resume ignores step-local state like `job-result.json` |
+| Weak Gates | A gate checks only file existence |
+| No Reopen Rule | Disconfirming evidence appears but the circuit only says "revise and continue" |
+| Prose/YAML Drift | `SKILL.md` and `circuit.yaml` disagree |
+| Review Step Mutates Source | A verdict step also changes code |
 
 ---
 
@@ -1090,34 +996,3 @@ SKILL.md (runtime truth)
                     └── fail -> @escalate, involve user
 ```
 
----
-
-## Design Principles (Summary)
-
-1. **Artifacts are state.** The chat thread is ephemeral. The artifact chain on
-   disk is the source of truth for circuit progress.
-
-2. **Separate implementation from review.** Workers that write code must not
-   review their own code. Different sessions prevent contamination.
-
-3. **Gates enforce honesty.** Every step has a quality check. Verdicts are
-   bounded. Negative outcomes have concrete routing, not vague "revise and
-   continue" instructions.
-
-4. **Topology is static, judgment is dynamic.** The step graph does not mutate
-   at runtime. Routes select paths; they do not create new steps.
-
-5. **Deterministic state management.** LLMs do not hand-edit JSON. Deterministic
-   scripts handle all state mutations to `batch.json`.
-
-6. **Fail fast and redirect.** Circuit breakers stop circuits that are not
-   working. Triage redirects to companion circuits. Neither the orchestrator nor
-   the worker should ever silently continue past a structural failure.
-
-7. **Compose, do not bundle.** Domain skills, adapter contracts, and templates
-   are separate from circuits. Circuits declare what they need; the relay scripts
-   assemble it at dispatch time.
-
-8. **Resume from disk, not from memory.** A fresh session with no chat history
-   can reconstruct the full circuit state by scanning artifacts, relay state,
-   and reopen markers.

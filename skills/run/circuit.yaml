@@ -3,9 +3,9 @@ circuit:
   id: run
   version: "2026-04-03"
   purpose: >
-    Adaptive supergraph circuit. Triage classifies task into one of six
-    workflow shapes; the runtime engine walks the selected path using
-    recorded routes. Steps on inactive paths are never visited.
+    Adaptive workflow circuit. Triage classifies any task into one of seven
+    workflows and walks the selected path. Steps on inactive paths are
+    never visited.
 
   entry:
     command: /circuit
