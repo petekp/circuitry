@@ -37,17 +37,17 @@ See frontmatter for full negative scope.
 
 ## Glossary
 
-- **Artifact** — Durable circuit output under `${RUN_ROOT}/artifacts/`.
-- **Detritus** — Dead code, stale docs, orphaned artifacts, vestigial comments,
-  or redundant abstractions — anything that pollutes a codebase without carrying
+- **Artifact** -- Durable circuit output under `${RUN_ROOT}/artifacts/`.
+- **Detritus** -- Dead code, stale docs, orphaned artifacts, vestigial comments,
+  or redundant abstractions -- anything that pollutes a codebase without carrying
   load.
-- **Confidence** — How certain we are that an item is dead. High: zero
+- **Confidence** -- How certain we are that an item is dead. High: zero
   references, no dynamic dispatch path. Low: might be used via reflection, FFI,
   string lookup, or external consumers.
-- **Risk** — Impact of a false positive. Low: removing a comment. High:
+- **Risk** -- Impact of a false positive. Low: removing a comment. High:
   removing a public API or exported type.
-- **Batch** — An ordered group of removals executed and verified together.
-- **Deferred item** — A finding that was too ambiguous to remove autonomously,
+- **Batch** -- An ordered group of removals executed and verified together.
+- **Deferred item** -- A finding that was too ambiguous to remove autonomously,
   logged for later human review.
 
 ## Principles
@@ -111,7 +111,7 @@ append `relay-protocol.md`.
 
 ## Phase 1: Survey
 
-### Step 1: Cleanup Scope — `interactive`
+### Step 1: Cleanup Scope -- `interactive`
 
 **Objective:** Freeze the runtime inputs before any scanning starts.
 
@@ -145,7 +145,7 @@ Write `${RUN_ROOT}/artifacts/cleanup-scope.md`:
 Command, and Test Command. At least one high-risk boundary named or explicit
 "None".
 
-### Step 2: Category Survey Fanout — `dispatch`, parallel
+### Step 2: Category Survey Fanout -- `dispatch`, parallel
 
 > **Protocol reference:** See `protocols/parallel-evidence-probes.md` for the canonical version of this pattern.
 
@@ -178,7 +178,7 @@ changed APIs, outdated architecture descriptions, and broken internal links.
 - Verify architecture docs match current module structure
 - Find broken internal links (file paths, anchor references)
 - Flag docs that describe deprecated workflows still in use elsewhere
-- Cross-reference document paths against CI scripts and test fixtures — a doc
+- Cross-reference document paths against CI scripts and test fixtures -- a doc
   with zero code references may still be asserted by a CI ratchet check or
   read as a test fixture
 
@@ -190,7 +190,7 @@ into source.
 
 - Cross-reference test fixture filenames against test file imports
 - Cross-reference artifact paths against CI helper scripts and shell test
-  fixtures (`scripts/ci/`, `tests/**/*.bats`) — artifacts may be consumed as
+  fixtures (`scripts/ci/`, `tests/**/*.bats`) -- artifacts may be consumed as
   string arguments to shell functions, not as imports
 - Check config files against the features they configure
 - Find migration files older than the schema they target
@@ -253,7 +253,7 @@ done
 **Gate:** All 5 category findings files exist. Each includes candidate paths
 and an uncertainty note per candidate.
 
-### Step 3: Survey Consolidation — `synthesis`
+### Step 3: Survey Consolidation -- `synthesis`
 
 **Objective:** Normalize all category findings into one canonical inventory.
 
@@ -277,7 +277,7 @@ Consolidation rules:
   that is also dead code). Keep the higher-confidence categorization.
 - Preserve the original category label for traceability.
 - Add an ambiguity flag for items near scope exclusions or high-risk boundaries.
-- Sort by category, then by confidence (low-confidence first — they need more
+- Sort by category, then by confidence (low-confidence first -- they need more
   attention downstream).
 
 **Gate:** `survey-inventory.md` exists with deduplicated candidates. Every
@@ -285,7 +285,7 @@ candidate has category, path, rationale, and ambiguity flag.
 
 ## Phase 2: Triage
 
-### Step 4: Triage Classification — `synthesis`
+### Step 4: Triage Classification -- `synthesis`
 
 **Objective:** Classify each survey finding by confidence × risk and assign an
 action.
@@ -335,7 +335,7 @@ deferred counts recorded.
 
 ## Phase 3: Prove
 
-### Step 5: Evidence Adjudication — `dispatch`
+### Step 5: Evidence Adjudication -- `dispatch`
 
 **Objective:** Gather evidence for items marked PROVE. Produce a verdict per
 item: CONFIRMED-DEAD or KEEP.
@@ -350,31 +350,31 @@ For every item marked PROVE in the triage report, gather concrete evidence of
 liveness or deadness. Produce a verdict per item.
 
 ## Inputs
-- `${RUN_ROOT}/artifacts/triage-report.md` — items marked PROVE
-- `${RUN_ROOT}/artifacts/cleanup-scope.md` — target root, exclusions, external
+- `${RUN_ROOT}/artifacts/triage-report.md` -- items marked PROVE
+- `${RUN_ROOT}/artifacts/cleanup-scope.md` -- target root, exclusions, external
   consumers, high-risk boundaries
 
 ## Dynamic Usage Proof Checklist
 
 For each PROVE item, check ALL of the following before marking CONFIRMED-DEAD:
 
-1. **grep/search** — Zero references across the full repo (not just the target
+1. **grep/search** -- Zero references across the full repo (not just the target
    directory). Include test files, scripts, and config.
-2. **git blame recency** — Was the item touched in the last 90 days? Recent
+2. **git blame recency** -- Was the item touched in the last 90 days? Recent
    activity suggests active use.
-3. **Reflection/dynamic dispatch** — Is the symbol name constructed at runtime
+3. **Reflection/dynamic dispatch** -- Is the symbol name constructed at runtime
    via string interpolation, reflection, or dynamic dispatch?
-4. **FFI boundary** — Is the item exposed across an FFI boundary (UniFFI,
+4. **FFI boundary** -- Is the item exposed across an FFI boundary (UniFFI,
    JNI, ctypes, wasm-bindgen)?
-5. **Code generation** — Is the item referenced by a code generator, macro, or
+5. **Code generation** -- Is the item referenced by a code generator, macro, or
    build script?
-6. **Plugin/registration system** — Is the item registered via a plugin system,
+6. **Plugin/registration system** -- Is the item registered via a plugin system,
    service locator, or dependency injection container?
-7. **External consumers** — Does any known external consumer reference this
+7. **External consumers** -- Does any known external consumer reference this
    item? If KNOWN_EXTERNAL_CONSUMERS is "unknown", treat as low-confidence.
-8. **Conditional compilation** — Is the item behind a feature flag, platform
+8. **Conditional compilation** -- Is the item behind a feature flag, platform
    gate, or build configuration?
-9. **CI scripts and test fixtures** — Is the item referenced in CI workflow
+9. **CI scripts and test fixtures** -- Is the item referenced in CI workflow
    files (`.github/workflows/`), CI helper scripts (`scripts/ci/`,
    `scripts/verify/`), or shell test fixtures (`tests/**/*.bats`,
    `tests/**/*.sh`)? These references appear as string arguments to shell
@@ -416,7 +416,7 @@ Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../
 
 ## Phase 4: Clean
 
-### Step 6: Cleanup Batch Execution — `dispatch` via `workers`
+### Step 6: Cleanup Batch Execution -- `dispatch` via `workers`
 
 > **Protocol reference:** See `protocols/workers-execute.md` for the canonical version of this pattern.
 
@@ -463,7 +463,7 @@ mkdir -p "${BATCH_ROOT}/archive" "${BATCH_ROOT}/reports" \
 **a) Create `${BATCH_ROOT}/CHARTER.md`** with required sections:
 `## Batch Items`, `## Evidence References`, `## Allowed File Scope`,
 `## Verification Commands` (build/test/verify), `## Revert Rule` (revert ALL
-on any verification failure — no partial reverts).
+on any verification failure -- no partial reverts).
 
 **b) Write `${BATCH_ROOT}/prompt-header.md`** telling workers to remove
 items per CHARTER, run verification after each slice, write convergence to
@@ -533,7 +533,7 @@ failed batches.
 
 ## Phase 5: Verify
 
-### Step 7: Verification Audit — `dispatch`
+### Step 7: Verification Audit -- `dispatch`
 
 > **Protocol reference:** See `protocols/final-review.md` for the canonical version of this pattern.
 
@@ -549,10 +549,10 @@ Write a prompt header to `${RUN_ROOT}/phases/step-7/prompt-header-audit.md`:
 Independently verify that the cleanup is sound. Do NOT modify any source code.
 
 ## Inputs
-- `${RUN_ROOT}/artifacts/cleanup-batches.md` — what was removed
-- `${RUN_ROOT}/artifacts/triage-report.md` — why it was triaged for removal
-- `${RUN_ROOT}/artifacts/evidence-log.md` — evidence supporting removal
-- `${RUN_ROOT}/artifacts/cleanup-scope.md` — build/test/verify commands
+- `${RUN_ROOT}/artifacts/cleanup-batches.md` -- what was removed
+- `${RUN_ROOT}/artifacts/triage-report.md` -- why it was triaged for removal
+- `${RUN_ROOT}/artifacts/evidence-log.md` -- evidence supporting removal
+- `${RUN_ROOT}/artifacts/cleanup-scope.md` -- build/test/verify commands
 
 ## Assessment Checklist
 1. Run build command and record result
@@ -573,7 +573,7 @@ Independently verify that the cleanup is sound. Do NOT modify any source code.
   ## Test Result
   ## Verify Result
   ## Warning Delta
-  [Count delta or NOT MEASURABLE — both are valid]
+  [Count delta or NOT MEASURABLE -- both are valid]
   ## Diff Sanity Check
   ## Manifest Cross-Check
   ## Candidate Verdict
@@ -603,7 +603,7 @@ Compose and dispatch using the standard recipe: `compose-prompt.sh --header .../
 delta (or NOT MEASURABLE), diff sanity findings, manifest cross-check, and a
 candidate verdict.
 
-### Step 8: Verification Synthesis — `synthesis`
+### Step 8: Verification Synthesis -- `synthesis`
 
 **Objective:** Publish the terminal verdict and deferred-review surface.
 
@@ -660,11 +660,11 @@ Sources for deferred items:
 
 **Gate (verdict-consistency):**
 
-- `clean` — All executed removals verified, no unresolved failing boundary,
+- `clean` -- All executed removals verified, no unresolved failing boundary,
   removal manifest and verification checks agree.
-- `partial` — Executed removals verified, but deferred items remain. Every
+- `partial` -- Executed removals verified, but deferred items remain. Every
   unresolved item appears in deferred-review. No failing executed batch.
-- `reopen` — At least one executed removal or proof boundary failed
+- `reopen` -- At least one executed removal or proof boundary failed
   verification. Must name the exact failing boundary and the reopen target
   (`cleanup-batches.md`, `evidence-log.md`, or `triage-report.md`).
 
@@ -689,12 +689,12 @@ Non-canonical intermediate outputs:
 
 Stop and recommend a different path when:
 
-- The codebase has fewer than 5 candidate findings — the overhead of a
+- The codebase has fewer than 5 candidate findings -- the overhead of a
   multi-phase circuit is not justified for a handful of known deletions
-- The target is a single file or a known specific item — use direct deletion
+- The target is a single file or a known specific item -- use direct deletion
   instead
 - The cleanup requires behavior changes (refactoring, API migration) -- use
   `circuit:run` in researched mode instead
 - The user wants architecture simplification, not detritus removal -- use
   `circuit:run` in adversarial mode instead
-- Build/test infrastructure does not exist or is broken — fix that first
+- Build/test infrastructure does not exist or is broken -- fix that first

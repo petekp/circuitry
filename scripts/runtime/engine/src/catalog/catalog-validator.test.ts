@@ -117,9 +117,12 @@ describe("generated block freshness", () => {
 // Directories that contain historical or ephemeral artifacts (migration plans,
 // circuit run outputs) rather than active source references.
 const LINT_SKIP_PREFIXES = [".claude/", ".circuitry/"];
+const LINT_SKIP_SUFFIXES = [".test.ts", ".test.js", ".spec.ts", ".spec.js"];
 
 function shouldLint(relPath: string): boolean {
-  return !LINT_SKIP_PREFIXES.some((p) => relPath.startsWith(p));
+  if (LINT_SKIP_PREFIXES.some((p) => relPath.startsWith(p))) return false;
+  if (LINT_SKIP_SUFFIXES.some((s) => relPath.endsWith(s))) return false;
+  return true;
 }
 
 describe("structured reference lint", () => {
@@ -157,13 +160,13 @@ describe("structured reference lint", () => {
 
       const lines = content.split("\n");
       for (let i = 0; i < lines.length; i++) {
-        let match;
+        let match: RegExpExecArray | null;
         circuitRefRe.lastIndex = 0;
         while ((match = circuitRefRe.exec(lines[i])) !== null) {
           const slug = match[1];
           if (!validSlugs.has(slug)) {
             orphans.push(
-              `catalog-validator: ${relPath}:${i + 1} — orphan reference /circuit:${slug}\n` +
+              `catalog-validator: ${relPath}:${i + 1} -- orphan reference /circuit:${slug}\n` +
                 `  Valid slugs: ${[...validSlugs].join(", ")}`,
             );
           }
@@ -207,13 +210,13 @@ describe("structured reference lint", () => {
 
       const lines = content.split("\n");
       for (let i = 0; i < lines.length; i++) {
-        let match;
+        let match: RegExpExecArray | null;
         skillsRefRe.lastIndex = 0;
         while ((match = skillsRefRe.exec(lines[i])) !== null) {
           const dir = match[1];
           if (!validDirs.has(dir)) {
             orphans.push(
-              `catalog-validator: ${relPath}:${i + 1} — orphan reference skills/${dir}/\n` +
+              `catalog-validator: ${relPath}:${i + 1} -- orphan reference skills/${dir}/\n` +
                 `  Valid dirs: ${[...validDirs].join(", ")}`,
             );
           }

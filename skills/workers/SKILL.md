@@ -90,7 +90,7 @@ Skip this phase for `review` slices.
 
 1. Compose the prompt and dispatch:
    `"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" --prompt {relay_root}/prompt.md --output {relay_root}/last-messages/last-message-{slice_id}.txt`
-2. Verify output exists using explicit checks — never zsh globs or `||` chains:
+2. Verify output exists using explicit checks -- never zsh globs or `||` chains:
    `test -f {relay_root}/reports/report-{slice_id}.md && wc -l {relay_root}/reports/report-{slice_id}.md`
    If the file is missing, check the worker output trace for `file update` diffs before
    concluding the worker failed. The trace is the definitive record.

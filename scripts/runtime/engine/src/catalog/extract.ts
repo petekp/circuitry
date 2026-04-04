@@ -15,13 +15,13 @@ interface ExtractOptions {
 function parseFrontmatter(content: string, filePath: string): Record<string, string> {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) {
-    throw new Error(`catalog-compiler: ${filePath} — no YAML frontmatter found`);
+    throw new Error(`catalog-compiler: ${filePath} -- no YAML frontmatter found`);
   }
   try {
     return parseYaml(match[1]) as Record<string, string>;
   } catch (e) {
     throw new Error(
-      `catalog-compiler: ${filePath} — YAML parse error: ${e instanceof Error ? e.message : String(e)}`,
+      `catalog-compiler: ${filePath} -- YAML parse error: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
 }
@@ -59,14 +59,14 @@ export function extract(skillsDir: string, opts?: ExtractOptions): Catalog {
         manifest = parseYaml(yamlContent);
       } catch (e) {
         throw new Error(
-          `catalog-compiler: ${circuitYamlPath} — YAML parse error: ${e instanceof Error ? e.message : String(e)}`,
+          `catalog-compiler: ${circuitYamlPath} -- YAML parse error: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
 
       const circuit = manifest?.circuit;
       if (!circuit || typeof circuit !== "object") {
         throw new Error(
-          `catalog-compiler: ${circuitYamlPath} — missing or invalid 'circuit' key`,
+          `catalog-compiler: ${circuitYamlPath} -- missing or invalid 'circuit' key`,
         );
       }
       const entry: CircuitEntry = {
