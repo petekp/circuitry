@@ -9,8 +9,8 @@ severity, and issues a SHIP-READY or ISSUES FOUND verdict. The worker does NOT
 modify source code -- if issues are found, the orchestrator handles remediation
 separately before re-running the review.
 
-Circuits that use this protocol: `run` (adversarial Step 10, spec-review
-Step 9), `cleanup` (Step 7).
+Circuits that use this protocol: `run` (review steps across adversarial and
+spec-review paths), `cleanup` (Step 7).
 
 ## Prerequisites
 

@@ -178,10 +178,10 @@ complexity, or has no rollback plan when a batch fails.
 
 ## Phase 2: Inventory
 
-### Steps 2-3: Dependency Scan + Risk Assessment -- `dispatch` (parallel)
+### Step 2: Dependency Scan + Risk Assessment -- `dispatch` (parallel)
 
-**Objective:** Map all code that depends on the migration target (Step 2), and classify
-each dependency by migration difficulty and risk (Step 3).
+**Objective:** Map all code that depends on the migration target, and classify
+each dependency by migration difficulty and risk. Two workers run in parallel.
 
 Dispatch two workers in parallel. Each header is self-contained (no `--template`).
 
@@ -286,7 +286,7 @@ Every dependency is classified by difficulty and risk.
 
 ## Phase 3: Strategy
 
-### Step 4: Coexistence Plan -- `synthesis`
+### Step 3: Coexistence Plan -- `synthesis`
 
 **Objective:** Design how old and new systems run simultaneously during the transition.
 This is the defining artifact of the migrate circuit.
@@ -319,7 +319,7 @@ requirements, and a verification strategy.
 **Failure mode:** The team starts migrating code without a plan for how old and new coexist,
 leading to a half-migrated state that neither works nor rolls back cleanly.
 
-### Step 5: Migration Steer -- `interactive`
+### Step 4: Migration Steer -- `interactive`
 
 **Objective:** Let the user review and approve the coexistence strategy and batch order
 before any code moves.
@@ -356,7 +356,7 @@ would have rejected, causing rework after code has already moved.
 
 ## Phase 4: Execution
 
-### Step 6: Batch Migration -- `dispatch` (via workers)
+### Step 5: Batch Migration -- `dispatch` (via workers)
 
 **Objective:** Execute the migration in ordered batches. Each batch: migrate code, update
 tests, verify old+new pass, commit.
@@ -453,7 +453,7 @@ revising the plan, leaving a half-migrated state that neither old nor new system
 
 ## Phase 5: Verification
 
-### Step 7: Full Verification -- `dispatch`
+### Step 6: Full Verification -- `dispatch`
 
 **Objective:** Run the complete test suite, check for leftover references to the old system,
 and verify no dual-system artifacts remain.
@@ -512,7 +512,7 @@ leftover explicitly named.
 **Failure mode:** Leftover references to the old system cause runtime failures after the
 coexistence scaffolding is removed.
 
-### Step 8: Cutover Review -- `dispatch`
+### Step 7: Cutover Review -- `dispatch`
 
 **Objective:** Final review: confirm the old system can be fully removed, coexistence
 scaffolding can be torn down, and documentation is updated.

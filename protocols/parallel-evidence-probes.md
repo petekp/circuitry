@@ -8,8 +8,8 @@ structured evidence digest. The workers run in parallel when the backend
 supports it. The orchestrator verifies all outputs exist and promotes them to
 the artifact chain.
 
-Circuits that use this protocol: `run` (researched Step 2, adversarial
-Step 2, spec-review Steps 3-5), `cleanup` (Step 2).
+Circuits that use this protocol: `run` (evidence-gathering steps across
+researched, adversarial, and spec-review paths), `cleanup` (Step 2).
 
 ## Prerequisites
 

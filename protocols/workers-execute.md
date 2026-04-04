@@ -8,8 +8,8 @@ and synthesizing the parent artifact from workers output. Use this protocol
 whenever a circuit step delegates its implementation phase to the `workers`
 skill for an implement -> review -> converge cycle.
 
-Circuits that use this protocol: `run` (quick/researched Step 3, adversarial
-Step 9), `cleanup` (Step 6).
+Circuits that use this protocol: `run` (implementation steps across all
+workflow paths), `cleanup` (Step 6).
 
 ## Prerequisites
 

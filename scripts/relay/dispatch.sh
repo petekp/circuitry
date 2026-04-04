@@ -7,12 +7,14 @@
 # orchestrator (Claude) should execute directly.
 #
 # Usage:
-#   $CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh --prompt <file> --output <file> [--backend codex|agent]
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh --prompt <file> --output <file> [options]
 #
 # Options:
-#   --prompt FILE    — Assembled prompt file to send to the worker (required)
-#   --output FILE    — Path where worker should write its last-message trace (required)
-#   --backend MODE   — Force dispatch engine (optional; auto-detects if omitted)
+#   --prompt FILE    -- Assembled prompt file to send to the worker (required)
+#   --output FILE    -- Path where worker should write its last-message trace (required)
+#   --backend MODE   -- Force dispatch engine (optional; auto-detects if omitted)
+#   --circuit NAME   -- Circuit id for config resolution (optional)
+#   --role ROLE      -- Worker role: implementer, reviewer, researcher (optional)
 #
 #   Built-in engines:
 #     codex   — Codex CLI (`codex exec --full-auto`)

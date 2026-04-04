@@ -54,7 +54,7 @@ The implement/review/converge loop, artifact chain, gates, and report format are
 
 ## Plan
 
-Read the task, `CHARTER.md`, and `SLICES.yaml` if present. Write `{relay_root}/batch.json`
+Read the task and `CHARTER.md`. Write `{relay_root}/batch.json`
 with:
 
 - batch fields: `batch_id`, `charter`, `branch`, `head_at_plan`,
