@@ -42,6 +42,12 @@ sync_target() {
     rsync -a "$PLUGIN_ROOT/scripts/" "$target/scripts/" || return 1
   fi
 
+  # Sync schemas (required by bundled engine CLIs for event/state validation).
+  if [[ -d "$PLUGIN_ROOT/schemas" ]]; then
+    mkdir -p "$target/schemas" || return 1
+    rsync -a "$PLUGIN_ROOT/schemas/" "$target/schemas/" || return 1
+  fi
+
   return 0
 }
 
@@ -70,7 +76,7 @@ fi
 
 if [[ "$synced_any" -eq 0 ]]; then
   printf 'No Claude plugin targets were available.\n' >&2
-  printf 'Install circuitry with: claude plugin install circuitry@petekp\n' >&2
+  printf 'Install circuitry with: claude plugin install petekp/circuitry\n' >&2
   exit 1
 fi
 

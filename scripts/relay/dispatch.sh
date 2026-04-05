@@ -41,7 +41,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-READ_CONFIG="$PLUGIN_ROOT/scripts/runtime/engine/src/cli/read-config.ts"
+READ_CONFIG="$PLUGIN_ROOT/scripts/runtime/bin/read-config.js"
 
 PROMPT=""
 OUTPUT=""
@@ -74,17 +74,17 @@ fi
 if [[ -z "$BACKEND" ]]; then
   # Check circuit.config.yaml for dispatch.per_circuit.<id> or dispatch.engine
   if [[ -n "$CIRCUIT" ]]; then
-    per_circuit="$(npx tsx "$READ_CONFIG" --key "dispatch.per_circuit.$CIRCUIT" --fallback "" 2>/dev/null || true)"
+    per_circuit="$(node "$READ_CONFIG" --key "dispatch.per_circuit.$CIRCUIT" --fallback "" || true)"
     [[ -n "$per_circuit" ]] && BACKEND="$per_circuit"
   fi
   if [[ -z "$BACKEND" ]]; then
-    global_engine="$(npx tsx "$READ_CONFIG" --key "dispatch.engine" --fallback "" 2>/dev/null || true)"
+    global_engine="$(node "$READ_CONFIG" --key "dispatch.engine" --fallback "" || true)"
     [[ -n "$global_engine" && "$global_engine" != "auto" ]] && BACKEND="$global_engine"
   fi
 
   # Role-based backend resolution: --role flag > config roles > auto-detect
   if [[ -z "$BACKEND" && -n "$ROLE" ]]; then
-    role_backend="$(npx tsx "$READ_CONFIG" --key "roles.$ROLE" --fallback "" 2>/dev/null || true)"
+    role_backend="$(node "$READ_CONFIG" --key "roles.$ROLE" --fallback "" || true)"
     [[ -n "$role_backend" ]] && BACKEND="$role_backend"
   fi
 fi

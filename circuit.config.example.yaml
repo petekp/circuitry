@@ -27,37 +27,14 @@ roles:
 #     run: codex
 #     cleanup: agent
 
-# Map semantic capabilities to installed skills (optional).
-# Resolution order: project config -> user config -> engine built-ins.
-#
-# An empty list [] means auto-detected: Circuitry inspects installed skills
-# and file context to find the best match. This works for common capabilities.
-# Explicit mappings (e.g., [tdd]) force a specific skill to fill the role.
-capabilities:
-  code.change: []                    # auto-detected from file extensions in scope
-  review.independent: []             # auto-detected (uses built-in review logic)
-  testing.tdd: [tdd]                 # maps to the tdd skill
-  research.external: [deep-research] # maps to deep-research skill
-  repo.analysis: []                  # auto-detected from codebase structure
-  architecture.exploration: [architecture-exploration, solution-explorer]
-
-# Declare expected capabilities for cross-machine consistency (optional).
-# If present, the session-start hook warns when an expected capability
-# is not detected. Omit this section for fully automatic degradation.
-#
-# expected_capabilities:
-#   - tdd
-#   - deep-research
-#   - dead-code-sweep
-
-# Per-circuit overrides (optional).
-# Use this to give a specific circuit different skill mappings than the
-# global defaults above.
+# Per-circuit skill overrides (optional).
+# Use this to assign specific skills to a circuit. Comma-separated skill
+# names are injected into the dispatch prompt for that circuit.
+# An empty string means no extra skills (use engine defaults).
 circuits:
   run:
-    capabilities: {}
+    skills: ""
   cleanup:
-    capabilities:
-      repo.analysis: [dead-code-sweep]
+    skills: "dead-code-sweep"
   migrate:
-    capabilities: {}
+    skills: ""

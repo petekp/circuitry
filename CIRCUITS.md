@@ -222,6 +222,6 @@ independent worker sessions. Not typically invoked directly.
 
 **`/circuit:handoff`** saves session state to disk so a fresh session can resume.
 Writes the current run's progress, active artifacts, and next step to
-`.circuitry/HANDOFF.md`. When you start a new session, Circuitry detects the
-handoff file and offers to resume. `/circuit:handoff done` clears a completed
-handoff.
+`~/.claude/projects/<slug>/handoff.md` (slug is derived from the git root).
+When you start a new session, Circuitry detects the handoff file and offers to
+resume. `/circuit:handoff done` clears a completed handoff.

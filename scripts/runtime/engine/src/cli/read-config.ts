@@ -5,13 +5,19 @@
  * Usage:
  *   node read-config.js --key roles.implementer --fallback auto
  *   node read-config.js --key dispatch.per_circuit.run --fallback ""
+ *   node read-config.js --config /path/to/circuit.config.yaml --key roles.implementer --fallback auto
  *
  * Searches for circuit.config.yaml in:
- *   1. Current working directory
- *   2. ~/.claude/circuit.config.yaml
+ *   1. Explicit --config path (if provided, only that path is tried)
+ *   2. Current working directory
+ *   3. ~/.claude/circuit.config.yaml
  *
- * Prints the value to stdout. On any error (missing file, missing key, parse
- * failure), prints the fallback value. Exit code is always 0.
+ * Exit behavior:
+ *   - Config file not found anywhere: print fallback, exit 0
+ *   - Config file found, key resolved: print value, exit 0
+ *   - Config file found, key NOT found: print fallback, exit 0
+ *   - Config file found, YAML parse error: print diagnostic to stderr, exit 1
+ *   - --config path does not exist: print diagnostic to stderr, exit 1
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -33,16 +39,29 @@ function resolvePath(obj: unknown, path: string): unknown {
   return current;
 }
 
+function formatValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.join(",");
+  }
+  if (typeof value === "object" && value !== null) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 function main(): number {
   const args = process.argv.slice(2);
   let key = "";
   let fallback = "";
+  let configFlag = "";
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--key" && i + 1 < args.length) {
       key = args[++i];
     } else if (args[i] === "--fallback" && i + 1 < args.length) {
       fallback = args[++i];
+    } else if (args[i] === "--config" && i + 1 < args.length) {
+      configFlag = args[++i];
     }
   }
 
@@ -51,6 +70,30 @@ function main(): number {
     return 0;
   }
 
+  // When --config is provided, ONLY search that explicit path.
+  if (configFlag) {
+    if (!existsSync(configFlag)) {
+      console.error(`circuitry: config file not found: ${configFlag}`);
+      return 1;
+    }
+    try {
+      const raw = readFileSync(configFlag, "utf-8");
+      const cfg = parseYaml(raw);
+      const value = resolvePath(cfg, key);
+      if (value !== undefined && value !== null) {
+        console.log(formatValue(value));
+        return 0;
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`circuitry: failed to parse ${configFlag}: ${message}`);
+      return 1;
+    }
+    console.log(fallback);
+    return 0;
+  }
+
+  // Default discovery: CWD then home directory.
   const configPaths = [
     join(process.cwd(), "circuit.config.yaml"),
     join(homedir(), ".claude", "circuit.config.yaml"),
@@ -65,15 +108,13 @@ function main(): number {
       const value = resolvePath(cfg, key);
 
       if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          console.log(value.join(","));
-        } else {
-          console.log(String(value));
-        }
+        console.log(formatValue(value));
         return 0;
       }
-    } catch {
-      continue;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`circuitry: failed to parse ${configPath}: ${message}`);
+      return 1;
     }
   }
 

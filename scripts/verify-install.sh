@@ -5,14 +5,16 @@
 #   ./scripts/verify-install.sh
 #
 # Checks:
-#   1. Node.js (required by the engine)
+#   1. Node.js (version 20+, required by the engine)
 #   2. Engine CLIs (bundled, no build step)
 #   3. Bash version
-#   4. Skill directories
-#   5. Relay scripts
-#   6. compose-prompt.sh smoke test
-#   7. Engine dev environment (contributors only)
-#   8. Codex CLI (optional, faster parallelism)
+#   4. Hooks
+#   5. Schemas
+#   6. Skill directories
+#   7. Relay scripts
+#   8. compose-prompt.sh smoke test
+#   9. Engine dev environment (contributors only)
+#  10. Codex CLI (optional, faster parallelism)
 
 set -uo pipefail
 
@@ -46,7 +48,12 @@ section "Node.js"
 
 if command -v node >/dev/null 2>&1; then
   node_version="$(node --version 2>&1)"
-  pass "node found: $node_version (engine runtime)"
+  node_major="$(node -e "console.log(process.versions.node.split('.')[0])")"
+  if [[ "$node_major" -ge 20 ]]; then
+    pass "node $node_version (engine runtime)"
+  else
+    fail "node $node_version found, but 20+ required (engine targets node20)"
+  fi
 else
   fail "node not found -- required by the engine (scripts/runtime/bin/)"
 fi
@@ -55,7 +62,7 @@ fi
 section "Engine CLIs"
 
 bin_dir="$PLUGIN_ROOT/scripts/runtime/bin"
-for cli_name in append-event catalog-compiler derive-state resume update-batch; do
+for cli_name in append-event catalog-compiler derive-state read-config resume update-batch; do
   cli_path="$bin_dir/${cli_name}.js"
   if [[ -f "$cli_path" ]]; then
     pass "engine CLI: ${cli_name}"
@@ -64,7 +71,44 @@ for cli_name in append-event catalog-compiler derive-state resume update-batch; 
   fi
 done
 
-# ── 3. Bash version ──────────────────────────────────────────────────
+# ── 3. Hooks ────────────────────────────────────────────────────────
+section "Hooks"
+
+if [[ -f "$PLUGIN_ROOT/hooks/hooks.json" ]]; then
+  pass "hooks.json"
+else
+  fail "hooks.json missing -- SessionStart hook will not run"
+fi
+
+if [[ -f "$PLUGIN_ROOT/hooks/session-start.sh" ]]; then
+  if [[ -x "$PLUGIN_ROOT/hooks/session-start.sh" ]]; then
+    pass "session-start.sh (exists, executable)"
+  else
+    fail "session-start.sh exists but is NOT executable -- run: chmod +x $PLUGIN_ROOT/hooks/session-start.sh"
+  fi
+else
+  fail "session-start.sh missing -- handoff resume will not work"
+fi
+
+# ── 4. Schemas ──────────────────────────────────────────────────────
+section "Schemas"
+
+schemas_dir="$PLUGIN_ROOT/schemas"
+if [[ -d "$schemas_dir" ]]; then
+  schema_count=0
+  for schema in "$schemas_dir"/*.schema.json; do
+    [[ -f "$schema" ]] && schema_count=$((schema_count + 1))
+  done
+  if [[ $schema_count -gt 0 ]]; then
+    pass "schemas/ found ($schema_count schema files)"
+  else
+    fail "schemas/ exists but contains no .schema.json files"
+  fi
+else
+  fail "schemas/ missing -- engine CLIs will fail to validate events and state"
+fi
+
+# ── 5. Bash version ──────────────────────────────────────────────────
 section "Bash version"
 
 bash_version="${BASH_VERSINFO[0]:-0}"

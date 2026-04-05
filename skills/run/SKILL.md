@@ -223,6 +223,4 @@ Include: counter values, failure output, options (adjust scope, skip slice, abor
 ## Single-User Assumptions
 
 - Named pattern labels assume familiarity with Circuitry vocabulary.
-- `expected_capabilities` assumes the same config across machines.
-- Capability auto-detection assumes one user manages skill installs.
 - These assumptions are intentional. Circuitry is a single-user power tool.

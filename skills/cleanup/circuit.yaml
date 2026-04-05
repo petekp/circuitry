@@ -66,9 +66,6 @@ circuit:
         request: jobs/{step_id}-{attempt}/dispatch-request.json
         receipt: jobs/{step_id}-{attempt}/dispatch-receipt.json
         result: jobs/{step_id}-{attempt}/job-result.json
-      capabilities:
-        required: [repo.analysis]
-        optional: []
       budgets:
         max_attempts: 1
       gate:
@@ -134,9 +131,6 @@ circuit:
         request: jobs/{step_id}-{attempt}/dispatch-request.json
         receipt: jobs/{step_id}-{attempt}/dispatch-receipt.json
         result: jobs/{step_id}-{attempt}/job-result.json
-      capabilities:
-        required: [repo.analysis]
-        optional: []
       budgets:
         max_attempts: 2
       gate:
@@ -164,9 +158,6 @@ circuit:
         request: jobs/{step_id}-{attempt}/dispatch-request.json
         receipt: jobs/{step_id}-{attempt}/dispatch-receipt.json
         result: jobs/{step_id}-{attempt}/job-result.json
-      capabilities:
-        required: [code.change, review.independent]
-        optional: []
       budgets:
         max_attempts: 3
       gate:
@@ -195,9 +186,6 @@ circuit:
         request: jobs/{step_id}-{attempt}/dispatch-request.json
         receipt: jobs/{step_id}-{attempt}/dispatch-receipt.json
         result: jobs/{step_id}-{attempt}/job-result.json
-      capabilities:
-        required: [review.independent]
-        optional: []
       budgets:
         max_attempts: 1
       gate:

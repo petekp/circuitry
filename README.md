@@ -64,9 +64,10 @@ evaluation. Circuitry picks the workflow that fits:
    implementation. Implementation gets an independent review from a separate
    session. Every step saves progress to disk.
 
-3. **Progress survives crashes.** All state lives in `.circuitry/` as plain
-   markdown. A new session reads that folder and resumes from wherever the last
-   one stopped.
+3. **Progress survives crashes.** Run state (artifacts, event logs, checkpoint
+   data) lives in `.circuitry/`. Session handoff state lives in
+   `~/.claude/projects/` so fresh sessions can resume where the last one
+   stopped.
 
 4. **You step in where it matters.** Circuitry pauses at checkpoints for your
    judgment (scope confirmation, tradeoff decisions). Everything else runs
@@ -136,7 +137,7 @@ they're used automatically at the right phase:
 Install what's relevant to your stack. Circuitry works without any of them, but
 each one adds depth to the phases where it applies.
 
-**Bring your own skills.** Map any installed skill to any Circuitry capability in
+**Bring your own skills.** Map any installed skill to a circuit in
 `circuit.config.yaml`. See `circuit.config.example.yaml` for details.
 
 ## Optional: Codex CLI
@@ -152,7 +153,7 @@ npm install -g @openai/codex
 ## Prerequisites
 
 - **Claude Code** (the host environment)
-- **Node.js 18+** (no build step required)
+- **Node.js 20+** (no build step required)
 
 ## Troubleshooting
 

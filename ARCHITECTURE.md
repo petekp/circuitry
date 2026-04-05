@@ -13,9 +13,8 @@ what each circuit does, see [CIRCUITS.md](CIRCUITS.md).
 4. [The Gate System](#the-gate-system)
 5. [Relay Infrastructure](#relay-infrastructure)
 6. [Circuit Composition](#circuit-composition)
-7. [Capability Resolution](#capability-resolution)
-8. [The Workflow Graph](#the-workflow-graph)
-9. [Extending the System](#extending-the-system)
+7. [The Workflow Graph](#the-workflow-graph)
+8. [Extending the System](#extending-the-system)
 
 ---
 
@@ -555,8 +554,7 @@ redirect note and tells the user to invoke the companion circuit directly.
 ### Domain Skills as Companions
 
 Domain skills (`rust`, `swift-apps`, `tdd`) are separate from circuits. They are
-composed at dispatch time through capability resolution and injected via
-`--skills`:
+composed at dispatch time and injected via `--skills`:
 
 ```bash
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
@@ -573,67 +571,6 @@ composed at dispatch time through capability resolution and injected via
   (typically 2 domain skills, 3 total), preventing prompt bloat.
 - **Domain knowledge stays current.** Updating a domain skill immediately
   affects all circuits that compose it, without editing any circuit files.
-
----
-
-## Capability Resolution
-
-Circuits do not reference skills by name in their topology. Instead, each
-dispatch step declares the *capabilities* it needs, semantic descriptors
-like `testing.tdd`, `code.change`, or `review.independent`. At dispatch time,
-the resolution layer maps those capabilities to concrete installed skills.
-
-### What Capabilities Are
-
-A capability is a dotted identifier that describes a semantic function:
-
-| Capability | Meaning |
-|------------|---------|
-| `testing.tdd` | Test-driven development: write failing tests first, then implement |
-| `code.change` | Make code changes in a specific language/framework context |
-| `review.independent` | Review code without having written it |
-| `research.external` | Conduct deep external research beyond the codebase |
-| `repo.analysis` | Analyze codebase structure, find dead code, audit patterns |
-
-Capabilities are not skills. A capability is *what needs to happen*; a skill
-is *who does it*. The mapping between them is many-to-many.
-
-### Resolution Order
-
-When a dispatch step declares a required capability, the resolver checks
-three sources in order:
-
-1. **Project config** (`./circuit.config.yaml`). Per-circuit capability
-   overrides take precedence.
-2. **User config** (`~/.claude/circuit.config.yaml`). Global defaults.
-3. **Engine built-ins**. Hardcoded fallback mappings for capabilities
-   that can be inferred without explicit configuration.
-
-### Required vs. Optional Capabilities
-
-- **Required capabilities** must resolve to at least one skill before the
-  step can dispatch. Unresolved required capabilities fail closed.
-- **Optional capabilities** degrade gracefully. The step dispatches without
-  the domain guidance if unresolved.
-
-### Configuration Format
-
-```yaml
-# circuit.config.yaml
-capabilities:
-  testing.tdd: [tdd]
-  research.external: [deep-research]
-  code.change: []       # auto-detected
-  review.independent: [] # auto-detected
-
-circuits:
-  cleanup:
-    capabilities:
-      repo.analysis: [dead-code-sweep]
-```
-
-An empty list (`[]`) means the capability is auto-detected or provided by
-the engine built-ins.
 
 ---
 
@@ -769,9 +706,6 @@ circuit:
         # For checkpoints:
         request: checkpoints/{step_id}-{attempt}.request.json
         response: checkpoints/{step_id}-{attempt}.response.json
-      capabilities:                  # for dispatch steps
-        required: [capability.names]
-        optional: [capability.names]
       budgets:
         max_attempts: N
       gate:
