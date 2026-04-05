@@ -161,7 +161,8 @@ Write `artifacts/queue.md`:
 **Batch ordering:** Lowest risk first. For cleanup: comments -> fixtures -> orphaned files -> unused functions -> exports -> public API. For quality: lint fixes -> error handling -> type safety -> coverage -> performance.
 
 **Rigor behavior:**
-- Standard: Present triage for user confirmation before proceeding.
+- Standard: Proceed with triage. Pause only if deferred items exceed 30% of
+  total or if any PROVE-HIGH items remain (ambiguity + risk warrants a check).
 - Deep: Evidence adjudication for PROVE items before batching.
 - Autonomous: Auto-approve using triage decision table. Log deferred items.
 
@@ -235,9 +236,11 @@ COMPLETE | REVERTED | PARTIAL
 **Retry:** Up to 3 attempts per batch. After 3, mark as REVERTED and continue.
 
 **Rigor behavior:**
-- Standard: User confirms each batch before dispatch.
+- Standard: Dispatch sequentially. Pause before any batch that touches
+  high-risk boundaries (public APIs, FFI, published packages) or has items
+  marked PROVE. Other batches proceed without confirmation.
 - Autonomous: Dispatch sequentially, no pause. Max 3 batches then stop.
-- Deep: Same as Standard + stronger false-positive aversion.
+- Deep: Confirm every batch + stronger false-positive aversion.
 
 **Gate:** All eligible batches executed. Verification results recorded. Reverted batches noted.
 
@@ -297,7 +300,7 @@ Write `artifacts/deferred.md`:
 
 **Gate:** deferred.md exists. Every deferred/blocked item from prior phases included.
 
-Update `active-run.md`: phase=deferred-review, next step=Close.
+Update `active-run.md`: phase=deferred, next step=Close.
 
 ## Phase: Close
 

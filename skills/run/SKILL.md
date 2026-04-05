@@ -22,7 +22,7 @@ The Circuitry router. Classifies tasks, selects rigor, dispatches to the right w
 /circuit repair: <task>          # Repair Deep
 /circuit develop: <task>         # Build Standard
 /circuit decide: <task>          # Explore Tournament (decision mode)
-/circuit migrate: <task>         # Redirect to circuit:migrate
+/circuit migrate: <task>         # Migrate Deep
 /circuit cleanup: <task>         # Sweep Standard (cleanup objective)
 /circuit overnight: <task>       # Sweep Autonomous
 ```
@@ -37,21 +37,10 @@ Before routing, check for intent hints in the task prefix.
 | `repair:` | Repair | Deep | Skip routing. Dispatch directly. |
 | `develop:` | Build | Standard | Skip routing. Dispatch directly. |
 | `decide:` | Explore | Tournament | Skip routing. Dispatch directly. |
-| `migrate:` | Migrate | Deep | Redirect to circuit:migrate. |
+| `migrate:` | Migrate | Deep | Skip routing. Dispatch directly. |
 | `cleanup:` | Sweep | Standard | Skip routing. Dispatch directly. |
 | `overnight:` | Sweep | Autonomous | Skip routing. Dispatch directly. |
 | (none) | (classify) | (auto) | Run routing classification. |
-
-**Companion circuit redirect:** When the prefix is `migrate:`, do NOT run the
-router. Tell the user:
-
-```
-This task needs the full migration workflow.
-
-  /circuit:migrate <task description>
-
-Copy and run the command above.
-```
 
 **Spec detection:** If the task includes an RFC, PRD, or spec document (file path
 or inline), route to Explore Deep with spec input mode.
@@ -132,6 +121,9 @@ say so and do the work inline. No workflow overhead.
 RUN_SLUG="<task-slug>"
 RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
+
+# Update the current-run pointer so session-start.sh picks up the right run
+ln -sfn "circuit-runs/${RUN_SLUG}" .circuitry/current-run
 ```
 
 Write initial `${RUN_ROOT}/artifacts/active-run.md`:

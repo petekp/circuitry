@@ -84,6 +84,23 @@ circuit:
         source: jobs/{step_id}-{attempt}.result.json
         pass: [complete_and_hardened]
       routes:
+        pass: verify
+
+    - id: verify
+      title: Verify
+      executor: orchestrator
+      kind: synthesis
+      protocol: repair-verify@v1
+      reads: [artifacts/brief.md, artifacts/analysis.md]
+      writes:
+        artifact:
+          path: artifacts/verification.md
+          schema: verification@v1
+      gate:
+        kind: schema_sections
+        source: artifacts/verification.md
+        required: [Verification Results, Regression Check]
+      routes:
         pass: review
 
     - id: review

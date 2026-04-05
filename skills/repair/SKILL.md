@@ -47,14 +47,20 @@ Write `artifacts/brief.md`:
 ### Actual Behavior
 <what happens instead>
 ### Repro Command
-<exact command or steps to reproduce>
+<exact command or steps to reproduce, or "not yet reproducible">
 ### Regression Test
 <test that fails now, must pass after fix -- this is Slice 0>
+<OR: "deferred -- see Diagnostic Path below">
 ```
 
-The Regression Contract is mandatory. The regression test becomes Slice 0 in any plan.
+The Regression Contract is mandatory. Expected Behavior, Actual Behavior, and Repro
+Command are always required. Regression Test may be deferred if the bug is not yet
+reproducible (flaky, environment-sensitive, partial incident). See Diagnostic Path below.
 
-**Gate:** brief.md exists with non-empty Objective, Regression Contract (all 4 subsections), Verification Commands.
+When the Regression Test is present, it becomes Slice 0 in any plan.
+
+**Gate:** brief.md exists with non-empty Objective, Regression Contract (Expected
+Behavior, Actual Behavior, Repro Command), Verification Commands.
 
 Update `active-run.md`: phase=frame, next step=Reproduce.
 
@@ -79,7 +85,28 @@ Write reproduction results into `artifacts/analysis.md`:
 <reproducible | intermittent | not reproducible>
 ```
 
-**Gate:** Repro attempted. Results recorded. If not reproducible, hypotheses listed.
+### Diagnostic Path (when not reproducible)
+
+When the bug cannot be reproduced but evidence suggests it is real (logs, user
+reports, monitoring data), enter the diagnostic path instead of stalling:
+
+1. **Contain:** Apply a minimal containment measure (add logging, add a guard
+   clause, enable a feature flag) that either prevents the failure or captures
+   the signal needed to write a regression test later.
+2. **Instrument:** Add targeted observability (structured logs, metrics, error
+   boundaries) at the suspected failure point.
+3. **Defer regression test:** Record the deferred test in analysis.md with the
+   trigger condition that would make it writable. The test becomes a follow-up
+   item in result.md, not a blocker.
+4. **Continue to Isolate:** The Isolate phase works from the containment and
+   instrumentation evidence rather than a clean repro.
+
+The diagnostic path is not a shortcut. It trades upfront test certainty for
+signal-gathering discipline. The containment must be code-reviewed. The deferred
+test is tracked.
+
+**Gate:** Repro attempted. Results recorded. If not reproducible: diagnostic path
+entered with containment plan, OR hypotheses listed for escalation.
 
 Update `active-run.md`: phase=reproduce, next step=Isolate.
 
@@ -128,8 +155,12 @@ Update `active-run.md`: phase=isolate, next step=Fix.
 
 ### Write the regression test first (Slice 0)
 
-Before any code fix, write the regression test from the Regression Contract. It
-must FAIL against the current code. This proves the bug exists in test form.
+If the Regression Test is present in the contract: write it before any code fix.
+It must FAIL against the current code. This proves the bug exists in test form.
+
+If the Regression Test was deferred (diagnostic path): Slice 0 is the
+containment/instrumentation from the diagnostic path instead. The regression test
+becomes a follow-up item in result.md.
 
 ### Then fix the code (Slice 1+)
 
@@ -249,7 +280,7 @@ Write `artifacts/result.md`:
 ## Fix
 <what was changed>
 ## Regression Test
-<test name, what it covers>
+<test name, what it covers -- or "deferred" with trigger condition>
 ## Verification
 <all test results>
 ## Eliminated Hypotheses

@@ -46,7 +46,7 @@ Write prompt header at `${step_dir}/prompt-header.md`:
   test coverage, scope drift, naming, dead code, security concerns. Do NOT modify
   source code -- diagnose only.
 - Inputs: diff or file list, any available brief.md/plan.md context
-- Output: `${step_dir}/review-findings.md`
+- Output: `${step_dir}/reports/review-report.md`
 
 ```bash
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \

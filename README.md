@@ -39,7 +39,7 @@ Circuitry owns the developer session lifecycle. Every task maps to a workflow
 | **Migrate** | Framework swaps, dependency replacements, architecture transitions |
 | **Sweep** | Cleanup, quality passes, coverage improvements, docs-sync |
 
-**Five rigor profiles, orthogonal to workflow:**
+**Five rigor profiles:**
 
 | Rigor | Budget |
 |-------|--------|

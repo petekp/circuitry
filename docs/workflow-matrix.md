@@ -19,15 +19,31 @@ Every workflow is a preset over this spine. A workflow may skip phases but never
 
 ## 2. Rigor Profiles
 
-Rigor is orthogonal to workflow. Every workflow has a default; user or router can override.
+Rigor profiles are a shared vocabulary, not a universal matrix. Every workflow
+supports the profiles that match its task shape. The core three (Lite, Standard,
+Deep) apply to most workflows. Tournament is Explore-only. Autonomous applies to
+any workflow that can run unattended. Lite does not apply to Migrate (migrations
+are inherently non-trivial).
 
 | Profile | Budget | Checkpoints | Review | When |
 |---------|--------|-------------|--------|------|
 | **Lite** | 1 planning pass, 1 writer, no independent review | 0 (route and proceed) | Self-verify only | Clear task, known approach, < 6 files |
-| **Standard** | 1 planning pass, 1 writer, 1 independent reviewer, 1 fix loop | 1 (scope confirmation) | Fresh-context review | Default for most work |
+| **Standard** | 1 planning pass, 1 writer, 1 independent reviewer, 1 fix loop | 0-1 (pause on ambiguity, irreversibility, or unclear success criteria) | Fresh-context review | Default for most work |
 | **Deep** | Research phase, 1 writer, 1 reviewer, seam proof before build | 1-2 (scope + optional tradeoff) | Fresh-context review + contract audit | Multi-domain, external research needed |
 | **Tournament** | 3 proposals, 1 adversarial round, 1 synthesis, 1 pre-mortem | 1 (tradeoff decision) | Stress-test + convergence | Expensive/irreversible decisions |
 | **Autonomous** | Same as Standard/Deep but all checkpoints auto-resolve except tradeoff-decision | 0 (evidence-gated auto-approval) | Independent audit + deferred review | Unattended overnight runs |
+
+### Profile Availability
+
+| Profile | Explore | Build | Repair | Migrate | Sweep |
+|---------|---------|-------|--------|---------|-------|
+| Lite | yes | yes | yes | -- | yes |
+| Standard | yes | yes | yes | yes | yes |
+| Deep | yes | yes | yes | yes (default) | yes |
+| Tournament | yes | -- | -- | -- | -- |
+| Autonomous | yes | yes | yes | yes | yes |
+
+"--" means the profile is not available for that workflow.
 
 ## 3. Canonical Artifacts
 
@@ -111,7 +127,7 @@ Bugs, regressions, flaky behavior, incidents.
 | **Stop conditions** | Regression test passes, review CLEAN, no new regressions |
 | **Absorbs** | quick+bug (Lite), researched+bug (Standard/Deep) |
 
-**Key rule:** brief.md requires: expected vs actual behavior, repro command/recipe. Regression test is always Slice 0.
+**Key rule:** brief.md requires: expected vs actual behavior, repro command/recipe. Regression test is Slice 0 when reproducible. For flaky or not-yet-reproducible bugs, the Diagnostic Path (contain, instrument, defer test) is a sanctioned alternative.
 
 **Rigor variations:**
 

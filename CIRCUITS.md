@@ -51,7 +51,9 @@ dispatches. Quiet by default: routes and proceeds unless genuinely ambiguous.
 
 ### Migrate
 
+- autonomous
 - default
+- standard
 
 ### Repair
 
@@ -121,7 +123,9 @@ If architecture uncertainty appears, bounces to Explore.
 **Phases:** Frame -> Reproduce -> Isolate -> Fix -> Verify -> Review -> Close
 
 Test-first discipline. Forces expected vs actual, repro recipe, regression
-contract. The regression test is always Slice 0.
+contract. When reproducible, the regression test is Slice 0. For flaky or
+not-yet-reproducible bugs, a diagnostic path (contain, instrument, defer test)
+is available.
 
 | Rigor | Behavior |
 |-------|----------|
@@ -213,7 +217,7 @@ Every workflow is a preset over this spine:
 | Profile | Checkpoints | Review | When |
 |---------|------------|--------|------|
 | Lite | 0 | Self-verify | Clear task, < 6 files |
-| Standard | 1 | Fresh-context | Default |
+| Standard | 0-1 | Fresh-context | Default |
 | Deep | 1-2 | Fresh-context + audit | Multi-domain, research needed |
 | Tournament | 1 | Built into tournament | Architecture decisions |
 | Autonomous | 0 | Evidence-gated | Unattended runs |

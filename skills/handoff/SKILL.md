@@ -37,7 +37,8 @@ Both mechanisms coexist. Handoff.md is the richer path. active-run.md is the saf
 1. Compute the handoff path (see Storage below -- use git root if in a git repo, else $PWD)
 2. If the file exists, delete it. Confirm: "Handoff cleared. Fresh session will start clean."
 3. If the file does not exist, confirm: "No handoff found for this directory. Nothing to clear."
-4. Stop here. Do not gather context or write a new handoff.
+4. If `.circuitry/current-run` exists, remove it so session-start.sh starts fresh.
+5. Stop here. Do not gather context or write a new handoff.
 
 ## Capture Mode
 

@@ -54,8 +54,11 @@ interpretation), ask ONE clarifying question before writing brief.md.
 Criteria, Verification Commands.
 
 **Rigor behavior:**
-- Lite: Write brief.md and proceed without user confirmation.
-- Standard/Deep/Autonomous: Present brief.md for confirmation. One checkpoint.
+- Lite: Write brief.md and proceed. No checkpoint.
+- Standard: Write brief.md and proceed. Pause only if scope is ambiguous
+  (more than one reasonable interpretation), irreversible (data migration,
+  public API change), or success criteria are unclear.
+- Deep/Autonomous: Present brief.md for confirmation. One checkpoint.
 
 Update `active-run.md`: phase=frame, next step=Plan.
 
@@ -178,7 +181,7 @@ Write prompt header:
   violations, missing test coverage, scope drift, adjacent-output compliance.
   Do NOT modify source code -- diagnose only.
 - Inputs: brief.md, plan.md
-- Output: `review/review-findings.md`
+- Output: `review/reports/review-report.md`
 
 Review schema:
 

@@ -9,11 +9,30 @@ fi
 project_slug=$(printf '%s' "$project_dir" | tr '/' '-')
 handoff_file="$HOME/.claude/projects/${project_slug}/handoff.md"
 
-# Check for active-run.md in the most recent circuit run
+# Check for active run via explicit pointer, fall back to most-recent heuristic
 active_run=""
 circuit_runs_dir="${project_dir}/.circuitry/circuit-runs"
-if [[ -d "$circuit_runs_dir" ]]; then
-  # Find the most recently modified active-run.md
+current_run_pointer="${project_dir}/.circuitry/current-run"
+
+if [[ -L "$current_run_pointer" ]] || [[ -f "$current_run_pointer" ]]; then
+  # Explicit pointer exists -- resolve it
+  if [[ -L "$current_run_pointer" ]]; then
+    pointed_dir=$(readlink "$current_run_pointer")
+    # Resolve relative symlinks
+    if [[ ! "$pointed_dir" = /* ]]; then
+      pointed_dir="${project_dir}/.circuitry/${pointed_dir}"
+    fi
+  else
+    # Plain file containing the run slug
+    pointed_dir="${circuit_runs_dir}/$(cat "$current_run_pointer")"
+  fi
+  if [[ -f "${pointed_dir}/artifacts/active-run.md" ]]; then
+    active_run="${pointed_dir}/artifacts/active-run.md"
+  fi
+fi
+
+# Fallback: most recently modified active-run.md (single-run heuristic)
+if [[ -z "$active_run" ]] && [[ -d "$circuit_runs_dir" ]]; then
   active_run=$(find "$circuit_runs_dir" -name "active-run.md" -maxdepth 3 -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
 fi
 

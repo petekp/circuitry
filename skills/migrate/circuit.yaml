@@ -16,6 +16,12 @@ circuit:
     default:
       start_at: frame
       description: Deep migration with steering checkpoints.
+    standard:
+      start_at: frame
+      description: Standard migration. Coexistence plan checkpoint only.
+    autonomous:
+      start_at: frame
+      description: Unattended migration. Auto-resolve checkpoints except coexistence plan.
 
   steps:
     - id: frame

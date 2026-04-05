@@ -1,7 +1,8 @@
 # Rigor Profiles
 
-Rigor is orthogonal to workflow. It controls budget, checkpoints, and review depth.
-Every workflow has a default rigor; the router or user can override.
+Rigor profiles are a shared vocabulary that controls budget, checkpoints, and review
+depth. Each workflow supports the profiles that match its task shape. Every workflow
+has a default rigor; the router or user can override.
 
 ## Profile Definitions
 

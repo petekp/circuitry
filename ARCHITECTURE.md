@@ -1,7 +1,8 @@
 # Architecture
 
 Reference for circuit authors and contributors. For a user-facing overview of
-what each circuit does, see [CIRCUITS.md](CIRCUITS.md).
+what each circuit does, see [CIRCUITS.md](CIRCUITS.md). For the full workflow
+matrix, see [docs/workflow-matrix.md](docs/workflow-matrix.md).
 
 ---
 
@@ -13,7 +14,7 @@ what each circuit does, see [CIRCUITS.md](CIRCUITS.md).
 4. [The Gate System](#the-gate-system)
 5. [Relay Infrastructure](#relay-infrastructure)
 6. [Circuit Composition](#circuit-composition)
-7. [The Workflow Graph](#the-workflow-graph)
+7. [The Workflow Model](#the-workflow-model)
 8. [Extending the System](#extending-the-system)
 
 ---
@@ -50,26 +51,19 @@ from domain skills. The directory name matches the slug: `circuit:run` lives at
 ### Every Step Produces a Named File
 
 Each step in a circuit exits by writing a specific file to a known path. The
-`run` circuit's adversarial path makes this concrete:
+`build` circuit's standard path makes this concrete:
 
 ```text
-triage-result.md          [triage, synthesis]
-  -> external-digest.md   [evidence-probes, dispatch worker]
-  -> internal-digest.md   [evidence-probes, dispatch worker]
-  -> constraints.md       [constraints, synthesis]
-  -> options.md           [options, dispatch]
-  -> decision-packet.md   [decision-packet, dispatch]
-  -> adr.md               [tradeoff-decision, checkpoint]
-  -> execution-packet.md  [execution-contract, synthesis]
-  -> seam-proof.md        [prove-seam, dispatch]
-  -> implementation-handoff.md [implement, dispatch via workers]
-  -> ship-review.md       [ship-review, dispatch]
-  -> done.md              [summarize, synthesis]
+brief.md          [frame, checkpoint]
+  -> plan.md      [plan, synthesis]
+  -> (workers)    [act, dispatch]
+  -> verification.md [verify, synthesis]
+  -> review.md    [review, dispatch]
+  -> result.md    [close, synthesis]
 ```
 
-The `execution-contract` step
-cannot begin until `tradeoff-decision` has written `adr.md`. The `implement`
-step reads `execution-packet.md` and nothing else from the decision phase. The
+The `act` step cannot begin until `plan` has written `plan.md`. The `review`
+step reads `brief.md` and `plan.md` but not the implementation details. The
 artifact chain is the workflow's dependency graph made explicit.
 
 Artifacts matter for three reasons:
@@ -130,6 +124,20 @@ Step-specific relay state (reports, last messages, prompt headers) lives under
 `${RUN_ROOT}/phases/<step-name>/`. This separation keeps the canonical artifact
 chain clean while preserving the full execution trace for debugging.
 
+### Continuity Model
+
+Two mechanisms provide session continuity:
+
+- **active-run.md** -- Automatic. Every workflow updates it after each phase.
+  The SessionStart hook injects it.
+- **handoff.md** -- Intentional. Written explicitly via `/circuit:handoff`.
+  Distills hard-to-rediscover facts.
+
+The `.circuitry/current-run` symlink points to the active run directory. The
+run router creates this pointer on dispatch. The SessionStart hook reads it
+first, falling back to a most-recent-file heuristic only when the pointer is
+absent. The handoff `done` command clears both the handoff file and the pointer.
+
 ---
 
 ## Execution Model
@@ -146,11 +154,10 @@ artifact directly, without dispatching a worker. Synthesis is for steps where
 the value is in combining and distilling information, not in generating new
 research or code.
 
-From `run`, the `constraints` step:
+From `build`, the `plan` step:
 
-> Read `external-digest.md`, `internal-digest.md`, and `triage-result.md`.
-> Synthesize `constraints.md` with Hard Invariants, Seams and Integration Points,
-> and Open Questions.
+> Read `brief.md`. Synthesize `plan.md` with Approach, Slices, Verification
+> Commands, and Adjacent-Output Checklist.
 
 The orchestrator reads upstream artifacts directly and writes the synthesis
 without dispatching a worker.
@@ -158,17 +165,17 @@ without dispatching a worker.
 #### 2. Orchestrator Checkpoint (`executor: orchestrator, kind: checkpoint`)
 
 The orchestrator pauses for user input at a decision point. Checkpoint steps
-produce an artifact that records the user's choice: tradeoff selection, scope
-confirmation, quality bar.
+produce an artifact that records the user's choice: scope confirmation, quality
+bar, coexistence plan approval.
 
-From `run`, the `confirm` step:
+From `build`, the `frame` step:
 
-> Present the scope to the user for confirmation. Options: confirm or amend.
-> If confirmed, write `scope-confirmed.md` and route to implement.
-> If amended, route back to scope.
+> Write `brief.md`. If rigor is Deep or Autonomous, present for confirmation.
+> If rigor is Standard, proceed unless scope is ambiguous or irreversible.
 
-Checkpoint steps are the only steps that pause for user interaction. They are
-never dispatched to workers.
+Checkpoint steps are the only steps that can pause for user interaction. They
+are never dispatched to workers. Whether they actually pause depends on the
+rigor profile and the SKILL.md's rules.
 
 #### 3. Worker Dispatch (`executor: worker, kind: dispatch`)
 
@@ -265,29 +272,29 @@ that checks the step's output before the circuit advances.
 Checks that the artifact contains required sections. Used for synthesis steps
 where the value is in the structure and completeness of the output.
 
-From `run`, the `triage` step:
+From `build`, the `plan` step:
 
 ```yaml
 gate:
   kind: schema_sections
-  source: artifacts/triage-result.md
-  required: [Pattern, Mode, Reasoning, Probe]
+  source: artifacts/plan.md
+  required: [Approach, Slices, Verification Commands]
 ```
 
-If the triage result is missing the `Probe` section, the step fails.
+If the plan is missing the `Verification Commands` section, the step fails.
 
 #### 2. `checkpoint_selection`
 
 Used for interactive checkpoint steps where the user makes a choice. The gate
 validates that the user's response is one of the allowed options.
 
-From `run`, the `confirm` step:
+From `build`, the `frame` step:
 
 ```yaml
 gate:
   kind: checkpoint_selection
   source: checkpoints/{step_id}-{attempt}.response.json
-  allow: [confirm, amend]
+  allow: [continue]
 ```
 
 The gate ensures the checkpoint produced a valid response before routing. The
@@ -298,12 +305,12 @@ The gate ensures the checkpoint produced a valid response before routing. The
 Used for worker dispatch steps. Checks that the worker's job result contains
 a passing verdict.
 
-From `run`, the `evidence-probes` step:
+From `sweep`, the `survey` step:
 
 ```yaml
 gate:
   kind: result_verdict
-  source: jobs/{step_id}-{attempt}/job-result.json
+  source: jobs/{step_id}-{attempt}.result.json
   pass: [outputs_ready]
 ```
 
@@ -313,11 +320,10 @@ steps for reopening:
 ```yaml
 gate:
   kind: result_verdict
-  source: jobs/{step_id}-{attempt}/job-result.json
-  pass: [evidence_sufficient]
+  source: jobs/{step_id}-{attempt}.result.json
+  pass: [complete_and_hardened]
   reroute:
-    queue_adjustment_required: triage-classification
-    risk_boundary_invalidated: cleanup-scope
+    coexistence_invalidated: plan
 ```
 
 ### Gate Selection Guide
@@ -336,17 +342,13 @@ step IDs:
 
 ```yaml
 routes:
-  quick: scope
-  researched: evidence-probes
-  adversarial: evidence-probes
-  redirect_cleanup: "@stop"
-  redirect_migrate: "@stop"
+  continue: plan
+  adjust: frame
 ```
 
 Special route targets:
 - **`@complete`**: Circuit completed successfully.
 - **`@escalate`**: Stop and involve the user.
-- **`@stop`**: Terminate the run (used for companion circuit redirects).
 
 Different routes from the same step lead to entirely different paths through
 the graph.
@@ -356,17 +358,13 @@ the graph.
 Every circuit includes a Circuit Breaker section that defines when to stop and
 redirect. These prevent unbounded loops.
 
-From `run`:
+Universal circuit breakers:
 
-> Escalate to the user when:
-> - A dispatch step fails twice (no valid output after 2 attempts)
-> - Seam proof returns `DESIGN INVALIDATED`
-> - Workers slice hits `impl_attempts > 3` or `impl_attempts + review_rejections > 5`
-> - Ship review says `ISSUES FOUND` after 2 attempts
-
-Circuit breakers also handle task misrouting. The `run` circuit's triage step
-can redirect tasks to companion circuits (`cleanup`, `migrate`) when the task
-signals don't fit the main graph.
+- A dispatch step fails twice (no valid output after 2 attempts)
+- Workers: `impl_attempts > 3` or `impl_attempts + review_rejections > 5`
+- Review says ISSUES FOUND with critical findings after 2 fix loops
+- Architecture uncertainty during Build (bounces to Explore)
+- No reproducible signal during Repair after bounded search
 
 ---
 
@@ -530,26 +528,28 @@ files and must not depend on worker-internal state.
 
 Worker internals may change. The public contract files are the stable interface.
 
-### How Triage Routes Tasks
+### How the Router Dispatches Tasks
 
-The `run` circuit's triage step classifies tasks and routes them to the
-appropriate workflow path.
+The `run` circuit is a lightweight router. It classifies the task into one of
+five workflows, selects a rigor profile, writes `active-run.md`, updates the
+`.circuitry/current-run` pointer, and loads the corresponding workflow skill.
 
-Triage classification:
+```text
+User task
+    |
+    v
+Router (classify kind + rigor)
+    |
+    ├── Explore    /circuit:explore
+    ├── Build      /circuit:build
+    ├── Repair     /circuit:repair
+    ├── Migrate    /circuit:migrate
+    └── Sweep      /circuit:sweep
+```
 
-| Signal Pattern | Mode | Path |
-|---------------|------|------|
-| Clear task, known approach, <6 files | quick | scope -> confirm -> implement -> summarize |
-| Multi-domain, external research needed | researched | evidence -> constraints -> scope -> confirm -> implement -> review -> summarize |
-| Named alternatives, architecture choice | adversarial | evidence -> constraints -> options -> decision -> preflight -> implement -> ship-review -> summarize |
-| Existing RFC/PRD/spec | spec-review | spec-intake -> reviews -> caveat-resolution -> preflight -> implement -> ship-review -> summarize |
-| Overnight quality improvement | ratchet | 17-step autonomous path |
-| Adversarial tournament | crucible | 7-step diverge-explore-converge path |
-| Strong cleanup signals | redirect | Redirects to `circuit:cleanup` |
-| Strong migration signals | redirect | Redirects to `circuit:migrate` |
-
-Companion circuit redirects use `@stop` routes. The triage step writes a
-redirect note and tells the user to invoke the companion circuit directly.
+Intent hints (`fix:`, `repair:`, `develop:`, `decide:`, `migrate:`, `cleanup:`,
+`overnight:`) skip classification and dispatch directly. The router proceeds
+quietly unless genuinely ambiguous.
 
 ### Domain Skills as Companions
 
@@ -565,7 +565,7 @@ composed at dispatch time and injected via `--skills`:
   --out "${STEP_ROOT}/prompt.md"
 ```
 
-- **Circuits stay domain-agnostic.** The same `run` circuit works for Rust,
+- **Circuits stay domain-agnostic.** The same `build` circuit works for Rust,
   Swift, or React projects.
 - **Skill budgets are enforceable.** Circuits declare maximum skill counts
   (typically 2 domain skills, 3 total), preventing prompt bloat.
@@ -574,100 +574,89 @@ composed at dispatch time and injected via `--skills`:
 
 ---
 
-## The Workflow Graph
+## The Workflow Model
 
-Circuitry uses a workflow graph model: 3 circuits and 2 utilities sharing common
-infrastructure. The primary `run` circuit contains 43 steps organized into 7
-workflow paths that share steps where their flows converge.
+Circuitry provides 5 workflows and 2 lifecycle utilities, all sharing a common
+phase spine and artifact vocabulary.
 
-### Shared Steps
+### Shared Phase Spine
 
-Quick, researched, and adversarial paths share steps like evidence gathering,
-scoping, and implementation. Each shared step is defined once. Routes select
-which path to take through the graph.
+Every workflow is a preset over this spine. A workflow may skip phases but never
+reorders them.
 
-### How Paths Share Steps
-
-How the seven workflows share steps in the `run` circuit:
-
-```
-                                    ┌─ quick ──────> scope -> confirm ─┐
-triage ─> classification ──────────>├─ researched ─> evidence ──┐      │
-                                    ├─ adversarial -> evidence ─┤      │
-                                    ├─ redirect ──> @stop       │      │
-                                    └─ (spec-review, ratchet,   │      │
-                                        crucible enter at their │      │
-                                        own entry points)       │      │
-                                                                │      │
-                  constraints <────────────────────────────────>┘      │
-                       │                                               │
-            ┌──────────┴──────────┐                                    │
-            │                     │                                    │
-    researched: scope        adversarial: options                      │
-         │                        │                                    │
-         v                        v                                    │
-       confirm              decision-packet                            │
-         │                        │                                    │
-         │                  tradeoff-decision                          │
-         │                        │                                    │
-         │              execution-contract  <── (spec-review merges)   │
-         │                        │                                    │
-         │                    prove-seam                               │
-         │                        │                                    │
-         └──────────>  implement  <────────────────────────────────────┘
-                          │
-                    ┌─────┼─────┐
-                    │     │     │
-              to_summary  │  to_ship_review
-                    │     │     │
-                    │  to_review │
-                    │     │     │
-                    v     v     v
-                  summarize <- review / ship-review
-                      │
-                  @complete
+```text
+Frame -> Analyze -> Plan -> Act -> Verify -> Review -> Close
 ```
 
-Each step's `routes` field determines which branch is taken. The runtime
-engine records the chosen route in the event log, so resume logic knows
-exactly which path was active.
+### Five Workflows
+
+| Workflow | Phases Used | Default Rigor | Purpose |
+|----------|------------|---------------|---------|
+| **Explore** | Frame, Analyze, Decide/Plan, Close | Standard | Investigate, choose among options, shape a plan |
+| **Build** | Frame, Plan, Act, Verify, Review, Close | Standard | Features, scoped refactors, docs, tests |
+| **Repair** | Frame, Reproduce, Isolate, Fix, Verify, Review, Close | Standard | Bugs, regressions, flaky behavior, incidents |
+| **Migrate** | Frame, Inventory, Plan, Execute, Verify, Review, Close | Deep | Framework swaps, architecture transitions |
+| **Sweep** | Frame, Survey, Triage, Execute, Verify, Deferred, Close | Standard | Cleanup, quality passes, coverage, docs-sync |
+
+### Two Lifecycle Utilities
+
+| Utility | Purpose |
+|---------|---------|
+| **Review** | Standalone fresh-context audit. Same schema as review phases inside workflows. |
+| **Handoff** | Session state persistence. Writes handoff.md with NEXT, GOAL, STATE, DEBT. |
+
+### Rigor Profiles
+
+Profiles are a shared vocabulary, not a universal matrix. Each workflow supports
+the profiles that match its task shape.
+
+| Profile | Available to |
+|---------|-------------|
+| Lite | Explore, Build, Repair, Sweep |
+| Standard | All |
+| Deep | All (default for Migrate) |
+| Tournament | Explore only |
+| Autonomous | All |
 
 ### Entry Modes
 
-The `entry_modes` section in `circuit.yaml` defines where different workflow
-shapes enter the graph:
+The `entry_modes` section in `circuit.yaml` defines where different rigor
+profiles enter the workflow:
 
 ```yaml
 entry_modes:
   default:
-    start_at: triage
-  quick:
-    start_at: triage
-  ratchet:
-    start_at: ratchet-survey
-  crucible:
-    start_at: crucible-frame
+    start_at: frame
+    description: Standard build. Pauses only on ambiguity or irreversibility.
+  lite:
+    start_at: frame
+    description: Quick build, no independent review.
+  deep:
+    start_at: frame
+    description: Standard plus seam proof.
 ```
 
-Entry modes that share a start point (default, quick, researched, adversarial
-all start at `triage`) are differentiated by triage classification. Entry modes
-with unique start points (spec-review, ratchet, crucible) enter at their own
-subgraph and may never touch the shared triage/scope/implement path.
+All entry modes for a workflow share the same start point (`frame`). Rigor
+affects behavior within each phase (checkpoint budget, review depth, evidence
+breadth), not the graph topology.
 
-### Three Circuits and Two Utilities
+### Canonical Artifacts
 
-| Name | Type | Steps | Entry modes | Purpose |
-|------|------|-------|-------------|---------|
-| `run` | Circuit | 43 | 7 (default, quick, researched, adversarial, spec-review, ratchet, crucible) | Primary workflow graph. Handles most tasks. |
-| `cleanup` | Circuit | 8 | 2 (default, auto) | Systematic dead code and cruft removal with evidence gates. |
-| `migrate` | Circuit | 7 | 1 (default) | Large-scale migrations with coexistence plans and rollback. |
-| `workers` | Utility | n/a | n/a | Dispatch backbone for all circuit implementation steps. |
-| `handoff` | Utility | n/a | n/a | Session state persistence for cross-session continuity. |
+All workflows draw from this vocabulary:
 
-Companion circuits (`cleanup`, `migrate`) are reached by triage redirect or
-direct invocation. They have specialized topologies that don't fit the
-main graph's structure (cleanup has a 5-category parallel survey; migrate has
-a coexistence plan artifact that the main graph doesn't model).
+| Artifact | Purpose |
+|----------|---------|
+| `active-run.md` | Dashboard: workflow, rigor, phase, goal, next step |
+| `brief.md` | Contract: objective, scope, success criteria, verification |
+| `analysis.md` | Evidence: repro, options, inventory, survey findings |
+| `plan.md` | Slices, sequence, rollback boundaries, adjacent-output checklist |
+| `review.md` | Verdict: CLEAN or ISSUES FOUND with findings by severity |
+| `result.md` | Changes, verification results, follow-ups, PR-summary seed |
+| `handoff.md` | Distilled hidden state per handoff skill format |
+| `deferred.md` | Ambiguous items, postponed issues, skipped work |
+
+Specialized extensions (max 1 per workflow): `decision.md` (Explore Tournament),
+`queue.md` (Sweep), `inventory.md` (Migrate).
 
 ### The `circuit.yaml` Schema
 
@@ -784,7 +773,7 @@ circuitry/
     plugin.json               # Plugin manifest
   hooks/
     hooks.json                # SessionStart hook registration
-    session-start.sh          # Handoff detection
+    session-start.sh          # Handoff + active-run detection
   scripts/
     relay/
       compose-prompt.sh       # Prompt assembly pipeline
@@ -816,21 +805,22 @@ circuitry/
     verify-install.sh         # Installation verification
   skills/
     run/
-      circuit.yaml            # 43-step workflow graph
-      SKILL.md                # Execution contract
-      references/
-        mode-quick.md
-        mode-researched.md
-        mode-adversarial.md
-        mode-spec-review.md
-        workflow-ratchet.md
-        workflow-crucible.md
-        autonomous-gates.md
-    cleanup/
-      circuit.yaml            # 8-step cleanup circuit
+      circuit.yaml            # Lightweight router (1 step)
+      SKILL.md                # Classification + dispatch
+    explore/
+      circuit.yaml            # 4-step exploration circuit
+      SKILL.md
+    build/
+      circuit.yaml            # 6-step build circuit
+      SKILL.md
+    repair/
+      circuit.yaml            # 6-step repair circuit
       SKILL.md
     migrate/
       circuit.yaml            # 7-step migration circuit
+      SKILL.md
+    sweep/
+      circuit.yaml            # 7-step sweep circuit
       SKILL.md
     workers/
       SKILL.md                # Batch worker orchestrator (utility, no circuit.yaml)
@@ -842,6 +832,8 @@ circuitry/
         review-preamble.md
         relay-protocol.md
         agents-md-template.md
+    review/
+      SKILL.md                # Standalone review (utility, no circuit.yaml)
     handoff/
       SKILL.md                # Session handoff (utility, no circuit.yaml)
       scripts/
@@ -849,47 +841,45 @@ circuitry/
 
 ### Runtime Layout (Example)
 
-When `circuit:run` executes in adversarial mode for a task called
-"sync-engine":
+When `circuit:build` executes in Standard mode for a task called
+"auth-refactor":
 
 ```
-.circuitry/circuit-runs/sync-engine/
-  artifacts/
-    triage-result.md
-    external-digest.md
-    internal-digest.md
-    constraints.md
-    options.md
-    decision-packet.md
-    adr.md
-    execution-packet.md
-    seam-proof.md
-    implementation-handoff.md
-    ship-review.md
-    done.md
-  phases/
-    evidence-probes/
-      prompt-header.md
-      prompt.md
-      reports/
-      last-messages/
-    implement/
-      CHARTER.md
-      batch.json
-      events.ndjson
-      reports/
-      last-messages/
-      archive/
-  checkpoints/
-    confirm-1.request.json
-    confirm-1.response.json
-    tradeoff-decision-1.request.json
-    tradeoff-decision-1.response.json
-  jobs/
-    evidence-probes-1/
-      dispatch-request.json
-      dispatch-receipt.json
-      job-result.json
+.circuitry/
+  current-run -> circuit-runs/auth-refactor    # symlink
+  circuit-runs/auth-refactor/
+    artifacts/
+      active-run.md
+      brief.md
+      plan.md
+      verification.md
+      review.md
+      result.md
+    phases/
+      implement/
+        CHARTER.md
+        batch.json
+        events.ndjson
+        prompt-header.md
+        prompt.md
+        reports/
+        last-messages/
+        archive/
+      review/
+        prompt-header.md
+        prompt.md
+        reports/
+        last-messages/
+    checkpoints/
+      frame-1.request.json
+      frame-1.response.json
+    jobs/
+      act-1.request.json
+      act-1.receipt.json
+      act-1.result.json
+      review-1.request.json
+      review-1.receipt.json
+      review-1.result.json
 ```
 
 ### Data Flow
@@ -898,18 +888,21 @@ When `circuit:run` executes in adversarial mode for a task called
 User Request
     |
     v
-circuit:run triage ──> classifies task
+circuit:run router
     |
-    ├── quick/researched/adversarial: route through workflow graph
-    ├── spec-review/ratchet/crucible: route to subgraph entry
-    └── redirect: stop, suggest circuit:cleanup or circuit:migrate
+    ├── classify task kind (Explore/Build/Repair/Migrate/Sweep)
+    ├── select rigor profile (Lite/Standard/Deep/Tournament/Autonomous)
+    ├── write active-run.md
+    ├── update .circuitry/current-run pointer
+    └── load workflow skill
     |
     v
-SKILL.md (runtime truth)
+Workflow SKILL.md (runtime truth)
     |
     ├── synthesis steps: orchestrator reads upstream -> writes artifact
     |
     ├── checkpoint steps: orchestrator + user -> artifact
+    |     (pause depends on rigor + ambiguity/risk, not default)
     |
     └── dispatch steps:
             |
@@ -932,4 +925,3 @@ SKILL.md (runtime truth)
                     ├── reroute -> archive downstream, resume from target
                     └── fail -> @escalate, involve user
 ```
-

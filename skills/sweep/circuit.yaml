@@ -15,7 +15,7 @@ circuit:
   entry_modes:
     default:
       start_at: frame
-      description: Standard sweep with user checkpoints.
+      description: Standard sweep. Pauses only at high-risk boundaries.
     lite:
       start_at: frame
       description: Quick scan, high-confidence items only.
