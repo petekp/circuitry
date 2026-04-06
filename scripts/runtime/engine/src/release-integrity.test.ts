@@ -889,6 +889,7 @@ describe("no bare /circuit commands in docs", () => {
     "README.md",
     "CIRCUITS.md",
     "docs/workflow-matrix.md",
+    "hooks/session-start.sh",
   ];
 
   for (const file of DOC_FILES) {

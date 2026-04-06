@@ -80,9 +80,9 @@ else
   cat <<'WELCOME'
 Circuitry is active. Try one of these to get started:
 
-  /circuit fix: login form rejects valid emails       Bug fix with test-first discipline
-  /circuit add dark mode support to the settings page  Router picks the right workflow
-  /circuit decide: REST vs GraphQL for the new API     Adversarial evaluation of options
+  /circuit:run fix: login form rejects valid emails       Bug fix with test-first discipline
+  /circuit:run add dark mode support to the settings page  Router picks the right workflow
+  /circuit:run decide: REST vs GraphQL for the new API     Adversarial evaluation of options
 
 Circuitry classifies your task into the right workflow (Explore, Build, Repair,
 Migrate, Sweep), selects a rigor level, and runs it. You step in at checkpoints.

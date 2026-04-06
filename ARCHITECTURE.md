@@ -83,7 +83,7 @@ where the last one left off. The runtime engine algorithm:
 1. Read the circuit manifest and event log.
 2. Derive the current state from recorded events.
 3. Determine the next step based on the last completed step and its routes.
-4. For `workers` steps, inspect child state (`job-result.json`) before
+4. For `workers` steps, inspect child state (`jobs/{step_id}-{attempt}.result.json`) before
    deciding to rerun.
 
 **Relay state takes precedence over artifact presence.** A
@@ -513,9 +513,9 @@ files and must not depend on worker-internal state.
 
 | File | Direction | Purpose |
 |------|-----------|---------|
-| `dispatch-request.json` | Parent -> Workers | Slice definitions, file scope, verification commands |
-| `dispatch-receipt.json` | Workers -> Parent | Confirmation that workers started |
-| `job-result.json` | Workers -> Parent | Execution status, slice metadata, convergence outcome |
+| `jobs/{step_id}-{attempt}.request.json` | Parent -> Workers | Per-attempt slice definitions, file scope, verification commands |
+| `jobs/{step_id}-{attempt}.receipt.json` | Workers -> Parent | Per-attempt confirmation that worker started |
+| `jobs/{step_id}-{attempt}.result.json` | Workers -> Parent | Per-attempt execution status, verdict, slice metadata |
 | `reports/report-converge.md` | Workers -> Parent | Human-readable convergence verdict |
 | `reports/report-<slice-id>.md` | Workers -> Parent | Human-readable per-slice implementation reports |
 
@@ -765,7 +765,7 @@ When authoring or reviewing a circuit, check these six categories:
 
 4. **Resume Safety.** Step-local relay state is checked before artifacts.
    Parallel completeness requires all worker artifacts. Child state like
-   `job-result.json` is inspected before restarting `workers`.
+   `jobs/{step_id}-{attempt}.result.json` is inspected before restarting `workers`.
 
 5. **Dispatch Compatibility.** Only real CLI flags and template behavior are
    used. Skill budgets stay within limits. No interactive skills in autonomous
@@ -782,7 +782,7 @@ When authoring or reviewing a circuit, check these six categories:
 | Copy-The-Handoff | A raw worker report is promoted to artifact without synthesis |
 | Placeholder Leakage | Unresolved `{relay_root}` tokens reach the worker |
 | Interactive Skill In Autonomous Dispatch | An interactive skill appended to `codex exec --full-auto` |
-| Resume By Final Artifacts Only | Resume ignores step-local state like `job-result.json` |
+| Resume By Final Artifacts Only | Resume ignores step-local state like `jobs/{step_id}-{attempt}.result.json` |
 | Weak Gates | A gate checks only file existence |
 | No Reopen Rule | Disconfirming evidence appears but the circuit only says "revise and continue" |
 | Prose/YAML Drift | `SKILL.md` and `circuit.yaml` disagree |

@@ -20,6 +20,8 @@ Install from the plugin marketplace:
 /reload-plugins
 ```
 
+> The repo is `petekp/circuitry`, the plugin is named `circuit`. Commands use the plugin name: `/circuit:run`, `/circuit:build`, etc.
+
 Start a new Claude Code session and run:
 
 ```
@@ -49,7 +51,7 @@ Circuitry owns the developer session lifecycle. Every task maps to a workflow
 |-------|--------|
 | **Lite** | Plan and do. No independent review. |
 | **Standard** | Plan, do, independent review. One fix loop. |
-| **Deep** | Research phase, seam proof, independent review. |
+| **Deep** | Research phase, seam proof. Workflows that include review still run it. |
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
 | **Autonomous** | Unattended. Evidence-gated. Checkpoints auto-resolve; workflows that include independent review still run it. |
 
