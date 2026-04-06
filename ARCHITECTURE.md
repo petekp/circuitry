@@ -637,18 +637,24 @@ entry_modes:
 ```
 
 The `steps` array defines the maximum topology for the workflow. Circuitry keeps
-one graph per workflow, then uses the selected `entry_mode` to tell the
-orchestrator how to run that graph for a specific profile, including which
-steps to skip.
+one graph per workflow. The engine reads only `entry_mode.start_at` to determine
+the starting step. All current modes start at `frame`.
 
-The `entry_mode.description` is authoritative for profile behavior. For
-example, Build Lite says "Quick build, no independent review." The Build
-topology still includes a `review` step, but Lite means the orchestrator skips
-that review dispatch instead of requiring a separate Lite-only graph.
+Profile-specific behavior (which steps to skip, how to execute a step
+differently) is specified in SKILL.md prose. For example, the Build SKILL says
+"**Skipped at Lite rigor.** Lite goes directly from Verify to Close." The
+manifest topology still includes a `review` step, but the orchestrating session
+follows the SKILL instructions for the selected profile. The close step uses
+`optional:artifacts/review.md` in its reads list so the gate does not fail when
+Review is skipped.
 
-This keeps manifests simple and avoids YAML route inflation: profile-specific
-behavior lives in the entry-mode description, while the manifest topology stays
-stable.
+The `entry_mode.description` documents intended profile behavior and is used by
+release-integrity tests to validate SKILL parity. It is not read by the engine
+at runtime.
+
+This keeps manifests simple: one graph per workflow, SKILL prose for profile
+variations, and `optional:` read annotations for artifacts that lighter profiles
+may skip.
 
 ### Canonical Artifacts
 
@@ -705,8 +711,8 @@ circuit:
     default:
       start_at: step-id
       description: >
-        Authoritative profile behavior for this mode; may instruct the
-        orchestrator to skip steps from the maximum topology.
+        Documents profile behavior. Used by release-integrity tests
+        to validate SKILL parity. Not read by the engine at runtime.
 
   steps:
     - id: step-id

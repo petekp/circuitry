@@ -49,17 +49,25 @@ are inherently non-trivial).
 
 Each workflow manifest defines one step graph: the maximum topology that
 workflow may use. Circuitry does not maintain separate YAML graphs per profile.
-Instead, the selected `entry_mode` tells the orchestrator how to run that one
-graph for a given rigor level, including which steps to skip.
 
-The `entry_mode.description` in `circuit.yaml` is therefore authoritative for
-profile behavior. For example, Build Lite says "no independent review." The
-Build manifest still contains a `review` step in its topology, but Lite means
-the orchestrator skips that review dispatch for the lighter path.
+The engine reads only `entry_mode.start_at` to determine where execution
+begins. All current modes start at `frame`, so the engine walks the same graph
+regardless of profile.
 
-This keeps manifests simple: one graph per workflow, profile-specific behavior
-lives in `entry_mode` descriptions, and we do not need extra YAML routing
-conditions just to express rigor differences.
+Profile-specific behavior (which steps to skip, how to execute a step
+differently) is specified in SKILL.md prose. For example, Build Lite skips the
+Review phase because the Build SKILL says "**Skipped at Lite rigor.** Lite
+goes directly from Verify to Close." The manifest topology still includes a
+`review` step, but the orchestrating session follows the SKILL instructions
+for the selected profile.
+
+The `entry_mode.description` in `circuit.yaml` documents intended profile
+behavior. It is not read by the engine. The SKILL is the execution contract;
+descriptions exist for documentation and test-parity validation.
+
+This keeps manifests simple: one graph per workflow, with SKILL prose governing
+profile variations. The manifest close step uses `optional:` read annotations
+for artifacts that lighter profiles may skip (e.g., `optional:artifacts/review.md`).
 
 ## 3. Canonical Artifacts
 
