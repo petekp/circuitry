@@ -305,8 +305,8 @@ Router may say "this is trivial, do it inline" when:
 Both router dispatch and direct specialist invocation produce the same minimum
 bootstrap state:
 
-1. Create run root: `.circuitry/circuit-runs/<slug>/artifacts/` and `phases/`
-2. Set current-run pointer: `ln -sfn "circuit-runs/<slug>" .circuitry/current-run`
+1. Create run root: `.circuit/circuit-runs/<slug>/artifacts/` and `phases/`
+2. Set current-run pointer: `ln -sfn "circuit-runs/<slug>" .circuit/current-run`
 3. Write initial `active-run.md` with Workflow, Rigor, Current Phase, Goal
 
 The router may write additional dashboard fields (Next Step, Verification

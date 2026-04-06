@@ -142,9 +142,9 @@ fi
 if [[ "$synced_any" -eq 0 ]]; then
   printf 'No Claude plugin targets were available.\n' >&2
   printf 'Install circuit with:\n' >&2
-  printf '/plugin marketplace add petekp/circuitry\n' >&2
+  printf '/plugin marketplace add petekp/circuit\n' >&2
   printf '/plugin install circuit@petekp\n' >&2
   exit 1
 fi
 
-printf 'Done. /clear to pick up changes.\n'
+printf 'Done. /reload-plugins to pick up changes mid-session, or /clear for a fresh start.\n'

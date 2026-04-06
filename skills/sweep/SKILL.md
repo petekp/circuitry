@@ -32,9 +32,9 @@ characters. Example: "Dead Code Cleanup Sprint" produces `dead-code-cleanup-spri
 
 ```bash
 RUN_SLUG="dead-code-cleanup-sprint"  # derived from task description
-RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
-ln -sfn "circuit-runs/${RUN_SLUG}" .circuitry/current-run
+ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
 ```
 
 Write initial `${RUN_ROOT}/artifacts/active-run.md` with Workflow=Sweep,

@@ -177,7 +177,7 @@ describe("specialist bootstrap sections", () => {
       const content = readFile(`skills/${skill}/SKILL.md`);
       expect(content).toContain("Direct invocation:");
       expect(content).toContain("RUN_ROOT=");
-      expect(content).toContain(".circuitry/current-run");
+      expect(content).toContain(".circuit/current-run");
     });
   }
 });
@@ -896,8 +896,9 @@ describe("no bare /circuit commands in docs", () => {
     it(`${file} does not use bare /circuit (should be /circuit:run)`, () => {
       const content = readFile(file);
       // Match /circuit followed by whitespace (bare command), whether
-      // backtick-wrapped or plain text.  Excludes /circuit: (namespaced).
-      const bareMatches = [...content.matchAll(/\/circuit\s(?!:)/g)];
+      // backtick-wrapped or plain text.  Excludes /circuit: (namespaced)
+      // and path-context like petekp/circuit or cache/petekp/circuit.
+      const bareMatches = [...content.matchAll(/(?<![a-zA-Z0-9_-])\/circuit\s(?!:)/g)];
       expect(
         bareMatches.length,
         `${file} contains bare /circuit commands — use /circuit:run instead`,

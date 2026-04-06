@@ -38,8 +38,8 @@ Clears both continuity mechanisms so the next session starts fresh.
 
 1. Compute the handoff path (see Storage below -- use git root if in a git repo, else $PWD)
 2. If the handoff file exists, delete it.
-3. If `.circuitry/current-run` exists, remove it.
-4. Find all `active-run.md` files under `.circuitry/circuit-runs/` (any depth)
+3. If `.circuit/current-run` exists, remove it.
+4. Find all `active-run.md` files under `.circuit/circuit-runs/` (any depth)
    and rename each to `completed-run.md`. This archives every run's dashboard,
    not just the currently pointed one, so the fallback heuristic finds nothing.
 5. Report what was cleared:
@@ -179,9 +179,9 @@ The handoff uses **git-root-normalized slugs** so it can be found from any subdi
 3. Replace every `/` with `-` to get the project slug
 4. Write to: `~/.claude/projects/<slug>/handoff.md`
 
-Example: invoking `/circuit:handoff` from `/Users/petepetrash/Code/circuitry/hooks` uses git root
-`/Users/petepetrash/Code/circuitry`, slug becomes `-Users-petepetrash-Code-circuitry`,
-handoff goes to `~/.claude/projects/-Users-petepetrash-Code-circuitry/handoff.md`.
+Example: invoking `/circuit:handoff` from `/Users/petepetrash/Code/circuit/hooks` uses git root
+`/Users/petepetrash/Code/circuit`, slug becomes `-Users-petepetrash-Code-circuit`,
+handoff goes to `~/.claude/projects/-Users-petepetrash-Code-circuit/handoff.md`.
 
 Use the Write tool. Overwrite any existing handoff at that path.
 

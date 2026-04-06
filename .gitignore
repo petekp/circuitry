@@ -1,5 +1,5 @@
 # Circuit state (generated at runtime)
-.circuitry/
+.circuit/
 .relay/
 *.ndjson
 

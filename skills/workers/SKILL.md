@@ -24,7 +24,7 @@ Done only when the convergence worker says `COMPLETE AND HARDENED`.
 - Implementation and review always run in separate sessions
 - Review and convergence workers diagnose only; they do not fix code
 - Use `"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root {relay_root}`; never hand-edit relay state
-- All relay paths thread through `--root`; standalone default is `--root .circuitry`
+- All relay paths thread through `--root`; standalone default is `--root .circuit`
 - Spot-check at least one claimed command before trusting a worker report
 - Preserve `--skills`, repeated `--verification`, and `--criteria` on follow-up slices
 
@@ -48,7 +48,7 @@ The implement/review/converge loop, artifact chain, gates, and report format are
 
 - Detect dispatch backend: `command -v codex >/dev/null 2>&1` (codex if found, agent otherwise)
 - If codex is found: `codex --version`
-- Determine relay root: use `--root` from caller if provided, otherwise `.circuitry`
+- Determine relay root: use `--root` from caller if provided, otherwise `.circuit`
 - `mkdir -p {relay_root}/archive {relay_root}/reports {relay_root}/last-messages {relay_root}/review-findings`
 - If `AGENTS.md` is missing, create it from `references/agents-md-template.md`
 

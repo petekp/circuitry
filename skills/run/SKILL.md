@@ -130,11 +130,11 @@ characters. Example: "Fix Auth Bug in Login" produces `fix-auth-bug-in-login`.
 
 ```bash
 RUN_SLUG="fix-auth-bug-in-login"  # derived from task description
-RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
 
 # Update the current-run pointer so session-start.sh picks up the right run
-ln -sfn "circuit-runs/${RUN_SLUG}" .circuitry/current-run
+ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
 ```
 
 Write initial `${RUN_ROOT}/artifacts/active-run.md`:

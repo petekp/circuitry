@@ -136,7 +136,53 @@ if [[ $skill_count -eq 0 ]]; then
   fail "no skill directories found in $PLUGIN_ROOT/skills"
 fi
 
-# ── 5. Relay scripts ─────────────────────────────────────────────────
+# ── 5. Command shims ──────────────────────────────────────────────────
+section "Command shims"
+
+commands_dir="$PLUGIN_ROOT/commands"
+if [[ -d "$commands_dir" ]]; then
+  # Every skill directory must have a matching command shim
+  shim_count=0
+  shim_missing=0
+  while IFS= read -r -d '' skill_dir; do
+    skill="$(basename "$skill_dir")"
+    if [[ -f "$commands_dir/${skill}.md" ]]; then
+      shim_count=$((shim_count + 1))
+    else
+      fail "skill $skill/ has no matching command shim at commands/${skill}.md"
+      shim_missing=$((shim_missing + 1))
+    fi
+  done < <(find "$PLUGIN_ROOT/skills" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+  if [[ $shim_missing -eq 0 ]]; then
+    pass "commands/ complete ($shim_count shims match $shim_count skills)"
+  fi
+else
+  fail "commands/ directory not found -- slash-command picker will not show circuit commands"
+fi
+
+# ── 6. Config example ────────────────────────────────────────────────
+section "Config example"
+
+config_example="$PLUGIN_ROOT/circuit.config.example.yaml"
+if [[ -f "$config_example" ]]; then
+  # Check for known stale references
+  stale_found=0
+  if grep -q 'Circuit v3' "$config_example"; then
+    fail "circuit.config.example.yaml still references 'Circuit v3'"
+    stale_found=1
+  fi
+  if grep -q 'cleanup' "$config_example"; then
+    fail "circuit.config.example.yaml still uses 'cleanup' (renamed to 'sweep')"
+    stale_found=1
+  fi
+  if [[ $stale_found -eq 0 ]]; then
+    pass "circuit.config.example.yaml (no stale references)"
+  fi
+else
+  warn "circuit.config.example.yaml not found"
+fi
+
+# ── 7. Relay scripts ─────────────────────────────────────────────────
 section "Relay scripts"
 
 for script in compose-prompt.sh dispatch.sh update-batch.sh; do

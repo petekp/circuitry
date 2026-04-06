@@ -1,4 +1,4 @@
-# circuit.config.yaml -- Per-project configuration for Circuit v3
+# circuit.config.yaml -- Per-project configuration for Circuit
 #
 # Place this file at your project root (./circuit.config.yaml) or globally
 # at ~/.claude/circuit.config.yaml. Project-level config takes precedence.
@@ -22,10 +22,10 @@ roles:
 # dispatch.sh takes precedence over this setting.
 #
 # dispatch:
-#   engine: auto               # global default (auto | codex | agent | <command>)
+#   engine: auto               # global default: auto | codex | agent | <command>
 #   per_circuit:               # override per circuit
 #     run: codex
-#     cleanup: agent
+#     sweep: agent
 
 # Per-circuit skill overrides (optional).
 # Use this to assign specific skills to a circuit. Comma-separated skill
@@ -34,7 +34,7 @@ roles:
 circuits:
   run:
     skills: ""
-  cleanup:
+  sweep:
     skills: "dead-code-sweep"
   migrate:
     skills: ""

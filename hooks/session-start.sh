@@ -11,8 +11,8 @@ handoff_file="$HOME/.claude/projects/${project_slug}/handoff.md"
 
 # Check for active run via explicit pointer, fall back to most-recent heuristic
 active_run=""
-circuit_runs_dir="${project_dir}/.circuitry/circuit-runs"
-current_run_pointer="${project_dir}/.circuitry/current-run"
+circuit_runs_dir="${project_dir}/.circuit/circuit-runs"
+current_run_pointer="${project_dir}/.circuit/current-run"
 
 if [[ -L "$current_run_pointer" ]] || [[ -f "$current_run_pointer" ]]; then
   # Explicit pointer exists -- resolve it
@@ -20,7 +20,7 @@ if [[ -L "$current_run_pointer" ]] || [[ -f "$current_run_pointer" ]]; then
     pointed_dir=$(readlink "$current_run_pointer")
     # Resolve relative symlinks
     if [[ ! "$pointed_dir" = /* ]]; then
-      pointed_dir="${project_dir}/.circuitry/${pointed_dir}"
+      pointed_dir="${project_dir}/.circuit/${pointed_dir}"
     fi
   else
     # Plain file containing the run slug
@@ -32,8 +32,14 @@ if [[ -L "$current_run_pointer" ]] || [[ -f "$current_run_pointer" ]]; then
 fi
 
 # Fallback: most recently modified active-run.md (single-run heuristic)
+# xargs -0 handles ARG_MAX chunking automatically. The guard below prevents
+# GNU xargs from running ls with no arguments when find returns nothing
+# (macOS xargs already skips empty input; GNU requires -r which macOS lacks).
 if [[ -z "$active_run" ]] && [[ -d "$circuit_runs_dir" ]]; then
-  active_run=$(find "$circuit_runs_dir" -name "active-run.md" -maxdepth 3 -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+  found=$(find "$circuit_runs_dir" -name "active-run.md" -maxdepth 3 -type f -print0 2>/dev/null)
+  if [[ -n "$found" ]]; then
+    active_run=$(printf '%s' "$found" | xargs -0 ls -t 2>/dev/null | head -1)
+  fi
 fi
 
 if [[ -f "$handoff_file" ]] && head -1 "$handoff_file" | grep -q '^# Handoff'; then

@@ -139,7 +139,7 @@ async function makeTarget(root: string, version?: string): Promise<string> {
   );
   await writeFile(resolve(target, "README.md"), "# Legacy README\n", "utf-8");
   await writeFile(resolve(target, "docs/workflow-matrix.md"), "legacy docs\n", "utf-8");
-  await writeFile(resolve(target, "assets/circuitry.svg"), "<svg />\n", "utf-8");
+  await writeFile(resolve(target, "assets/circuit.svg"), "<svg />\n", "utf-8");
   await writeFile(
     resolve(target, "circuit.config.example.yaml"),
     "legacy: true\n",

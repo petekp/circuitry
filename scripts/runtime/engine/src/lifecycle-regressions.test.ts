@@ -89,7 +89,7 @@ describe("bootstrap parity contract", () => {
       expect(content).toContain("Direct invocation:");
       expect(content).toContain("RUN_SLUG=");
       expect(content).toContain("RUN_ROOT=");
-      expect(content).toContain(".circuitry/current-run");
+      expect(content).toContain(".circuit/current-run");
       expect(content).toContain("active-run.md");
     });
   }
@@ -99,7 +99,7 @@ describe("bootstrap parity contract", () => {
     expect(content).toContain("## Run Root Setup");
     expect(content).toContain("RUN_SLUG=");
     expect(content).toContain("ln -sfn");
-    expect(content).toContain(".circuitry/current-run");
+    expect(content).toContain(".circuit/current-run");
   });
 
   it("workflow-matrix documents the bootstrap contract", () => {

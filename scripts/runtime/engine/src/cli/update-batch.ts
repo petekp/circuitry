@@ -14,7 +14,7 @@ import { run, type CliArgs } from "../update-batch.js";
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
-    root: ".circuitry",
+    root: ".circuit",
     batchOverride: "",
     slice: "",
     event: "",

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/circuitry.png" alt="Circuit" width="100%" />
+  <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </p>
 
 **One command. The right workflow. No babysitting.**
@@ -13,12 +13,10 @@ before shipping. If a session dies, the next one picks up where it stopped.
 Install from the plugin marketplace:
 
 ```
-/plugin marketplace add petekp/circuitry
+/plugin marketplace add petekp/circuit
 /plugin install circuit@petekp
 /reload-plugins
 ```
-
-> The repo is `petekp/circuitry`, the plugin is named `circuit`. Commands use the plugin name: `/circuit:run`, `/circuit:build`, etc.
 
 Start a new Claude Code session and run:
 
@@ -193,8 +191,8 @@ Mid-session, `/reload-plugins` picks up cache changes without `/clear`.
 Claude Code's Agent tool for worker dispatch. Install Codex only if you want
 faster parallel execution.
 
-**Circuit resumes from the wrong step.** State lives in `.circuitry/`. If a run
-is corrupt, delete the run directory (`rm -rf .circuitry/circuit-runs/<slug>`)
+**Circuit resumes from the wrong step.** State lives in `.circuit/`. If a run
+is corrupt, delete the run directory (`rm -rf .circuit/circuit-runs/<slug>`)
 and start fresh.
 
 ## Further Reading

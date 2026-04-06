@@ -2,10 +2,10 @@
 # compose-prompt.sh -- Assemble a worker prompt from header + skills + template
 #
 # Usage:
-#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --skills swift-apps,rust --out .circuitry/prompt.md
-#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/review-header.md --template review --out .circuitry/review-prompt.md
-#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --template implement --root /tmp/relay-root --out .circuitry/prompt.md
-#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuitry/prompt-header.md --backend agent --out .circuitry/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuit/prompt-header.md --skills swift-apps,rust --out .circuit/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuit/review-header.md --template review --out .circuit/review-prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuit/prompt-header.md --template implement --root /tmp/relay-root --out .circuit/prompt.md
+#   $CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh --header .circuit/prompt-header.md --backend agent --out .circuit/prompt.md
 #
 # Options:
 #   --header FILE    -- Task-specific header (required)

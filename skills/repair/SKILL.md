@@ -31,9 +31,9 @@ characters. Example: "Fix Login Email Validation" produces `fix-login-email-vali
 
 ```bash
 RUN_SLUG="fix-login-email-validation"  # derived from task description
-RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
-ln -sfn "circuit-runs/${RUN_SLUG}" .circuitry/current-run
+ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
 ```
 
 Write initial `${RUN_ROOT}/artifacts/active-run.md` with Workflow=Repair,

@@ -109,7 +109,7 @@ artifacts.
 All artifacts live under a single run root:
 
 ```bash
-RUN_ROOT=".circuitry/circuit-runs/${RUN_SLUG}"
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 mkdir -p "${RUN_ROOT}/artifacts"
 ```
 
@@ -117,7 +117,7 @@ The `RUN_SLUG` incorporates the topic. For example, a run for "auth-refactor"
 would use:
 
 ```bash
-RUN_ROOT=".circuitry/circuit-runs/auth-refactor"
+RUN_ROOT=".circuit/circuit-runs/auth-refactor"
 ```
 
 Step-specific relay state (reports, last messages, prompt headers) lives under
@@ -133,7 +133,7 @@ Two mechanisms provide session continuity:
 - **handoff.md** -- Intentional. Written explicitly via `/circuit:handoff`.
   Distills hard-to-rediscover facts.
 
-The `.circuitry/current-run` symlink points to the active run directory. The
+The `.circuit/current-run` symlink points to the active run directory. The
 run router creates this pointer on dispatch. The SessionStart hook reads it
 first, falling back to a most-recent-file heuristic only when the pointer is
 absent. The handoff `done` command clears both the handoff file and the pointer.
@@ -517,7 +517,7 @@ files and must not depend on worker-internal state.
 | `jobs/{step_id}-{attempt}.receipt.json` | Workers -> Parent | Per-attempt confirmation that worker started |
 | `jobs/{step_id}-{attempt}.result.json` | Workers -> Parent | Per-attempt execution status, verdict, slice metadata |
 | `reports/report-converge.md` | Workers -> Parent | Human-readable convergence verdict |
-| `reports/report-<slice-id>.md` | Workers -> Parent | Human-readable per-slice implementation reports |
+| `reports/report-{slice_id}.md` | Workers -> Parent | Human-readable per-slice implementation reports |
 
 **Worker-private (parent circuits must not read or depend on):**
 
@@ -532,7 +532,7 @@ Worker internals may change. The public contract files are the stable interface.
 
 The `run` circuit is a lightweight router. It classifies the task into one of
 five workflows, selects a rigor profile, writes `active-run.md`, updates the
-`.circuitry/current-run` pointer, and loads the corresponding workflow skill.
+`.circuit/current-run` pointer, and loads the corresponding workflow skill.
 
 ```text
 User task
@@ -801,7 +801,7 @@ When authoring or reviewing a circuit, check these six categories:
 ### File Layout
 
 ```
-circuitry/
+circuit/
   .claude-plugin/
     plugin.json               # Plugin manifest
   hooks/
@@ -878,7 +878,7 @@ When `circuit:build` executes in Standard mode for a task called
 "auth-refactor":
 
 ```
-.circuitry/
+.circuit/
   current-run -> circuit-runs/auth-refactor    # symlink
   circuit-runs/auth-refactor/
     artifacts/
@@ -926,7 +926,7 @@ circuit:run router
     ├── classify task kind (Explore/Build/Repair/Migrate/Sweep)
     ├── select rigor profile (Lite/Standard/Deep/Tournament/Autonomous)
     ├── write active-run.md
-    ├── update .circuitry/current-run pointer
+    ├── update .circuit/current-run pointer
     └── load workflow skill
     |
     v
@@ -942,7 +942,7 @@ Workflow SKILL.md (runtime truth)
             ├── compose-prompt.sh
             |     (header + skills + template + relay_root substitution)
             |
-            ├── dispatch.sh --role <role>
+            ├── dispatch.sh --role implementer
             |     (auto-detects codex/agent/custom backend)
             |
             ├── [if workers delegation]
