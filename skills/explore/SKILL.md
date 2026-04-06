@@ -84,7 +84,7 @@ Content depends on rigor profile.
 
 ### Lite
 
-Read the codebase directly. No external research. No dispatch.
+Read the codebase directly. No external research.
 
 Write `artifacts/analysis.md`:
 

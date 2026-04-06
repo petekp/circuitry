@@ -81,7 +81,7 @@ Update `active-run.md`: phase=frame, next step=Survey.
 
 ### Lite
 
-Quick scan by the orchestrator. Look for the most obvious items. No dispatch.
+Quick scan. High-confidence items only.
 
 Write `artifacts/analysis.md` with a short inventory of high-confidence findings.
 

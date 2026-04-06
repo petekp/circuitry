@@ -153,7 +153,7 @@ Bugs, regressions, flaky behavior, incidents.
 |--------|--------|
 | **Phases** | Frame -> Analyze (reproduce + isolate) -> Fix -> Verify -> Review -> Close |
 | **Default rigor** | Standard |
-| **Artifacts** | brief.md (with regression contract), analysis.md (repro results; hypotheses/root cause when isolation succeeds), plan.md (optional), review.md, result.md |
+| **Artifacts** | brief.md (with regression contract), analysis.md (repro results; hypotheses/root cause when isolation succeeds), review.md, result.md |
 | **Stop conditions** | Regression test passes, review CLEAN, no new regressions |
 | **Absorbs** | quick+bug (Lite), researched+bug (Standard/Deep) |
 
@@ -212,7 +212,7 @@ separate Review phase on the shared spine.
 
 | Rigor | Sweep Behavior |
 |-------|---------------|
-| Lite | Quick scan, high-confidence removals only, 1 batch. |
+| Lite | Quick scan, high-confidence items only. |
 | Standard | Full survey (5 categories), triage, evidence adjudication, ordered batches, independent audit. |
 | Deep | Standard + evidence adjudication with 9-point checklist, stronger false-positive aversion. |
 | Autonomous | 3 batches or time budget, then stop. Evidence-gated auto-approval. Deferred.md for borderline items. Injection check + final audit. |

@@ -141,7 +141,7 @@ is available within Analyze.
 | Deep | Broad investigation with parallel evidence probes during Analyze. |
 | Autonomous | Standard, auto-resolve checkpoints, escalate on no-repro after bounded search. |
 
-**Artifacts:** brief.md (with regression contract), analysis.md, plan.md, review.md, result.md
+**Artifacts:** brief.md (with regression contract), analysis.md, review.md, result.md
 
 ### Migrate
 
@@ -164,7 +164,7 @@ agents trust them.
 
 | Rigor | Behavior |
 |-------|----------|
-| Lite | Quick scan, high-confidence items only, 1 batch. |
+| Lite | Quick scan, high-confidence items only. |
 | Standard | Full survey, triage, evidence adjudication, ordered batches, audit. |
 | Deep | Standard + evidence adjudication with 9-point checklist, stronger false-positive aversion. |
 | Autonomous | 3 batches or time budget, then stop. Deferred review for borderline items. |

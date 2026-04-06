@@ -124,7 +124,8 @@ implementation choices. Lite skips independent review where documented.
 
 **Canonical artifacts.** All workflows draw from a shared artifact vocabulary:
 `brief.md`, `analysis.md`, `plan.md`, `review.md`, `result.md`, plus a few
-specialized artifacts per workflow (`decision.md`, `queue.md`, `inventory.md`).
+specialized artifacts per workflow (`decision.md`, `queue.md`, `inventory.md`,
+`deferred.md`).
 One mental model across all circuits.
 
 **Dual continuity.** `active-run.md` updates automatically after every phase.

@@ -231,7 +231,7 @@ describe("close-step gate requirements match SKILL.md", () => {
   const GATE_EXPECTATIONS: Record<string, string[]> = {
     explore: ["Findings", "Next Steps"],
     build: ["Changes", "Verification", "PR Summary"],
-    repair: ["Root Cause", "Fix", "Regression Test"],
+    repair: ["Root Cause", "Fix", "Regression Test", "PR Summary"],
     migrate: ["Changes", "Verification", "PR Summary"],
     sweep: ["Summary", "Verification"],
   };
@@ -246,6 +246,40 @@ describe("close-step gate requirements match SKILL.md", () => {
       expect(closeStep.gate.required).toEqual(expected);
     });
   }
+});
+
+// ── Repair plan.md is not a gated artifact ───────────────────────────
+
+describe("repair plan.md contract", () => {
+  it("repair close step does not read plan.md", () => {
+    const yaml = readCircuitYaml("repair");
+    const closeStep = getCircuitStep(yaml, "close");
+    const reads = closeStep.reads as string[];
+    expect(reads.some((r: string) => r.includes("plan.md"))).toBe(false);
+  });
+
+  it("repair YAML does not write plan.md as a gated artifact", () => {
+    const yaml = readCircuitYaml("repair");
+    const writtenPaths = getWrittenArtifactPaths(yaml);
+    expect(writtenPaths).not.toContain("artifacts/plan.md");
+  });
+
+  it("CIRCUITS.md Repair artifacts do not list plan.md", () => {
+    const circuits = getH3Section(
+      readFile("CIRCUITS.md"),
+      "Repair",
+      "## Workflows",
+    );
+    const artifactsLine = circuits.match(/\*\*Artifacts:\*\*[^\n]*/)?.[0] ?? "";
+    expect(artifactsLine).not.toContain("plan.md");
+  });
+
+  it("workflow-matrix Repair artifacts do not list plan.md", () => {
+    const matrix = getH3Section(readFile("docs/workflow-matrix.md"), "Repair");
+    const artifactsRow = matrix
+      .match(/\| \*\*Artifacts\*\*[^\n]*/)?.[0] ?? "";
+    expect(artifactsRow).not.toContain("plan.md");
+  });
 });
 
 // ── Entry modes match workflow-matrix ─────────────────────────────────
@@ -586,7 +620,7 @@ describe("manifest to SKILL parity", () => {
     }
   });
 
-  it("Explore Lite description matches the no-dispatch Analyze guidance", () => {
+  it("Explore Lite description matches the Analyze guidance", () => {
     const yaml = readCircuitYaml("explore");
     const skillDoc = readFile("skills/explore/SKILL.md");
     const analyzeSection = getH2Section(skillDoc, "Phase: Analyze");
@@ -595,9 +629,11 @@ describe("manifest to SKILL parity", () => {
     expect(yaml.circuit.entry_modes.lite.description).toMatch(
       /quick investigation/i,
     );
-    expect(yaml.circuit.entry_modes.lite.description).toMatch(/no dispatch/i);
+    expect(yaml.circuit.entry_modes.lite.description).toMatch(
+      /no external research/i,
+    );
     expect(liteSection).toMatch(/Read the codebase directly\./);
-    expect(liteSection).toMatch(/No dispatch\./);
+    expect(liteSection).toMatch(/No external research\./);
   });
 
   it("Explore does not formalize deferred.md as a manifest artifact or plan output", () => {
@@ -622,8 +658,7 @@ describe("manifest to SKILL parity", () => {
     expect(yaml.circuit.entry_modes.lite.description).toMatch(
       /high-confidence items only/i,
     );
-    expect(liteSection).toMatch(/Quick scan by the orchestrator\./);
-    expect(liteSection).toMatch(/No dispatch\./);
+    expect(liteSection).toMatch(/Quick scan\./);
   });
 
   it("Sweep manifest and SKILL both define review.md in Verify", () => {
@@ -740,6 +775,15 @@ describe("sweep artifact contract", () => {
     );
     expect(deferredTemplate).toContain("## Summary");
     expect(deferredTemplate).toContain("## Items");
+  });
+});
+
+// ── README artifact vocabulary ──────────────────────────────────────
+
+describe("README artifact vocabulary", () => {
+  it("lists deferred.md as a specialized artifact", () => {
+    const readme = readFile("README.md");
+    expect(readme).toContain("deferred.md");
   });
 });
 

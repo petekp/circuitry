@@ -187,7 +187,7 @@ becomes a follow-up item in result.md.
 
 ### Then fix the code (Slice 1+)
 
-Write `artifacts/plan.md` (optional for Lite, required for Standard+):
+Optionally write `artifacts/plan.md` to plan slices (internal guidance, not a gated artifact):
 
 ```markdown
 # Plan: <task>

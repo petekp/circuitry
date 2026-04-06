@@ -17,7 +17,7 @@ circuit:
       description: Standard exploration with evidence probes.
     lite:
       start_at: frame
-      description: Quick investigation, no dispatch.
+      description: Quick investigation. Read codebase directly, no external research.
     deep:
       start_at: frame
       description: Standard plus seam proof.
