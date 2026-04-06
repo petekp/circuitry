@@ -2,8 +2,6 @@
   <img src="assets/circuitry.png" alt="Circuit" width="100%" />
 </p>
 
-# Circuit
-
 **One command. The right workflow. No babysitting.**
 
 You describe your task. Circuit classifies it, picks the right workflow, and
