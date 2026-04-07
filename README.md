@@ -85,7 +85,7 @@ Review, Close, Pause**. Not every workflow uses every phase, but the order remai
 
 ## Commands
 
-**Router (auto-classifies your task):**
+**Using the router:**
 
 | You type | What happens |
 |----------|-------------|
@@ -98,7 +98,7 @@ Review, Close, Pause**. Not every workflow uses every phase, but the order remai
 | `/circuit:run cleanup: <target>` | Sweep Standard -- cleanup by confidence/risk |
 | `/circuit:run overnight: <scope>` | Sweep Autonomous -- unattended quality pass |
 
-**Direct circuits (skip the router):**
+**Direct circuits:**
 
 | You type | What happens |
 |----------|-------------|
