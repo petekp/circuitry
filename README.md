@@ -5,12 +5,12 @@
 <p align="center"><strong>A single command to automate your most common workflows with multi-step skill orchestration.</strong></p>
 <br />
 
-You enter `/circuit` and describe your task. Circuit picks the most suitable workflow from the core set -- or one you created -- and
-runs it, ensuring each step is verified before starting the next.
+Just enter `/circuit` and describe your task. It will pick the most suitable workflow from the core set -- or ones you've created -- and
+execute it, making sure each step's output is valid before moving onto the next.
  
-Circuit is a skill orchestrator: you can pre-configure any skill(s) be applied at any step in a workflow. 
+**Circuit orchestrates your favorite skills.** You can pre-configure any skill(s) be applied at any step in a workflow.
 
-Circuit is durable: if a session dies, the next can pick up where you left off.
+**Circuit is durable.** If a session dies, the next can pick up where you left off.
 
 ## Get Started
 
