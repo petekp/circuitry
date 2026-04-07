@@ -173,7 +173,7 @@ describe("append-event", () => {
     expect(event.run_id).not.toContain("/");
   });
 
-  it("run_id uses basename even for deeply nested paths", async () => {
+  it("run_id uses basename regardless of path depth", async () => {
     // Ensure multi-segment paths don't leak into run_id
     const { basename } = await import("node:path");
     const nestedRoot = await mkdtemp(join(tmpdir(), "deep/nested/circuit-test-".replace(/\//g, "-")));

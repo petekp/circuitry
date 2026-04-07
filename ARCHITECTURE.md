@@ -407,9 +407,12 @@ The assembly pipeline:
    preamble is appended first with shared review instructions.
 
 4. **Append relay protocol (legacy fallback).** The script checks whether the
-   assembled output already contains the canonical relay headings
-   (`### Files Changed`, `### Tests Run`, `### Completion Claim`). If not, it
-   appends `relay-protocol.md` as a safety net.
+   assembled output already contains the relay protocol. Detection uses two
+   methods: an explicit `<!-- circuit:relay-protocol-inline -->` HTML comment
+   (preferred), or a heuristic check for canonical headings (`### Files Changed`,
+   `### Tests Run`, `### Completion Claim`). All current templates use the
+   explicit marker. If neither is found, the script appends `relay-protocol.md`
+   as a safety net.
 
 5. **Substitute known placeholders and reject unresolved ones.** If `--root`
    is provided, all `{relay_root}` tokens are replaced. After substitution, the
@@ -475,7 +478,8 @@ Every worker writes a report file with these exact sections:
 ### Next Steps
 ```
 
-`compose-prompt.sh` checks for these headings. If missing, it appends
+`compose-prompt.sh` checks for the explicit `<!-- circuit:relay-protocol-inline -->`
+marker first, then falls back to heading detection. If neither is found, it appends
 `relay-protocol.md` as a fallback. Workers that omit them produce reports the
 orchestrator cannot parse.
 
@@ -751,8 +755,8 @@ circuit:
 
 ## Extending the System
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the practical workflow (fork, branch,
-test, submit). This section covers the design constraints your circuit must satisfy.
+See [CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md) for a step-by-step guide to building
+your own circuit workflow. This section covers the design constraints your circuit must satisfy.
 
 ### The Quality Gate Checklist
 

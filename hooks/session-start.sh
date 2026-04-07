@@ -36,8 +36,9 @@ fi
 
 # Fallback: most recently modified active-run.md (single-run heuristic)
 # NUL-safe pipeline: find | xargs | head.  We guard against empty find output
-# by piping through `grep -c` first -- if find returns nothing, we skip ls
-# entirely (macOS xargs skips empty input, but GNU xargs does not without -r).
+# by counting matches with `head -1 | wc -l` first -- if find returns nothing,
+# we skip the second find|xargs|ls entirely (avoids GNU xargs invoking ls with
+# no arguments when -r is unavailable on macOS).
 if [[ -z "$active_run" ]] && [[ -d "$circuit_runs_dir" ]]; then
   found_count=$(find "$circuit_runs_dir" -name "active-run.md" -maxdepth 3 -type f 2>/dev/null | head -1 | wc -l)
   if [[ "$found_count" -gt 0 ]]; then

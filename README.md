@@ -189,7 +189,7 @@ and start fresh.
 
 - **[CIRCUITS.md](CIRCUITS.md):** Full catalog with phase breakdowns and usage examples.
 - **[ARCHITECTURE.md](ARCHITECTURE.md):** How circuits work internally (for contributors).
-- **[CONTRIBUTING.md](CONTRIBUTING.md):** How to build new circuits or modify existing ones.
+- **[CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md):** How to create your own custom circuit workflows.
 
 ## License
 

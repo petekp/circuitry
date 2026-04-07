@@ -146,6 +146,7 @@ describe("deriveState", () => {
         "abc1234",
       );
       expect(state.routes).toEqual({});
+      expectValidState(state);
     });
   });
 
@@ -169,6 +170,7 @@ describe("deriveState", () => {
 
       expect(state.current_step).toBe("step-one");
       expect(state.status).toBe("in_progress");
+      expectValidState(state);
     });
   });
 
@@ -204,6 +206,7 @@ describe("deriveState", () => {
       expect(art.status).toBe("complete");
       expect(art.gate).toBe("pending");
       expect(art.produced_by).toBe("step-one");
+      expectValidState(state);
     });
   });
 
@@ -263,6 +266,7 @@ describe("deriveState", () => {
       expect(state.current_step).toBe("step-one");
       expect(state.status).toBe("in_progress");
       expect(state.routes).toEqual({});
+      expectValidState(state);
     });
   });
 
@@ -301,6 +305,7 @@ describe("deriveState", () => {
       expect(state.routes).toEqual({
         "step-one": "step-two",
       });
+      expectValidState(state);
     });
 
     it("should store fail routes in state", () => {
@@ -337,6 +342,7 @@ describe("deriveState", () => {
       expect(state.routes).toEqual({
         "step-one": "@stop",
       });
+      expectValidState(state);
     });
   });
 
@@ -360,6 +366,7 @@ describe("deriveState", () => {
       expect(state.status).toBe("completed");
       expect(state.terminal_target).toBe("@complete");
       expect(state.current_step).toBeNull();
+      expectValidState(state);
     });
   });
 
@@ -396,7 +403,7 @@ describe("deriveState", () => {
       expectValidState(state);
     });
 
-    it("should preserve completion=blocked with status=failed", () => {
+    it("should preserve completion=blocked with status=failed and block the run", () => {
       resetTs();
       const events = [
         makeEvent("run_started", {
@@ -425,6 +432,7 @@ describe("deriveState", () => {
 
       expect(jobs["step-one"].status).toBe("failed");
       expect(jobs["step-one"].completion).toBe("blocked");
+      expect(state.status).toBe("in_progress");
       expectValidState(state);
     });
 
@@ -594,6 +602,7 @@ describe("deriveState", () => {
       expect(checkpoints1["step-one"]).toBeDefined();
       expect(checkpoints1["step-one"].status).toBe("waiting");
       expect(state1.status).toBe("waiting_checkpoint");
+      expectValidState(state1);
 
       // Phase 2: resolve the checkpoint
       const eventsPhase2 = [
@@ -618,6 +627,7 @@ describe("deriveState", () => {
       expect(checkpoints2["step-one"].status).toBe("resolved");
       expect(checkpoints2["step-one"].selection).toBe("approve");
       expect(state2.status).toBe("in_progress");
+      expectValidState(state2);
     });
   });
 });

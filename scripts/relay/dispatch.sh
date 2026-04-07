@@ -196,6 +196,8 @@ EOF
     # Treat any other value as a custom command string.
     # The command receives the prompt file as $1 and output path as $2.
     # Split BACKEND into an argv array for safe execution (no eval).
+    # Note: word-splitting means commands with spaces in their path must
+    # be on $PATH or symlinked to a simple name.
     read -ra BACKEND_ARGV <<< "$BACKEND"
     CMD_NAME="${BACKEND_ARGV[0]}"
     if ! command -v "$CMD_NAME" >/dev/null 2>&1 && [[ ! -x "$CMD_NAME" ]]; then

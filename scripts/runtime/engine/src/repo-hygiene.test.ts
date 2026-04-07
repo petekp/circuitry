@@ -21,7 +21,6 @@ const SKIP_DIRS = new Set([
 ]);
 const ALLOWED_CONTENT_PATHS = new Set([
   "scripts/runtime/engine/src/repo-hygiene.test.ts",
-  "CONTRIBUTING.md",        // mentions pytest/tox as example repo-declared commands
   "skills/review/SKILL.md", // lists pytest as example repo-declared verification tool
 ]);
 const CONTENT_PATTERNS = [
