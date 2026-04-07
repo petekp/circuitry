@@ -1,8 +1,9 @@
 <p align="center">
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </p>
-
-**One command. The right workflow. No babysitting.**
+<br />
+<p align="center"><strong>A Claude Code plugin for invoking powerful, contextually determined workflows with one command.</strong></p>
+<br />
 
 You describe your task. Circuit classifies it, picks the right workflow, and
 runs it. Research before decisions, decisions before code, independent review
