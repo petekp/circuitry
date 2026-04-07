@@ -8,9 +8,10 @@
 Just enter `/circuit` and describe your task. It'll pick the most suitable workflow from the core set -- or from ones you've created -- and
 execute it, making sure each step's output is valid before moving onto the next.
  
-**Circuit orchestrates your skills.** You can pre-configure any skill(s) be applied at the phase or step level.
-
-**Circuit is durable.** If a session dies, you can still pick up where you left off.
+- **Orchestrate your skills.** You can pre-configure any skill(s) be applied at the phase or step level.
+- **Resumable.** If a session dies, you can still pick up where you left off.
+- **Adjustable autonomy.** Steer with periodic checkpoints or let it run overnight.
+- **Effort levels.** Rigorous by default; a lighter touch when needed.
 
 ## Get Started
 
