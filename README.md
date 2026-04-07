@@ -33,31 +33,32 @@ Circuit classifies your task, picks the right workflow, and runs it.
 
 ## How It Works
 
-Circuit owns the developer session lifecycle. Every task maps to a workflow
-(what kind of job) and a rigor profile (how much scrutiny).
+Circuit replaces ad-hoc skill invocation and having to copy-paste or re-type the same instructions over and over (and over). Instead, just use `/circuit:run` or select a specific circuit. You can optionally provide a level of autonomy and rigor for more control.
 
-**Five Core Workflows:**
+**Core Workflows:**
+
+These workflows are included and ready to use. You can easily make your own with `/circuit:create`. 
 
 | Workflow | Purpose |
 |----------|-------------|
 | **Explore** | Investigate, understand, choose among options, shape a plan |
 | **Build** | Features, refactors, docs, tests, mixed changes |
-| **Repair** | Bugs, regressions, flaky behavior, incidents |
+| **Repair** | Bugs, regressions, flaky behavior |
 | **Migrate** | Framework swaps, dependency replacements, architecture transitions |
-| **Sweep** | Cleanup, quality passes, coverage improvements, docs-sync |
+| **Sweep** | Cleanup, quality passes, coverage improvements |
 
 **Rigor Levels:**
 
 | Rigor | Budget |
 |-------|--------|
-| **Lite** | Plan and do. No independent review. |
+| **Lite** | Plan and do. |
 | **Standard** | Plan, do, independent review. One fix loop. |
 | **Deep** | Research phase, seam proof. Workflows that include review still run it. |
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
-| **Autonomous** | Unattended. Checkpoints auto-resolve. Good for actually getting sleep. |
+| **Autonomous** | Checkpoints auto-resolve. Good for actually getting some sleep for once. |
 
 Every workflow follows these phases: **Frame, Analyze, Plan, Act, Verify,
-Review, Close, Pause**. Not every workflow uses every phase, but the order remains consistent.
+Review, Close, Pause**. Not every workflow goes through every phase, but the order remains consistent.
 
 1. **The router classifies your task.** Circuit matches your task to a workflow
    and rigor profile. Quiet by default: it routes and proceeds unless something
@@ -67,13 +68,9 @@ Review, Close, Pause**. Not every workflow uses every phase, but the order remai
    implementation. Implementation gets an independent review from a separate
    session. Every step saves progress to disk.
 
-3. **Progress survives crashes.** Active run state (`active-run.md`) is updated
-   after every phase. Session handoff state lives in `~/.claude/projects/` so
-   fresh sessions resume where the last one stopped.
+3. **Progress survives session clearing and crashes.** Active run state (`active-run.md`) is updated after every phase. Session handoff state lives in `~/.claude/projects/` so fresh sessions resume where the last one stopped.
 
-4. **You step in where it matters.** Circuit pauses at checkpoints for your
-   judgment (scope confirmation, tradeoff decisions). Everything else runs
-   autonomously.
+4. **Stay in the loop.** Circuit pauses at checkpoints to gather input (scope confirmation, tradeoff decisions). Everything else runs autonomously. Fully autonomous mode is also supported.
 
 ## Commands
 
