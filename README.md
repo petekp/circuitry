@@ -46,7 +46,7 @@ Circuit owns the developer session lifecycle. Every task maps to a workflow
 | **Migrate** | Framework swaps, dependency replacements, architecture transitions |
 | **Sweep** | Cleanup, quality passes, coverage improvements, docs-sync |
 
-**Five Rigor Settings:**
+**Rigor Levels:**
 
 | Rigor | Budget |
 |-------|--------|
@@ -54,9 +54,9 @@ Circuit owns the developer session lifecycle. Every task maps to a workflow
 | **Standard** | Plan, do, independent review. One fix loop. |
 | **Deep** | Research phase, seam proof. Workflows that include review still run it. |
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
-| **Autonomous** | Unattended. Evidence-gated. Checkpoints auto-resolve; workflows that include independent review still run it. |
+| **Autonomous** | Unattended. Checkpoints auto-resolve. Good for actually getting sleep. |
 
-Every workflow follows the same phase pattern: **Frame, Analyze, Plan, Act, Verify,
+Every workflow follows these phases: **Frame, Analyze, Plan, Act, Verify,
 Review, Close, Pause**. Not every workflow uses every phase, but the order remains consistent.
 
 1. **The router classifies your task.** Circuit matches your task to a workflow
@@ -81,8 +81,7 @@ Review, Close, Pause**. Not every workflow uses every phase, but the order remai
   pipelines.
 - **Not for trivial edits.** The router will show restraint by handing off trivial tasks to Claude, unless asked not to.
 - **Not a replacement for skills.** Circuit orchestrates skills. If you need
-  TDD discipline, install the `tdd` skill. Circuit will use it at the right
-  phase.
+  TDD discipline, install the `tdd` skill. Circuit will use it at the right phase.
 
 ## Commands
 
@@ -123,15 +122,14 @@ workflow and rigor level.
 run in separate sessions. The reviewer starts fresh with no knowledge of the
 implementation choices. Lite skips independent review where documented.
 
-**Canonical artifacts.** All workflows draw from a shared artifact vocabulary:
+**Canonical artifacts.** All workflows use a shared set of artifacts:
 `brief.md`, `analysis.md`, `plan.md`, `review.md`, `result.md`, plus a few
 specialized artifacts per workflow (`decision.md`, `queue.md`, `inventory.md`,
 `deferred.md`).
-One mental model across all circuits.
 
 **Dual continuity.** `active-run.md` updates automatically after every phase.
-`/circuit:handoff` writes a richer snapshot when you need it. Both inject on
-session start.
+`/circuit:handoff` writes a richer snapshot when you want to continue in a fresh session. Both inject on
+session start -- no more manual copy-pasting.
 
 **Circuit breakers.** When something goes wrong, Circuit escalates to you with
 the failure output and your options. No silent failures. No infinite loops.
@@ -167,8 +165,8 @@ npm install -g @openai/codex
 
 ## Prerequisites
 
-- **Claude Code** (the host environment)
-- **Node.js 20+** (no build step required)
+- **Claude Code**
+- **Node.js 20+**
 
 ## Troubleshooting
 
