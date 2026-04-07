@@ -2,13 +2,15 @@
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </p>
 <br />
-<p align="center"><strong>A Claude Code plugin for invoking powerful, contextually determined workflows with one command. Batteries included.</strong></p>
+<p align="center"><strong>A Claude Code plugin for orchestrating skills to automate your most common workflows, with one command.</strong></p>
 <br />
 
 You enter `/circuit` and describe your task. Circuit picks the most suitable workflow from the core set -- or one you created -- and
-runs it, ensuring each step is verified before starting the next. 
+runs it, ensuring each step is verified before starting the next.
  
-Any skills you like working with can be configured to be applied at any step. If a session dies, the next one picks up where it stopped.
+Circuit is a skill orchestrator: you can pre-configure any skill(s) be applied at any step in a workflow. 
+
+Circuit is durable: if a session dies, the next can pick up where you left off.
 
 ## Get Started
 
@@ -23,19 +25,19 @@ Install from the plugin marketplace:
 Start a new Claude Code session and run:
 
 ```
-/circuit:run evaluate microservices vs modular monolith vs serverless for our growing backend
+/circuit:run {{your task}}
 ```
 
-That's it. Circuit classifies your task, picks the right workflow, and runs it.
+Circuit classifies your task, picks the right workflow, and runs it.
 
 ## How It Works
 
 Circuit owns the developer session lifecycle. Every task maps to a workflow
 (what kind of job) and a rigor profile (how much scrutiny).
 
-**Five workflows, named after your job:**
+**Five Core Workflows:**
 
-| Workflow | What it does |
+| Workflow | Purpose |
 |----------|-------------|
 | **Explore** | Investigate, understand, choose among options, shape a plan |
 | **Build** | Features, refactors, docs, tests, mixed changes |
@@ -43,7 +45,7 @@ Circuit owns the developer session lifecycle. Every task maps to a workflow
 | **Migrate** | Framework swaps, dependency replacements, architecture transitions |
 | **Sweep** | Cleanup, quality passes, coverage improvements, docs-sync |
 
-**Five rigor profiles:**
+**Five Rigor Settings:**
 
 | Rigor | Budget |
 |-------|--------|
@@ -53,9 +55,8 @@ Circuit owns the developer session lifecycle. Every task maps to a workflow
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
 | **Autonomous** | Unattended. Evidence-gated. Checkpoints auto-resolve; workflows that include independent review still run it. |
 
-Every workflow follows the same phase spine: **Frame, Analyze, Plan, Act, Verify,
-Review, Close, Pause**. Not every workflow uses every phase, but the semantics
-stay stable.
+Every workflow follows the same phase pattern: **Frame, Analyze, Plan, Act, Verify,
+Review, Close, Pause**. Not every workflow uses every phase, but the order remains consistent.
 
 1. **The router classifies your task.** Circuit matches your task to a workflow
    and rigor profile. Quiet by default: it routes and proceeds unless something
@@ -75,10 +76,9 @@ stay stable.
 
 ## What Circuit Is Not
 
-- **Not a CI/CD tool.** Circuit runs inside Claude Code sessions, not in
+- **Not a CI/CD tool.** Circuit is run manually inside Claude Code sessions, not in
   pipelines.
-- **Not for trivial edits.** The router can say "this is trivial, do it inline."
-  That restraint is part of the product.
+- **Not for trivial edits.** The router will show restraint by handing off trivial tasks to Claude, unless asked not to.
 - **Not a replacement for skills.** Circuit orchestrates skills. If you need
   TDD discipline, install the `tdd` skill. Circuit will use it at the right
   phase.
