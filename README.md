@@ -2,7 +2,7 @@
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </p>
 <br />
-<p align="center"><strong>Automate your frequent Claude Code workflows using multi-step skill orchestration.</strong></p>
+<p align="center"><strong>Automate your Claude Code workflows with a single command.</strong></p>
 <br />
 
 Just enter `/circuit` and describe your task. It will pick the most suitable workflow from the core set -- or ones you've created -- and
