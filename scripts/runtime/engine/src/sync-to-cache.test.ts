@@ -97,6 +97,11 @@ async function makePluginRoot(root: string): Promise<void> {
     '{"type":"object"}\n',
     "utf-8",
   );
+  await writeFile(
+    resolve(root, "circuit.config.example.yaml"),
+    "roles:\n  implementer: example-role\n",
+    "utf-8",
+  );
 }
 
 async function makeTarget(root: string, version?: string): Promise<string> {
@@ -176,6 +181,9 @@ async function expectSyncedTarget(target: string): Promise<void> {
   expect(await readFile(resolve(target, "schemas/event.schema.json"), "utf-8")).toBe(
     '{"type":"object"}\n',
   );
+  expect(await readFile(resolve(target, "circuit.config.example.yaml"), "utf-8")).toBe(
+    "roles:\n  implementer: example-role\n",
+  );
   const mode = (await stat(resolve(target, "hooks/session-start.sh"))).mode;
   expect(mode & 0o100).not.toBe(0);
 }
@@ -183,6 +191,7 @@ async function expectSyncedTarget(target: string): Promise<void> {
 async function expectCacheTargetLayout(target: string): Promise<void> {
   expect((await readdir(target)).sort()).toEqual([
     ".claude-plugin",
+    "circuit.config.example.yaml",
     "commands",
     "hooks",
     "schemas",

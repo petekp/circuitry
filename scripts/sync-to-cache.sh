@@ -26,7 +26,7 @@ prune_cache_target() {
   while IFS= read -r -d '' path; do
     name="${path##*/}"
     case "$name" in
-      .claude-plugin|commands|hooks|schemas|scripts|skills) ;;
+      .claude-plugin|commands|hooks|schemas|scripts|skills|circuit.config.example.yaml) ;;
       *)
         rm -rf "$path" || return 1
         ;;
@@ -88,6 +88,15 @@ sync_target() {
     rsync "${RSYNC_ARGS[@]}" "$PLUGIN_ROOT/schemas/" "$target/schemas/" || return 1
   else
     rm -rf "$target/schemas" || return 1
+  fi
+
+  # Sync the example config users are pointed to in the README.
+  if [[ -f "$PLUGIN_ROOT/circuit.config.example.yaml" ]]; then
+    rsync "${RSYNC_ARGS[@]}" \
+      "$PLUGIN_ROOT/circuit.config.example.yaml" \
+      "$target/circuit.config.example.yaml" || return 1
+  else
+    rm -f "$target/circuit.config.example.yaml" || return 1
   fi
 
   if [[ "$label" == "marketplace" && -d "$target/.git" ]]; then
