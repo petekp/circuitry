@@ -27,8 +27,13 @@ public surface is projected into generated `CIRCUITS.md` blocks.
 `scripts/runtime/engine/src/catalog/surface-roots.ts` owns which roots count as
 shipped and which paths are ignored.
 
-`scripts/runtime/engine/src/catalog/surface-inventory.ts` owns file walking,
-hashing, executability, and plugin metadata capture.
+`scripts/runtime/engine/src/catalog/surface-fs.ts` owns raw installed-surface
+filesystem facts: recursive walking, hashing, executable-bit checks, and
+top-level entry listing.
+
+`scripts/runtime/engine/src/catalog/surface-inventory.ts` owns repo-time
+inventory projection, generated projection inclusion, and plugin metadata
+capture.
 
 `scripts/runtime/engine/src/catalog/surface-manifest.ts` owns
 `scripts/runtime/generated/surface-manifest.json`.
@@ -38,8 +43,11 @@ hashing, executability, and plugin metadata capture.
 `scripts/runtime/engine/src/catalog/verify-installed-surface.ts` owns manifest
 and installed-filesystem agreement checks.
 
-`scripts/verify-install.sh` is the repo-level ship gate that runs those checks
-against the shipped plugin surface.
+`scripts/runtime/engine/src/cli/verify-install.ts` owns the broader install
+verification CLI orchestration (generated freshness, surface verification,
+config, dispatch, and runtime checks).
+
+`scripts/verify-install.sh` is a thin shell wrapper around that broad CLI.
 
 ## Generated artifacts
 
@@ -49,9 +57,11 @@ against the shipped plugin surface.
 | Public slash command ids and shims | `public-surface.ts` | `.claude-plugin/public-commands.txt`, `commands/*.md` | `catalog-validator.test.ts`, `release-integrity.test.ts` |
 | CIRCUITS generated reference blocks | `catalog-doc-projections.ts` | generated blocks in `CIRCUITS.md` | `catalog-validator.test.ts`, `generate.test.ts` |
 | Shipped root allowlist and schema path pattern | `surface-roots.ts` | schema path regex, sync pruning inputs | `surface-roots.test.ts`, `catalog-validator.test.ts`, `sync-to-cache.test.ts` |
-| Installed file hashes and executability | `surface-inventory.ts` | `surface-manifest.json` file inventory | `verify-installed-surface.test.ts` |
+| Raw installed-surface filesystem facts | `surface-fs.ts` | file inventory inputs and installed top-level listings | `surface-fs.test.ts`, `verify-installed-surface.test.ts` |
+| Repo-time installed file inventory projection | `surface-inventory.ts` | `surface-manifest.json` file inventory | `verify-installed-surface.test.ts`, `generate.test.ts` |
 | Manifest entry projection and rendering | `surface-manifest.ts` | `scripts/runtime/generated/surface-manifest.json` | `catalog-validator.test.ts`, `generate.test.ts`, `verify-installed-surface.test.ts` |
 | Generate target registration and stale shim pruning | `generate-targets.ts` | catalog compiler write set | `catalog-validator.test.ts`, `generate.test.ts` |
+| Broad install verification CLI | `cli/verify-install.ts` | bundled `scripts/runtime/bin/verify-install.js` behavior | `runtime-cli-integration.test.ts` |
 
 ## Which files a contributor edits for each kind of change
 
@@ -61,7 +71,7 @@ against the shipped plugin surface.
 | Utility or adapter visibility | `skills/<slug>/SKILL.md` frontmatter | regenerate catalog outputs, run `release-integrity.test.ts` |
 | Public command shim text or invocation projection | `scripts/runtime/engine/src/catalog/public-surface.ts` | regenerate catalog outputs, run catalog tests |
 | CIRCUITS generated tables or entry-mode snippets | `scripts/runtime/engine/src/catalog/catalog-doc-projections.ts` | regenerate catalog outputs, review `CIRCUITS.md` |
-| What ships in the installed plugin surface | `scripts/runtime/engine/src/catalog/surface-roots.ts` and `surface-inventory.ts` | regenerate manifest, run `verify-installed-surface.test.ts` and `./scripts/verify-install.sh` |
+| What ships in the installed plugin surface | `scripts/runtime/engine/src/catalog/surface-roots.ts`, `surface-fs.ts`, and `surface-inventory.ts` | regenerate manifest, run `surface-fs.test.ts`, `verify-installed-surface.test.ts`, and `./scripts/verify-install.sh` |
 | Surface manifest structure or rendering | `scripts/runtime/engine/src/catalog/surface-manifest.ts` and `schemas/surface-manifest.schema.json` | regenerate manifest, run schema + verifier tests |
 | Which generated files the compiler manages | `scripts/runtime/engine/src/catalog/generate-targets.ts` | run `catalog-compiler.js generate --check`, `generate.test.ts` |
-| Repo-level installed verification behavior | `scripts/runtime/engine/src/catalog/verify-installed-surface.ts` and `scripts/verify-install.sh` | run verifier tests and `./scripts/verify-install.sh` |
+| Repo-level installed verification behavior | `scripts/runtime/engine/src/catalog/verify-installed-surface.ts`, `scripts/runtime/engine/src/cli/verify-install.ts`, and `scripts/verify-install.sh` | run verifier tests, CLI integration tests, and `./scripts/verify-install.sh` |

@@ -1,13 +1,17 @@
-import { createHash } from "node:crypto";
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-} from "node:fs";
-import { posix as posixPath, resolve } from "node:path";
+/**
+ * Owns narrow manifest-vs-installed-filesystem verification.
+ * It does not own raw filesystem traversal, hashing, or executable-bit detection primitives.
+ */
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import {
+  collectSurfaceFiles,
+  isExecutableFile,
+  listTopLevelEntries,
+  sha256File,
+} from "./surface-fs.js";
 import type { SurfaceManifest } from "./types.js";
 import {
   SURFACE_MANIFEST_PATH,
@@ -27,62 +31,26 @@ export interface VerifyInstalledSurfaceOptions {
   pluginRoot: string;
 }
 
-function walkInstalledFiles(
-  absolutePath: string,
-  relativePath: string,
-  files: string[],
-): void {
-  const stat = lstatSync(absolutePath);
-  if (stat.isDirectory()) {
-    if (shouldIgnoreInstalledPath(relativePath)) {
-      return;
-    }
-
-    for (const child of readdirSync(absolutePath).sort()) {
-      walkInstalledFiles(
-        resolve(absolutePath, child),
-        posixPath.join(relativePath, child),
-        files,
-      );
-    }
-    return;
-  }
-
-  if (stat.isFile()) {
-    files.push(relativePath);
-  }
-}
-
-function sha256(filePath: string): string {
-  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
-}
-
-function isExecutable(filePath: string): boolean {
-  return (statSync(filePath).mode & 0o111) !== 0;
-}
-
 function collectActualFiles(
   pluginRoot: string,
   mode: InstalledSurfaceMode,
   errors: string[],
 ): string[] {
-  const actualFiles: string[] = [];
+  const result = collectSurfaceFiles({
+    ignoreRelativePath: shouldIgnoreInstalledPath,
+    rootDir: pluginRoot,
+    seedPaths: listInstalledSurfaceSeedPaths(mode),
+  });
 
-  for (const relativePath of listInstalledSurfaceSeedPaths(mode)) {
-    const absolutePath = resolve(pluginRoot, relativePath);
-    if (!existsSync(absolutePath)) {
-      errors.push(
-        mode === "installed"
-          ? `missing shipped root ${relativePath}`
-          : `missing shipped path ${relativePath}`,
-      );
-      continue;
-    }
-
-    walkInstalledFiles(absolutePath, relativePath, actualFiles);
+  for (const relativePath of result.missingSeedPaths) {
+    errors.push(
+      mode === "installed"
+        ? `missing shipped root ${relativePath}`
+        : `missing shipped path ${relativePath}`,
+    );
   }
 
-  return actualFiles.sort();
+  return result.files;
 }
 
 function loadManifest(pluginRoot: string, errors: string[]): SurfaceManifest | null {
@@ -141,7 +109,7 @@ function verifyInstalledTopLevel(
     return;
   }
 
-  const actualTopLevel = readdirSync(pluginRoot).sort();
+  const actualTopLevel = listTopLevelEntries(pluginRoot);
   const expectedTopLevel = [...listInstalledSurfaceRoots()].sort();
   if (JSON.stringify(actualTopLevel) !== JSON.stringify(expectedTopLevel)) {
     errors.push(
@@ -215,10 +183,10 @@ function verifyManifestFiles(
       continue;
     }
 
-    if (file.sha256 !== sha256(absolutePath)) {
+    if (file.sha256 !== sha256File(absolutePath)) {
       errors.push(`sha256 mismatch for ${relativePath}`);
     }
-    if (Boolean(file.executable) !== isExecutable(absolutePath)) {
+    if (Boolean(file.executable) !== isExecutableFile(absolutePath)) {
       errors.push(`executable-bit mismatch for ${relativePath}`);
     }
   }

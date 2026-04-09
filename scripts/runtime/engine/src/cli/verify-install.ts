@@ -67,7 +67,7 @@ function parseArgs(argv: string[]): CliArgs {
   }
 
   if (mode !== "repo" && mode !== "installed") {
-    throw new Error("verify-installed-surface: --mode must be repo or installed");
+    throw new Error("verify-install: --mode must be repo or installed");
   }
 
   return { mode, pluginRoot };

@@ -157,6 +157,16 @@ describe("verifyInstalledSurface", () => {
     expect(result.errors).toContain("missing shipped manifest scripts/runtime/generated/surface-manifest.json");
   });
 
+  it("fails when the manifest is invalid JSON", () => {
+    const root = makeFixture();
+    writeFileSync(resolve(root, "scripts/runtime/generated/surface-manifest.json"), "{\n", "utf-8");
+
+    const result = verifyInstalledSurface({ mode: "repo", pluginRoot: root });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain("invalid shipped manifest");
+  });
+
   it("fails closed on installed top-level root drift", () => {
     const root = makeFixture();
     mkdirSync(resolve(root, "docs"));
@@ -165,6 +175,16 @@ describe("verifyInstalledSurface", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors.join("\n")).toContain("installed top-level surface drift");
+  });
+
+  it("fails when a shipped file is missing from disk", () => {
+    const root = makeFixture();
+    rmSync(resolve(root, "commands/build.md"));
+
+    const result = verifyInstalledSurface({ mode: "repo", pluginRoot: root });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("missing shipped file commands/build.md");
   });
 
   it("fails on file hash drift", () => {

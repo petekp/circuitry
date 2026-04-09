@@ -10,7 +10,7 @@ const ENTRY_POINTS = [
   "src/cli/resume.ts",
   "src/cli/update-surface-manifest-schema.ts",
   "src/cli/update-batch.ts",
-  "src/cli/verify-installed-surface.ts",
+  "src/cli/verify-install.ts",
 ];
 
 const outdir = new URL("../bin", import.meta.url).pathname;

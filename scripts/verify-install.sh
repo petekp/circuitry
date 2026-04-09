@@ -8,7 +8,7 @@ set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NODE_BIN="${NODE_BIN:-node}"
-VERIFY_INSTALLED_SURFACE="$PLUGIN_ROOT/scripts/runtime/bin/verify-installed-surface.js"
+VERIFY_INSTALL_CLI="$PLUGIN_ROOT/scripts/runtime/bin/verify-install.js"
 
 MODE=""
 while [[ $# -gt 0 ]]; do
@@ -39,6 +39,6 @@ if [[ "$MODE" != "repo" && "$MODE" != "installed" ]]; then
 fi
 
 printf 'Selected mode: %s\n' "$MODE"
-"$NODE_BIN" "$VERIFY_INSTALLED_SURFACE" \
+"$NODE_BIN" "$VERIFY_INSTALL_CLI" \
   --plugin-root "$PLUGIN_ROOT" \
   --mode "$MODE"

@@ -213,7 +213,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "c35722e2629627c7470b5b415ae387dcbd0b296f4c9777c9e18826ca5cd7ead1"
+      "sha256": "aa800e40539849356dc21fa6371f402d14b606f0ecb0baf6d9f527f8eff49c6d"
     },
     {
       "executable": true,
@@ -252,8 +252,8 @@
     },
     {
       "executable": true,
-      "path": "scripts/runtime/bin/verify-installed-surface.js",
-      "sha256": "0531248e68c8ff8727f595c86c818b834db99b8b630a83cedf71b83140df7ad8"
+      "path": "scripts/runtime/bin/verify-install.js",
+      "sha256": "b35b61218a899bc9a6963da0ab264f61cdb93fd7ca78f380464c5e8b96c1b1e5"
     },
     {
       "executable": true,
@@ -263,7 +263,7 @@
     {
       "executable": true,
       "path": "scripts/verify-install.sh",
-      "sha256": "b0a77ad8248e7ea82121a4fe16a5465124f2cb86eb79109a909561e411df7fe4"
+      "sha256": "f7ded52378216bff795d755fa058bb34afff470a391ea89554fe6457440f254f"
     },
     {
       "executable": false,

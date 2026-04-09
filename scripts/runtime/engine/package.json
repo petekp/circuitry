@@ -13,7 +13,7 @@
     "circuit-resume": "dist/cli/resume.js",
     "circuit-update-batch": "dist/cli/update-batch.js",
     "circuit-update-surface-manifest-schema": "dist/cli/update-surface-manifest-schema.js",
-    "circuit-verify-installed-surface": "dist/cli/verify-installed-surface.js"
+    "circuit-verify-install": "dist/cli/verify-install.js"
   },
   "scripts": {
     "build": "tsc",

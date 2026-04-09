@@ -106,7 +106,8 @@ describe("runtime CLI integration", () => {
   it("keeps verify-install.sh as a thin wrapper around the bundled verifier", () => {
     const script = readFileSync(VERIFY_INSTALL, "utf-8");
 
-    expect(script).toContain("verify-installed-surface.js");
+    expect(script).toContain("verify-install.js");
+    expect(script).not.toContain("verify-installed-surface.js");
     expect(script).not.toContain("<<'NODE'");
     expect(script).not.toContain("const installedRoots");
     expect(script).not.toMatch(/sha256\(|lstatSync\(|readdirSync\(/);

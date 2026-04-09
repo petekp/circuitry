@@ -1,19 +1,18 @@
 /**
- * Owns shipped-file inventory collection: file walking, hashing, executability, and plugin metadata.
- * It does not assemble manifest entries or decide which docs blocks get generated.
+ * Owns repo-time installed inventory projection, generated-file inclusion, and plugin metadata.
+ * It does not implement raw file walking, hashing, or executable-bit detection primitives.
  */
 
-import { createHash } from "node:crypto";
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-} from "node:fs";
+import { readFileSync } from "node:fs";
 import { posix as posixPath, resolve } from "node:path";
 
 import { getPublicEntries, renderCommandShim, renderPublicCommandsFile } from "./public-surface.js";
+import {
+  collectSurfaceFiles,
+  isExecutableFile,
+  sha256File,
+  sha256Text,
+} from "./surface-fs.js";
 import {
   SURFACE_MANIFEST_PATH,
   listInstalledSurfaceSeedPaths,
@@ -26,57 +25,12 @@ interface GeneratedInventoryProjection {
   executable: boolean;
 }
 
-function walkInstalledFiles(
-  absolutePath: string,
-  relativePath: string,
-  files: string[],
-): void {
-  const stat = lstatSync(absolutePath);
-  if (stat.isDirectory()) {
-    if (shouldIgnoreInstalledPath(relativePath)) {
-      return;
-    }
-
-    for (const child of readdirSync(absolutePath).sort()) {
-      walkInstalledFiles(
-        resolve(absolutePath, child),
-        posixPath.join(relativePath, child),
-        files,
-      );
-    }
-    return;
-  }
-
-  if (stat.isFile()) {
-    files.push(relativePath);
-  }
-}
-
 function listInstalledFiles(repoRoot: string): string[] {
-  const files: string[] = [];
-
-  for (const relativePath of listInstalledSurfaceSeedPaths("repo")) {
-    const absolutePath = resolve(repoRoot, relativePath);
-    if (!existsSync(absolutePath)) {
-      continue;
-    }
-
-    walkInstalledFiles(absolutePath, relativePath, files);
-  }
-
-  return files.sort();
-}
-
-function sha256Content(content: string): string {
-  return createHash("sha256").update(content, "utf-8").digest("hex");
-}
-
-function sha256File(filePath: string): string {
-  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
-}
-
-function isExecutableFile(filePath: string): boolean {
-  return (statSync(filePath).mode & 0o111) !== 0;
+  return collectSurfaceFiles({
+    ignoreRelativePath: shouldIgnoreInstalledPath,
+    rootDir: repoRoot,
+    seedPaths: listInstalledSurfaceSeedPaths("repo"),
+  }).files;
 }
 
 function buildGeneratedInventoryProjections(
@@ -133,7 +87,7 @@ export function getInstalledFileInventory(repoRoot: string, catalog: Catalog): S
       inventory.push({
         executable: generated.executable,
         path: relativePath,
-        sha256: sha256Content(generated.content),
+        sha256: sha256Text(generated.content),
       });
       continue;
     }
