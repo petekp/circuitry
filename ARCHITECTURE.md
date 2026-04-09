@@ -40,7 +40,7 @@ quality check.
 
 Non-workflow helpers are intentionally different. `review` and `handoff` ship
 as utility skills without `circuit.yaml`. `workers` also omits `circuit.yaml`,
-but it is an internal adapter utility rather than a public lifecycle utility.
+but it is an internal adapter rather than a public lifecycle utility.
 None of them are workflows the runtime engine classifies as circuits.
 
 The plugin is named `circuit`. Skills use bare directory names (`run`, `build`,
@@ -210,7 +210,6 @@ The dispatch pipeline:
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt" \
   --circuit build \
-  --step act \
   --role implementer
 
 # 4. Orchestrator reads the report and verifies
@@ -436,7 +435,6 @@ CLI. The CLI resolves the adapter after applying config-driven routing:
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt" \
   --circuit build \
-  --step act \
   --role implementer
 ```
 
@@ -457,10 +455,9 @@ Resolution order:
 4. `dispatch.default`
 5. auto-detect (`codex` if installed, else `agent`)
 
-`--step` still threads through dispatch calls, but only as internal execution
-metadata for job labeling and state correlation. It does not participate in
-routing. Convergence still uses `--role converger` internally, but adapter
-selection resolves through the reviewer adapter.
+The dispatch contract stays semantic: parent workflows provide `--circuit` plus
+the worker role, and convergence uses reviewer routing semantics with
+converge-specific prompt/report content.
 
 All adapters run synchronously and emit a JSON receipt to stdout on completion.
 Every receipt includes `adapter`, `transport`, and `resolved_from`.
@@ -515,9 +512,9 @@ omit the required sections produce reports the orchestrator cannot parse.
 Circuits compose with each other and with non-circuit skills through
 well-defined interfaces.
 
-### How Circuits Call `workers` as an Adapter
+### How Circuits Call `workers` as an Internal Adapter
 
-The `workers` skill is not a circuit. It is an adapter. Circuits delegate
+The `workers` skill is not a circuit. It is an internal adapter. Circuits delegate
 their implementation-heavy steps to `workers`, which handles the
 plan-implement-review-converge loop.
 
@@ -602,7 +599,7 @@ composed at dispatch time and injected via `--skills`:
   affects all circuits that compose it, without editing any circuit files.
 
 `workers` is not one of these companion skills. Parent workflows must not inject
-`workers` through `--skills`; they hand off to the `workers` adapter utility,
+`workers` through `--skills`; they hand off to the `workers` internal adapter,
 which then owns prompt-template assembly and the inner worker loop.
 
 ---
@@ -735,7 +732,6 @@ circuit:
     One-sentence thesis.
 
   entry:
-    expert_command: /circuit:build   # direct invocation (matches /circuit:<id>)
     usage: <task>                    # optional single placeholder suffix rendered in public docs
     signals:
       include: [signal_names]
@@ -976,7 +972,7 @@ Workflow SKILL.md (runtime truth)
             ├── compose-prompt.sh
             |     (header + skills + template + relay_root substitution)
             |
-            ├── dispatch.sh --circuit build --step act --role implementer
+            ├── dispatch.sh --circuit build --role implementer
             |     (auto-detects codex/agent/custom adapter)
             |
             ├── [if workers delegation]

@@ -11,7 +11,7 @@ set -euo pipefail
 PLUGIN_ROOT="${CIRCUIT_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CACHE_BASE="${CLAUDE_PLUGIN_CACHE_DIR:-$HOME/.claude/plugins/cache/petekp}"
 MARKETPLACE_DIR="${CLAUDE_PLUGIN_MARKETPLACE_DIR:-$HOME/.claude/plugins/marketplaces/petekp}"
-RSYNC_ARGS=(-a --checksum --delete)
+RSYNC_ARGS=(-a --checksum --delete --exclude '.vite/')
 
 CACHE_DIRS=()
 if [[ -d "${CACHE_BASE}/circuit" ]]; then

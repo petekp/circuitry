@@ -63,6 +63,7 @@ async function makePluginRoot(root: string): Promise<void> {
   await mkdir(resolve(root, "commands"), { recursive: true });
   await mkdir(resolve(root, ".claude-plugin"), { recursive: true });
   await mkdir(resolve(root, "scripts/relay"), { recursive: true });
+  await mkdir(resolve(root, "scripts/runtime/generated"), { recursive: true });
   await mkdir(resolve(root, "schemas"), { recursive: true });
 
   await writeFile(resolve(root, "hooks/hooks.json"), '{"hooks":{}}\n', "utf-8");
@@ -93,6 +94,11 @@ async function makePluginRoot(root: string): Promise<void> {
     "utf-8",
   );
   await writeFile(
+    resolve(root, "scripts/runtime/generated/surface-manifest.json"),
+    '{"schema_version":"1"}\n',
+    "utf-8",
+  );
+  await writeFile(
     resolve(root, "schemas/event.schema.json"),
     '{"type":"object"}\n',
     "utf-8",
@@ -112,6 +118,7 @@ async function makeTarget(root: string, version?: string): Promise<string> {
   await mkdir(resolve(target, "commands"), { recursive: true });
   await mkdir(resolve(target, ".claude-plugin"), { recursive: true });
   await mkdir(resolve(target, "scripts/relay"), { recursive: true });
+  await mkdir(resolve(target, "scripts/runtime/generated"), { recursive: true });
   await mkdir(resolve(target, "schemas"), { recursive: true });
   await mkdir(resolve(target, "docs"), { recursive: true });
   await mkdir(resolve(target, "assets"), { recursive: true });
@@ -135,6 +142,11 @@ async function makeTarget(root: string, version?: string): Promise<string> {
   await writeFile(
     resolve(target, "scripts/relay/dispatch.sh"),
     "#!/usr/bin/env bash\necho old-dispatch\n",
+    "utf-8",
+  );
+  await writeFile(
+    resolve(target, "scripts/runtime/generated/surface-manifest.json"),
+    '{"schema_version":"old"}\n',
     "utf-8",
   );
   await writeFile(
@@ -178,6 +190,9 @@ async function expectSyncedTarget(target: string): Promise<void> {
   expect(await readFile(resolve(target, "scripts/relay/dispatch.sh"), "utf-8")).toBe(
     "#!/usr/bin/env bash\necho dispatch\n",
   );
+  expect(
+    await readFile(resolve(target, "scripts/runtime/generated/surface-manifest.json"), "utf-8"),
+  ).toBe('{"schema_version":"1"}\n');
   expect(await readFile(resolve(target, "schemas/event.schema.json"), "utf-8")).toBe(
     '{"type":"object"}\n',
   );

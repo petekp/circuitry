@@ -46,7 +46,6 @@ function writeManifest(runRoot: string) {
       '  version: "2026-04-07"',
       '  purpose: "Integration test manifest"',
       "  entry:",
-      "    expert_command: /circuit:build",
       "    signals:",
       "      include: [feature]",
       "      exclude: []",
@@ -80,13 +79,10 @@ function copyInstallRoot(targetRoot: string) {
   const entries = [
     ".claude-plugin",
     "commands",
-    "docs/examples",
     "hooks",
     "schemas",
+    "scripts",
     "skills",
-    "scripts/relay",
-    "scripts/runtime/bin",
-    "scripts/verify-install.sh",
     "circuit.config.example.yaml",
   ];
 
@@ -97,7 +93,6 @@ function copyInstallRoot(targetRoot: string) {
   }
 
   chmodSync(resolve(targetRoot, "scripts/verify-install.sh"), 0o755);
-  chmodSync(resolve(targetRoot, "docs/examples/gemini-dispatch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/compose-prompt.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/dispatch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/update-batch.sh"), 0o755);
@@ -219,7 +214,7 @@ describe("runtime CLI integration", () => {
     expect(payload.resume_step).toBe("frame");
   });
 
-  it("verify-install succeeds from a copied install root", () => {
+  it("verify-install succeeds from a copied install root in installed mode", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const installRoot = resolve(tempRoot, "install-root");
     const homeDir = resolve(tempRoot, "home");
@@ -229,7 +224,7 @@ describe("runtime CLI integration", () => {
 
     const result = run(
       resolve(installRoot, "scripts/verify-install.sh"),
-      [],
+      ["--mode", "installed"],
       {
         cwd: installRoot,
         env: { HOME: homeDir, NODE_BIN: process.execPath },
@@ -237,6 +232,45 @@ describe("runtime CLI integration", () => {
     );
 
     expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("Selected mode: installed");
+    expect(`${result.stdout}\n${result.stderr}`).toContain("All checks passed");
+  });
+
+  it("verify-install succeeds from a copied repo root in repo mode", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const repoRoot = resolve(tempRoot, "repo-root");
+    mkdirSync(repoRoot, { recursive: true });
+
+    for (const entry of [
+      ".claude-plugin",
+      "commands",
+      "hooks",
+      "schemas",
+      "scripts",
+      "skills",
+      "README.md",
+      "ARCHITECTURE.md",
+      "CIRCUITS.md",
+      "CUSTOM-CIRCUITS.md",
+      "docs",
+      "circuit.config.example.yaml",
+    ]) {
+      cpSync(resolve(REPO_ROOT, entry), resolve(repoRoot, entry), { recursive: true });
+    }
+
+    chmodSync(resolve(repoRoot, "scripts/verify-install.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "scripts/relay/compose-prompt.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "scripts/relay/dispatch.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "scripts/relay/update-batch.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "hooks/session-start.sh"), 0o755);
+
+    const result = run(resolve(repoRoot, "scripts/verify-install.sh"), ["--mode", "repo"], {
+      cwd: repoRoot,
+      env: { NODE_BIN: process.execPath },
+    });
+
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("Selected mode: repo");
     expect(`${result.stdout}\n${result.stderr}`).toContain("All checks passed");
   });
 
@@ -256,7 +290,7 @@ describe("runtime CLI integration", () => {
 
     const result = run(
       resolve(installRoot, "scripts/verify-install.sh"),
-      [],
+      ["--mode", "installed"],
       {
         cwd: installRoot,
         env: { HOME: homeDir },
@@ -284,7 +318,7 @@ describe("runtime CLI integration", () => {
       "utf-8",
     );
 
-    const result = run(resolve(installRoot, "scripts/verify-install.sh"), [], {
+    const result = run(resolve(installRoot, "scripts/verify-install.sh"), ["--mode", "installed"], {
       cwd: installRoot,
     });
 
@@ -329,13 +363,13 @@ describe("runtime CLI integration", () => {
       "utf-8",
     );
 
-    const result = run(resolve(installRoot, "scripts/verify-install.sh"), [], {
+    const result = run(resolve(installRoot, "scripts/verify-install.sh"), ["--mode", "installed"], {
       cwd: installRoot,
     });
 
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toMatch(
-      /(workers|public command surface|authoritative)/i,
+      /(workers|surface|unexpected|hash)/i,
     );
   });
 });
