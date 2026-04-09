@@ -31,4 +31,14 @@ describe("surface boundary regressions", () => {
     expect(filePaths).not.toContain("CIRCUITS.md");
     expect(filePaths).not.toContain("CUSTOM-CIRCUITS.md");
   });
+
+  it("keeps the engine workspace and runtime node_modules out of the shipped surface manifest", () => {
+    const manifest = JSON.parse(
+      read("scripts/runtime/generated/surface-manifest.json"),
+    ) as { files: Array<{ path: string }> };
+
+    const filePaths = manifest.files.map((file) => file.path);
+    expect(filePaths.some((path) => path.startsWith("scripts/runtime/engine/"))).toBe(false);
+    expect(filePaths.some((path) => path.startsWith("scripts/runtime/node_modules/"))).toBe(false);
+  });
 });

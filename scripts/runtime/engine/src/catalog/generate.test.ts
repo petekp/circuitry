@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { collectPendingWrites, generate } from "./generate.js";
-import { getGenerateTargets } from "./surfaces.js";
+import { getGenerateTargets } from "./generate-targets.js";
 import type { Catalog } from "./types.js";
 
 const SAMPLE_CATALOG: Catalog = [

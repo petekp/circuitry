@@ -46,6 +46,9 @@ compiler path for generated surfaces. This RFC rejects any implementation that
 adds a new mirror or generated output without also specifying its owner,
 validator, and freshness enforcement.
 
+The current contributor-facing ownership map for that contract lives in
+`docs/control-plane-ownership.md`.
+
 Anti-goals:
 
 - No full workflow authoring DSL.

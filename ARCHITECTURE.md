@@ -2,7 +2,9 @@
 
 Reference for circuit authors and contributors. For a user-facing overview of
 what each circuit does, see [CIRCUITS.md](CIRCUITS.md). For the full workflow
-matrix, see [docs/workflow-matrix.md](docs/workflow-matrix.md).
+matrix, see [docs/workflow-matrix.md](docs/workflow-matrix.md). For the
+control-plane ownership map, see
+[docs/control-plane-ownership.md](docs/control-plane-ownership.md).
 
 ---
 

@@ -14,8 +14,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { extract } from "../catalog/extract.js";
+import { getGenerateTargets, pruneStaleCommandShims } from "../catalog/generate-targets.js";
 import { collectPendingWrites, generate } from "../catalog/generate.js";
-import { getGenerateTargets, pruneStaleCommandShims } from "../catalog/surfaces.js";
 
 const MODULE_DIR =
   typeof __dirname !== "undefined"

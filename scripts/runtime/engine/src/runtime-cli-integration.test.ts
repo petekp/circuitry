@@ -2,6 +2,7 @@ import {
   chmodSync,
   cpSync,
   mkdirSync,
+  readFileSync,
   writeFileSync,
 } from "node:fs";
 import { mkdtempSync } from "node:fs";
@@ -76,21 +77,23 @@ function writeManifest(runRoot: string) {
 }
 
 function copyInstallRoot(targetRoot: string) {
-  const entries = [
+  for (const entry of [
     ".claude-plugin",
     "commands",
     "hooks",
     "schemas",
-    "scripts",
     "skills",
     "circuit.config.example.yaml",
-  ];
-
-  for (const entry of entries) {
-    const src = resolve(REPO_ROOT, entry);
-    const dest = resolve(targetRoot, entry);
-    cpSync(src, dest, { recursive: true });
+  ]) {
+    cpSync(resolve(REPO_ROOT, entry), resolve(targetRoot, entry), { recursive: true });
   }
+
+  mkdirSync(resolve(targetRoot, "scripts"), { recursive: true });
+  cpSync(resolve(REPO_ROOT, "scripts/relay"), resolve(targetRoot, "scripts/relay"), { recursive: true });
+  cpSync(resolve(REPO_ROOT, "scripts/runtime/bin"), resolve(targetRoot, "scripts/runtime/bin"), { recursive: true });
+  cpSync(resolve(REPO_ROOT, "scripts/runtime/generated"), resolve(targetRoot, "scripts/runtime/generated"), { recursive: true });
+  cpSync(resolve(REPO_ROOT, "scripts/verify-install.sh"), resolve(targetRoot, "scripts/verify-install.sh"));
+  cpSync(resolve(REPO_ROOT, "scripts/sync-to-cache.sh"), resolve(targetRoot, "scripts/sync-to-cache.sh"));
 
   chmodSync(resolve(targetRoot, "scripts/verify-install.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/compose-prompt.sh"), 0o755);
@@ -100,6 +103,15 @@ function copyInstallRoot(targetRoot: string) {
 }
 
 describe("runtime CLI integration", () => {
+  it("keeps verify-install.sh as a thin wrapper around the bundled verifier", () => {
+    const script = readFileSync(VERIFY_INSTALL, "utf-8");
+
+    expect(script).toContain("verify-installed-surface.js");
+    expect(script).not.toContain("<<'NODE'");
+    expect(script).not.toContain("const installedRoots");
+    expect(script).not.toMatch(/sha256\(|lstatSync\(|readdirSync\(/);
+  });
+
   it("read-config honors explicit config over project and home", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const homeDir = resolve(tempRoot, "home");

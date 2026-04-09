@@ -5,16 +5,10 @@ import { describe, expect, it } from "vitest";
 
 import { REPO_ROOT, loadJsonSchema, validate } from "../schema.js";
 import { extract } from "./extract.js";
+import { getGenerateTargets, pruneStaleCommandShims } from "./generate-targets.js";
 import { collectPendingWrites } from "./generate.js";
-import {
-  SURFACE_MANIFEST_PATH,
-  getGenerateTargets,
-  getPublicCommandIds,
-  isAdapter,
-  isPublicEntry,
-  isWorkflow,
-  pruneStaleCommandShims,
-} from "./surfaces.js";
+import { isAdapter, isPublicEntry, isWorkflow, getPublicCommandIds } from "./public-surface.js";
+import { SURFACE_MANIFEST_PATH, getInstalledSurfacePathPattern } from "./surface-roots.js";
 
 const skillsDir = resolve(REPO_ROOT, "skills");
 
@@ -80,5 +74,21 @@ describe("generated public surface", () => {
     expect(manifest.entries.map((entry: { slug: string }) => entry.slug)).toEqual(
       [...catalog].map((entry) => entry.slug),
     );
+  });
+
+  it("derives the schema path allowlist from the surface-roots owner", () => {
+    const schema = loadJsonSchema("schemas/surface-manifest.schema.json") as {
+      $defs: {
+        file: {
+          properties: {
+            path: {
+              pattern: string;
+            };
+          };
+        };
+      };
+    };
+
+    expect(schema.$defs.file.properties.path.pattern).toBe(getInstalledSurfacePathPattern());
   });
 });
