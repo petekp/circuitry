@@ -4,7 +4,7 @@ description: >
   Build features, scoped refactors, docs, tests, or mixed changes. The doing
   workflow. Phases: Frame -> Plan -> Act -> Verify -> Review -> Close. Docs and
   tests are first-class outputs, not afterthoughts. If architecture uncertainty
-  appears, transfers to Explore rather than muddling through.
+  appears, stop and restart through Explore rather than muddling through.
 trigger: >
   Use for /circuit:build, or when circuit:run routes here.
 ---
@@ -19,26 +19,33 @@ Frame -> Plan -> Act -> Verify -> Review -> Close
 
 ## Entry
 
-The router passes: task description, rigor profile (Lite, Standard, Deep, Autonomous).
+The router passes: task description and rigor profile (Lite, Standard, Deep, Autonomous).
 
-**Direct invocation:** When invoked directly via `/circuit:build` (not through the
-router), bootstrap the run root if one does not already exist:
+Build uses the semantic outer engine on the real execution path. The human-facing
+dashboard is generated from machine state; do not hand-edit it.
 
-Derive `RUN_SLUG` from the task description: lowercase, replace spaces and
-special characters with hyphens, collapse consecutive hyphens, trim to 50
-characters. Example: "Add Dark Mode Support" produces `add-dark-mode-support`.
+Map rigor to Build entry mode:
+- Standard -> `default`
+- Lite -> `lite`
+- Deep -> `deep`
+- Autonomous -> `autonomous`
+
+When Build starts, derive `RUN_SLUG` and `RUN_ROOT` as usual, then always call
+the semantic bootstrap wrapper. Bootstrap is idempotent, so call it even if the
+router already initialized the run:
 
 ```bash
 RUN_SLUG="add-dark-mode-support"  # derived from task description
 RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
-mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
-ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
-```
+ENTRY_MODE="default"              # map from the selected rigor
 
-Write initial `${RUN_ROOT}/artifacts/active-run.md` with Workflow=Build,
-Rigor=Standard (or as specified), Current Phase=frame. If the router already set
-up the run root (active-run.md exists at `${RUN_ROOT}/artifacts/active-run.md`),
-skip bootstrap and proceed to the current phase.
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" bootstrap \
+  --run-root "$RUN_ROOT" \
+  --manifest "$CLAUDE_PLUGIN_ROOT/skills/build/circuit.yaml" \
+  --entry-mode "$ENTRY_MODE" \
+  --goal "<task description>" \
+  --project-root "$PWD"
+```
 
 ## Phase: Frame
 
@@ -62,24 +69,51 @@ Write `artifacts/brief.md`:
 <what we are NOT doing>
 ```
 
-**Key rule:** Output Types must be explicit. If the change affects code, ask: does
-this also need tests? Updated docs? Config changes? Docs and tests are first-class
+Key rule: Output Types must be explicit. If the change affects code, ask whether
+tests, docs, or config changes are also required. Docs and tests are first-class
 outputs, not afterthoughts.
 
-**Ambiguity check:** If the task is genuinely ambiguous (more than one reasonable
-interpretation), ask ONE clarifying question before writing brief.md.
+Ambiguity check: If the task is genuinely ambiguous (more than one reasonable
+interpretation), ask one clarifying question before writing `brief.md`.
 
-**Gate:** brief.md exists with non-empty Objective, Scope, Output Types, Success
-Criteria, Verification Commands.
+After writing `artifacts/brief.md`, write the checkpoint request file and call the
+semantic checkpoint command:
 
-**Rigor behavior:**
-- Lite: Write brief.md and proceed. No checkpoint.
-- Standard: Write brief.md and proceed. Pause only if scope is ambiguous
-  (more than one reasonable interpretation), irreversible (data migration,
-  public API change), or success criteria are unclear.
-- Deep/Autonomous: Present brief.md for confirmation. One checkpoint.
+```bash
+cat > "$RUN_ROOT/checkpoints/frame-1.request.json" <<'JSON'
+{
+  "step": "frame",
+  "selection_required": ["continue"],
+  "reason": "brief ready for checkpoint resolution"
+}
+JSON
 
-Update `active-run.md`: phase=frame, next step=Plan.
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" request-checkpoint \
+  --run-root "$RUN_ROOT" \
+  --step frame
+```
+
+Rigor behavior:
+- Lite, Standard, Autonomous: auto-write `{"selection":"continue"}` to
+  `checkpoints/frame-1.response.json`, then call `resolve-checkpoint`.
+- Deep: stop for user confirmation. Once the user confirms, write
+  `checkpoints/frame-1.response.json` with `selection: continue`, then call
+  `resolve-checkpoint`.
+
+```bash
+cat > "$RUN_ROOT/checkpoints/frame-1.response.json" <<'JSON'
+{
+  "selection": "continue"
+}
+JSON
+
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" resolve-checkpoint \
+  --run-root "$RUN_ROOT" \
+  --step frame
+```
+
+Gate: `brief.md` exists with non-empty Objective, Scope, Output Types, Success
+Criteria, and Verification Commands.
 
 ## Phase: Plan
 
@@ -108,94 +142,93 @@ Write `artifacts/plan.md`:
 - [ ] Compatibility: any breaking changes to document?
 ```
 
-Address each adjacent-output item explicitly: mark it required (with details) or
-mark it N/A. Treat unchecked items as plan-quality gaps to fix before
-proceeding, not as a separate manifest gate.
+Address each adjacent-output item explicitly: mark it required with details or
+mark it N/A. Treat unchecked items as plan-quality gaps to fix before proceeding.
 
-**Architecture uncertainty:** If during planning you discover the approach is
-unclear, involves multiple viable architectures, or touches unfamiliar territory,
-transfer to Explore within the same run. This is orchestrator behavior, not a
-dedicated route in `circuit.yaml`:
+Deep rigor folds seam proof into this phase. Identify the riskiest seam, prove
+it inside the planning work, and refine the slices here. This is extra rigor
+inside Plan, not a separate runtime step.
 
-1. Update `active-run.md`:
-   ```markdown
-   ## Current Phase
-   transfer
-   ## Next Step
-   Explore: investigate architecture options
-   ## Transfer
-   from: Build
-   to: Explore
-   reason: architecture uncertainty detected during Plan
-   ```
-2. Load the `circuit:explore` skill and follow its Frame phase from here. The
-   existing run root, brief.md, and plan.md (if partial) carry forward as
-   context. Explore will produce analysis.md and a revised plan.md.
-3. When Explore finishes with a plan ready for execution, reload
-   `circuit:build` in the same run and resume from Plan. See Explore's
-   close-to-Build transfer guidance.
+If planning or seam proof reveals architecture uncertainty, multiple viable
+architectures, or a design invalidation that requires deeper exploration, stop
+and tell the user to restart via Explore. Same-run Build -> Explore transfer is
+not supported in v1. Do not advance the runtime until `plan.md` is sound.
 
-**Gate:** plan.md exists with non-empty Approach, Slices, Verification Commands.
+When `plan.md` is ready, complete the synthesis step:
 
-Update `active-run.md`: phase=plan, next step=Act.
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" complete-synthesis \
+  --run-root "$RUN_ROOT" \
+  --step plan
+```
+
+Gate: `plan.md` exists with non-empty Approach, Slices, and Verification Commands.
 
 ## Phase: Act
 
-Create the workers workspace and dispatch implementation.
+Act is always a dispatch step in this migration. No mode may bypass dispatch.
+
+Create the parent-owned implementation workspace:
 
 ```bash
-IMPL_ROOT="${RUN_ROOT}/phases/implement"
-mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" "${IMPL_ROOT}/last-messages"
-cp ${RUN_ROOT}/artifacts/plan.md ${IMPL_ROOT}/CHARTER.md
+IMPL_ROOT="$RUN_ROOT/phases/implement"
+mkdir -p "${IMPL_ROOT}/archive" "${IMPL_ROOT}/reports" "${IMPL_ROOT}/last-messages" "${IMPL_ROOT}/jobs"
+cp "$RUN_ROOT/artifacts/plan.md" "${IMPL_ROOT}/CHARTER.md"
 ```
 
-Write prompt header at `${IMPL_ROOT}/prompt-header.md`:
-- Mission: Implement the task described in CHARTER.md
-- Inputs: Full plan.md
-- Output: convergence report
-- Success criteria: All slices complete, verification commands pass
+Write `artifacts/implementation-handoff.md` with the concrete implementation
+mission, verification commands, expected outputs, and relay headings:
+- `### Files Changed`
+- `### Tests Run`
+- `### Completion Claim`
 
-Include canonical relay headings: `### Files Changed`, `### Tests Run`,
-`### Completion Claim`.
+Keep `workers` as the inner adapter. Do not duplicate its inner event system.
+Do not pass `workers` through `--skills`; it is the internal adapter.
 
-Prepare the adapter handoff:
+Before dispatch, materialize the outer request at:
+- `phases/implement/jobs/act-1.request.json` for the first attempt
+- `phases/implement/jobs/act-2.request.json` for the second attempt
+- `phases/implement/jobs/act-3.request.json` for the third attempt
+
+Then call the semantic dispatch command:
 
 ```bash
-# Keep the parent-owned workspace minimal and typed.
-touch "${IMPL_ROOT}/jobs/act-1.request.json"
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" dispatch-step \
+  --run-root "$RUN_ROOT" \
+  --step act
 ```
 
-Then hand off to the `workers` internal adapter with:
-- 0-2 domain skills for the affected code (for example `rust`, `tdd`)
-- verification commands copied from `plan.md`
-- success criteria for the act step
-- the expectation that `workers` owns prompt assembly, dispatch, review, and convergence
+When the worker result exists at the manifest path for the active attempt, call:
 
-Do **not** pass `workers` via `--skills`. `workers` is the internal adapter, not
-a domain skill. The parent workflow owns the child root and reads back only the
-public contract files:
-- `jobs/{step_id}-{attempt}.request.json`
-- `jobs/{step_id}-{attempt}.receipt.json`
-- `jobs/{step_id}-{attempt}.result.json`
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" reconcile-dispatch \
+  --run-root "$RUN_ROOT" \
+  --step act
+```
+
+Public files owned by the outer Build workflow:
+- `phases/implement/jobs/{step_id}-{attempt}.request.json`
+- `phases/implement/jobs/{step_id}-{attempt}.receipt.json`
+- `phases/implement/jobs/{step_id}-{attempt}.result.json`
 - `reports/report-converge.md`
 - `reports/report-{slice_id}.md`
 
-**Rigor behavior:**
-- Lite: Dispatch single worker or do inline for very small changes.
-- Standard/Deep: Dispatch via workers (implement -> review -> converge).
-- Autonomous: Same as Standard, auto-resolve checkpoints.
+If `reconcile-dispatch` reports `gate_passed=false`, the Act step stays
+incomplete. Interpret that mechanically:
+- `completion=partial`: finish remaining work, write the next request file, and dispatch again
+- `completion=blocked`: resolve the dependency or reopen the step before retrying
+- `completion=complete` with a disallowed verdict: fix findings, update the handoff if needed, and re-dispatch
 
-**Gate:** Implementation complete. Workers convergence = COMPLETE AND HARDENED.
-Verification commands pass.
-
-Update `active-run.md`: phase=act, next step=Verify.
+Gate: Act advances only when the result is mechanically complete and the verdict
+satisfies the manifest pass list.
 
 ## Phase: Verify
 
-Independently re-run all verification commands from plan.md. Record results.
-This is objective proof, not narrative confirmation.
+Independently re-run all verification commands from `plan.md`. Record results in
+`artifacts/verification.md`:
 
 ```markdown
+# Verification: <task>
 ## Verification Results
 - <command>: PASS | FAIL
 - <command>: PASS | FAIL
@@ -203,57 +236,56 @@ This is objective proof, not narrative confirmation.
 <any new failures introduced?>
 ```
 
-**Gate:** All verification commands pass. No regressions.
+Then complete the synthesis step:
 
-Update `active-run.md`: phase=verify, next step=Review (or Close for Lite).
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" complete-synthesis \
+  --run-root "$RUN_ROOT" \
+  --step verify
+```
+
+Verify always routes to Review in this migration.
 
 ## Phase: Review
 
-**Skipped at Lite rigor.** Lite goes directly from Verify to Close.
+Review is always present in this migration, including Lite.
 
-Dispatch an independent reviewer in a fresh context.
+Create the review workspace:
 
 ```bash
-step_dir="${RUN_ROOT}/phases/review"
-mkdir -p "${step_dir}/reports" "${step_dir}/last-messages"
+REVIEW_ROOT="$RUN_ROOT/phases/review"
+mkdir -p "${REVIEW_ROOT}/reports" "${REVIEW_ROOT}/last-messages" "${REVIEW_ROOT}/jobs"
 ```
 
-Write prompt header:
-- Mission: Audit implementation against brief.md and plan.md. Check constraint
-  violations, missing test coverage, scope drift, adjacent-output compliance.
-  Do NOT modify source code -- diagnose only.
-- Inputs: brief.md, plan.md
-- Output: `review/reports/review-report.md`
+Dispatch an independent reviewer in a fresh context. The reviewer audits
+implementation against `brief.md` and `plan.md`, reruns verification where
+needed, and writes the public review result.
 
-Review schema:
+Outer review contract paths:
+- `phases/review/jobs/review-1.request.json`
+- `phases/review/jobs/review-1.receipt.json`
+- `phases/review/jobs/review-1.result.json`
 
-```markdown
-# Review: <task>
-## Contract Compliance
-<does implementation match brief.md and plan.md?>
-## Findings
-### Critical (must fix before ship)
-### High (should fix)
-### Low (acceptable debt)
-## Adjacent-Output Audit
-<were all checked items in the checklist actually delivered?>
-## Verification Rerun
-<re-ran verification commands, results>
-## Verdict: CLEAN | ISSUES FOUND
+Dispatch:
+
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" dispatch-step \
+  --run-root "$RUN_ROOT" \
+  --step review
 ```
 
-Compose and dispatch with `--circuit build --role reviewer`.
-Adapter routing stays semantic.
+When the reviewer output exists, promote the human-facing review artifact to
+`artifacts/review.md`, then reconcile the dispatch:
 
-Promote to `artifacts/review.md`.
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" reconcile-dispatch \
+  --run-root "$RUN_ROOT" \
+  --step review
+```
 
-**Gate with retry:**
-- CLEAN: proceed to Close.
-- ISSUES FOUND with critical findings: address findings, re-run review (max 2 loops).
-  After 2 loops with persistent critical findings, escalate to user.
-- ISSUES FOUND, no critical: proceed to Close. High/low become tracked debt in result.md.
-
-Update `active-run.md`: phase=review, next step=Close.
+If review does not pass its verdict gate, the step remains incomplete. Fix the
+findings, write the next request file for `review`, and dispatch again. After
+two critical-review loops with no passing verdict, escalate to the user.
 
 ## Phase: Close
 
@@ -268,7 +300,7 @@ Write `artifacts/result.md`:
 ## Adjacent Outputs Delivered
 <tests, docs, config, etc. that were updated>
 ## Residual Risks / Debt
-<known issues left intentionally, high/low findings from review>
+<known issues left intentionally>
 ## Follow-ups
 <future work surfaced during this run>
 ## PR Summary
@@ -281,37 +313,39 @@ Write `artifacts/result.md`:
 <how to verify>
 ```
 
-**Gate:** result.md exists with non-empty Changes, Verification, PR Summary.
+Complete the final synthesis step:
 
-Update `active-run.md`: phase=close.
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" complete-synthesis \
+  --run-root "$RUN_ROOT" \
+  --step close
+```
 
-## Deep Rigor: Seam Proof
-
-When rigor is Deep, add a seam proof step between Plan and Act:
-
-1. Identify the riskiest seam in the plan.
-2. Dispatch a worker to prove it with code (failing test, spike, minimal integration).
-3. DESIGN HOLDS: continue to Act.
-4. NEEDS ADJUSTMENT: update plan.md, continue.
-5. DESIGN INVALIDATED: transfer to Explore.
+This terminates the run via `run_completed`.
 
 ## Circuit Breakers
 
 Escalate when:
-- Workers: impl_attempts > 3 or impl_attempts + review_rejections > 5
-- Review says ISSUES FOUND with critical after 2 fix loops
-- Architecture uncertainty detected during Plan (transfer to Explore)
-- Verification commands fail after implementation and fix attempts
-- Dispatch step fails twice
+- Workers: `impl_attempts > 3` or `impl_attempts + review_rejections > 5`
+- Review returns critical issues after 2 fix loops
+- Architecture uncertainty appears during Plan and the user must restart via Explore
+- Verification commands fail after bounded fix attempts
+- A dispatch step fails twice
 
-Include: counter values, failure output, options (adjust scope, skip slice, abort).
+Include counter values, failure output, and concrete options (adjust scope, skip
+slice, abort, restart via Explore).
 
 ## Resume
 
-Check artifacts in chain order:
-1. brief.md missing -> Frame
-2. plan.md missing -> Plan
-3. Check workers convergence state -> Act (resume workers if partial)
-4. review.md missing -> Review (skip for Lite)
-5. result.md missing -> Close
-6. All present -> complete
+Use the semantic resume command as the source of truth:
+
+```bash
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" resume \
+  --run-root "$RUN_ROOT" \
+  --json
+```
+
+Read `resume_step`, `status`, and `reason`.
+- If status is terminal, stop.
+- Otherwise continue from the reported `resume_step`.
+- Do not reconstruct the phase from a handwritten artifact chain.

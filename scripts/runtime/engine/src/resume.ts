@@ -19,6 +19,7 @@ import {
   loadEvents,
   loadStateSchema,
 } from "./derive-state.js";
+import { findStepById } from "./manifest-utils.js";
 import { validate } from "./schema.js";
 
 export class RebuildError extends Error {
@@ -307,6 +308,26 @@ export function findResumePoint(manifest: any, state: any): ResumeResult {
         reason = `step ${stepId} is waiting for checkpoint resolution`;
       } else if (currentStep === stepId && status === "waiting_worker") {
         reason = `step ${stepId} is waiting for worker completion`;
+      } else if (
+        stepId in (state.jobs ?? {}) &&
+        state.jobs[stepId]?.status === "complete"
+      ) {
+        const verdict = state.jobs[stepId]?.verdict;
+        const step = findStepById(manifest as Record<string, unknown>, stepId);
+        const gate = (step?.gate ?? {}) as Record<string, unknown>;
+        const passList = Array.isArray(gate.pass)
+          ? gate.pass.filter((value): value is string => typeof value === "string")
+          : [];
+
+        if (
+          typeof verdict === "string" &&
+          passList.length > 0 &&
+          !passList.includes(verdict)
+        ) {
+          reason = `step ${stepId} verdict ${verdict} does not satisfy gate; retry or reroute`;
+        } else {
+          reason = `step ${stepId} has completed job output but gate has not advanced`;
+        }
       } else if (
         stepId in (state.jobs ?? {}) &&
         state.jobs[stepId]?.status === "failed"

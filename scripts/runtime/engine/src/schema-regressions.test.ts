@@ -273,6 +273,74 @@ describe("schema regressions", () => {
 
     expect(validate(eventSchema, event)).toEqual([]);
   });
+
+  it("accepts optional run goals and phase-scoped run-relative paths", () => {
+    const eventSchema = loadJsonSchema("schemas/event.schema.json");
+
+    const started = {
+      schema_version: "1",
+      event_id: "evt-002",
+      event_type: "run_started",
+      occurred_at: "2026-04-09T12:00:00.000Z",
+      run_id: "run-002",
+      payload: {
+        manifest_path: "circuit.manifest.yaml",
+        entry_mode: "deep",
+        head_at_start: "abc1234",
+        goal: "Make Build use the outer event engine",
+      },
+    };
+    const dispatched = {
+      schema_version: "1",
+      event_id: "evt-003",
+      event_type: "dispatch_requested",
+      occurred_at: "2026-04-09T12:00:01.000Z",
+      run_id: "run-002",
+      step_id: "act",
+      payload: {
+        request_path: "phases/implement/jobs/act-1.request.json",
+        protocol: "workers-execute@v1",
+        attempt: 1,
+      },
+    };
+    const completedWithoutVerdict = {
+      schema_version: "1",
+      event_id: "evt-004",
+      event_type: "job_completed",
+      occurred_at: "2026-04-09T12:00:02.000Z",
+      run_id: "run-002",
+      step_id: "act",
+      payload: {
+        result_path: "phases/implement/jobs/act-1.result.json",
+        completion: "partial",
+        attempt: 1,
+      },
+    };
+
+    expect(validate(eventSchema, started)).toEqual([]);
+    expect(validate(eventSchema, dispatched)).toEqual([]);
+    expect(validate(eventSchema, completedWithoutVerdict)).toEqual([]);
+  });
+
+  it("rejects unsafe event paths that escape the run root", () => {
+    const eventSchema = loadJsonSchema("schemas/event.schema.json");
+
+    const event = {
+      schema_version: "1",
+      event_id: "evt-005",
+      event_type: "dispatch_requested",
+      occurred_at: "2026-04-09T12:00:00.000Z",
+      run_id: "run-003",
+      step_id: "act",
+      payload: {
+        request_path: "../outside.json",
+        protocol: "workers-execute@v1",
+        attempt: 1,
+      },
+    };
+
+    expect(validate(eventSchema, event).length).toBeGreaterThan(0);
+  });
 });
 
 describe("circuit.yaml manifest validation", () => {

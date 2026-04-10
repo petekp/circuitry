@@ -82,6 +82,14 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
+    "safeRelativePath": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9{](?:[A-Za-z0-9_{}-]|\\.(?=[A-Za-z0-9_{}-]))*)(?:/(?:[A-Za-z0-9{](?:[A-Za-z0-9_{}-]|\\.(?=[A-Za-z0-9_{}-]))*))*$"
+    },
+    "safeRelativeJsonPath": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9{](?:[A-Za-z0-9_{}-]|\\.(?=[A-Za-z0-9_{}-]))*)(?:/(?:[A-Za-z0-9{](?:[A-Za-z0-9_{}-]|\\.(?=[A-Za-z0-9_{}-]))*))*\\.json$"
+    },
     "step": {
       "type": "object",
       "required": ["id", "title", "executor", "kind", "reads", "writes", "gate", "routes"],
@@ -192,11 +200,11 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/artifactWrite" }
         },
-        "request": { "type": "string", "pattern": "^(checkpoints|jobs)/[A-Za-z0-9._/{}-]+\\.json$" },
-        "response": { "type": "string", "pattern": "^checkpoints/[A-Za-z0-9._/{}-]+\\.json$" },
-        "receipt": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/{}-]+\\.json$" },
-        "result": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/{}-]+\\.json$" },
-        "handoff": { "type": "string", "pattern": "^handoffs/[A-Za-z0-9._/{}-]+\\.json$" }
+        "request": { "$ref": "#/$defs/safeRelativeJsonPath" },
+        "response": { "$ref": "#/$defs/safeRelativeJsonPath" },
+        "receipt": { "$ref": "#/$defs/safeRelativeJsonPath" },
+        "result": { "$ref": "#/$defs/safeRelativeJsonPath" },
+        "handoff": { "$ref": "#/$defs/safeRelativeJsonPath" }
       }
     },
     "artifactWrite": {

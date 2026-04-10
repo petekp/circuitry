@@ -163,17 +163,17 @@
     {
       "executable": true,
       "path": "hooks/session-start.sh",
-      "sha256": "c1c853ffe19737d13ddb8ba6d82e477ea0ff4916d752a9d9331604ac56fca0fa"
+      "sha256": "054e1b4280d12342a2057afbe0ae6ec2e552cbd58e75e32c9e25aee0e184e8de"
     },
     {
       "executable": false,
       "path": "schemas/circuit-manifest.schema.json",
-      "sha256": "08d9a7f309a8beb91e6fdf688d9dd499ea0f6b0e445702a0d428cb89aabcf517"
+      "sha256": "35a30c65e9f7021cdeafe891c70960a0b7c79630fd04d30bed4353beeedbf45d"
     },
     {
       "executable": false,
       "path": "schemas/event.schema.json",
-      "sha256": "733591936ff279f74e8ff7326e4833ea12e14771665c535eedfcab4fdb057538"
+      "sha256": "4d3233383b3af9739e153081492ae13da8f64078aea7cd2bbd9f08381190475c"
     },
     {
       "executable": false,
@@ -183,12 +183,17 @@
     {
       "executable": false,
       "path": "schemas/state.schema.json",
-      "sha256": "12cf982091cac30143044d82f1cc39203820518066bc4b315b4efa1177020ae8"
+      "sha256": "e91a0e80e37e0bf59649a1edaba058976e7528a0049aa19427ed8298355e3bb6"
     },
     {
       "executable": false,
       "path": "schemas/surface-manifest.schema.json",
       "sha256": "c8c2a04fd47dd32dfaeae25ecca3bee57539c51aa5f64b931dd7e247cff45b6c"
+    },
+    {
+      "executable": true,
+      "path": "scripts/relay/circuit-engine.sh",
+      "sha256": "671a344569bf5fab862f22b201f5528e2027ec76b772c78976542a0557cd0931"
     },
     {
       "executable": true,
@@ -217,8 +222,13 @@
     },
     {
       "executable": true,
+      "path": "scripts/runtime/bin/circuit-engine.js",
+      "sha256": "f9c02120f72a748555e07c46f2bb23112d68164c2b7620d27f267e881fba3abe"
+    },
+    {
+      "executable": true,
       "path": "scripts/runtime/bin/derive-state.js",
-      "sha256": "857ffcc75ab25ace6c18b61c93e5af12799f745c26b66cf6aa9053b0c3b0e219"
+      "sha256": "c51acd22779ab3258fb68e2b07f775612c750f3a29b0622a6fc3429ff6908cf5"
     },
     {
       "executable": true,
@@ -238,7 +248,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/resume.js",
-      "sha256": "4417dabbae3ef534ebb70a1a67b981492b2af4eb7e4d5213351c988cb3db1424"
+      "sha256": "1d734a2b58d44d5af1d3f0d4a45ea7cbb3158e703930f2f70422ff90b8f0aaf6"
     },
     {
       "executable": true,
@@ -268,12 +278,12 @@
     {
       "executable": false,
       "path": "skills/build/circuit.yaml",
-      "sha256": "dc28a40840f93f69026b9bde14afd3bfb5df957a9ffe1640c82f3093f9ea466a"
+      "sha256": "0aca879c22d147243f534da75f9c83c6ef42e78f89e04b55aae3b766bdc149cb"
     },
     {
       "executable": false,
       "path": "skills/build/SKILL.md",
-      "sha256": "89e02b6929143a581a3e58e6f6d4dd356010ff07cd3e731dd31cfa94688ea61d"
+      "sha256": "73fea6c24c06443b3841930398d00c1a5a14fd364cafa3ee809bc847dfa985fa"
     },
     {
       "executable": false,
@@ -343,7 +353,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "321f54be3a6ea8b9db12d979e9fdd309a57cd8c75b137262e53e613e78f00b33"
+      "sha256": "b6319cc046805ec15f5a5ad248e1c23da2714abb8cd7d6433392a3ce95afb809"
     },
     {
       "executable": false,

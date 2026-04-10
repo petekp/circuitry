@@ -40,6 +40,7 @@
       ]
     },
     "selected_entry_mode": { "type": "string", "minLength": 1 },
+    "goal": { "type": "string", "minLength": 1 },
     "started_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" },
     "git": {
@@ -80,6 +81,7 @@
           "attempt": { "type": "integer", "minimum": 1 },
           "status": { "enum": ["requested", "running", "complete", "failed", "reconciling"] },
           "completion": { "enum": ["complete", "partial", "blocked"] },
+          "verdict": { "type": "string", "pattern": "^[a-z0-9_]+$" },
           "request": { "type": "string" },
           "receipt": { "type": "string" },
           "result": { "type": "string" }

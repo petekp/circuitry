@@ -148,6 +148,23 @@ describe("deriveState", () => {
       expect(state.routes).toEqual({});
       expectValidState(state);
     });
+
+    it("projects goal from run_started into state", () => {
+      resetTs();
+      const events = [
+        makeEvent("run_started", {
+          manifest_path: "circuit.manifest.yaml",
+          entry_mode: "default",
+          head_at_start: "abc1234",
+          goal: "Generate Build dashboard from machine state",
+        }),
+      ];
+
+      const state = deriveState(MINIMAL_MANIFEST, events);
+
+      expect(state.goal).toBe("Generate Build dashboard from machine state");
+      expectValidState(state);
+    });
   });
 
   describe("test_step_started_sets_current_step", () => {
@@ -722,6 +739,7 @@ describe("deriveState", () => {
       const job = jobs["step-one"];
       expect(job.status).toBe("complete");
       expect(job.attempt).toBe(1);
+      expect(job.verdict).toBe("clean");
       expect(state.status).toBe("in_progress");
       expectValidState(state);
     });

@@ -78,6 +78,12 @@ Resume from the handoff above.
 
 HANDOFF_FOOTER
 elif [[ -n "$active_run" ]] && [[ -f "$active_run" ]]; then
+  run_root="$(cd "$(dirname "$active_run")/.." && pwd)"
+  if [[ -f "${run_root}/circuit.manifest.yaml" ]]; then
+    if ! "${CLAUDE_PLUGIN_ROOT}/scripts/relay/circuit-engine.sh" render --run-root "$run_root" >/dev/null 2>&1; then
+      printf 'warning: circuit-engine render failed for %s; using last saved dashboard\n' "$run_root"
+    fi
+  fi
   cat <<'ACTIVERUN_HEADER'
 > **Active circuit run detected.** Injecting current state.
 

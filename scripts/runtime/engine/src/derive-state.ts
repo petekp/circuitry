@@ -120,6 +120,9 @@ export function deriveState(
     if (eventType === "run_started") {
       state.run_id = (event.run_id ?? "") as string;
       state.selected_entry_mode = (payload.entry_mode ?? "default") as string;
+      if (typeof payload.goal === "string" && payload.goal.length > 0) {
+        state.goal = payload.goal;
+      }
       state.started_at = occurredAt;
       state.updated_at = occurredAt;
       (state.git as Record<string, unknown>).head_at_start =
@@ -178,6 +181,9 @@ export function deriveState(
       // "blocked" -> failed with completion=blocked
       job.status = completion === "complete" ? "complete" : "failed";
       job.completion = completion;
+      if (typeof payload.verdict === "string" && payload.verdict.length > 0) {
+        job.verdict = payload.verdict;
+      }
       job.result = (payload.result_path ?? "") as string;
       job.attempt = attempt;
       jobs[stepId] = job;

@@ -137,15 +137,19 @@ chain clean while preserving the full execution trace for debugging.
 
 Two mechanisms provide session continuity:
 
-- **active-run.md** -- Automatic. Every workflow updates it after each phase.
-  The SessionStart hook injects it.
+- **active-run.md** -- Automatic. For event-backed runs it is generated from
+  machine state; for legacy workflows it is still updated manually. The
+  SessionStart hook injects it.
 - **handoff.md** -- Intentional. Written explicitly via `/circuit:handoff`.
   Distills hard-to-rediscover facts.
 
 The `.circuit/current-run` symlink points to the active run directory. The
 run router creates this pointer on dispatch. The SessionStart hook reads it
 first, falling back to a most-recent-file heuristic only when the pointer is
-absent. The handoff `done` command clears both the handoff file and the pointer.
+absent. If the active run contains `circuit.manifest.yaml`, SessionStart
+refreshes `active-run.md` through the semantic outer engine before injecting it.
+Legacy runs without a manifest snapshot stay on the saved dashboard path. The
+handoff `done` command clears both the handoff file and the pointer.
 
 ---
 
@@ -561,8 +565,10 @@ Worker internals may change. The public contract files are the stable interface.
 ### How the Router Dispatches Tasks
 
 The `run` circuit is a lightweight router. It classifies the task into one of
-five workflows, selects a rigor profile, writes `active-run.md`, updates the
+five workflows, selects a rigor profile, sets up the run root, updates the
 `.circuit/current-run` pointer, and loads the corresponding workflow skill.
+Build now bootstraps through the semantic outer engine; the other workflows
+remain on the legacy manual dashboard bootstrap path until they are migrated.
 
 ```text
 User task
@@ -617,6 +623,19 @@ phase spine and artifact vocabulary.
 
 Every workflow is a preset over this spine. A workflow may skip phases but never
 reorders them.
+
+Build is the first workflow where the authored fixed graph and the outer runtime
+now meet on the real execution path:
+
+```text
+frame -> plan -> act -> verify -> review -> close
+```
+
+Rigor changes behavior inside those steps only. It does not add a same-run
+Build -> Explore transfer, a separate seam-proof runtime step, or a Lite
+skip-review path. When Build planning discovers architecture uncertainty, the
+workflow stops and tells the user to restart via Explore instead of trying to
+chain workflows inside one run.
 
 ```text
 Frame -> Analyze -> Plan -> Act -> Verify -> Review -> Close

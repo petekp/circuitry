@@ -210,6 +210,47 @@ const REROUTE_MANIFEST = {
   },
 };
 
+const DISPATCH_GATE_MANIFEST = {
+  schema_version: "2",
+  circuit: {
+    id: "dispatch-circuit",
+    version: "2026-04-10",
+    purpose: "Dispatch resume reasoning tests",
+    entry: {
+      signals: { include: ["feature"] },
+    },
+    entry_modes: {
+      default: {
+        start_at: "review",
+        description: "Default review mode",
+      },
+    },
+    steps: [
+      {
+        id: "review",
+        title: "Review",
+        executor: "worker",
+        kind: "dispatch",
+        protocol: "final-review@v1",
+        reads: ["artifacts/review.md"],
+        writes: {
+          request: "phases/review/jobs/{step_id}-{attempt}.request.json",
+          receipt: "phases/review/jobs/{step_id}-{attempt}.receipt.json",
+          result: "phases/review/jobs/{step_id}-{attempt}.result.json",
+        },
+        gate: {
+          kind: "result_verdict",
+          source: "phases/review/jobs/{step_id}-{attempt}.result.json",
+          pass: ["ship_ready", "clean"],
+        },
+        routes: {
+          pass: "@complete",
+        },
+      },
+    ],
+  },
+};
+
 // ─── Test helpers ────────────────────────────────────────────────────
 
 /** Create a fresh temp directory with the manifest written. */
@@ -349,6 +390,76 @@ describe("TestResume", () => {
     const result = findResumePoint(MINIMAL_MANIFEST, state);
     expect(result.resumeStep).toBeNull();
     expect(result.status).toBe("completed");
+  });
+
+  it("reports partial jobs with the retry reason", () => {
+    const state = baseState({
+      status: "in_progress",
+      current_step: "step-one",
+      jobs: {
+        "step-one": {
+          attempt: 1,
+          status: "failed",
+          completion: "partial",
+          result: "phases/implement/jobs/step-one-1.result.json",
+        },
+      },
+    });
+
+    const result = findResumePoint(MINIMAL_MANIFEST, state);
+
+    expect(result.resumeStep).toBe("step-one");
+    expect(result.reason).toBe(
+      "step step-one partially completed, needs retry to finish remaining work",
+    );
+  });
+
+  it("reports blocked jobs with the dependency reason", () => {
+    const state = baseState({
+      status: "in_progress",
+      current_step: "step-one",
+      jobs: {
+        "step-one": {
+          attempt: 1,
+          status: "failed",
+          completion: "blocked",
+          result: "phases/implement/jobs/step-one-1.result.json",
+        },
+      },
+    });
+
+    const result = findResumePoint(MINIMAL_MANIFEST, state);
+
+    expect(result.resumeStep).toBe("step-one");
+    expect(result.reason).toBe(
+      "step step-one is blocked, needs dependency resolution or reroute",
+    );
+  });
+
+  it("reports disallowed dispatch verdicts when a job completed but no route advanced", () => {
+    const state = {
+      ...baseState({
+        circuit_id: "dispatch-circuit",
+      }),
+      status: "in_progress",
+      current_step: "review",
+      jobs: {
+        review: {
+          attempt: 1,
+          status: "complete",
+          completion: "complete",
+          verdict: "issues_found",
+          result: "phases/review/jobs/review-1.result.json",
+        },
+      },
+    };
+
+    const result = findResumePoint(DISPATCH_GATE_MANIFEST, state);
+
+    expect(result.resumeStep).toBe("review");
+    expect(result.reason).toBe(
+      "step review verdict issues_found does not satisfy gate; retry or reroute",
+    );
   });
 
   it("resumes at step-one after step reopened", () => {

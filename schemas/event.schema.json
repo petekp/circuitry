@@ -4,6 +4,24 @@
   "type": "object",
   "required": ["schema_version", "event_id", "event_type", "occurred_at", "run_id", "payload"],
   "additionalProperties": false,
+  "$defs": {
+    "safePathSegment": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*$"
+    },
+    "safeRelativePath": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*)(?:/(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*))*$"
+    },
+    "safeRelativeJsonPath": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*)(?:/(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*))*\\.json$"
+    },
+    "safeRelativeArtifactPath": {
+      "type": "string",
+      "pattern": "^artifacts/(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*)(?:/(?:[A-Za-z0-9](?:[A-Za-z0-9_-]|\\.(?=[A-Za-z0-9_-]))*))*\\.(md|json|ya?ml)$"
+    }
+  },
   "properties": {
     "schema_version": { "const": "1" },
     "event_id": { "type": "string", "minLength": 1 },
@@ -41,7 +59,8 @@
             "properties": {
               "manifest_path": { "type": "string", "minLength": 1 },
               "entry_mode": { "type": "string", "minLength": 1 },
-              "head_at_start": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+              "head_at_start": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+              "goal": { "type": "string", "minLength": 1 }
             }
           }
         }
@@ -69,7 +88,7 @@
             "type": "object",
             "required": ["request_path", "protocol", "attempt"],
             "properties": {
-              "request_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/dispatch-request\\.json$" },
+              "request_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "protocol": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" },
               "attempt": { "type": "integer", "minimum": 1 }
             }
@@ -85,7 +104,7 @@
             "type": "object",
             "required": ["receipt_path", "adapter", "transport", "resolved_from", "job_id", "attempt"],
             "properties": {
-              "receipt_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/dispatch-receipt\\.json$" },
+              "receipt_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "adapter": { "type": "string", "minLength": 1 },
               "transport": { "enum": ["agent", "process"] },
               "resolved_from": { "type": "string", "minLength": 1 },
@@ -102,9 +121,9 @@
         "properties": {
           "payload": {
             "type": "object",
-            "required": ["result_path", "completion", "verdict", "attempt"],
+            "required": ["result_path", "completion", "attempt"],
             "properties": {
-              "result_path": { "type": "string", "pattern": "^jobs/[A-Za-z0-9._/-]+/job-result\\.json$" },
+              "result_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "completion": { "enum": ["complete", "partial", "blocked"] },
               "verdict": {
                 "enum": [
@@ -161,7 +180,7 @@
             "type": "object",
             "required": ["artifact_path"],
             "properties": {
-              "artifact_path": { "type": "string", "pattern": "^artifacts/[A-Za-z0-9._/-]+\\.(md|json|ya?ml)$" },
+              "artifact_path": { "$ref": "#/$defs/safeRelativeArtifactPath" },
               "schema": { "type": "string", "pattern": "^[a-z0-9-]+@v[0-9]+$" }
             }
           }
@@ -225,7 +244,7 @@
             "type": "object",
             "required": ["request_path", "checkpoint_kind", "attempt"],
             "properties": {
-              "request_path": { "type": "string", "pattern": "^checkpoints/[A-Za-z0-9._/{}-]+\\.json$" },
+              "request_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "checkpoint_kind": { "type": "string", "pattern": "^[a-z0-9_]+$" },
               "attempt": { "type": "integer", "minimum": 1 }
             }
@@ -241,7 +260,7 @@
             "type": "object",
             "required": ["response_path", "selection", "attempt"],
             "properties": {
-              "response_path": { "type": "string", "pattern": "^checkpoints/[A-Za-z0-9._/{}-]+\\.json$" },
+              "response_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "selection": { "type": "string", "pattern": "^[a-z0-9-]+$" },
               "attempt": { "type": "integer", "minimum": 1 }
             }
@@ -275,8 +294,8 @@
             "properties": {
               "status": { "enum": ["completed", "stopped", "blocked", "handed_off"] },
               "terminal_target": { "enum": ["@complete", "@stop", "@escalate", "@handoff"] },
-              "diagnostic_path": { "type": "string", "pattern": "^capsules/escalation\\.md$" },
-              "handoff_path": { "type": "string", "pattern": "^handoffs/[A-Za-z0-9._/-]+\\.json$" }
+              "diagnostic_path": { "$ref": "#/$defs/safeRelativePath" },
+              "handoff_path": { "$ref": "#/$defs/safeRelativePath" }
             },
             "allOf": [
               {

@@ -22,6 +22,7 @@ const REPO_ROOT = resolve(THIS_DIR, "../../../..");
 const VERIFY_INSTALL = resolve(REPO_ROOT, "scripts/verify-install.sh");
 const READ_CONFIG = resolve(REPO_ROOT, "scripts/runtime/bin/read-config.js");
 const APPEND_EVENT = resolve(REPO_ROOT, "scripts/runtime/bin/append-event.js");
+const CIRCUIT_ENGINE = resolve(REPO_ROOT, "scripts/runtime/bin/circuit-engine.js");
 const DERIVE_STATE = resolve(REPO_ROOT, "scripts/runtime/bin/derive-state.js");
 const RESUME = resolve(REPO_ROOT, "scripts/runtime/bin/resume.js");
 
@@ -97,6 +98,7 @@ function copyInstallRoot(targetRoot: string) {
 
   chmodSync(resolve(targetRoot, "scripts/verify-install.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/compose-prompt.sh"), 0o755);
+  chmodSync(resolve(targetRoot, "scripts/relay/circuit-engine.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/dispatch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/update-batch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "hooks/session-start.sh"), 0o755);
@@ -225,6 +227,109 @@ describe("runtime CLI integration", () => {
     const payload = JSON.parse(resume.stdout);
     expect(payload.status).toBe("in_progress");
     expect(payload.resume_step).toBe("frame");
+  });
+
+  it("circuit-engine emits plain-text bootstrap output and JSON resume output", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const runRoot = resolve(tempRoot, "run-root");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    writeManifest(manifestRoot);
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run("node", [
+      CIRCUIT_ENGINE,
+      "bootstrap",
+      "--run-root",
+      runRoot,
+      "--manifest",
+      manifestPath,
+      "--entry-mode",
+      "default",
+      "--goal",
+      "CLI bootstrap test",
+      "--head-at-start",
+      "abc1234",
+    ]);
+
+    expect(bootstrap.status).toBe(0);
+    expect(bootstrap.stdout).toContain("bootstrapped=true");
+    expect(bootstrap.stdout).toContain(`run_root=${runRoot}`);
+    expect(bootstrap.stdout).toContain("resume_step=frame");
+
+    const resume = run("node", [
+      CIRCUIT_ENGINE,
+      "resume",
+      "--run-root",
+      runRoot,
+      "--json",
+    ]);
+
+    expect(resume.status).toBe(0);
+    const payload = JSON.parse(resume.stdout);
+    expect(payload.status).toBe("in_progress");
+    expect(payload.resume_step).toBe("frame");
+    expect(payload.reason).toContain("frame");
+  });
+
+  it("circuit-engine wrapper resolves the bundled runtime bin from an installed copy", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const installRoot = resolve(tempRoot, "install-root");
+    mkdirSync(installRoot, { recursive: true });
+    copyInstallRoot(installRoot);
+
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+    const runRoot = resolve(tempRoot, "run-root");
+    mkdirSync(manifestRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    writeManifest(manifestRoot);
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run(
+      "bash",
+      [
+        resolve(installRoot, "scripts/relay/circuit-engine.sh"),
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "Wrapper bootstrap test",
+        "--head-at-start",
+        "abc1234",
+      ],
+      {
+        cwd: installRoot,
+        env: { NODE_BIN: process.execPath },
+      },
+    );
+
+    expect(bootstrap.status).toBe(0);
+    expect(bootstrap.stdout).toContain("bootstrapped=true");
+
+    const render = run(
+      "bash",
+      [
+        resolve(installRoot, "scripts/relay/circuit-engine.sh"),
+        "render",
+        "--run-root",
+        runRoot,
+      ],
+      {
+        cwd: installRoot,
+        env: { NODE_BIN: process.execPath },
+      },
+    );
+
+    expect(render.status).toBe(0);
+    expect(render.stdout).toContain(`active_run_path=${resolve(runRoot, "artifacts/active-run.md")}`);
+    expect(render.stdout).toContain("status=in_progress");
   });
 
   it("verify-install succeeds from a copied install root in installed mode", () => {

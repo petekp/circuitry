@@ -106,6 +106,7 @@ describe("append-event", () => {
       manifest_path: "circuit.manifest.yaml",
       entry_mode: "default",
       head_at_start: "abc1234",
+      goal: "Ship event-backed Build",
     });
 
     const errors = validateEvent(event, schema);
@@ -121,6 +122,7 @@ describe("append-event", () => {
     expect(parsed.event_type).toBe("run_started");
     expect(parsed.schema_version).toBe("1");
     expect(parsed.payload.entry_mode).toBe("default");
+    expect(parsed.payload.goal).toBe("Ship event-backed Build");
     expect(parsed.event_id).toBeDefined();
     expect(parsed.occurred_at).toBeDefined();
   });

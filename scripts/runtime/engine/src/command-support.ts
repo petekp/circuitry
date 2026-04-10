@@ -1,0 +1,369 @@
+import { existsSync, mkdirSync, readFileSync, symlinkSync, rmSync, writeFileSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+
+import {
+  appendEvent,
+  buildEvent,
+  loadEventSchema,
+  validateEvent,
+} from "./append-event.js";
+import {
+  deriveState,
+  loadManifest,
+  loadEvents,
+  loadStateSchema,
+  validateState,
+  writeState,
+} from "./derive-state.js";
+import { writeTextFileAtomic } from "./file-utils.js";
+import {
+  requireStepById,
+  resolveRequestPath,
+  resolveResponsePath,
+  resolveReceiptPath,
+  resolveResultPath,
+  type CircuitManifestStep,
+} from "./manifest-utils.js";
+import { resolveRunRelativePath, assertSafeRelativePath } from "./path-utils.js";
+import { renderActiveRun, type RenderActiveRunResult } from "./render-active-run.js";
+import { loadJsonSchema, validate } from "./schema.js";
+
+type EventSpec = {
+  attempt?: number;
+  eventType: string;
+  payload: Record<string, unknown>;
+  stepId?: string;
+};
+
+let EVENT_SCHEMA_CACHE: object | null = null;
+let MANIFEST_SCHEMA_CACHE: object | null = null;
+
+export interface LoadedRunContext {
+  manifest: Record<string, unknown>;
+  runRoot: string;
+  state: Record<string, any>;
+}
+
+export function loadRunContext(runRoot: string): LoadedRunContext {
+  const resolvedRunRoot = resolve(runRoot);
+  const manifest = loadManifest(resolvedRunRoot) as Record<string, unknown>;
+  const state = loadOrDeriveValidatedState(resolvedRunRoot);
+
+  return {
+    manifest,
+    runRoot: resolvedRunRoot,
+    state,
+  };
+}
+
+export function loadOrDeriveValidatedState(
+  runRoot: string,
+): Record<string, any> {
+  const resolvedRunRoot = resolve(runRoot);
+  const manifest = loadManifest(resolvedRunRoot) as Record<string, unknown>;
+  const events = loadEvents(resolvedRunRoot);
+  const state = deriveState(manifest, events);
+  const errors = validateState(state, loadStateSchema());
+
+  if (errors.length > 0) {
+    throw new Error(`state validation failed: ${errors.join("; ")}`);
+  }
+
+  writeState(resolvedRunRoot, state);
+  return state as Record<string, any>;
+}
+
+export function validateManifestDocument(
+  manifest: Record<string, unknown>,
+): void {
+  if (!MANIFEST_SCHEMA_CACHE) {
+    MANIFEST_SCHEMA_CACHE = loadJsonSchema("schemas/circuit-manifest.schema.json");
+  }
+
+  const errors = validate(MANIFEST_SCHEMA_CACHE, manifest);
+  if (errors.length > 0) {
+    throw new Error(`manifest validation failed: ${errors.join("; ")}`);
+  }
+}
+
+export function appendValidatedEvents(
+  runRoot: string,
+  specs: EventSpec[],
+): Record<string, unknown>[] {
+  if (!EVENT_SCHEMA_CACHE) {
+    EVENT_SCHEMA_CACHE = loadEventSchema();
+  }
+
+  const events = specs.map((spec) =>
+    buildEvent(
+      runRoot,
+      spec.eventType,
+      spec.payload,
+      spec.stepId,
+      spec.attempt,
+    ),
+  );
+
+  const errors = events.flatMap((event) =>
+    validateEvent(event, EVENT_SCHEMA_CACHE as object),
+  );
+  if (errors.length > 0) {
+    throw new Error(`event validation failed: ${errors.join("; ")}`);
+  }
+
+  for (const event of events) {
+    appendEvent(runRoot, event);
+  }
+
+  return events;
+}
+
+export function renderRunState(runRoot: string): RenderActiveRunResult {
+  return renderActiveRun(runRoot);
+}
+
+export function ensureRunRelativeFileExists(
+  runRoot: string,
+  relativePath: string,
+  label: string,
+): string {
+  const fullPath = resolveRunRelativePath(runRoot, relativePath);
+  if (!existsSync(fullPath)) {
+    throw new Error(`${label} not found: ${relativePath}`);
+  }
+
+  return fullPath;
+}
+
+export function readJsonFile(path: string): unknown {
+  return JSON.parse(readFileSync(path, "utf-8"));
+}
+
+export function resolveStepArtifactPath(
+  step: CircuitManifestStep,
+): string | null {
+  const writes = (step.writes ?? {}) as Record<string, unknown>;
+  const artifact = (writes.artifact ?? null) as
+    | Record<string, unknown>
+    | null;
+
+  if (!artifact || typeof artifact.path !== "string") {
+    return null;
+  }
+
+  return assertSafeRelativePath(artifact.path, "artifact path");
+}
+
+export function resolveStepArtifactSchema(
+  step: CircuitManifestStep,
+): string | undefined {
+  const writes = (step.writes ?? {}) as Record<string, unknown>;
+  const artifact = (writes.artifact ?? null) as
+    | Record<string, unknown>
+    | null;
+
+  return typeof artifact?.schema === "string" ? artifact.schema : undefined;
+}
+
+export function shouldRecordArtifact(
+  state: Record<string, any>,
+  stepId: string,
+  artifactPath: string,
+): boolean {
+  const artifact = state.artifacts?.[artifactPath];
+  if (!artifact) {
+    return true;
+  }
+
+  return artifact.produced_by !== stepId || artifact.status !== "complete";
+}
+
+export function maybeAppendArtifactWrittenEvent(
+  runRoot: string,
+  state: Record<string, any>,
+  step: CircuitManifestStep,
+  stepId: string,
+  events: EventSpec[],
+): string | null {
+  const artifactPath = resolveStepArtifactPath(step);
+  if (!artifactPath) {
+    return null;
+  }
+
+  const fullPath = resolveRunRelativePath(runRoot, artifactPath);
+  if (!existsSync(fullPath)) {
+    return artifactPath;
+  }
+
+  if (!shouldRecordArtifact(state, stepId, artifactPath)) {
+    return artifactPath;
+  }
+
+  const payload: Record<string, unknown> = {
+    artifact_path: artifactPath,
+  };
+  const schema = resolveStepArtifactSchema(step);
+  if (schema) {
+    payload.schema = schema;
+  }
+
+  events.push({
+    eventType: "artifact_written",
+    payload,
+    stepId,
+  });
+
+  return artifactPath;
+}
+
+export function getRouteTarget(
+  step: CircuitManifestStep,
+  routeKey: string,
+  routeOverride?: string,
+): string {
+  const routes = (step.routes ?? {}) as Record<string, unknown>;
+  const route =
+    routeOverride ?? (typeof routes[routeKey] === "string" ? routes[routeKey] : "");
+
+  if (!route) {
+    throw new Error(`route "${routeKey}" is not defined for step ${step.id}`);
+  }
+
+  return route;
+}
+
+export function isTerminalRoute(route: string): boolean {
+  return route.startsWith("@");
+}
+
+export function terminalStatusForRoute(route: string): string {
+  switch (route) {
+    case "@complete":
+      return "completed";
+    case "@stop":
+      return "stopped";
+    case "@escalate":
+      return "blocked";
+    case "@handoff":
+      return "handed_off";
+    default:
+      throw new Error(`not a terminal route: ${route}`);
+  }
+}
+
+export function assertNextStepExists(
+  manifest: Record<string, unknown>,
+  route: string,
+): string {
+  if (isTerminalRoute(route)) {
+    return route;
+  }
+
+  requireStepById(manifest, route);
+  return route;
+}
+
+export function readGitHead(projectRoot: string): string {
+  const result = spawnSync(
+    "git",
+    ["rev-parse", "--verify", "HEAD"],
+    {
+      cwd: projectRoot,
+      encoding: "utf-8",
+    },
+  );
+
+  if (result.status !== 0) {
+    return "0000000";
+  }
+
+  const value = result.stdout.trim();
+  return /^[0-9a-f]{7,40}$/.test(value) ? value : "0000000";
+}
+
+export function updateCurrentRunPointer(
+  projectRoot: string,
+  runRoot: string,
+): { mode: "file" | "symlink"; path: string; slug: string } {
+  const pointerDir = join(projectRoot, ".circuit");
+  const pointerPath = join(pointerDir, "current-run");
+  const slug = basename(runRoot);
+
+  mkdirSync(pointerDir, { recursive: true });
+  rmSync(pointerPath, { force: true, recursive: true });
+
+  try {
+    symlinkSync(`circuit-runs/${slug}`, pointerPath);
+    return {
+      mode: "symlink",
+      path: pointerPath,
+      slug,
+    };
+  } catch {
+    writeFileSync(pointerPath, `${slug}\n`, "utf-8");
+    return {
+      mode: "file",
+      path: pointerPath,
+      slug,
+    };
+  }
+}
+
+export function writeManifestSnapshot(
+  runRoot: string,
+  manifestContent: string,
+): string {
+  const manifestSnapshotPath = join(runRoot, "circuit.manifest.yaml");
+  mkdirSync(runRoot, { recursive: true });
+  writeTextFileAtomic(manifestSnapshotPath, manifestContent);
+  return manifestSnapshotPath;
+}
+
+export function readDispatchReceiptEventPayload(
+  receiptFullPath: string,
+  receiptPath: string,
+  stepId: string,
+  attempt: number,
+): Record<string, unknown> {
+  const parsed = readJsonFile(receiptFullPath) as Record<string, unknown>;
+  const adapter =
+    typeof parsed.adapter === "string" && parsed.adapter.length > 0
+      ? parsed.adapter
+      : null;
+  const transport =
+    parsed.transport === "agent" || parsed.transport === "process"
+      ? parsed.transport
+      : null;
+  const resolvedFrom =
+    typeof parsed.resolved_from === "string" && parsed.resolved_from.length > 0
+      ? parsed.resolved_from
+      : null;
+
+  if (!adapter || !transport || !resolvedFrom) {
+    throw new Error(`receipt is missing required dispatch fields: ${receiptPath}`);
+  }
+
+  return {
+    receipt_path: stepId ? receiptPath : receiptPath,
+    adapter,
+    transport,
+    resolved_from: resolvedFrom,
+    job_id:
+      typeof parsed.job_id === "string" && parsed.job_id.length > 0
+        ? parsed.job_id
+        : `${stepId}-${attempt}`,
+    attempt,
+  };
+}
+
+export function recordEventsAndRender(
+  runRoot: string,
+  specs: EventSpec[],
+): RenderActiveRunResult {
+  if (specs.length > 0) {
+    appendValidatedEvents(runRoot, specs);
+  }
+
+  return renderRunState(runRoot);
+}

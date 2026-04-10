@@ -87,7 +87,9 @@ say so and do the work inline. No workflow overhead.
 
 **If classification is confident** (>80% of tasks):
 
-1. Write `active-run.md` to the run root
+1. Set up the run root.
+   Build uses semantic bootstrap through `circuit-engine.sh`.
+   Explore, Repair, Migrate, and Sweep stay on the legacy dashboard bootstrap path in this change set.
 2. Show a one-line summary:
    > **Build / Standard** -- I'll plan the change, implement with independent review, then close.
 3. Load the workflow skill and follow its instructions.
@@ -106,9 +108,9 @@ say so and do the work inline. No workflow overhead.
 | Explore | Deep | "I'll research, prove the riskiest assumption, then hand off to Build." |
 | Explore | Tournament | "I'll generate competing proposals, pressure-test each, and converge the strongest." |
 | Explore | Autonomous | "I'll research and synthesize a plan. Checkpoints auto-resolve. Ambiguous findings deferred." |
-| Build | Lite | "I'll plan and implement. Quick self-verify." |
+| Build | Lite | "I'll frame, plan, implement, verify, and review with a lighter rigor bar." |
 | Build | Standard | "I'll plan, implement, and run an independent review." |
-| Build | Deep | "I'll research first, prove the seam, then build with independent review." |
+| Build | Deep | "I'll frame and plan with deeper seam scrutiny, then implement, verify, and review." |
 | Build | Autonomous | "I'll plan, implement, and run an independent review. Checkpoints auto-resolve." |
 | Repair | Lite | "I'll reproduce, fix, and verify the regression test passes." |
 | Repair | Standard | "I'll reproduce, isolate root cause, fix, and run independent review." |
@@ -131,13 +133,34 @@ characters. Example: "Fix Auth Bug in Login" produces `fix-auth-bug-in-login`.
 ```bash
 RUN_SLUG="fix-auth-bug-in-login"  # derived from task description
 RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
+```
+
+For Build only, map rigor to the Build entry mode and call semantic bootstrap:
+
+```bash
+BUILD_ENTRY_MODE="default"  # Standard -> default, Lite -> lite, Deep -> deep, Autonomous -> autonomous
+
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" bootstrap \
+  --run-root "$RUN_ROOT" \
+  --manifest "$CLAUDE_PLUGIN_ROOT/skills/build/circuit.yaml" \
+  --entry-mode "$BUILD_ENTRY_MODE" \
+  --goal "<task objective>" \
+  --project-root "$PWD"
+```
+
+Bootstrap is idempotent, so the router may call it even when Build already
+initialized the run.
+
+For non-Build workflows, keep the current legacy bootstrap path:
+
+```bash
 mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
 
 # Update the current-run pointer so session-start.sh picks up the right run
 ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
 ```
 
-Write initial `${RUN_ROOT}/artifacts/active-run.md`:
+Write initial `${RUN_ROOT}/artifacts/active-run.md` for non-Build workflows:
 
 ```markdown
 # Active Run
@@ -201,7 +224,7 @@ If no domain skills apply, omit the `--skills` flag entirely.
 Escalate to the user when:
 - A dispatch step fails twice (no valid output after 2 attempts)
 - Workers: impl_attempts > 3 or impl_attempts + review_rejections > 5
-- Architecture uncertainty during Build (transfer to Explore)
+- Architecture uncertainty during Build (stop and restart via Explore)
 - No reproducible signal during Repair after bounded search
 - Regression detected during Sweep batch (revert batch, continue next)
 - Batch failure during Migrate (halt, write partial result.md)

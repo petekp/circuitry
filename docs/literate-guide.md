@@ -199,6 +199,15 @@ On the runtime side, Circuit treats the run directory as the source of truth.
 `state.json`, and the state model keeps separate slots for artifacts, jobs,
 checkpoints, and routes.
 
+Build is the first workflow where that outer runtime is now real rather than
+aspirational. The semantic outer CLI lives in
+`scripts/runtime/engine/src/cli/circuit-engine.ts`, is shipped through
+`scripts/runtime/bin/circuit-engine.js`, and is called from
+`scripts/relay/circuit-engine.sh`. Build uses semantic commands such as
+`bootstrap`, `complete-synthesis`, `request-checkpoint`, `resolve-checkpoint`,
+`dispatch-step`, `reconcile-dispatch`, `reopen-step`, `resume`, and `render`
+instead of teaching the skill prose to append raw events directly.
+
 That separation is not bookkeeping for its own sake. Each piece answers a
 different question:
 
@@ -211,7 +220,9 @@ The workflow manifests make that runtime contract concrete. Files such as
 `skills/build/circuit.yaml`, `skills/repair/circuit.yaml`, and
 `skills/sweep/circuit.yaml` declare steps, reads, writes, gates, and routes.
 The runtime stays generic because the authored workflows are explicit about the
-files they write and the conditions that let a step advance.
+files they write and the conditions that let a step advance. Build was
+realigned to a fixed graph so the manifest and `skills/build/SKILL.md` now
+describe the same outer execution path.
 
 This is where Circuit's bias toward durable state shows up most clearly.
 Artifacts under `.circuit/circuit-runs/<slug>/artifacts` matter more than a chat
@@ -230,14 +241,18 @@ event log instead of optimistically treating a stale projection as good enough.
 Circuit also carries continuity across sessions in two different ways on
 purpose:
 
-- `active-run.md` is the automatic dashboard for the current run.
+- `active-run.md` is the automatic dashboard for the current run. For
+  event-backed runs it is generated from `state.json`; legacy workflows still
+  maintain it manually until they migrate.
 - `handoff.md` is the intentional high-signal summary written through the
   `handoff` utility.
 
 `hooks/session-start.sh` resolves those sources in a deliberate order: pending
 handoff first, then the explicit `.circuit/current-run` pointer, then the most
-recent `active-run.md`. `/clear` is therefore part of the expected lifecycle,
-not an exceptional case the system hopes to avoid.
+recent `active-run.md`. When the chosen run contains `circuit.manifest.yaml`,
+SessionStart refreshes the dashboard through `circuit-engine render` before it
+prints the file. `/clear` is therefore part of the expected lifecycle, not an
+exceptional case the system hopes to avoid.
 
 ---
 
