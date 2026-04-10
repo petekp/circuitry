@@ -1,5 +1,6 @@
-import { expect, describe, it } from "vitest";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { expect, describe, it } from "vitest";
 
 import { bootstrapRun } from "./bootstrap.js";
 import {
@@ -35,6 +36,9 @@ describe("bootstrap", () => {
 
     expect(result.bootstrapped).toBe(true);
     expect(result.resumeStep).toBe("plan");
+    expect(existsSync(join(runRoot, "artifacts"))).toBe(true);
+    expect(existsSync(join(runRoot, "phases"))).toBe(true);
+    expect(existsSync(join(runRoot, "checkpoints"))).toBe(true);
 
     const events = readEvents(runRoot);
     expect(events).toHaveLength(2);

@@ -64,6 +64,7 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
 
   mkdirSync(join(runRoot, "artifacts"), { recursive: true });
   mkdirSync(join(runRoot, "phases"), { recursive: true });
+  mkdirSync(join(runRoot, "checkpoints"), { recursive: true });
 
   let bootstrapped = false;
   if (existsSync(manifestSnapshotPath)) {

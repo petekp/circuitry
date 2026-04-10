@@ -87,6 +87,10 @@ describe("build/run wiring", () => {
     expect(reviewSection).toMatch(/directly in Build/i);
     expect(reviewSection).not.toMatch(/same as Act/i);
     expect(reviewSection).not.toMatch(/use workers/i);
+    expect(reviewSection).toContain('review-${REVIEW_ATTEMPT}.request.json');
+    expect(reviewSection).toContain("dispatch-step");
+    expect(reviewSection).toContain('cat > "$REVIEW_ROOT/review-header.md"');
+    expect(reviewSection).toContain("review-header.md");
     expect(reviewSection).toMatch(/compose-prompt\.sh/);
     expect(reviewSection).toMatch(/dispatch\.sh/);
     expect(reviewSection).toMatch(/--template ship-review/);
@@ -100,6 +104,9 @@ describe("build/run wiring", () => {
     expect(reviewSection).toMatch(/reconcile-dispatch/i);
     expect(reviewSection).toMatch(/reject a `completion=complete` result if the declared artifact is missing/i);
     expectOrdered(reviewSection, [
+      'review-${REVIEW_ATTEMPT}.request.json',
+      "dispatch-step",
+      'cat > "$REVIEW_ROOT/review-header.md"',
       "compose-prompt.sh",
       "dispatch.sh",
       "artifacts/review.md",

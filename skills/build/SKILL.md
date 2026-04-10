@@ -325,6 +325,13 @@ This is an independent review in a fresh context. Compose the review prompt and
 dispatch the reviewer directly from Build using reviewer semantics:
 
 ```bash
+cat > "$REVIEW_ROOT/review-header.md" <<'MD'
+# Independent Review: <task>
+Review this change in a fresh context.
+Focus on correctness, regressions, missing tests, and ship readiness.
+Use the Build artifacts as the source of truth.
+MD
+
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "$REVIEW_ROOT/review-header.md" \
   --template ship-review \
