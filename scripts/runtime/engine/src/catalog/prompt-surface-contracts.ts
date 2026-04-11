@@ -7,13 +7,12 @@
 
 import { resolve } from "node:path";
 
-import { getPublicCommandInvocation, isUtility, isWorkflow } from "./public-surface.js";
+import { getPublicCommandInvocation } from "./public-surface.js";
 import type {
   AdapterEntry,
   BlockGenerateTarget,
   Catalog,
   CircuitKind,
-  PublicCommandProjection,
   UtilityEntry,
   WorkflowEntry,
 } from "./types.js";
@@ -704,48 +703,4 @@ export function getPromptSurfaceBlockTargets(
   }
 
   return targets;
-}
-
-export function getPromptContractSurfaceSummaries(
-  catalog: Catalog,
-): Record<string, PromptSurfaceSummary> {
-  return Object.fromEntries(catalog.map((entry) => [entry.slug, getSurfaceSummary(entry)]));
-}
-
-export function getPublicCommandProjectionBySlug(
-  catalog: Catalog,
-): Record<string, PublicCommandProjection> {
-  const projections: Record<string, PublicCommandProjection> = {};
-
-  for (const entry of catalog) {
-    if (!isWorkflow(entry) && !isUtility(entry)) {
-      continue;
-    }
-
-    projections[entry.slug] = {
-      description: firstSentence(entry.skillDescription),
-      invocation: getPublicCommandInvocation(entry),
-      shimPath: `commands/${entry.slug}.md`,
-      slash: `/circuit:${entry.slug}`,
-    };
-  }
-
-  return projections;
-}
-
-export function getSharedHelperWrapper(name: string): PromptHelperWrapper {
-  const wrapper = HELPER_WRAPPERS.find((entry) => entry.name === name);
-  if (!wrapper) {
-    throw new Error(`catalog-compiler: missing helper wrapper contract for ${name}`);
-  }
-
-  return wrapper;
-}
-
-export function getHelperWrappers(): PromptHelperWrapper[] {
-  return HELPER_WRAPPERS;
-}
-
-export function getFastModeContracts(): Record<string, PromptFastModeContract> {
-  return FAST_MODE_CONTRACTS;
 }

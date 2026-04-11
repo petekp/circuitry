@@ -55,14 +55,10 @@ export function resolveProjectRoot(cwd: string): string {
   return resolve(cwd);
 }
 
-export function resolveSlugSource(projectRoot: string): string {
-  return resolveProjectRoot(projectRoot);
-}
-
 export function resolveHandoffPath(options: HandoffLocationOptions): string {
   const base = options.handoffHome || options.homeDir || "";
   const rootDir = options.handoffHome ? ".circuit-projects" : ".claude/projects";
-  return resolve(base, rootDir, projectSlug(resolveSlugSource(options.projectRoot)), "handoff.md");
+  return resolve(base, rootDir, projectSlug(resolveProjectRoot(options.projectRoot)), "handoff.md");
 }
 
 export function hasValidHandoff(handoffPath: string): boolean {
@@ -170,7 +166,7 @@ export function inspectContinuity(options: HandoffLocationOptions): ContinuityIn
       pointer,
       projectRoot,
       runRoot: pointer.runRoot,
-      slugSource: resolveSlugSource(projectRoot),
+      slugSource: projectRoot,
     };
   }
 
@@ -183,6 +179,6 @@ export function inspectContinuity(options: HandoffLocationOptions): ContinuityIn
     pointer,
     projectRoot,
     runRoot: fallbackActiveRun ? dirname(dirname(fallbackActiveRun)) : null,
-    slugSource: resolveSlugSource(projectRoot),
+    slugSource: projectRoot,
   };
 }

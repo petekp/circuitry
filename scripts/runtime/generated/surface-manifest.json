@@ -223,7 +223,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "fe947154a6e7d2fce6e5ffab73b2be06e76a42ce0f6a5c4a1bceb0b0b2775daf"
+      "sha256": "23289d8db5276238d5fcdf0de680bd38d7712e5144d8573459dca677eb45a5dc"
     },
     {
       "executable": true,
@@ -233,7 +233,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/continuity.js",
-      "sha256": "3f3eedb6474c918fa14ea011bfbe86f9852534e83704bb16fd5d031275e15dc9"
+      "sha256": "89bf13857e719ebb0c59149d88a991bdd4357235340bec2ea7082e8161f0aa8b"
     },
     {
       "executable": true,
@@ -263,7 +263,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "f70904b8339a525d7985a5f536fe12bd482153bf93ac49b3d30b8a04b6a52651"
+      "sha256": "db4bef3c29f3038d921ad0751a85323b3b197890e7cbfec339101d59a0383822"
     },
     {
       "executable": true,
@@ -278,7 +278,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "7e2673b1d773c22fbf637690645d2e830b6787c56dfc36b723216e26b4bb6124"
+      "sha256": "a00f1958eca766035100a533ca5b9908a082ad705fc952f6e8b0554ca629a584"
     },
     {
       "executable": true,

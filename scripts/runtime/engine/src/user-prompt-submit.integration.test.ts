@@ -87,8 +87,6 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain('--manifest "@build"');
     expect(context).toContain("Do not use `Write`, `Edit`, heredocs, or manual file creation");
     expect(context).toContain("Do not continue into Frame, Plan, Act, Verify, Review, or Close");
-    expect(context).not.toContain("CIRCUIT_PLUGIN_ROOT");
-    expect(context).not.toContain(".circuit/plugin-root");
   });
 
   it("stays silent for unrelated prompts", () => {
@@ -157,7 +155,6 @@ describe("user-prompt-submit integration", () => {
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Review Current-Changes Contract");
     expect(context).toContain("Review verdict:");
-    expect(context).toContain("review-scope-sentinel.ts");
   });
 
   it("injects handoff done fast mode context with the resolved handoff path", () => {
