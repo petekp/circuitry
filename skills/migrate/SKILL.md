@@ -31,6 +31,7 @@ Action-first rules for `/circuit:migrate`:
 4. Do not start with "let me understand the current state first" before bootstrap completes.
 5. When the slash command already selected Migrate, stay on that path immediately instead of reclassifying the task.
 6. If bootstrap already happened, continue from the current phase instead of re-exploring.
+7. If the user explicitly says to continue or resume from a handoff, read only `~/.claude/projects/<git-root-slug>/handoff.md` before unrelated repo exploration.
 
 ## Local Helper Wrappers
 

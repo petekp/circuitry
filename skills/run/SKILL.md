@@ -39,9 +39,10 @@ Action-first rules for `/circuit:run`:
 4. Do not use generic repo exploration or the trivial inline path before a predetermined route has created or validated workflow run state.
 5. Once a workflow is selected, create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.
 6. If the run is already bootstrapped, continue from the current phase instead of re-exploring.
-7. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.
-8. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.
-9. For Build smoke/bootstrap requests, never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.
+7. If the user explicitly says to continue or resume from a handoff, read only `~/.claude/projects/<git-root-slug>/handoff.md` before unrelated repo exploration.
+8. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.
+9. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.
+10. For Build smoke/bootstrap requests, never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.
 
 ## Local Helper Wrappers
 

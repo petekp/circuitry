@@ -6,13 +6,14 @@ import { join } from "node:path";
 import { inspectContinuity } from "../continuity.js";
 import { renderActiveRun } from "../render-active-run.js";
 
-function printContinuityBanner(available: string): void {
+function printContinuityBanner(available: string, warnings: string[]): void {
   process.stdout.write(
     [
       "> **Circuit continuity available.** This is context only.",
       "> Fresh `/circuit:*` commands should be honored as the active task.",
       "> Resume saved continuity only through `/circuit:handoff resume`.",
       `> Available: ${available}`,
+      ...warnings.map((warning) => `> Warning: ${warning}`),
       "",
     ].join("\n"),
   );
@@ -60,7 +61,7 @@ function main(): number {
       inspection.hasHandoff ? "pending handoff" : "",
       inspection.activeRunPath ? "active run" : "",
     ].filter(Boolean).join(", ");
-    printContinuityBanner(availableLabels);
+    printContinuityBanner(availableLabels, inspection.handoff.warnings);
     return 0;
   }
 

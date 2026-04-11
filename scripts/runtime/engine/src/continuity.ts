@@ -1,7 +1,13 @@
-import { lstatSync, readdirSync, readFileSync, readlinkSync, statSync } from "node:fs";
+import {
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  statSync,
+} from "node:fs";
 import { existsSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { dirname, join, resolve } from "node:path";
 
 export interface HandoffLocationOptions {
   handoffHome?: string;
@@ -17,15 +23,33 @@ export interface CurrentRunResolution {
   runRoot: string | null;
 }
 
+export interface HandoffInspection {
+  baseCommit: string | null;
+  baseCommitIsAncestorOfHead: boolean | null;
+  branch: string | null;
+  branchMatchesCurrent: boolean | null;
+  exists: boolean;
+  path: string;
+  valid: boolean;
+  warnings: string[];
+  writtenAt: string | null;
+  writtenAtMs: number | null;
+}
+
 export interface ContinuityInspection {
   activeRunPath: string | null;
   activeRunSource: "fallback" | "pointer" | null;
+  handoff: HandoffInspection;
   hasHandoff: boolean;
   handoffPath: string;
   pointer: CurrentRunResolution;
   projectRoot: string;
   runRoot: string | null;
   slugSource: string;
+}
+
+interface GitContext {
+  currentBranch: string | null;
 }
 
 function normalizeProjectPath(projectRoot: string): string {
@@ -35,8 +59,7 @@ function normalizeProjectPath(projectRoot: string): string {
 export function projectSlug(projectRoot: string): string {
   return normalizeProjectPath(projectRoot)
     .replace(/\//g, "-")
-    .replace(/[:<>"|?*]/g, "")
-    .replace(/^-/, "");
+    .replace(/[:<>"|?*]/g, "");
 }
 
 export function resolveProjectRoot(cwd: string): string {
@@ -55,9 +78,15 @@ export function resolveProjectRoot(cwd: string): string {
   return resolve(cwd);
 }
 
+function handoffRootDir(options: HandoffLocationOptions): { base: string; rootDir: string } {
+  return {
+    base: options.handoffHome || options.homeDir || "",
+    rootDir: options.handoffHome ? ".circuit-projects" : ".claude/projects",
+  };
+}
+
 export function resolveHandoffPath(options: HandoffLocationOptions): string {
-  const base = options.handoffHome || options.homeDir || "";
-  const rootDir = options.handoffHome ? ".circuit-projects" : ".claude/projects";
+  const { base, rootDir } = handoffRootDir(options);
   return resolve(base, rootDir, projectSlug(resolveProjectRoot(options.projectRoot)), "handoff.md");
 }
 
@@ -68,6 +97,115 @@ export function hasValidHandoff(handoffPath: string): boolean {
 
   const firstLine = readFileSync(handoffPath, "utf-8").split(/\r?\n/, 1)[0] ?? "";
   return firstLine === "# Handoff";
+}
+
+function readGitContext(projectRoot: string): GitContext {
+  const branchResult = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+    cwd: projectRoot,
+    encoding: "utf-8",
+  });
+
+  return {
+    currentBranch: branchResult.status === 0 ? branchResult.stdout.trim() || null : null,
+  };
+}
+
+function readHeaderValue(contents: string, key: string): string | null {
+  const match = new RegExp(`^${key}:\\s*(.+)$`, "m").exec(contents);
+  return match?.[1]?.trim() || null;
+}
+
+function parseWrittenAt(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function isAncestorCommit(projectRoot: string, commit: string | null): boolean | null {
+  if (!commit) {
+    return null;
+  }
+
+  const result = spawnSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], {
+    cwd: projectRoot,
+    encoding: "utf-8",
+  });
+
+  if (result.status === 0) {
+    return true;
+  }
+
+  if (result.status === 1) {
+    return false;
+  }
+
+  return null;
+}
+
+function inspectHandoff(options: HandoffLocationOptions): HandoffInspection {
+  const projectRoot = resolveProjectRoot(options.projectRoot);
+  const path = resolveHandoffPath({
+    handoffHome: options.handoffHome,
+    homeDir: options.homeDir,
+    projectRoot,
+  });
+
+  if (!existsSync(path)) {
+    return {
+      baseCommit: null,
+      baseCommitIsAncestorOfHead: null,
+      branch: null,
+      branchMatchesCurrent: null,
+      exists: false,
+      path,
+      valid: false,
+      warnings: [],
+      writtenAt: null,
+      writtenAtMs: null,
+    };
+  }
+
+  const contents = readFileSync(path, "utf-8");
+  const firstLine = contents.split(/\r?\n/, 1)[0] ?? "";
+  const valid = firstLine === "# Handoff";
+  const writtenAt = readHeaderValue(contents, "WRITTEN");
+  const writtenAtMs = parseWrittenAt(writtenAt);
+  const branch = readHeaderValue(contents, "BRANCH");
+  const baseCommit = readHeaderValue(contents, "BASE_COMMIT");
+  const gitContext = readGitContext(projectRoot);
+  const branchMatchesCurrent = valid && branch && gitContext.currentBranch
+    ? branch === gitContext.currentBranch
+    : null;
+  const baseCommitIsAncestorOfHead = valid ? isAncestorCommit(projectRoot, baseCommit) : null;
+  const warnings: string[] = [];
+
+  if (!valid) {
+    warnings.push("Saved handoff exists but does not start with `# Handoff`.");
+  }
+
+  if (valid && branch && branchMatchesCurrent === false) {
+    warnings.push(`Saved handoff was written on branch ${branch}; current branch differs.`);
+  }
+
+  if (valid && baseCommit && baseCommitIsAncestorOfHead === false) {
+    warnings.push(`Saved handoff base commit ${baseCommit} is not an ancestor of HEAD.`);
+  }
+
+  return {
+    baseCommit,
+    baseCommitIsAncestorOfHead,
+    branch,
+    branchMatchesCurrent,
+    exists: true,
+    path,
+    valid,
+    warnings,
+    writtenAt,
+    writtenAtMs,
+  };
 }
 
 export function resolveCurrentRun(projectRoot: string): CurrentRunResolution {
@@ -150,7 +288,7 @@ export function findLatestActiveRun(projectRoot: string): string | null {
 
 export function inspectContinuity(options: HandoffLocationOptions): ContinuityInspection {
   const projectRoot = resolveProjectRoot(options.projectRoot);
-  const handoffPath = resolveHandoffPath({
+  const handoff = inspectHandoff({
     handoffHome: options.handoffHome,
     homeDir: options.homeDir,
     projectRoot,
@@ -161,8 +299,9 @@ export function inspectContinuity(options: HandoffLocationOptions): ContinuityIn
     return {
       activeRunPath: pointer.activeRunPath,
       activeRunSource: "pointer",
-      hasHandoff: hasValidHandoff(handoffPath),
-      handoffPath,
+      handoff,
+      hasHandoff: handoff.valid,
+      handoffPath: handoff.path,
       pointer,
       projectRoot,
       runRoot: pointer.runRoot,
@@ -174,8 +313,9 @@ export function inspectContinuity(options: HandoffLocationOptions): ContinuityIn
   return {
     activeRunPath: fallbackActiveRun,
     activeRunSource: fallbackActiveRun ? "fallback" : null,
-    hasHandoff: hasValidHandoff(handoffPath),
-    handoffPath,
+    handoff,
+    hasHandoff: handoff.valid,
+    handoffPath: handoff.path,
     pointer,
     projectRoot,
     runRoot: fallbackActiveRun ? dirname(dirname(fallbackActiveRun)) : null,

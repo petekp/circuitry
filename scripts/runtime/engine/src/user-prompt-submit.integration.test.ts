@@ -7,6 +7,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -232,6 +233,60 @@ describe("user-prompt-submit integration", () => {
       resolveHandoffPath({ homeDir: explicitHome, projectRoot: realpathSync(projectRoot) }),
     );
     expect(context).toContain("Only fall back to `.circuit/current-run` when the handoff file is absent.");
+  });
+
+  it("injects handoff-reference guidance for workflow prompts that explicitly say continue with the handoff", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-guidance-"));
+    const explicitHome = resolve(projectRoot, "home");
+    mkdirSync(explicitHome, { recursive: true });
+
+    const realProjectRoot = realpathSync(projectRoot);
+    const canonicalPath = resolveHandoffPath({ homeDir: explicitHome, projectRoot: realProjectRoot });
+    mkdirSync(resolve(canonicalPath, ".."), { recursive: true });
+    writeFileSync(
+      canonicalPath,
+      [
+        "# Handoff",
+        "WRITTEN: 2026-04-11T20:30:00Z",
+        `DIR: ${realProjectRoot}`,
+        "",
+        "NEXT: DO: canonical-sentinel",
+        "STATE:",
+        "- canonical-sentinel",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const result = runUserPromptSubmit("/circuit:build continue with the handoff", {
+      cwd: projectRoot,
+      env: { HOME: explicitHome },
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Handoff Continuity Reference");
+    expect(context).toContain(canonicalPath);
+    expect(context).toContain("The saved handoff lives only at the canonical project handoff path below.");
+    expect(context).toContain(`Read this handoff first: ${canonicalPath}`);
+  });
+
+  it("says there is no saved handoff when the canonical file is absent", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-missing-"));
+    const explicitHome = resolve(projectRoot, "home");
+    mkdirSync(explicitHome, { recursive: true });
+
+    const realProjectRoot = realpathSync(projectRoot);
+    const canonicalPath = resolveHandoffPath({ homeDir: explicitHome, projectRoot: realProjectRoot });
+
+    const result = runUserPromptSubmit("/circuit:handoff resume", {
+      cwd: projectRoot,
+      env: { HOME: explicitHome },
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain(canonicalPath);
+    expect(context).toContain("No saved handoff exists.");
   });
 
   it("keeps the default handoff store even when a sibling home fixture exists", () => {

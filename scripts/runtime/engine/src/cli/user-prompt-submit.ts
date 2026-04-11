@@ -3,7 +3,10 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { resolveHandoffPath } from "../continuity.js";
+import {
+  inspectContinuity,
+  type ContinuityInspection,
+} from "../continuity.js";
 import type { PromptContractsManifest } from "../catalog/prompt-surface-contracts.js";
 import { PROMPT_CONTRACTS_PATH } from "../catalog/prompt-surface-contracts.js";
 import { REPO_ROOT } from "../schema.js";
@@ -65,6 +68,17 @@ function isLegacySmoke(command: ParsedSlashCommand): boolean {
   return (
     ["explore", "migrate", "repair", "sweep"].includes(command.slug)
     && /^smoke(\s|$)/.test(command.argsLower)
+  );
+}
+
+function requestsSavedHandoff(command: ParsedSlashCommand): boolean {
+  if (command.slug === "handoff") {
+    return false;
+  }
+
+  return (
+    /\bhandoff\b/.test(command.argsLower)
+    && /\b(continue|resume|pick\s*up|pickup|pick-up|use|follow)\b/.test(command.argsLower)
   );
 }
 
@@ -154,6 +168,89 @@ function emitContext(additionalContext: string): never {
   process.exit(0);
 }
 
+function resolutionLines(
+  inspection: ContinuityInspection,
+  options: { explicitResume: boolean },
+): string[] {
+  if (inspection.hasHandoff) {
+    return [
+      `Read this handoff first: ${inspection.handoffPath}`,
+      ...(options.explicitResume
+        ? ["Only fall back to `.circuit/current-run` when the handoff file is absent."]
+        : []),
+    ];
+  }
+
+  return options.explicitResume
+    ? ["No saved handoff exists. Only `.circuit/current-run` may still provide fallback continuity."]
+    : ["No saved handoff exists. Do not guess from unrelated repo files."];
+}
+
+function warningLines(inspection: ContinuityInspection): string[] {
+  return inspection.handoff.warnings.map((warning) => `- ${warning}`);
+}
+
+function renderHandoffReferenceContext(
+  command: ParsedSlashCommand,
+  inspection: ContinuityInspection,
+): string {
+  return [
+    "# Circuit Handoff Continuity Reference",
+    `The user explicitly referenced a saved handoff while invoking \`/circuit:${command.slug}\`.`,
+    "The saved handoff lives only at the canonical project handoff path below.",
+    "",
+    "## Canonical Handoff Path",
+    inspection.handoffPath,
+    "",
+    "## Resolution",
+    ...resolutionLines(inspection, { explicitResume: false }),
+    ...(inspection.handoff.warnings.length > 0
+      ? [
+        "",
+        "## Drift Warnings",
+        ...warningLines(inspection),
+      ]
+      : []),
+    "",
+    "Read the selected handoff before unrelated repo exploration if the task truly means \"continue with the handoff.\"",
+  ].join("\n");
+}
+
+function renderHandoffResumeContext(
+  manifest: PromptContractsManifest,
+  inspection: ContinuityInspection,
+): string {
+  const lines = renderTemplate(manifest.fast_modes.handoff_resume.lines, {
+    handoff_path: inspection.handoffPath,
+  });
+
+  return [
+    lines,
+    "",
+    "## Canonical Handoff Path",
+    inspection.handoffPath,
+    "",
+    "## Resolution",
+    ...resolutionLines(inspection, { explicitResume: true }),
+    ...(inspection.handoff.warnings.length > 0
+      ? [
+        "",
+        "## Drift Warnings",
+        ...warningLines(inspection),
+      ]
+      : []),
+  ].join("\n");
+}
+
+function renderHandoffDoneContext(
+  manifest: PromptContractsManifest,
+  inspection: ContinuityInspection,
+): string {
+  return renderTemplate(manifest.fast_modes.handoff_done.lines, {
+    handoff_path: inspection.handoffPath,
+  });
+}
+
 function main(): number {
   const input = readInput();
   const prompt = typeof input.prompt === "string" ? input.prompt : "";
@@ -174,28 +271,22 @@ function main(): number {
     return 0;
   }
 
+  const continuity = inspectContinuity({
+    handoffHome: process.env.CIRCUIT_HANDOFF_HOME,
+    homeDir: process.env.HOME || "",
+    projectRoot,
+  });
+
   if (isReviewCurrentChanges(command)) {
     emitContext(renderTemplate(manifest.fast_modes.review_current_changes.lines, {}));
   }
 
   if (isHandoffDone(command)) {
-    emitContext(renderTemplate(manifest.fast_modes.handoff_done.lines, {
-      handoff_path: resolveHandoffPath({
-        handoffHome: process.env.CIRCUIT_HANDOFF_HOME,
-        homeDir: process.env.HOME || "",
-        projectRoot,
-      }),
-    }));
+    emitContext(renderHandoffDoneContext(manifest, continuity));
   }
 
   if (isHandoffResume(command)) {
-    emitContext(renderTemplate(manifest.fast_modes.handoff_resume.lines, {
-      handoff_path: resolveHandoffPath({
-        handoffHome: process.env.CIRCUIT_HANDOFF_HOME,
-        homeDir: process.env.HOME || "",
-        projectRoot,
-      }),
-    }));
+    emitContext(renderHandoffResumeContext(manifest, continuity));
   }
 
   if (isLegacySmoke(command)) {
@@ -207,6 +298,10 @@ function main(): number {
 
   if (isBuildSmoke(command)) {
     emitContext(renderTemplate(manifest.fast_modes.build_smoke.lines, {}));
+  }
+
+  if (requestsSavedHandoff(command)) {
+    emitContext(renderHandoffReferenceContext(command, continuity));
   }
 
   return 0;

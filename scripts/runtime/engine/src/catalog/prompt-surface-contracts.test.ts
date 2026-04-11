@@ -245,7 +245,7 @@ describe("prompt surface contracts", () => {
             "lines": [
               "# Circuit Handoff Done Contract",
               "This prompt is the explicit handoff completion fast mode.",
-              "Handoff path: {handoff_path}",
+              "Project handoff path: {handoff_path}",
               "Resolve \`.circuit/current-run\` exactly like this before deciding whether an active run exists:",
               "if [ -L .circuit/current-run ]; then RUN_ROOT=\\".circuit/$(readlink .circuit/current-run)\\"; elif [ -f .circuit/current-run ]; then RUN_ROOT=\\".circuit/circuit-runs/$(tr -d '\\\\n' < .circuit/current-run)\\"; fi",
               "If \`$RUN_ROOT/artifacts/active-run.md\` exists, move it to \`$RUN_ROOT/artifacts/completed-run.md\`.",
@@ -264,7 +264,8 @@ describe("prompt surface contracts", () => {
             "lines": [
               "# Circuit Handoff Resume Contract",
               "This prompt is the explicit continuity resume fast mode.",
-              "Read this handoff file first if it exists: {handoff_path}",
+              "Project handoff path: {handoff_path}",
+              "Read this handoff file first if it exists.",
               "Only fall back to \`.circuit/current-run\` when the handoff file is absent.",
               "Start the response with \`# Circuit Resume\`.",
               "When the handoff file exists, treat it as the source of truth and do not surface fallback-only active-run sentinel details.",

@@ -21,7 +21,7 @@ saved state for you. No clipboard, no paste.
 ## Fast Modes
 
 - `/circuit:handoff done` -- clear handoff + active-run continuity immediately and stop.
-- `/circuit:handoff resume` -- resolve continuity immediately (`handoff.md` first, active-run fallback) and present it before any unrelated repo exploration.
+- `/circuit:handoff resume` -- resolve continuity immediately (handoff first, active-run fallback second) and present it before any unrelated repo exploration.
 
 ## Local Helper Wrappers
 
@@ -49,7 +49,8 @@ Circuit provides two continuity mechanisms:
   higher-fidelity.
 
 Both mechanisms coexist. Handoff.md is the richer path. active-run.md is the safety
-net. Explicit resume resolves `handoff.md` first, then falls back to the active run.
+net. Explicit resume resolves the project-scoped `handoff.md` first, then falls
+back to the active run.
 
 ## Modes
 
@@ -61,8 +62,8 @@ net. Explicit resume resolves `handoff.md` first, then falls back to the active 
 
 Clears both continuity mechanisms so the next session starts fresh.
 
-1. Compute the handoff path (see Storage below -- use git root if in a git repo, else $PWD)
-2. If the handoff file exists, delete it.
+1. Compute the handoff path (see Storage below -- use git root if in a git repo, else `$PWD`)
+2. Delete the handoff file if it exists.
 3. If `.circuit/current-run` exists, remove it.
 4. Find all `active-run.md` files under `.circuit/circuit-runs/` (any depth)
    and rename each to `completed-run.md`. This archives every run's dashboard,
@@ -85,11 +86,11 @@ how many prior runs exist. Run directories stay intact for reference.
 Resolves saved continuity explicitly. This is the only supported way to consume
 pending continuity in Circuit.
 
-1. Compute the handoff path (see Storage below -- use git root if in a git repo, else `$PWD`)
+1. Compute the handoff path (see Storage below)
 2. Resolve active-run fallback the same way SessionStart does:
    - prefer `.circuit/current-run` when it points to a real run
    - otherwise fall back to the newest `active-run.md` under `.circuit/circuit-runs/`
-3. If `handoff.md` exists and starts with `# Handoff`, use it and stop. Do not inspect unrelated repo files first.
+3. If the handoff exists and starts with `# Handoff`, use it and stop. Do not inspect unrelated repo files first.
 4. Otherwise, if an active run exists:
    - refresh event-backed runs through `.circuit/bin/circuit-engine render --run-root <run-root>` when the run has `circuit.manifest.yaml`
    - use the refreshed `active-run.md` and stop
@@ -172,6 +173,8 @@ Use exactly this structure. Omit DEBT if empty. STATE is never empty.
 # Handoff
 WRITTEN: <ISO 8601 timestamp, e.g. 2026-04-03T14:30:00Z>
 DIR: /absolute/path/to/working/directory
+BRANCH: <current git branch, mandatory in git repos>
+BASE_COMMIT: <git rev-parse --verify HEAD, mandatory in git repos>
 
 NEXT: [DO: <exact command, file:line, or concrete step> | DECIDE: <decision name> -- options: A) <option>, B) <option>]
 GOAL: <one sentence -- what done looks like> [VERIFY: confirm this is still the right target before acting]
@@ -188,6 +191,8 @@ DEBT:
 
 - **WRITTEN**: mandatory, always first line after the header. ISO 8601 timestamp of when the handoff was created. Used by the consuming session to assess staleness.
 - **DIR**: mandatory, after WRITTEN. Absolute path to the actual working directory (`$PWD`). The cold-start anchor.
+- **BRANCH**: mandatory in git repos, immediately after DIR. Use the current branch name exactly as `git rev-parse --abbrev-ref HEAD` reports it.
+- **BASE_COMMIT**: mandatory in git repos, immediately after BRANCH. Use the exact commit hash from `git rev-parse --verify HEAD`. This lets future sessions detect branch drift.
 - **NEXT**: mandatory. Prefixed `DO:` or `DECIDE:`.
   - `DO:` means the action is ready to execute. Use only when unambiguous.
   - `DECIDE:` means the session ended at a branch point. Name the decision and list options.

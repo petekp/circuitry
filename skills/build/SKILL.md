@@ -29,7 +29,8 @@ Action-first rules for `/circuit:build`:
 4. Do not start with "let me understand the current state first" or broad repo exploration before bootstrap completes.
 5. If routing already selected Build, stay on that path immediately instead of reclassifying.
 6. If bootstrap already happened, continue from the current phase instead of re-exploring.
-7. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
+7. If the user explicitly says to continue or resume from a handoff, read only `~/.claude/projects/<git-root-slug>/handoff.md` before unrelated repo exploration.
+8. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
 
 ## Local Helper Wrappers
 
