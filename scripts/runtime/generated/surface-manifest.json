@@ -163,12 +163,12 @@
     {
       "executable": true,
       "path": "hooks/session-start.sh",
-      "sha256": "1d6ee2160016870b45c6822629b44ffeb2576f16d90150d925d2107172d54a15"
+      "sha256": "038d931d0bc79e3e37966662884dc1cccf937f8ef2853769fe4cb1c807bb8d91"
     },
     {
       "executable": true,
       "path": "hooks/user-prompt-submit.js",
-      "sha256": "b5f77c09113bcac47a05d96b26e73f1d49cdb7c7b5ea5951e09793d161f64023"
+      "sha256": "687f0d2e8dd7e4506103e301ff51d7eccac43de26929f3a7ee975cfd2d7e1aa7"
     },
     {
       "executable": false,
@@ -273,7 +273,7 @@
     {
       "executable": true,
       "path": "scripts/sync-to-cache.sh",
-      "sha256": "0cb39fe6ea40b114e9dc2e073870c76a2215521fd74a797a6e79ee3cd42f0a35"
+      "sha256": "e497a7964497f54eb273b8976e1fa71475814c86e8f8e20097e633290c1c35fc"
     },
     {
       "executable": true,

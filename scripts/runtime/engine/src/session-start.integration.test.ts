@@ -14,6 +14,7 @@ const SESSION_START = resolve(REPO_ROOT, "hooks/session-start.sh");
 function runSessionStart(
   cwd: string,
   homeDir: string,
+  extraEnv: Record<string, string> = {},
 ): ReturnType<typeof spawnSync> {
   return spawnSync("bash", [SESSION_START], {
     cwd,
@@ -23,6 +24,7 @@ function runSessionStart(
       CLAUDE_PLUGIN_ROOT: REPO_ROOT,
       HOME: homeDir,
       NODE_BIN: process.execPath,
+      ...extraEnv,
     },
   });
 }
@@ -80,6 +82,53 @@ describe("session-start integration", () => {
     expect(result.stdout).not.toContain("handoff-sentinel");
     expect(result.stdout).not.toContain("Resume from the handoff above.");
     expect(result.stdout).not.toContain("execute NEXT");
+  });
+
+  it("ignores sibling home fixtures unless CIRCUIT_HANDOFF_HOME is set", () => {
+    const root = mkdtempSync(join(tmpdir(), "circuit-session-sibling-home-"));
+    const projectRoot = join(root, "project");
+    const siblingHome = join(root, "home");
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
+
+    mkdirSync(projectRoot, { recursive: true });
+    spawnSync("git", ["init", "-q"], { cwd: projectRoot, encoding: "utf-8" });
+    const gitRoot = spawnSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: projectRoot,
+      encoding: "utf-8",
+    }).stdout.trim();
+    const siblingHandoffPath = join(
+      siblingHome,
+      ".circuit-projects",
+      projectSlug(gitRoot),
+      "handoff.md",
+    );
+    mkdirSync(resolve(siblingHandoffPath, ".."), { recursive: true });
+    writeFileSync(
+      siblingHandoffPath,
+      [
+        "# Handoff",
+        "WRITTEN: 2026-04-10T00:00:00Z",
+        `DIR: ${gitRoot}`,
+        "",
+        "NEXT: DO: sibling-home-sentinel",
+        "STATE:",
+        "- sibling-home-sentinel",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const defaultResult = runSessionStart(projectRoot, homeDir);
+    expect(defaultResult.status).toBe(0);
+    expect(defaultResult.stdout).toContain("Circuit is active.");
+    expect(defaultResult.stdout).not.toContain("Circuit continuity available");
+
+    const overrideResult = runSessionStart(projectRoot, homeDir, {
+      CIRCUIT_HANDOFF_HOME: siblingHome,
+    });
+    expect(overrideResult.status).toBe(0);
+    expect(overrideResult.stdout).toContain("Circuit continuity available");
+    expect(overrideResult.stdout).toContain("pending handoff");
   });
 
   it("refreshes event-backed runs before announcing passive active-run continuity", () => {

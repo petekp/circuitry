@@ -330,6 +330,29 @@ describe("sync-to-cache.sh", () => {
     expect((await readdir(marketplaceTarget)).sort()).toContain("README.md");
   });
 
+  it("skips the stable alias for custom cache roots and preserves the version layout", async () => {
+    const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
+    const pluginRoot = resolve(tmpPath, "plugin-root");
+    const cacheDir = resolve(tmpPath, "cache");
+    const marketplaceDir = resolve(tmpPath, "marketplace");
+    const cachePluginDir = resolve(cacheDir, "circuit");
+
+    await makePluginRoot(pluginRoot);
+    const cacheTarget = await makeTarget(cachePluginDir, "0.2.0");
+    const marketplaceTarget = await makeTarget(marketplaceDir);
+    await initGitRepo(marketplaceTarget);
+
+    const result = runSync(pluginRoot, cacheDir, marketplaceDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Syncing local -> cache (${cacheTarget})`);
+    expect(result.stdout).not.toContain("Refreshed stable cache alias");
+    await expectSyncedTarget(cacheTarget);
+    await expectSyncedTarget(marketplaceTarget);
+    expect((await lstat(cachePluginDir)).isDirectory()).toBe(true);
+    expect((await readdir(cachePluginDir)).sort()).toContain("0.2.0");
+  });
+
   it("syncs marketplace even when cache versions are missing", async () => {
     const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
     const pluginRoot = resolve(tmpPath, "plugin-root");

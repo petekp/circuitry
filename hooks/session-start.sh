@@ -12,10 +12,6 @@ fi
 project_slug=$(printf '%s' "$project_dir" | tr '\\' '/' | tr '/' '-' | sed 's/[:<>"|?*]//g; s/^-//')
 handoff_home="${CIRCUIT_HANDOFF_HOME:-}"
 handoff_root=".claude/projects"
-if [[ -z "$handoff_home" && -d "$project_dir/../home" ]]; then
-  handoff_home="$project_dir/../home"
-  handoff_root=".circuit-projects"
-fi
 if [[ -z "$handoff_home" ]]; then
   handoff_home="$HOME"
 fi

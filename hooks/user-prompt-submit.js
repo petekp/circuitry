@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { existsSync, readFileSync } = require("node:fs");
+const { readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
 
 function readInput() {
@@ -87,11 +87,6 @@ function currentProjectRoot() {
 function handoffHome() {
   if (process.env.CIRCUIT_HANDOFF_HOME) {
     return { base: process.env.CIRCUIT_HANDOFF_HOME, override: true };
-  }
-
-  const siblingHome = resolve(currentProjectRoot(), "..", "home");
-  if (existsSync(siblingHome)) {
-    return { base: siblingHome, override: true };
   }
 
   return { base: process.env.HOME || "", override: false };

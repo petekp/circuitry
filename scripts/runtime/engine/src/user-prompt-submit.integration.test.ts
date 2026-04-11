@@ -1,5 +1,4 @@
-import { chmodSync, copyFileSync } from "node:fs";
-import { mkdtempSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -17,6 +16,21 @@ function runUserPromptSubmit(prompt: string): ReturnType<typeof spawnSync> {
     env: {
       ...process.env,
       CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+    },
+  });
+}
+
+function runUserPromptSubmitWithEnv(
+  prompt: string,
+  env: Record<string, string>,
+): ReturnType<typeof spawnSync> {
+  return spawnSync(USER_PROMPT_SUBMIT, {
+    input: JSON.stringify({ prompt }),
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+      ...env,
     },
   });
 }
@@ -140,6 +154,31 @@ describe("user-prompt-submit integration", () => {
     expect(payload.hookSpecificOutput.additionalContext).toContain("# Circuit Resume");
     expect(payload.hookSpecificOutput.additionalContext).toContain(
       "Only fall back to `.circuit/current-run` when the handoff file is absent.",
+    );
+  });
+
+  it("keeps the default handoff store even when a sibling home fixture exists", () => {
+    const root = mkdtempSync(join(tmpdir(), "circuit-prompt-home-"));
+    const projectRoot = resolve(root, "project");
+    const siblingHome = resolve(root, "home");
+    const explicitHome = resolve(root, "real-home");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(siblingHome, { recursive: true });
+    mkdirSync(explicitHome, { recursive: true });
+
+    const result = runUserPromptSubmitWithEnv("/circuit:handoff resume", {
+      CLAUDE_PROJECT_DIR: projectRoot,
+      HOME: explicitHome,
+    });
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout);
+    expect(payload.hookSpecificOutput.additionalContext).toContain(
+      resolve(explicitHome, ".claude", "projects"),
+    );
+    expect(payload.hookSpecificOutput.additionalContext).not.toContain(
+      resolve(siblingHome, ".circuit-projects"),
     );
   });
 

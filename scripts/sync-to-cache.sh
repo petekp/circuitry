@@ -17,7 +17,7 @@ LIST_SURFACE_ROOTS="$PLUGIN_ROOT/scripts/runtime/bin/list-installed-surface-root
 if [[ "$(basename "$CACHE_BASE")" == "petekp" ]]; then
   CACHE_ALIAS_ROOT="$(dirname "$CACHE_BASE")"
 else
-  CACHE_ALIAS_ROOT="$CACHE_BASE"
+  CACHE_ALIAS_ROOT=""
 fi
 
 CACHE_DIRS=()
@@ -212,10 +212,12 @@ sync_target() {
 
 refresh_cache_alias() {
   local target="$1"
-  local alias_path="$CACHE_ALIAS_ROOT/circuit"
 
+  [[ -n "$CACHE_ALIAS_ROOT" ]] || return 0
   [[ -n "$target" ]] || return 0
   [[ -d "$target" ]] || return 0
+
+  local alias_path="$CACHE_ALIAS_ROOT/circuit"
 
   rm -rf "$alias_path" || return 1
   ln -s "$target" "$alias_path" || return 1
