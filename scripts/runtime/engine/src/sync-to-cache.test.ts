@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, readlink, stat, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -304,7 +304,8 @@ describe("sync-to-cache.sh", () => {
   it("syncs cache versions, prunes cache cruft, and leaves marketplace extras alone", async () => {
     const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
     const pluginRoot = resolve(tmpPath, "plugin-root");
-    const cacheDir = resolve(tmpPath, "cache");
+    const cacheDir = resolve(tmpPath, "cache", "petekp");
+    const cacheAlias = resolve(tmpPath, "cache", "circuit");
     const marketplaceDir = resolve(tmpPath, "marketplace");
     const cachePluginDir = resolve(cacheDir, "circuit");
 
@@ -317,19 +318,22 @@ describe("sync-to-cache.sh", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(`Syncing local -> cache (${cacheTarget})`);
+    expect(result.stdout).toContain(`Refreshed stable cache alias (${cacheAlias} -> ${cacheTarget})`);
     expect(result.stdout).toContain(
       `Syncing local -> marketplace (${marketplaceTarget})`,
     );
     await expectSyncedTarget(cacheTarget);
     await expectSyncedTarget(marketplaceTarget);
     await expectCacheTargetLayout(cacheTarget);
+    expect((await lstat(cacheAlias)).isSymbolicLink()).toBe(true);
+    expect(await readlink(cacheAlias)).toBe(cacheTarget);
     expect((await readdir(marketplaceTarget)).sort()).toContain("README.md");
   });
 
   it("syncs marketplace even when cache versions are missing", async () => {
     const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
     const pluginRoot = resolve(tmpPath, "plugin-root");
-    const cacheDir = resolve(tmpPath, "cache");
+    const cacheDir = resolve(tmpPath, "cache", "petekp");
     const marketplaceDir = resolve(tmpPath, "marketplace");
     const cachePluginDir = resolve(cacheDir, "circuit");
 
@@ -348,7 +352,7 @@ describe("sync-to-cache.sh", () => {
   it("commits marketplace sync changes so git status stays clean", async () => {
     const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
     const pluginRoot = resolve(tmpPath, "plugin-root");
-    const cacheDir = resolve(tmpPath, "cache");
+    const cacheDir = resolve(tmpPath, "cache", "petekp");
     const marketplaceDir = resolve(tmpPath, "marketplace");
     const cachePluginDir = resolve(cacheDir, "circuit");
 
@@ -374,7 +378,7 @@ describe("sync-to-cache.sh", () => {
   it("fails loudly when a target cannot be synced", async () => {
     const tmpPath = await mkdtemp(resolve(tmpdir(), "circuit-sync-test-"));
     const pluginRoot = resolve(tmpPath, "plugin-root");
-    const cacheDir = resolve(tmpPath, "cache");
+    const cacheDir = resolve(tmpPath, "cache", "petekp");
     const brokenTarget = resolve(cacheDir, "circuit", "0.2.0");
 
     await makePluginRoot(pluginRoot);

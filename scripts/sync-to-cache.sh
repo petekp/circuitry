@@ -14,6 +14,11 @@ CACHE_BASE="${CLAUDE_PLUGIN_CACHE_DIR:-$HOME/.claude/plugins/cache/petekp}"
 MARKETPLACE_DIR="${CLAUDE_PLUGIN_MARKETPLACE_DIR:-$HOME/.claude/plugins/marketplaces/petekp}"
 RSYNC_ARGS=(-a --checksum --delete --exclude '.vite/')
 LIST_SURFACE_ROOTS="$PLUGIN_ROOT/scripts/runtime/bin/list-installed-surface-roots.js"
+if [[ "$(basename "$CACHE_BASE")" == "petekp" ]]; then
+  CACHE_ALIAS_ROOT="$(dirname "$CACHE_BASE")"
+else
+  CACHE_ALIAS_ROOT="$CACHE_BASE"
+fi
 
 CACHE_DIRS=()
 if [[ -d "${CACHE_BASE}/circuit" ]]; then
@@ -205,8 +210,21 @@ sync_target() {
   return 0
 }
 
+refresh_cache_alias() {
+  local target="$1"
+  local alias_path="$CACHE_ALIAS_ROOT/circuit"
+
+  [[ -n "$target" ]] || return 0
+  [[ -d "$target" ]] || return 0
+
+  rm -rf "$alias_path" || return 1
+  ln -s "$target" "$alias_path" || return 1
+  printf 'Refreshed stable cache alias (%s -> %s)\n' "$alias_path" "$target"
+}
+
 synced_any=0
 synced_cache=0
+latest_cache_target=""
 
 # Sync to every cached version under each name (avoids ghost-version misrouting)
 for cache_dir in "${CACHE_DIRS[@]}"; do
@@ -214,8 +232,13 @@ for cache_dir in "${CACHE_DIRS[@]}"; do
     sync_target cache "$version_dir"
     synced_any=1
     synced_cache=1
+    latest_cache_target="$version_dir"
   done < <(find "$cache_dir" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 done
+
+if [[ "$synced_cache" -eq 1 ]]; then
+  refresh_cache_alias "$latest_cache_target"
+fi
 
 if [[ "$synced_cache" -eq 0 ]]; then
   printf 'No cached versions found under %s/circuit\n' "$CACHE_BASE"

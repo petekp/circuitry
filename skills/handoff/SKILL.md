@@ -1,37 +1,47 @@
 ---
 name: handoff
 description: >
-  Save session state for the next session. A fresh session can resume
-  automatically. Use when context is getting heavy, the user asks for a handoff,
-  or you need to preserve progress before a session boundary. Also supports
-  `/circuit:handoff done` to clear a pending handoff. Works alongside
-  active-run.md (automatic continuity) as the intentional high-quality
-  continuity path.
+  Save or explicitly resume session continuity across session boundaries.
+  Use when context is getting heavy, the user asks for a handoff, or you need
+  to preserve progress before a session boundary. Also supports
+  `/circuit:handoff resume` for explicit continuity pickup and
+  `/circuit:handoff done` to clear pending continuity. Works alongside
+  active-run.md as the higher-fidelity continuity path.
 role: utility
 ---
 
 # Handoff
 
-Save session state for the next session. On the next `/clear` or
-session start, the Circuit hook auto-injects it so the fresh session picks up
-where this one left off. No clipboard, no paste.
+Save session state for the next session, or resume saved continuity explicitly.
+Fresh sessions only get a passive continuity banner; they do not auto-resume the
+saved state for you. No clipboard, no paste.
+
+## Fast Modes
+
+- `/circuit:handoff done` -- clear handoff + active-run continuity immediately and stop.
+- `/circuit:handoff resume` -- resolve continuity immediately (`handoff.md` first, active-run fallback) and present it before any unrelated repo exploration.
 
 ## Relationship to active-run.md
 
 Circuit provides two continuity mechanisms:
 
-- **active-run.md** -- Automatic. Every workflow updates it after each phase. The
-  SessionStart hook injects it. Gives basic continuity even when the user forgets
-  to hand off. Low-effort, lower-fidelity.
+- **active-run.md** -- Automatic dashboard. Every workflow updates it after each
+  phase. SessionStart only announces that it exists; explicit resume consumes it.
+  Gives basic continuity even when the user forgets to hand off. Low-effort,
+  lower-fidelity.
 - **handoff.md** -- Intentional. Written explicitly via `/circuit:handoff`. Distills
   hard-to-rediscover facts that active-run.md cannot capture (eliminated approaches,
-  operating constraints, debug state). Higher-effort, higher-fidelity.
+  operating constraints, debug state). SessionStart announces availability, but
+  `/circuit:handoff resume` is the explicit consumption path. Higher-effort,
+  higher-fidelity.
 
-Both mechanisms coexist. Handoff.md is the richer path. active-run.md is the safety net.
+Both mechanisms coexist. Handoff.md is the richer path. active-run.md is the safety
+net. Explicit resume resolves `handoff.md` first, then falls back to the active run.
 
 ## Modes
 
 - `/circuit:handoff` -- capture current state and write to disk
+- `/circuit:handoff resume` -- present saved continuity explicitly
 - `/circuit:handoff done` -- delete the pending handoff
 
 ## Done Mode
@@ -56,6 +66,34 @@ inject a finished or stale run. Archiving only the pointed run can surface a
 different stale run instead of the welcome screen. Renaming all `active-run.md`
 files to `completed-run.md` ensures the fallback finds nothing regardless of
 how many prior runs exist. Run directories stay intact for reference.
+
+## Resume Mode
+
+Resolves saved continuity explicitly. This is the only supported way to consume
+pending continuity in Circuit.
+
+1. Compute the handoff path (see Storage below -- use git root if in a git repo, else `$PWD`)
+2. Resolve active-run fallback the same way SessionStart does:
+   - prefer `.circuit/current-run` when it points to a real run
+   - otherwise fall back to the newest `active-run.md` under `.circuit/circuit-runs/`
+3. If `handoff.md` exists and starts with `# Handoff`, use it and stop. Do not inspect unrelated repo files first.
+4. Otherwise, if an active run exists:
+   - refresh event-backed runs through `scripts/relay/circuit-engine.sh render --run-root <run-root>` when the run has `circuit.manifest.yaml`
+   - use the refreshed `active-run.md` and stop
+5. If neither source exists, report: `No saved continuity found. Nothing to resume.`
+6. Stop here. Do not bootstrap new work or do broad repo exploration.
+
+Present resumed continuity in a Circuit-owned wrapper:
+
+```markdown
+# Circuit Resume
+## Source
+handoff.md | active-run.md
+## Continuity State
+<saved handoff or active-run content>
+## Next Circuit Action
+<NEXT from handoff.md, or Next Step from active-run.md>
+```
 
 ## Capture Mode
 
@@ -187,17 +225,19 @@ handoff goes to `~/.claude/projects/-Users-petepetrash-Code-circuit/handoff.md`.
 
 Use the Write tool. Overwrite any existing handoff at that path.
 
-**Note:** Auto-resume on `/clear` requires the Circuit session-start hook to be active.
-Without it, the handoff file is written to disk but must be manually referenced in a new
-session. The hook handles detection, validation, and injection automatically.
+**Note:** SessionStart only announces saved continuity. To consume it in a fresh
+session, run `/circuit:handoff resume`.
 
 ## Output
 
-After writing, confirm briefly:
+- Capture mode: after writing, confirm briefly:
 
 > Handoff saved. `/clear` when ready for a fresh session.
 
-Do not display the handoff contents. Do not copy to clipboard. The hook handles injection.
+- Resume mode: display the `# Circuit Resume` wrapper shown above.
+- Done mode: report the cleared/already-clean result and stop.
+
+Do not display handoff contents during capture mode. Do not copy to clipboard.
 
 ## active-run.md Integration
 

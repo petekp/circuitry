@@ -108,9 +108,21 @@ describe("generate", () => {
     expect(readFileSync(resolve(root, "commands/build.md"), "utf-8")).toContain(
       'description: "Build things."',
     );
-    expect(readFileSync(resolve(root, "commands/handoff.md"), "utf-8")).toContain(
+    const buildShim = readFileSync(resolve(root, "commands/build.md"), "utf-8");
+    const handoffShim = readFileSync(resolve(root, "commands/handoff.md"), "utf-8");
+
+    expect(handoffShim).toContain(
       'description: "Save session state."',
     );
+    expect(buildShim).toContain("Direct slash-command invocation");
+    expect(buildShim).toContain("Launch the `circuit:build` skill immediately.");
+    expect(buildShim).toContain("Use installed Circuit helpers directly via `$CLAUDE_PLUGIN_ROOT`");
+    expect(buildShim).toContain("direct-invocation/bootstrap contract");
+    expect(buildShim).toContain("Do not reinterpret this command as a generic repo-understanding request.");
+    expect(handoffShim).toContain("Direct utility invocation");
+    expect(handoffShim).toContain("Launch the `circuit:handoff` skill immediately.");
+    expect(handoffShim).toContain("Execute argument-selected fast modes before context gathering.");
+    expect(handoffShim).toContain("Do not do broad repo exploration unless the utility contract explicitly requires it.");
     expect(() => readFileSync(resolve(root, "commands/workers.md"), "utf-8")).toThrow();
 
     const manifest = JSON.parse(

@@ -1,6 +1,7 @@
 import {
   chmodSync,
   cpSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -19,6 +20,7 @@ const THIS_DIR =
     : dirname(fileURLToPath(import.meta.url));
 
 const REPO_ROOT = resolve(THIS_DIR, "../../../..");
+const COMPOSE_PROMPT = resolve(REPO_ROOT, "scripts/relay/compose-prompt.sh");
 const VERIFY_INSTALL = resolve(REPO_ROOT, "scripts/verify-install.sh");
 const READ_CONFIG = resolve(REPO_ROOT, "scripts/runtime/bin/read-config.js");
 const APPEND_EVENT = resolve(REPO_ROOT, "scripts/runtime/bin/append-event.js");
@@ -102,6 +104,7 @@ function copyInstallRoot(targetRoot: string) {
   chmodSync(resolve(targetRoot, "scripts/relay/dispatch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "scripts/relay/update-batch.sh"), 0o755);
   chmodSync(resolve(targetRoot, "hooks/session-start.sh"), 0o755);
+  chmodSync(resolve(targetRoot, "hooks/user-prompt-submit.js"), 0o755);
 }
 
 describe("runtime CLI integration", () => {
@@ -183,6 +186,90 @@ describe("runtime CLI integration", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe("project-role");
+  });
+
+  it("compose-prompt injects config-defined build skills when --circuit build is passed without --skills", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const skillRoot = resolve(tempRoot, "skills");
+    const skillDir = resolve(skillRoot, "build-extra");
+    const config = resolve(tempRoot, "circuit.config.yaml");
+    const header = resolve(tempRoot, "review-header.md");
+    const out = resolve(tempRoot, "prompt.md");
+    const outWithoutCircuit = resolve(tempRoot, "prompt-without-circuit.md");
+
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(header, "# Review Header\n", "utf-8");
+    writeFileSync(
+      config,
+      [
+        "circuits:",
+        "  build:",
+        '    skills: "build-extra"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    writeFileSync(
+      resolve(skillDir, "SKILL.md"),
+      [
+        "---",
+        "name: build-extra",
+        'description: "Synthetic build skill for integration coverage."',
+        "---",
+        "",
+        "Synthetic build skill guidance.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = run(
+      "bash",
+      [
+        COMPOSE_PROMPT,
+        "--header",
+        header,
+        "--circuit",
+        "build",
+        "--config",
+        config,
+        "--out",
+        out,
+      ],
+      {
+        env: {
+          CIRCUIT_PLUGIN_SKILL_DIR: skillRoot,
+        },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    const contents = readFileSync(out, "utf-8");
+    expect(contents).toContain("## Domain Guidance: build-extra");
+    expect(contents).toContain("Synthetic build skill guidance.");
+
+    const resultWithoutCircuit = run(
+      "bash",
+      [
+        COMPOSE_PROMPT,
+        "--header",
+        header,
+        "--config",
+        config,
+        "--out",
+        outWithoutCircuit,
+      ],
+      {
+        env: {
+          CIRCUIT_PLUGIN_SKILL_DIR: skillRoot,
+        },
+      },
+    );
+
+    expect(resultWithoutCircuit.status).toBe(0);
+    expect(readFileSync(outWithoutCircuit, "utf-8")).not.toContain(
+      "## Domain Guidance: build-extra",
+    );
   });
 
   it("append-event -> derive-state -> resume succeeds through bundled CLIs", () => {
@@ -272,6 +359,44 @@ describe("runtime CLI integration", () => {
     expect(payload.status).toBe("in_progress");
     expect(payload.resume_step).toBe("frame");
     expect(payload.reason).toContain("frame");
+  });
+
+  it("circuit-engine bootstrap accepts workflow shorthand and normalizes a bare .circuit root", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    mkdirSync(projectRoot, { recursive: true });
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--workflow",
+        "build",
+        "--run-root",
+        resolve(projectRoot, ".circuit"),
+        "--goal",
+        "Host surface smoke",
+      ],
+      { cwd: projectRoot },
+    );
+
+    const expectedRunRoot = resolve(
+      projectRoot,
+      ".circuit",
+      "circuit-runs",
+      "host-surface-smoke",
+    );
+
+    expect(bootstrap.status).toBe(0);
+    expect(bootstrap.stdout).toContain(`run_root=${expectedRunRoot}`);
+    expect(bootstrap.stdout).toContain("resume_step=frame");
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
+    expect(existsSync(resolve(expectedRunRoot, "circuit.manifest.yaml"))).toBe(true);
+    expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
+    expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
+    expect(existsSync(resolve(expectedRunRoot, "artifacts", "active-run.md"))).toBe(true);
   });
 
   it("circuit-engine wrapper resolves the bundled runtime bin from an installed copy", () => {
@@ -381,6 +506,7 @@ describe("runtime CLI integration", () => {
     chmodSync(resolve(repoRoot, "scripts/relay/dispatch.sh"), 0o755);
     chmodSync(resolve(repoRoot, "scripts/relay/update-batch.sh"), 0o755);
     chmodSync(resolve(repoRoot, "hooks/session-start.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "hooks/user-prompt-submit.js"), 0o755);
 
     const result = run(resolve(repoRoot, "scripts/verify-install.sh"), ["--mode", "repo"], {
       cwd: repoRoot,
@@ -426,6 +552,7 @@ describe("runtime CLI integration", () => {
     chmodSync(resolve(repoRoot, "scripts/relay/dispatch.sh"), 0o755);
     chmodSync(resolve(repoRoot, "scripts/relay/update-batch.sh"), 0o755);
     chmodSync(resolve(repoRoot, "hooks/session-start.sh"), 0o755);
+    chmodSync(resolve(repoRoot, "hooks/user-prompt-submit.js"), 0o755);
 
     const result = run(resolve(repoRoot, "scripts/verify-install.sh"), ["--mode", "repo"], {
       cwd: repoRoot,

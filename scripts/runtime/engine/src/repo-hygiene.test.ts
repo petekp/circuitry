@@ -41,7 +41,7 @@ async function collectPythonTraces(
   const traces: string[] = [];
 
   for (const entry of entries) {
-    if (SKIP_DIRS.has(entry.name)) {
+    if (SKIP_DIRS.has(entry.name) || entry.name.startsWith(".circuit")) {
       continue;
     }
 
@@ -67,8 +67,8 @@ async function collectPythonTraces(
       continue;
     }
 
-    const contents = await readFile(nextPath);
-    if (contents.includes(0)) {
+    const contents = await readFile(nextPath).catch(() => null);
+    if (!contents || contents.includes(0)) {
       continue;
     }
 

@@ -42,6 +42,8 @@ dispatch:
 circuits:
   run:
     skills: ""
+  build:
+    skills: ""
   sweep:
     skills: "dead-code-sweep"
   migrate:

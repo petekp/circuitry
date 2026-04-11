@@ -17,6 +17,62 @@ Features, scoped refactors, docs, tests, mixed code+docs+tests changes. The doin
 
 Frame -> Plan -> Act -> Verify -> Review -> Close
 
+## Direct Invocation Contract
+
+Action-first rules for `/circuit:build`:
+
+1. First action is semantic bootstrap through `circuit-engine.sh`.
+2. Use Circuit helpers directly via `$CLAUDE_PLUGIN_ROOT`; do not inspect the plugin cache or repo structure to rediscover them.
+3. Create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.
+4. Do not start with "let me understand the current state first" or broad repo exploration before bootstrap completes.
+5. If routing already selected Build, stay on that path immediately instead of reclassifying.
+6. If bootstrap already happened, continue from the current phase instead of re-exploring.
+7. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run-state; `circuit-engine.sh bootstrap` must materialize it.
+
+## Smoke Bootstrap Mode
+
+If the request is explicitly a smoke/bootstrap verification of the Build workflow
+(for example it says `smoke`, asks to bootstrap, or mentions host-surface verification),
+do not run the full Build lifecycle.
+
+Instead:
+
+1. Bootstrap the run root through `circuit-engine.sh`.
+2. Validate `.circuit/current-run` points at a real run directory.
+3. Validate Build scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`,
+   `state.json`, and `artifacts/active-run.md`.
+4. Report the validated run root and scaffold state briefly.
+5. Stop here. Do not write `brief.md`, resolve checkpoints, inspect unrelated repo files,
+   or continue into Plan/Act/Verify/Review/Close.
+
+A smoke verification that only reports git branch/status, repo cleanliness, or
+top-level directory contents is not valid smoke evidence. The proof must be the on-disk `.circuit`
+run state and Build scaffold.
+
+Hand-written `Write`/`Edit` creation of `circuit.manifest.yaml`, `events.ndjson`,
+`state.json`, `artifacts/active-run.md`, or `.circuit/current-run` is a smoke failure.
+
+Use the real bootstrap path, then prove it with the concrete files:
+
+```bash
+RUN_SLUG="smoke-bootstrap-build-workflow-host-surface"  # derived from the task
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
+ENTRY_MODE="lite"
+
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" bootstrap \
+  --run-root "$RUN_ROOT" \
+  --manifest "$CLAUDE_PLUGIN_ROOT/skills/build/circuit.yaml" \
+  --entry-mode "$ENTRY_MODE" \
+  --goal "<smoke bootstrap objective>" \
+  --project-root "$PWD"
+
+test -e .circuit/current-run
+test -f "$RUN_ROOT/circuit.manifest.yaml"
+test -f "$RUN_ROOT/events.ndjson"
+test -f "$RUN_ROOT/state.json"
+test -f "$RUN_ROOT/artifacts/active-run.md"
+```
+
 ## Entry
 
 The router passes: task description and rigor profile (Lite, Standard, Deep, Autonomous).
@@ -30,9 +86,11 @@ Map rigor to Build entry mode:
 - Deep -> `deep`
 - Autonomous -> `autonomous`
 
-When Build starts, derive `RUN_SLUG` and `RUN_ROOT` as usual, then always call
+When Build starts, derive `RUN_SLUG` and `RUN_ROOT` as usual, then immediately call
 the semantic bootstrap wrapper. Bootstrap is idempotent, so call it even if the
-router already initialized the run:
+router already initialized the run.
+
+Do not read unrelated parts of the repo before this bootstrap finishes:
 
 ```bash
 RUN_SLUG="add-dark-mode-support"  # derived from task description
@@ -326,14 +384,15 @@ dispatch the reviewer directly from Build using reviewer semantics:
 
 ```bash
 cat > "$REVIEW_ROOT/review-header.md" <<'MD'
-# Independent Review: <task>
-Review this change in a fresh context.
+# Independent Review
+Review this Build run in a fresh context.
 Focus on correctness, regressions, missing tests, and ship readiness.
-Use the Build artifacts as the source of truth.
+Use artifacts/brief.md, artifacts/plan.md, artifacts/verification.md, and artifacts/implementation-handoff.md as the source of truth.
 MD
 
 "$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
   --header "$REVIEW_ROOT/review-header.md" \
+  --circuit build \
   --template ship-review \
   --root "$REVIEW_ROOT" \
   --out "$REVIEW_ROOT/prompt.md"

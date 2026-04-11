@@ -10,7 +10,30 @@ fi
 # Converts backslashes and slashes to dashes, strips colons and other
 # characters unsafe in file paths (e.g. Windows drive letter "C:").
 project_slug=$(printf '%s' "$project_dir" | tr '\\' '/' | tr '/' '-' | sed 's/[:<>"|?*]//g; s/^-//')
-handoff_file="$HOME/.claude/projects/${project_slug}/handoff.md"
+handoff_home="${CIRCUIT_HANDOFF_HOME:-}"
+handoff_root=".claude/projects"
+if [[ -z "$handoff_home" && -d "$project_dir/../home" ]]; then
+  handoff_home="$project_dir/../home"
+  handoff_root=".circuit-projects"
+fi
+if [[ -z "$handoff_home" ]]; then
+  handoff_home="$HOME"
+fi
+if [[ -n "${CIRCUIT_HANDOFF_HOME:-}" ]]; then
+  handoff_root=".circuit-projects"
+fi
+handoff_file="$handoff_home/$handoff_root/${project_slug}/handoff.md"
+
+print_continuity_banner() {
+  local available="$1"
+  cat <<EOF
+> **Circuit continuity available.** This is context only.
+> Fresh \`/circuit:*\` commands should be honored as the active task.
+> Resume saved continuity only through \`/circuit:handoff resume\`.
+> Available: ${available}
+
+EOF
+}
 
 # Check for active run via explicit pointer, fall back to most-recent heuristic
 active_run=""
@@ -52,52 +75,35 @@ if [[ -z "$active_run" ]] && [[ -d "$circuit_runs_dir" ]]; then
   [[ -n "$newest_file" ]] && active_run="$newest_file"
 fi
 
+has_handoff=0
 if [[ -f "$handoff_file" ]] && head -1 "$handoff_file" | grep -q '^# Handoff'; then
-  cat <<'HANDOFF_HEADER'
-> **Pending handoff detected.** A previous session saved its state before ending. Resume context follows.
+  has_handoff=1
+fi
 
----
-
-HANDOFF_HEADER
-  cat "$handoff_file"
-  cat <<'HANDOFF_FOOTER'
-
----
-
-Resume from the handoff above.
-
-1. Read DIR. This is your working directory for all file operations and git commands.
-2. Read GOAL and verify it is still accurate. Check it against current repo state. Do not acknowledge it -- assess it. If it appears stale, say so before acting.
-3. Read all DEBT entries. RULED OUT approaches should not be re-investigated unless you have new evidence that changes the original reasoning. BLOCKED entries may be unblocked -- check the unblocking condition. CONSTRAINT entries are operating rules for this session.
-4. Read STATE for current facts.
-5. If NEXT is DO: execute it. The DO prefix means the action is ready. You have already read DEBT -- use it to operate safely.
-6. If NEXT is DECIDE: resolve the decision using STATE and DEBT before taking any action. If the DECIDE text says "need user input," stop and ask.
-7. Run /circuit:handoff done when this work is complete.
-
----
-
-HANDOFF_FOOTER
-elif [[ -n "$active_run" ]] && [[ -f "$active_run" ]]; then
+has_active_run=0
+if [[ -n "$active_run" ]] && [[ -f "$active_run" ]]; then
+  has_active_run=1
   run_root="$(cd "$(dirname "$active_run")/.." && pwd)"
   if [[ -f "${run_root}/circuit.manifest.yaml" ]]; then
     if ! "${CLAUDE_PLUGIN_ROOT}/scripts/relay/circuit-engine.sh" render --run-root "$run_root" >/dev/null 2>&1; then
-      printf 'warning: circuit-engine render failed for %s; using last saved dashboard\n' "$run_root"
+      printf 'warning: circuit-engine render failed for %s; using last saved dashboard\n' "$run_root" >&2
     fi
   fi
-  cat <<'ACTIVERUN_HEADER'
-> **Active circuit run detected.** Injecting current state.
+fi
 
----
-
-ACTIVERUN_HEADER
-  cat "$active_run"
-  cat <<'ACTIVERUN_FOOTER'
-
----
-
-Review the active run state above and resume from the current phase.
-
-ACTIVERUN_FOOTER
+if (( has_handoff == 1 || has_active_run == 1 )); then
+  available_labels=""
+  if (( has_handoff == 1 )); then
+    available_labels="pending handoff"
+  fi
+  if (( has_active_run == 1 )); then
+    if [[ -n "$available_labels" ]]; then
+      available_labels="${available_labels}, active run"
+    else
+      available_labels="active run"
+    fi
+  fi
+  print_continuity_banner "$available_labels"
 else
   cat <<'WELCOME'
 Circuit is active. Try one of these to get started:

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { existsSync } from "node:fs";
 
 import { bootstrapRun } from "../bootstrap.js";
@@ -11,11 +11,15 @@ import { loadManifest } from "../derive-state.js";
 import { renderActiveRun } from "../render-active-run.js";
 import { reopenStep } from "../reopen-step.js";
 import { findResumePoint, loadOrRebuildState } from "../resume.js";
+import { REPO_ROOT } from "../schema.js";
 
 type ParsedFlags = {
   flags: Record<string, string>;
   json: boolean;
 };
+
+const USAGE =
+  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render> [options]\n";
 
 function requireFlagValue(flag: string, next?: string): string {
   if (!next || next.startsWith("--")) {
@@ -82,14 +86,75 @@ function requireRunRoot(flags: Record<string, string>): string {
   return resolve(runRoot);
 }
 
+function slugifyGoal(goal?: string): string {
+  if (!goal) {
+    return "run";
+  }
+
+  const slug = goal
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 50);
+
+  return slug || "run";
+}
+
+function resolveBootstrapManifest(
+  manifestFlag: string | undefined,
+  workflow: string | undefined,
+): string | undefined {
+  if (manifestFlag) {
+    return resolve(manifestFlag);
+  }
+
+  if (!workflow) {
+    return undefined;
+  }
+
+  return resolve(REPO_ROOT, "skills", workflow, "circuit.yaml");
+}
+
+function resolveBootstrapEntryMode(
+  entryModeFlag: string | undefined,
+  workflow: string | undefined,
+): string | undefined {
+  if (entryModeFlag) {
+    return entryModeFlag;
+  }
+
+  if (!workflow) {
+    return undefined;
+  }
+
+  return "default";
+}
+
+function resolveBootstrapRunRoot(
+  runRoot: string,
+  workflow: string | undefined,
+  goal: string | undefined,
+): string {
+  if (!workflow || basename(runRoot) !== ".circuit") {
+    return runRoot;
+  }
+
+  const runSlug = goal ? slugifyGoal(goal) : `${workflow}-run`;
+  return resolve(runRoot, "circuit-runs", runSlug);
+}
+
 function main(): number {
   const [command, ...rest] = process.argv.slice(2);
 
   if (!command) {
-    process.stderr.write(
-      "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render> [options]\n",
-    );
+    process.stderr.write(USAGE);
     return 1;
+  }
+
+  if (command === "--help" || command === "help") {
+    process.stdout.write(USAGE);
+    return 0;
   }
 
   try {
@@ -97,9 +162,10 @@ function main(): number {
 
     switch (command) {
       case "bootstrap": {
-        const runRoot = requireRunRoot(flags);
-        const manifest = flags.manifest;
-        const entryMode = flags["entry-mode"];
+        const workflow = flags.workflow;
+        const runRoot = resolveBootstrapRunRoot(requireRunRoot(flags), workflow, flags.goal);
+        const manifest = resolveBootstrapManifest(flags.manifest, workflow);
+        const entryMode = resolveBootstrapEntryMode(flags["entry-mode"], workflow);
 
         if (!manifest) {
           throw new Error("circuit: --manifest is required");

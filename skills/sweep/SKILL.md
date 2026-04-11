@@ -18,13 +18,40 @@ Cleanup, quality passes, coverage sweeps, docs-sync. The maintenance workflow.
 
 Frame -> Survey -> Queue/Triage -> Batch execute -> Verify -> Deferred review -> Close
 
+## Direct Invocation Contract
+
+Action-first rules for `/circuit:sweep`:
+
+1. First action is run-root bootstrap.
+2. Use Circuit helpers directly via `$CLAUDE_PLUGIN_ROOT`; do not inspect the plugin cache or repo structure to rediscover them.
+3. Create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.
+4. Do not start with "let me understand the current state first" before bootstrap completes.
+5. When the slash command already selected Sweep, stay on that path immediately instead of reclassifying the task.
+6. If bootstrap already happened, continue from the current phase instead of re-exploring.
+
+## Smoke Bootstrap Mode
+
+If the request is explicitly a smoke/bootstrap verification of Sweep
+(for example it says `smoke`, asks to bootstrap, or mentions host-surface verification),
+bootstrap only.
+
+1. Create or validate the Sweep run root.
+2. Validate `.circuit/current-run` points at a real run directory.
+3. Validate legacy Sweep scaffolding exists: `artifacts/`, `phases/`, and `artifacts/active-run.md`.
+4. Report the validated run root and scaffold state briefly.
+5. Stop here. Do not continue into Frame/Survey/Queue/Batch/Verify/Review/Close or do unrelated repo exploration.
+
+Repo cleanliness, branch status, or directory listings are not valid smoke evidence.
+The proof must be the on-disk `.circuit` run root and Sweep scaffold.
+
 ## Entry
 
 The router passes: task description, rigor profile (Lite, Standard, Deep, Autonomous),
 and sweep objective (cleanup, quality improvement, coverage, docs-sync).
 
 **Direct invocation:** When invoked directly via `/circuit:sweep` (not through
-the router), bootstrap the run root if one does not already exist:
+the router), bootstrap the run root immediately if one does not already exist.
+Do not do unrelated repo exploration before this setup finishes:
 
 Derive `RUN_SLUG` from the task description: lowercase, replace spaces and
 special characters with hyphens, collapse consecutive hyphens, trim to 50

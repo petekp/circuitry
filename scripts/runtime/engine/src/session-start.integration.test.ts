@@ -27,8 +27,62 @@ function runSessionStart(
   });
 }
 
+function projectSlug(projectRoot: string): string {
+  return projectRoot
+    .replace(/\\/g, "/")
+    .replace(/\//g, "-")
+    .replace(/[:<>"|?*]/g, "")
+    .replace(/^-/, "");
+}
+
+function handoffPath(homeDir: string, projectRoot: string): string {
+  return join(homeDir, ".claude", "projects", projectSlug(projectRoot), "handoff.md");
+}
+
 describe("session-start integration", () => {
-  it("refreshes event-backed runs before injecting stale active-run content", () => {
+  it("announces pending handoff as passive context without injecting resume instructions", () => {
+    const root = mkdtempSync(join(tmpdir(), "circuit-session-handoff-"));
+    const projectRoot = join(root, "project");
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
+
+    mkdirSync(projectRoot, { recursive: true });
+    spawnSync("git", ["init", "-q"], { cwd: projectRoot, encoding: "utf-8" });
+    const gitRoot = spawnSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: projectRoot,
+      encoding: "utf-8",
+    }).stdout.trim();
+    const handoff = handoffPath(homeDir, gitRoot);
+    mkdirSync(resolve(handoff, ".."), { recursive: true });
+    writeFileSync(
+      handoff,
+      [
+        "# Handoff",
+        "WRITTEN: 2026-04-10T00:00:00Z",
+        `DIR: ${gitRoot}`,
+        "",
+        "NEXT: DO: resume-handoff-sentinel",
+        "GOAL: Verify explicit resume only [VERIFY: confirm this is still the right target before acting]",
+        "STATE:",
+        "- handoff-sentinel",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runSessionStart(projectRoot, homeDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Circuit continuity available");
+    expect(result.stdout).toContain("This is context only.");
+    expect(result.stdout).toContain("Fresh `/circuit:*` commands should be honored as the active task.");
+    expect(result.stdout).toContain("/circuit:handoff resume");
+    expect(result.stdout).toContain("pending handoff");
+    expect(result.stdout).not.toContain("handoff-sentinel");
+    expect(result.stdout).not.toContain("Resume from the handoff above.");
+    expect(result.stdout).not.toContain("execute NEXT");
+  });
+
+  it("refreshes event-backed runs before announcing passive active-run continuity", () => {
     const { projectRoot, runRoot } = createBuildRun("Refresh before injection");
     const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
 
@@ -41,10 +95,14 @@ describe("session-start integration", () => {
     const result = runSessionStart(projectRoot, homeDir);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Active circuit run detected");
-    expect(result.stdout).toContain("## Workflow\nBuild");
-    expect(result.stdout).toContain("## Goal\nRefresh before injection");
+    expect(result.stdout).toContain("Circuit continuity available");
+    expect(result.stdout).toContain("This is context only.");
+    expect(result.stdout).toContain("/circuit:handoff resume");
+    expect(result.stdout).toContain("active run");
+    expect(result.stdout).not.toContain("## Workflow\nBuild");
+    expect(result.stdout).not.toContain("Refresh before injection");
     expect(result.stdout).not.toContain("STALE");
+    expect(result.stdout).not.toContain("resume from the current phase");
 
     const refreshed = readFileSync(
       join(runRoot, "artifacts", "active-run.md"),
@@ -76,8 +134,9 @@ describe("session-start integration", () => {
     const result = runSessionStart(projectRoot, homeDir);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Active circuit run detected");
-    expect(result.stdout).toContain("## Workflow\nLegacy");
+    expect(result.stdout).toContain("Circuit continuity available");
+    expect(result.stdout).toContain("active run");
+    expect(result.stdout).not.toContain("## Workflow\nLegacy");
 
     const saved = readFileSync(join(runRoot, "artifacts", "active-run.md"), "utf-8");
     expect(saved).toContain("## Workflow\nLegacy");

@@ -26,7 +26,7 @@
       "kind": "utility",
       "public": true,
       "publicCommand": {
-        "description": "Save session state for the next session.",
+        "description": "Save or explicitly resume session continuity across session boundaries.",
         "invocation": "/circuit:handoff",
         "shimPath": "commands/handoff.md",
         "slash": "/circuit:handoff"
@@ -113,57 +113,62 @@
     {
       "executable": false,
       "path": "circuit.config.example.yaml",
-      "sha256": "d2581b4c893475225f4312dacb48fb9708f18006a4f40fc871c60886013385d7"
+      "sha256": "1b9f450a8805a2849dd8cab0e732c8c3c8da13edeeab9fb8043120f9258f761e"
     },
     {
       "executable": false,
       "path": "commands/build.md",
-      "sha256": "2e391d964b40ad42778459e8c7b045a9bb7dc07927bd875d3fa46b81d34f7172"
+      "sha256": "23c27c6dbf1d54a72587a2749a983a6cf06103242f51ec6c8efdaa967653e65d"
     },
     {
       "executable": false,
       "path": "commands/explore.md",
-      "sha256": "02a6bcfbeea1e5cd2e34f6fda5faff8175545938795032ff76247687fd1fcf22"
+      "sha256": "a5659924c2f35938e7ae38c2483da4c671566289c4b86827cd3c36377670cbba"
     },
     {
       "executable": false,
       "path": "commands/handoff.md",
-      "sha256": "77d20d1534db713c2332e3a5b8e1c72ae0e60f10d2e0f18d4c2458a622103b66"
+      "sha256": "cbc526a032e9b5de379ea0cb263ade769611c6d0769bd2a6a9d6a78113fdfd32"
     },
     {
       "executable": false,
       "path": "commands/migrate.md",
-      "sha256": "7d469fe77cfdad17330e57568fc1757fed67efe82d46af8850311609391bf75e"
+      "sha256": "46e31fdfac40a7fb7f669919aa67050db03f1e10b7e95b8bd56d510c632e2a51"
     },
     {
       "executable": false,
       "path": "commands/repair.md",
-      "sha256": "3b3466096ff45c4e2b856eb54a3c7282b3130d06dc97a7a84cc304c2dcbfb539"
+      "sha256": "bb3eadac393a54f5ab39298cd762973f2efd03091619ac417c9213a3d640eea6"
     },
     {
       "executable": false,
       "path": "commands/review.md",
-      "sha256": "23ecb7dad86949a5104fb694d0ce623d910ae73630596b3a56471ad091f25a84"
+      "sha256": "374e1fb79924631f165596034e50a676f29123d6ddfd57ce78e539c95e3e224a"
     },
     {
       "executable": false,
       "path": "commands/run.md",
-      "sha256": "3f7a699f1f10ff25f89adafdb8c3cf33c123682914a7344e82d0f62bda7caf91"
+      "sha256": "e88373c40ccb370bbcdafab21467185011445fdfeffbd04654023db9f22304ac"
     },
     {
       "executable": false,
       "path": "commands/sweep.md",
-      "sha256": "736e1436d763ce869566c16ec2b3f32a5ecf228cf1ac488831b1d27afd5611c1"
+      "sha256": "898bf2ca2f242d4ad7ca6c48a2437e5cf26ea60c34ed57acc6ef82e60a1650ee"
     },
     {
       "executable": false,
       "path": "hooks/hooks.json",
-      "sha256": "8422b78fd7d06a23d594948a37b2e141f458f268beb354a82be29337f7dfd9aa"
+      "sha256": "ec60f17560be3a2c00fce9769dcd3d5a945391bde2fa46b5548cd33de6c725d0"
     },
     {
       "executable": true,
       "path": "hooks/session-start.sh",
-      "sha256": "054e1b4280d12342a2057afbe0ae6ec2e552cbd58e75e32c9e25aee0e184e8de"
+      "sha256": "1d6ee2160016870b45c6822629b44ffeb2576f16d90150d925d2107172d54a15"
+    },
+    {
+      "executable": true,
+      "path": "hooks/user-prompt-submit.js",
+      "sha256": "b5f77c09113bcac47a05d96b26e73f1d49cdb7c7b5ea5951e09793d161f64023"
     },
     {
       "executable": false,
@@ -218,12 +223,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "7ef5dd155d3f8106b2b0319b7f19dd1d1d38d9c71740543b448848b8c64ca03a"
+      "sha256": "e6714e01c1058ba6873ce528440d7e42049042adf223c1306e551e270537b196"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "d75efd6e67c4dd40a3f14e957c82287b0b173aa37fb00546a7777f8d73bf2a77"
+      "sha256": "1f291cc3d9112033b82346b9ede4fc61310c29eee71a8402f6e05b9477f6f8f2"
     },
     {
       "executable": true,
@@ -268,7 +273,7 @@
     {
       "executable": true,
       "path": "scripts/sync-to-cache.sh",
-      "sha256": "965ec3d446dee44d66b6325907fbda209766a8741368e3763fb47c0b33a706e8"
+      "sha256": "0cb39fe6ea40b114e9dc2e073870c76a2215521fd74a797a6e79ee3cd42f0a35"
     },
     {
       "executable": true,
@@ -283,7 +288,7 @@
     {
       "executable": false,
       "path": "skills/build/SKILL.md",
-      "sha256": "8fca3a126b4329109c9ac5b565113b10ea1b72cc25e61133eb68bd3fd691f115"
+      "sha256": "2ce9df82662fdc16d10cc7e0aeb5773f0638ef103ec3df87d8462b4386812400"
     },
     {
       "executable": false,
@@ -293,7 +298,7 @@
     {
       "executable": false,
       "path": "skills/explore/SKILL.md",
-      "sha256": "3d97c9d11b6b7339abea4b1685eb2097655b72cacb0a1354482ad449a059bc4b"
+      "sha256": "291ed0fbad32531af2d547468a3d8875aa13f3b16c47b3dd254e199b76dd84d4"
     },
     {
       "executable": true,
@@ -303,7 +308,7 @@
     {
       "executable": false,
       "path": "skills/handoff/SKILL.md",
-      "sha256": "d570987fbadd8a504d98f3668738ae6aa701da9bc0b5e29b85b3db383f26ca2d"
+      "sha256": "86bc36256fb3123100e7e56557df320ae2d8c713cc98dee57cda519cc73d764d"
     },
     {
       "executable": false,
@@ -313,7 +318,7 @@
     {
       "executable": false,
       "path": "skills/migrate/SKILL.md",
-      "sha256": "9964213e5a66b5a10e8944894099621d4bd3bdf8d49a2a9e587913c7103ee83a"
+      "sha256": "f98fd0d9f89f0d489808293a7c79680f9c03ab59d3cc54740af2c0caa28819f6"
     },
     {
       "executable": false,
@@ -323,12 +328,12 @@
     {
       "executable": false,
       "path": "skills/repair/SKILL.md",
-      "sha256": "fcbd13820b512cf2c36cd7ffca193c146257891bd0ce9f4f1c3ab9b29c3f567a"
+      "sha256": "b82314f768a9ee1f3ceb1a5d6cc546bf247aac1621367e8faf731083ad0e6ff4"
     },
     {
       "executable": false,
       "path": "skills/review/SKILL.md",
-      "sha256": "907e3b051af0fb2b9bb42ffc5a1aca632c3dcb88545007e850f45ebb15d1edde"
+      "sha256": "020ddfcedf5eda6e237943cd12bd0c592049a319b417953e28be38f8448495cf"
     },
     {
       "executable": false,
@@ -353,7 +358,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "b6319cc046805ec15f5a5ad248e1c23da2714abb8cd7d6433392a3ce95afb809"
+      "sha256": "a8d714dcbf25bf91ff12c96919c86966c6e0c822ab2302be9f8d03143f39a948"
     },
     {
       "executable": false,
@@ -363,7 +368,7 @@
     {
       "executable": false,
       "path": "skills/sweep/SKILL.md",
-      "sha256": "73610be20a1ba641e084036ce670b28f7b061224d602e6c83e4f0886d6bf5a66"
+      "sha256": "6bcd24abb294757ee39ba6eb21fef0113a58b4a0f2da82cd1a36a02708010de2"
     },
     {
       "executable": false,

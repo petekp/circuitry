@@ -17,14 +17,24 @@ Standalone fresh-context audit. Not every review needs to go through a full circ
 
 Intake -> Independent Audit -> Verification Rerun -> Verdict
 
+## Fast Modes
+
+- Explicit scope: if the user names files, directories, or a diff target, use that scope immediately.
+- Current changes: if no explicit scope was given and the repo has uncommitted changes, review that diff immediately.
+- Recent commit diff: if there is no explicit scope and no uncommitted diff, review the most recent commit diff.
+
+Do not start with broad repo exploration. Scope selection is mechanical and happens before context gathering.
+
 ## Phase: Intake
 
 Determine what to review:
 
 1. If the user specifies files or a diff: use that scope.
-2. If there are uncommitted changes: review those.
-3. If there is a recent commit or branch diff: review that.
+2. If there are uncommitted changes: review that diff.
+3. If there is a recent commit diff: review that.
 4. Ask if unclear.
+
+Do not broaden the scope before these checks complete.
 
 Gather context:
 - What was the intent of these changes?

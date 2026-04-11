@@ -83,6 +83,24 @@ describe("build/run wiring", () => {
 
   it("documents Review as a direct reviewer dispatch with promoted artifacts before reconcile", () => {
     const reviewSection = extractPhaseSection(read("skills/build/SKILL.md"), "Review");
+    const reviewHeaderStart = reviewSection.indexOf('cat > "$REVIEW_ROOT/review-header.md"');
+    const composeStart = reviewSection.indexOf(
+      '"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh"',
+    );
+    const dispatchStart = reviewSection.indexOf('"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh"');
+    const reviewOutputCheckStart = reviewSection.indexOf("Check for the generated reviewer output");
+    const reviewHeaderBlock =
+      reviewHeaderStart === -1 || composeStart === -1
+        ? ""
+        : reviewSection.slice(reviewHeaderStart, composeStart);
+    const composeInvocation =
+      composeStart === -1 || dispatchStart === -1
+        ? ""
+        : reviewSection.slice(composeStart, dispatchStart);
+    const dispatchInvocation =
+      dispatchStart === -1 || reviewOutputCheckStart === -1
+        ? ""
+        : reviewSection.slice(dispatchStart, reviewOutputCheckStart);
 
     expect(reviewSection).toMatch(/directly in Build/i);
     expect(reviewSection).not.toMatch(/same as Act/i);
@@ -93,8 +111,21 @@ describe("build/run wiring", () => {
     expect(reviewSection).toContain("review-header.md");
     expect(reviewSection).toMatch(/compose-prompt\.sh/);
     expect(reviewSection).toMatch(/dispatch\.sh/);
-    expect(reviewSection).toMatch(/--template ship-review/);
-    expect(reviewSection).toMatch(/--circuit build/);
+    expect(reviewHeaderBlock).not.toContain("<task>");
+    expect(reviewHeaderBlock).toContain("artifacts/brief.md");
+    expect(reviewHeaderBlock).toContain("artifacts/plan.md");
+    expect(reviewHeaderBlock).toContain("artifacts/verification.md");
+    expect(reviewHeaderBlock).toContain("artifacts/implementation-handoff.md");
+    expect(composeInvocation).toContain("--circuit build");
+    expect(composeInvocation).toContain("--template ship-review");
+    expectOrdered(composeInvocation, [
+      '--header "$REVIEW_ROOT/review-header.md"',
+      "--circuit build",
+      "--template ship-review",
+      '--root "$REVIEW_ROOT"',
+      '--out "$REVIEW_ROOT/prompt.md"',
+    ]);
+    expect(dispatchInvocation).toContain("--circuit build");
     expect(reviewSection).toMatch(/independent review/i);
     expect(reviewSection).toMatch(/reviewer/i);
     expect(reviewSection).toMatch(/artifacts\/review\.md/);

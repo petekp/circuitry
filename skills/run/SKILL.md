@@ -27,6 +27,20 @@ The Circuit router. Classifies tasks, selects rigor, dispatches to the right wor
 /circuit:run overnight: <task>       # Sweep Autonomous
 ```
 
+## Direct Invocation Contract
+
+Action-first rules for `/circuit:run`:
+
+1. If the task prefix already fixes the route (`fix:`, `develop:`, `decide:`, `migrate:`, `cleanup:`, `overnight:`), take that route immediately.
+2. `/circuit:run develop: ...` resolves to Build. Bootstrap Build immediately or hand off into Build's bootstrap path immediately.
+3. Use Circuit helpers directly via `$CLAUDE_PLUGIN_ROOT`; do not inspect the plugin cache or repo structure to rediscover them.
+4. Do not use generic repo exploration or the trivial inline path before a predetermined route has created or validated workflow run state.
+5. Once a workflow is selected, create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.
+6. If the run is already bootstrapped, continue from the current phase instead of re-exploring.
+7. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.
+8. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.
+9. For Build smoke/bootstrap requests, never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run-state; semantic bootstrap must create it.
+
 ## Intent Hint Resolution
 
 Before routing, check for intent hints in the task prefix.
@@ -41,6 +55,43 @@ Before routing, check for intent hints in the task prefix.
 | `cleanup:` | Sweep | Standard | Skip routing. Dispatch directly. |
 | `overnight:` | Sweep | Autonomous | Skip routing. Dispatch directly. |
 | (none) | (classify) | (auto) | Run routing classification. |
+
+Intent-hint routing happens before the trivial inline path. When the slash command
+already picked the workflow, do not reinterpret it as a generic repo-understanding request.
+If the request explicitly says `smoke` and asks to bootstrap/verify the workflow surface,
+route directly and keep the task bootstrap-only.
+
+## Smoke Bootstrap Dispatch
+
+When an intent hint already selects the workflow and the task is an explicit smoke/bootstrap
+verification, do not stop at classification.
+
+- Execute the real workflow bootstrap path.
+- Validate the resulting `.circuit` files on disk.
+- Stop after reporting those run-state facts.
+- Do not substitute git branch/status checks or repo inventory for bootstrap evidence.
+- Do not hand-write Build smoke artifacts with `Write` or ad hoc shell file creation.
+
+For `/circuit:run develop: ...` smoke requests, use the real Build bootstrap path with Lite rigor:
+
+```bash
+RUN_SLUG="smoke-bootstrap-build-workflow-host-surface"  # derived from the task
+RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
+BUILD_ENTRY_MODE="lite"
+
+"$CLAUDE_PLUGIN_ROOT/scripts/relay/circuit-engine.sh" bootstrap \
+  --run-root "$RUN_ROOT" \
+  --manifest "$CLAUDE_PLUGIN_ROOT/skills/build/circuit.yaml" \
+  --entry-mode "$BUILD_ENTRY_MODE" \
+  --goal "<smoke bootstrap objective>" \
+  --project-root "$PWD"
+
+test -e .circuit/current-run
+test -f "$RUN_ROOT/circuit.manifest.yaml"
+test -f "$RUN_ROOT/events.ndjson"
+test -f "$RUN_ROOT/state.json"
+test -f "$RUN_ROOT/artifacts/active-run.md"
+```
 
 **Spec detection:** If the task includes an RFC, PRD, or spec document (file path
 or inline), route to Explore Deep with spec input mode.
@@ -78,6 +129,10 @@ Match signal patterns to determine the workflow:
 
 ### Step 3: Trivial Path Check
 
+Only use this inline path when the command did not already pin the workflow.
+If the user invoked `/circuit:run develop:` (or any other intent-hint prefix),
+stay on the workflow path and bootstrap it first.
+
 If the task is trivial (single file, obvious change, < 3 lines, no ambiguity),
 say so and do the work inline. No workflow overhead.
 
@@ -88,6 +143,7 @@ say so and do the work inline. No workflow overhead.
 **If classification is confident** (>80% of tasks):
 
 1. Set up the run root.
+   Do this before broader repo exploration.
    Build uses semantic bootstrap through `circuit-engine.sh`.
    Explore, Repair, Migrate, and Sweep stay on the legacy dashboard bootstrap path in this change set.
 2. Show a one-line summary:
