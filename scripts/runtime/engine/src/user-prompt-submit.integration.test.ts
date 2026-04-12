@@ -75,6 +75,46 @@ function makeInstalledHookRoot(root: string): string {
   return installRoot;
 }
 
+function writeCustomWorkflow(homeDir: string, slug: string): void {
+  const skillDir = resolve(homeDir, ".claude", "circuit", "skills", slug);
+  mkdirSync(skillDir, { recursive: true });
+  writeFileSync(
+    resolve(skillDir, "SKILL.md"),
+    [
+      "---",
+      `name: ${slug}`,
+      `description: "${slug} custom workflow. Additional detail."`,
+      "---",
+      "",
+      `# ${slug}`,
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  writeFileSync(
+    resolve(skillDir, "circuit.yaml"),
+    [
+      'schema_version: "2"',
+      "circuit:",
+      `  id: ${slug}`,
+      '  version: "2026-04-11"',
+      `  purpose: "${slug} custom workflow."`,
+      "  entry:",
+      "    usage: <task>",
+      "    signals:",
+      "      include: [research, deep_dive]",
+      "      exclude: [bug]",
+      "  entry_modes:",
+      "    default:",
+      "      start_at: frame",
+      '      description: "Default"',
+      "  steps: []",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
 describe("user-prompt-submit integration", () => {
   it("injects targeted Build smoke bootstrap context from generated contracts", () => {
     const result = runUserPromptSubmit(
@@ -147,6 +187,46 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
+  });
+
+  it("injects the custom routing overlay for /circuit:run when user-global circuits exist", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-custom-routing-"));
+    const homeDir = resolve(projectRoot, "home");
+    mkdirSync(homeDir, { recursive: true });
+    writeCustomWorkflow(homeDir, "research");
+
+    const result = runUserPromptSubmit("/circuit:run investigate auth provider choices", {
+      cwd: projectRoot,
+      env: { HOME: homeDir },
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Custom Routing Overlay");
+    expect(context).toContain("Built-ins win ties.");
+    expect(context).toContain("`/circuit:research`");
+    expect(context).toContain("include: deep_dive, research");
+    expect(context).toContain("exclude: bug");
+  });
+
+  it("surfaces a warning context when the custom routing catalog is malformed", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-custom-routing-error-"));
+    const homeDir = resolve(projectRoot, "home");
+    const brokenSkillDir = resolve(homeDir, ".claude", "circuit", "skills", "broken");
+
+    mkdirSync(brokenSkillDir, { recursive: true });
+    writeFileSync(resolve(brokenSkillDir, "SKILL.md"), "# broken\n", "utf-8");
+
+    const result = runUserPromptSubmit("/circuit:run investigate auth provider choices", {
+      cwd: projectRoot,
+      env: { HOME: homeDir },
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Custom Routing Overlay Unavailable");
+    expect(context).toContain("Do not consider user-global custom circuits");
+    expect(context).toContain("no YAML frontmatter found");
   });
 
   it("does not hijack ordinary legacy-workflow work that mentions smoke tests", () => {

@@ -15,6 +15,7 @@ CACHE_BASE="${CLAUDE_PLUGIN_CACHE_DIR:-$HOME/.claude/plugins/cache/petekp}"
 MARKETPLACE_DIR="${CLAUDE_PLUGIN_MARKETPLACE_DIR:-$HOME/.claude/plugins/marketplaces/petekp}"
 RSYNC_ARGS=(-a --checksum --delete --exclude '.vite/')
 LIST_SURFACE_ROOTS="$PLUGIN_ROOT/scripts/runtime/bin/list-installed-surface-roots.js"
+CUSTOM_CIRCUITS_CLI="$PLUGIN_ROOT/scripts/runtime/bin/custom-circuits.js"
 if [[ "$(basename "$CACHE_BASE")" == "petekp" ]]; then
   CACHE_ALIAS_ROOT="$(dirname "$CACHE_BASE")"
 else
@@ -214,6 +215,10 @@ sync_target() {
       "$target/circuit.config.example.yaml" || return 1
   else
     rm -f "$target/circuit.config.example.yaml" || return 1
+  fi
+
+  if [[ -f "$CUSTOM_CIRCUITS_CLI" ]]; then
+    "$NODE_BIN" "$CUSTOM_CIRCUITS_CLI" materialize --plugin-root "$target" >/dev/null || return 1
   fi
 
   if [[ "$label" == "marketplace" && -d "$target/.git" ]]; then

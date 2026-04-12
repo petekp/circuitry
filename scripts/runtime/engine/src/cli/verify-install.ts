@@ -238,7 +238,11 @@ function verifySurface(
   mode: InstalledSurfaceMode,
 ): void {
   reporter.section("Shipped surface");
-  const result = verifyInstalledSurface({ mode, pluginRoot });
+  const result = verifyInstalledSurface({
+    homeDir: process.env.HOME,
+    mode,
+    pluginRoot,
+  });
   if (result.ok) {
     reporter.pass("shipped surface manifest and installed filesystem agree");
     return;

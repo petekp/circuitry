@@ -202,6 +202,20 @@
       "canonical_invocation": "/circuit:build",
       "kind": "workflow"
     },
+    "create": {
+      "bootstrap_style": "guided-utility",
+      "helper_wrappers": [
+        "circuit-engine"
+      ],
+      "proof_artifacts": [
+        "~/.claude/circuit/drafts/<slug>/SKILL.md",
+        "~/.claude/circuit/drafts/<slug>/circuit.yaml",
+        "~/.claude/circuit/overlay/manifest.json"
+      ],
+      "stop_condition": "Draft, validate, summarize, and wait for explicit publish confirmation before materializing installed command surface changes.",
+      "canonical_invocation": "/circuit:create",
+      "kind": "utility"
+    },
     "explore": {
       "bootstrap_style": "semantic-bootstrap",
       "canonical_command": ".circuit/bin/circuit-engine bootstrap --workflow explore",

@@ -30,6 +30,11 @@ Start a new Claude Code session and run:
 ```
 
 Circuit classifies your task, picks the right workflow, and runs it.
+When you want a reusable workflow of your own, use:
+
+```
+/circuit:create {{workflow idea}}
+```
 
 ## How It Works
 
@@ -101,11 +106,13 @@ Review, Close, Pause**. Not every workflow goes through every phase, but the ord
 
 | You type | What happens |
 |----------|-------------|
+| `/circuit:create` | Draft, validate, and publish a user-global custom circuit |
 | `/circuit:review` | Standalone fresh-context code review |
 | `/circuit:handoff` | Save session state for the next session |
 
 See [CIRCUITS.md](CIRCUITS.md) for the full catalog with phase breakdowns and
-usage examples.
+usage examples. See [CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md) for the end-user
+create/publish flow and the manual authoring track.
 
 ## Key Features
 
@@ -243,7 +250,7 @@ and start fresh.
 ## Further Reading
 
 - **[CIRCUITS.md](CIRCUITS.md):** Catalog/reference.
-- **[CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md):** How to create your own custom circuit workflows.
+- **[CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md):** End-user create/publish flow plus manual custom circuit authoring.
 
 ## License
 

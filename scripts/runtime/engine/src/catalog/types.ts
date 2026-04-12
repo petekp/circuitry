@@ -4,10 +4,18 @@
  */
 
 export type CircuitKind = "workflow" | "utility" | "adapter";
+export type CircuitOrigin = "shipped" | "user_global";
+
+export interface WorkflowSignals {
+  exclude: string[];
+  include: string[];
+}
 
 interface BaseEntry {
   dir: string;
+  origin: CircuitOrigin;
   skillDescription: string;
+  skillMdPath: string;
   skillName: string;
   slug: string;
 }
@@ -16,7 +24,9 @@ export interface WorkflowEntry extends BaseEntry {
   kind: "workflow";
   entryModes: string[];
   entryUsage?: string;
+  manifestPath: string;
   purpose: string;
+  signals: WorkflowSignals;
   version: string;
 }
 

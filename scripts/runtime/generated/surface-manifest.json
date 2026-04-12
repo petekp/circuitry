@@ -12,6 +12,17 @@
       "slug": "build"
     },
     {
+      "kind": "utility",
+      "public": true,
+      "publicCommand": {
+        "description": "Generate, validate, and publish a user-global custom circuit workflow.",
+        "invocation": "/circuit:create",
+        "shimPath": "commands/create.md",
+        "slash": "/circuit:create"
+      },
+      "slug": "create"
+    },
+    {
       "kind": "workflow",
       "public": true,
       "publicCommand": {
@@ -108,7 +119,7 @@
     {
       "executable": false,
       "path": ".claude-plugin/public-commands.txt",
-      "sha256": "76f7b559dcb33ab6fe0137b84793148de93336b80c3d7c3c3c02ae4f54d22f39"
+      "sha256": "f2147c5522979012a0e385c2c7514e8663e45fe786aebf75cae64a595d63819b"
     },
     {
       "executable": false,
@@ -119,6 +130,11 @@
       "executable": false,
       "path": "commands/build.md",
       "sha256": "d9f16a190004a76e4961fd001892746e9b3fd3ad82fe8a666b048db60cbb37e7"
+    },
+    {
+      "executable": false,
+      "path": "commands/create.md",
+      "sha256": "9ea1bd8f3d0281292b26ccd798c696ec5c5296c38cbc6fb3aa17ed445cd53acb"
     },
     {
       "executable": false,
@@ -223,7 +239,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "0245d16e3a2a93b527cfa35977dec6642607ad7ef95796eef385f01157257e7e"
+      "sha256": "236666efb9428f9d104c375c72a697574cd915116d01254d192deb14c4858e5f"
     },
     {
       "executable": true,
@@ -234,6 +250,11 @@
       "executable": true,
       "path": "scripts/runtime/bin/continuity.js",
       "sha256": "7dc606a762706b4afeda40e47facc26dba98519e1563653f30d9857ee274b906"
+    },
+    {
+      "executable": true,
+      "path": "scripts/runtime/bin/custom-circuits.js",
+      "sha256": "afbd93199a813cb6c4883ed6712b2ee300a89dc09a0f2cdf1b786c02b8a569f5"
     },
     {
       "executable": true,
@@ -263,7 +284,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "dedf784a7a31d75f52c2ed0eac7b6d91a088b03da60f825b7fe57ecefc148d93"
+      "sha256": "c13eff2d50ab15cc20ceee3a0fe8296ac34fe7c635f4d199f99418561ad22fa9"
     },
     {
       "executable": true,
@@ -278,22 +299,22 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "7289c84591a77f1fbb70c3390f99f1577547830bc5e9e69631fc6e73e17207d3"
+      "sha256": "abe367aa635e015a1555be2ef5e0ba8e50e9c4c47b0863697c5336df9c519560"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "52d72767ff42c1fa6dff1d4b46fff0c4f5488cbc8dc7b2da55eea9bf2e4bf56c"
+      "sha256": "038db05d9b84c7700e214d0b6647941357f47221bba1cd1a07059838b241b9c4"
     },
     {
       "executable": false,
       "path": "scripts/runtime/generated/prompt-contracts.json",
-      "sha256": "81c8c513dcb3d1835b2a29d61c9962408261c20090aab1dca5499a02551fbf21"
+      "sha256": "0f656b86b93d4c18a98b10202fe4cb6a149cff1927592d5bae3cdfb4bf6183a9"
     },
     {
       "executable": true,
       "path": "scripts/sync-to-cache.sh",
-      "sha256": "d5c273054d0b934f60c220721f0dce6a65f4e5885b942df1e7301c74a2ad54b8"
+      "sha256": "9e8deef8a5cf1d2a276a004e766ca131761531a59362c3284df1981baee6c592"
     },
     {
       "executable": true,
@@ -309,6 +330,11 @@
       "executable": false,
       "path": "skills/build/SKILL.md",
       "sha256": "22f07e3023bf2e3c26dd211748c9767456b7016027cb71754685576f44dd72bf"
+    },
+    {
+      "executable": false,
+      "path": "skills/create/SKILL.md",
+      "sha256": "6117dece2911026eabca5b061e7cff49e003ad4716578e0375dcc6e66f4ce5dd"
     },
     {
       "executable": false,
@@ -378,7 +404,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "ab197ca8dcc9bef33699bdfd4a52be99968e95960769ff9eebad7e6321641821"
+      "sha256": "38c5a935295bc6b018841b2177bda76e63f2c29210391f108198a8cf0288cf98"
     },
     {
       "executable": false,
@@ -437,6 +463,7 @@
   },
   "public_commands": [
     "build",
+    "create",
     "explore",
     "handoff",
     "migrate",

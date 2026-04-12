@@ -5,6 +5,7 @@ const ENTRY_POINTS = [
   "src/cli/catalog-compiler.ts",
   "src/cli/circuit-engine.ts",
   "src/cli/continuity.ts",
+  "src/cli/custom-circuits.ts",
   "src/cli/dispatch.ts",
   "src/cli/derive-state.ts",
   "src/cli/list-installed-surface-roots.ts",
