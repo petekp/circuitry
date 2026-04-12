@@ -27,6 +27,7 @@ function printWelcome(): void {
       "  /circuit:run fix: login form rejects valid emails       Bug fix with test-first discipline",
       "  /circuit:run add dark mode support to the settings page  Router picks the right workflow",
       "  /circuit:run decide: REST vs GraphQL for the new API     Adversarial evaluation of options",
+      "  /circuit:create research workflow for RFC pre-reads      Draft and publish a reusable custom circuit",
       "",
       "Circuit classifies your task into the right workflow (Explore, Build, Repair,",
       "Migrate, Sweep), selects a rigor level, and runs it. You step in at checkpoints.",

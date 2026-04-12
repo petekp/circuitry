@@ -9,13 +9,16 @@ import { parse as parseYaml } from "yaml";
 import type {
   AdapterEntry,
   Catalog,
+  CircuitOrigin,
   CircuitIR,
   UtilityEntry,
   WorkflowEntry,
+  WorkflowSignals,
 } from "./types.js";
 
 interface ExtractOptions {
   exists?: (path: string) => boolean;
+  origin?: CircuitOrigin;
   readDir?: (path: string) => string[];
   readFile?: (path: string) => string;
 }
@@ -93,6 +96,48 @@ function getOptionalUsage(entry: Record<string, unknown>, filePath: string): str
   return value.trim();
 }
 
+function getWorkflowSignals(
+  entry: Record<string, unknown>,
+  filePath: string,
+): WorkflowSignals {
+  const rawSignals = entry.signals;
+  if (rawSignals == null) {
+    return {
+      exclude: [],
+      include: [],
+    };
+  }
+
+  if (typeof rawSignals !== "object" || Array.isArray(rawSignals)) {
+    throw new Error(`catalog-compiler: ${filePath} -- entry.signals must be a mapping`);
+  }
+
+  const signals = rawSignals as Record<string, unknown>;
+  const include = parseSignalList(signals.include, "include", filePath);
+  const exclude = parseSignalList(signals.exclude, "exclude", filePath);
+
+  return {
+    exclude,
+    include,
+  };
+}
+
+function parseSignalList(
+  value: unknown,
+  key: "include" | "exclude",
+  filePath: string,
+): string[] {
+  if (value == null) {
+    return [];
+  }
+
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim().length === 0)) {
+    throw new Error(`catalog-compiler: ${filePath} -- entry.signals.${key} must be a string array`);
+  }
+
+  return [...value].map((item) => item.trim()).sort();
+}
+
 function getRequiredWorkflowString(
   circuit: Record<string, unknown>,
   key: string,
@@ -142,6 +187,7 @@ export function extract(skillsDir: string, opts?: ExtractOptions): Catalog {
       .map((entry) => entry.name)
   );
   const exists = opts?.exists ?? ((path: string) => existsSync(path));
+  const origin = opts?.origin ?? "shipped";
 
   const entries: CircuitIR[] = [];
 
@@ -170,7 +216,9 @@ export function extract(skillsDir: string, opts?: ExtractOptions): Catalog {
       const entry: UtilityEntry | AdapterEntry = {
         dir,
         kind: role,
+        origin,
         skillDescription,
+        skillMdPath,
         skillName,
         slug: dir,
       };
@@ -220,8 +268,12 @@ export function extract(skillsDir: string, opts?: ExtractOptions): Catalog {
       entryModes: getSortedEntryModes(circuitObject, circuitYamlPath),
       entryUsage: getOptionalUsage(entryObject, circuitYamlPath),
       kind: "workflow",
+      manifestPath: circuitYamlPath,
+      origin,
       purpose: getRequiredWorkflowString(circuitObject, "purpose", circuitYamlPath),
+      signals: getWorkflowSignals(entryObject, circuitYamlPath),
       skillDescription,
+      skillMdPath,
       skillName,
       slug: dir,
       version: getRequiredWorkflowString(circuitObject, "version", circuitYamlPath),

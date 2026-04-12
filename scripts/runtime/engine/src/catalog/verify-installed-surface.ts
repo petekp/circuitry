@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { readOverlayManifest, type OverlayManifest } from "./custom-circuits.js";
 import {
   collectSurfaceFiles,
   isExecutableFile,
@@ -27,6 +28,7 @@ export interface VerificationResult {
 }
 
 export interface VerifyInstalledSurfaceOptions {
+  homeDir?: string;
   mode: InstalledSurfaceMode;
   pluginRoot: string;
 }
@@ -100,6 +102,19 @@ function loadManifest(pluginRoot: string, errors: string[]): SurfaceManifest | n
   return manifest;
 }
 
+function loadOverlay(homeDir: string | undefined, errors: string[]): OverlayManifest | null {
+  try {
+    return readOverlayManifest(homeDir ?? process.env.HOME);
+  } catch (error) {
+    errors.push(
+      `invalid custom overlay manifest: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return null;
+  }
+}
+
 function verifyInstalledTopLevel(
   pluginRoot: string,
   mode: InstalledSurfaceMode,
@@ -163,12 +178,25 @@ function verifyManifestStructure(manifest: SurfaceManifest, errors: string[]): v
 function verifyManifestFiles(
   pluginRoot: string,
   manifest: SurfaceManifest,
-  mode: InstalledSurfaceMode,
+  options: VerifyInstalledSurfaceOptions,
   errors: string[],
 ): void {
-  const actualFiles = collectActualFiles(pluginRoot, mode, errors);
+  const actualFiles = collectActualFiles(pluginRoot, options.mode, errors);
   const expectedFileMap = new Map(manifest.files.map((file) => [file.path, file]));
-  const expectedFiles = [...expectedFileMap.keys(), SURFACE_MANIFEST_PATH].sort();
+  const unexpectedFiles = actualFiles.filter((relativePath) =>
+    relativePath !== SURFACE_MANIFEST_PATH && !expectedFileMap.has(relativePath)
+  );
+  const overlay = unexpectedFiles.length > 0
+    ? loadOverlay(options.homeDir, errors)
+    : null;
+  const overlayFileMap = new Map(
+    (overlay?.circuits ?? []).map((entry) => [entry.commandFile.path, entry.commandFile]),
+  );
+  const expectedFiles = [
+    ...expectedFileMap.keys(),
+    ...overlayFileMap.keys(),
+    SURFACE_MANIFEST_PATH,
+  ].sort();
 
   if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
     errors.push(
@@ -180,6 +208,28 @@ function verifyManifestFiles(
     const absolutePath = resolve(pluginRoot, relativePath);
     if (!existsSync(absolutePath)) {
       errors.push(`missing shipped file ${relativePath}`);
+      continue;
+    }
+
+    const expectedSha256 = overlay?.publicCommandsFile.path === relativePath
+      ? overlay.publicCommandsFile.sha256
+      : file.sha256;
+    const expectedExecutable = overlay?.publicCommandsFile.path === relativePath
+      ? overlay.publicCommandsFile.executable
+      : file.executable;
+
+    if (expectedSha256 !== sha256File(absolutePath)) {
+      errors.push(`sha256 mismatch for ${relativePath}`);
+    }
+    if (Boolean(expectedExecutable) !== isExecutableFile(absolutePath)) {
+      errors.push(`executable-bit mismatch for ${relativePath}`);
+    }
+  }
+
+  for (const [relativePath, file] of overlayFileMap.entries()) {
+    const absolutePath = resolve(pluginRoot, relativePath);
+    if (!existsSync(absolutePath)) {
+      errors.push(`missing overlay-managed file ${relativePath}`);
       continue;
     }
 
@@ -201,7 +251,7 @@ export function verifyInstalledSurface(
   if (manifest) {
     verifyInstalledTopLevel(options.pluginRoot, options.mode, errors);
     verifyManifestStructure(manifest, errors);
-    verifyManifestFiles(options.pluginRoot, manifest, options.mode, errors);
+    verifyManifestFiles(options.pluginRoot, manifest, options, errors);
   }
 
   return {

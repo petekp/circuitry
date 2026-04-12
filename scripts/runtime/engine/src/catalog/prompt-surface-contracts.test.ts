@@ -10,7 +10,7 @@ import {
   renderCommandShim,
   renderPromptContractsJson,
 } from "./prompt-surface-contracts.js";
-import type { Catalog, WorkflowEntry } from "./types.js";
+import type { Catalog, UtilityEntry, WorkflowEntry } from "./types.js";
 
 const catalog = extract(resolve(REPO_ROOT, "skills"));
 
@@ -18,6 +18,15 @@ function getWorkflowEntry(slug: string): WorkflowEntry {
   const entry = catalog.find((candidate) => candidate.slug === slug);
   if (!entry || entry.kind !== "workflow") {
     throw new Error(`expected workflow entry for ${slug}`);
+  }
+
+  return entry;
+}
+
+function getUtilityEntry(slug: string): UtilityEntry {
+  const entry = catalog.find((candidate) => candidate.slug === slug);
+  if (!entry || entry.kind !== "utility") {
+    throw new Error(`expected utility entry for ${slug}`);
   }
 
   return entry;
@@ -78,6 +87,7 @@ describe("prompt surface contracts", () => {
     ]);
     expect(Object.keys(manifest.surfaces).sort()).toEqual([
       "build",
+      "create",
       "explore",
       "handoff",
       "migrate",
@@ -89,6 +99,7 @@ describe("prompt surface contracts", () => {
     ]);
     expect(manifest.surfaces).toMatchObject({
       build: { bootstrap_style: "semantic-bootstrap" },
+      create: { bootstrap_style: "guided-utility" },
       explore: { bootstrap_style: "semantic-bootstrap" },
       handoff: { bootstrap_style: "fast-mode-first" },
       migrate: { bootstrap_style: "semantic-bootstrap" },
@@ -213,6 +224,23 @@ describe("prompt surface contracts", () => {
       For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, \`artifacts/active-run.md\` is a failure; use \`.circuit/bin/circuit-engine bootstrap\` instead.
       Inside that skill, execute its compiled contract block before unrelated repo exploration.
       Do not reinterpret this command as a generic repo-understanding request.
+      "
+    `);
+  });
+
+  it("renders the create command shim", () => {
+    expect(renderCommandShim(getUtilityEntry("create"))).toMatchInlineSnapshot(`
+      "---
+      description: "Generate, validate, and publish a user-global custom circuit workflow."
+      ---
+
+      Direct utility invocation for \`/circuit:create\`.
+
+      Launch the \`circuit:create\` skill immediately.
+      First resolve the installed plugin root from \`.circuit/plugin-root\`.
+      Do not search the whole repo, plugin cache, or \`$HOME\` to rediscover Circuit docs or skills.
+      Use exact paths plus the bundled \`custom-circuits\` helper CLI for catalog checks, draft validation, and publish.
+      Keep shell steps short and single-purpose; avoid long chained one-liners unless they are unavoidable.
       "
     `);
   });
@@ -422,6 +450,20 @@ describe("prompt surface contracts", () => {
             ],
             "canonical_invocation": "/circuit:build",
             "kind": "workflow"
+          },
+          "create": {
+            "bootstrap_style": "guided-utility",
+            "helper_wrappers": [
+              "circuit-engine"
+            ],
+            "proof_artifacts": [
+              "~/.claude/circuit/drafts/<slug>/SKILL.md",
+              "~/.claude/circuit/drafts/<slug>/circuit.yaml",
+              "~/.claude/circuit/overlay/manifest.json"
+            ],
+            "stop_condition": "Draft, validate, summarize, and wait for explicit publish confirmation before materializing installed command surface changes.",
+            "canonical_invocation": "/circuit:create",
+            "kind": "utility"
           },
           "explore": {
             "bootstrap_style": "semantic-bootstrap",

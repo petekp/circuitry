@@ -111,6 +111,19 @@ route directly and keep the task bootstrap-only.
 **Spec detection:** If the task includes an RFC, PRD, or spec document (file path
 or inline), route to Explore Deep with spec input mode.
 
+## Custom Circuit Overlay
+
+If the prompt includes a `Circuit Custom Routing Overlay` block, treat those
+custom circuits as additional router candidates.
+
+Routing rules for custom circuits:
+
+1. Built-in explicit prefixes (`fix:`, `develop:`, `decide:`, `migrate:`, `cleanup:`, `overnight:`) still win immediately.
+2. Otherwise compare the strongest built-in route with the strongest custom-circuit match.
+3. Choose a custom circuit only when it is a stronger match than the best built-in candidate.
+4. Built-ins win ties.
+5. If the best custom and built-in candidates are too close to distinguish, ask one sharp routing question.
+
 ## Routing Classification
 
 **Quiet by default.** Route and proceed unless ambiguity or risk is material.

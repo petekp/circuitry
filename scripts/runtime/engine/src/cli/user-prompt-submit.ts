@@ -7,6 +7,7 @@ import {
   inspectContinuity,
   type ContinuityInspection,
 } from "../continuity.js";
+import { renderRunCustomCircuitContext } from "../catalog/custom-circuits.js";
 import type { PromptContractsManifest } from "../catalog/prompt-surface-contracts.js";
 import { PROMPT_CONTRACTS_PATH } from "../catalog/prompt-surface-contracts.js";
 import { REPO_ROOT } from "../schema.js";
@@ -168,6 +169,19 @@ function emitContext(additionalContext: string): never {
   process.exit(0);
 }
 
+function renderCustomRoutingUnavailableContext(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+
+  return [
+    "# Circuit Custom Routing Overlay Unavailable",
+    "Do not consider user-global custom circuits for this `/circuit:run` request.",
+    "Route only among the built-in workflows unless the user invokes a custom circuit directly.",
+    "",
+    "## Reason",
+    reason,
+  ].join("\n");
+}
+
 function resolutionLines(
   inspection: ContinuityInspection,
   options: { explicitResume: boolean },
@@ -302,6 +316,17 @@ function main(): number {
 
   if (requestsSavedHandoff(command)) {
     emitContext(renderHandoffReferenceContext(command, continuity));
+  }
+
+  if (command.slug === "run") {
+    try {
+      const customRoutingContext = renderRunCustomCircuitContext(process.env.HOME);
+      if (customRoutingContext) {
+        emitContext(customRoutingContext);
+      }
+    } catch (error) {
+      emitContext(renderCustomRoutingUnavailableContext(error));
+    }
   }
 
   return 0;

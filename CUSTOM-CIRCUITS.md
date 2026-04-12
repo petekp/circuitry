@@ -1,6 +1,40 @@
-# Creating Custom Circuit Workflows
+# Custom Circuits
 
-This guide walks through building your own circuit workflow from scratch. A
+Circuit supports two custom-circuit tracks:
+
+1. **End-user create/publish flow** via `/circuit:create`
+2. **Maintainer hand-authoring flow** when you want to build the files yourself
+
+Both paths end at the same user-global source root:
+
+```text
+~/.claude/circuit/skills/<slug>/
+  SKILL.md
+  circuit.yaml
+```
+
+Published custom circuits become real `/circuit:<slug>` commands after you run
+`/reload-plugins`.
+
+## Track 1: End-User Create/Publish
+
+Use `/circuit:create <workflow idea>` when you want Circuit to draft a reusable
+workflow for you.
+
+The create flow:
+
+1. Infers the slug, archetype, purpose, invocation, and routing signals.
+2. Drafts `SKILL.md` + `circuit.yaml` into `~/.claude/circuit/drafts/<slug>/`.
+3. Validates the draft by bootstrapping the manifest directly through the engine.
+4. Shows a publish summary and waits for your confirmation.
+5. On confirmation, promotes the draft into `~/.claude/circuit/skills/<slug>/`,
+   updates the overlay manifest, and materializes the installed command surface.
+
+After publish, run `/reload-plugins` so the slash menu refreshes.
+
+## Track 2: Maintainer Hand-Authoring
+
+This track walks through building a custom circuit workflow from scratch. A
 circuit is two files: `circuit.yaml` (the topology) and `SKILL.md` (the
 execution contract). Together they define the steps, gates, artifacts, and
 routing that the engine follows.

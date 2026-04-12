@@ -11,6 +11,10 @@ import { mkdtempSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  materializeCustomCommandSurface,
+  resolveCircuitHomePaths,
+} from "./custom-circuits.js";
 import { generate } from "./generate.js";
 import { getGenerateTargets } from "./generate-targets.js";
 import type { Catalog } from "./types.js";
@@ -85,6 +89,11 @@ function writeFixture(root: string): void {
   writeFileSync(
     resolve(root, "skills/build/SKILL.md"),
     [
+      "---",
+      "name: build",
+      'description: "Build things."',
+      "---",
+      "",
       "# Build",
       "",
       "<!-- BEGIN BUILD_CONTRACT -->",
@@ -93,10 +102,35 @@ function writeFixture(root: string): void {
     ].join("\n"),
     "utf-8",
   );
-  writeFileSync(resolve(root, "skills/build/circuit.yaml"), "id: build\n", "utf-8");
+  writeFileSync(
+    resolve(root, "skills/build/circuit.yaml"),
+    [
+      'schema_version: "2"',
+      "circuit:",
+      "  id: build",
+      '  version: "2026-04-11"',
+      '  purpose: "Build things."',
+      "  entry:",
+      "    signals:",
+      "      include: [feature]",
+      "      exclude: []",
+      "  entry_modes:",
+      "    default:",
+      "      start_at: frame",
+      "  steps: []",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
   writeFileSync(
     resolve(root, "skills/handoff/SKILL.md"),
     [
+      "---",
+      "name: handoff",
+      'description: "Save session state."',
+      "role: utility",
+      "---",
+      "",
       "# Handoff",
       "",
       "<!-- BEGIN HANDOFF_FAST_MODES -->",
@@ -108,6 +142,12 @@ function writeFixture(root: string): void {
   writeFileSync(
     resolve(root, "skills/workers/SKILL.md"),
     [
+      "---",
+      "name: workers",
+      'description: "Internal adapter."',
+      "role: adapter",
+      "---",
+      "",
       "# Workers",
       "",
       "<!-- BEGIN WORKERS_HELPERS -->",
@@ -139,6 +179,45 @@ function writeFixture(root: string): void {
   );
 
   generate(SAMPLE_CATALOG, getGenerateTargets(root, SAMPLE_CATALOG));
+}
+
+function writeCustomWorkflow(root: string, slug: string): void {
+  const skillDir = resolve(root, slug);
+  mkdirSync(skillDir, { recursive: true });
+  writeFileSync(
+    resolve(skillDir, "SKILL.md"),
+    [
+      "---",
+      `name: ${slug}`,
+      `description: "${slug} custom workflow."`,
+      "---",
+      "",
+      `# ${slug}`,
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  writeFileSync(
+    resolve(skillDir, "circuit.yaml"),
+    [
+      'schema_version: "2"',
+      "circuit:",
+      `  id: ${slug}`,
+      '  version: "2026-04-11"',
+      `  purpose: "${slug} custom workflow."`,
+      "  entry:",
+      "    signals:",
+      "      include: [research]",
+      "      exclude: []",
+      "  entry_modes:",
+      "    default:",
+      "      start_at: frame",
+      '      description: "Default"',
+      "  steps: []",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 function makeFixture(): string {
@@ -180,6 +259,44 @@ describe("verifyInstalledSurface", () => {
     rmSync(resolve(root, "CIRCUITS.md"));
 
     expect(verifyInstalledSurface({ mode: "installed", pluginRoot: root })).toEqual({
+      errors: [],
+      ok: true,
+    });
+  });
+
+  it("passes in installed mode when overlay-managed custom commands are declared in the user manifest", () => {
+    const root = makeFixture();
+    const homeDir = mkdtempSync(resolve(tmpdir(), "circuit-installed-overlay-home-"));
+    const { skillsRoot } = resolveCircuitHomePaths(homeDir);
+
+    rmSync(resolve(root, "CIRCUITS.md"));
+    writeCustomWorkflow(skillsRoot, "research");
+    materializeCustomCommandSurface({
+      homeDir,
+      pluginRoot: root,
+    });
+
+    expect(verifyInstalledSurface({ homeDir, mode: "installed", pluginRoot: root })).toEqual({
+      errors: [],
+      ok: true,
+    });
+  });
+
+  it("ignores ambient overlay state for install roots that were not materialized", () => {
+    const root = makeFixture();
+    const otherRoot = makeFixture();
+    const homeDir = mkdtempSync(resolve(tmpdir(), "circuit-installed-overlay-home-"));
+    const { skillsRoot } = resolveCircuitHomePaths(homeDir);
+
+    rmSync(resolve(root, "CIRCUITS.md"));
+    rmSync(resolve(otherRoot, "CIRCUITS.md"));
+    writeCustomWorkflow(skillsRoot, "research");
+    materializeCustomCommandSurface({
+      homeDir,
+      pluginRoot: otherRoot,
+    });
+
+    expect(verifyInstalledSurface({ homeDir, mode: "installed", pluginRoot: root })).toEqual({
       errors: [],
       ok: true,
     });

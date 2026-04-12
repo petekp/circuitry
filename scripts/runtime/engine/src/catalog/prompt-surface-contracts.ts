@@ -136,6 +136,16 @@ const SURFACE_SUMMARIES: Record<string, Omit<PromptSurfaceSummary, "canonical_in
     stop_condition: "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Plan, Act, Verify, Review, or Close.",
     forbidden_manual_fabrication: BUILD_PROOF_ARTIFACTS,
   },
+  create: {
+    bootstrap_style: "guided-utility",
+    helper_wrappers: ["circuit-engine"],
+    proof_artifacts: [
+      "~/.claude/circuit/drafts/<slug>/SKILL.md",
+      "~/.claude/circuit/drafts/<slug>/circuit.yaml",
+      "~/.claude/circuit/overlay/manifest.json",
+    ],
+    stop_condition: "Draft, validate, summarize, and wait for explicit publish confirmation before materializing installed command surface changes.",
+  },
   explore: {
     bootstrap_style: "semantic-bootstrap",
     canonical_command: `${LOCAL_HELPER_DIR}/circuit-engine bootstrap --workflow explore`,
@@ -645,6 +655,21 @@ export function renderPromptContractsJson(catalog: Catalog): string {
 }
 
 function renderWorkflowCommandShim(entry: WorkflowEntry): string {
+  if (entry.origin === "user_global") {
+    return [
+      `Direct custom slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`,
+      "",
+      "This command is overlay-managed from the user-global custom circuit catalog.",
+      `Before broader repo exploration, verify \`${entry.skillMdPath}\` and \`${entry.manifestPath}\` both exist.`,
+      `Read \`${entry.skillMdPath}\` directly and treat it as the authoritative execution contract for this command.`,
+      `For explicit smoke/bootstrap verification, bootstrap with \`${LOCAL_HELPER_DIR}/circuit-engine bootstrap --manifest "${entry.manifestPath}"\` and validate the resulting run state before stopping.`,
+      "Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.",
+      "Treat this custom workflow as already selected. Do not reroute it through `/circuit:run`.",
+      "If the external skill or manifest is missing, stop and tell the user to recreate or republish the custom circuit with `/circuit:create`.",
+      "",
+    ].join("\n");
+  }
+
   const summary = getSurfaceSummary(entry);
   const lines = [
     `Direct slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`,
@@ -669,6 +694,19 @@ function renderWorkflowCommandShim(entry: WorkflowEntry): string {
 }
 
 function renderUtilityCommandShim(entry: UtilityEntry): string {
+  if (entry.slug === "create") {
+    return [
+      `Direct utility invocation for \`${getPublicCommandInvocation(entry)}\`.`,
+      "",
+      "Launch the `circuit:create` skill immediately.",
+      "First resolve the installed plugin root from `.circuit/plugin-root`.",
+      "Do not search the whole repo, plugin cache, or `$HOME` to rediscover Circuit docs or skills.",
+      "Use exact paths plus the bundled `custom-circuits` helper CLI for catalog checks, draft validation, and publish.",
+      "Keep shell steps short and single-purpose; avoid long chained one-liners unless they are unavoidable.",
+      "",
+    ].join("\n");
+  }
+
   return [
     `Direct utility invocation for \`${getPublicCommandInvocation(entry)}\`.`,
     "",
