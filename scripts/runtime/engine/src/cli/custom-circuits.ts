@@ -2,6 +2,8 @@
 
 import { resolve } from "node:path";
 
+import { unknownOption } from "./unknown-option.js";
+
 import {
   loadMergedCatalog,
   loadShippedCatalog,
@@ -93,7 +95,7 @@ function parseArgs(argv: string[]): ParsedArgs {
         index++;
         break;
       default:
-        throw new Error(`custom-circuits: unknown option ${value}`);
+        throw new Error(unknownOption(value, ["--entry-mode", "--goal", "--home", "--plugin-root", "--include-marketplace", "--project-root", "--scope", "--slug"]));
     }
   }
 

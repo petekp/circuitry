@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { verifyInstalledSurface } from "../catalog/verify-installed-surface.js";
 import type { InstalledSurfaceMode } from "../catalog/surface-roots.js";
 import { REPO_ROOT } from "../schema.js";
+import { unknownOption } from "./unknown-option.js";
 
 interface CliArgs {
   mode: InstalledSurfaceMode;
@@ -62,7 +63,7 @@ function parseArgs(argv: string[]): CliArgs {
         pluginRoot = resolve(argv[++index]);
         break;
       default:
-        throw new Error(`Unknown option: ${value}`);
+        throw new Error(unknownOption(value, ["--mode", "--plugin-root"]));
     }
   }
 

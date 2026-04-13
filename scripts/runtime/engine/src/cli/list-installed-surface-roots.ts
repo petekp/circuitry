@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { listInstalledSurfaceRoots, listInstalledSurfaceSeedPaths } from "../catalog/surface-roots.js";
+import { unknownOption } from "./unknown-option.js";
 
 function main(): number {
   const args = process.argv.slice(2);
@@ -8,7 +9,7 @@ function main(): number {
   const unknownArgs = args.filter((arg) => arg !== "--repo-paths");
 
   if (unknownArgs.length > 0) {
-    process.stderr.write(`Unknown option(s): ${unknownArgs.join(", ")}\n`);
+    process.stderr.write(`${unknownOption(unknownArgs.join(", "), ["--repo-paths"])}\n`);
     return 1;
   }
 

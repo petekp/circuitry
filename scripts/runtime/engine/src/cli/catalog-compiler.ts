@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { extract } from "../catalog/extract.js";
 import { getGenerateTargets, pruneStaleCommandShims } from "../catalog/generate-targets.js";
 import { collectPendingWrites, generate } from "../catalog/generate.js";
+import { unknownOption } from "./unknown-option.js";
 
 const MODULE_DIR =
   typeof __dirname !== "undefined"
@@ -56,7 +57,7 @@ function main(): number {
 
   const unknownArgs = extraArgs.filter((arg) => arg !== "--check");
   if (unknownArgs.length > 0) {
-    process.stderr.write(`catalog-compiler: unknown option(s): ${unknownArgs.join(", ")}\n`);
+    process.stderr.write(`${unknownOption(unknownArgs.join(", "), ["--check"])}\n`);
     return 1;
   }
 

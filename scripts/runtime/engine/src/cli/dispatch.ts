@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { dispatchTask } from "../dispatch.js";
+import { unknownOption } from "./unknown-option.js";
 
 function requireFlagValue(flag: string, next?: string): string {
   if (!next || next.startsWith("--")) {
@@ -52,7 +53,7 @@ function main(): number {
         case "--step":
           throw new Error("circuit: --step is no longer supported");
         default:
-          process.stderr.write(`Unknown option: ${value}\n`);
+          process.stderr.write(`${unknownOption(value, ["--prompt", "--output", "--adapter", "--circuit", "--config", "--role"])}\n`);
           return 1;
       }
     }

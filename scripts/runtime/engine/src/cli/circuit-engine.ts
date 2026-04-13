@@ -5,6 +5,7 @@ import { basename, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { bootstrapRun } from "../bootstrap.js";
+import { resolveProjectRoot } from "../project-root.js";
 import { requestCheckpoint, resolveCheckpoint } from "../checkpoint-step.js";
 import { completeSynthesisStep } from "../complete-synthesis.js";
 import { dispatchStep, reconcileDispatch } from "../dispatch-step.js";
@@ -273,7 +274,7 @@ function main(): number {
     }
 
     if (command !== "bootstrap" && positionals.length > 0) {
-      throw new Error(`circuit: unknown argument: ${positionals[0]}`);
+      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, reopen-step, resume, render, continuity)`);
     }
 
     switch (command) {
@@ -300,7 +301,7 @@ function main(): number {
           headAtStart: flags["head-at-start"],
           invocationId: flags["invocation-id"],
           manifestPath: resolve(manifest),
-          projectRoot: flags["project-root"] ? resolve(flags["project-root"]) : undefined,
+          projectRoot: flags["project-root"] ? resolveProjectRoot(flags["project-root"]) : undefined,
           runRoot,
         });
 

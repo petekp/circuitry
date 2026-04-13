@@ -652,6 +652,82 @@ describe("user-prompt-submit integration", () => {
     );
   });
 
+  it("creates .circuit at the git root when CWD is a subdirectory", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-subdir-"));
+    const subDir = resolve(projectRoot, "src", "components");
+    mkdirSync(subDir, { recursive: true });
+
+    // Initialize a git repo so resolveProjectRoot walks up to it.
+    spawnSync("git", ["init"], { cwd: projectRoot });
+    spawnSync("git", ["commit", "--allow-empty", "-m", "init"], {
+      cwd: projectRoot,
+      env: { ...process.env, GIT_AUTHOR_NAME: "test", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "test", GIT_COMMITTER_EMAIL: "t@t" },
+    });
+
+    const result = runUserPromptSubmit("/circuit:build add dark mode support", { cwd: subDir });
+
+    expect(result.status).toBe(0);
+    // .circuit should be at the git root, NOT in the subdirectory.
+    const canonicalRoot = realpathSync(projectRoot);
+    expect(existsSync(resolve(canonicalRoot, ".circuit", "plugin-root"))).toBe(true);
+    expect(existsSync(resolve(subDir, ".circuit"))).toBe(false);
+
+    // The emitted wrapper must be executable from the resolved git root.
+    const wrapper = resolve(canonicalRoot, ".circuit", "bin", "circuit-engine");
+    expect(existsSync(wrapper)).toBe(true);
+    const helpResult = spawnSync(wrapper, ["--help"], {
+      cwd: canonicalRoot,
+      encoding: "utf-8",
+      env: { ...process.env, CLAUDE_PLUGIN_ROOT: REPO_ROOT },
+    });
+    expect(helpResult.status).toBe(0);
+  });
+
+  it("bootstrap from resolved git root colocates run artifacts and continuity state", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-subdir-bootstrap-"));
+    const subDir = resolve(projectRoot, "src", "components");
+    mkdirSync(subDir, { recursive: true });
+
+    spawnSync("git", ["init"], { cwd: projectRoot });
+    spawnSync("git", ["commit", "--allow-empty", "-m", "init"], {
+      cwd: projectRoot,
+      env: { ...process.env, GIT_AUTHOR_NAME: "test", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "test", GIT_COMMITTER_EMAIL: "t@t" },
+    });
+
+    // First, trigger the hook from the subdirectory to create .circuit/ at git root.
+    runUserPromptSubmit("/circuit:build add feature", { cwd: subDir });
+    const canonicalRoot = realpathSync(projectRoot);
+
+    // Now bootstrap a run from the git root (as the model's Bash would).
+    const runSlug = "test-subdir-colocation";
+    const runRoot = resolve(canonicalRoot, ".circuit", "circuit-runs", runSlug);
+    const bootstrapResult = runCircuitEngine([
+      "bootstrap",
+      "--workflow", "build",
+      "--run-root", runRoot,
+      "--entry-mode", "lite",
+      "--goal", "Test colocation",
+      "--project-root", canonicalRoot,
+      "--json",
+    ], { cwd: canonicalRoot });
+
+    expect(bootstrapResult.status).toBe(0);
+
+    // Run artifacts and continuity state must be under the same .circuit/ tree.
+    expect(existsSync(resolve(runRoot, "state.json"))).toBe(true);
+    expect(existsSync(resolve(runRoot, "circuit.manifest.yaml"))).toBe(true);
+    expect(existsSync(resolve(canonicalRoot, ".circuit", "control-plane", "continuity-index.json"))).toBe(true);
+
+    // Continuity index must reference a run_root under the same .circuit/.
+    const indexRaw = readFileSync(
+      resolve(canonicalRoot, ".circuit", "control-plane", "continuity-index.json"),
+      "utf-8",
+    );
+    const index = JSON.parse(indexRaw);
+    expect(index.current_run?.run_root_rel).toContain(".circuit/circuit-runs/");
+    expect(index.project_root).toBe(canonicalRoot);
+  });
+
   it("is executable from an installed copy", () => {
     const copiedRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-hook-"));
     const installRoot = makeInstalledHookRoot(copiedRoot);

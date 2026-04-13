@@ -249,17 +249,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/append-event.js",
-      "sha256": "2f78e891fc23c75a366f21945e07f4e5853bfec3015aae7e24f272fa13e6e253"
+      "sha256": "e2503b3d958be9835328f48183cfa9099c552e0b907893b085f0e1aa320e5346"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "35cf69aa770d49cda403c468714628dc036ebf9ae6f6b11690945289d0cb2338"
+      "sha256": "014e1240f59c976cf8a17143b4e009295971b7f4de073253909f05c10c588e0b"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "7bbfc80b9b7af631367d6c8fb5fe476a5df144afdde84de294f3038081b2e932"
+      "sha256": "7402b1513074c642d0b074491f2ce8b609bceb1070e26a7eae783a52263f9a8c"
     },
     {
       "executable": true,
@@ -269,7 +269,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "436d2c95b68c558a4a82d1ef317d5d1a4db1564010fe412d327e3a017cf99b6c"
+      "sha256": "639f4b5cf9dfbb5f2c973bdb0061b55c929e81b2579fc297b36cf422e4478206"
     },
     {
       "executable": true,
@@ -279,12 +279,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/dispatch.js",
-      "sha256": "40bb28aab7e4ffbb53c1d63ac8fcbddc2234d23f97a4dec546e77a15d64033ad"
+      "sha256": "d7d9d6a694c9537238b255dbc4f2b03f80c099f6b2142085fd33e5048c4b529b"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/list-installed-surface-roots.js",
-      "sha256": "6c1214f79429f6c299052f1df900fb17d82a1926f125a47c3da4d8f419bb10bb"
+      "sha256": "d97c52f862ac9367239eb79bb593e9fecd43811486897cb009337f0e25448a4f"
     },
     {
       "executable": true,
@@ -299,12 +299,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "5243e8fbff2ba0a0e5887c9860a1a4d66c63645e9853e581f9e499f7aeb05196"
+      "sha256": "308ee71f5f6781857eba8c82b509c5657441e15ac0b8db1d69b8b498e5ad8f15"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/update-batch.js",
-      "sha256": "8bd02d7ae7133c4c1694730102ddde0356e19e050718cb7b32196129739fe878"
+      "sha256": "6e6d24adcf6e643d6915f68c9cb602db19911f1acb5a76510201fc498ac0f203"
     },
     {
       "executable": true,
@@ -314,12 +314,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "d38b8595a2da9b464f6ebacc049f05c0b58010c23ef6fcff2e0b59e93c2b83c4"
+      "sha256": "6ef676662bcc99bc0e1f17afe0fd4b4d0e302ac000b9202739b8649bf78533b4"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "085ea7014ee833310c754b4a35993a385ca21b649870229e648e81fd11106f8f"
+      "sha256": "fc17fbd679bdf443ff8ea52d286ed8bf3c8a72b2c61c1c05ebe6aaaa9f8e0a31"
     },
     {
       "executable": false,

@@ -34,7 +34,7 @@ function readInput(): { prompt?: string } {
 }
 
 function currentProjectRoot(): string {
-  return process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  return resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
 }
 
 function isCircuitPrompt(prompt: string): boolean {

@@ -11,6 +11,7 @@
  */
 
 import { run, type CliArgs } from "../update-batch.js";
+import { unknownOption } from "./unknown-option.js";
 
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
@@ -77,7 +78,7 @@ function parseArgs(argv: string[]): CliArgs {
         args.batchOverride = argv[++i];
         break;
       default:
-        process.stderr.write(`Unknown option: ${argv[i]}\n`);
+        process.stderr.write(`${unknownOption(argv[i], ["--slice", "--event", "--report", "--summary", "--task", "--type", "--scope", "--skills", "--verification", "--criteria", "--validate", "--rebuild", "--root", "--batch"])}\n`);
         process.exit(1);
     }
     i++;

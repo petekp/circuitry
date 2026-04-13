@@ -17,6 +17,7 @@ import {
   validateEvent,
   appendEvent,
 } from "../append-event.js";
+import { unknownOption } from "./unknown-option.js";
 
 function main(): number {
   const args = process.argv.slice(2);
@@ -60,7 +61,7 @@ function main(): number {
         }
         break;
       default:
-        process.stderr.write(`Error: unknown argument: ${args[i]}\n`);
+        process.stderr.write(`Error: ${unknownOption(args[i], ["--payload", "--step-id", "--attempt"])}\n`);
         return 1;
     }
   }
