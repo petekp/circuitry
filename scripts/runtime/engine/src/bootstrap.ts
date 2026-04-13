@@ -11,14 +11,22 @@ import {
   writeManifestSnapshot,
 } from "./command-support.js";
 import { upsertContinuityCurrentRun } from "./continuity-control-plane.js";
+import {
+  recordInvocationFailed,
+  recordInvocationRouted,
+} from "./invocation-ledger.js";
 import { requireStepById } from "./manifest-utils.js";
 
 export interface BootstrapOptions {
+  circuitId?: string;
   entryMode: string;
   goal?: string;
   headAtStart?: string;
+  invocationId?: string;
   manifestPath: string;
   projectRoot?: string;
+  routedCommand?: string;
+  routedTargetKind?: "built_in" | "custom_global";
   runRoot: string;
 }
 
@@ -42,10 +50,22 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
   const legacyActiveRunPath = join(runRoot, "artifacts/active-run.md");
 
   if (!existsSync(manifestPath)) {
+    recordInvocationFailed({
+      failureReason: `manifest not found: ${manifestPath}`,
+      homeDir: process.env.HOME ?? undefined,
+      invocationId: options.invocationId,
+      projectRoot,
+    });
     throw new Error(`manifest not found: ${manifestPath}`);
   }
 
   if (!existsSync(manifestSnapshotPath) && existsSync(legacyActiveRunPath)) {
+    recordInvocationFailed({
+      failureReason: `refusing to bootstrap over legacy run root without manifest snapshot: ${runRoot}`,
+      homeDir: process.env.HOME ?? undefined,
+      invocationId: options.invocationId,
+      projectRoot,
+    });
     throw new Error(
       `refusing to bootstrap over legacy run root without manifest snapshot: ${runRoot}`,
     );
@@ -106,7 +126,19 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
     bootstrapped = true;
   }
 
-  const renderResult = renderRunState(runRoot);
+  let renderResult: ReturnType<typeof renderRunState>;
+  try {
+    renderResult = renderRunState(runRoot);
+  } catch (err) {
+    recordInvocationFailed({
+      failureReason: `render failed: ${err instanceof Error ? err.message : String(err)}`,
+      homeDir: process.env.HOME ?? undefined,
+      invocationId: options.invocationId,
+      projectRoot,
+    });
+    throw err;
+  }
+
   upsertContinuityCurrentRun({
     currentStep:
       typeof renderResult.state.current_step === "string"
@@ -123,8 +155,31 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
   });
   const pointer = syncCurrentRunPointerFromIndex(projectRoot);
   if (!pointer.mode || !pointer.slug) {
+    recordInvocationFailed({
+      failureReason: "failed to mirror current-run pointer from continuity index",
+      homeDir: process.env.HOME ?? undefined,
+      invocationId: options.invocationId,
+      projectRoot,
+    });
     throw new Error("failed to mirror current-run pointer from continuity index");
   }
+
+  // Best-effort: record successful routing in the invocation ledger.
+  const circuitId = options.circuitId
+    ?? ((manifest.circuit as Record<string, any>)?.id as string | undefined)
+    ?? runSlug;
+  recordInvocationRouted({
+    circuitId,
+    entryMode: options.entryMode,
+    goal: options.goal,
+    homeDir: process.env.HOME ?? undefined,
+    invocationId: options.invocationId,
+    projectRoot,
+    routedCommand: options.routedCommand ?? `circuit:${circuitId}`,
+    routedTargetKind: options.routedTargetKind ?? "built_in",
+    runId: runSlug,
+    runRoot,
+  });
 
   return {
     activeRunPath: renderResult.activeRunPath,

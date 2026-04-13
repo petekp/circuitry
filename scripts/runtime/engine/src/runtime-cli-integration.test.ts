@@ -802,6 +802,129 @@ describe("runtime CLI integration", () => {
     expect(status.stderr).toContain("Continuity index failed validation");
   });
 
+  it("continuity clear is idempotent when no pending record exists", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+
+    mkdirSync(resolve(projectRoot, ".circuit", "control-plane"), { recursive: true });
+
+    // Clear with no existing continuity state should exit cleanly.
+    const clear = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "clear",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(clear.status).toBe(0);
+    const payload = JSON.parse(clear.stdout);
+    // clearContinuity always reports true (it writes the cleared state unconditionally).
+    expect(payload.cleared_pending_record).toBe(true);
+    expect(payload.cleared_current_run).toBe(true);
+    // But nothing was actually deleted.
+    expect(payload.deleted_record_id).toBeNull();
+  });
+
+  it("continuity full CLI lifecycle: save -> status -> resume -> clear -> verify empty", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+
+    mkdirSync(resolve(projectRoot, ".circuit"), { recursive: true });
+
+    // Save standalone continuity.
+    const save = run(
+      "node",
+      [
+        CONTINUITY,
+        "save",
+        "--project-root",
+        projectRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Full lifecycle test",
+        "--next",
+        "DO: verify lifecycle",
+        "--state-markdown",
+        "- lifecycle in progress",
+        "--debt-markdown",
+        "none",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(0);
+    const savePayload = JSON.parse(save.stdout);
+    expect(savePayload.continuity_kind).toBe("standalone");
+    expect(existsSync(savePayload.record_path)).toBe(true);
+
+    // Status should show the pending record.
+    const status = run(
+      "node",
+      [
+        CONTINUITY,
+        "status",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(status.status).toBe(0);
+    expect(status.stdout).toContain("pending_record");
+
+    // Resume should yield the saved record.
+    const resume = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "resume",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(resume.status).toBe(0);
+    const resumePayload = JSON.parse(resume.stdout);
+    expect(resumePayload.source).toBe("pending_record");
+    expect(resumePayload.record.narrative.goal).toBe("Full lifecycle test");
+
+    // Clear should delete the record file and null the index.
+    const clear = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "clear",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(clear.status).toBe(0);
+    const clearPayload = JSON.parse(clear.stdout);
+    expect(clearPayload.cleared_pending_record).toBe(true);
+    expect(existsSync(savePayload.record_path)).toBe(false);
+
+    // Index should be fully empty.
+    const finalIndex = readContinuityIndex(projectRoot);
+    expect(finalIndex).not.toBeNull();
+    expect(finalIndex!.current_run).toBeNull();
+    expect(finalIndex!.pending_record).toBeNull();
+  });
+
   it("circuit-engine bootstrap accepts workflow shorthand and normalizes a bare .circuit root", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const projectRoot = resolve(tempRoot, "project");

@@ -16,6 +16,7 @@ const SKIP_DIRS = new Set([
   ".git",
   ".pytest_cache",
   ".relay",
+  "debug",
   "dist",
   "node_modules",
 ]);

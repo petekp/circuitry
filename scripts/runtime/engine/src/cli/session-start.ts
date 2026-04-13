@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
+
+import { syncCurrentRunPointerFromIndex } from "../command-support.js";
 import { getContinuityStatus } from "../continuity-commands.js";
+import { clearContinuityCurrentRun } from "../continuity-control-plane.js";
+import { ensureCircuitHome } from "../ensure-circuit-dirs.js";
+import { cleanupStaleSidecars } from "../invocation-ledger.js";
 import { resolveProjectRoot } from "../project-root.js";
 import { renderActiveRun } from "../render-active-run.js";
 
@@ -36,8 +42,29 @@ function printWelcome(): void {
 }
 
 function main(): number {
+  // Best-effort: ensure user-global circuit directories exist.
+  const homeInit = ensureCircuitHome(process.env.HOME ?? undefined);
+  for (const warning of homeInit.warnings) {
+    process.stderr.write(`circuit: ${warning}\n`);
+  }
+
+  // Best-effort: clean up orphaned invocation sidecars (>10 min old).
+  cleanupStaleSidecars(process.env.HOME ?? undefined);
+
   const projectRoot = resolveProjectRoot(process.cwd());
   const continuity = getContinuityStatus(projectRoot);
+
+  // Clear stale current_run pointers whose run root no longer exists.
+  if (continuity.current_run) {
+    const runRoot = continuity.current_run.run_root;
+    if (!existsSync(runRoot)) {
+      clearContinuityCurrentRun(projectRoot);
+      syncCurrentRunPointerFromIndex(projectRoot);
+      process.stderr.write(
+        `circuit: cleared stale current_run pointer: ${continuity.current_run.run_slug}\n`,
+      );
+    }
+  }
 
   if (!continuity.pending_record && continuity.current_run?.manifest_present) {
     try {

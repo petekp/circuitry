@@ -431,6 +431,7 @@ export function renderRunCustomCircuitContext(homeDir?: string): string | null {
     "Otherwise compare the strongest built-in route with the strongest custom-circuit match from the catalog below.",
     "Choose a custom circuit only when it is clearly stronger than the best built-in candidate.",
     "Built-ins win ties.",
+    "When dispatching to a custom circuit, briefly state which include signals matched.",
     "If the best built-in and custom candidates are too close to distinguish, ask one sharp routing question.",
     "",
     "## Available Custom Circuits",

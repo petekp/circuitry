@@ -11,6 +11,8 @@ import {
   LOCAL_HELPER_DIR,
   PROMPT_CONTRACTS_PATH,
 } from "../catalog/prompt-surface-contracts.js";
+import { ensureProjectCircuitRoot } from "../ensure-circuit-dirs.js";
+import { recordInvocationReceived } from "../invocation-ledger.js";
 import { resolveProjectRoot } from "../project-root.js";
 import { REPO_ROOT } from "../schema.js";
 import {
@@ -389,6 +391,12 @@ async function main(): Promise<number> {
   const manifest = loadPromptContracts();
 
   if (isCircuitPrompt(prompt)) {
+    // Best-effort: ensure per-project circuit directories exist.
+    const projInit = ensureProjectCircuitRoot(projectRoot);
+    for (const warning of projInit.warnings) {
+      process.stderr.write(`circuit: ${warning}\n`);
+    }
+
     persistPluginRoot(projectRoot);
     try {
       ensureLocalHelperWrappers(projectRoot, manifest);
@@ -401,6 +409,15 @@ async function main(): Promise<number> {
   if (!command) {
     return 0;
   }
+
+  // Best-effort: record invocation and write sidecar for bootstrap correlation.
+  recordInvocationReceived({
+    commandArgs: command.args,
+    commandSlug: command.slug,
+    homeDir: process.env.HOME ?? undefined,
+    projectRoot,
+    requestedCommand: `circuit:${command.slug}`,
+  });
 
   let continuityStatus: ContinuityStatusPayload | null = null;
   const readContinuityStatus = async (): Promise<ContinuityStatusPayload> => {

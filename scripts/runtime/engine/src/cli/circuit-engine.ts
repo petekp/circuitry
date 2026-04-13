@@ -25,7 +25,7 @@ type ParsedFlags = {
 const USAGE =
   "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render|continuity> [options]\n";
 const BOOTSTRAP_USAGE = [
-  "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--json]",
+  "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--invocation-id <id>] [--json]",
   "",
   "Agent-friendly shorthand:",
   "  circuit-engine bootstrap <workflow> <goal> --rigor <rigor> --run-root <path>",
@@ -298,6 +298,7 @@ function main(): number {
           entryMode,
           goal,
           headAtStart: flags["head-at-start"],
+          invocationId: flags["invocation-id"],
           manifestPath: resolve(manifest),
           projectRoot: flags["project-root"] ? resolve(flags["project-root"]) : undefined,
           runRoot,

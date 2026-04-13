@@ -339,4 +339,108 @@ describe("continuity control plane", () => {
       expect((error as ContinuityControlPlaneError).code).toBe("continuity_index_invalid");
     }
   });
+
+  it("full lifecycle: empty -> upsert -> save -> cross-reference -> clear -> verify empty", () => {
+    const projectRoot = makeProjectRoot();
+
+    // 1. Start empty.
+    expect(readContinuityIndex(projectRoot)).toBeNull();
+
+    // 2. Upsert a current run.
+    const afterUpsert = upsertContinuityCurrentRun({
+      currentStep: "frame",
+      manifestPresent: true,
+      projectRoot,
+      runSlug: "lifecycle-run",
+      runtimeStatus: "in_progress",
+    });
+    expect(afterUpsert.current_run?.run_slug).toBe("lifecycle-run");
+
+    // 3. Save a continuity record and set pending.
+    const record = makeRecord(projectRoot);
+    record.record_id = createContinuityRecordId();
+    record.run_ref!.run_slug = "lifecycle-run";
+    record.run_ref!.run_root_rel = continuityRunRootRel("lifecycle-run");
+    const { payloadRel } = writeContinuityRecord(projectRoot, record);
+    setContinuityPendingRecord(projectRoot, {
+      continuity_kind: "run_ref",
+      created_at: record.created_at,
+      payload_rel: payloadRel,
+      record_id: record.record_id,
+      run_slug: "lifecycle-run",
+    });
+
+    // 4. Cross-reference: read pending record through the index.
+    const pending = readPendingContinuityRecord(projectRoot);
+    expect(pending).not.toBeNull();
+    expect(pending!.record_id).toBe(record.record_id);
+
+    // 5. Clear pending and current run.
+    clearContinuityPendingRecord(projectRoot);
+    clearContinuityCurrentRun(projectRoot);
+
+    // 6. Verify both are empty.
+    const finalIndex = readContinuityIndex(projectRoot);
+    expect(finalIndex).not.toBeNull();
+    expect(finalIndex!.current_run).toBeNull();
+    expect(finalIndex!.pending_record).toBeNull();
+  });
+
+  it("rejects a record with resume_run mode but null run_ref", () => {
+    const projectRoot = makeProjectRoot();
+    const record = makeRecord(projectRoot);
+    record.run_ref = null;
+    // resume_contract.mode is still "resume_run" but run_ref is null.
+
+    expect(() => writeContinuityRecord(projectRoot, record)).toThrowError(
+      expect.objectContaining({
+        code: "continuity_record_invalid",
+        name: "ContinuityControlPlaneError",
+      }),
+    );
+  });
+
+  it("rejects a standalone record with a non-null run_ref", () => {
+    const projectRoot = makeProjectRoot();
+    const record = makeRecord(projectRoot);
+    record.resume_contract.mode = "resume_standalone";
+    // run_ref is still set, which conflicts with standalone mode.
+
+    expect(() => writeContinuityRecord(projectRoot, record)).toThrowError(
+      expect.objectContaining({
+        code: "continuity_record_invalid",
+        name: "ContinuityControlPlaneError",
+      }),
+    );
+  });
+
+  it("returns null for readContinuityIndex on a fresh project root with no index file", () => {
+    const projectRoot = makeProjectRoot();
+    expect(readContinuityIndex(projectRoot)).toBeNull();
+  });
+
+  it("preserves attached_at when upserting the same run slug", () => {
+    const projectRoot = makeProjectRoot();
+    const firstResult = upsertContinuityCurrentRun({
+      attachedAt: "2026-04-01T10:00:00.000Z",
+      currentStep: "frame",
+      manifestPresent: true,
+      projectRoot,
+      runSlug: "same-slug",
+      runtimeStatus: "in_progress",
+    });
+    expect(firstResult.current_run!.attached_at).toBe("2026-04-01T10:00:00.000Z");
+
+    const secondResult = upsertContinuityCurrentRun({
+      currentStep: "verify",
+      lastValidatedAt: "2026-04-01T11:00:00.000Z",
+      manifestPresent: true,
+      projectRoot,
+      runSlug: "same-slug",
+      runtimeStatus: "waiting_worker",
+    });
+    // attached_at should be preserved from the first upsert.
+    expect(secondResult.current_run!.attached_at).toBe("2026-04-01T10:00:00.000Z");
+    expect(secondResult.current_run!.current_step).toBe("verify");
+  });
 });

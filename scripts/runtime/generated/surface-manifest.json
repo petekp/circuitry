@@ -208,6 +208,11 @@
     },
     {
       "executable": false,
+      "path": "schemas/invocation-ledger.schema.json",
+      "sha256": "4073e26c709755b713c1704e914685a20690624cdd78b2dda3a449dc240d4c1e"
+    },
+    {
+      "executable": false,
       "path": "schemas/job-result.schema.json",
       "sha256": "c53dd8b741b3fe88641fddd8b035566b1da4c63928f2f72783fb0ac2ff821396"
     },

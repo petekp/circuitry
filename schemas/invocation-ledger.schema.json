@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "invocation-ledger.schema.json",
+  "title": "Circuit Invocation Ledger Entry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "invocation_id",
+    "occurred_at",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "invocation_id": {
+      "type": "string",
+      "pattern": "^inv_[0-9a-f-]+$"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": ["received", "routed", "failed", "abandoned"]
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "project_root": {
+      "type": "string"
+    },
+    "cwd": {
+      "type": "string"
+    },
+    "git_branch": {
+      "type": ["string", "null"]
+    },
+    "requested_command": {
+      "type": "string"
+    },
+    "command_slug": {
+      "type": "string"
+    },
+    "command_args": {
+      "type": "string"
+    },
+    "routed_command": {
+      "type": "string"
+    },
+    "routed_target_kind": {
+      "enum": ["built_in", "custom_global"]
+    },
+    "entry_mode": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "run_root": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "circuit_id": {
+      "type": "string"
+    },
+    "launch_outcome": {
+      "enum": ["success", "bootstrap_failed", "routing_failed"]
+    },
+    "failure_reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
