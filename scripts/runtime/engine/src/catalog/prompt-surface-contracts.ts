@@ -251,6 +251,10 @@ const SEMANTIC_WORKFLOW_CONTRACTS_BY_SLUG = Object.fromEntries(
   SEMANTIC_WORKFLOW_CONTRACTS.map((contract) => [contract.slug, contract]),
 ) as Record<SemanticWorkflowContract["slug"], SemanticWorkflowContract>;
 
+const HANDOFF_CONTINUATION_RULE = `If the user explicitly says to continue or resume from a handoff, resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to \`current_run\`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.`;
+
+const HANDOFF_CAPTURE_CONFIRMATION = "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.";
+
 const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
   build_smoke: {
     id: "build_smoke",
@@ -301,7 +305,7 @@ const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
       "Supported handoff commands are `/circuit:handoff`, `/circuit:handoff resume`, and `/circuit:handoff done`.",
       "Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.",
       "Do not inspect legacy handoff paths, scan run roots, or write `handoff.md`.",
-      "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to pick it up; use `/circuit:handoff done` only to clear it.",
+      HANDOFF_CAPTURE_CONFIRMATION,
       "Do not dump the saved continuity body back to the user during capture mode.",
       "Stop after either reporting that nothing useful could be captured or confirming the save.",
     ],
@@ -478,7 +482,7 @@ function renderBuildContractBlock(): string {
     "4. Do not start with \"let me understand the current state first\" or broad repo exploration before bootstrap completes.",
     "5. If routing already selected Build, stay on that path immediately instead of reclassifying.",
     "6. If bootstrap already happened, continue from the current phase instead of re-exploring.",
-    `7. If the user explicitly says to continue or resume from a handoff, resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration. If control-plane status includes \`current_run_root\`, treat that run root as authoritative and continue it with \`${LOCAL_HELPER_DIR}/circuit-engine resume --run-root \"$RUN_ROOT\" --json\`; do not invent attach or rebind commands.`,
+    `7. ${HANDOFF_CONTINUATION_RULE}`,
     "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
     "9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
     "",
@@ -526,7 +530,7 @@ function renderSemanticWorkflowContractBlock(
     "4. Do not start with \"let me understand the current state first\" before bootstrap completes.",
     `5. ${routeLine}`,
     "6. If bootstrap already happened, continue from the current phase instead of re-exploring.",
-    `7. If the user explicitly says to continue or resume from a handoff, resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration. If control-plane status includes \`current_run_root\`, treat that run root as authoritative and continue it with \`${LOCAL_HELPER_DIR}/circuit-engine resume --run-root \"$RUN_ROOT\" --json\`; do not invent attach or rebind commands.`,
+    `7. ${HANDOFF_CONTINUATION_RULE}`,
     "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
     "9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate workflow run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
     "",
@@ -577,7 +581,7 @@ function renderRunContractBlock(): string {
     "4. Do not use generic repo exploration or the trivial inline path before a predetermined route has created or validated workflow run state.",
     "5. Once a workflow is selected, create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.",
     "6. If the run is already bootstrapped, continue from the current phase instead of re-exploring.",
-    `7. If the user explicitly says to continue or resume from a handoff, resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration. If control-plane status includes \`current_run_root\`, treat that run root as authoritative and continue it with \`${LOCAL_HELPER_DIR}/circuit-engine resume --run-root \"$RUN_ROOT\" --json\`; do not invent attach or rebind commands.`,
+    `7. ${HANDOFF_CONTINUATION_RULE}`,
     "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
     "9. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.",
     "10. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.",

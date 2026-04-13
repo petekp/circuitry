@@ -249,7 +249,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "bc823dba7cc52644ca95e0b1667411789620f75f689114ed8821fd61cf201f9f"
+      "sha256": "35cf69aa770d49cda403c468714628dc036ebf9ae6f6b11690945289d0cb2338"
     },
     {
       "executable": true,
@@ -264,7 +264,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "c0660d0f9f3f667076e3e0a86c877bb8bf805ddcc072f607a40e10f59c98ca83"
+      "sha256": "436d2c95b68c558a4a82d1ef317d5d1a4db1564010fe412d327e3a017cf99b6c"
     },
     {
       "executable": true,
@@ -309,17 +309,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "ea348933830e27eafec1214dc210bad21f84380214c2c03dcd19d4653180b0da"
+      "sha256": "d38b8595a2da9b464f6ebacc049f05c0b58010c23ef6fcff2e0b59e93c2b83c4"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "cab70b5e127d2d60cd19ded759f64afd6dfd3f4729f8d2310e048c28047c716a"
+      "sha256": "085ea7014ee833310c754b4a35993a385ca21b649870229e648e81fd11106f8f"
     },
     {
       "executable": false,
       "path": "scripts/runtime/generated/prompt-contracts.json",
-      "sha256": "012bb9a2a58cc76d3e1b3941ac9a732b1af05aa4063658154c7c25d89f629425"
+      "sha256": "7e40e2f9e17fc04bb2c1522ec6ffcaf3fb01eeb228362cd49ffa6445f80b11fb"
     },
     {
       "executable": true,
@@ -339,7 +339,7 @@
     {
       "executable": false,
       "path": "skills/build/SKILL.md",
-      "sha256": "4e3d77fa69ac942d38ffd298d6c74855199a2bc216ce4ad6224c79ae41457511"
+      "sha256": "789bc5d7fcddffb5ab5d2125ae98b9e4ee2f37a69f501a68a1eb69318d29695c"
     },
     {
       "executable": false,
@@ -354,7 +354,7 @@
     {
       "executable": false,
       "path": "skills/explore/SKILL.md",
-      "sha256": "0c44367c1fb8a27d55801f345c71ba70e672eebf379fb38cff97738918d7a588"
+      "sha256": "ea26998493ee32d3aad2466066a30c96e05cb7639fe55e52c0021b38725f1908"
     },
     {
       "executable": true,
@@ -364,7 +364,7 @@
     {
       "executable": false,
       "path": "skills/handoff/SKILL.md",
-      "sha256": "271f8ba719abaab1a4c579b2e24a72ddcd579ff7e930e6afd38b7a4c18a1c1db"
+      "sha256": "c3ab7be73986f2cbfb71df236b8252c940e0ea73a899916203af4c4796b7f9b5"
     },
     {
       "executable": false,
@@ -374,7 +374,7 @@
     {
       "executable": false,
       "path": "skills/migrate/SKILL.md",
-      "sha256": "42ee2a1f1cce26beb19c4030b7696d37b4bb3c5347669e0092954588a0986f5b"
+      "sha256": "14e3c50eb0bdc36619de7f65066d1c90d473b1b9e3d2fa2a52e3e6a893bd90ce"
     },
     {
       "executable": false,
@@ -384,7 +384,7 @@
     {
       "executable": false,
       "path": "skills/repair/SKILL.md",
-      "sha256": "4105f3b8b834dac7e27eede3e59d8831666591dd93a37185b7310f8326a8fdb7"
+      "sha256": "a840d2cf451e016968a5e5746f44b140c78ad9b0b5d960f6081b1bee5e208aa3"
     },
     {
       "executable": false,
@@ -414,7 +414,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "5acf08df71ea9821ab2f5254b28e93ebb252a6581d151aa17cefc41a104fe596"
+      "sha256": "bd6aa523a620b12f24aca5850904dc30529f6db55d548faeaa6bb58c08ee8443"
     },
     {
       "executable": false,
@@ -424,7 +424,7 @@
     {
       "executable": false,
       "path": "skills/sweep/SKILL.md",
-      "sha256": "4a4d9b37313d0d9d586db0b48a0ea610d4448f6558dd0dfc4204fe25a3babdcd"
+      "sha256": "a138f9a55c8bc65397a08ff9b67c404ebb093a79badf81ad23be648e2d161324"
     },
     {
       "executable": false,

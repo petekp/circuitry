@@ -29,7 +29,7 @@ Action-first rules for `/circuit:build`:
 4. Do not start with "let me understand the current state first" or broad repo exploration before bootstrap completes.
 5. If routing already selected Build, stay on that path immediately instead of reclassifying.
 6. If bootstrap already happened, continue from the current phase instead of re-exploring.
-7. If the user explicitly says to continue or resume from a handoff, resolve it through `.circuit/bin/circuit-engine continuity resume --json` before unrelated repo exploration. If control-plane status includes `current_run_root`, treat that run root as authoritative and continue it with `.circuit/bin/circuit-engine resume --run-root "$RUN_ROOT" --json`; do not invent attach or rebind commands.
+7. If the user explicitly says to continue or resume from a handoff, resolve it through `.circuit/bin/circuit-engine continuity resume --json` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to `current_run`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.
 8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.
 9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
 

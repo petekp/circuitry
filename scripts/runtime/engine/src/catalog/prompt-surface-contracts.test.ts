@@ -158,11 +158,20 @@ describe("prompt surface contracts", () => {
     expect(buildContract).toContain(
       "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
     );
+    expect(buildContract).toContain(
+      "Only continue a run when the selected continuity output is run-backed and warning-free.",
+    );
     expect(exploreContract).toContain(
       "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
     );
+    expect(exploreContract).toContain(
+      "Only continue a run when the selected continuity output is run-backed and warning-free.",
+    );
     expect(runContract).toContain(
       "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
+    );
+    expect(runContract).toContain(
+      "Only continue a run when the selected continuity output is run-backed and warning-free.",
     );
     expect(handoffBlock).toContain(
       "run `.circuit/bin/circuit-engine continuity clear --json`, report completion, and stop.",
@@ -171,6 +180,16 @@ describe("prompt surface contracts", () => {
       "run `.circuit/bin/circuit-engine continuity resume --json`, present the selected continuity source",
     );
     expect(handoffBlock).not.toContain("handoff first, active-run fallback second");
+  });
+
+  it("clarifies capture vs continue wording for handoff prompt surfaces", () => {
+    const manifest = buildPromptContractsManifest(catalog);
+    const handoffCaptureLines = manifest.fast_modes.handoff_capture.lines.join("\n");
+
+    expect(handoffCaptureLines).toContain(
+      "use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work",
+    );
+    expect(handoffCaptureLines).not.toContain("pick it up");
   });
 
   it("returns the expected prompt surface block targets", () => {
@@ -333,7 +352,7 @@ describe("prompt surface contracts", () => {
               "Supported handoff commands are \`/circuit:handoff\`, \`/circuit:handoff resume\`, and \`/circuit:handoff done\`.",
               "Do not invent \`/circuit:handoff save\` or \`/circuit:handoff clear\` aliases.",
               "Do not inspect legacy handoff paths, scan run roots, or write \`handoff.md\`.",
-              "After a successful save, confirm briefly with: Handoff saved. In the next session, use \`/circuit:handoff resume\` to pick it up; use \`/circuit:handoff done\` only to clear it.",
+              "After a successful save, confirm briefly with: Handoff saved. In the next session, use \`/circuit:handoff resume\` to inspect the continuity record, then start a fresh \`/circuit:*\` command to continue the work; use \`/circuit:handoff done\` only to clear it.",
               "Do not dump the saved continuity body back to the user during capture mode.",
               "Stop after either reporting that nothing useful could be captured or confirming the save."
             ],

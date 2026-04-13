@@ -18,12 +18,20 @@ import { describe, expect, it } from "vitest";
 import {
   setContinuityPendingRecord,
   type ContinuityRecordV1,
-  upsertContinuityCurrentRun,
   writeContinuityRecord,
 } from "./continuity-control-plane.js";
 import { REPO_ROOT } from "./schema.js";
 
 const USER_PROMPT_SUBMIT = resolve(REPO_ROOT, "hooks/user-prompt-submit.js");
+const CIRCUIT_ENGINE = resolve(REPO_ROOT, "scripts/relay/circuit-engine.sh");
+
+type BootstrappedRun = {
+  currentStep: string | null;
+  runRoot: string;
+  runSlug: string;
+  runtimeStatus: string | null;
+  runtimeUpdatedAt: string | null;
+};
 
 function runUserPromptSubmit(
   prompt: string,
@@ -46,6 +54,21 @@ function readAdditionalContext(result: ReturnType<typeof spawnSync>): string {
   expect(payload.suppressOutput).toBe(true);
   expect(payload.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
   return payload.hookSpecificOutput.additionalContext as string;
+}
+
+function runCircuitEngine(
+  args: string[],
+  options?: { cwd?: string; env?: Record<string, string> },
+): ReturnType<typeof spawnSync> {
+  return spawnSync(CIRCUIT_ENGINE, args, {
+    cwd: options?.cwd,
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+      ...options?.env,
+    },
+  });
 }
 
 function makeInstalledHookRoot(root: string): string {
@@ -158,12 +181,55 @@ function writePendingContinuity(projectRoot: string): void {
   });
 }
 
-function writeRunBackedPendingContinuity(projectRoot: string): string {
+function bootstrapResumableRun(projectRoot: string, runSlug: string): BootstrappedRun {
   const canonicalProjectRoot = realpathSync(projectRoot);
-  const runSlug = "resume-attached-run";
   const runRoot = resolve(canonicalProjectRoot, ".circuit", "circuit-runs", runSlug);
+  const bootstrapResult = runCircuitEngine([
+    "bootstrap",
+    "--workflow",
+    "build",
+    "--run-root",
+    runRoot,
+    "--entry-mode",
+    "lite",
+    "--goal",
+    `Bootstrap ${runSlug}`,
+    "--project-root",
+    canonicalProjectRoot,
+    "--json",
+  ], { cwd: canonicalProjectRoot });
 
-  mkdirSync(runRoot, { recursive: true });
+  expect(bootstrapResult.status).toBe(0);
+  expect(existsSync(resolve(runRoot, "circuit.manifest.yaml"))).toBe(true);
+  expect(existsSync(resolve(runRoot, "state.json"))).toBe(true);
+
+  const resumeResult = runCircuitEngine([
+    "resume",
+    "--run-root",
+    runRoot,
+    "--json",
+  ], { cwd: canonicalProjectRoot });
+
+  expect(resumeResult.status).toBe(0);
+
+  const state = JSON.parse(readFileSync(resolve(runRoot, "state.json"), "utf-8")) as Record<string, unknown>;
+
+  return {
+    currentStep: typeof state.current_step === "string" ? state.current_step : null,
+    runRoot,
+    runSlug,
+    runtimeStatus: typeof state.status === "string" ? state.status : null,
+    runtimeUpdatedAt: typeof state.updated_at === "string" ? state.updated_at : null,
+  };
+}
+
+function writeRunBackedPendingContinuity(
+  projectRoot: string,
+  run: BootstrappedRun,
+): string {
+  const canonicalProjectRoot = realpathSync(projectRoot);
+
+  const manifestPath = resolve(run.runRoot, "circuit.manifest.yaml");
 
   const record: ContinuityRecordV1 = {
     created_at: "2026-04-12T00:00:00.000Z",
@@ -187,35 +253,26 @@ function writeRunBackedPendingContinuity(projectRoot: string): string {
       requires_explicit_resume: true,
     },
     run_ref: {
-      current_step_at_save: "plan",
-      manifest_present: true,
-      run_root_rel: `.circuit/circuit-runs/${runSlug}`,
-      run_slug: runSlug,
-      runtime_status_at_save: "in_progress",
-      runtime_updated_at_at_save: "2026-04-12T00:00:00.000Z",
+      current_step_at_save: run.currentStep,
+      manifest_present: existsSync(manifestPath),
+      run_root_rel: `.circuit/circuit-runs/${run.runSlug}`,
+      run_slug: run.runSlug,
+      runtime_status_at_save: run.runtimeStatus,
+      runtime_updated_at_at_save: run.runtimeUpdatedAt,
     },
     schema_version: "1",
   };
 
   const { payloadRel } = writeContinuityRecord(projectRoot, record);
-  upsertContinuityCurrentRun({
-    attachedAt: "2026-04-12T00:00:00.000Z",
-    currentStep: "plan",
-    lastValidatedAt: "2026-04-12T00:00:00.000Z",
-    manifestPresent: true,
-    projectRoot: canonicalProjectRoot,
-    runSlug,
-    runtimeStatus: "in_progress",
-  });
   setContinuityPendingRecord(projectRoot, {
     continuity_kind: "run_ref",
     created_at: record.created_at,
     payload_rel: payloadRel,
     record_id: record.record_id,
-    run_slug: runSlug,
+    run_slug: run.runSlug,
   });
 
-  return runRoot;
+  return run.runRoot;
 }
 
 describe("user-prompt-submit integration", () => {
@@ -413,7 +470,7 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("resume never shows the sentinel");
     expect(context).toContain("/circuit:handoff resume");
     expect(context).toContain("/circuit:handoff done");
-    expect(context).toContain("Handoff saved. In the next session, use `/circuit:handoff resume` to pick it up; use `/circuit:handoff done` only to clear it.");
+    expect(context).toContain("Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.");
     expect(context).toContain("Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.");
     expect(context).toContain("## Control-Plane Status");
     expect(context).toContain("- selection: none");
@@ -480,7 +537,8 @@ describe("user-prompt-submit integration", () => {
   it("injects a run-backed continuity bridge for /circuit:run continue from the handoff", () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-run-handoff-"));
     mkdirSync(projectRoot, { recursive: true });
-    const runRoot = writeRunBackedPendingContinuity(projectRoot);
+    const run = bootstrapResumableRun(projectRoot, "resume-attached-run");
+    const runRoot = writeRunBackedPendingContinuity(projectRoot, run);
 
     const result = runUserPromptSubmit("/circuit:run continue from the handoff", {
       cwd: projectRoot,
@@ -496,6 +554,70 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain(`.circuit/bin/circuit-engine resume --run-root "${runRoot}" --json`);
     expect(context).toContain("do not invent `run attach`, `attach`, or other rebind commands");
     expect(context).toContain("Do not `cat` `.circuit/current-run`");
+    expect(context.match(/- current_run_root:/g)?.length ?? 0).toBe(1);
+  });
+
+  it("withholds current_run_root guidance when standalone pending continuity coexists with an attached run", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-standalone-handoff-"));
+    mkdirSync(projectRoot, { recursive: true });
+    bootstrapResumableRun(projectRoot, "standalone-attached-run");
+    writePendingContinuity(projectRoot);
+
+    const result = runUserPromptSubmit("/circuit:run continue from the handoff", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain("- selection: pending_record");
+    expect(context).toContain("## Saved Next Action");
+    expect(context).toContain("DO: resume-control-plane-sentinel");
+    expect(context).not.toContain("- current_run_root:");
+    expect(context).not.toContain(".circuit/bin/circuit-engine resume --run-root");
+  });
+
+  it("fails closed when pending run-backed continuity disagrees with the indexed current run", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-mismatched-handoff-"));
+    mkdirSync(projectRoot, { recursive: true });
+    const savedRun = bootstrapResumableRun(projectRoot, "saved-run");
+    writeRunBackedPendingContinuity(projectRoot, savedRun);
+    const attachedRun = bootstrapResumableRun(projectRoot, "attached-run");
+
+    const result = runUserPromptSubmit("/circuit:run continue from the handoff", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain("- selection: pending_record");
+    expect(context).toContain("## Saved Next Action");
+    expect(context).toContain("DO: resume-attached-run-sentinel");
+    expect(context).toContain("## Warnings");
+    expect(context).toContain(`Pending continuity references run ${savedRun.runSlug}, but the indexed current run is ${attachedRun.runSlug}.`);
+    expect(context).toContain("Do not continue a run until the mismatch is resolved.");
+    expect(context).not.toContain("- current_run_root:");
+    expect(context).not.toContain(".circuit/bin/circuit-engine resume --run-root");
+  });
+
+  it("treats indexed current_run as a fallback when no pending continuity exists", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-current-run-fallback-"));
+    mkdirSync(projectRoot, { recursive: true });
+    const currentRun = bootstrapResumableRun(projectRoot, "fallback-run");
+
+    const result = runUserPromptSubmit("/circuit:run continue from the handoff", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain("- selection: current_run");
+    expect(context).toContain(`- current_run_root: ${currentRun.runRoot}`);
+    expect(context).toContain("## Active Run Fallback");
+    expect(context).toContain("No saved continuity record is selected.");
+    expect(context).toContain(`.circuit/bin/circuit-engine resume --run-root "${currentRun.runRoot}" --json`);
   });
 
   it("does not inject continuity guidance for unrelated prompts that only mention handoff as a noun", () => {

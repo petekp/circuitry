@@ -192,24 +192,119 @@ function renderCustomRoutingUnavailableContext(error: unknown): string {
 }
 
 function continuityStatusLines(status: ContinuityStatusPayload): string[] {
+  return continuityStatusLinesWithCurrentRunRoot(status);
+}
+
+function continuityStatusLinesWithCurrentRunRoot(
+  status: ContinuityStatusPayload,
+  currentRunRoot: string | null = null,
+): string[] {
   return [
     `- selection: ${status.selection}`,
     `- pending_record: ${status.pending_record?.record_id ?? "none"}`,
     `- current_run: ${status.current_run?.run_slug ?? "none"}`,
-    ...(status.current_run
-      ? [`- current_run_root: ${status.current_run.run_root}`]
+    ...(currentRunRoot
+      ? [`- current_run_root: ${currentRunRoot}`]
       : []),
   ];
+}
+
+type ContinuityGuidance = {
+  currentRunRoot: string | null;
+  lines: string[];
+};
+
+function renderSavedNextAction(status: ContinuityStatusPayload): string[] {
+  const savedNextAction = status.record?.narrative.next;
+  if (!savedNextAction) {
+    return [];
+  }
+
+  return [
+    "",
+    "## Saved Next Action",
+    savedNextAction,
+  ];
+}
+
+function renderRunResumeGuidance(runRoot: string, intro: string): string[] {
+  const semanticResumeCommand = `${LOCAL_HELPER_DIR}/circuit-engine resume --run-root "${runRoot}" --json`;
+
+  return [
+    "",
+    "## Resume Workflow Run",
+    `${intro} \`${semanticResumeCommand}\` to get the semantic resume step for the attached run.`,
+    "Continue from the reported `resume_step`; do not invent `run attach`, `attach`, or other rebind commands.",
+  ];
+}
+
+function deriveContinuityGuidance(status: ContinuityStatusPayload): ContinuityGuidance {
+  if (status.selection === "none") {
+    return {
+      currentRunRoot: null,
+      lines: [
+        "",
+        "No continuity is currently saved in the control plane. Do not invent a legacy handoff file.",
+      ],
+    };
+  }
+
+  if (status.selection === "current_run" && status.current_run) {
+    return {
+      currentRunRoot: status.current_run.run_root,
+      lines: [
+        "",
+        "## Active Run Fallback",
+        "No saved continuity record is selected. The indexed current run is available only as a fallback, not as saved handoff authority.",
+        ...renderRunResumeGuidance(
+          status.current_run.run_root,
+          "As a fallback, use",
+        ),
+      ],
+    };
+  }
+
+  const savedNextActionLines = renderSavedNextAction(status);
+  const isRunBackedPendingRecord = status.selection === "pending_record"
+    && status.record?.resume_contract.mode === "resume_run"
+    && status.record.run_ref !== null;
+
+  if (!isRunBackedPendingRecord) {
+    return {
+      currentRunRoot: null,
+      lines: savedNextActionLines,
+    };
+  }
+
+  if (status.warnings.length > 0 || !status.current_run) {
+    return {
+      currentRunRoot: null,
+      lines: [
+        ...savedNextActionLines,
+        "",
+        "The selected continuity record is run-backed, but its continuity status is warning-bearing.",
+        "Do not continue a run until the mismatch is resolved.",
+      ],
+    };
+  }
+
+  return {
+    currentRunRoot: status.current_run.run_root,
+    lines: [
+      ...savedNextActionLines,
+      ...renderRunResumeGuidance(
+        status.current_run.run_root,
+        "After resolving continuity, use",
+      ),
+    ],
+  };
 }
 
 function renderHandoffReferenceContext(
   command: ParsedSlashCommand,
   status: ContinuityStatusPayload,
 ): string {
-  const savedNextAction = status.record?.narrative.next;
-  const semanticResumeCommand = status.current_run
-    ? `${LOCAL_HELPER_DIR}/circuit-engine resume --run-root "${status.current_run.run_root}" --json`
-    : null;
+  const guidance = deriveContinuityGuidance(status);
 
   return [
     "# Circuit Continuity Reference",
@@ -218,28 +313,8 @@ function renderHandoffReferenceContext(
     "Do not inspect legacy handoff paths or scan run roots.",
     "",
     "## Control-Plane Status",
-    ...continuityStatusLines(status),
-    ...(status.selection === "none"
-      ? [
-        "",
-        "No continuity is currently saved in the control plane. Do not invent a legacy handoff file.",
-      ]
-      : []),
-    ...(savedNextAction
-      ? [
-        "",
-        "## Saved Next Action",
-        savedNextAction,
-      ]
-      : []),
-    ...(semanticResumeCommand
-      ? [
-        "",
-        "## Resume Workflow Run",
-        `After resolving continuity, use \`${semanticResumeCommand}\` to get the semantic resume step for the attached run.`,
-        "Continue from the reported `resume_step`; do not invent `run attach`, `attach`, or other rebind commands.",
-      ]
-      : []),
+    ...continuityStatusLinesWithCurrentRunRoot(status, guidance.currentRunRoot),
+    ...guidance.lines,
     ...(status.selection !== "none"
       ? [
         "",
@@ -293,10 +368,10 @@ function renderHandoffCaptureContext(
     lines,
     "",
     "## Control-Plane Status",
-    ...continuityStatusLines(status),
-    ...(status.current_run
-      ? [`- current_run_root: ${status.current_run.run_root}`]
-      : []),
+    ...continuityStatusLinesWithCurrentRunRoot(
+      status,
+      status.current_run?.run_root ?? null,
+    ),
     ...(status.warnings.length > 0
       ? [
         "",

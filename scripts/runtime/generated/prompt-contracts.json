@@ -49,7 +49,7 @@
         "Supported handoff commands are `/circuit:handoff`, `/circuit:handoff resume`, and `/circuit:handoff done`.",
         "Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.",
         "Do not inspect legacy handoff paths, scan run roots, or write `handoff.md`.",
-        "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to pick it up; use `/circuit:handoff done` only to clear it.",
+        "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.",
         "Do not dump the saved continuity body back to the user during capture mode.",
         "Stop after either reporting that nothing useful could be captured or confirming the save."
       ],

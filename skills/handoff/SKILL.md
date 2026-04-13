@@ -200,6 +200,6 @@ Keep continuity dense and useful:
 
 After saving, confirm without dumping the continuity body:
 
-> Handoff saved. In the next session, use `/circuit:handoff resume` to pick it up; use `/circuit:handoff done` only to clear it.
+> Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.
 
 Do not display the saved continuity during capture mode.
