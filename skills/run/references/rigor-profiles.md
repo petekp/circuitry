@@ -89,7 +89,7 @@ tradeoff-decision.
 **Auto-resolve rules:**
 - Checkpoints with clear evidence: auto-continue.
 - Checkpoints requiring human judgment: log to deferred.md (Sweep) or note in result.md (other workflows), continue.
-- Tradeoff decisions: halt and write handoff.md.
+- Tradeoff decisions: halt and save continuity with `/circuit:handoff`.
 - Critical path failures: halt and write partial result.md.
 
 **Additional artifacts:** deferred.md (Sweep only; always present when Sweep runs Autonomous).

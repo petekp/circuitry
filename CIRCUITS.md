@@ -25,7 +25,7 @@ For technical details on how circuits execute, see
 | Utility | Invoke | Best For |
 |---------|--------|----------|
 | Create | `/circuit:create` | Generate, validate, and publish a user-global custom circuit workflow |
-| Handoff | `/circuit:handoff` | Save or explicitly resume session continuity across session boundaries |
+| Handoff | `/circuit:handoff` | Save, explicitly resume, or clear session continuity across session boundaries |
 | Review | `/circuit:review` | Standalone fresh-context code review |
 <!-- END UTILITY_TABLE -->
 
@@ -218,12 +218,15 @@ phases inside workflows.
 
 ### Handoff
 
-Save session state to disk. On the next `/clear` or session start, the hook
-injects it so the fresh session resumes automatically.
+Save session continuity into the engine-owned control plane. Fresh sessions get
+a passive continuity banner and resume only through `/circuit:handoff resume`.
+Use `/circuit:handoff done` to clear saved continuity; host `/clear` remains
+passive.
 
-**Artifact:** handoff.md (NEXT, GOAL, STATE, DEBT)
+**Artifact:** `.circuit/control-plane/continuity-index.json` +
+`.circuit/control-plane/continuity-records/<record-id>.json`
 
-Works alongside `active-run.md` (automatic continuity) as the intentional
+Works alongside `active-run.md` (runtime dashboard only) as the intentional
 high-quality continuity path.
 
 ## Shared Phase Spine
@@ -251,7 +254,7 @@ Every workflow is a preset over this spine:
 | plan.md | Plan phase. Slices and sequence. |
 | review.md | Review phase.* CLEAN or ISSUES FOUND. |
 | result.md | Always, on completion. PR-summary seed. |
-| handoff.md | Pause phase. Distilled hidden state. |
+| continuity-index.json + continuity-records/<record-id>.json | Pause phase. Structured session continuity. |
 | deferred.md | Sweep deferred review phase. Ambiguous or borderline items kept out of executed batches. |
 
 * `review.md` is produced during the Review phase for Build, Repair, and Migrate. Sweep writes `review.md` during Verify as part of its verify-deferred flow.

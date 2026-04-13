@@ -15,7 +15,7 @@ Every workflow is a preset over this spine. A workflow may skip phases but never
 | **Verify** | Objective proof, not narrative | Verification commands re-run independently, results recorded |
 | **Review** | Fresh-context critique (separate session) | review.md exists with CLEAN or ISSUES FOUND verdict |
 | **Close** | What changed? What passed? What remains? PR-summary seed | result.md exists with changes, verification, follow-ups |
-| **Pause** | (Optional) Session boundary, distilled hidden state | handoff.md written with NEXT, GOAL, STATE, DEBT |
+| **Pause** | (Optional) Session boundary, distilled hidden state | continuity record saved in the control plane with goal, next, state, and debt fields |
 
 ## 2. Rigor Profiles
 
@@ -81,7 +81,7 @@ Every workflow draws from this vocabulary. No workflow invents its own artifact 
 | **plan.md** | Plan phase runs | Slices, sequence, rollback/safety boundaries, adjacent-output checklist |
 | **review.md** | Review phase runs* | Verdict: CLEAN or ISSUES FOUND. Findings by severity (critical/high/low) |
 | **result.md** | Always, on completion | Changes, verification results, residual risks/debt, follow-ups, PR-summary seed |
-| **handoff.md** | Pause phase only | Distilled hidden state per existing handoff skill format |
+| **continuity record** | Pause phase only | Structured continuity payload stored in `.circuit/control-plane/` |
 | **deferred.md** | Workflows whose topology explicitly includes Deferred Review (currently Sweep) | Ambiguous items, postponed issues, deliberately skipped work |
 
 * `review.md` is produced during the Review phase for Build, Repair, and Migrate. Sweep writes `review.md` during Verify as part of its verify-deferred flow.
@@ -244,15 +244,16 @@ Public, core lifecycle primitive.
 
 | Aspect | Detail |
 |--------|--------|
-| **Modes** | capture (write handoff.md), done (clear pending handoff) |
-| **Artifact** | handoff.md (NEXT, GOAL, STATE, DEBT) |
+| **Modes** | capture (save continuity record), resume (explicit pickup), done (clear pending continuity) |
+| **Artifact** | `.circuit/control-plane/continuity-index.json` + `.circuit/control-plane/continuity-records/<record-id>.json` |
 | **Philosophy** | Preserve only info a new session cannot cheaply reconstruct |
 
 **Lifecycle integration:**
 - Every active workflow keeps active-run.md updated after each phase
-- Manual /circuit:handoff writes the richer distilled snapshot
-- SessionStart hook injects active-run.md on startup/resume/clear/compaction
-- active-run.md = automatic continuity; handoff.md = intentional high-quality continuity
+- Manual `/circuit:handoff` writes the richer structured continuity snapshot
+- Manual `/circuit:handoff done` clears saved continuity when you want the next session to start fresh
+- SessionStart hook prints a passive continuity banner on startup when saved continuity or indexed current-run state exists
+- `active-run.md` = runtime dashboard; control-plane continuity = intentional high-quality continuity
 
 ## 6. Command Surface
 
@@ -305,8 +306,8 @@ Router may say "this is trivial, do it inline" when:
 Both router dispatch and direct specialist invocation produce the same minimum
 bootstrap state:
 
-1. Create run root: `.circuit/circuit-runs/<slug>/artifacts/` and `phases/`
-2. Set current-run pointer: `ln -sfn "circuit-runs/<slug>" .circuit/current-run`
+1. Bootstrap through `.circuit/bin/circuit-engine bootstrap`
+2. Let the engine materialize the run root and mirror `.circuit/current-run` from indexed `current_run`
 3. Write initial `active-run.md` with Workflow, Rigor, Current Phase, Goal
 
 The router may write additional dashboard fields (Next Step, Verification

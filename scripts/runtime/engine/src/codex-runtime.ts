@@ -12,7 +12,7 @@ import {
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
-import { resolveProjectRoot } from "./continuity.js";
+import { resolveProjectRoot } from "./project-root.js";
 import { writeTextFileAtomic } from "./file-utils.js";
 
 export type RuntimeBoundary =

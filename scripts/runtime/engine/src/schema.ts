@@ -34,12 +34,28 @@ function findRepoRoot(): string {
 /** Resolve the repository root in both source and bundled runtime layouts. */
 export const REPO_ROOT = findRepoRoot();
 
+const SCHEMA_CACHE = new Map<string, object>();
+
 /**
  * Load a JSON-Schema file relative to the repository root.
  */
 export function loadJsonSchema(relativePath: string): object {
   const fullPath = resolve(REPO_ROOT, relativePath);
   return JSON.parse(readFileSync(fullPath, "utf-8"));
+}
+
+/**
+ * Load and memoize a JSON-Schema file relative to the repository root.
+ */
+export function loadJsonSchemaCached(relativePath: string): object {
+  const cached = SCHEMA_CACHE.get(relativePath);
+  if (cached) {
+    return cached;
+  }
+
+  const schema = loadJsonSchema(relativePath);
+  SCHEMA_CACHE.set(relativePath, schema);
+  return schema;
 }
 
 /**

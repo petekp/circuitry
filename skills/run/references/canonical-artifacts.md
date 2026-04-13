@@ -171,13 +171,14 @@ Always present on completion. The consumable outcome.
 <ready-to-use PR body seed -- title, summary bullets, test plan>
 ```
 
-### handoff.md
+### continuity record
 
 Only when pausing. Distilled hidden state.
 
-See the handoff skill for the full format (NEXT, GOAL, STATE, DEBT).
-Written via `/circuit:handoff` or when session boundary matters more than
-continuing.
+See the handoff skill for the structured save fields (`goal`, `next`,
+`state_markdown`, `debt_markdown`). Written via `/circuit:handoff` into
+`.circuit/control-plane/continuity-index.json` plus the pointed record payload
+under `.circuit/control-plane/continuity-records/`.
 
 ### deferred.md
 
@@ -258,6 +259,6 @@ Each workflow may introduce ONE specialized artifact if it genuinely helps.
 
 **Review (utility):** review.md (standalone)
 
-**Handoff (utility):** handoff.md (standalone)
+**Handoff (utility):** control-plane continuity record (standalone)
 
 All workflows maintain active-run.md throughout.

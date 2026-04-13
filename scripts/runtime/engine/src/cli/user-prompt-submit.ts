@@ -3,13 +3,15 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import {
-  inspectContinuity,
-  type ContinuityInspection,
-} from "../continuity.js";
+import type { ContinuityStatusPayload } from "../continuity-commands.js";
 import { renderRunCustomCircuitContext } from "../catalog/custom-circuits.js";
 import type { PromptContractsManifest } from "../catalog/prompt-surface-contracts.js";
-import { PROMPT_CONTRACTS_PATH } from "../catalog/prompt-surface-contracts.js";
+import {
+  CONTINUITY_RESUME_JSON_COMMAND,
+  LOCAL_HELPER_DIR,
+  PROMPT_CONTRACTS_PATH,
+} from "../catalog/prompt-surface-contracts.js";
+import { resolveProjectRoot } from "../project-root.js";
 import { REPO_ROOT } from "../schema.js";
 import {
   parseCircuitSlashCommand,
@@ -49,6 +51,10 @@ function isHandoffResume(command: ParsedSlashCommand): boolean {
   return command.slug === "handoff" && /^resume(\s|$)/.test(command.argsLower);
 }
 
+function isHandoffCapture(command: ParsedSlashCommand): boolean {
+  return command.slug === "handoff" && !isHandoffDone(command) && !isHandoffResume(command);
+}
+
 function isReviewCurrentChanges(command: ParsedSlashCommand): boolean {
   return command.slug === "review" && /^current\s+changes(\s|$)/.test(command.argsLower);
 }
@@ -72,15 +78,18 @@ function isWorkflowSmoke(command: ParsedSlashCommand): boolean {
   );
 }
 
-function requestsSavedHandoff(command: ParsedSlashCommand): boolean {
+function requestsSavedContinuity(command: ParsedSlashCommand): boolean {
   if (command.slug === "handoff") {
     return false;
   }
 
-  return (
-    /\bhandoff\b/.test(command.argsLower)
-    && /\b(continue|resume|pick\s*up|pickup|pick-up|use|follow)\b/.test(command.argsLower)
-  );
+  const args = command.argsLower;
+  const continuityResumePatterns = [
+    /\b(?:continue|resume|pick\s*up|pickup|pick-up|follow)\s+(?:from|with)?\s*(?:the\s+|saved\s+)?(?:continuity|handoff)\b(?:\s+(?:context|record|state|summary|notes?))?(?:\s|$)/,
+    /\buse\s+(?:the\s+|saved\s+)?(?:continuity|handoff)\b(?:\s+(?:context|record|state|summary|notes?))?(?:\s+(?:for|to)\b|\s*$)/,
+  ];
+
+  return continuityResumePatterns.some((pattern) => pattern.test(args));
 }
 
 function loadPromptContracts(): PromptContractsManifest {
@@ -182,75 +191,87 @@ function renderCustomRoutingUnavailableContext(error: unknown): string {
   ].join("\n");
 }
 
-function resolutionLines(
-  inspection: ContinuityInspection,
-  options: { explicitResume: boolean },
-): string[] {
-  if (inspection.hasHandoff) {
-    return [
-      `Read this handoff first: ${inspection.handoffPath}`,
-      ...(options.explicitResume
-        ? ["Only fall back to `.circuit/current-run` when the handoff file is absent."]
-        : []),
-    ];
-  }
-
-  return options.explicitResume
-    ? ["No saved handoff exists. Only `.circuit/current-run` may still provide fallback continuity."]
-    : ["No saved handoff exists. Do not guess from unrelated repo files."];
-}
-
-function warningLines(inspection: ContinuityInspection): string[] {
-  return inspection.handoff.warnings.map((warning) => `- ${warning}`);
+function continuityStatusLines(status: ContinuityStatusPayload): string[] {
+  return [
+    `- selection: ${status.selection}`,
+    `- pending_record: ${status.pending_record?.record_id ?? "none"}`,
+    `- current_run: ${status.current_run?.run_slug ?? "none"}`,
+    ...(status.current_run
+      ? [`- current_run_root: ${status.current_run.run_root}`]
+      : []),
+  ];
 }
 
 function renderHandoffReferenceContext(
   command: ParsedSlashCommand,
-  inspection: ContinuityInspection,
+  status: ContinuityStatusPayload,
 ): string {
+  const savedNextAction = status.record?.narrative.next;
+  const semanticResumeCommand = status.current_run
+    ? `${LOCAL_HELPER_DIR}/circuit-engine resume --run-root "${status.current_run.run_root}" --json`
+    : null;
+
   return [
-    "# Circuit Handoff Continuity Reference",
-    `The user explicitly referenced a saved handoff while invoking \`/circuit:${command.slug}\`.`,
-    "The saved handoff lives only at the canonical project handoff path below.",
+    "# Circuit Continuity Reference",
+    `The user explicitly referenced saved continuity while invoking \`/circuit:${command.slug}\`.`,
+    `Resolve continuity through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration.`,
+    "Do not inspect legacy handoff paths or scan run roots.",
     "",
-    "## Canonical Handoff Path",
-    inspection.handoffPath,
-    "",
-    "## Resolution",
-    ...resolutionLines(inspection, { explicitResume: false }),
-    ...(inspection.handoff.warnings.length > 0
+    "## Control-Plane Status",
+    ...continuityStatusLines(status),
+    ...(status.selection === "none"
       ? [
         "",
-        "## Drift Warnings",
-        ...warningLines(inspection),
+        "No continuity is currently saved in the control plane. Do not invent a legacy handoff file.",
       ]
       : []),
-    "",
-    "Read the selected handoff before unrelated repo exploration if the task truly means \"continue with the handoff.\"",
+    ...(savedNextAction
+      ? [
+        "",
+        "## Saved Next Action",
+        savedNextAction,
+      ]
+      : []),
+    ...(semanticResumeCommand
+      ? [
+        "",
+        "## Resume Workflow Run",
+        `After resolving continuity, use \`${semanticResumeCommand}\` to get the semantic resume step for the attached run.`,
+        "Continue from the reported `resume_step`; do not invent `run attach`, `attach`, or other rebind commands.",
+      ]
+      : []),
+    ...(status.selection !== "none"
+      ? [
+        "",
+        "Do not `cat` `.circuit/current-run`; the mirror may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
+      ]
+      : []),
+    ...(status.warnings.length > 0
+      ? [
+        "",
+        "## Warnings",
+        ...status.warnings.map((warning) => `- ${warning}`),
+      ]
+      : []),
   ].join("\n");
 }
 
 function renderHandoffResumeContext(
   manifest: PromptContractsManifest,
-  inspection: ContinuityInspection,
+  status: ContinuityStatusPayload,
 ): string {
-  const lines = renderTemplate(manifest.fast_modes.handoff_resume.lines, {
-    handoff_path: inspection.handoffPath,
-  });
+  const lines = renderTemplate(manifest.fast_modes.handoff_resume.lines, {});
 
   return [
     lines,
     "",
-    "## Canonical Handoff Path",
-    inspection.handoffPath,
-    "",
-    "## Resolution",
-    ...resolutionLines(inspection, { explicitResume: true }),
-    ...(inspection.handoff.warnings.length > 0
+    "## Control-Plane Status",
+    ...continuityStatusLines(status),
+    ...(status.warnings.length > 0
       ? [
         "",
-        "## Drift Warnings",
-        ...warningLines(inspection),
+        "## Warnings",
+        ...status.warnings.map((warning) => `- ${warning}`),
       ]
       : []),
   ].join("\n");
@@ -258,14 +279,35 @@ function renderHandoffResumeContext(
 
 function renderHandoffDoneContext(
   manifest: PromptContractsManifest,
-  inspection: ContinuityInspection,
 ): string {
-  return renderTemplate(manifest.fast_modes.handoff_done.lines, {
-    handoff_path: inspection.handoffPath,
-  });
+  return renderTemplate(manifest.fast_modes.handoff_done.lines, {});
 }
 
-function main(): number {
+function renderHandoffCaptureContext(
+  manifest: PromptContractsManifest,
+  status: ContinuityStatusPayload,
+): string {
+  const lines = renderTemplate(manifest.fast_modes.handoff_capture.lines, {});
+
+  return [
+    lines,
+    "",
+    "## Control-Plane Status",
+    ...continuityStatusLines(status),
+    ...(status.current_run
+      ? [`- current_run_root: ${status.current_run.run_root}`]
+      : []),
+    ...(status.warnings.length > 0
+      ? [
+        "",
+        "## Warnings",
+        ...status.warnings.map((warning) => `- ${warning}`),
+      ]
+      : []),
+  ].join("\n");
+}
+
+async function main(): Promise<number> {
   const input = readInput();
   const prompt = typeof input.prompt === "string" ? input.prompt : "";
   const projectRoot = currentProjectRoot();
@@ -285,22 +327,31 @@ function main(): number {
     return 0;
   }
 
-  const continuity = inspectContinuity({
-    handoffHome: process.env.CIRCUIT_HANDOFF_HOME,
-    homeDir: process.env.HOME || "",
-    projectRoot,
-  });
+  let continuityStatus: ContinuityStatusPayload | null = null;
+  const readContinuityStatus = async (): Promise<ContinuityStatusPayload> => {
+    if (continuityStatus) {
+      return continuityStatus;
+    }
+
+    const { getContinuityStatus } = await import("../continuity-commands.js");
+    continuityStatus = getContinuityStatus(resolveProjectRoot(projectRoot));
+    return continuityStatus;
+  };
 
   if (isReviewCurrentChanges(command)) {
     emitContext(renderTemplate(manifest.fast_modes.review_current_changes.lines, {}));
   }
 
   if (isHandoffDone(command)) {
-    emitContext(renderHandoffDoneContext(manifest, continuity));
+    emitContext(renderHandoffDoneContext(manifest));
   }
 
   if (isHandoffResume(command)) {
-    emitContext(renderHandoffResumeContext(manifest, continuity));
+    emitContext(renderHandoffResumeContext(manifest, await readContinuityStatus()));
+  }
+
+  if (isHandoffCapture(command)) {
+    emitContext(renderHandoffCaptureContext(manifest, await readContinuityStatus()));
   }
 
   if (isWorkflowSmoke(command)) {
@@ -314,8 +365,8 @@ function main(): number {
     emitContext(renderTemplate(manifest.fast_modes.build_smoke.lines, {}));
   }
 
-  if (requestsSavedHandoff(command)) {
-    emitContext(renderHandoffReferenceContext(command, continuity));
+  if (requestsSavedContinuity(command)) {
+    emitContext(renderHandoffReferenceContext(command, await readContinuityStatus()));
   }
 
   if (command.slug === "run") {
@@ -332,4 +383,9 @@ function main(): number {
   return 0;
 }
 
-process.exit(main());
+void main().then((code) => {
+  process.exit(code);
+}).catch((error) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
+});

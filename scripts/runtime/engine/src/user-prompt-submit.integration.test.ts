@@ -15,7 +15,12 @@ import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { projectSlug, resolveHandoffPath } from "./continuity.js";
+import {
+  setContinuityPendingRecord,
+  type ContinuityRecordV1,
+  upsertContinuityCurrentRun,
+  writeContinuityRecord,
+} from "./continuity-control-plane.js";
 import { REPO_ROOT } from "./schema.js";
 
 const USER_PROMPT_SUBMIT = resolve(REPO_ROOT, "hooks/user-prompt-submit.js");
@@ -34,13 +39,6 @@ function runUserPromptSubmit(
       ...options?.env,
     },
   });
-}
-
-function runUserPromptSubmitWithEnv(
-  prompt: string,
-  env: Record<string, string>,
-): ReturnType<typeof spawnSync> {
-  return runUserPromptSubmit(prompt, { env });
 }
 
 function readAdditionalContext(result: ReturnType<typeof spawnSync>): string {
@@ -70,6 +68,14 @@ function makeInstalledHookRoot(root: string): string {
   copyFileSync(
     resolve(REPO_ROOT, "schemas/event.schema.json"),
     resolve(installRoot, "schemas/event.schema.json"),
+  );
+  copyFileSync(
+    resolve(REPO_ROOT, "schemas/continuity-index.schema.json"),
+    resolve(installRoot, "schemas/continuity-index.schema.json"),
+  );
+  copyFileSync(
+    resolve(REPO_ROOT, "schemas/continuity-record.schema.json"),
+    resolve(installRoot, "schemas/continuity-record.schema.json"),
   );
 
   return installRoot;
@@ -113,6 +119,103 @@ function writeCustomWorkflow(homeDir: string, slug: string): void {
     ].join("\n"),
     "utf-8",
   );
+}
+
+function writePendingContinuity(projectRoot: string): void {
+  const canonicalProjectRoot = realpathSync(projectRoot);
+  const record: ContinuityRecordV1 = {
+    created_at: "2026-04-12T00:00:00.000Z",
+    git: {
+      base_commit: null,
+      branch: null,
+      cwd: canonicalProjectRoot,
+      head: null,
+    },
+    narrative: {
+      debt_markdown: "- CONSTRAINT: use engine commands only",
+      goal: "Resume from the continuity control plane",
+      next: "DO: resume-control-plane-sentinel",
+      state_markdown: "- resume-control-plane-sentinel",
+    },
+    project_root: canonicalProjectRoot,
+    record_id: "continuity-pending-record",
+    resume_contract: {
+      auto_resume: false,
+      mode: "resume_standalone",
+      requires_explicit_resume: true,
+    },
+    run_ref: null,
+    schema_version: "1",
+  };
+
+  const { payloadRel } = writeContinuityRecord(projectRoot, record);
+  setContinuityPendingRecord(projectRoot, {
+    continuity_kind: "standalone",
+    created_at: record.created_at,
+    payload_rel: payloadRel,
+    record_id: record.record_id,
+    run_slug: null,
+  });
+}
+
+function writeRunBackedPendingContinuity(projectRoot: string): string {
+  const canonicalProjectRoot = realpathSync(projectRoot);
+  const runSlug = "resume-attached-run";
+  const runRoot = resolve(canonicalProjectRoot, ".circuit", "circuit-runs", runSlug);
+
+  mkdirSync(runRoot, { recursive: true });
+
+  const record: ContinuityRecordV1 = {
+    created_at: "2026-04-12T00:00:00.000Z",
+    git: {
+      base_commit: null,
+      branch: null,
+      cwd: canonicalProjectRoot,
+      head: null,
+    },
+    narrative: {
+      debt_markdown: "- CONSTRAINT: continue the existing run without rebinding it",
+      goal: "Resume the saved run through the control plane",
+      next: "DO: resume-attached-run-sentinel",
+      state_markdown: "- resume-attached-run-sentinel",
+    },
+    project_root: canonicalProjectRoot,
+    record_id: "continuity-run-ref-record",
+    resume_contract: {
+      auto_resume: false,
+      mode: "resume_run",
+      requires_explicit_resume: true,
+    },
+    run_ref: {
+      current_step_at_save: "plan",
+      manifest_present: true,
+      run_root_rel: `.circuit/circuit-runs/${runSlug}`,
+      run_slug: runSlug,
+      runtime_status_at_save: "in_progress",
+      runtime_updated_at_at_save: "2026-04-12T00:00:00.000Z",
+    },
+    schema_version: "1",
+  };
+
+  const { payloadRel } = writeContinuityRecord(projectRoot, record);
+  upsertContinuityCurrentRun({
+    attachedAt: "2026-04-12T00:00:00.000Z",
+    currentStep: "plan",
+    lastValidatedAt: "2026-04-12T00:00:00.000Z",
+    manifestPresent: true,
+    projectRoot: canonicalProjectRoot,
+    runSlug,
+    runtimeStatus: "in_progress",
+  });
+  setContinuityPendingRecord(projectRoot, {
+    continuity_kind: "run_ref",
+    created_at: record.created_at,
+    payload_rel: payloadRel,
+    record_id: record.record_id,
+    run_slug: runSlug,
+  });
+
+  return runRoot;
 }
 
 describe("user-prompt-submit integration", () => {
@@ -274,148 +377,138 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("Review verdict:");
   });
 
-  it("injects handoff done fast mode context with the resolved handoff path", () => {
+  it("injects handoff done fast mode context that points to the engine clear command", () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-done-"));
-    const explicitHome = resolve(projectRoot, "home");
-    mkdirSync(explicitHome, { recursive: true });
+    mkdirSync(projectRoot, { recursive: true });
 
     const result = runUserPromptSubmit("/circuit:handoff done", {
       cwd: projectRoot,
-      env: { HOME: explicitHome },
     });
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Handoff Done Contract");
-    expect(context).toContain("artifacts/completed-run.md");
-    expect(context).toContain(
-      resolveHandoffPath({ homeDir: explicitHome, projectRoot: realpathSync(projectRoot) }),
-    );
-    expect(context).toContain(
-      "Delete `.circuit/current-run` after archiving the active-run dashboard.",
-    );
+    expect(context).toContain(".circuit/bin/circuit-engine continuity clear --json");
+    expect(context).toContain("removes the mirrored `.circuit/current-run` pointer");
+    expect(context).toContain("Do not manually delete handoff files");
+    expect(context).not.toContain("handoff.md");
+    expect(context).not.toContain("completed-run.md");
   });
 
-  it("injects handoff resume fast mode context with the resolved handoff path", () => {
+  it("injects handoff capture context that prohibits invented aliases", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-capture-"));
+    mkdirSync(projectRoot, { recursive: true });
+
+    const result = runUserPromptSubmit("/circuit:handoff", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Handoff Capture Contract");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity status --json");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity save");
+    expect(context).toContain("Do not move `DECIDED:`, `CONSTRAINT:`, `BLOCKED:`, or `RULED OUT:` bullets into `--state-markdown`");
+    expect(context).toContain("literal `none` is allowed only as a CLI convenience");
+    expect(context).toContain("resume never shows the sentinel");
+    expect(context).toContain("/circuit:handoff resume");
+    expect(context).toContain("/circuit:handoff done");
+    expect(context).toContain("Handoff saved. In the next session, use `/circuit:handoff resume` to pick it up; use `/circuit:handoff done` only to clear it.");
+    expect(context).toContain("Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.");
+    expect(context).toContain("## Control-Plane Status");
+    expect(context).toContain("- selection: none");
+    expect(context).toContain("- pending_record: none");
+    expect(context).toContain("- current_run: none");
+    expect(context).toContain("Do not inspect legacy handoff paths, scan run roots, or write `handoff.md`.");
+  });
+
+  it("injects handoff resume fast mode context with control-plane status", () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-resume-"));
-    const explicitHome = resolve(projectRoot, "home");
-    mkdirSync(explicitHome, { recursive: true });
+    mkdirSync(projectRoot, { recursive: true });
 
     const result = runUserPromptSubmit("/circuit:handoff resume", {
       cwd: projectRoot,
-      env: { HOME: explicitHome },
     });
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Handoff Resume Contract");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity resume --json");
     expect(context).toContain("# Circuit Resume");
-    expect(context).toContain(
-      resolveHandoffPath({ homeDir: explicitHome, projectRoot: realpathSync(projectRoot) }),
-    );
-    expect(context).toContain("Only fall back to `.circuit/current-run` when the handoff file is absent.");
+    expect(context).toContain("## Control-Plane Status");
+    expect(context).toContain("- selection: none");
+    expect(context).not.toContain("canonical project handoff path");
+    expect(context).not.toContain("Only fall back to `.circuit/current-run` when the handoff file is absent.");
   });
 
   it("injects handoff-reference guidance for workflow prompts that explicitly say continue with the handoff", () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-guidance-"));
-    const explicitHome = resolve(projectRoot, "home");
-    mkdirSync(explicitHome, { recursive: true });
+    mkdirSync(projectRoot, { recursive: true });
+    writePendingContinuity(projectRoot);
 
-    const realProjectRoot = realpathSync(projectRoot);
-    const canonicalPath = resolveHandoffPath({ homeDir: explicitHome, projectRoot: realProjectRoot });
-    mkdirSync(resolve(canonicalPath, ".."), { recursive: true });
-    writeFileSync(
-      canonicalPath,
-      [
-        "# Handoff",
-        "WRITTEN: 2026-04-11T20:30:00Z",
-        `DIR: ${realProjectRoot}`,
-        "",
-        "NEXT: DO: canonical-sentinel",
-        "STATE:",
-        "- canonical-sentinel",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
     const result = runUserPromptSubmit("/circuit:build continue with the handoff", {
       cwd: projectRoot,
-      env: { HOME: explicitHome },
     });
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
-    expect(context).toContain("Circuit Handoff Continuity Reference");
-    expect(context).toContain(canonicalPath);
-    expect(context).toContain("The saved handoff lives only at the canonical project handoff path below.");
-    expect(context).toContain(`Read this handoff first: ${canonicalPath}`);
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity resume --json");
+    expect(context).toContain("## Control-Plane Status");
+    expect(context).toContain("- selection: pending_record");
+    expect(context).toContain("- pending_record: continuity-pending-record");
+    expect(context).not.toContain("canonical project handoff path");
+    expect(context).not.toContain("Read this handoff first:");
   });
 
-  it("says there is no saved handoff when the canonical file is absent", () => {
-    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-missing-"));
-    const explicitHome = resolve(projectRoot, "home");
-    mkdirSync(explicitHome, { recursive: true });
-
-    const realProjectRoot = realpathSync(projectRoot);
-    const canonicalPath = resolveHandoffPath({ homeDir: explicitHome, projectRoot: realProjectRoot });
-
-    const result = runUserPromptSubmit("/circuit:handoff resume", {
-      cwd: projectRoot,
-      env: { HOME: explicitHome },
-    });
-
-    expect(result.status).toBe(0);
-    const context = readAdditionalContext(result);
-    expect(context).toContain(canonicalPath);
-    expect(context).toContain("No saved handoff exists.");
-  });
-
-  it("keeps the default handoff store even when a sibling home fixture exists", () => {
-    const root = mkdtempSync(join(tmpdir(), "circuit-prompt-home-"));
-    const projectRoot = resolve(root, "project");
-    const siblingHome = resolve(root, "home");
-    const explicitHome = resolve(root, "real-home");
-
+  it("injects continuity-reference guidance for workflow prompts that use the new continuity wording", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-continuity-guidance-"));
     mkdirSync(projectRoot, { recursive: true });
-    mkdirSync(siblingHome, { recursive: true });
-    mkdirSync(explicitHome, { recursive: true });
+    writePendingContinuity(projectRoot);
 
-    const result = runUserPromptSubmitWithEnv("/circuit:handoff resume", {
-      CLAUDE_PROJECT_DIR: projectRoot,
-      HOME: explicitHome,
+    const result = runUserPromptSubmit("/circuit:build continue from saved continuity", {
+      cwd: projectRoot,
     });
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
-    expect(context).toContain(resolve(explicitHome, ".claude", "projects"));
-    expect(context).not.toContain(resolve(siblingHome, ".circuit-projects"));
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity resume --json");
+    expect(context).toContain("- selection: pending_record");
   });
 
-  it("uses the git-root slug for handoff fast modes when invoked from a subdirectory", () => {
-    const root = mkdtempSync(join(tmpdir(), "circuit-prompt-subdir-"));
-    const repoRoot = resolve(root, "repo");
-    const subdir = resolve(repoRoot, "nested", "work");
-    const homeDir = resolve(root, "home");
+  it("injects a run-backed continuity bridge for /circuit:run continue from the handoff", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-run-handoff-"));
+    mkdirSync(projectRoot, { recursive: true });
+    const runRoot = writeRunBackedPendingContinuity(projectRoot);
 
-    mkdirSync(subdir, { recursive: true });
-    mkdirSync(homeDir, { recursive: true });
-    spawnSync("git", ["init", "-q"], { cwd: repoRoot, encoding: "utf-8" });
-    const gitRoot = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-      cwd: subdir,
-      encoding: "utf-8",
-    }).stdout.trim();
-
-    const result = runUserPromptSubmitWithEnv("/circuit:handoff resume", {
-      CLAUDE_PROJECT_DIR: subdir,
-      HOME: homeDir,
+    const result = runUserPromptSubmit("/circuit:run continue from the handoff", {
+      cwd: projectRoot,
     });
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
-    const expectedPath = resolveHandoffPath({ homeDir, projectRoot: gitRoot });
-    const subdirPath = resolve(homeDir, ".claude", "projects", projectSlug(realpathSync(subdir)), "handoff.md");
-    expect(context).toContain(expectedPath);
-    expect(context).not.toContain(subdirPath);
+    expect(context).toContain("Circuit Continuity Reference");
+    expect(context).toContain(".circuit/bin/circuit-engine continuity resume --json");
+    expect(context).toContain(`- current_run_root: ${runRoot}`);
+    expect(context).toContain("## Saved Next Action");
+    expect(context).toContain("DO: resume-attached-run-sentinel");
+    expect(context).toContain(`.circuit/bin/circuit-engine resume --run-root "${runRoot}" --json`);
+    expect(context).toContain("do not invent `run attach`, `attach`, or other rebind commands");
+    expect(context).toContain("Do not `cat` `.circuit/current-run`");
+  });
+
+  it("does not inject continuity guidance for unrelated prompts that only mention handoff as a noun", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-noun-"));
+    mkdirSync(projectRoot, { recursive: true });
+    writePendingContinuity(projectRoot);
+
+    const result = runUserPromptSubmit("/circuit:build use handoff tests to debug the failure", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("");
   });
 
   it("authors helper wrappers that fail clearly when .circuit/plugin-root is missing", () => {

@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
-import { inspectContinuity } from "../continuity.js";
+import { getContinuityStatus } from "../continuity-commands.js";
+import { resolveProjectRoot } from "../project-root.js";
 import { renderActiveRun } from "../render-active-run.js";
 
 function printContinuityBanner(available: string, warnings: string[]): void {
@@ -38,31 +36,26 @@ function printWelcome(): void {
 }
 
 function main(): number {
-  const inspection = inspectContinuity({
-    handoffHome: process.env.CIRCUIT_HANDOFF_HOME,
-    homeDir: process.env.HOME || "",
-    projectRoot: process.cwd(),
-  });
+  const projectRoot = resolveProjectRoot(process.cwd());
+  const continuity = getContinuityStatus(projectRoot);
 
-  if (inspection.activeRunPath && inspection.runRoot) {
-    const manifestPath = join(inspection.runRoot, "circuit.manifest.yaml");
-    if (existsSync(manifestPath)) {
-      try {
-        renderActiveRun(inspection.runRoot);
-      } catch {
-        process.stderr.write(
-          `warning: circuit-engine render failed for ${inspection.runRoot}; using last saved dashboard\n`,
-        );
-      }
+  if (!continuity.pending_record && continuity.current_run?.manifest_present) {
+    try {
+      renderActiveRun(continuity.current_run.run_root);
+    } catch {
+      process.stderr.write(
+        `warning: circuit-engine render failed for ${continuity.current_run.run_root}; using last saved dashboard\n`,
+      );
     }
   }
 
-  if (inspection.hasHandoff || inspection.activeRunPath) {
-    const availableLabels = [
-      inspection.hasHandoff ? "pending handoff" : "",
-      inspection.activeRunPath ? "active run" : "",
-    ].filter(Boolean).join(", ");
-    printContinuityBanner(availableLabels, inspection.handoff.warnings);
+  if (continuity.pending_record) {
+    printContinuityBanner("pending continuity", continuity.warnings);
+    return 0;
+  }
+
+  if (continuity.current_run) {
+    printContinuityBanner("active run", []);
     return 0;
   }
 

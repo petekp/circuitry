@@ -28,6 +28,11 @@ import {
 import { resolveRunRelativePath, assertSafeRelativePath } from "./path-utils.js";
 import { renderActiveRun, type RenderActiveRunResult } from "./render-active-run.js";
 import { loadJsonSchema, validate } from "./schema.js";
+import {
+  clearContinuityCurrentRun,
+  readContinuityIndex,
+  upsertContinuityCurrentRun,
+} from "./continuity-control-plane.js";
 
 export type EventSpec = {
   attempt?: number;
@@ -384,16 +389,23 @@ export function readGitHead(projectRoot: string): string {
   return /^[0-9a-f]{7,40}$/.test(value) ? value : "0000000";
 }
 
-export function updateCurrentRunPointer(
+export function syncCurrentRunPointerFromIndex(
   projectRoot: string,
-  runRoot: string,
-): { mode: "file" | "symlink"; path: string; slug: string } {
+): { mode: "file" | "symlink" | null; path: string; slug: string | null } {
   const pointerDir = join(projectRoot, ".circuit");
   const pointerPath = join(pointerDir, "current-run");
-  const slug = basename(runRoot);
 
   mkdirSync(pointerDir, { recursive: true });
   rmSync(pointerPath, { force: true, recursive: true });
+
+  const slug = readContinuityIndex(projectRoot)?.current_run?.run_slug ?? null;
+  if (!slug) {
+    return {
+      mode: null,
+      path: pointerPath,
+      slug: null,
+    };
+  }
 
   try {
     symlinkSync(`circuit-runs/${slug}`, pointerPath);
@@ -410,6 +422,46 @@ export function updateCurrentRunPointer(
       slug,
     };
   }
+}
+
+function projectRootForRunRoot(runRoot: string): string {
+  return resolve(runRoot, "..", "..", "..");
+}
+
+function syncIndexedCurrentRun(
+  projectRoot: string,
+  runRoot: string,
+  renderResult: RenderActiveRunResult,
+): void {
+  const runSlug = basename(runRoot);
+  const state = renderResult.state;
+  const runtimeStatus =
+    typeof state.status === "string" ? state.status : null;
+
+  if (
+    runtimeStatus === "completed"
+    || runtimeStatus === "stopped"
+    || runtimeStatus === "blocked"
+    || runtimeStatus === "handed_off"
+  ) {
+    clearContinuityCurrentRun(projectRoot);
+    syncCurrentRunPointerFromIndex(projectRoot);
+    return;
+  }
+
+  upsertContinuityCurrentRun({
+    currentStep:
+      typeof state.current_step === "string" ? state.current_step : null,
+    lastValidatedAt:
+      typeof state.updated_at === "string" && state.updated_at.length > 0
+        ? state.updated_at
+        : undefined,
+    manifestPresent: existsSync(join(runRoot, "circuit.manifest.yaml")),
+    projectRoot,
+    runSlug,
+    runtimeStatus,
+  });
+  syncCurrentRunPointerFromIndex(projectRoot);
 }
 
 export function writeManifestSnapshot(
@@ -494,5 +546,7 @@ export function recordEventsAndRender(
     appendValidatedEvents(runRoot, specs);
   }
 
-  return renderRunState(runRoot);
+  const renderResult = renderRunState(runRoot);
+  syncIndexedCurrentRun(projectRootForRunRoot(runRoot), runRoot, renderResult);
+  return renderResult;
 }

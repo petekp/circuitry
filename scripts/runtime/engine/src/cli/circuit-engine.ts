@@ -13,6 +13,7 @@ import { renderActiveRun } from "../render-active-run.js";
 import { reopenStep } from "../reopen-step.js";
 import { findResumePoint, loadOrRebuildState } from "../resume.js";
 import { REPO_ROOT } from "../schema.js";
+import { runContinuityCommand } from "../continuity-commands.js";
 
 type ParsedFlags = {
   flags: Record<string, string>;
@@ -22,7 +23,7 @@ type ParsedFlags = {
 };
 
 const USAGE =
-  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render> [options]\n";
+  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render|continuity> [options]\n";
 const BOOTSTRAP_USAGE = [
   "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--json]",
   "",
@@ -257,6 +258,10 @@ function main(): number {
   if (command === "--help" || command === "help") {
     process.stdout.write(USAGE);
     return 0;
+  }
+
+  if (command === "continuity") {
+    return runContinuityCommand(rest);
   }
 
   try {

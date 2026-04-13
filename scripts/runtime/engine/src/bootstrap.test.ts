@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, describe, it } from "vitest";
 
 import { bootstrapRun } from "./bootstrap.js";
+import { readContinuityIndex } from "./continuity-control-plane.js";
 import {
   loadBuildManifest,
   makeTempProject,
@@ -64,6 +65,18 @@ describe("bootstrap", () => {
     } else {
       expect(pointer.target).toBe(slug);
     }
+
+    expect(readContinuityIndex(projectRoot)).toEqual(
+      expect.objectContaining({
+        current_run: expect.objectContaining({
+          current_step: "plan",
+          manifest_present: true,
+          run_root_rel: `.circuit/circuit-runs/${slug}`,
+          run_slug: slug,
+          runtime_status: "in_progress",
+        }),
+      }),
+    );
   });
 
   it("is idempotent when rerun against the same manifest snapshot", () => {
@@ -92,6 +105,15 @@ describe("bootstrap", () => {
 
     expect(result.bootstrapped).toBe(false);
     expect(readEvents(runRoot)).toHaveLength(before);
+    expect(readContinuityIndex(projectRoot)?.current_run).toEqual(
+      expect.objectContaining({
+        current_step: "frame",
+        manifest_present: true,
+        run_root_rel: ".circuit/circuit-runs/idempotent-run",
+        run_slug: "idempotent-run",
+        runtime_status: "in_progress",
+      }),
+    );
   });
 
   it("fails on legacy run-root collision", () => {

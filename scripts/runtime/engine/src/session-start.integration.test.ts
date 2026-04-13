@@ -1,13 +1,17 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { createBuildRun } from "./build-run-test-helpers.js";
-import { resolveHandoffPath } from "./continuity.js";
+import {
+  setContinuityPendingRecord,
+  type ContinuityRecordV1,
+  writeContinuityRecord,
+} from "./continuity-control-plane.js";
 import { REPO_ROOT } from "./schema.js";
 
 const SESSION_START = resolve(REPO_ROOT, "hooks/session-start.sh");
@@ -30,35 +34,78 @@ function runSessionStart(
   });
 }
 
+function legacyFixtureProjectKey(projectRoot: string): string {
+  return projectRoot
+    .replace(/\\/g, "/")
+    .replace(/\//g, "-")
+    .replace(/[:<>"|?*]/g, "");
+}
+
+function legacyFixturePath(baseDir: string, projectRoot: string): string {
+  return resolve(
+    baseDir,
+    ".circuit-projects",
+    legacyFixtureProjectKey(projectRoot),
+    "handoff.md",
+  );
+}
+
+function writePendingRunContinuity(projectRoot: string, runRoot: string): void {
+  const runSlug = basename(runRoot);
+  const canonicalProjectRoot = realpathSync(projectRoot);
+  const record: ContinuityRecordV1 = {
+    created_at: "2026-04-12T00:00:00.000Z",
+    git: {
+      base_commit: null,
+      branch: null,
+      cwd: canonicalProjectRoot,
+      head: null,
+    },
+    narrative: {
+      debt_markdown: "- CONSTRAINT: stay passive",
+      goal: "Keep continuity engine-owned",
+      next: "DO: pending-record-sentinel",
+      state_markdown: "- pending-record-sentinel",
+    },
+    project_root: canonicalProjectRoot,
+    record_id: `continuity-${runSlug}`,
+    resume_contract: {
+      auto_resume: false,
+      mode: "resume_run",
+      requires_explicit_resume: true,
+    },
+    run_ref: {
+      current_step_at_save: "frame",
+      manifest_present: true,
+      run_root_rel: `.circuit/circuit-runs/${runSlug}`,
+      run_slug: runSlug,
+      runtime_status_at_save: "in_progress",
+      runtime_updated_at_at_save: "2026-04-12T00:00:00.000Z",
+    },
+    schema_version: "1",
+  };
+
+  const { payloadRel } = writeContinuityRecord(projectRoot, record);
+  setContinuityPendingRecord(projectRoot, {
+    continuity_kind: "run_ref",
+    created_at: record.created_at,
+    payload_rel: payloadRel,
+    record_id: record.record_id,
+    run_slug: runSlug,
+  });
+}
+
 describe("session-start integration", () => {
-  it("announces pending handoff as passive context without injecting resume instructions", () => {
-    const root = mkdtempSync(join(tmpdir(), "circuit-session-handoff-"));
-    const projectRoot = join(root, "project");
+  it("announces pending continuity as passive context without injecting resume instructions", () => {
+    const { projectRoot, runRoot } = createBuildRun("Pending continuity should stay passive");
     const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
 
-    mkdirSync(projectRoot, { recursive: true });
-    spawnSync("git", ["init", "-q"], { cwd: projectRoot, encoding: "utf-8" });
-    const gitRoot = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-      cwd: projectRoot,
-      encoding: "utf-8",
-    }).stdout.trim();
-    const handoff = resolveHandoffPath({ homeDir, projectRoot: gitRoot });
-    mkdirSync(resolve(handoff, ".."), { recursive: true });
     writeFileSync(
-      handoff,
-      [
-        "# Handoff",
-        "WRITTEN: 2026-04-10T00:00:00Z",
-        `DIR: ${gitRoot}`,
-        "",
-        "NEXT: DO: resume-handoff-sentinel",
-        "GOAL: Verify explicit resume only [VERIFY: confirm this is still the right target before acting]",
-        "STATE:",
-        "- handoff-sentinel",
-        "",
-      ].join("\n"),
+      join(runRoot, "artifacts", "active-run.md"),
+      "# Active Run\n## Workflow\nSTALE\n",
       "utf-8",
     );
+    writePendingRunContinuity(projectRoot, runRoot);
 
     const result = runSessionStart(projectRoot, homeDir);
 
@@ -67,13 +114,16 @@ describe("session-start integration", () => {
     expect(result.stdout).toContain("This is context only.");
     expect(result.stdout).toContain("Fresh `/circuit:*` commands should be honored as the active task.");
     expect(result.stdout).toContain("/circuit:handoff resume");
-    expect(result.stdout).toContain("pending handoff");
-    expect(result.stdout).not.toContain("handoff-sentinel");
+    expect(result.stdout).toContain("pending continuity");
+    expect(result.stdout).not.toContain("pending-record-sentinel");
     expect(result.stdout).not.toContain("Resume from the handoff above.");
     expect(result.stdout).not.toContain("execute NEXT");
+
+    const saved = readFileSync(join(runRoot, "artifacts", "active-run.md"), "utf-8");
+    expect(saved).toContain("STALE");
   });
 
-  it("ignores sibling home fixtures unless CIRCUIT_HANDOFF_HOME is set", () => {
+  it("ignores legacy home handoff fixtures even when CIRCUIT_HANDOFF_HOME is set", () => {
     const root = mkdtempSync(join(tmpdir(), "circuit-session-sibling-home-"));
     const projectRoot = join(root, "project");
     const siblingHome = join(root, "home");
@@ -85,11 +135,7 @@ describe("session-start integration", () => {
       cwd: projectRoot,
       encoding: "utf-8",
     }).stdout.trim();
-    const siblingHandoffPath = resolveHandoffPath({
-      handoffHome: siblingHome,
-      homeDir,
-      projectRoot: gitRoot,
-    });
+    const siblingHandoffPath = legacyFixturePath(siblingHome, gitRoot);
     mkdirSync(resolve(siblingHandoffPath, ".."), { recursive: true });
     writeFileSync(
       siblingHandoffPath,
@@ -115,8 +161,8 @@ describe("session-start integration", () => {
       CIRCUIT_HANDOFF_HOME: siblingHome,
     });
     expect(overrideResult.status).toBe(0);
-    expect(overrideResult.stdout).toContain("Circuit continuity available");
-    expect(overrideResult.stdout).toContain("pending handoff");
+    expect(overrideResult.stdout).toContain("Circuit is active.");
+    expect(overrideResult.stdout).not.toContain("Circuit continuity available");
   });
 
   it("refreshes event-backed runs before announcing passive active-run continuity", () => {
@@ -149,8 +195,8 @@ describe("session-start integration", () => {
     expect(refreshed).not.toContain("STALE");
   });
 
-  it("keeps legacy runs on the saved dashboard path", () => {
-    const root = mkdtempSync(join(tmpdir(), "circuit-session-legacy-"));
+  it("ignores mirrored .circuit/current-run when it is not backed by indexed current_run", () => {
+    const root = mkdtempSync(join(tmpdir(), "circuit-session-mirror-only-"));
     const projectRoot = join(root, "project");
     const runRoot = join(projectRoot, ".circuit", "circuit-runs", "legacy-run");
     const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
@@ -171,9 +217,8 @@ describe("session-start integration", () => {
     const result = runSessionStart(projectRoot, homeDir);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Circuit continuity available");
-    expect(result.stdout).toContain("active run");
-    expect(result.stdout).not.toContain("## Workflow\nLegacy");
+    expect(result.stdout).toContain("Circuit is active.");
+    expect(result.stdout).not.toContain("Circuit continuity available");
 
     const saved = readFileSync(join(runRoot, "artifacts", "active-run.md"), "utf-8");
     expect(saved).toContain("## Workflow\nLegacy");

@@ -137,17 +137,17 @@ chain clean while preserving the full execution trace for debugging.
 
 Two mechanisms provide session continuity:
 
-- **active-run.md** -- Automatic. For event-backed runs it is generated from
-  machine state; for legacy workflows it is still updated manually. The
-  SessionStart hook injects it.
-- **handoff.md** -- Intentional. Written explicitly via `/circuit:handoff`.
-  Distills hard-to-rediscover facts.
+- **active-run.md** -- Passive runtime dashboard. For event-backed runs it is
+  generated from machine state; for legacy workflows it is still updated
+  manually. SessionStart may announce it when indexed `current_run` exists.
+- **continuity control plane** -- Intentional continuity saved explicitly via
+  `/circuit:handoff` into `.circuit/control-plane/`.
 
-The `.circuit/current-run` symlink points to the active run directory. The
-run router creates this pointer on dispatch. The SessionStart hook reads it
-first, falling back to a most-recent-file heuristic only when the pointer is
-absent. If the active run contains `circuit.manifest.yaml`, SessionStart
-refreshes `active-run.md` through the semantic outer engine before injecting it.
+The mirrored `.circuit/current-run` pointer follows indexed `current_run`; it
+is not continuity authority. SessionStart resolves pending continuity first,
+then indexed `current_run`, and otherwise shows the welcome banner. If the
+active run contains `circuit.manifest.yaml`, SessionStart refreshes
+`active-run.md` through the engine before printing a passive context banner.
 Legacy runs without a manifest snapshot stay on the saved dashboard path. The
 handoff `done` command clears both the handoff file and the pointer.
 
@@ -656,7 +656,7 @@ Frame -> Analyze -> Plan -> Act -> Verify -> Review -> Close
 | Utility | Purpose |
 |---------|---------|
 | **Review** | Standalone fresh-context audit. Same schema as review phases inside workflows. |
-| **Handoff** | Session state persistence. Writes handoff.md with NEXT, GOAL, STATE, DEBT. |
+| **Handoff** | Session continuity persistence. Writes control-plane continuity with goal, next, state, and debt. |
 
 ### Rigor Profiles
 
@@ -720,7 +720,7 @@ All workflows draw from this vocabulary:
 | `plan.md` | Slices, sequence, rollback boundaries, adjacent-output checklist |
 | `review.md` | Verdict: CLEAN or ISSUES FOUND with findings by severity |
 | `result.md` | Changes, verification results, follow-ups, PR-summary seed |
-| `handoff.md` | Distilled hidden state per handoff skill format |
+| `continuity-index.json` + `continuity-records/<record-id>.json` | Structured session continuity persisted by the handoff utility |
 | `deferred.md` | Deferred-review output for workflows that include that step (currently Sweep) |
 
 Specialized extensions (max 1 per workflow): `decision.md` (Explore, when the output is a decision; any profile),
@@ -978,7 +978,7 @@ circuit:run router
     ├── classify task kind (Explore/Build/Repair/Migrate/Sweep)
     ├── select rigor profile (Lite/Standard/Deep/Tournament/Autonomous)
     ├── write active-run.md
-    ├── update .circuit/current-run pointer
+    ├── mirror .circuit/current-run from indexed current_run
     └── load workflow skill
     |
     v

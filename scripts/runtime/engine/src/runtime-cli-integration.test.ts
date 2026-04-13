@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readContinuityIndex } from "./continuity-control-plane.js";
+
 const THIS_DIR =
   typeof __dirname !== "undefined"
     ? __dirname
@@ -25,6 +27,7 @@ const VERIFY_INSTALL = resolve(REPO_ROOT, "scripts/verify-install.sh");
 const READ_CONFIG = resolve(REPO_ROOT, "scripts/runtime/bin/read-config.js");
 const APPEND_EVENT = resolve(REPO_ROOT, "scripts/runtime/bin/append-event.js");
 const CIRCUIT_ENGINE = resolve(REPO_ROOT, "scripts/runtime/bin/circuit-engine.js");
+const CONTINUITY = resolve(REPO_ROOT, "scripts/runtime/bin/continuity.js");
 const DERIVE_STATE = resolve(REPO_ROOT, "scripts/runtime/bin/derive-state.js");
 const RESUME = resolve(REPO_ROOT, "scripts/runtime/bin/resume.js");
 
@@ -318,28 +321,37 @@ describe("runtime CLI integration", () => {
 
   it("circuit-engine emits plain-text bootstrap output and JSON resume output", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
-    const runRoot = resolve(tempRoot, "run-root");
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "plain-text-bootstrap");
     const manifestRoot = resolve(tempRoot, "manifest-root");
+    mkdirSync(projectRoot, { recursive: true });
     mkdirSync(runRoot, { recursive: true });
     mkdirSync(manifestRoot, { recursive: true });
     const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
     writeManifest(manifestRoot);
     cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+    run("git", ["init", "-q"], { cwd: projectRoot });
 
-    const bootstrap = run("node", [
-      CIRCUIT_ENGINE,
-      "bootstrap",
-      "--run-root",
-      runRoot,
-      "--manifest",
-      manifestPath,
-      "--entry-mode",
-      "default",
-      "--goal",
-      "CLI bootstrap test",
-      "--head-at-start",
-      "abc1234",
-    ]);
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "CLI bootstrap test",
+        "--head-at-start",
+        "abc1234",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
 
     expect(bootstrap.status).toBe(0);
     expect(bootstrap.stdout).toContain("bootstrapped=true");
@@ -359,6 +371,435 @@ describe("runtime CLI integration", () => {
     expect(payload.status).toBe("in_progress");
     expect(payload.resume_step).toBe("frame");
     expect(payload.reason).toContain("frame");
+    expect(readContinuityIndex(projectRoot)?.current_run).toEqual(
+      expect.objectContaining({
+        current_step: "frame",
+        manifest_present: true,
+        run_root_rel: ".circuit/circuit-runs/plain-text-bootstrap",
+        run_slug: "plain-text-bootstrap",
+        runtime_status: "in_progress",
+      }),
+    );
+  });
+
+  it("circuit-engine continuity save and resume use the control plane without terminating the run", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "run-backed-save");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    writeManifest(manifestRoot);
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "Run-backed continuity save",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(bootstrap.status).toBe(0);
+
+    const save = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "save",
+        "--project-root",
+        projectRoot,
+        "--run-root",
+        runRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Preserve run-backed continuity",
+        "--next",
+        "Resume at frame",
+        "--state-markdown",
+        "- frame is still active",
+        "--debt-markdown",
+        "- CONSTRAINT: stay run-backed",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(0);
+    const savePayload = JSON.parse(save.stdout);
+    expect(savePayload.continuity_kind).toBe("run_ref");
+    expect(savePayload.record.run_ref.run_slug).toBe("run-backed-save");
+    expect(savePayload.record.narrative.goal).toBe("Preserve run-backed continuity");
+    expect(savePayload.record.resume_contract.mode).toBe("resume_run");
+    expect(existsSync(savePayload.record_path)).toBe(true);
+
+    const state = JSON.parse(readFileSync(resolve(runRoot, "state.json"), "utf-8"));
+    expect(state.status).toBe("in_progress");
+    expect(state.current_step).toBe("frame");
+
+    const resume = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "resume",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(resume.status).toBe(0);
+    const resumePayload = JSON.parse(resume.stdout);
+    expect(resumePayload.source).toBe("pending_record");
+    expect(resumePayload.record.record_id).toBe(savePayload.record.record_id);
+    expect(resumePayload.record.narrative.next).toBe("Resume at frame");
+    expect(resumePayload.warnings).toEqual([]);
+  });
+
+  it("continuity save normalizes literal none debt markers to empty stored debt", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+
+    mkdirSync(projectRoot, { recursive: true });
+
+    const save = run(
+      "node",
+      [
+        CONTINUITY,
+        "save",
+        "--project-root",
+        projectRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Preserve standalone continuity",
+        "--next",
+        "DO: decide whether to bootstrap a run",
+        "--state-markdown",
+        "- still deciding",
+        "--debt-markdown",
+        "none",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(0);
+    const savePayload = JSON.parse(save.stdout);
+    expect(savePayload.record.narrative.debt_markdown).toBe("");
+    const persistedRecord = JSON.parse(readFileSync(savePayload.record_path, "utf-8"));
+    expect(persistedRecord.narrative.debt_markdown).toBe("");
+
+    const resume = run(
+      "node",
+      [
+        CONTINUITY,
+        "resume",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(resume.status).toBe(0);
+    const resumePayload = JSON.parse(resume.stdout);
+    expect(resumePayload.record.narrative.debt_markdown).toBe("");
+    expect(JSON.stringify(resumePayload.record.narrative)).not.toContain('"none"');
+  });
+
+  it("continuity save rejects typed debt markers parked in state_markdown", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+
+    mkdirSync(projectRoot, { recursive: true });
+
+    const save = run(
+      "node",
+      [
+        CONTINUITY,
+        "save",
+        "--project-root",
+        projectRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Preserve standalone continuity",
+        "--next",
+        "DO: rerun the validation chain",
+        "--state-markdown",
+        "- DECIDED: keep session-start passive",
+        "--debt-markdown",
+        "none",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(1);
+    expect(save.stderr).toContain("move DECIDED:/CONSTRAINT:/BLOCKED:/RULED OUT: bullets");
+  });
+
+  it("standalone continuity CLI saves and resumes standalone continuity records", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+
+    mkdirSync(projectRoot, { recursive: true });
+
+    const save = run(
+      "node",
+      [
+        CONTINUITY,
+        "save",
+        "--project-root",
+        projectRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Preserve standalone continuity",
+        "--next",
+        "Decide whether to bootstrap a run",
+        "--state-markdown",
+        "- still deciding",
+        "--debt-markdown",
+        "- BLOCKED: waiting for a bootstrap decision",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(0);
+    const savePayload = JSON.parse(save.stdout);
+    expect(savePayload.continuity_kind).toBe("standalone");
+    expect(savePayload.record.run_ref).toBeNull();
+    expect(savePayload.record.resume_contract.mode).toBe("resume_standalone");
+
+    const status = run(
+      "node",
+      [
+        CONTINUITY,
+        "status",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(status.status).toBe(0);
+    const statusPayload = JSON.parse(status.stdout);
+    expect(statusPayload.selection).toBe("pending_record");
+    expect(statusPayload.pending_record.continuity_kind).toBe("standalone");
+
+    const resume = run(
+      "node",
+      [
+        CONTINUITY,
+        "resume",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(resume.status).toBe(0);
+    const resumePayload = JSON.parse(resume.stdout);
+    expect(resumePayload.source).toBe("pending_record");
+    expect(resumePayload.record.run_ref).toBeNull();
+    expect(resumePayload.record.narrative.goal).toBe("Preserve standalone continuity");
+  });
+
+  it("continuity resume falls back to the indexed current run when no pending record exists", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "resume-current-run");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    writeManifest(manifestRoot);
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "Resume current run fallback",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(bootstrap.status).toBe(0);
+
+    const resume = run(
+      "node",
+      [
+        CONTINUITY,
+        "resume",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(resume.status).toBe(0);
+    const resumePayload = JSON.parse(resume.stdout);
+    expect(resumePayload.source).toBe("current_run");
+    expect(resumePayload.current_run.run_slug).toBe("resume-current-run");
+    expect(resumePayload.active_run_markdown).toContain("# Active Run");
+    expect(resumePayload.active_run_markdown).toContain("Resume current run fallback");
+  });
+
+  it("continuity clear deletes the pending record and detaches indexed current_run", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "clear-continuity");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    writeManifest(manifestRoot);
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "Clear continuity state",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(bootstrap.status).toBe(0);
+
+    const save = run(
+      "node",
+      [
+        CONTINUITY,
+        "save",
+        "--project-root",
+        projectRoot,
+        "--run-root",
+        runRoot,
+        "--cwd",
+        projectRoot,
+        "--goal",
+        "Save before clear",
+        "--next",
+        "Clear continuity",
+        "--state-markdown",
+        "- pending",
+        "--debt-markdown",
+        "- CONSTRAINT: clear through the engine",
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(save.status).toBe(0);
+    const savePayload = JSON.parse(save.stdout);
+    expect(existsSync(savePayload.record_path)).toBe(true);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
+
+    const clear = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "continuity",
+        "clear",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(clear.status).toBe(0);
+    const clearPayload = JSON.parse(clear.stdout);
+    expect(clearPayload.deleted_record_id).toBe(savePayload.record.record_id);
+    expect(clearPayload.cleared_current_run).toBe(true);
+    expect(clearPayload.cleared_pending_record).toBe(true);
+    expect(existsSync(savePayload.record_path)).toBe(false);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
+    expect(readContinuityIndex(projectRoot)).toEqual(
+      expect.objectContaining({
+        current_run: null,
+        pending_record: null,
+      }),
+    );
+  });
+
+  it("continuity CLI fails closed when the continuity index is corrupt", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const indexPath = resolve(projectRoot, ".circuit", "control-plane", "continuity-index.json");
+
+    mkdirSync(resolve(indexPath, ".."), { recursive: true });
+    writeFileSync(indexPath, "{\"schema_version\":\"2\"}\n", "utf-8");
+
+    const status = run(
+      "node",
+      [
+        CONTINUITY,
+        "status",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(status.status).toBe(1);
+    expect(status.stderr).toContain("Continuity index failed validation");
   });
 
   it("circuit-engine bootstrap accepts workflow shorthand and normalizes a bare .circuit root", () => {
@@ -397,6 +838,15 @@ describe("runtime CLI integration", () => {
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "artifacts", "active-run.md"))).toBe(true);
+    expect(readContinuityIndex(projectRoot)?.current_run).toEqual(
+      expect.objectContaining({
+        current_step: "frame",
+        manifest_present: true,
+        run_root_rel: ".circuit/circuit-runs/host-surface-smoke",
+        run_slug: "host-surface-smoke",
+        runtime_status: "in_progress",
+      }),
+    );
   });
 
   it("circuit-engine bootstrap supports agent-friendly positional shorthand with --rigor", () => {
@@ -435,6 +885,80 @@ describe("runtime CLI integration", () => {
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "artifacts", "active-run.md"))).toBe(true);
+    expect(readContinuityIndex(projectRoot)?.current_run).toEqual(
+      expect.objectContaining({
+        current_step: "frame",
+        manifest_present: true,
+        run_root_rel: ".circuit/circuit-runs/paddock-architecture-tournament",
+        run_slug: "paddock-architecture-tournament",
+        runtime_status: "in_progress",
+      }),
+    );
+  });
+
+  it("terminal completion detaches indexed current_run and removes the mirrored pointer", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "terminal-run");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    writeManifest(manifestRoot);
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "Terminal completion",
+        "--project-root",
+        projectRoot,
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(bootstrap.status).toBe(0);
+    writeFileSync(
+      resolve(runRoot, "artifacts", "brief.md"),
+      [
+        "# Brief: Terminal completion",
+        "## Objective",
+        "Finish the run cleanly.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const complete = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "complete-synthesis",
+        "--run-root",
+        runRoot,
+        "--step",
+        "frame",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(complete.status).toBe(0);
+    expect(complete.stdout).toContain("status=completed");
+    expect(readContinuityIndex(projectRoot)?.current_run).toBeNull();
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
   });
 
   it("circuit-engine bootstrap --help prints bootstrap usage instead of treating --help as a valued flag", () => {

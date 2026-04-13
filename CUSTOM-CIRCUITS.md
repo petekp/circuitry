@@ -315,11 +315,16 @@ characters with hyphens, collapse consecutive hyphens, trim to 50 chars.
 \```bash
 RUN_SLUG="<derived>"
 RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
-mkdir -p "${RUN_ROOT}/artifacts" "${RUN_ROOT}/phases"
-ln -sfn "circuit-runs/${RUN_SLUG}" .circuit/current-run
+.circuit/bin/circuit-engine bootstrap \
+  --run-root "${RUN_ROOT}" \
+  --manifest "<path-to-manifest>" \
+  --entry-mode "<entry-mode>" \
+  --goal "<goal>" \
+  --project-root "$PWD"
 \```
 
-Write initial `${RUN_ROOT}/artifacts/active-run.md`.
+This writes the initial `${RUN_ROOT}/artifacts/active-run.md` and mirrors
+`.circuit/current-run` from indexed `current_run`.
 
 ## Phase: Frame
 
@@ -481,5 +486,5 @@ After any change, verify:
 - [ ] Gate `required` arrays match the section headings described in SKILL.md
 - [ ] `entry_modes` in circuit.yaml match the rigor profiles described in SKILL.md
 - [ ] Run `cd scripts/runtime/engine && npx vitest run` -- all tests pass
-- [ ] Run `./scripts/sync-to-cache.sh` and `/clear`
+- [ ] Run `./scripts/sync-to-cache.sh`; use `/circuit:handoff done` if you also need to clear saved continuity
 - [ ] Run `./scripts/verify-install.sh` -- installed-surface checks pass

@@ -133,9 +133,10 @@ Review runs in a separate session (dispatch with the workflow's `--circuit` and 
 
 **Question:** Is the session boundary more important than continuing?
 
-**Artifact:** `handoff.md` (via /circuit:handoff)
+**Artifact:** control-plane continuity record (via `/circuit:handoff`)
 
-Only written on explicit pause or session boundary. See the handoff skill for format.
+Only written on explicit pause or session boundary. See the handoff skill for
+the structured fields and save contract.
 
 **active-run.md update:** Updated to reflect pause state.
 
@@ -171,5 +172,7 @@ Updated after every phase transition:
 ## Last Updated
 ```
 
-This is the automatic continuity mechanism. SessionStart hook injects it.
-Handoff.md is the intentional high-quality continuity path.
+This is the passive runtime dashboard. SessionStart may announce it when indexed
+`current_run` exists, but saved continuity resumes only through
+`/circuit:handoff resume`.
+Control-plane continuity is the intentional high-quality continuity path.

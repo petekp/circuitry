@@ -73,7 +73,7 @@ Review, Close, Pause**. Not every workflow goes through every phase, but the ord
    implementation. Implementation gets an independent review from a separate
    session. Every step saves progress to disk.
 
-3. **Progress survives session clearing and crashes.** Active run state (`active-run.md`) is updated after every phase. Session handoff state lives in `~/.claude/projects/` so fresh sessions resume where the last one stopped.
+3. **Progress survives session clearing and crashes.** Active run state (`active-run.md`) is updated after every phase. Intentional session continuity lives in Circuit's control plane under `.circuit/control-plane/`; fresh sessions get a passive banner and resume only through `/circuit:handoff resume`. Use `/circuit:handoff done` when you want to clear saved continuity; host `/clear` stays passive.
 
 4. **Stay in the loop.** Circuit pauses at checkpoints to gather input (scope confirmation, tradeoff decisions). Everything else runs autonomously. Fully autonomous mode is also supported.
 

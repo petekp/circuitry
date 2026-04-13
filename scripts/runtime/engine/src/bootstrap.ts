@@ -6,10 +6,11 @@ import {
   appendValidatedEvents,
   readGitHead,
   renderRunState,
-  updateCurrentRunPointer,
+  syncCurrentRunPointerFromIndex,
   validateManifestDocument,
   writeManifestSnapshot,
 } from "./command-support.js";
+import { upsertContinuityCurrentRun } from "./continuity-control-plane.js";
 import { requireStepById } from "./manifest-utils.js";
 
 export interface BootstrapOptions {
@@ -106,7 +107,24 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
   }
 
   const renderResult = renderRunState(runRoot);
-  const pointer = updateCurrentRunPointer(projectRoot, runRoot);
+  upsertContinuityCurrentRun({
+    currentStep:
+      typeof renderResult.state.current_step === "string"
+        ? renderResult.state.current_step
+        : null,
+    lastValidatedAt:
+      typeof renderResult.state.updated_at === "string"
+        ? renderResult.state.updated_at
+        : undefined,
+    manifestPresent: existsSync(manifestSnapshotPath),
+    projectRoot,
+    runSlug,
+    runtimeStatus: renderResult.status,
+  });
+  const pointer = syncCurrentRunPointerFromIndex(projectRoot);
+  if (!pointer.mode || !pointer.slug) {
+    throw new Error("failed to mirror current-run pointer from continuity index");
+  }
 
   return {
     activeRunPath: renderResult.activeRunPath,

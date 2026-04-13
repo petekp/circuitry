@@ -241,18 +241,18 @@ event log instead of optimistically treating a stale projection as good enough.
 Circuit also carries continuity across sessions in two different ways on
 purpose:
 
-- `active-run.md` is the automatic dashboard for the current run. For
-  event-backed runs it is generated from `state.json`; legacy workflows still
-  maintain it manually until they migrate.
-- `handoff.md` is the intentional high-signal summary written through the
-  `handoff` utility.
+- `active-run.md` is the passive runtime dashboard for the indexed current run.
+  For event-backed runs it is generated from `state.json`; legacy workflows
+  still maintain it manually until they migrate.
+- the continuity control plane is the intentional high-signal summary written
+  through the `handoff` utility into `.circuit/control-plane/`.
 
-`hooks/session-start.sh` resolves those sources in a deliberate order: pending
-handoff first, then the explicit `.circuit/current-run` pointer, then the most
-recent `active-run.md`. When the chosen run contains `circuit.manifest.yaml`,
-SessionStart refreshes the dashboard through `circuit-engine render` before it
-prints the file. `/clear` is therefore part of the expected lifecycle, not an
-exceptional case the system hopes to avoid.
+`hooks/session-start.sh` resolves those sources in a deliberate order:
+pending continuity record first, then indexed `current_run`, then nothing. When
+the chosen run contains `circuit.manifest.yaml`, SessionStart refreshes the
+dashboard through `circuit-engine render` before printing a compact
+context-only banner. Resume stays explicit through `/circuit:handoff resume`;
+the hook no longer injects saved continuity directly into the fresh session.
 
 ---
 

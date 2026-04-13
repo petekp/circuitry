@@ -1,5 +1,5 @@
 ---
-description: "Save or explicitly resume session continuity across session boundaries."
+description: "Save, explicitly resume, or clear session continuity across session boundaries."
 ---
 
 Direct utility invocation for `/circuit:handoff`.

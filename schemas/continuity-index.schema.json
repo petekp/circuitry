@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Circuit Continuity Index v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_root",
+    "current_run",
+    "pending_record"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "project_root": { "type": "string", "minLength": 1 },
+    "current_run": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "run_slug",
+            "run_root_rel",
+            "manifest_present",
+            "runtime_status",
+            "current_step",
+            "attached_at",
+            "last_validated_at"
+          ],
+          "properties": {
+            "run_slug": { "type": "string", "minLength": 1 },
+            "run_root_rel": {
+              "type": "string",
+              "pattern": "^\\.circuit/circuit-runs/[^\\n]+$"
+            },
+            "manifest_present": { "type": "boolean" },
+            "runtime_status": { "type": ["string", "null"] },
+            "current_step": { "type": ["string", "null"] },
+            "attached_at": { "type": "string", "format": "date-time" },
+            "last_validated_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    },
+    "pending_record": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record_id",
+            "payload_rel",
+            "continuity_kind",
+            "run_slug",
+            "created_at"
+          ],
+          "properties": {
+            "record_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]+$"
+            },
+            "payload_rel": {
+              "type": "string",
+              "pattern": "^\\.circuit/control-plane/continuity-records/[A-Za-z0-9._-]+\\.json$"
+            },
+            "continuity_kind": {
+              "type": "string",
+              "enum": ["run_ref", "standalone"]
+            },
+            "run_slug": { "type": ["string", "null"] },
+            "created_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    }
+  }
+}

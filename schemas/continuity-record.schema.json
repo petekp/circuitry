@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Circuit Continuity Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "created_at",
+    "project_root",
+    "run_ref",
+    "git",
+    "narrative",
+    "resume_contract"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "record_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "project_root": { "type": "string", "minLength": 1 },
+    "run_ref": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "run_slug",
+            "run_root_rel",
+            "manifest_present",
+            "runtime_status_at_save",
+            "current_step_at_save",
+            "runtime_updated_at_at_save"
+          ],
+          "properties": {
+            "run_slug": { "type": "string", "minLength": 1 },
+            "run_root_rel": {
+              "type": "string",
+              "pattern": "^\\.circuit/circuit-runs/[^\\n]+$"
+            },
+            "manifest_present": { "type": "boolean" },
+            "runtime_status_at_save": { "type": ["string", "null"] },
+            "current_step_at_save": { "type": ["string", "null"] },
+            "runtime_updated_at_at_save": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            }
+          }
+        }
+      ]
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "head", "base_commit", "cwd"],
+      "properties": {
+        "branch": { "type": ["string", "null"] },
+        "head": { "type": ["string", "null"] },
+        "base_commit": { "type": ["string", "null"] },
+        "cwd": { "type": "string", "minLength": 1 }
+      }
+    },
+    "narrative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goal", "next", "state_markdown", "debt_markdown"],
+      "properties": {
+        "goal": { "type": "string", "minLength": 1 },
+        "next": { "type": "string", "minLength": 1 },
+        "state_markdown": { "type": "string", "minLength": 1 },
+        "debt_markdown": { "type": "string", "minLength": 0 }
+      }
+    },
+    "resume_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "requires_explicit_resume", "auto_resume"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["resume_run", "resume_standalone"]
+        },
+        "requires_explicit_resume": { "const": true },
+        "auto_resume": { "const": false }
+      }
+    }
+  }
+}

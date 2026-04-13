@@ -77,6 +77,7 @@ describe("prompt surface contracts", () => {
     ]);
     expect(Object.keys(manifest.fast_modes).sort()).toEqual([
       "build_smoke",
+      "handoff_capture",
       "handoff_done",
       "handoff_resume",
       "review_current_changes",
@@ -136,6 +137,40 @@ describe("prompt surface contracts", () => {
     expect(runContract).toContain('--manifest "@build"');
     expect(runContract).toContain('BUILD_ENTRY_MODE="lite"');
     expect(runContract).toContain('--entry-mode "$BUILD_ENTRY_MODE"');
+  });
+
+  it("routes handoff continuity through engine commands across prompt surfaces", () => {
+    const manifest = buildPromptContractsManifest(catalog);
+    const buildContract = getBlockTarget("BUILD_CONTRACT").render(catalog);
+    const exploreContract = getBlockTarget("EXPLORE_CONTRACT").render(catalog);
+    const runContract = getBlockTarget("RUN_CONTRACT").render(catalog);
+    const handoffBlock = getBlockTarget("HANDOFF_FAST_MODES").render(catalog);
+
+    expect(manifest.fast_modes.handoff_done.lines.join("\n")).toContain(
+      ".circuit/bin/circuit-engine continuity clear --json",
+    );
+    expect(manifest.fast_modes.handoff_resume.lines.join("\n")).toContain(
+      ".circuit/bin/circuit-engine continuity resume --json",
+    );
+    expect(manifest.fast_modes.handoff_done.placeholders).toEqual([]);
+    expect(manifest.fast_modes.handoff_resume.placeholders).toEqual([]);
+
+    expect(buildContract).toContain(
+      "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
+    );
+    expect(exploreContract).toContain(
+      "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
+    );
+    expect(runContract).toContain(
+      "resolve it through `.circuit/bin/circuit-engine continuity resume --json`",
+    );
+    expect(handoffBlock).toContain(
+      "run `.circuit/bin/circuit-engine continuity clear --json`, report completion, and stop.",
+    );
+    expect(handoffBlock).toContain(
+      "run `.circuit/bin/circuit-engine continuity resume --json`, present the selected continuity source",
+    );
+    expect(handoffBlock).not.toContain("handoff first, active-run fallback second");
   });
 
   it("returns the expected prompt surface block targets", () => {
@@ -273,36 +308,54 @@ describe("prompt surface contracts", () => {
             "lines": [
               "# Circuit Handoff Done Contract",
               "This prompt is the explicit handoff completion fast mode.",
-              "Project handoff path: {handoff_path}",
-              "Resolve \`.circuit/current-run\` exactly like this before deciding whether an active run exists:",
-              "if [ -L .circuit/current-run ]; then RUN_ROOT=\\".circuit/$(readlink .circuit/current-run)\\"; elif [ -f .circuit/current-run ]; then RUN_ROOT=\\".circuit/circuit-runs/$(tr -d '\\\\n' < .circuit/current-run)\\"; fi",
-              "If \`$RUN_ROOT/artifacts/active-run.md\` exists, move it to \`$RUN_ROOT/artifacts/completed-run.md\`.",
-              "Delete the handoff file if it exists.",
-              "Delete \`.circuit/current-run\` after archiving the active-run dashboard.",
+              "Run \`.circuit/bin/circuit-engine continuity clear --json\`.",
+              "This clears the pending continuity record, detaches indexed \`current_run\`, and removes the mirrored \`.circuit/current-run\` pointer.",
+              "Do not manually delete handoff files, archive dashboards, or scan run roots.",
               "Do not bootstrap new work or do broad repo exploration.",
               "Stop after reporting completion."
             ],
-            "placeholders": [
-              "handoff_path"
-            ],
+            "placeholders": [],
             "stop_condition": "Stop after clearing continuity."
+          },
+          "handoff_capture": {
+            "id": "handoff_capture",
+            "lines": [
+              "# Circuit Handoff Capture Contract",
+              "This prompt is the default continuity capture mode for \`/circuit:handoff\`.",
+              "Check current control-plane status with \`.circuit/bin/circuit-engine continuity status --json\` before deciding what to save.",
+              "If capture is warranted, save through \`.circuit/bin/circuit-engine continuity save --cwd \\"$PWD\\" --goal \\"...\\" --next \\"DO: ...\\" --state-markdown \\"$STATE_MARKDOWN\\" --debt-markdown \\"$DEBT_MARKDOWN\\" --json\`.",
+              "When real debt exists, encode it as typed \`--debt-markdown\` bullets.",
+              "Do not move \`DECIDED:\`, \`CONSTRAINT:\`, \`BLOCKED:\`, or \`RULED OUT:\` bullets into \`--state-markdown\`; those belong only in \`--debt-markdown\`.",
+              "If there is no real debt, literal \`none\` is allowed only as a CLI convenience; the engine normalizes it before persistence so resume never shows the sentinel.",
+              "If indexed \`current_run\` exists, bind the save to that run with \`--run-root\` using the indexed run root from control-plane status.",
+              "Use \`.circuit/bin/gather-git-state\` when git context is helpful, but do not restate facts a future session can recover cheaply from git.",
+              "If there is no indexed current run, no pending record, and no hard-to-rediscover session context worth preserving, say there is nothing useful to capture and stop.",
+              "Supported handoff commands are \`/circuit:handoff\`, \`/circuit:handoff resume\`, and \`/circuit:handoff done\`.",
+              "Do not invent \`/circuit:handoff save\` or \`/circuit:handoff clear\` aliases.",
+              "Do not inspect legacy handoff paths, scan run roots, or write \`handoff.md\`.",
+              "After a successful save, confirm briefly with: Handoff saved. In the next session, use \`/circuit:handoff resume\` to pick it up; use \`/circuit:handoff done\` only to clear it.",
+              "Do not dump the saved continuity body back to the user during capture mode.",
+              "Stop after either reporting that nothing useful could be captured or confirming the save."
+            ],
+            "placeholders": [],
+            "stop_condition": "Stop after saving continuity or reporting that no capture is needed."
           },
           "handoff_resume": {
             "id": "handoff_resume",
             "lines": [
               "# Circuit Handoff Resume Contract",
               "This prompt is the explicit continuity resume fast mode.",
-              "Project handoff path: {handoff_path}",
-              "Read this handoff file first if it exists.",
-              "Only fall back to \`.circuit/current-run\` when the handoff file is absent.",
+              "Run \`.circuit/bin/circuit-engine continuity resume --json\`.",
+              "This resolves continuity only through the control plane in priority order: pending_record, current_run, none.",
               "Start the response with \`# Circuit Resume\`.",
-              "When the handoff file exists, treat it as the source of truth and do not surface fallback-only active-run sentinel details.",
+              "If \`source\` is \`pending_record\`, present the saved narrative and warnings from the command output.",
+              "If \`source\` is \`current_run\`, present the returned \`active_run_markdown\`.",
+              "If \`source\` is \`none\`, report \`No saved continuity found. Nothing to resume.\`",
+              "Do not inspect canonical handoff paths, scan run roots, or surface fallback-only guesses.",
               "Do not bootstrap new work or do broad repo exploration.",
               "Stop after presenting the resume context."
             ],
-            "placeholders": [
-              "handoff_path"
-            ],
+            "placeholders": [],
             "stop_condition": "Stop after presenting saved continuity."
           },
           "smoke_explore": {
@@ -498,8 +551,8 @@ describe("prompt surface contracts", () => {
               "gather-git-state"
             ],
             "proof_artifacts": [
-              "handoff.md",
-              "artifacts/active-run.md"
+              ".circuit/control-plane/continuity-index.json",
+              ".circuit/control-plane/continuity-records/<record-id>.json"
             ],
             "stop_condition": "Resolve the selected fast mode before any broader repo exploration.",
             "canonical_invocation": "/circuit:handoff",
