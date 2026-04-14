@@ -227,8 +227,8 @@ describe("deriveState", () => {
     });
   });
 
-  describe("test_step_reopened_marks_artifacts_stale", () => {
-    it("should mark artifacts from the reopened step as stale", () => {
+  describe("test_ignores_unsupported_events", () => {
+    it("should ignore legacy step_reopened events during projection", () => {
       resetTs();
       const events = [
         makeEvent("run_started", {
@@ -278,49 +278,13 @@ describe("deriveState", () => {
       >;
       const art = artifacts["artifacts/step-one-output.md"];
 
-      expect(art.status).toBe("stale");
-      expect(art.gate).toBe("pending");
-      expect(state.current_step).toBe("step-one");
+      expect(art.status).toBe("complete");
+      expect(art.gate).toBe("pass");
+      expect(state.current_step).toBe("step-two");
       expect(state.status).toBe("in_progress");
-      expect(state.routes).toEqual({});
-      expectValidState(state);
-    });
-  });
-
-  describe("test_step_reopened_handles_cyclic_routes", () => {
-    it("should not loop forever when routes form a cycle", () => {
-      resetTs();
-      // Build a state where step-one -> step-two -> step-one (cycle)
-      // Then reopen step-one. Without cycle detection this would hang.
-      const events = [
-        makeEvent("run_started", {
-          manifest_path: "circuit.manifest.yaml",
-          entry_mode: "default",
-          head_at_start: "abc1234",
-        }),
-        makeEvent("step_started", { step_id: "step-one" }, { step_id: "step-one" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-one-output.md" }, { step_id: "step-one" }),
-        makeEvent("gate_passed", { step_id: "step-one", gate_kind: "all_outputs_present", route: "step-two" }, { step_id: "step-one" }),
-        makeEvent("step_started", { step_id: "step-two" }, { step_id: "step-two" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-two-output.md" }, { step_id: "step-two" }),
-        // Create cycle: step-two routes back to step-one
-        makeEvent("gate_passed", { step_id: "step-two", gate_kind: "all_outputs_present", route: "step-one" }, { step_id: "step-two" }),
-        // Reopen step-one -- traversal must terminate despite cycle
-        makeEvent("step_reopened", {
-          from_step: "step-two",
-          to_step: "step-one",
-          reason: "cycle test",
-        }, { step_id: "step-one" }),
-      ];
-
-      // This must complete without hanging
-      const state = deriveState(MINIMAL_MANIFEST, events);
-      const routes = state.routes as Record<string, string>;
-
-      // Both steps should be invalidated
-      expect(routes["step-one"]).toBeUndefined();
-      expect(routes["step-two"]).toBeUndefined();
-      expect(state.current_step).toBe("step-one");
+      expect(state.routes).toEqual({
+        "step-one": "step-two",
+      });
       expectValidState(state);
     });
   });
@@ -520,127 +484,6 @@ describe("deriveState", () => {
 
       expect(jobs["step-one"].status).toBe("complete");
       expect(jobs["step-one"].completion).toBe("complete");
-      expectValidState(state);
-    });
-  });
-
-  describe("test_step_reopened_invalidates_downstream_descendants", () => {
-    it("should clear downstream routes, artifacts, jobs, and checkpoints when middle step is reopened", () => {
-      resetTs();
-      // Complete all three steps: step-one -> step-two -> step-three
-      const events = [
-        makeEvent("run_started", {
-          manifest_path: "circuit.manifest.yaml",
-          entry_mode: "default",
-          head_at_start: "abc1234",
-        }),
-        // Step one: start, write artifact, gate pass
-        makeEvent("step_started", { step_id: "step-one" }, { step_id: "step-one" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-one-output.md" }, { step_id: "step-one" }),
-        makeEvent("gate_passed", { step_id: "step-one", gate_kind: "all_outputs_present", route: "step-two" }, { step_id: "step-one" }),
-        // Step two: start, write artifact, gate pass
-        makeEvent("step_started", { step_id: "step-two" }, { step_id: "step-two" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-two-output.md" }, { step_id: "step-two" }),
-        makeEvent("gate_passed", { step_id: "step-two", gate_kind: "all_outputs_present", route: "step-three" }, { step_id: "step-two" }),
-        // Step three: start, write artifact, gate pass
-        makeEvent("step_started", { step_id: "step-three" }, { step_id: "step-three" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-three-output.md" }, { step_id: "step-three" }),
-        makeEvent("gate_passed", { step_id: "step-three", gate_kind: "all_outputs_present", route: "@complete" }, { step_id: "step-three" }),
-        // Now reopen step-two (middle step)
-        makeEvent("step_reopened", {
-          from_step: "step-three",
-          to_step: "step-two",
-          reason: "upstream dependency changed",
-        }, { step_id: "step-two" }),
-      ];
-
-      const state = deriveState(MINIMAL_MANIFEST, events);
-      const artifacts = state.artifacts as Record<string, Record<string, unknown>>;
-      const routes = state.routes as Record<string, string>;
-
-      // step-one should still be complete (not downstream of reopen)
-      expect(routes["step-one"]).toBe("step-two");
-      expect(artifacts["artifacts/step-one-output.md"].status).toBe("complete");
-      expect(artifacts["artifacts/step-one-output.md"].gate).toBe("pass");
-
-      // step-two (reopened) should be invalidated
-      expect(routes["step-two"]).toBeUndefined();
-      expect(artifacts["artifacts/step-two-output.md"].status).toBe("stale");
-      expect(artifacts["artifacts/step-two-output.md"].gate).toBe("pending");
-
-      // step-three (downstream descendant) should also be invalidated
-      expect(routes["step-three"]).toBeUndefined();
-      expect(artifacts["artifacts/step-three-output.md"].status).toBe("stale");
-      expect(artifacts["artifacts/step-three-output.md"].gate).toBe("pending");
-
-      // Current step should be the reopened step
-      expect(state.current_step).toBe("step-two");
-      expect(state.status).toBe("in_progress");
-      expectValidState(state);
-    });
-
-    it("should clear downstream jobs and checkpoints on reopen", () => {
-      resetTs();
-      const events = [
-        makeEvent("run_started", {
-          manifest_path: "circuit.manifest.yaml",
-          entry_mode: "default",
-          head_at_start: "abc1234",
-        }),
-        // Step one
-        makeEvent("step_started", { step_id: "step-one" }, { step_id: "step-one" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-one-output.md" }, { step_id: "step-one" }),
-        makeEvent("gate_passed", { step_id: "step-one", gate_kind: "all_outputs_present", route: "step-two" }, { step_id: "step-one" }),
-        // Step two with dispatch job
-        makeEvent("step_started", { step_id: "step-two" }, { step_id: "step-two" }),
-        makeEvent("dispatch_requested", { request_path: "jobs/step-two/001/dispatch-request.json", attempt: 1 }, { step_id: "step-two" }),
-        makeEvent(
-          "dispatch_received",
-          {
-            receipt_path: "jobs/step-two/001/receipt.json",
-            adapter: "agent",
-            transport: "agent",
-            resolved_from: "dispatch.roles.reviewer",
-            job_id: "job-step-two-001",
-            attempt: 1,
-          },
-          { step_id: "step-two" },
-        ),
-        makeEvent("job_completed", { result_path: "jobs/step-two/001/result.json", completion: "complete", attempt: 1 }, { step_id: "step-two" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-two-output.md" }, { step_id: "step-two" }),
-        makeEvent("gate_passed", { step_id: "step-two", gate_kind: "all_outputs_present", route: "step-three" }, { step_id: "step-two" }),
-        // Step three with checkpoint
-        makeEvent("step_started", { step_id: "step-three" }, { step_id: "step-three" }),
-        makeEvent("checkpoint_requested", { request_path: "checkpoints/step-three-001.json", checkpoint_kind: "approval", attempt: 1 }, { step_id: "step-three" }),
-        makeEvent("checkpoint_resolved", { response_path: "checkpoints/step-three-001.response.json", selection: "approve", attempt: 1 }, { step_id: "step-three" }),
-        makeEvent("artifact_written", { artifact_path: "artifacts/step-three-output.md" }, { step_id: "step-three" }),
-        makeEvent("gate_passed", { step_id: "step-three", gate_kind: "all_outputs_present", route: "@complete" }, { step_id: "step-three" }),
-        // Reopen step-one (first step) -- should invalidate both step-two and step-three
-        makeEvent("step_reopened", {
-          from_step: "step-three",
-          to_step: "step-one",
-          reason: "requirement changed",
-        }, { step_id: "step-one" }),
-      ];
-
-      const state = deriveState(MINIMAL_MANIFEST, events);
-      const jobs = state.jobs as Record<string, Record<string, unknown>>;
-      const checkpoints = state.checkpoints as Record<string, Record<string, unknown>>;
-      const routes = state.routes as Record<string, string>;
-
-      // step-one (reopened): cleared
-      expect(routes["step-one"]).toBeUndefined();
-      expect(jobs["step-one"]).toBeUndefined();
-
-      // step-two (downstream): jobs and route cleared
-      expect(routes["step-two"]).toBeUndefined();
-      expect(jobs["step-two"]).toBeUndefined();
-
-      // step-three (downstream): checkpoints and route cleared
-      expect(routes["step-three"]).toBeUndefined();
-      expect(checkpoints["step-three"]).toBeUndefined();
-
-      expect(state.current_step).toBe("step-one");
       expectValidState(state);
     });
   });

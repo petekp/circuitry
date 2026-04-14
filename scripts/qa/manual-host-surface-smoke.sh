@@ -208,7 +208,7 @@ current_run_target() {
   local target
   target="$(continuity_field "$repo_root" current_run.run_root)"
   if [[ -z "$target" ]]; then
-    printf 'no current-run pointer found for %s\n' "$repo_root" >&2
+    printf 'no attached current run found for %s\n' "$repo_root" >&2
     return 1
   fi
 
@@ -495,33 +495,17 @@ assert_continuity_banner() {
 
 assert_build_bootstrap() {
   local repo_root="$1"
+  local workflow_label="${2:-Build}"
   local run_root
   run_root="$(current_run_target "$repo_root")"
 
   [[ -d "$run_root" ]] || {
-    printf 'current-run target is not a directory: %s\n' "$run_root" >&2
+    printf 'attached run root is not a directory: %s\n' "$run_root" >&2
     return 1
   }
   assert_exists "$run_root/circuit.manifest.yaml"
   assert_exists "$run_root/events.ndjson"
   assert_exists "$run_root/state.json"
-  assert_exists "$run_root/artifacts/active-run.md"
-  assert_log_contains "$run_root/artifacts/active-run.md" "## Workflow"
-  assert_log_contains "$run_root/artifacts/active-run.md" "Build"
-}
-
-assert_legacy_workflow_bootstrap() {
-  local repo_root="$1"
-  local workflow_label="$2"
-  local run_root
-  run_root="$(current_run_target "$repo_root")"
-
-  [[ -d "$run_root" ]] || {
-    printf 'current-run target is not a directory: %s\n' "$run_root" >&2
-    return 1
-  }
-  assert_exists "$run_root/artifacts"
-  assert_exists "$run_root/phases"
   assert_exists "$run_root/artifacts/active-run.md"
   assert_log_contains "$run_root/artifacts/active-run.md" "## Workflow"
   assert_log_contains "$run_root/artifacts/active-run.md" "$workflow_label"
@@ -544,34 +528,34 @@ run_case() {
 
   case "$case_id" in
     run-develop)
-      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate .circuit/current-run plus circuit.manifest.yaml, events.ndjson, state.json, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     run-develop-pending-handoff)
       seed_pending_continuity "$repo_root" "PENDING_CONTINUITY_SENTINEL"
-      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate .circuit/current-run plus circuit.manifest.yaml, events.ndjson, state.json, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     run-develop-active-run)
       seeded_run_root="$(seed_active_run "$repo_root" "Build" "frame" "ACTIVE_RUN_CONTINUITY_SENTINEL")"
-      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate .circuit/current-run plus circuit.manifest.yaml, events.ndjson, state.json, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:run develop: smoke bootstrap the build path for host-surface verification; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     build)
-      prompt="/circuit:build smoke bootstrap the build path for host-surface verification; create and validate .circuit/current-run plus circuit.manifest.yaml, events.ndjson, state.json, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:build smoke bootstrap the build path for host-surface verification; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     build-continue-saved-continuity)
       seed_pending_continuity "$repo_root" "BUILD_CONTINUE_SAVED_CONTINUITY_SENTINEL"
       prompt="/circuit:build continue from saved continuity"
       ;;
     explore)
-      prompt="/circuit:explore smoke inspect the public-surface bootstrap path; create and validate .circuit/current-run plus artifacts/, phases/, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:explore smoke inspect the public-surface bootstrap path; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     repair)
-      prompt="/circuit:repair smoke investigate the placeholder host-surface regression; create and validate .circuit/current-run plus artifacts/, phases/, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:repair smoke investigate the placeholder host-surface regression; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     migrate)
-      prompt="/circuit:migrate smoke migrate the placeholder host-surface contract; create and validate .circuit/current-run plus artifacts/, phases/, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:migrate smoke migrate the placeholder host-surface contract; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     sweep)
-      prompt="/circuit:sweep smoke clean placeholder host-surface residue; create and validate .circuit/current-run plus artifacts/, phases/, and artifacts/active-run.md for the selected run, then stop"
+      prompt="/circuit:sweep smoke clean placeholder host-surface residue; create and validate circuit.manifest.yaml, events.ndjson, the derived state.json snapshot, and artifacts/active-run.md for the selected run, then stop"
       ;;
     review-current-changes)
       seed_review_diff "$repo_root"
@@ -639,7 +623,7 @@ run_case() {
         fi
         ;;
       build)
-        assert_build_bootstrap "$repo_root" || assert_status=1
+        assert_build_bootstrap "$repo_root" "Build" || assert_status=1
         assert_bootstrap_only_log "$log_path" || assert_status=1
         assert_build_semantic_bootstrap_log "$log_path" || assert_status=1
         ;;
@@ -654,16 +638,16 @@ run_case() {
         assert_log_not_contains "$log_path" "Read this handoff first:" || assert_status=1
         ;;
       explore)
-        assert_legacy_workflow_bootstrap "$repo_root" "Explore" || assert_status=1
+        assert_build_bootstrap "$repo_root" "Explore" || assert_status=1
         ;;
       repair)
-        assert_legacy_workflow_bootstrap "$repo_root" "Repair" || assert_status=1
+        assert_build_bootstrap "$repo_root" "Repair" || assert_status=1
         ;;
       migrate)
-        assert_legacy_workflow_bootstrap "$repo_root" "Migrate" || assert_status=1
+        assert_build_bootstrap "$repo_root" "Migrate" || assert_status=1
         ;;
       sweep)
-        assert_legacy_workflow_bootstrap "$repo_root" "Sweep" || assert_status=1
+        assert_build_bootstrap "$repo_root" "Sweep" || assert_status=1
         ;;
       review-current-changes)
         assert_not_exists "$repo_root/.circuit/current-run" || assert_status=1

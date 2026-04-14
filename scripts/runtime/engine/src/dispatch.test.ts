@@ -64,18 +64,6 @@ describe("dispatch adapter resolution", () => {
     expect(resolution.transport).toBe("process");
   });
 
-  it("resolves codex-ambient as a first-class built-in adapter", () => {
-    const resolution = resolveDispatchAdapter(
-      {},
-      { adapterOverride: "codex-ambient" },
-      null,
-    );
-
-    expect(resolution.adapter).toBe("codex-ambient");
-    expect(resolution.runtimeBoundary).toBe("codex-ambient");
-    expect(resolution.transport).toBe("process");
-  });
-
   it("resolves auto to codex-isolated when codex is installed", () => {
     const root = mkdtempSync(resolve(tmpdir(), "circuit-dispatch-unit-"));
     const fakeBin = resolve(root, "bin");

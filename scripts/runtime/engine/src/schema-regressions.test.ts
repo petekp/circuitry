@@ -322,6 +322,26 @@ describe("schema regressions", () => {
     expect(validate(eventSchema, completedWithoutVerdict)).toEqual([]);
   });
 
+  it("rejects legacy step_reopened events", () => {
+    const eventSchema = loadJsonSchema("schemas/event.schema.json");
+
+    const legacyEvent = {
+      schema_version: "1",
+      event_id: "evt-legacy-reopen",
+      event_type: "step_reopened",
+      occurred_at: "2026-04-09T12:00:03.000Z",
+      run_id: "run-002",
+      step_id: "plan",
+      payload: {
+        from_step: "execute",
+        to_step: "plan",
+        reason: "legacy reopen",
+      },
+    };
+
+    expect(validate(eventSchema, legacyEvent).length).toBeGreaterThan(0);
+  });
+
   it("rejects unsafe event paths that escape the run root", () => {
     const eventSchema = loadJsonSchema("schemas/event.schema.json");
 

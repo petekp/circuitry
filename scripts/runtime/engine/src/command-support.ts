@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -9,12 +9,8 @@ import {
   validateEvent,
 } from "./append-event.js";
 import {
-  deriveState,
+  deriveValidatedStateFromRun,
   loadManifest,
-  loadEvents,
-  loadStateSchema,
-  validateState,
-  writeState,
 } from "./derive-state.js";
 import { writeTextFileAtomic } from "./file-utils.js";
 import {
@@ -30,7 +26,6 @@ import { renderActiveRun, type RenderActiveRunResult } from "./render-active-run
 import { loadJsonSchema, validate } from "./schema.js";
 import {
   clearContinuityCurrentRun,
-  readContinuityIndex,
   upsertContinuityCurrentRun,
 } from "./continuity-control-plane.js";
 
@@ -50,31 +45,10 @@ export interface LoadedRunContext {
   state: Record<string, any>;
 }
 
-function deriveValidatedState(
-  runRoot: string,
-  persist: boolean,
-): Record<string, any> {
-  const resolvedRunRoot = resolve(runRoot);
-  const manifest = loadManifest(resolvedRunRoot) as Record<string, unknown>;
-  const events = loadEvents(resolvedRunRoot);
-  const state = deriveState(manifest, events);
-  const errors = validateState(state, loadStateSchema());
-
-  if (errors.length > 0) {
-    throw new Error(`state validation failed: ${errors.join("; ")}`);
-  }
-
-  if (persist) {
-    writeState(resolvedRunRoot, state);
-  }
-
-  return state as Record<string, any>;
-}
-
 export function loadRunContext(runRoot: string): LoadedRunContext {
   const resolvedRunRoot = resolve(runRoot);
   const manifest = loadManifest(resolvedRunRoot) as Record<string, unknown>;
-  const state = deriveValidatedState(resolvedRunRoot, false);
+  const state = deriveValidatedStateFromRun(resolvedRunRoot);
 
   return {
     manifest,
@@ -86,7 +60,7 @@ export function loadRunContext(runRoot: string): LoadedRunContext {
 export function loadOrDeriveValidatedState(
   runRoot: string,
 ): Record<string, any> {
-  return deriveValidatedState(runRoot, true);
+  return deriveValidatedStateFromRun(runRoot, { persist: true });
 }
 
 export function validateManifestDocument(
@@ -389,41 +363,6 @@ export function readGitHead(projectRoot: string): string {
   return /^[0-9a-f]{7,40}$/.test(value) ? value : "0000000";
 }
 
-export function syncCurrentRunPointerFromIndex(
-  projectRoot: string,
-): { mode: "file" | "symlink" | null; path: string; slug: string | null } {
-  const pointerDir = join(projectRoot, ".circuit");
-  const pointerPath = join(pointerDir, "current-run");
-
-  mkdirSync(pointerDir, { recursive: true });
-  rmSync(pointerPath, { force: true, recursive: true });
-
-  const slug = readContinuityIndex(projectRoot)?.current_run?.run_slug ?? null;
-  if (!slug) {
-    return {
-      mode: null,
-      path: pointerPath,
-      slug: null,
-    };
-  }
-
-  try {
-    symlinkSync(`circuit-runs/${slug}`, pointerPath);
-    return {
-      mode: "symlink",
-      path: pointerPath,
-      slug,
-    };
-  } catch {
-    writeFileSync(pointerPath, `${slug}\n`, "utf-8");
-    return {
-      mode: "file",
-      path: pointerPath,
-      slug,
-    };
-  }
-}
-
 function projectRootForRunRoot(runRoot: string): string {
   return resolve(runRoot, "..", "..", "..");
 }
@@ -445,7 +384,6 @@ function syncIndexedCurrentRun(
     || runtimeStatus === "handed_off"
   ) {
     clearContinuityCurrentRun(projectRoot);
-    syncCurrentRunPointerFromIndex(projectRoot);
     return;
   }
 
@@ -461,7 +399,6 @@ function syncIndexedCurrentRun(
     runSlug,
     runtimeStatus,
   });
-  syncCurrentRunPointerFromIndex(projectRoot);
 }
 
 export function writeManifestSnapshot(
@@ -496,7 +433,6 @@ export function readDispatchReceiptEventPayload(
   const runtimeBoundary =
     parsed.runtime_boundary === "agent"
     || parsed.runtime_boundary === "codex-isolated"
-    || parsed.runtime_boundary === "codex-ambient"
     || parsed.runtime_boundary === "process"
       ? parsed.runtime_boundary
       : null;

@@ -10,7 +10,7 @@ Status: Companion to `docs/continuity-control-plane-rfc.md`
 | S2 | Standalone save then explicit resume | Save writes a standalone record; resume returns it without requiring any run attachment | I2 |
 | S3 | Session-start sees pending continuity | Session-start prints a passive banner and does not inline saved continuity | I4 |
 | S4 | Session-start sees only current run | Session-start refreshes `active-run.md` from runtime state and stays passive | I4 |
-| S5 | Clear after save | Pending record is deleted, index fields are cleared, `.circuit/current-run` is removed | I5 |
+| S5 | Clear after save | Pending record is deleted and index fields are cleared | I5 |
 | S6 | Corrupt authoritative record | Resume/status fail closed with an explicit error | I6 |
 | S7 | Corrupt index | Status/session-start fail closed with an explicit error | I6 |
 | S8 | Attached run advances after save | Resume still returns the saved record and warns that runtime moved on | I1, I2 |

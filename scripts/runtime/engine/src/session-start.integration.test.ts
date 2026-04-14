@@ -198,14 +198,14 @@ describe("session-start integration", () => {
   it("ignores mirrored .circuit/current-run when it is not backed by indexed current_run", () => {
     const root = mkdtempSync(join(tmpdir(), "circuit-session-mirror-only-"));
     const projectRoot = join(root, "project");
-    const runRoot = join(projectRoot, ".circuit", "circuit-runs", "legacy-run");
+    const runRoot = join(projectRoot, ".circuit", "circuit-runs", "orphan-run");
     const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
 
     mkdirSync(join(projectRoot, ".circuit"), { recursive: true });
     mkdirSync(join(runRoot, "artifacts"), { recursive: true });
     writeFileSync(
       join(projectRoot, ".circuit", "current-run"),
-      "legacy-run\n",
+      "orphan-run\n",
       "utf-8",
     );
     writeFileSync(

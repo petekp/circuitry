@@ -43,12 +43,7 @@ Continuity authority lives only in:
 
 Related runtime surfaces:
 
-- `.circuit/current-run` -- mirror of indexed `current_run`, not authority
 - `<run-root>/artifacts/active-run.md` -- passive dashboard refreshed from runtime state, not continuity authority
-
-Do not `cat` `.circuit/current-run` to discover attachment state; the mirror may
-be a symlink. Use control-plane status as the source of truth, and use
-`test -e .circuit/current-run` only for presence checks.
 
 Do not read or write `~/.claude/projects/.../handoff.md`.
 Do not scan `.circuit/circuit-runs/` to guess continuity.

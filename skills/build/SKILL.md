@@ -30,8 +30,7 @@ Action-first rules for `/circuit:build`:
 5. If routing already selected Build, stay on that path immediately instead of reclassifying.
 6. If bootstrap already happened, continue from the current phase instead of re-exploring.
 7. If the user explicitly says to continue or resume from a handoff, resolve it through `.circuit/bin/circuit-engine continuity resume --json` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to `current_run`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.
-8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.
-9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
+8. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
 
 ## Local Helper Wrappers
 
@@ -51,14 +50,13 @@ If the request is explicitly a smoke/bootstrap verification of the Build workflo
 Instead:
 
 1. Bootstrap the run root through `.circuit/bin/circuit-engine`.
-2. Validate `.circuit/current-run` points at a real run directory.
-3. Validate Build scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md`.
-4. Report the validated run root and scaffold state briefly.
-5. Stop here. Do not write `brief.md`, resolve checkpoints, inspect unrelated repo files, or continue into Plan/Act/Verify/Review/Close.
+2. Validate Build scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, and `artifacts/active-run.md`.
+3. Report the validated run root and scaffold state briefly.
+4. Stop here. Do not write `brief.md`, resolve checkpoints, inspect unrelated repo files, or continue into Plan/Act/Verify/Review/Close.
 
 A smoke verification that only reports git branch/status, repo cleanliness, or top-level directory contents is not valid smoke evidence. The proof must be the on-disk `.circuit` run state and Build scaffold.
 
-Hand-written `Write`/`Edit` creation of `circuit.manifest.yaml`, `events.ndjson`, `state.json`, `artifacts/active-run.md`, or `.circuit/current-run` is a smoke failure.
+Hand-written `Write`/`Edit` creation of `circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, or `artifacts/active-run.md` is a smoke failure.
 
 Use the real bootstrap path, then prove it with the concrete files:
 
@@ -76,7 +74,6 @@ test -x .circuit/bin/circuit-engine
   --goal "<smoke bootstrap objective>" \
   --project-root "$PWD"
 
-test -e .circuit/current-run
 test -f "$RUN_ROOT/circuit.manifest.yaml"
 test -f "$RUN_ROOT/events.ndjson"
 test -f "$RUN_ROOT/state.json"
@@ -327,7 +324,7 @@ Outer Build runtime files remain:
 If `reconcile-dispatch` reports `gate_passed=false`, the Act step stays
 incomplete. Interpret that mechanically:
 - `completion=partial`: finish remaining work, write the next request file, and dispatch again
-- `completion=blocked`: resolve the dependency or reopen the step before retrying
+- `completion=blocked`: resolve the dependency before retrying
 - `completion=complete` with a disallowed verdict: fix findings, update the handoff if needed, and re-dispatch
 
 Gate: Act advances only when the result is mechanically complete and the verdict

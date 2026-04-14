@@ -8,7 +8,6 @@ import {
   loadBuildManifest,
   makeTempProject,
   readActiveRun,
-  readCurrentRunPointer,
   readEvents,
   readState,
   writeManifestFile,
@@ -16,7 +15,7 @@ import {
 } from "./outer-engine-test-utils.js";
 
 describe("bootstrap", () => {
-  it("creates manifest snapshot, events, state, active-run, pointer, and uses the entry-mode start step", () => {
+  it("creates manifest snapshot, events, state, active-run, and uses the entry-mode start step", () => {
     const { projectRoot, runRoot, slug } = makeTempProject("bootstrap-run");
     const manifest = loadBuildManifest();
     manifest.circuit.entry_modes["plan-first"] = {
@@ -58,13 +57,6 @@ describe("bootstrap", () => {
     expect(activeRun).toContain("## Rigor\nPlan First");
     expect(activeRun).toContain("## Current Phase\nplan");
     expect(activeRun).toContain("## Goal\nBootstrap the semantic outer engine");
-
-    const pointer = readCurrentRunPointer(projectRoot);
-    if (pointer.mode === "symlink") {
-      expect(pointer.target).toBe(`circuit-runs/${slug}`);
-    } else {
-      expect(pointer.target).toBe(slug);
-    }
 
     expect(readContinuityIndex(projectRoot)).toEqual(
       expect.objectContaining({
@@ -116,8 +108,8 @@ describe("bootstrap", () => {
     );
   });
 
-  it("fails on legacy run-root collision", () => {
-    const { projectRoot, runRoot } = makeTempProject("legacy-run");
+  it("fails on run-root collision without a manifest snapshot", () => {
+    const { projectRoot, runRoot } = makeTempProject("collision-run");
     const manifestPath = join(projectRoot, "build.manifest.yaml");
     writeManifestFile(manifestPath, loadBuildManifest());
     writeRunFile(runRoot, "artifacts/active-run.md", "# Active Run\n");
@@ -130,6 +122,24 @@ describe("bootstrap", () => {
         projectRoot,
         runRoot,
       }),
-    ).toThrow(/legacy run root/i);
+    ).toThrow(/without manifest snapshot/i);
+  });
+
+  it("supports detached bootstrap without mutating project attachment state", () => {
+    const { projectRoot } = makeTempProject("attached-run");
+    const manifestPath = join(projectRoot, "build.manifest.yaml");
+    const detachedRunRoot = join(process.env.TMPDIR ?? "/tmp", "circuit-detached-bootstrap-test");
+    writeManifestFile(manifestPath, loadBuildManifest());
+
+    const result = bootstrapRun({
+      attachment: "detached",
+      entryMode: "default",
+      manifestPath,
+      projectRoot,
+      runRoot: detachedRunRoot,
+    });
+
+    expect(result.attachment).toBe("detached");
+    expect(readContinuityIndex(projectRoot)?.current_run ?? null).toBeNull();
   });
 });

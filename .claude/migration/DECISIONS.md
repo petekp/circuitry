@@ -31,3 +31,23 @@ Exit condition: These references are removed when a v2 engine exists that reads 
 Date: 2026-03-31
 
 Steps 1-3 (circuit topology changes) are independent of steps 4-6 (infrastructure improvements). Steps 7-9 (Runtime Foundation) depend on step 6. Steps 10-15 depend on steps 7-9. This creates two parallel tracks for early work, converging at step 7.
+
+## Decision 6: Canonical runtime projection does not model reopen events
+
+Date: 2026-04-14
+
+`step_reopened` and the old `reopen-step` command are not part of the canonical runtime model. The only runtime truth is `circuit.manifest.yaml` plus supported `events.ndjson` event types. Routing back to an earlier step is represented by gate routing and the subsequent `step_started` / worker / checkpoint events, not by a dedicated reopen event.
+
+Legacy `step_reopened` entries are now rejected by `schemas/event.schema.json`, and the pure projector ignores them if they still appear in historical logs.
+
+Exit condition: None. Reintroduce reopen as a first-class runtime event only through a new explicit decision that updates the schema, projection, and docs together.
+
+## Decision 7: Built-in Codex dispatch is isolated-only
+
+Date: 2026-04-14
+
+Circuit no longer ships `codex-ambient`. The only built-in Codex modes are `codex` and `codex-isolated`, and both resolve to Circuit-owned isolated runtime execution.
+
+This removes the last built-in worker path that inherited user Codex state, keeps dispatch semantics deterministic, and prevents config/docs from advertising a compatibility escape hatch that the current architecture no longer wants.
+
+Exit condition: None. Reintroduce an ambient built-in only through a new explicit decision that updates runtime behavior, docs, example config, and verification together.

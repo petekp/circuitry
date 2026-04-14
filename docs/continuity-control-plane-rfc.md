@@ -40,7 +40,7 @@ Replace prompt-authored markdown continuity with engine-owned structured continu
 
 | Domain | Authority |
 |---|---|
-| Run execution | `<runRoot>/events.ndjson` + `<runRoot>/state.json` |
+| Run execution | `<runRoot>/circuit.manifest.yaml` + `<runRoot>/events.ndjson` (`state.json` is derived output) |
 | Continuity | `.circuit/control-plane/continuity-index.json` + pointed record |
 | Active-run dashboard | `<runRoot>/artifacts/active-run.md` as runtime output only |
 
@@ -54,7 +54,6 @@ Replace prompt-authored markdown continuity with engine-owned structured continu
     continuity-index.json
     continuity-records/
       <record-id>.json
-  current-run
   circuit-runs/
     <run-slug>/
       circuit.manifest.yaml
@@ -154,7 +153,6 @@ interface ContinuityRecordV1 {
 - Deletes the pending record if present.
 - Clears `index.pending_record`.
 - Clears `index.current_run`.
-- Removes `.circuit/current-run`.
 - Leaves no hidden continuity fallback.
 
 There is no `render` or `import-legacy` command.

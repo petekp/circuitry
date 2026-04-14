@@ -7,20 +7,9 @@
  */
 
 import {
-  existsSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { join } from "node:path";
-import {
-  deriveState,
-  loadManifest,
-  loadEvents,
-  loadStateSchema,
+  deriveValidatedStateFromRun,
 } from "./derive-state.js";
 import { findStepById } from "./manifest-utils.js";
-import { validate } from "./schema.js";
 
 export class RebuildError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -32,75 +21,18 @@ export class RebuildError extends Error {
 // ─── State loading ───────────────────────────────────────────────────
 
 /**
- * Load state.json, rebuilding from events if the file is missing or stale.
- *
- * "Stale" means events.ndjson has a newer mtime than state.json,
- * indicating events were appended without re-deriving state.
+ * Derive the canonical run state from replay and refresh state.json as an
+ * output artifact for tooling and inspection.
  */
 export function loadOrRebuildState(runRoot: string): object {
-  const statePath = join(runRoot, "state.json");
-  const eventsPath = join(runRoot, "events.ndjson");
-
-  let needsRebuild = false;
-
-  if (!existsSync(statePath)) {
-    needsRebuild = true;
-  } else if (existsSync(eventsPath)) {
-    const stateMtime = statSync(statePath).mtimeMs;
-    const eventsMtime = statSync(eventsPath).mtimeMs;
-    if (eventsMtime > stateMtime) {
-      needsRebuild = true;
-    }
-  }
-
-  if (needsRebuild) {
-    try {
-      const manifest = loadManifest(runRoot) as Record<string, unknown>;
-      const events = loadEvents(runRoot);
-      const state = deriveState(manifest, events);
-      const stateSchema = loadStateSchema();
-      const errors = validate(stateSchema, state);
-
-      if (errors.length > 0) {
-        throw new RebuildError(
-          `Rebuilt state failed schema validation: ${errors.join("; ")}`,
-        );
-      }
-
-      writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
-      return state;
-    } catch (err) {
-      if (err instanceof RebuildError) {
-        throw err;
-      }
-
-      throw new RebuildError(
-        `State rebuild failed for ${runRoot}: events.ndjson is newer than state.json but replay could not complete`,
-        err,
-      );
-    }
-  }
-
-  // Fresh state exists and is not stale -- still validate against schema.
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(statePath, "utf-8"));
+    return deriveValidatedStateFromRun(runRoot, { persist: true });
   } catch (err) {
     throw new RebuildError(
-      `Failed to parse ${statePath}: ${err instanceof Error ? err.message : String(err)}`,
+      `State replay failed for ${runRoot}: ${err instanceof Error ? err.message : String(err)}`,
       err,
     );
   }
-
-  const stateSchema = loadStateSchema();
-  const errors = validate(stateSchema, parsed as object);
-  if (errors.length > 0) {
-    throw new RebuildError(
-      `Loaded state failed schema validation: ${errors.join("; ")}`,
-    );
-  }
-
-  return parsed as object;
 }
 
 // ─── Step graph helpers ──────────────────────────────────────────────

@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 
 import {
-  runAmbientCodexDispatch,
   runIsolatedCodexDispatch,
   type DispatchProcessResult,
   type RuntimeBoundary,
@@ -156,7 +155,6 @@ function loadDispatchConfig(config: Record<string, unknown>): DispatchConfigShap
         adapterName === "agent"
         || adapterName === "codex"
         || adapterName === "codex-isolated"
-        || adapterName === "codex-ambient"
       ) {
         throw new Error(`circuit: "${adapterName}" is a reserved built-in adapter name`);
       }
@@ -250,19 +248,10 @@ export function resolveDispatchAdapter(
     };
   }
 
-  if (selected === "codex-ambient") {
-    return {
-      adapter: "codex-ambient",
-      resolvedFrom,
-      runtimeBoundary: "codex-ambient",
-      transport: "process",
-    };
-  }
-
   const commandArgv = dispatch.adapters[selected];
   if (!commandArgv) {
     throw new Error(
-      `circuit: unknown adapter "${selected}". Use agent, codex, codex-isolated, codex-ambient, auto, or configure dispatch.adapters.${selected}.command`,
+      `circuit: unknown adapter "${selected}". Use agent, codex, codex-isolated, auto, or configure dispatch.adapters.${selected}.command`,
     );
   }
 
@@ -302,19 +291,6 @@ function runProcessAdapter(
 
     return runIsolatedCodexDispatch({
       baseEnv: process.env,
-      cwd: options.cwd ?? process.cwd(),
-      homeDir: options.homeDir,
-      outputFile,
-      promptFile,
-    });
-  }
-
-  if (resolution.runtimeBoundary === "codex-ambient") {
-    if (!commandExists("codex")) {
-      throw new Error('circuit: adapter "codex-ambient" requires the codex CLI to be installed');
-    }
-
-    return runAmbientCodexDispatch({
       cwd: options.cwd ?? process.cwd(),
       homeDir: options.homeDir,
       outputFile,

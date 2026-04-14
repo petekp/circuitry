@@ -44,7 +44,7 @@ Goal:
 
 - bootstrap updates `index.current_run`
 - runtime completion detaches `index.current_run`
-- `.circuit/current-run` becomes a byproduct of indexed attachment state
+- indexed attachment state is the only source of truth
 
 Verification:
 

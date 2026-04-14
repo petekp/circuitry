@@ -17,7 +17,6 @@
 # - `agent` uses Claude Code's Agent tool with worktree isolation
 # - `codex` is an alias for `codex-isolated`
 # - `codex-isolated` runs Codex CLI inside Circuit's isolated runtime home
-# - `codex-ambient` preserves the old behavior and inherits user Codex state
 #
 # Custom adapters are wrapper executables defined as argv arrays. Circuit
 # appends `PROMPT_FILE OUTPUT_FILE` as the final two positional args.
@@ -28,7 +27,7 @@ dispatch:
     reviewer: agent
     researcher: agent
   circuits:
-    migrate: codex-ambient
+    migrate: codex
     explore: gemini
   adapters:
     gemini:

@@ -25,7 +25,7 @@ export const CONTINUITY_STATUS_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engin
 export const CONTINUITY_RESUME_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engine continuity resume --json`;
 export const CONTINUITY_CLEAR_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engine continuity clear --json`;
 
-interface PromptHelperWrapper {
+export interface PromptHelperWrapper {
   name: string;
   path: string;
   target: string;
@@ -42,7 +42,7 @@ interface PromptSurfaceSummary {
   forbidden_manual_fabrication?: string[];
 }
 
-interface PromptFastModeContract {
+export interface PromptFastModeContract {
   id: string;
   lines: string[];
   placeholders: string[];
@@ -72,7 +72,7 @@ export interface PromptContractsManifest {
   surfaces: Record<string, PromptSurfaceSummary>;
 }
 
-const HELPER_WRAPPERS: PromptHelperWrapper[] = [
+export const HELPER_WRAPPERS: PromptHelperWrapper[] = [
   {
     name: "circuit-engine",
     path: `${LOCAL_HELPER_DIR}/circuit-engine`,
@@ -101,7 +101,6 @@ const HELPER_WRAPPERS: PromptHelperWrapper[] = [
 ];
 
 const BUILD_PROOF_ARTIFACTS = [
-  ".circuit/current-run",
   "circuit.manifest.yaml",
   "events.ndjson",
   "state.json",
@@ -109,6 +108,9 @@ const BUILD_PROOF_ARTIFACTS = [
 ];
 
 const SEMANTIC_PROOF_ARTIFACTS = BUILD_PROOF_ARTIFACTS;
+const DERIVED_STATE_SNAPSHOT_TEXT = "the derived `state.json` snapshot";
+const RUN_STATE_ARTIFACTS_TEXT =
+  "`circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, and `artifacts/active-run.md`";
 
 const BUILD_SMOKE_RUN_SLUG = 'RUN_SLUG="smoke-bootstrap-build-workflow-host-surface"';
 const BUILD_SMOKE_RUN_ROOT_LINE = 'RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"';
@@ -123,7 +125,6 @@ const BUILD_SMOKE_BOOTSTRAP_SUFFIX_LINES = [
   '  --project-root "$PWD"',
 ];
 const BUILD_SMOKE_VALIDATION_CHECK_LINES = [
-  "test -e .circuit/current-run",
   'test -f "$RUN_ROOT/circuit.manifest.yaml"',
   'test -f "$RUN_ROOT/events.ndjson"',
   'test -f "$RUN_ROOT/state.json"',
@@ -255,7 +256,7 @@ const HANDOFF_CONTINUATION_RULE = `If the user explicitly says to continue or re
 
 const HANDOFF_CAPTURE_CONFIRMATION = "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.";
 
-const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
+export const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
   build_smoke: {
     id: "build_smoke",
     lines: [
@@ -267,8 +268,8 @@ const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
       BUILD_SMOKE_RUN_ROOT_LINE,
       BUILD_SMOKE_ENGINE_CHECK_LINE,
       renderBuildSmokeBootstrapInlineCommand('"lite"'),
-      "Do not use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit/current-run`, `circuit.manifest.yaml`, `events.ndjson`, `state.json`, or `artifacts/active-run.md`.",
-      "After bootstrap, validate with `test -e .circuit/current-run` plus `test -f` checks for `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md` under `$RUN_ROOT`.",
+      `Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, ${DERIVED_STATE_SNAPSHOT_TEXT}, or \`artifacts/active-run.md\`.`,
+      `After bootstrap, validate with \`test -f\` checks for ${RUN_STATE_ARTIFACTS_TEXT} under \`$RUN_ROOT\`.`,
       "After bootstrap, validate those on-disk artifacts, report the selected run root briefly, and stop.",
       "Do not continue into Frame, Plan, Act, Verify, Review, or Close for this smoke request.",
     ],
@@ -281,7 +282,7 @@ const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
       "# Circuit Handoff Done Contract",
       "This prompt is the explicit handoff completion fast mode.",
       `Run \`${CONTINUITY_CLEAR_JSON_COMMAND}\`.`,
-      "This clears the pending continuity record, detaches indexed `current_run`, and removes the mirrored `.circuit/current-run` pointer.",
+      "This clears the pending continuity record and detaches indexed `current_run`.",
       "Do not manually delete handoff files, archive dashboards, or scan run roots.",
       "Do not bootstrap new work or do broad repo exploration.",
       "Stop after reporting completion.",
@@ -366,8 +367,8 @@ function createWorkflowSmokeFastMode(
       `ENTRY_MODE="${defaultEntryMode}"`,
       BUILD_SMOKE_ENGINE_CHECK_LINE,
       renderWorkflowSmokeBootstrapInlineCommand(workflowSlug, `"$ENTRY_MODE"`),
-      "After bootstrap, validate with `test -e .circuit/current-run` plus `test -f` checks for `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md` under `$RUN_ROOT`.",
-      "Do not use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit/current-run`, `circuit.manifest.yaml`, `events.ndjson`, `state.json`, or `artifacts/active-run.md`.",
+      `After bootstrap, validate with \`test -f\` checks for ${RUN_STATE_ARTIFACTS_TEXT} under \`$RUN_ROOT\`.`,
+      `Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, ${DERIVED_STATE_SNAPSHOT_TEXT}, or \`artifacts/active-run.md\`.`,
       "Validate those on-disk artifacts, report the selected run root briefly, and stop.",
       "Do not continue into the normal workflow phases or broader repo exploration for this smoke request.",
     ],
@@ -483,8 +484,7 @@ function renderBuildContractBlock(): string {
     "5. If routing already selected Build, stay on that path immediately instead of reclassifying.",
     "6. If bootstrap already happened, continue from the current phase instead of re-exploring.",
     `7. ${HANDOFF_CONTINUATION_RULE}`,
-    "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
-    "9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
+    "8. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate Build run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
     "",
     renderHelperWrapperSection(getSurfaceContractDefinition("build").helper_wrappers),
     "",
@@ -495,14 +495,13 @@ function renderBuildContractBlock(): string {
     "Instead:",
     "",
     "1. Bootstrap the run root through `.circuit/bin/circuit-engine`.",
-    "2. Validate `.circuit/current-run` points at a real run directory.",
-    "3. Validate Build scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md`.",
-    "4. Report the validated run root and scaffold state briefly.",
-    "5. Stop here. Do not write `brief.md`, resolve checkpoints, inspect unrelated repo files, or continue into Plan/Act/Verify/Review/Close.",
+    `2. Validate Build scaffolding exists: ${RUN_STATE_ARTIFACTS_TEXT}.`,
+    "3. Report the validated run root and scaffold state briefly.",
+    "4. Stop here. Do not write `brief.md`, resolve checkpoints, inspect unrelated repo files, or continue into Plan/Act/Verify/Review/Close.",
     "",
     "A smoke verification that only reports git branch/status, repo cleanliness, or top-level directory contents is not valid smoke evidence. The proof must be the on-disk `.circuit` run state and Build scaffold.",
     "",
-    "Hand-written `Write`/`Edit` creation of `circuit.manifest.yaml`, `events.ndjson`, `state.json`, `artifacts/active-run.md`, or `.circuit/current-run` is a smoke failure.",
+    `Hand-written \`Write\`/\`Edit\` creation of \`circuit.manifest.yaml\`, \`events.ndjson\`, ${DERIVED_STATE_SNAPSHOT_TEXT}, or \`artifacts/active-run.md\` is a smoke failure.`,
     "",
     "Use the real bootstrap path, then prove it with the concrete files:",
     "",
@@ -531,8 +530,7 @@ function renderSemanticWorkflowContractBlock(
     `5. ${routeLine}`,
     "6. If bootstrap already happened, continue from the current phase instead of re-exploring.",
     `7. ${HANDOFF_CONTINUATION_RULE}`,
-    "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
-    "9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate workflow run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
+    "8. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate workflow run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.",
     "",
     renderHelperWrapperSection(getSurfaceContractDefinition(slug).helper_wrappers),
     "",
@@ -541,10 +539,9 @@ function renderSemanticWorkflowContractBlock(
     `If the request is explicitly a smoke/bootstrap verification of ${label} (for example it says \`smoke\`, asks to bootstrap, or mentions host-surface verification), bootstrap only.`,
     "",
     `1. Bootstrap the ${label} run root through \`.circuit/bin/circuit-engine\`.`,
-    "2. Validate `.circuit/current-run` points at a real run directory.",
-    `3. Validate ${label} scaffolding exists: \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\`.`,
-    "4. Report the validated run root and scaffold state briefly.",
-    `5. ${stopLine}`,
+    `2. Validate ${label} scaffolding exists: ${RUN_STATE_ARTIFACTS_TEXT}.`,
+    "3. Report the validated run root and scaffold state briefly.",
+    `4. ${stopLine}`,
     "",
     `Repo cleanliness, branch status, or directory listings are not valid smoke evidence. The proof must be the on-disk \`.circuit\` run root and ${label} scaffold.`,
     "",
@@ -582,10 +579,9 @@ function renderRunContractBlock(): string {
     "5. Once a workflow is selected, create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.",
     "6. If the run is already bootstrapped, continue from the current phase instead of re-exploring.",
     `7. ${HANDOFF_CONTINUATION_RULE}`,
-    "8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
-    "9. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.",
-    "10. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.",
-    "11. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.",
+    "8. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.",
+    "9. Smoke validation is invalid unless the selected workflow scaffold exists on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.",
+    "10. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.",
     "",
     renderHelperWrapperSection(getSurfaceContractDefinition("run").helper_wrappers),
     "",
@@ -651,7 +647,7 @@ function renderCircuitsSmokeContract(): string {
     renderShellFence(getBuildSmokeShellFenceLines({
       entryModeArgument: '  --entry-mode "lite" \\',
     })),
-    "- Valid proof is on-disk run state: `.circuit/current-run`, `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md`.",
+    `- Valid proof is the canonical manifest/event pair plus derived outputs on disk: ${RUN_STATE_ARTIFACTS_TEXT}.`,
     "- Never fabricate those files with `Write`, `Edit`, heredocs, or ad hoc shell writes.",
     "- Do not run `--help` or search the repo to rediscover the required bootstrap flags; use the exact command shape above.",
     "- Stop after validation. Do not continue into planning or broader repo exploration for a smoke request.",
@@ -721,7 +717,7 @@ function renderWorkflowCommandShim(entry: WorkflowEntry): string {
     lines.splice(
       6,
       0,
-      `For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of ${summary.forbidden_manual_fabrication.map((artifact) => `\`${artifact}\``).join(", ")} is a failure; use \`${LOCAL_HELPER_DIR}/circuit-engine bootstrap\` instead.`,
+      `For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`circuit.manifest.yaml\`, \`events.ndjson\`, ${DERIVED_STATE_SNAPSHOT_TEXT}, or \`artifacts/active-run.md\` is a failure; use \`${LOCAL_HELPER_DIR}/circuit-engine bootstrap\` instead.`,
     );
   }
 

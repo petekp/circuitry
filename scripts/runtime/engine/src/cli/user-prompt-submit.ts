@@ -5,16 +5,16 @@ import { resolve } from "node:path";
 
 import type { ContinuityStatusPayload } from "../continuity-commands.js";
 import { renderRunCustomCircuitContext } from "../catalog/custom-circuits.js";
-import type { PromptContractsManifest } from "../catalog/prompt-surface-contracts.js";
 import {
   CONTINUITY_RESUME_JSON_COMMAND,
+  FAST_MODE_CONTRACTS,
+  HELPER_WRAPPERS,
   LOCAL_HELPER_DIR,
-  PROMPT_CONTRACTS_PATH,
+  type PromptHelperWrapper,
 } from "../catalog/prompt-surface-contracts.js";
 import { ensureProjectCircuitRoot } from "../ensure-circuit-dirs.js";
 import { recordInvocationReceived } from "../invocation-ledger.js";
 import { resolveProjectRoot } from "../project-root.js";
-import { REPO_ROOT } from "../schema.js";
 import {
   parseCircuitSlashCommand,
   type ParsedSlashCommand,
@@ -94,12 +94,6 @@ function requestsSavedContinuity(command: ParsedSlashCommand): boolean {
   return continuityResumePatterns.some((pattern) => pattern.test(args));
 }
 
-function loadPromptContracts(): PromptContractsManifest {
-  return JSON.parse(
-    readFileSync(resolve(REPO_ROOT, PROMPT_CONTRACTS_PATH), "utf-8"),
-  ) as PromptContractsManifest;
-}
-
 function persistPluginRoot(projectRoot: string): void {
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
   if (!pluginRoot) {
@@ -115,7 +109,7 @@ function persistPluginRoot(projectRoot: string): void {
   }
 }
 
-function renderWrapper(wrapper: PromptContractsManifest["helper_wrappers"][number]): string {
+function renderWrapper(wrapper: PromptHelperWrapper): string {
   return [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
@@ -147,12 +141,11 @@ function renderWrapper(wrapper: PromptContractsManifest["helper_wrappers"][numbe
 
 function ensureLocalHelperWrappers(
   projectRoot: string,
-  manifest: PromptContractsManifest,
 ): void {
   const binDir = resolve(projectRoot, ".circuit", "bin");
   mkdirSync(binDir, { recursive: true });
 
-  for (const wrapper of manifest.helper_wrappers) {
+  for (const wrapper of HELPER_WRAPPERS) {
     const wrapperPath = resolve(projectRoot, wrapper.path);
     const content = renderWrapper(wrapper);
     writeFileSync(wrapperPath, content, "utf-8");
@@ -178,6 +171,31 @@ function emitContext(additionalContext: string): never {
     suppressOutput: true,
   }));
   process.exit(0);
+}
+
+function renderInvocationContext(invocationId: string): string {
+  return [
+    "# Circuit Invocation",
+    `This slash-command invocation id is \`${invocationId}\`.`,
+    `If you bootstrap a workflow run for this request, include \`--invocation-id "${invocationId}"\` on the bootstrap command.`,
+    "Reuse this exact invocation id end-to-end for the run started from this prompt. Do not mint another id.",
+  ].join("\n");
+}
+
+function mergeContextSections(
+  invocationId: string | null,
+  ...sections: Array<string | null | undefined>
+): string | null {
+  const merged = [
+    invocationId ? renderInvocationContext(invocationId) : null,
+    ...sections,
+  ].filter((section): section is string => typeof section === "string" && section.length > 0);
+
+  if (merged.length === 0) {
+    return null;
+  }
+
+  return merged.join("\n\n");
 }
 
 function renderCustomRoutingUnavailableContext(error: unknown): string {
@@ -319,10 +337,7 @@ function renderHandoffReferenceContext(
     ...guidance.lines,
     ...(status.selection !== "none"
       ? [
-        "",
-        "Do not `cat` `.circuit/current-run`; the mirror may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.",
-      ]
-      : []),
+      ] : []),
     ...(status.warnings.length > 0
       ? [
         "",
@@ -334,10 +349,9 @@ function renderHandoffReferenceContext(
 }
 
 function renderHandoffResumeContext(
-  manifest: PromptContractsManifest,
   status: ContinuityStatusPayload,
 ): string {
-  const lines = renderTemplate(manifest.fast_modes.handoff_resume.lines, {});
+  const lines = renderTemplate(FAST_MODE_CONTRACTS.handoff_resume.lines, {});
 
   return [
     lines,
@@ -354,17 +368,14 @@ function renderHandoffResumeContext(
   ].join("\n");
 }
 
-function renderHandoffDoneContext(
-  manifest: PromptContractsManifest,
-): string {
-  return renderTemplate(manifest.fast_modes.handoff_done.lines, {});
+function renderHandoffDoneContext(): string {
+  return renderTemplate(FAST_MODE_CONTRACTS.handoff_done.lines, {});
 }
 
 function renderHandoffCaptureContext(
-  manifest: PromptContractsManifest,
   status: ContinuityStatusPayload,
 ): string {
-  const lines = renderTemplate(manifest.fast_modes.handoff_capture.lines, {});
+  const lines = renderTemplate(FAST_MODE_CONTRACTS.handoff_capture.lines, {});
 
   return [
     lines,
@@ -388,7 +399,6 @@ async function main(): Promise<number> {
   const input = readInput();
   const prompt = typeof input.prompt === "string" ? input.prompt : "";
   const projectRoot = currentProjectRoot();
-  const manifest = loadPromptContracts();
 
   if (isCircuitPrompt(prompt)) {
     // Best-effort: ensure per-project circuit directories exist.
@@ -399,7 +409,7 @@ async function main(): Promise<number> {
 
     persistPluginRoot(projectRoot);
     try {
-      ensureLocalHelperWrappers(projectRoot, manifest);
+      ensureLocalHelperWrappers(projectRoot);
     } catch {
       // Best effort only. The persisted plugin root remains the primary recovery path.
     }
@@ -410,14 +420,14 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  // Best-effort: record invocation and write sidecar for bootstrap correlation.
-  recordInvocationReceived({
+  const recordedInvocation = recordInvocationReceived({
     commandArgs: command.args,
     commandSlug: command.slug,
     homeDir: process.env.HOME ?? undefined,
     projectRoot,
     requestedCommand: `circuit:${command.slug}`,
   });
+  const invocationId = recordedInvocation?.invocationId ?? null;
 
   let continuityStatus: ContinuityStatusPayload | null = null;
   const readContinuityStatus = async (): Promise<ContinuityStatusPayload> => {
@@ -431,45 +441,77 @@ async function main(): Promise<number> {
   };
 
   if (isReviewCurrentChanges(command)) {
-    emitContext(renderTemplate(manifest.fast_modes.review_current_changes.lines, {}));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderTemplate(FAST_MODE_CONTRACTS.review_current_changes.lines, {}),
+    ) ?? "");
   }
 
   if (isHandoffDone(command)) {
-    emitContext(renderHandoffDoneContext(manifest));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderHandoffDoneContext(),
+    ) ?? "");
   }
 
   if (isHandoffResume(command)) {
-    emitContext(renderHandoffResumeContext(manifest, await readContinuityStatus()));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderHandoffResumeContext(await readContinuityStatus()),
+    ) ?? "");
   }
 
   if (isHandoffCapture(command)) {
-    emitContext(renderHandoffCaptureContext(manifest, await readContinuityStatus()));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderHandoffCaptureContext(await readContinuityStatus()),
+    ) ?? "");
   }
 
   if (isWorkflowSmoke(command)) {
-    emitContext(renderTemplate(
-      manifest.fast_modes[`smoke_${command.slug}`].lines,
-      {},
-    ));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderTemplate(
+        FAST_MODE_CONTRACTS[`smoke_${command.slug}`].lines,
+        {},
+      ),
+    ) ?? "");
   }
 
   if (isBuildSmoke(command)) {
-    emitContext(renderTemplate(manifest.fast_modes.build_smoke.lines, {}));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderTemplate(FAST_MODE_CONTRACTS.build_smoke.lines, {}),
+    ) ?? "");
   }
 
   if (requestsSavedContinuity(command)) {
-    emitContext(renderHandoffReferenceContext(command, await readContinuityStatus()));
+    emitContext(mergeContextSections(
+      invocationId,
+      renderHandoffReferenceContext(command, await readContinuityStatus()),
+    ) ?? "");
   }
 
   if (command.slug === "run") {
     try {
       const customRoutingContext = renderRunCustomCircuitContext(process.env.HOME);
       if (customRoutingContext) {
-        emitContext(customRoutingContext);
+        emitContext(mergeContextSections(
+          invocationId,
+          customRoutingContext,
+        ) ?? "");
       }
     } catch (error) {
-      emitContext(renderCustomRoutingUnavailableContext(error));
+      emitContext(mergeContextSections(
+        invocationId,
+        renderCustomRoutingUnavailableContext(error),
+      ) ?? "");
     }
+  }
+
+  const baseInvocationContext = mergeContextSections(invocationId);
+  if (baseInvocationContext) {
+    emitContext(baseInvocationContext);
   }
 
   return 0;

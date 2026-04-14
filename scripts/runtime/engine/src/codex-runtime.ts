@@ -18,7 +18,6 @@ import { writeTextFileAtomic } from "./file-utils.js";
 export type RuntimeBoundary =
   | "agent"
   | "codex-isolated"
-  | "codex-ambient"
   | "process";
 
 export interface DispatchProcessResult {
@@ -122,7 +121,6 @@ export interface CodexDispatchOptions {
   promptFile: string;
 }
 
-const AMBIENT_WARNING = "codex-ambient inherits user Codex state; less deterministic.";
 const DEFAULT_GRACE_MS = 30_000;
 const PID_FILE_SUFFIX = ".pid.json";
 const RUNTIME_KEEP_ENTRIES = new Set(["auth.json", "config.toml", "pids", "reports", "tmp"]);
@@ -804,24 +802,6 @@ function finalizeSpawnResult(
       `circuit: adapter "${adapter}" exited with status ${result.status}${detail ? `\n${detail}` : ""}`,
     );
   }
-}
-
-export function runAmbientCodexDispatch(options: CodexDispatchOptions): DispatchProcessResult {
-  const workspaceRoot = resolveProjectRoot(options.cwd ?? process.cwd());
-  const commandArgv = ["codex", "exec", "--full-auto", "-o", options.outputFile, "-"];
-  const result = spawnSync(commandArgv[0], commandArgv.slice(1), {
-    cwd: workspaceRoot,
-    encoding: "utf-8",
-    input: readFileSync(options.promptFile, "utf-8"),
-  });
-
-  finalizeSpawnResult("codex-ambient", result);
-
-  return {
-    commandArgv,
-    runtimeBoundary: "codex-ambient",
-    warnings: [AMBIENT_WARNING],
-  };
 }
 
 export function runIsolatedCodexDispatch(options: CodexDispatchOptions): DispatchProcessResult {

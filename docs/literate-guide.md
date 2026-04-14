@@ -194,10 +194,11 @@ plugin.
 
 ## §7. Runtime Execution Is an Artifact Chain Backed by Events
 
-On the runtime side, Circuit treats the run directory as the source of truth.
-`scripts/runtime/engine/src/derive-state.ts` replays `events.ndjson` into
-`state.json`, and the state model keeps separate slots for artifacts, jobs,
-checkpoints, and routes.
+On the runtime side, Circuit treats `circuit.manifest.yaml` plus
+`events.ndjson` as the canonical execution record.
+`scripts/runtime/engine/src/derive-state.ts` replays those inputs into the
+derived `state.json` snapshot, and the state model keeps separate slots for
+artifacts, jobs, checkpoints, and routes.
 
 Build is the first workflow where that outer runtime is now real rather than
 aspirational. The semantic outer CLI lives in
@@ -205,7 +206,7 @@ aspirational. The semantic outer CLI lives in
 `scripts/runtime/bin/circuit-engine.js`, and is called from
 `scripts/relay/circuit-engine.sh`. Build uses semantic commands such as
 `bootstrap`, `complete-synthesis`, `request-checkpoint`, `resolve-checkpoint`,
-`dispatch-step`, `reconcile-dispatch`, `reopen-step`, `resume`, and `render`
+`dispatch-step`, `reconcile-dispatch`, `resume`, and `render`
 instead of teaching the skill prose to append raw events directly.
 
 That separation is not bookkeeping for its own sake. Each piece answers a
@@ -227,23 +228,23 @@ describe the same outer execution path.
 This is where Circuit's bias toward durable state shows up most clearly.
 Artifacts under `.circuit/circuit-runs/<slug>/artifacts` matter more than a chat
 transcript because they are the pieces the runtime can validate, replay, and
-resume.
+resume, while `state.json` stays a replayable convenience output rather than an
+input authority.
 
 ---
 
 ## §8. Resume and Continuity Prefer Replay Over Guesswork
 
 `scripts/runtime/engine/src/resume.ts` treats replay as the authoritative way to
-recover a run. If `events.ndjson` is newer than `state.json`, the runtime
-rebuilds state before trusting it. That keeps resume logic aligned with the
-event log instead of optimistically treating a stale projection as good enough.
+recover a run. It rebuilds state from the manifest snapshot plus `events.ndjson`
+and refreshes `state.json` as a derived output for tooling. That keeps resume
+logic aligned with the event log instead of trusting a cached projection.
 
 Circuit also carries continuity across sessions in two different ways on
 purpose:
 
 - `active-run.md` is the passive runtime dashboard for the indexed current run.
-  For event-backed runs it is generated from `state.json`; legacy workflows
-  still maintain it manually until they migrate.
+  For engine-backed runs it is rendered from derived runtime state.
 - the continuity control plane is the intentional high-signal summary written
   through the `handoff` utility into `.circuit/control-plane/`.
 

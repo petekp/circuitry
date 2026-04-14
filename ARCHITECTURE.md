@@ -137,19 +137,17 @@ chain clean while preserving the full execution trace for debugging.
 
 Two mechanisms provide session continuity:
 
-- **active-run.md** -- Passive runtime dashboard. For event-backed runs it is
-  generated from machine state; for legacy workflows it is still updated
-  manually. SessionStart may announce it when indexed `current_run` exists.
+- **active-run.md** -- Passive runtime dashboard generated from derived run
+  state. SessionStart may announce it when indexed `current_run` exists.
 - **continuity control plane** -- Intentional continuity saved explicitly via
   `/circuit:handoff` into `.circuit/control-plane/`.
 
-The mirrored `.circuit/current-run` pointer follows indexed `current_run`; it
-is not continuity authority. SessionStart resolves pending continuity first,
-then indexed `current_run`, and otherwise shows the welcome banner. If the
-active run contains `circuit.manifest.yaml`, SessionStart refreshes
-`active-run.md` through the engine before printing a passive context banner.
-Legacy runs without a manifest snapshot stay on the saved dashboard path. The
-handoff `done` command clears both the handoff file and the pointer.
+Indexed `current_run` in `.circuit/control-plane/continuity-index.json` is the
+only attachment authority. SessionStart resolves pending continuity first, then
+indexed `current_run`, and otherwise shows the welcome banner. If the active run
+contains `circuit.manifest.yaml`, SessionStart refreshes `active-run.md`
+through the engine before printing a passive context banner. The handoff `done`
+command clears saved continuity and detaches the indexed current run.
 
 ---
 
@@ -329,8 +327,8 @@ gate:
   pass: [outputs_ready]
 ```
 
-The `reroute` field (optional) maps specific non-passing verdicts to upstream
-steps for reopening:
+The `reroute` field (optional) maps specific non-passing verdicts back to an
+upstream step:
 
 ```yaml
 gate:
@@ -565,10 +563,11 @@ Worker internals may change. The public contract files are the stable interface.
 ### How the Router Dispatches Tasks
 
 The `run` circuit is a lightweight router. It classifies the task into one of
-five workflows, selects a rigor profile, sets up the run root, updates the
-`.circuit/current-run` pointer, and loads the corresponding workflow skill.
-Build now bootstraps through the semantic outer engine; the other workflows
-remain on the legacy manual dashboard bootstrap path until they are migrated.
+five workflows, selects a rigor profile, sets up the run root, updates indexed
+attachment state, and loads the corresponding workflow skill. Public workflow
+commands bootstrap through the same semantic outer engine; Build currently
+exercises the deepest outer-runtime command set, while the other workflows use
+lighter-weight authored phase contracts on top of that same run bootstrap.
 
 ```text
 User task
@@ -931,7 +930,6 @@ When `circuit:build` executes in Standard mode for a task called
 
 ```
 .circuit/
-  current-run -> circuit-runs/auth-refactor    # symlink
   circuit-runs/auth-refactor/
     artifacts/
       active-run.md
@@ -978,7 +976,7 @@ circuit:run router
     ├── classify task kind (Explore/Build/Repair/Migrate/Sweep)
     ├── select rigor profile (Lite/Standard/Deep/Tournament/Autonomous)
     ├── write active-run.md
-    ├── mirror .circuit/current-run from indexed current_run
+    ├── update indexed current_run attachment
     └── load workflow skill
     |
     v

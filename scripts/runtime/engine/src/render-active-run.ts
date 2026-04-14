@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { loadManifest } from "./derive-state.js";
+import { deriveValidatedStateFromRun } from "./derive-state.js";
 import { writeTextFileAtomic } from "./file-utils.js";
 import {
   findStepById,
@@ -11,8 +12,6 @@ import {
   type CircuitManifestStep,
 } from "./manifest-utils.js";
 import { extractFirstTitleLine, extractH2SectionBodies } from "./markdown-utils.js";
-import { loadOrRebuildState } from "./resume.js";
-
 export interface RenderActiveRunResult {
   activeRunPath: string;
   currentPhase: string;
@@ -206,7 +205,7 @@ function nextStepForState(
     return `Retry dispatch for ${step.id} with attempt ${job.attempt + 1}.`;
   }
   if (job?.status === "failed" && job.completion === "blocked") {
-    return `Resolve the dependency blocking ${step.id}, then retry dispatch or reopen the step.`;
+    return `Resolve the dependency blocking ${step.id}, then retry dispatch.`;
   }
   if (
     job?.status === "complete" &&
@@ -237,7 +236,7 @@ function nextStepForState(
 
 export function renderActiveRun(runRoot: string): RenderActiveRunResult {
   const manifest = loadManifest(runRoot) as Record<string, any>;
-  const state = loadOrRebuildState(runRoot) as Record<string, any>;
+  const state = deriveValidatedStateFromRun(runRoot, { persist: true });
   const activeRunPath = join(runRoot, "artifacts/active-run.md");
   const phase = currentPhase(state);
   const step = typeof state.current_step === "string"

@@ -252,7 +252,7 @@ Public, core lifecycle primitive.
 - Every active workflow keeps active-run.md updated after each phase
 - Manual `/circuit:handoff` writes the richer structured continuity snapshot
 - Manual `/circuit:handoff done` clears saved continuity when you want the next session to start fresh
-- SessionStart hook prints a passive continuity banner on startup when saved continuity or indexed current-run state exists
+- SessionStart hook prints a passive continuity banner on startup when saved continuity or indexed `current_run` attachment exists
 - `active-run.md` = runtime dashboard; control-plane continuity = intentional high-quality continuity
 
 ## 6. Command Surface
@@ -307,7 +307,7 @@ Both router dispatch and direct specialist invocation produce the same minimum
 bootstrap state:
 
 1. Bootstrap through `.circuit/bin/circuit-engine bootstrap`
-2. Let the engine materialize the run root and mirror `.circuit/current-run` from indexed `current_run`
+2. Let the engine materialize the run root and update indexed `current_run` attachment
 3. Write initial `active-run.md` with Workflow, Rigor, Current Phase, Goal
 
 The router may write additional dashboard fields (Next Step, Verification
@@ -322,8 +322,8 @@ specialist creates one using the same minimum contract.
 ## 8. Workflow Transfer
 
 Workflows can transfer to another workflow within the same run. The run root,
-artifacts, and current-run pointer stay intact. Transfers are internal: the agent
-loads the target workflow skill and continues.
+artifacts, and indexed attachment stay intact. Transfers are internal: the
+agent loads the target workflow skill and continues.
 
 | Transfer | Trigger | Mechanism |
 |----------|---------|-----------|

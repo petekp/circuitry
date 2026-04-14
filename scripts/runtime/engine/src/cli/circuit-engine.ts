@@ -11,7 +11,6 @@ import { completeSynthesisStep } from "../complete-synthesis.js";
 import { dispatchStep, reconcileDispatch } from "../dispatch-step.js";
 import { loadManifest } from "../derive-state.js";
 import { renderActiveRun } from "../render-active-run.js";
-import { reopenStep } from "../reopen-step.js";
 import { findResumePoint, loadOrRebuildState } from "../resume.js";
 import { REPO_ROOT } from "../schema.js";
 import { runContinuityCommand } from "../continuity-commands.js";
@@ -24,7 +23,7 @@ type ParsedFlags = {
 };
 
 const USAGE =
-  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|reopen-step|resume|render|continuity> [options]\n";
+  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|resume|render|continuity> [options]\n";
 const BOOTSTRAP_USAGE = [
   "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--invocation-id <id>] [--json]",
   "",
@@ -274,7 +273,7 @@ function main(): number {
     }
 
     if (command !== "bootstrap" && positionals.length > 0) {
-      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, reopen-step, resume, render, continuity)`);
+      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, continuity)`);
     }
 
     switch (command) {
@@ -296,6 +295,7 @@ function main(): number {
         }
 
         const result = bootstrapRun({
+          commandArgs: rest.join(" "),
           entryMode,
           goal,
           headAtStart: flags["head-at-start"],
@@ -308,9 +308,8 @@ function main(): number {
         return printResult(
           {
             active_run_path: result.activeRunPath,
+            attachment: result.attachment,
             bootstrapped: result.bootstrapped,
-            current_run_pointer: result.currentRunPointer,
-            pointer_mode: result.pointerMode,
             resume_step: result.resumeStep,
             run_root: result.runRoot,
             run_slug: result.runSlug,
@@ -432,37 +431,6 @@ function main(): number {
             gate_passed: result.gatePassed,
             no_op: result.noOp,
             route: result.route ?? null,
-            status: result.status,
-            step: result.step,
-          },
-          json,
-        );
-      }
-      case "reopen-step": {
-        const runRoot = requireRunRoot(flags);
-        const fromStep = flags["from-step"];
-        const toStep = flags["to-step"];
-        const reason = flags.reason;
-
-        if (!fromStep) {
-          throw new Error("circuit: --from-step is required");
-        }
-        if (!toStep) {
-          throw new Error("circuit: --to-step is required");
-        }
-        if (!reason) {
-          throw new Error("circuit: --reason is required");
-        }
-
-        const result = reopenStep({
-          fromStep,
-          reason,
-          runRoot,
-          toStep,
-        });
-        return printResult(
-          {
-            active_run_path: result.activeRunPath,
             status: result.status,
             step: result.step,
           },

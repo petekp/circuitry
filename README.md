@@ -204,7 +204,6 @@ Built-in adapter names are reserved:
 - `agent`: structured Claude Code Agent transport with worktree isolation
 - `codex`: alias for `codex-isolated`
 - `codex-isolated`: Codex CLI launched inside Circuit's isolated runtime home
-- `codex-ambient`: compatibility mode that inherits user Codex state; less deterministic
 
 Custom adapters are wrapper executables only. Define them under
 `dispatch.adapters.<name>.command` as a YAML argv array. Circuit appends
@@ -240,8 +239,7 @@ Use `/reload-plugins` if you want the current session to pick up cache changes.
 
 **"codex not found" warning.** Codex CLI is optional. `auto` falls back to
 Claude Code's Agent tool for worker dispatch. Install Codex only if you want
-faster parallel execution, or use `codex-ambient` explicitly if you need the
-old user-state behavior.
+faster parallel execution through Circuit's isolated Codex runtime.
 
 **Circuit resumes from the wrong step.** State lives in `.circuit/`. If a run
 is corrupt, delete the run directory (`rm -rf .circuit/circuit-runs/<slug>`)

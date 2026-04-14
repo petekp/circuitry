@@ -7,10 +7,10 @@ import {
   startAct,
   writeFrameInputs,
 } from "./build-run-test-helpers.js";
+import { appendValidatedEvents } from "./command-support.js";
 import { requestCheckpoint } from "./checkpoint-step.js";
 import { reconcileDispatch } from "./dispatch-step.js";
-import { writeRunJson, readState } from "./outer-engine-test-utils.js";
-import { reopenStep } from "./reopen-step.js";
+import { writeRunJson } from "./outer-engine-test-utils.js";
 import { renderActiveRun } from "./render-active-run.js";
 
 describe("render-active-run", () => {
@@ -67,7 +67,7 @@ describe("render-active-run", () => {
     });
     reconcileDispatch({ runRoot: blocked.runRoot, step: "act" });
     markdown = renderActiveRun(blocked.runRoot).markdown;
-    expect(markdown).toContain("Resolve the dependency blocking act, then retry dispatch or reopen the step.");
+    expect(markdown).toContain("Resolve the dependency blocking act, then retry dispatch.");
     expect(markdown).toContain("blocked completion for act; resolve dependency before retry");
 
     const mismatch = createBuildRun();
@@ -82,34 +82,22 @@ describe("render-active-run", () => {
     expect(markdown).toContain("verdict mismatch for act: issues_found");
   });
 
-  it("renders completed and reopened runs", () => {
+  it("renders completed runs from canonical replay state", () => {
     const completed = createBuildRun();
-    writeRunJson(completed.runRoot, "state.json", {
-      ...readState(completed.runRoot),
-      current_step: null,
-      status: "completed",
-      updated_at: "2026-04-09T12:00:00.000Z",
-    });
-    let markdown = renderActiveRun(completed.runRoot).markdown;
+    appendValidatedEvents(completed.runRoot, [
+      {
+        eventType: "run_completed",
+        payload: {
+          status: "completed",
+          terminal_target: "@complete",
+        },
+        stepId: "frame",
+      },
+    ]);
+
+    const markdown = renderActiveRun(completed.runRoot).markdown;
     expect(markdown).toContain("## Current Phase\ncompleted");
     expect(markdown).toContain("## Next Step\ncomplete");
     expect(markdown).toContain("## Blockers\nnone");
-
-    const reopened = createBuildRun();
-    advanceToReview(reopened.runRoot);
-    reopenStep({
-      fromStep: "verify",
-      reason: "Need another implementation pass",
-      runRoot: reopened.runRoot,
-      toStep: "act",
-    });
-
-    const state = readState(reopened.runRoot);
-    expect(state.current_step).toBe("act");
-    expect(state.jobs.act).toBeUndefined();
-
-    markdown = renderActiveRun(reopened.runRoot).markdown;
-    expect(markdown).toContain("## Current Phase\nact");
-    expect(markdown).toContain("Prepare phases/implement/jobs/act-1.request.json for act and run dispatch-step.");
   });
 });

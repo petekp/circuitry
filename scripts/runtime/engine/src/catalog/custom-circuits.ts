@@ -355,6 +355,7 @@ export function validateDraft(options: ValidateDraftOptions): ValidateDraftResul
 
   try {
     const result = bootstrapRun({
+      attachment: "detached",
       entryMode: options.entryMode ?? "default",
       goal: options.goal ?? `Validate ${options.slug} draft circuit`,
       manifestPath,

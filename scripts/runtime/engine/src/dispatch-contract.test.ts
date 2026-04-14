@@ -420,35 +420,6 @@ describe("dispatch adapter contract", () => {
     expect(contract).toMatch(/tmpdir=.*\.circuit\/runtime\/codex\/.+-[0-9a-f]{16}\/tmp\/[0-9a-f-]+/);
   });
 
-  it("keeps codex-ambient as an explicit compatibility adapter", () => {
-    const root = mkdtempSync(resolve(tmpdir(), "circuit-dispatch-"));
-    const prompt = writePrompt(root, "# Ambient task\n");
-    const output = outputPath(root);
-    const fakeBin = resolve(root, "bin");
-
-    writeFakeCodex(fakeBin);
-    initRepo(root);
-
-    const result = runDispatch(
-      [
-        "--prompt",
-        prompt,
-        "--output",
-        output,
-        "--adapter",
-        "codex-ambient",
-      ],
-      { cwd: root, env: { PATH: `${fakeBin}:${process.env.PATH ?? ""}` } },
-    );
-
-    expect(result.status).toBe(0);
-    const receipt = JSON.parse(result.stdout);
-    expect(receipt.adapter).toBe("codex-ambient");
-    expect(receipt.runtime_boundary).toBe("codex-ambient");
-    expect(receipt.diagnostics_path).toBeUndefined();
-    expect(receipt.warnings).toContain("codex-ambient inherits user Codex state; less deterministic.");
-  });
-
   it("passes PROMPT_FILE OUTPUT_FILE as final argv to custom wrapper adapters without shell interpolation", () => {
     const root = mkdtempSync(resolve(tmpdir(), "circuit-dispatch-"));
     const prompt = writePrompt(root, "wrapper payload\n");

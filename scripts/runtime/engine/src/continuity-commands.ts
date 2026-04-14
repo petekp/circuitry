@@ -2,7 +2,6 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { basename, join, resolve } from "node:path";
 
-import { syncCurrentRunPointerFromIndex } from "./command-support.js";
 import {
   type ContinuityCurrentRunV1,
   type ContinuityIndexV1,
@@ -10,7 +9,6 @@ import {
   type ContinuityPendingRecordV1,
   type ContinuityRecordV1,
   type ContinuitySaveRequestV1,
-  clearContinuityCurrentRun,
   continuityRunRootPath,
   continuityRunRootRel,
   createContinuityRecordId,
@@ -60,7 +58,7 @@ export const CONTINUITY_USAGE = [
   "  status  Show indexed current run, pending record, and continuity warnings",
   "  save    Write a continuity record and update index.pending_record",
   "  resume  Resolve continuity in priority order: pending_record, current_run, none",
-  "  clear   Delete pending continuity, detach current_run, and remove the pointer mirror",
+  "  clear   Delete pending continuity and detach current_run",
   "",
   "Common options:",
   "  --project-root <path>  Resolve continuity for this project root (defaults to cwd/git root)",
@@ -456,7 +454,6 @@ function saveContinuity(
     run_slug: runSlug,
   };
   const updatedIndex = setContinuityPendingRecord(projectRoot, pendingRecord);
-  syncCurrentRunPointerFromIndex(projectRoot);
 
   return {
     continuity_kind: continuityKind,
@@ -562,15 +559,12 @@ function clearContinuity(projectRoot: string): Record<string, unknown> {
   index.pending_record = null;
   index.current_run = null;
   writeContinuityIndex(projectRoot, index);
-  clearContinuityCurrentRun(projectRoot);
-  const pointer = syncCurrentRunPointerFromIndex(projectRoot);
 
   return {
     cleared_current_run: true,
     cleared_pending_record: true,
     deleted_record_id: deletedRecordId,
     deleted_record_path: deletedRecordPath,
-    pointer_path: pointer.path,
     project_root: projectRoot,
   };
 }

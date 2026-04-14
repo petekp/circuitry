@@ -324,7 +324,7 @@ RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 \```
 
 This writes the initial `${RUN_ROOT}/artifacts/active-run.md` and mirrors
-`.circuit/current-run` from indexed `current_run`.
+the attached run through `.circuit/control-plane/continuity-index.json`.
 
 ## Phase: Frame
 

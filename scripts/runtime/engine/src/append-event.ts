@@ -18,23 +18,14 @@ export function loadEventSchema(): object {
 }
 
 /**
- * Read circuit_id and run_id from the run root's state.json or
- * circuit.manifest.yaml.  Falls back to directory name for run_id.
+ * Read circuit_id from the manifest snapshot and derive run_id from the run
+ * root directory name.
  */
 function readRunIdentity(runRoot: string): {
   circuitId: string;
   runId: string;
 } {
-  const statePath = join(runRoot, "state.json");
   const manifestPath = join(runRoot, "circuit.manifest.yaml");
-
-  if (existsSync(statePath)) {
-    const state = JSON.parse(readFileSync(statePath, "utf-8"));
-    return {
-      circuitId: state.circuit_id ?? "",
-      runId: state.run_id ?? "",
-    };
-  }
 
   if (existsSync(manifestPath)) {
     const manifest = parseYaml(readFileSync(manifestPath, "utf-8"));

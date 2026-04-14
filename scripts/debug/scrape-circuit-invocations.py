@@ -15,6 +15,7 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, time
@@ -34,7 +35,6 @@ BUILTIN_WORKFLOW_COMMANDS = {
 CIRCUIT_COMMAND_PATTERN = re.compile(r"/circuit:([a-z0-9-]+)([^\r\n]*)", re.IGNORECASE)
 DATE_ONLY_PATTERN = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 
-# Alias for backward compat in summary/analysis logic.
 WORKFLOW_COMMANDS = BUILTIN_WORKFLOW_COMMANDS
 
 
@@ -93,6 +93,28 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     except Exception:
         return []
     return rows
+
+
+def derive_run_state(run_root: Path) -> dict[str, Any] | None:
+    derive_state_cli = repo_root() / "scripts" / "runtime" / "bin" / "derive-state.js"
+    if not derive_state_cli.exists():
+        return None
+
+    result = subprocess.run(
+        ["node", str(derive_state_cli), "--json", "--no-persist", str(run_root)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    try:
+        parsed = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+
+    return parsed if isinstance(parsed, dict) else None
 
 
 def as_dict(value: Any) -> dict[str, Any] | None:
@@ -268,7 +290,6 @@ def ledger_invocations_to_finalized(
             "run_job_completed_count": None,
             "run_match_confidence": "exact",
             "run_partial_job_count": None,
-            "run_reopened_count": None,
             "run_time_to_start_ms": None,
             "session_created_at": None,
             "session_first_prompt": None,
@@ -628,12 +649,14 @@ def infer_run_circuit(command_name: str, command_args: str) -> str | None:
 
 
 def load_run_record(run_root: Path) -> dict[str, Any] | None:
-    state_path = run_root / "state.json"
+    manifest_path = run_root / "circuit.manifest.yaml"
     events_path = run_root / "events.ndjson"
-    if not state_path.exists() and not events_path.exists():
+    if not manifest_path.exists() or not events_path.exists():
         return None
 
-    state = read_json(state_path) if state_path.exists() else {}
+    state = derive_run_state(run_root)
+    if not state:
+        return None
     events = read_jsonl(events_path) if events_path.exists() else []
     run_started = next((event for event in events if event.get("event_type") == "run_started"), None)
 
@@ -647,8 +670,6 @@ def load_run_record(run_root: Path) -> dict[str, Any] | None:
     gate_failed_count = sum(1 for event in events if event.get("event_type") == "gate_failed")
     checkpoint_requested_count = sum(1 for event in events if event.get("event_type") == "checkpoint_requested")
     checkpoint_resolved_count = sum(1 for event in events if event.get("event_type") == "checkpoint_resolved")
-    reopened_count = sum(1 for event in events if event.get("event_type") == "step_reopened")
-
     partial_job_count = 0
     blocked_job_count = 0
     job_completed_count = 0
@@ -683,7 +704,6 @@ def load_run_record(run_root: Path) -> dict[str, Any] | None:
         "id": as_str((state or {}).get("run_id")) or run_root.name,
         "job_completed_count": job_completed_count,
         "partial_job_count": partial_job_count,
-        "reopened_count": reopened_count,
         "root": str(run_root),
         "selected_entry_mode": as_str((state or {}).get("selected_entry_mode")) or as_str((as_dict((run_started or {}).get("payload")) or {}).get("entry_mode")),
         "started_at": started_at,
@@ -818,7 +838,6 @@ def finalize_invocation(draft: dict[str, Any], matched: dict[str, Any] | None) -
         "run_job_completed_count": run.get("job_completed_count") if run else None,
         "run_match_confidence": matched["confidence"] if matched else None,
         "run_partial_job_count": run.get("partial_job_count") if run else None,
-        "run_reopened_count": run.get("reopened_count") if run else None,
         "run_time_to_start_ms": (started_at_ms - draft["requested_at_ms"]) if started_at_ms is not None else None,
         "session_created_at": draft["session"].get("created_at"),
         "session_first_prompt": draft["session"].get("first_prompt"),
@@ -881,8 +900,6 @@ def build_summary(invocations: list[dict[str, Any]], known_commands: list[str], 
     tool_error_invocations = [row for row in invocations if row.get("tool_error_count", 0) > 0]
     incomplete_runs = [row for row in invocations if row.get("matched_run") and row.get("run_completed") is not True]
     gate_failed_invocations = [row for row in invocations if (row.get("run_gate_failed_count") or 0) > 0]
-    reopened_invocations = [row for row in invocations if (row.get("run_reopened_count") or 0) > 0]
-
     if unknown_commands:
         counts = Counter(row["command_name"] for row in unknown_commands)
         issue_signals.append(
@@ -940,24 +957,13 @@ def build_summary(invocations: list[dict[str, Any]], known_commands: list[str], 
             }
         )
 
-    if reopened_invocations:
-        issue_signals.append(
-            {
-                "count": len(reopened_invocations),
-                "details": f"{len(reopened_invocations)} matched runs reopened an earlier step",
-                "examples": [row["invocation_id"] for row in reopened_invocations[:5]],
-                "severity": "low",
-                "title": "Reopen loops are part of the live workflow mix",
-            }
-        )
-
     improvement_opportunities: list[dict[str, Any]] = []
     for item in command_summaries:
         if item["command_name"] in WORKFLOW_COMMANDS and item["no_run_match_invocations"] > 0:
             improvement_opportunities.append(
                 {
                     "command_name": item["command_name"],
-                    "details": f"{item['no_run_match_invocations']}/{item['invocations']} invocations did not correlate to a local run root. Improve hook-side correlation or explicitly model legacy/manual paths.",
+                    "details": f"{item['no_run_match_invocations']}/{item['invocations']} invocations did not correlate to a local run root. Improve hook-side correlation or explicitly model untracked/manual paths.",
                     "evidence_count": item["no_run_match_invocations"],
                     "priority": "high" if item["no_run_match_invocations"] >= 5 else "medium",
                     "title": "Tighten invocation-to-run observability",
@@ -1016,7 +1022,7 @@ def build_summary(invocations: list[dict[str, Any]], known_commands: list[str], 
         "maintainer_notes": [
             "This report is for Circuit maintainer debugging and product improvement, not end-user reporting.",
             "Non-built-in surfaces usually mean custom or experimental circuits, not necessarily a built-in product defect.",
-            "Workflow invocations without matched runs indicate either an observability gap or a legacy/manual execution path worth understanding.",
+            "Workflow invocations without matched runs indicate either an observability gap or an untracked/manual execution path worth understanding.",
         ],
         "matched_runs_total": sum(1 for row in invocations if row.get("matched_run")),
         "range_from": to_iso(from_ms),
@@ -1124,7 +1130,6 @@ def write_outputs(out_dir: Path, invocations: list[dict[str, Any]], summary: dic
         "run_gate_failed_count",
         "run_partial_job_count",
         "run_blocked_job_count",
-        "run_reopened_count",
         "run_match_confidence",
         "raw_excerpt",
     ]
@@ -1329,7 +1334,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--source",
         choices=["ledger", "transcript", "both"],
         default="both",
-        help="Data source: 'ledger' (structured only), 'transcript' (legacy mining), 'both' (merge with dedup, default)",
+        help="Data source: 'ledger' (structured only), 'transcript' (session mining), 'both' (merge with dedup, default)",
     )
     return parser.parse_args(argv)
 

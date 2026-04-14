@@ -55,7 +55,7 @@ test -x .circuit/bin/circuit-engine
   --goal "<smoke bootstrap objective>" \
   --project-root "$PWD"
 ```
-- Valid proof is on-disk run state: `.circuit/current-run`, `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md`.
+- Valid proof is the canonical manifest/event pair plus derived outputs on disk: `circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, and `artifacts/active-run.md`.
 - Never fabricate those files with `Write`, `Edit`, heredocs, or ad hoc shell writes.
 - Do not run `--help` or search the repo to rediscover the required bootstrap flags; use the exact command shape above.
 - Stop after validation. Do not continue into planning or broader repo exploration for a smoke request.

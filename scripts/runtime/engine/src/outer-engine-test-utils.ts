@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -69,24 +69,4 @@ export function readState(runRoot: string): Record<string, any> {
 
 export function readActiveRun(runRoot: string): string {
   return readFileSync(join(runRoot, "artifacts", "active-run.md"), "utf-8");
-}
-
-export function readCurrentRunPointer(projectRoot: string): {
-  mode: "file" | "symlink";
-  target: string;
-} {
-  const pointerPath = join(projectRoot, ".circuit", "current-run");
-  const stat = lstatSync(pointerPath);
-
-  if (stat.isSymbolicLink()) {
-    return {
-      mode: "symlink",
-      target: readlinkSync(pointerPath),
-    };
-  }
-
-  return {
-    mode: "file",
-    target: readFileSync(pointerPath, "utf-8").trim(),
-  };
 }

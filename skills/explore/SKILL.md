@@ -32,8 +32,7 @@ Action-first rules for `/circuit:explore`:
 5. If a spec or direct explore request already determined the route, follow it immediately instead of reclassifying.
 6. If bootstrap already happened, continue from the current phase instead of re-exploring.
 7. If the user explicitly says to continue or resume from a handoff, resolve it through `.circuit/bin/circuit-engine continuity resume --json` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to `current_run`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.
-8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.
-9. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate workflow run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
+8. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate workflow run state; `.circuit/bin/circuit-engine bootstrap` must materialize it.
 
 ## Local Helper Wrappers
 
@@ -51,10 +50,9 @@ test -x .circuit/bin/dispatch
 If the request is explicitly a smoke/bootstrap verification of Explore (for example it says `smoke`, asks to bootstrap, or mentions host-surface verification), bootstrap only.
 
 1. Bootstrap the Explore run root through `.circuit/bin/circuit-engine`.
-2. Validate `.circuit/current-run` points at a real run directory.
-3. Validate Explore scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`, `state.json`, and `artifacts/active-run.md`.
-4. Report the validated run root and scaffold state briefly.
-5. Stop here. Do not continue into Frame/Analyze/Decide/Close or do unrelated repo exploration.
+2. Validate Explore scaffolding exists: `circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, and `artifacts/active-run.md`.
+3. Report the validated run root and scaffold state briefly.
+4. Stop here. Do not continue into Frame/Analyze/Decide/Close or do unrelated repo exploration.
 
 Repo cleanliness, branch status, or directory listings are not valid smoke evidence. The proof must be the on-disk `.circuit` run root and Explore scaffold.
 
@@ -74,7 +72,6 @@ test -x .circuit/bin/circuit-engine
   --goal "<smoke bootstrap objective>" \
   --project-root "$PWD"
 
-test -e .circuit/current-run
 test -f "$RUN_ROOT/circuit.manifest.yaml"
 test -f "$RUN_ROOT/events.ndjson"
 test -f "$RUN_ROOT/state.json"

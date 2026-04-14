@@ -895,19 +895,37 @@ describe("loadOrRebuildState fresh-invalid", () => {
     runRoot = await makeRunRoot();
   });
 
-  it("throws RebuildError on malformed fresh state.json", () => {
-    // Write invalid JSON to state.json
+  it("ignores malformed fresh state.json when replay is valid", () => {
+    appendEvent(
+      runRoot,
+      makeEvent("run_started", {
+        manifest_path: "circuit.manifest.yaml",
+        entry_mode: "default",
+        head_at_start: "abc1234",
+      }),
+    );
+
     writeFileSync(
       join(runRoot, "state.json"),
       '{"status": "in_progr',
       "utf-8",
     );
 
-    expect(() => loadOrRebuildState(runRoot)).toThrow(/Failed to parse/);
+    const replayed = loadOrRebuildState(runRoot) as Record<string, unknown>;
+    expect(replayed.run_id).toBe("test-run-001");
+    expect(replayed.status).toBe("initialized");
   });
 
-  it("throws RebuildError on schema-invalid fresh state.json", () => {
-    // Write parseable JSON that violates the schema (invalid status enum)
+  it("ignores schema-invalid fresh state.json when replay is valid", () => {
+    appendEvent(
+      runRoot,
+      makeEvent("run_started", {
+        manifest_path: "circuit.manifest.yaml",
+        entry_mode: "default",
+        head_at_start: "abc1234",
+      }),
+    );
+
     writeFileSync(
       join(runRoot, "state.json"),
       JSON.stringify({
@@ -926,9 +944,9 @@ describe("loadOrRebuildState fresh-invalid", () => {
       "utf-8",
     );
 
-    expect(() => loadOrRebuildState(runRoot)).toThrow(
-      /schema validation/,
-    );
+    const replayed = loadOrRebuildState(runRoot) as Record<string, unknown>;
+    expect(replayed.run_id).toBe("test-run-001");
+    expect(replayed.status).toBe("initialized");
   });
 
   it("does not pass through nonsense status from fresh state", () => {

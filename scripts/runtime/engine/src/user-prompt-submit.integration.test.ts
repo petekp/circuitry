@@ -56,6 +56,13 @@ function readAdditionalContext(result: ReturnType<typeof spawnSync>): string {
   return payload.hookSpecificOutput.additionalContext as string;
 }
 
+function expectInvocationContext(context: string): void {
+  expect(context).toContain("# Circuit Invocation");
+  expect(context).toMatch(/This slash-command invocation id is `inv_[^`]+`\./);
+  expect(context).toContain("include `--invocation-id");
+  expect(context).toContain("Do not mint another id.");
+}
+
 function runCircuitEngine(
   args: string[],
   options?: { cwd?: string; env?: Record<string, string> },
@@ -319,7 +326,7 @@ describe("user-prompt-submit integration", () => {
     const result = runUserPromptSubmit("/circuit:build add dark mode support", { cwd: projectRoot });
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(result));
     expect(readFileSync(pluginRootPath, "utf-8").trim()).toBe(REPO_ROOT);
     expect(existsSync(resolve(projectRoot, ".circuit/bin/circuit-engine"))).toBe(true);
     expect(existsSync(resolve(projectRoot, ".circuit/bin/compose-prompt"))).toBe(true);
@@ -327,12 +334,14 @@ describe("user-prompt-submit integration", () => {
   });
 
   it("does not hijack ordinary Build work that mentions smoke tests", () => {
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-prompt-build-work-"));
     const result = runUserPromptSubmit(
       "/circuit:run develop: add smoke test coverage for login flow",
+      { env: { HOME: homeDir } },
     );
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(result));
   });
 
   it("does not trigger any fast mode for prompts that mention smoke bootstrap without /circuit:", () => {
@@ -346,7 +355,7 @@ describe("user-prompt-submit integration", () => {
     const result = runUserPromptSubmit("/circuit:build refactor the auth module");
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(result));
   });
 
   it("injects the custom routing overlay for /circuit:run when user-global circuits exist", () => {
@@ -362,6 +371,7 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
+    expectInvocationContext(context);
     expect(context).toContain("Circuit Custom Routing Overlay");
     expect(context).toContain("Built-ins win ties.");
     expect(context).toContain("`/circuit:research`");
@@ -384,6 +394,7 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
+    expectInvocationContext(context);
     expect(context).toContain("Circuit Custom Routing Overlay Unavailable");
     expect(context).toContain("Do not consider user-global custom circuits");
     expect(context).toContain("no YAML frontmatter found");
@@ -396,9 +407,9 @@ describe("user-prompt-submit integration", () => {
     );
 
     expect(repairResult.status).toBe(0);
-    expect(repairResult.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(repairResult));
     expect(exploreResult.status).toBe(0);
-    expect(exploreResult.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(exploreResult));
   });
 
   it("injects semantic workflow smoke bootstrap context from generated fast modes", () => {
@@ -408,12 +419,13 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
+    expectInvocationContext(context);
     expect(context).toContain("Circuit Explore Smoke Contract");
     expect(context).toContain(".circuit/bin/circuit-engine bootstrap");
     expect(context).toContain('--workflow "explore"');
     expect(context).toContain('RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"');
     expect(context).toContain('ENTRY_MODE="default"');
-    expect(context).toContain("After bootstrap, validate with `test -e .circuit/current-run`");
+    expect(context).toContain("After bootstrap, validate with `test -f` checks");
   });
 
   it("injects review current-changes fast mode context", () => {
@@ -446,7 +458,7 @@ describe("user-prompt-submit integration", () => {
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Handoff Done Contract");
     expect(context).toContain(".circuit/bin/circuit-engine continuity clear --json");
-    expect(context).toContain("removes the mirrored `.circuit/current-run` pointer");
+    expect(context).toContain("detaches indexed `current_run`");
     expect(context).toContain("Do not manually delete handoff files");
     expect(context).not.toContain("handoff.md");
     expect(context).not.toContain("completed-run.md");
@@ -553,7 +565,6 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("DO: resume-attached-run-sentinel");
     expect(context).toContain(`.circuit/bin/circuit-engine resume --run-root "${runRoot}" --json`);
     expect(context).toContain("do not invent `run attach`, `attach`, or other rebind commands");
-    expect(context).toContain("Do not `cat` `.circuit/current-run`");
     expect(context.match(/- current_run_root:/g)?.length ?? 0).toBe(1);
   });
 
@@ -630,7 +641,7 @@ describe("user-prompt-submit integration", () => {
     });
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe("");
+    expectInvocationContext(readAdditionalContext(result));
   });
 
   it("authors helper wrappers that fail clearly when .circuit/plugin-root is missing", () => {

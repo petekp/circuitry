@@ -256,7 +256,7 @@ describe("prompt surface contracts", () => {
       Use hook-authored helper wrappers from \`.circuit/bin/\` instead of rediscovering plugin paths or cache layout.
       If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.
       Valid smoke evidence is the real \`.circuit\` run state and workflow scaffold on disk; repo hygiene or branch status alone does not count.
-      For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, \`artifacts/active-run.md\` is a failure; use \`.circuit/bin/circuit-engine bootstrap\` instead.
+      For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\` is a failure; use \`.circuit/bin/circuit-engine bootstrap\` instead.
       Inside that skill, execute its compiled contract block before unrelated repo exploration.
       Do not reinterpret this command as a generic repo-understanding request.
       "
@@ -275,7 +275,7 @@ describe("prompt surface contracts", () => {
       Use hook-authored helper wrappers from \`.circuit/bin/\` instead of rediscovering plugin paths or cache layout.
       If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.
       Valid smoke evidence is the real \`.circuit\` run state and workflow scaffold on disk; repo hygiene or branch status alone does not count.
-      For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, \`artifacts/active-run.md\` is a failure; use \`.circuit/bin/circuit-engine bootstrap\` instead.
+      For smoke/bootstrap requests, manual \`Write\`/\`Edit\` creation of \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\` is a failure; use \`.circuit/bin/circuit-engine bootstrap\` instead.
       Inside that skill, execute its compiled contract block before unrelated repo exploration.
       Do not reinterpret this command as a generic repo-understanding request.
       "
@@ -314,8 +314,8 @@ describe("prompt surface contracts", () => {
               "RUN_ROOT=\\".circuit/circuit-runs/\${RUN_SLUG}\\"",
               "test -x .circuit/bin/circuit-engine",
               ".circuit/bin/circuit-engine bootstrap --run-root \\"$RUN_ROOT\\" --manifest \\"@build\\" --entry-mode \\"lite\\" --goal \\"<smoke bootstrap objective>\\" --project-root \\"$PWD\\"",
-              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, or \`artifacts/active-run.md\`.",
-              "After bootstrap, validate with \`test -e .circuit/current-run\` plus \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
+              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
+              "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
               "After bootstrap, validate those on-disk artifacts, report the selected run root briefly, and stop.",
               "Do not continue into Frame, Plan, Act, Verify, Review, or Close for this smoke request."
             ],
@@ -328,7 +328,7 @@ describe("prompt surface contracts", () => {
               "# Circuit Handoff Done Contract",
               "This prompt is the explicit handoff completion fast mode.",
               "Run \`.circuit/bin/circuit-engine continuity clear --json\`.",
-              "This clears the pending continuity record, detaches indexed \`current_run\`, and removes the mirrored \`.circuit/current-run\` pointer.",
+              "This clears the pending continuity record and detaches indexed \`current_run\`.",
               "Do not manually delete handoff files, archive dashboards, or scan run roots.",
               "Do not bootstrap new work or do broad repo exploration.",
               "Stop after reporting completion."
@@ -388,8 +388,8 @@ describe("prompt surface contracts", () => {
               "ENTRY_MODE=\\"default\\"",
               "test -x .circuit/bin/circuit-engine",
               ".circuit/bin/circuit-engine bootstrap --workflow \\"explore\\" --run-root \\"$RUN_ROOT\\" --entry-mode \\"$ENTRY_MODE\\" --goal \\"<smoke bootstrap objective>\\" --project-root \\"$PWD\\"",
-              "After bootstrap, validate with \`test -e .circuit/current-run\` plus \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
-              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, or \`artifacts/active-run.md\`.",
+              "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
+              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
               "Validate those on-disk artifacts, report the selected run root briefly, and stop.",
               "Do not continue into the normal workflow phases or broader repo exploration for this smoke request."
             ],
@@ -407,8 +407,8 @@ describe("prompt surface contracts", () => {
               "ENTRY_MODE=\\"default\\"",
               "test -x .circuit/bin/circuit-engine",
               ".circuit/bin/circuit-engine bootstrap --workflow \\"migrate\\" --run-root \\"$RUN_ROOT\\" --entry-mode \\"$ENTRY_MODE\\" --goal \\"<smoke bootstrap objective>\\" --project-root \\"$PWD\\"",
-              "After bootstrap, validate with \`test -e .circuit/current-run\` plus \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
-              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, or \`artifacts/active-run.md\`.",
+              "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
+              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
               "Validate those on-disk artifacts, report the selected run root briefly, and stop.",
               "Do not continue into the normal workflow phases or broader repo exploration for this smoke request."
             ],
@@ -426,8 +426,8 @@ describe("prompt surface contracts", () => {
               "ENTRY_MODE=\\"default\\"",
               "test -x .circuit/bin/circuit-engine",
               ".circuit/bin/circuit-engine bootstrap --workflow \\"repair\\" --run-root \\"$RUN_ROOT\\" --entry-mode \\"$ENTRY_MODE\\" --goal \\"<smoke bootstrap objective>\\" --project-root \\"$PWD\\"",
-              "After bootstrap, validate with \`test -e .circuit/current-run\` plus \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
-              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, or \`artifacts/active-run.md\`.",
+              "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
+              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
               "Validate those on-disk artifacts, report the selected run root briefly, and stop.",
               "Do not continue into the normal workflow phases or broader repo exploration for this smoke request."
             ],
@@ -445,8 +445,8 @@ describe("prompt surface contracts", () => {
               "ENTRY_MODE=\\"default\\"",
               "test -x .circuit/bin/circuit-engine",
               ".circuit/bin/circuit-engine bootstrap --workflow \\"sweep\\" --run-root \\"$RUN_ROOT\\" --entry-mode \\"$ENTRY_MODE\\" --goal \\"<smoke bootstrap objective>\\" --project-root \\"$PWD\\"",
-              "After bootstrap, validate with \`test -e .circuit/current-run\` plus \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
-              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`.circuit/current-run\`, \`circuit.manifest.yaml\`, \`events.ndjson\`, \`state.json\`, or \`artifacts/active-run.md\`.",
+              "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
+              "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
               "Validate those on-disk artifacts, report the selected run root briefly, and stop.",
               "Do not continue into the normal workflow phases or broader repo exploration for this smoke request."
             ],
@@ -506,7 +506,6 @@ describe("prompt surface contracts", () => {
               "dispatch"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -514,7 +513,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Plan, Act, Verify, Review, or Close.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -546,7 +544,6 @@ describe("prompt surface contracts", () => {
               "dispatch"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -554,7 +551,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Analyze, Decide/Plan, or Close.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -586,7 +582,6 @@ describe("prompt surface contracts", () => {
               "dispatch"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -594,7 +589,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Analyze, Plan, Act, Verify, Review, or Close.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -610,7 +604,6 @@ describe("prompt surface contracts", () => {
               "circuit-engine"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -618,7 +611,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Analyze, Fix, Verify, Review, or Close.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -648,7 +640,6 @@ describe("prompt surface contracts", () => {
               "dispatch"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -656,7 +647,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "If the task is an explicit smoke/bootstrap verification, stop after validating the selected workflow run state.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -674,7 +664,6 @@ describe("prompt surface contracts", () => {
               "dispatch"
             ],
             "proof_artifacts": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",
@@ -682,7 +671,6 @@ describe("prompt surface contracts", () => {
             ],
             "stop_condition": "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Survey, Queue, Batch Execute, Verify, Deferred Review, or Close.",
             "forbidden_manual_fabrication": [
-              ".circuit/current-run",
               "circuit.manifest.yaml",
               "events.ndjson",
               "state.json",

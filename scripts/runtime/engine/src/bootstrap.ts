@@ -1,12 +1,11 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import {
   appendValidatedEvents,
   readGitHead,
   renderRunState,
-  syncCurrentRunPointerFromIndex,
   validateManifestDocument,
   writeManifestSnapshot,
 } from "./command-support.js";
@@ -18,6 +17,8 @@ import {
 import { requireStepById } from "./manifest-utils.js";
 
 export interface BootstrapOptions {
+  attachment?: "attached" | "detached";
+  commandArgs?: string;
   circuitId?: string;
   entryMode: string;
   goal?: string;
@@ -32,42 +33,70 @@ export interface BootstrapOptions {
 
 export interface BootstrapResult {
   activeRunPath: string;
+  attachment: "attached" | "detached";
   bootstrapped: boolean;
-  currentRunPointer: string;
-  pointerMode: "file" | "symlink";
   resumeStep: string;
   runRoot: string;
   runSlug: string;
   status: string;
 }
 
+function assertAttachedRunRoot(projectRoot: string, runRoot: string): void {
+  const runSlug = basename(runRoot);
+  const canonicalProjectRoot = existsSync(projectRoot)
+    ? realpathSync(projectRoot)
+    : projectRoot;
+  const runProjectRoot = resolve(runRoot, "..", "..", "..");
+  const canonicalRunProjectRoot = existsSync(runProjectRoot)
+    ? realpathSync(runProjectRoot)
+    : runProjectRoot;
+  const runRootLooksCanonical =
+    basename(dirname(runRoot)) === "circuit-runs"
+    && basename(dirname(dirname(runRoot))) === ".circuit";
+
+  if (!runRootLooksCanonical || canonicalRunProjectRoot !== canonicalProjectRoot) {
+    throw new Error(
+      `attached runs must live under ${resolve(projectRoot, ".circuit", "circuit-runs")}: ${runRoot}`,
+    );
+  }
+}
+
 export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
+  const attachment = options.attachment ?? "attached";
   const runRoot = resolve(options.runRoot);
   const projectRoot = resolve(options.projectRoot ?? process.cwd());
   const manifestPath = resolve(options.manifestPath);
   const runSlug = basename(runRoot);
   const manifestSnapshotPath = join(runRoot, "circuit.manifest.yaml");
-  const legacyActiveRunPath = join(runRoot, "artifacts/active-run.md");
+  const existingActiveRunPath = join(runRoot, "artifacts/active-run.md");
+
+  if (attachment === "attached") {
+    assertAttachedRunRoot(projectRoot, runRoot);
+  }
 
   if (!existsSync(manifestPath)) {
     recordInvocationFailed({
+      commandArgs: options.commandArgs,
       failureReason: `manifest not found: ${manifestPath}`,
       homeDir: process.env.HOME ?? undefined,
       invocationId: options.invocationId,
       projectRoot,
+      requestedCommand: options.routedCommand,
     });
     throw new Error(`manifest not found: ${manifestPath}`);
   }
 
-  if (!existsSync(manifestSnapshotPath) && existsSync(legacyActiveRunPath)) {
+  if (!existsSync(manifestSnapshotPath) && existsSync(existingActiveRunPath)) {
     recordInvocationFailed({
-      failureReason: `refusing to bootstrap over legacy run root without manifest snapshot: ${runRoot}`,
+      commandArgs: options.commandArgs,
+      failureReason: `refusing to bootstrap over run root without manifest snapshot: ${runRoot}`,
       homeDir: process.env.HOME ?? undefined,
       invocationId: options.invocationId,
       projectRoot,
+      requestedCommand: options.routedCommand,
     });
     throw new Error(
-      `refusing to bootstrap over legacy run root without manifest snapshot: ${runRoot}`,
+      `refusing to bootstrap over run root without manifest snapshot: ${runRoot}`,
     );
   }
 
@@ -131,61 +160,58 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
     renderResult = renderRunState(runRoot);
   } catch (err) {
     recordInvocationFailed({
+      commandArgs: options.commandArgs,
       failureReason: `render failed: ${err instanceof Error ? err.message : String(err)}`,
       homeDir: process.env.HOME ?? undefined,
       invocationId: options.invocationId,
       projectRoot,
+      requestedCommand: options.routedCommand,
     });
     throw err;
   }
 
-  upsertContinuityCurrentRun({
-    currentStep:
-      typeof renderResult.state.current_step === "string"
-        ? renderResult.state.current_step
-        : null,
-    lastValidatedAt:
-      typeof renderResult.state.updated_at === "string"
-        ? renderResult.state.updated_at
-        : undefined,
-    manifestPresent: existsSync(manifestSnapshotPath),
-    projectRoot,
-    runSlug,
-    runtimeStatus: renderResult.status,
-  });
-  const pointer = syncCurrentRunPointerFromIndex(projectRoot);
-  if (!pointer.mode || !pointer.slug) {
-    recordInvocationFailed({
-      failureReason: "failed to mirror current-run pointer from continuity index",
+  if (attachment === "attached") {
+    upsertContinuityCurrentRun({
+      currentStep:
+        typeof renderResult.state.current_step === "string"
+          ? renderResult.state.current_step
+          : null,
+      lastValidatedAt:
+        typeof renderResult.state.updated_at === "string"
+          ? renderResult.state.updated_at
+          : undefined,
+      manifestPresent: existsSync(manifestSnapshotPath),
+      projectRoot,
+      runSlug,
+      runtimeStatus: renderResult.status,
+    });
+  }
+
+  if (attachment === "attached") {
+    // Best-effort: record successful routing in the invocation ledger.
+    const circuitId = options.circuitId
+      ?? ((manifest.circuit as Record<string, any>)?.id as string | undefined)
+      ?? runSlug;
+    recordInvocationRouted({
+      commandArgs: options.commandArgs,
+      circuitId,
+      entryMode: options.entryMode,
+      goal: options.goal,
       homeDir: process.env.HOME ?? undefined,
       invocationId: options.invocationId,
       projectRoot,
+      requestedCommand: options.routedCommand,
+      routedCommand: options.routedCommand ?? `circuit:${circuitId}`,
+      routedTargetKind: options.routedTargetKind ?? "built_in",
+      runId: runSlug,
+      runRoot,
     });
-    throw new Error("failed to mirror current-run pointer from continuity index");
   }
-
-  // Best-effort: record successful routing in the invocation ledger.
-  const circuitId = options.circuitId
-    ?? ((manifest.circuit as Record<string, any>)?.id as string | undefined)
-    ?? runSlug;
-  recordInvocationRouted({
-    circuitId,
-    entryMode: options.entryMode,
-    goal: options.goal,
-    homeDir: process.env.HOME ?? undefined,
-    invocationId: options.invocationId,
-    projectRoot,
-    routedCommand: options.routedCommand ?? `circuit:${circuitId}`,
-    routedTargetKind: options.routedTargetKind ?? "built_in",
-    runId: runSlug,
-    runRoot,
-  });
 
   return {
     activeRunPath: renderResult.activeRunPath,
+    attachment,
     bootstrapped,
-    currentRunPointer: pointer.path,
-    pointerMode: pointer.mode,
     resumeStep: startStep,
     runRoot,
     runSlug,

@@ -40,10 +40,9 @@ Action-first rules for `/circuit:run`:
 5. Once a workflow is selected, create or validate `.circuit/circuit-runs/<slug>/...` before unrelated repo reads.
 6. If the run is already bootstrapped, continue from the current phase instead of re-exploring.
 7. If the user explicitly says to continue or resume from a handoff, resolve it through `.circuit/bin/circuit-engine continuity resume --json` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to `current_run`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.
-8. Do not `cat` `.circuit/current-run` to detect attachment state; it may be a symlink. Use control-plane status as the source of truth, and use `test -e .circuit/current-run` only for presence checks.
-9. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.
-10. Smoke validation is invalid unless `.circuit/current-run` and the selected workflow scaffold exist on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.
-11. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.
+8. If the request is an explicit smoke/bootstrap verification of the workflow, dispatch into that workflow's bootstrap-only smoke mode and stop after validating run state.
+9. Smoke validation is invalid unless the selected workflow scaffold exists on disk. Branch status, repo cleanliness, and top-level directory listings are not run-state evidence.
+10. Never use `Write`, `Edit`, heredocs, or manual file creation to fabricate `.circuit` run state; semantic bootstrap must create it.
 
 ## Local Helper Wrappers
 
@@ -81,7 +80,6 @@ test -x .circuit/bin/circuit-engine
   --goal "<smoke bootstrap objective>" \
   --project-root "$PWD"
 
-test -e .circuit/current-run
 test -f "$RUN_ROOT/circuit.manifest.yaml"
 test -f "$RUN_ROOT/events.ndjson"
 test -f "$RUN_ROOT/state.json"

@@ -37,7 +37,6 @@
         "gate_failed",
         "checkpoint_requested",
         "checkpoint_resolved",
-        "step_reopened",
         "run_completed"
       ]
     },
@@ -263,22 +262,6 @@
               "response_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
               "selection": { "type": "string", "pattern": "^[a-z0-9-]+$" },
               "attempt": { "type": "integer", "minimum": 1 }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "event_type": { "const": "step_reopened" } } },
-      "then": {
-        "properties": {
-          "payload": {
-            "type": "object",
-            "required": ["from_step", "to_step", "reason"],
-            "properties": {
-              "from_step": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-              "to_step": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-              "reason": { "type": "string", "minLength": 1 }
             }
           }
         }

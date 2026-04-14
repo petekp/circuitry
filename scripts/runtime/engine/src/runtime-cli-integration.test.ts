@@ -319,6 +319,49 @@ describe("runtime CLI integration", () => {
     expect(payload.resume_step).toBe("frame");
   });
 
+  it("derive-state can emit canonical state without persisting state.json", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const runRoot = resolve(tempRoot, "run-root");
+    mkdirSync(runRoot, { recursive: true });
+    writeManifest(runRoot);
+
+    const appendStarted = run(
+      "node",
+      [
+        APPEND_EVENT,
+        runRoot,
+        "run_started",
+        "--payload",
+        '{"manifest_path":"circuit.manifest.yaml","entry_mode":"default","head_at_start":"abc1234"}',
+      ],
+    );
+    expect(appendStarted.status).toBe(0);
+
+    const appendStep = run(
+      "node",
+      [
+        APPEND_EVENT,
+        runRoot,
+        "step_started",
+        "--payload",
+        '{"step_id":"frame"}',
+        "--step-id",
+        "frame",
+        "--attempt",
+        "1",
+      ],
+    );
+    expect(appendStep.status).toBe(0);
+
+    const derive = run("node", [DERIVE_STATE, "--json", "--no-persist", runRoot]);
+    expect(derive.status).toBe(0);
+    expect(existsSync(resolve(runRoot, "state.json"))).toBe(false);
+
+    const payload = JSON.parse(derive.stdout);
+    expect(payload.status).toBe("in_progress");
+    expect(payload.current_step).toBe("frame");
+  });
+
   it("circuit-engine emits plain-text bootstrap output and JSON resume output", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const projectRoot = resolve(tempRoot, "project");
@@ -749,7 +792,7 @@ describe("runtime CLI integration", () => {
     expect(save.status).toBe(0);
     const savePayload = JSON.parse(save.stdout);
     expect(existsSync(savePayload.record_path)).toBe(true);
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
 
     const clear = run(
       "node",
@@ -956,7 +999,7 @@ describe("runtime CLI integration", () => {
     expect(bootstrap.status).toBe(0);
     expect(bootstrap.stdout).toContain(`run_root=${expectedRunRoot}`);
     expect(bootstrap.stdout).toContain("resume_step=frame");
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
     expect(existsSync(resolve(expectedRunRoot, "circuit.manifest.yaml"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
@@ -1003,7 +1046,7 @@ describe("runtime CLI integration", () => {
     expect(bootstrap.status).toBe(0);
     expect(bootstrap.stdout).toContain(`run_root=${expectedRunRoot}`);
     expect(bootstrap.stdout).toContain("resume_step=frame");
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
     expect(existsSync(resolve(expectedRunRoot, "circuit.manifest.yaml"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
@@ -1019,7 +1062,7 @@ describe("runtime CLI integration", () => {
     );
   });
 
-  it("terminal completion detaches indexed current_run and removes the mirrored pointer", () => {
+  it("terminal completion detaches indexed current_run", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const projectRoot = resolve(tempRoot, "project");
     const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "terminal-run");
@@ -1096,11 +1139,14 @@ describe("runtime CLI integration", () => {
   it("circuit-engine wrapper resolves the bundled runtime bin from an installed copy", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const installRoot = resolve(tempRoot, "install-root");
+    const projectRoot = resolve(tempRoot, "project");
     mkdirSync(installRoot, { recursive: true });
+    mkdirSync(projectRoot, { recursive: true });
     copyInstallRoot(installRoot);
+    run("git", ["init", "-q"], { cwd: projectRoot });
 
     const manifestRoot = resolve(tempRoot, "manifest-root");
-    const runRoot = resolve(tempRoot, "run-root");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "wrapper-installed-copy");
     mkdirSync(manifestRoot, { recursive: true });
     mkdirSync(runRoot, { recursive: true });
     writeManifest(manifestRoot);
@@ -1122,6 +1168,8 @@ describe("runtime CLI integration", () => {
         "Wrapper bootstrap test",
         "--head-at-start",
         "abc1234",
+        "--project-root",
+        projectRoot,
       ],
       {
         cwd: installRoot,
