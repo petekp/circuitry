@@ -1,6 +1,6 @@
 # Continuity Control Plane Validation Matrix
 
-Status: Companion to `docs/continuity-control-plane-rfc.md`
+Status: Shipped (companion to `docs/continuity-control-plane-rfc.md`). Validation scenarios correspond to shipped behavior.
 
 ## Scenario Matrix
 

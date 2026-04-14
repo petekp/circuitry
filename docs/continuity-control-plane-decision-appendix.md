@@ -1,6 +1,6 @@
 # Continuity Control Plane Decision Appendix
 
-Status: Companion to `docs/continuity-control-plane-rfc.md`
+Status: Shipped (companion to `docs/continuity-control-plane-rfc.md`). Decisions closed.
 
 ## Closed Decisions
 

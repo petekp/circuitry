@@ -1,6 +1,6 @@
 # Continuity Control Plane RFC
 
-Status: Selected for implementation
+Status: Shipped (2026-04-12, commit 18868c9). Historical RFC preserved for decision context.
 
 ## Decision
 

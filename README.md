@@ -5,7 +5,7 @@
 <p align="center"><strong>Automate your Claude Code workflows with a single command.</strong></p>
 <br />
 
-Just enter `/circuit:run` and describe your task. It'll pick the most suitable workflow from the core set -- or from ones you've created -- and
+Enter `/circuit:run` and describe your task. It'll pick the most suitable workflow from the core set -- or from ones you've created -- and
 execute it, making sure each step's output is valid before moving onto the next.
  
 - **Orchestrate your skills.** You can pre-configure any skill(s) be applied at the phase or step level.
@@ -38,7 +38,7 @@ When you want a reusable workflow of your own, use:
 
 ## How It Works
 
-Circuit replaces ad-hoc skill invocation and having to copy-paste or re-type the same instructions over and over (and over). Instead, just use `/circuit:run` or select a specific circuit. You can optionally provide a level of autonomy and rigor for more control.
+Circuit replaces ad-hoc skill invocation and having to copy-paste or re-type the same instructions over and over (and over). Instead, use `/circuit:run` or select a specific circuit. You can optionally provide a level of autonomy and rigor for more control.
 
 **Core Workflows:**
 
@@ -52,7 +52,7 @@ These workflows are included and ready to use. You can create your own by follow
 | **Migrate** | Framework swaps, dependency replacements, architecture transitions |
 | **Sweep** | Cleanup, quality passes, coverage improvements |
 
-**Rigor Levels:**
+**Rigor Profiles:**
 
 | Rigor | Budget |
 |-------|--------|
@@ -60,7 +60,7 @@ These workflows are included and ready to use. You can create your own by follow
 | **Standard** | Plan, do, independent review. One fix loop. |
 | **Deep** | Research phase, seam proof. Workflows that include review still run it. |
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
-| **Autonomous** | Checkpoints auto-resolve. Good for actually getting some sleep for once. |
+| **Autonomous** | Checkpoints auto-resolve. Useful for unattended runs. |
 
 Every workflow follows these phases: **Frame, Analyze, Plan, Act, Verify,
 Review, Close, Pause**. Not every workflow goes through every phase, but the order remains consistent.
@@ -249,6 +249,7 @@ and start fresh.
 
 - **[CIRCUITS.md](CIRCUITS.md):** Catalog/reference.
 - **[CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md):** End-user create/publish flow plus manual custom circuit authoring.
+- **[ARCHITECTURE.md](ARCHITECTURE.md):** Internal architecture reference for circuit authors and maintainers.
 
 ## License
 

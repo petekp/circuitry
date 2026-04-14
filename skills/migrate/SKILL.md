@@ -412,7 +412,7 @@ Update `active-run.md`: phase=close.
 - **Each batch is independently verifiable.** If batch N fails, batches 1 through N-1 remain valid.
 - **Rollback is documented and verified.** Every batch boundary is a safe rollback point.
 - **Risk drives ordering.** Trivial first, complex last.
-- **Build is the inner executor.** Each batch is essentially a Build run with stronger safety rules.
+- **Build is the inner executor.** Each batch is a Build run with stronger safety rules.
 - **Re-evaluate after each batch.** Don't blindly execute the plan if reality diverges.
 
 ## Circuit Breakers

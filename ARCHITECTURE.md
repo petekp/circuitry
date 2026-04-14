@@ -1,12 +1,11 @@
 # Architecture
 
-Internal architecture reference for circuit authors and maintainers. Read this
-file for the concise architecture reference,
-[docs/literate-guide.md](docs/literate-guide.md) for the narrative walkthrough,
-and [docs/control-plane-ownership.md](docs/control-plane-ownership.md) for the
-source-of-truth ownership map. For a user-facing overview of what each circuit
-does, see [CIRCUITS.md](CIRCUITS.md). For the full workflow matrix, see
-[docs/workflow-matrix.md](docs/workflow-matrix.md).
+Internal architecture reference for circuit authors and maintainers. Start here for the concise reference.
+
+- New to Circuit and want the narrative walkthrough: [docs/literate-guide.md](docs/literate-guide.md).
+- Authoring a circuit and need source-of-truth ownership: [docs/control-plane-ownership.md](docs/control-plane-ownership.md).
+- Using Circuit and want the user-facing overview: [CIRCUITS.md](CIRCUITS.md).
+- Looking up phases and gates: [docs/workflow-matrix.md](docs/workflow-matrix.md).
 
 ---
 
@@ -139,7 +138,7 @@ Two mechanisms provide session continuity:
 
 - **active-run.md** -- Passive runtime dashboard generated from derived run
   state. SessionStart may announce it when indexed `current_run` exists.
-- **continuity control plane** -- Intentional continuity saved explicitly via
+- **[continuity control plane](docs/continuity-control-plane-rfc.md)** -- Intentional continuity saved explicitly via
   `/circuit:handoff` into `.circuit/control-plane/`.
 
 Indexed `current_run` in `.circuit/control-plane/continuity-index.json` is the

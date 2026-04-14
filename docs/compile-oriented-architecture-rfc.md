@@ -1,6 +1,6 @@
 # Compile-Oriented Architecture RFC for Circuit
 
-Status: Proposed for implementation  
+Status: Shipped (2026-04-08 to 2026-04-14, control-plane convergence commits). Historical RFC preserved for decision context.  
 Audience: skeptical technical reviewers  
 Decision bar: exacting approval for a constrained pilot, not broad rollout
 
