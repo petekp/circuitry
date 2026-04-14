@@ -1,272 +1,399 @@
-# Circuit Narrative Walkthrough
+# Circuit: A Literate Guide
 
-> Narrative architecture walkthrough for internal use.
->
-> This guide is explanatory and human-owned: it connects the moving parts,
-> names the important boundaries, and points to the modules that own them, but
-> it is not a generated contract.
->
-> For concise reference, read [ARCHITECTURE.md](../ARCHITECTURE.md). For the
-> ownership map, read
-> [docs/control-plane-ownership.md](control-plane-ownership.md). For the
-> generated catalog and entry-mode listings, read [CIRCUITS.md](../CIRCUITS.md).
+This guide explains how Circuit works today by following the facts the code
+actually owns. It is not the schema reference, and it is not the generated
+catalog. It is the narrative layer: the document we would hand to a strong new
+maintainer so they can form the right mental model before they start changing
+things.
 
----
+For the concise reference, read [ARCHITECTURE.md](../ARCHITECTURE.md). For the
+ownership map, read
+[docs/control-plane-ownership.md](control-plane-ownership.md). For the
+generated catalog and public workflow list, read [CIRCUITS.md](../CIRCUITS.md).
 
-## §1. The Problem Circuit Is Trying To Solve
+## §1. The Job Circuit Is Really Doing
 
-Circuit exists because "ask an agent to do the thing" is not a durable workflow
-by itself. A useful automation layer has to survive `/clear`, survive a crashed
-session, keep public command surfaces in sync with authored skills, and make it
-possible to verify what the plugin actually ships.
+Circuit exists because "tell the coding agent what to do" is not enough on its
+own. A useful workflow system has to answer three harder questions:
 
-That means Circuit is not only a runtime. It is also a small control plane. One
-part of the system executes workflows and records durable state under
-`.circuit/`. Another part reads authored skills, projects machine-owned
-surfaces, and verifies the shipped install surface. The codebase is easier to
-reason about once those two jobs stop blending together.
+1. What are the workflows, really?
+2. What public surface does the plugin actually ship?
+3. If a run gets interrupted, what state survives and how do we continue it?
 
-This guide follows that split. We start with the vocabulary, then trace the
-authored inputs into the catalog, then follow the runtime path that turns those
-authored workflows into resumable runs.
+Those questions sound related, but Circuit answers them with different kinds of
+artifacts owned by different parts of the codebase. That separation is the main
+idea to carry through the whole repository.
 
----
+Circuit is therefore not one thing. It is three cooperating layers:
 
-## §2. The Working Vocabulary
+- an authored workflow layer under `skills/`
+- a compiler-style control plane under
+  `scripts/runtime/engine/src/catalog/`
+- a runtime and continuity layer under
+  `scripts/runtime/engine/src/`
 
-Circuit uses a small set of terms, but they do a lot of work:
+Once we keep those layers separate, the repo stops feeling like a collection of
+plugin tricks and starts reading like a system with clear boundaries.
 
-- A **workflow** is a public circuit defined by both
-  `skills/<slug>/circuit.yaml` and `skills/<slug>/SKILL.md`.
-- A **utility** is public but not a workflow. `review` and `handoff` are the
-  important examples.
-- An **adapter** is shipped but internal. `workers` is the clearest example:
-  workflows depend on it, but it should not be treated as a public slash
-  command.
-- A **run** is one execution rooted under `.circuit/circuit-runs/<slug>`.
-- An **artifact** is the durable output of a step. Circuit treats artifacts as
-  state, not as a loose transcript.
-- The **catalog** is the normalized list of workflow, utility, and adapter
-  entries extracted from `skills/*`.
-- The **surface manifest** is the generated inventory of the files the plugin
-  claims to ship.
+## §2. The Three Records Circuit Refuses To Confuse
 
-Two distinctions matter immediately.
+The cleanest way to understand Circuit is to notice that it keeps three records
+of reality and does not let any one of them impersonate the others.
 
-First, identity and execution are different concerns. A workflow's identity
-comes from authored files under `skills/<slug>/`; execution behavior comes from
-the runtime engine and relay layer that interpret those files.
+| Record | Owned by | Primary files | Purpose |
+|---|---|---|---|
+| Authored workflow identity | skill authors | `skills/<slug>/circuit.yaml`, `skills/<slug>/SKILL.md` | Define what a workflow, utility, or adapter is |
+| Generated shipped surface | catalog/control-plane compiler | `commands/*.md`, `.claude-plugin/public-commands.txt`, `scripts/runtime/generated/*.json` | Project authored facts and control-plane contracts into the installed plugin surface |
+| Runtime and continuity state | engine runtime | `.circuit/circuit-runs/*`, `.circuit/control-plane/*` | Record what a live run did and what a future session should resume |
 
-Second, public visibility is not a naming convention. It is a role decision
-that the catalog compiler turns into generated command shims, public command
-inventories, and shipped-surface metadata.
+That split is load-bearing.
 
----
+Narrative docs do not own runtime identity. Generated command shims do not own
+workflow design. `state.json` does not own history. Circuit stays trustworthy
+because each layer is narrow about what it is allowed to assert.
 
-## §3. Two Planes, One System
+Generated `CIRCUITS.md` blocks still matter, but they belong to the repo-side
+reference surface, not the installed plugin surface.
 
-Circuit is easiest to understand as two cooperating planes.
+## §3. A Circuit Starts As A Skill Directory
 
-- The **runtime plane** executes workflows, writes artifacts, records events,
-  rebuilds state, and resumes interrupted runs. Most of that work lives under
-  `scripts/runtime/engine/src/` plus the relay scripts in `scripts/relay/`.
-- The **control plane** turns authored skills into a typed catalog, projects the
-  public command surface, renders generated catalog blocks, and verifies the
-  shipped plugin surface. Those responsibilities live mostly under
-  `scripts/runtime/engine/src/catalog/`.
+Every public thing Circuit knows begins in `skills/`, but not every skill
+directory means the same thing.
 
-```mermaid
-graph TD
-    A["skills/*/circuit.yaml + SKILL.md"] --> B["catalog/extract.ts"]
-    B --> C["public-surface.ts"]
-    B --> D["catalog-doc-projections.ts"]
-    B --> E["surface-manifest.ts"]
-    C --> F["commands/*.md + .claude-plugin/public-commands.txt"]
-    D --> G["generated blocks in CIRCUITS.md"]
-    E --> H["scripts/runtime/generated/surface-manifest.json"]
-    A --> I["runtime engine"]
-    I --> J[".circuit/circuit-runs/*"]
-    H --> K["verify-installed-surface.ts"]
+The rule in
+[`extract.ts`](../scripts/runtime/engine/src/catalog/extract.ts) is simple:
+
+- if `skills/<slug>/circuit.yaml` exists, the entry is a workflow
+- if it does not, `SKILL.md` frontmatter must declare `role: utility` or
+  `role: adapter`
+
+That one rule is the root of the catalog.
+
+The extractor also enforces a few architectural invariants that keep the rest
+of the system sane:
+
+- the frontmatter `name` must match the directory slug
+- `circuit.id` must match the directory slug
+- workflows do not declare a frontmatter role
+- non-workflow skills must declare one
+- legacy identity fields such as `entry.command` and `expert_command` are
+  rejected so slash-command identity stays derived instead of handwritten
+
+This means that Circuit's public vocabulary is authored, not guessed.
+
+| Kind | How it is declared | Example |
+|---|---|---|
+| Workflow | `circuit.yaml` present | `build`, `repair`, `run`, `sweep` |
+| Utility | `SKILL.md` frontmatter `role: utility` | `handoff`, `review`, `create` |
+| Adapter | `SKILL.md` frontmatter `role: adapter` | `workers` |
+
+`run` is worth calling out because it looks special from the outside, but in the
+catalog it is just another workflow. Its manifest is tiny:
+
+Path: `skills/run/circuit.yaml`
+
+```yaml
+circuit:
+  id: run
+  entry:
+    usage: <task>
+  entry_modes:
+    default:
+      start_at: route
+  steps:
+    - id: route
+      executor: orchestrator
+      kind: synthesis
+      writes:
+        artifact:
+          path: artifacts/active-run.md
 ```
 
-The important idea is that these planes cooperate without sharing ownership of
-the same facts. The runtime does not derive workflow identity from narrative
-docs. The control plane does not inspect chat transcripts to decide what a run
-did. Each plane consumes a narrow, named set of inputs.
+That is a surprisingly revealing snippet. It tells us that `/circuit:run` is
+not a hardcoded runtime exception. It is a workflow whose manifest says, in
+effect, "route the task, write the dashboard, and finish." The richer routing
+behavior lives in `skills/run/SKILL.md` and in hook-injected context, not in a
+special router buried inside the engine.
 
----
+## §4. The Catalog Compiler Turns Authored Facts Into Shipped Surfaces
 
-## §4. Authored Skills Become a Catalog
+Once authored skills exist, Circuit's control plane projects them outward.
 
-`scripts/runtime/engine/src/catalog/extract.ts` is where authored text becomes a
-typed catalog entry. It walks `skills/*`, reads `SKILL.md` frontmatter, checks
-for `circuit.yaml`, and normalizes the result into workflow, utility, and
-adapter entries.
+The flow looks like this:
 
-The classification rule is deliberately simple:
+```mermaid
+graph LR
+    A["skills/*/circuit.yaml + SKILL.md"] --> B["extract.ts"]
+    B --> C["public-surface.ts"]
+    B --> D["catalog-doc-projections.ts"]
+    B --> E["prompt-surface-contracts.ts"]
+    B --> F["surface-manifest.ts"]
+    C --> G["commands/*.md"]
+    C --> H[".claude-plugin/public-commands.txt"]
+    D --> I["generated CIRCUITS.md blocks"]
+    E --> J["prompt-contracts.json + generated skill blocks"]
+    F --> K["surface-manifest.json"]
+```
 
-- If `skills/<slug>/circuit.yaml` exists, the entry is a workflow.
-- If it does not exist, `SKILL.md` frontmatter must declare
-  `role: utility|adapter`.
+Several modules matter here, each with a distinct job.
 
-That rule matters because it keeps runtime identity in authored sources rather
-than spreading it across docs or generated files. The extractor also enforces a
-few other architectural constraints that keep later stages predictable:
+[`public-surface.ts`](../scripts/runtime/engine/src/catalog/public-surface.ts)
+decides what is public. The policy is deliberately narrow: workflows and
+utilities are public, adapters are not. From there it derives:
 
-- The frontmatter `name` must match the skill directory.
-- Workflow slash identity is derived from the slug, not handwritten into the
-  manifest.
-- Legacy manifest fields such as `entry.command` and `expert_command` are not
-  allowed to define public identity.
-- `entry.usage` remains the stable way for a workflow such as `run` to publish a
-  suffix like `<task>` without changing the command id itself.
+- slash ids such as `/circuit:build`
+- invocation text such as `/circuit:run <task>`
+- generated shim paths such as `commands/run.md`
 
-This is also where `run` becomes easier to understand. `skills/run/circuit.yaml`
-is not a special runtime carveout. It is an authored workflow whose job is to
-classify a task, select a rigor profile, and dispatch into one of the other
-workflows.
+[`catalog-doc-projections.ts`](../scripts/runtime/engine/src/catalog/catalog-doc-projections.ts)
+owns the machine-written blocks inside [CIRCUITS.md](../CIRCUITS.md). That is
+important because it keeps `CIRCUITS.md` in the "generated reference" lane
+instead of letting it drift into being a second source of truth.
 
-Once the extractor has built the catalog, every later projection is supposed to
-consume that catalog rather than rediscover facts on its own.
+[`prompt-surface-contracts.ts`](../scripts/runtime/engine/src/catalog/prompt-surface-contracts.ts)
+is the model-facing sibling of the public surface. It is where Circuit defines
+fast-mode contracts, helper wrapper names, smoke-bootstrap instructions, and
+other prompt fragments that get projected into generated shims, generated skill
+sections, and
+[`scripts/runtime/generated/prompt-contracts.json`](../scripts/runtime/generated/prompt-contracts.json).
 
----
+That file is one of the more important pieces in the repo because it shows that
+Circuit does not treat prompt surface as freehand prose. It compiles a contract
+for the model-facing layer just as deliberately as it compiles command shims for
+the user-facing layer.
 
-## §5. Public Commands Are Projected, Not Handwritten
+`generate-targets.ts` then makes the write set explicit. This is less glamorous
+than routing or runtime, but it is one of the reasons the system stays
+maintainable: the compiler knows exactly which files it owns.
 
-`scripts/runtime/engine/src/catalog/public-surface.ts` takes the catalog and
-decides which entries are public. The policy is narrow and easy to explain:
-workflows and utilities are public; adapters are not.
+The key idea in this whole section is slightly more precise than "the control
+plane only projects." It does not invent workflow identity or public visibility,
+but it does author some model-facing contract text and helper conventions in the
+catalog layer, then projects both authored workflow facts and those
+control-plane contracts into the shipped surfaces the plugin needs.
 
-That policy feeds three visible outputs:
+## §5. "What Ships" Is Its Own Contract
 
-- `commands/*.md` command shims
-- `.claude-plugin/public-commands.txt`
-- the public command portion of
-  `scripts/runtime/generated/surface-manifest.json`
+A plugin repo contains many things, but the installed plugin surface is a much
+smaller shape. Circuit encodes that policy directly in
+[`surface-roots.ts`](../scripts/runtime/engine/src/catalog/surface-roots.ts).
 
-`scripts/runtime/engine/src/catalog/generate-targets.ts` is the registry that
-ties those outputs together. It makes the catalog compiler's write set explicit
-instead of letting generation sprawl into unrelated files.
+Installed roots include:
 
-`scripts/runtime/engine/src/catalog/catalog-doc-projections.ts` handles a
-separate projection: the generated blocks inside `CIRCUITS.md`. That split is
-important. `CIRCUITS.md` is a generated catalog/reference surface. Narrative
-docs such as `README.md`, `ARCHITECTURE.md`, and this guide stay human-authored.
+- `.claude-plugin`
+- `commands`
+- `hooks`
+- `schemas`
+- `scripts`
+- `skills`
+- `circuit.config.example.yaml`
 
-This is one of the quiet strengths of the repo. The control plane owns the
-mechanical restatements. Human-owned docs explain how the pieces fit together
-without pretending to be the source of truth for runtime identity or public
-command derivation.
+Repo-only roots include:
 
----
+- `README.md`
+- `ARCHITECTURE.md`
+- `CIRCUITS.md`
+- `CUSTOM-CIRCUITS.md`
+- `docs`
+- `assets`
 
-## §6. The Shipped Surface Is a Contract
+That split matters because it prevents a common kind of plugin confusion:
+assuming the installed cache is a mirror of the repo. It is not. Circuit ships
+an allowlisted surface.
 
-The next question is not "what is public?" but "what does the plugin claim to
-ship, and how is that claim checked?"
+From there, the surface pipeline gets stricter:
 
-Circuit answers that with a layered set of modules:
+- `surface-fs.ts` walks files, hashes them, and records executable bits
+- `surface-inventory.ts` builds the repo-time installed inventory, including
+  generated projections
+- `surface-manifest.ts` renders the final JSON manifest
+- `verify-installed-surface.ts` checks whether the real installed filesystem
+  agrees with that manifest
+- `cli/verify-install.ts` wraps the broader install verification flow
 
-- `surface-roots.ts` defines which top-level roots count as installed surface
-  and which repo-time seed paths should be inventoried.
-- `surface-fs.ts` walks those roots, records file facts, and handles hashing and
-  executable-bit checks.
-- `surface-inventory.ts` turns repo files into a repo-time installed-surface
-  inventory.
-- `surface-manifest.ts` renders that inventory into
-  `scripts/runtime/generated/surface-manifest.json`.
-- `verify-installed-surface.ts` compares the actual filesystem to the manifest.
-- `scripts/runtime/engine/src/cli/verify-install.ts` runs the broader install
-  verification flow used before shipping.
+The generated manifest is therefore inventory, not hand-wavy documentation. It
+is a statement the verifier can test against the real installed surface.
 
-The key architectural point is that the manifest is an inventory, not proof by
-itself. The verifier still checks the real installed filesystem. That is why the
-repo has both a generated manifest and an install verification path instead of
-trying to let one stand in for the other.
+This is also where
+[`scripts/sync-to-cache.sh`](../scripts/sync-to-cache.sh) fits. The cache sync
+script is not an afterthought for local development. It is part of the same
+story: the repo, the generated manifest, the installed cache, and install
+verification all have to agree about what "the plugin" means.
 
-This shipped-surface story also lines up with the cache sync flow.
-`scripts/sync-to-cache.sh` copies the same surface that the manifest describes
-and the verifier checks. The goal is not just to list files; it is to keep
-generation, cache sync, and install verification talking about the same shape of
-plugin.
+That is why editing `hooks/`, `skills/`, `scripts/`, or plugin metadata without
+syncing to cache produces such confusing behavior. You changed the repo copy,
+but Claude runs the cached installed surface.
 
----
+## §6. A Slash Command Enters Through Hooks, Not Through Magic
 
-## §7. Runtime Execution Is an Artifact Chain Backed by Events
+The most useful hidden fact about Circuit is that `/circuit:*` commands do not
+begin inside a workflow skill. They begin in the host hooks.
 
-On the runtime side, Circuit treats `circuit.manifest.yaml` plus
-`events.ndjson` as the canonical execution record.
-`scripts/runtime/engine/src/derive-state.ts` replays those inputs into the
-derived `state.json` snapshot, and the state model keeps separate slots for
-artifacts, jobs, checkpoints, and routes.
+[`hooks/user-prompt-submit.js`](../hooks/user-prompt-submit.js) is just a thin
+wrapper. The real work happens in
+[`cli/user-prompt-submit.ts`](../scripts/runtime/engine/src/cli/user-prompt-submit.ts),
+which does four important things before the model ever starts "doing the task":
 
-Build is the first workflow where that outer runtime is now real rather than
-aspirational. The semantic outer CLI lives in
-`scripts/runtime/engine/src/cli/circuit-engine.ts`, is shipped through
-`scripts/runtime/bin/circuit-engine.js`, and is called from
-`scripts/relay/circuit-engine.sh`. Build uses semantic commands such as
-`bootstrap`, `complete-synthesis`, `request-checkpoint`, `resolve-checkpoint`,
-`dispatch-step`, `reconcile-dispatch`, `resume`, and `render`
-instead of teaching the skill prose to append raw events directly.
+1. It recognizes `/circuit:*` prompts.
+2. It persists the installed plugin root into `.circuit/plugin-root`.
+3. It writes local helper wrappers under `.circuit/bin/`.
+4. It injects extra prompt context for fast modes, continuity, and custom
+   routing.
 
-That separation is not bookkeeping for its own sake. Each piece answers a
-different question:
+That wrapper-writing step is especially important. Circuit wants later skill
+instructions to call stable local paths such as:
 
-- artifacts: what durable outputs exist
-- jobs: what worker dispatches happened
-- checkpoints: what decisions are waiting on the user
-- routes: where the workflow graph goes next
+- `.circuit/bin/circuit-engine`
+- `.circuit/bin/compose-prompt`
+- `.circuit/bin/dispatch`
+- `.circuit/bin/update-batch`
+- `.circuit/bin/gather-git-state`
 
-The workflow manifests make that runtime contract concrete. Files such as
-`skills/build/circuit.yaml`, `skills/repair/circuit.yaml`, and
-`skills/sweep/circuit.yaml` declare steps, reads, writes, gates, and routes.
-The runtime stays generic because the authored workflows are explicit about the
-files they write and the conditions that let a step advance. Build was
-realigned to a fixed graph so the manifest and `skills/build/SKILL.md` now
-describe the same outer execution path.
+Those wrappers are generated from the plugin root the hook persisted. So the
+model does not need to rediscover the cache path, and the skill instructions do
+not need to guess where the installed plugin lives.
 
-This is where Circuit's bias toward durable state shows up most clearly.
-Artifacts under `.circuit/circuit-runs/<slug>/artifacts` matter more than a chat
-transcript because they are the pieces the runtime can validate, replay, and
-resume, while `state.json` stays a replayable convenience output rather than an
-input authority.
+The hook also records an invocation receipt in the
+[`invocation-ledger`](../scripts/runtime/engine/src/invocation-ledger.ts),
+minting an `invocation_id` that later bootstrap calls can thread through. That
+is a subtle but important boundary: the hook owns "a command was invoked," while
+the runtime owns "a run was bootstrapped."
 
----
+Finally, this is where fast modes and continuity instructions are injected. If a
+user asks for a smoke bootstrap, `/circuit:handoff resume`, or `/circuit:review current changes`,
+the hook can attach a generated contract block before any broad repo
+exploration happens.
 
-## §8. Resume and Continuity Prefer Replay Over Guesswork
+So a slash command in Circuit is not merely "open this markdown file and let the
+model improvise." It is a hook-authored prompt entry surface backed by generated
+contracts and local helper wrappers.
 
-`scripts/runtime/engine/src/resume.ts` treats replay as the authoritative way to
-recover a run. It rebuilds state from the manifest snapshot plus `events.ndjson`
-and refreshes `state.json` as a derived output for tooling. That keeps resume
-logic aligned with the event log instead of trusting a cached projection.
+## §7. Bootstrap Creates The Durable Outer Run
 
-Circuit also carries continuity across sessions in two different ways on
-purpose:
+Once a workflow is selected, the runtime engine bootstraps a run root. For
+normal attached runs that root lives under `.circuit/circuit-runs/<slug>/`. For
+detached flows such as custom-circuit draft validation, it can live elsewhere,
+including a temporary directory.
 
-- `active-run.md` is the passive runtime dashboard for the indexed current run.
-  For engine-backed runs it is rendered from derived runtime state.
-- the continuity control plane is the intentional high-signal summary written
-  through the `handoff` utility into `.circuit/control-plane/`.
+[`bootstrap.ts`](../scripts/runtime/engine/src/bootstrap.ts) does the work. It:
 
-`hooks/session-start.sh` resolves those sources in a deliberate order:
-pending continuity record first, then indexed `current_run`, then nothing. When
-the chosen run contains `circuit.manifest.yaml`, SessionStart refreshes the
-dashboard through `circuit-engine render` before printing a compact
-context-only banner. Resume stays explicit through `/circuit:handoff resume`;
-the hook no longer injects saved continuity directly into the fresh session.
+1. validates the selected manifest
+2. snapshots that manifest into `circuit.manifest.yaml`
+3. creates the run directories
+4. appends the first events
+5. renders `artifacts/active-run.md`
+6. indexes the run as `current_run` when the run is attached
 
----
+The first events are not incidental bookkeeping. They establish the canonical
+history:
 
-## §9. Dispatch Is Semantic; Adapters Are Transports
+- `run_started`
+- `step_started`
 
-`scripts/runtime/engine/src/dispatch.ts` resolves how work is dispatched.
-`scripts/runtime/engine/src/config.ts` resolves where dispatch configuration
-comes from. Together they keep a useful boundary in place: workflow manifests
-declare intent, while config selects transport.
+An attached run root looks roughly like this:
 
-That boundary lets a workflow ask for an implementer or reviewer without baking
-Codex, Agent, or any custom wrapper directly into `circuit.yaml`.
-Dispatch resolution follows a clear precedence order:
+```text
+.circuit/circuit-runs/<slug>/
+  circuit.manifest.yaml
+  events.ndjson
+  state.json
+  artifacts/
+    active-run.md
+    ...
+  checkpoints/
+  phases/
+```
+
+Two details matter a lot here.
+
+First, `circuit.manifest.yaml` is a snapshot, not a pointer back to the live
+skill file. A run should remain interpretable even if the workflow evolves
+later.
+
+Second, `state.json` is derived, not authoritative.
+[`derive-state.ts`](../scripts/runtime/engine/src/derive-state.ts) always
+rebuilds it from `events.ndjson` plus the manifest snapshot. Circuit is choosing
+replay over cached projection.
+
+That choice is why the runtime can be both debuggable and resumable. The event
+log is the durable story. `state.json` is a convenient view.
+
+## §8. The Step Machine Is Manifest-Driven
+
+The engine's step vocabulary is small:
+
+- `synthesis`
+- `checkpoint`
+- `dispatch`
+
+Manifests describe those steps in enough detail for the engine to reason about
+them: what they read, what they write, which gate proves completion, and which
+route advances next.
+
+Path: `skills/build/circuit.yaml`
+
+```yaml
+- id: frame
+  executor: orchestrator
+  kind: checkpoint
+  routes:
+    continue: plan
+
+- id: act
+  executor: worker
+  kind: dispatch
+  gate:
+    kind: result_verdict
+    pass: [complete_and_hardened]
+  routes:
+    pass: verify
+```
+
+From there, the engine provides the semantic commands that move the run:
+
+- `request-checkpoint`
+- `resolve-checkpoint`
+- `complete-synthesis`
+- `dispatch-step`
+- `reconcile-dispatch`
+- `resume`
+- `render`
+
+The corresponding library code lives in:
+
+- [`checkpoint-step.ts`](../scripts/runtime/engine/src/checkpoint-step.ts)
+- [`dispatch-step.ts`](../scripts/runtime/engine/src/dispatch-step.ts)
+- [`command-support.ts`](../scripts/runtime/engine/src/command-support.ts)
+
+Checkpoint steps do not author their request and response files for you. The
+skill or outer orchestrator writes those sidecar files first, and the engine
+then validates and records them. Dispatch works the same way: the outer layer
+prepares request, receipt, and result files, and the engine consumes them to
+record events, evaluate gates, and advance routes. Route advancement itself is
+semantic: `gate_passed` leads either to the next step or to a terminal target
+such as `@complete`, `@stop`, `@escalate`, or `@handoff`.
+
+This step machine is generic, but it is worth being precise about how much of it
+the current product uses end to end.
+
+Build is the workflow that leans most fully on the outer semantic engine today.
+`skills/build/SKILL.md` explicitly drives `request-checkpoint`,
+`complete-synthesis`, `dispatch-step`, `reconcile-dispatch`, and `resume` on its
+mainline path. The other workflows already share the same manifest model,
+bootstrap path, replay model, and dashboard/resume surfaces, but more of their
+phase choreography still lives in skill prose rather than in the full outer step
+command sequence.
+
+That nuance matters. The runtime architecture is present for all workflows, but
+its most mature end-to-end use today is Build.
+
+## §9. Dispatch Is Semantic; Transport Comes From Configuration
+
+When a workflow reaches a worker step, it still does not choose a transport
+directly. It chooses a role and a parent circuit context.
+
+[`dispatch.ts`](../scripts/runtime/engine/src/dispatch.ts) resolves the actual
+adapter in this order:
 
 1. explicit adapter override
 2. `dispatch.roles.<role>`
@@ -274,129 +401,178 @@ Dispatch resolution follows a clear precedence order:
 4. `dispatch.default`
 5. auto-detect
 
-This matters because it keeps authored workflow logic stable while still
-allowing transport to be adapted to a repo, machine, or personal setup.
-The workflow describes the job to do; the adapter describes how that job reaches
-another session or process.
+Configuration discovery in [`config.ts`](../scripts/runtime/engine/src/config.ts)
+walks upward from the project and falls back to `~/.claude/circuit.config.yaml`,
+which means routing stays repo- and user-configurable without changing any
+workflow manifests.
 
----
+The built-in adapters tell us what Circuit considers stable:
 
-## §10. `workers` Is Internal on Purpose
+- `agent` returns structured agent parameters with worktree isolation
+- `codex` is an alias for `codex-isolated`
+- `codex-isolated` launches Codex inside a Circuit-owned runtime root under
+  `~/.circuit/runtime/codex/...`
+- custom adapters are argv wrappers declared in config
 
-`skills/workers/SKILL.md` declares `role: adapter`, and that one choice has a
-lot of architectural consequences.
+The `codex-isolated` path in
+[`codex-runtime.ts`](../scripts/runtime/engine/src/codex-runtime.ts) is
+especially revealing. Circuit does not merely shell out to Codex and hope for
+the best. It creates an isolated runtime root, sanitizes the environment,
+bootstraps auth into that root, records launch diagnostics, and cleans up owned
+process artifacts afterward.
 
-`workers` ships because workflows depend on it for bounded
-implement-review-converge loops, but it does not become a public slash command.
-That behavior follows naturally from the public-surface projection described in
-§5:
+That tells us what boundary Circuit is trying to preserve: workflows describe
+work in semantic terms, while the runtime boundary chooses how that work reaches
+another execution environment.
 
-- `extract.ts` classifies `workers` as an adapter
-- `public-surface.ts` excludes adapters from public command projection
-- `release-integrity.test.ts` guards the expectation that `workers` stays out of
-  public command inventories and user-facing public docs
+This is also the right place to explain `workers`.
 
-This is an important boundary to preserve mentally. `review` and `handoff` are
-public utilities. `workers` is internal orchestration plumbing. They all live
-under `skills/`, but they do not all occupy the same user-facing layer.
+`workers` lives in `skills/`, but it is explicitly marked
+`role: adapter` in [skills/workers/SKILL.md](../skills/workers/SKILL.md). That
+keeps it out of the public command surface while still letting workflows depend
+on it.
 
-The relay layer reinforces that internal role. `scripts/relay/compose-prompt.sh`
-assembles prompts from a task-specific header, selected skills, and relay
-templates, while `scripts/relay/update-batch.sh` owns `batch.json` state
-transitions. The point is to make the worker loop deterministic enough that the
-parent workflow can trust its artifacts and verdicts.
+Inside that adapter, Circuit runs a bounded inner loop:
 
----
-
-## §11. Verification Is Layered
-
-Circuit uses several different verification layers, and they are healthy
-because they are not all checking the same thing.
-
-- Catalog freshness checks such as `catalog-compiler.js generate --check` and
-  the catalog validator tests guard machine-owned generated surfaces.
-- `release-integrity.test.ts` guards a small set of public-surface expectations,
-  including the rule that `workers` must stay internal.
-- Installed-surface verification modules and tests check that the manifest and
-  the actual plugin filesystem still agree.
-- Runtime schemas, gates, and replay logic check whether a specific run can
-  advance safely.
-
-That layering is worth remembering because it explains why some truths belong in
-generated files, some belong in tests, and some belong only in explanatory docs.
-The system does not need one giant test to prove everything. It needs each layer
-to validate the facts it actually owns.
-
----
-
-## §12. Runtime Flow and Maintenance Flow Are Different Paths
-
-Two day-to-day flows matter in Circuit, and it helps to describe them
-separately.
-
-The **runtime flow** is what users trigger:
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Run as "run workflow"
-    participant Engine as "runtime engine"
-    participant Worker as "adapter or worker session"
-    participant Hook as "session-start hook"
-
-    User->>Run: /circuit:run <task>
-    Run->>Engine: classify and dispatch
-    Engine->>Worker: assign work by semantic role
-    Worker-->>Engine: reports, artifacts, verdicts
-    Engine->>Engine: append events, derive state, update active-run
-    Hook-->>Engine: restore handoff or active run in the next session
+```text
+plan -> implement -> review -> converge
 ```
 
-The **maintenance flow** is what maintainers trigger:
+with rejection paths that re-enter implementation and review. The parent
+workflow stays responsible for the outer artifact chain; the `workers` adapter
+owns the relay-root batch state and the implement-review-converge loop.
 
-```mermaid
-sequenceDiagram
-    participant Author as "maintainer"
-    participant Catalog as "catalog compiler"
-    participant Sync as "sync-to-cache"
-    participant Verify as "verify-install"
+So `workers` is not a hidden sixth workflow. It is internal orchestration
+plumbing, and the catalog treats it that way on purpose.
 
-    Author->>Catalog: regenerate machine-owned surfaces
-    Catalog-->>Author: update shims, catalog blocks, manifest
-    Author->>Sync: copy shipped surface into cache
-    Author->>Verify: check repo or installed plugin surface
-```
+## §10. Resume And Continuity Are Two Different Things
 
-Keeping those paths distinct prevents a lot of confusion.
+Circuit uses the word "resume" in two related but different senses.
 
-- `/circuit:run` is an authored workflow, not a hardcoded one-off command.
-- The runtime engine serves multiple workflows without each workflow needing its
-  own execution machinery.
-- The control plane is maintenance infrastructure, not part of the user hot
-  path.
+The first is runtime resume.
+[`resume.ts`](../scripts/runtime/engine/src/resume.ts) rebuilds `state.json`
+from the manifest snapshot and `events.ndjson`, walks the manifest in graph
+order, and finds the first incomplete step. This is replay-first recovery. The
+engine does not trust stale cached state when it can recompute from the durable
+log.
 
-Those boundaries are also why handwritten docs can stay explanatory. The runtime
-and control plane already have named owners for machine-owned facts, so the docs
-do not need to impersonate a second compiler.
+The second is session continuity.
 
----
+For that, Circuit keeps a separate control plane under `.circuit/control-plane/`:
 
-## §13. Where To Look Next
+- `continuity-index.json`
+- `continuity-records/<record-id>.json`
 
-When you are changing Circuit, the fastest way to stay oriented is to pick the
-document that matches the question you are asking:
+The index can point to:
 
-- Read [ARCHITECTURE.md](../ARCHITECTURE.md) for the concise internal
-  architecture reference.
+- `current_run`, which is an attachment to a live run
+- `pending_record`, which is an explicit saved continuity handoff
+
+The distinction matters because `active-run.md` is only a passive dashboard.
+The continuity record is the intentional narrative payload. That payload stores:
+
+- goal
+- next action
+- state markdown
+- typed debt markdown
+- optional run reference
+
+The priority order in
+[`continuity-commands.ts`](../scripts/runtime/engine/src/continuity-commands.ts)
+is explicit:
+
+1. `pending_record`
+2. `current_run`
+3. none
+
+And the session-start hook honors the same idea.
+[`cli/session-start.ts`](../scripts/runtime/engine/src/cli/session-start.ts)
+refreshes `active-run.md` for the indexed current run when possible, then prints
+a passive banner. It does not silently resume saved continuity. A fresh session
+still has to use `/circuit:handoff resume` to consume the saved handoff
+intentionally.
+
+This is one of the best design choices in the system. Circuit treats continuity
+as an explicit control-plane object, not as accidental leftovers from the last
+thread.
+
+## §11. Custom Circuits Extend The Catalog Without Forking The Plugin
+
+Circuit's custom workflow story is also revealing because it follows the same
+authored -> projected -> executed pattern as the built-in workflows.
+
+User-global custom circuits live under:
+
+- `~/.claude/circuit/drafts/<slug>/` while being drafted
+- `~/.claude/circuit/skills/<slug>/` once published
+
+The flow in
+[`catalog/custom-circuits.ts`](../scripts/runtime/engine/src/catalog/custom-circuits.ts)
+is:
+
+1. draft a workflow from a built-in archetype
+2. validate it by bootstrapping a detached temporary run from the draft
+   manifest
+3. publish it into the user-global skills directory
+4. materialize overlay command surfaces and merged public commands
+
+That validation step is worth pausing on. Circuit does not validate custom
+circuits by linting prose alone. It boots the draft manifest through the same
+runtime bootstrap machinery and insists on the real outer artifacts:
+
+- `circuit.manifest.yaml`
+- `events.ndjson`
+- `state.json`
+- `artifacts/active-run.md`
+
+After publication, `/circuit:run` can see these custom circuits through a
+hook-injected routing overlay generated by
+`renderRunCustomCircuitContext()`. But even there, Circuit keeps the boundary
+sharp:
+
+- explicit built-in intent prefixes still win immediately
+- custom circuits compete only when routing is otherwise open
+- built-ins win ties
+
+So custom circuits extend the catalog; they do not patch over the built-in
+runtime model.
+
+## §12. The Mental Model To Keep While Changing Circuit
+
+If we compress the whole system into one practical maintainer's rule, it is
+this:
+
+Edit the layer that owns the fact.
+
+- If you are changing what a workflow is, edit `skills/`.
+- If you are changing what the plugin projects or ships, edit the catalog/control-plane modules.
+- If you are changing what a run records, resumes, or hands off, edit the
+  engine and continuity modules.
+
+Everything else in the repo makes more sense once we read it through that lens.
+
+Circuit is a plugin, but it is also a compiler for prompt surfaces and a runtime
+for durable workflow state. Its authored skills define the vocabulary. Its
+control plane turns that vocabulary into a shipped surface. Its runtime records
+enough durable state that work can survive `/clear`, session boundaries, and
+transport changes.
+
+That is the system. The public slash command is only the front door.
+
+## §13. Where To Read Next
+
+When the narrative in this guide has done its job, the next document depends on
+the question you are asking.
+
+- Read [ARCHITECTURE.md](../ARCHITECTURE.md) when you want the concise internal
+  reference.
 - Read [docs/control-plane-ownership.md](control-plane-ownership.md) when you
-  need the source-of-truth owner for a catalog or verification fact.
-- Read [CIRCUITS.md](../CIRCUITS.md) when you need the generated catalog,
-  command list, or entry-mode reference.
-- Return to this guide when you need the narrative explanation for why those
-  parts fit together the way they do.
+  need to know which module owns a generated or verification fact.
+- Read [CIRCUITS.md](../CIRCUITS.md) when you want the current generated catalog
+  and entry modes.
+- Read the relevant `skills/<slug>/SKILL.md` and `circuit.yaml` pair when you
+  are changing a specific workflow.
 
-The recurring theme across the codebase is simple: authored workflow definitions
-feed a compiler-controlled catalog, the runtime executes those workflows as
-durable artifact chains, and verification stays layered so each owner validates
-its own surface. Once that mental model clicks, most of the repo stops feeling
-like special cases and starts feeling like a set of cooperating boundaries.
+If you keep one sentence from this guide, keep this one: Circuit is healthiest
+when authored workflow identity, generated shipped surface, and runtime
+continuity stay separate and cooperate only through named contracts.
