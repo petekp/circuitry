@@ -146,6 +146,8 @@ Field rules:
 - When real debt exists, every `--debt-markdown` entry needs a typed prefix plus a short rationale.
 - If there is no real debt, literal `none` is only an input sentinel. The engine normalizes it to empty stored debt before resume, so never expect resume to echo `none` back.
 - For debug-heavy sessions, lead `--state-markdown` with `hypothesis:`, `repro:`, `expected:`, `actual:`, and `eliminated:` bullets.
+- Treat existing control-plane status as reference only. An existing `pending_record` does not satisfy a fresh bare `/circuit:handoff` request when this session has new state worth preserving.
+- Do not stop after merely summarizing current status, `active-run.md`, or an already-saved pending record.
 
 ### 4. Save through the engine
 

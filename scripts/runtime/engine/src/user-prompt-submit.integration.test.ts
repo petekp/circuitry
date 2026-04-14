@@ -477,10 +477,13 @@ describe("user-prompt-submit integration", () => {
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Handoff Capture Contract");
     expect(context).toContain(".circuit/bin/circuit-engine continuity status --json");
+    expect(context).toContain("Treat that status as reference only.");
+    expect(context).toContain("existing `pending_record` does not satisfy the current bare `/circuit:handoff` request");
     expect(context).toContain(".circuit/bin/circuit-engine continuity save");
     expect(context).toContain("Do not move `DECIDED:`, `CONSTRAINT:`, `BLOCKED:`, or `RULED OUT:` bullets into `--state-markdown`");
     expect(context).toContain("literal `none` is allowed only as a CLI convenience");
     expect(context).toContain("resume never shows the sentinel");
+    expect(context).toContain("Do not stop after merely summarizing current status");
     expect(context).toContain("/circuit:handoff resume");
     expect(context).toContain("/circuit:handoff done");
     expect(context).toContain("Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.");

@@ -254,12 +254,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "c8e2de634e3969f3e14acc930627dd44a5de38034c83c20e7d6828683181d2a6"
+      "sha256": "16e64e5a96a2e340400ffbf46a5c45aff9baec7460ad12c895168f19e35cce3e"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "72672722405cc2e9ae641f25ddc28d773efef6e6c33f8b3c69a4c466cf9f6128"
+      "sha256": "a88ee2a39ce79e04453e571641dfe32a4413119c39080c5203f25e373d9b1153"
     },
     {
       "executable": true,
@@ -269,7 +269,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "c62d84850ee00691ef01bf2416ee271e1c1ea90833cd3ddc20d3944a7d1baeae"
+      "sha256": "dbf51950e6058bd014c69552441c27d222985a078adaf77b9793562ba83cae18"
     },
     {
       "executable": true,
@@ -299,7 +299,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "fc65e4bbf771ab41651eade069862daf05ba604d83e43d93d331591c16bac31a"
+      "sha256": "a03aa496684efdeebc54d4a83b0fe38324c799347a1ca0513d6efe37d5e0bd95"
     },
     {
       "executable": true,
@@ -314,17 +314,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "1481ea7a0dbd1fd52edb5b46f949794822c3ce9798d85083a81a74d6e1416c01"
+      "sha256": "17a0df2e2fb0a61ba7473305be4d67133c51f552e28f8e2f457063c167f63505"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "6ee21b4362a00f76ba099eb79345fd6532c5f6c8fdd5dc19adfcd90a82069e07"
+      "sha256": "b903f8f359225fde81ba59373433e3f7636c06a01db775c4dec3f2ee75f4e525"
     },
     {
       "executable": false,
       "path": "scripts/runtime/generated/prompt-contracts.json",
-      "sha256": "36a2246c7a3ae7cc5a554bdd632bf2f2d7f71a3f41d96d40da0000757f525733"
+      "sha256": "b64f7ceaf2d6dfc8e2348b24485c65b1d319f9d4cea5c95f06c85511a33cb124"
     },
     {
       "executable": true,
@@ -369,7 +369,7 @@
     {
       "executable": false,
       "path": "skills/handoff/SKILL.md",
-      "sha256": "5cc95af34e2814530145822982a4db55ee96a023223c760c01e7de1ee8b87ebb"
+      "sha256": "89ec03b0b7922e44016a8a2ef5a91bff4fc452fa4a64923fc313aa4e5e4c32ce"
     },
     {
       "executable": false,
