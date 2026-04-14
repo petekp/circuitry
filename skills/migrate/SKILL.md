@@ -421,7 +421,7 @@ Escalate when:
 - Coexistence strategy proves unworkable (don't iterate, escalate)
 - Batch fails and coexistence plan cannot accommodate the failure
 - Cutover review returns ISSUES FOUND with critical after 2 attempts
-- Migration target is more entangled than inventory showed (reopen from Inventory)
+- Migration target is more entangled than inventory showed (loop back to Inventory)
 - Dispatch step fails twice
 
 ## Resume

@@ -163,7 +163,9 @@ describe("build/run wiring", () => {
     for (const skill of [exploreSkill, migrateSkill, repairSkill, sweepSkill]) {
       expect(skill).toContain(".circuit/bin/circuit-engine bootstrap");
       expect(skill).not.toContain("mkdir -p \"${RUN_ROOT}/artifacts\" \"${RUN_ROOT}/phases\"");
-      expect(skill).not.toContain("ln -sfn \"circuit-runs/${RUN_SLUG}\" .circuit/current-run");
+      expect(skill).not.toContain(
+        `ln -sfn "circuit-runs/\${RUN_SLUG}" ${[".circuit", "current-run"].join("/")}`,
+      );
     }
 
     expect(runSkill).not.toContain("I'll plan and implement. Quick self-verify.");

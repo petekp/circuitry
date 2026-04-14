@@ -189,7 +189,7 @@
     {
       "executable": false,
       "path": "schemas/circuit-manifest.schema.json",
-      "sha256": "35a30c65e9f7021cdeafe891c70960a0b7c79630fd04d30bed4353beeedbf45d"
+      "sha256": "ca176a28aaff671bfc81aa9905721627bd4defdf0f36a4f44959ddeb9c577eca"
     },
     {
       "executable": false,
@@ -204,7 +204,7 @@
     {
       "executable": false,
       "path": "schemas/event.schema.json",
-      "sha256": "95ca7f7c8d9605f9fde4894494a4bc772ccc6fdb634c724e9b1d0ccbe77b952e"
+      "sha256": "8f8ad9021688a9fdd36acf14e3e96244256e3fb645dc42ac49939075fd0481fb"
     },
     {
       "executable": false,
@@ -214,7 +214,7 @@
     {
       "executable": false,
       "path": "schemas/job-result.schema.json",
-      "sha256": "c53dd8b741b3fe88641fddd8b035566b1da4c63928f2f72783fb0ac2ff821396"
+      "sha256": "2d6794f12a6cd9d3023d031658f022b21c553ac4bc1c13254285a451bb0366ed"
     },
     {
       "executable": false,
@@ -379,7 +379,7 @@
     {
       "executable": false,
       "path": "skills/migrate/SKILL.md",
-      "sha256": "c62a48356b04963cf1d3a0be84b7258c5a6cba2acb8799718bbed5d1ea03765a"
+      "sha256": "2fe64cf0540ef29bd01cbaf2c5136f2b1fd64dd5753a6a593d8b21c7f7a2f8c9"
     },
     {
       "executable": false,

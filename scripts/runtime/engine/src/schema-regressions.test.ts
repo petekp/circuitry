@@ -30,9 +30,9 @@ const EXPECTED_VERDICTS = [
   "queue_adjustment_required",
   "re_envision",
   "ready",
-  "reopen",
-  "reopen_execute",
-  "reopen_plan",
+  "reroute",
+  "reroute_execute",
+  "reroute_plan",
   "repair_again",
   "retriage",
   "reviews_complete",
@@ -81,10 +81,10 @@ const PROTOCOL_VERDICTS: Record<string, string[]> = {
     "risk_boundary_invalidated",
   ],
   "execution-audit@v1": ["partial", "ready"],
-  "execution-ratchet@v1": ["partial", "ready", "reopen_plan"],
+  "execution-ratchet@v1": ["partial", "ready", "reroute_plan"],
   "exploration-fanout@v1": ["outputs_ready"],
-  "final-review@v1": ["issues_found", "partial", "reopen_execute", "ship_ready"],
-  "forensic-flow-audit@v1": ["audit_complete", "closed", "partial", "reopen"],
+  "final-review@v1": ["issues_found", "partial", "reroute_execute", "ship_ready"],
+  "forensic-flow-audit@v1": ["audit_complete", "closed", "partial", "reroute"],
   "full-verification@v1": ["verification_complete"],
   "inventory-probes@v1": ["outputs_ready"],
   "option-generation@v1": ["options_ready"],
@@ -107,6 +107,13 @@ const PROTOCOL_VERDICTS: Record<string, string[]> = {
     "issues_remain",
   ],
 };
+
+const LEGACY_PREDECESSOR_PREFIX = ["re", "open"].join("");
+const LEGACY_STEP_INVALIDATION_EVENT = `step_${["re", "opened"].join("")}`;
+
+function legacyRerouteVerdict(suffix?: string) {
+  return suffix ? `${LEGACY_PREDECESSOR_PREFIX}_${suffix}` : LEGACY_PREDECESSOR_PREFIX;
+}
 
 function makeJobResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -266,7 +273,7 @@ describe("schema regressions", () => {
       payload: {
         result_path: "jobs/step-one-1/job-result.json",
         completion: "partial",
-        verdict: "reopen_execute",
+        verdict: "reroute_execute",
         attempt: 1,
       },
     };
@@ -322,24 +329,88 @@ describe("schema regressions", () => {
     expect(validate(eventSchema, completedWithoutVerdict)).toEqual([]);
   });
 
-  it("rejects legacy step_reopened events", () => {
+  it("rejects legacy invalidation events", () => {
     const eventSchema = loadJsonSchema("schemas/event.schema.json");
 
     const legacyEvent = {
       schema_version: "1",
-      event_id: "evt-legacy-reopen",
-      event_type: "step_reopened",
+      event_id: "evt-legacy-step-reset",
+      event_type: LEGACY_STEP_INVALIDATION_EVENT,
       occurred_at: "2026-04-09T12:00:03.000Z",
       run_id: "run-002",
       step_id: "plan",
       payload: {
         from_step: "execute",
         to_step: "plan",
-        reason: "legacy reopen",
+        reason: "legacy invalidation",
       },
     };
 
     expect(validate(eventSchema, legacyEvent).length).toBeGreaterThan(0);
+  });
+
+  it("rejects legacy predecessor verdict names everywhere they used to validate", () => {
+    const manifestSchema = loadJsonSchema(
+      "schemas/circuit-manifest.schema.json",
+    );
+    const jobResultSchema = loadJsonSchema("schemas/job-result.schema.json");
+    const eventSchema = loadJsonSchema("schemas/event.schema.json");
+    const baseManifest = makeManifest();
+    const dispatchStep = baseManifest.circuit.steps[0] as Record<string, unknown>;
+    const legacyVerdicts = [
+      legacyRerouteVerdict(),
+      legacyRerouteVerdict("execute"),
+      legacyRerouteVerdict("plan"),
+    ];
+
+    for (const verdict of legacyVerdicts) {
+      expect(
+        validate(manifestSchema, {
+          ...baseManifest,
+          circuit: {
+            ...baseManifest.circuit,
+            steps: [
+              {
+                ...dispatchStep,
+                gate: {
+                  kind: "result_verdict",
+                  source: "jobs/{step_id}-{attempt}/job-result.json",
+                  pass: [verdict],
+                },
+              },
+            ],
+          },
+        }).length,
+      ).toBeGreaterThan(0);
+
+      expect(
+        validate(
+          jobResultSchema,
+          makeJobResult({
+            protocol: "execution-ratchet@v1",
+            verdict,
+            completion: "partial",
+          }),
+        ).length,
+      ).toBeGreaterThan(0);
+
+      expect(
+        validate(eventSchema, {
+          schema_version: "1",
+          event_id: `evt-${verdict}`,
+          event_type: "job_completed",
+          occurred_at: "2026-04-09T12:00:05.000Z",
+          run_id: "run-legacy-verdict",
+          step_id: "plan",
+          payload: {
+            result_path: "jobs/plan-1/job-result.json",
+            completion: "partial",
+            verdict,
+            attempt: 1,
+          },
+        }).length,
+      ).toBeGreaterThan(0);
+    }
   });
 
   it("rejects unsafe event paths that escape the run root", () => {

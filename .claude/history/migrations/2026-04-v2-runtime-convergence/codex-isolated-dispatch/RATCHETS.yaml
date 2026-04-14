@@ -1,0 +1,6 @@
+ratchets:
+  - id: ratchet-no-direct-codex-spawn
+    pattern: 'spawnSync\\("codex"'
+    scope: "scripts/runtime/engine/src"
+    budget: 0
+    rationale: "Built-in Codex launches must go through the isolated runtime helper, not direct ambient spawns."

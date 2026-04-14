@@ -462,8 +462,8 @@ describe("TestResume", () => {
     );
   });
 
-  it("resumes at step-one after step reopened", () => {
-    // Step-one was completed but then reopened -- artifacts now stale
+  it("resumes at step-one after step invalidation", () => {
+    // Step-one was completed, then invalidated, so its artifacts are stale.
     const state = baseState({
       status: "in_progress",
       current_step: "step-one",
@@ -481,27 +481,27 @@ describe("TestResume", () => {
     expect(result.resumeStep).toBe("step-one");
   });
 
-  it("resumes at downstream step after middle step reopened and re-completed", () => {
-    // This is the critical regression test for the reopen/resume bug:
-    // Complete A->B->C, reopen B, re-complete B only.
+  it("resumes at downstream step after middle step invalidation and re-completion", () => {
+    // This is the critical regression test for the reroute/resume bug:
+    // Complete A->B->C, invalidate B, then re-complete B only.
     // Resume MUST return C (not "all steps complete").
     const state = baseState({
       status: "in_progress",
       current_step: "step-two",
       artifacts: {
-        // step-one: still complete (upstream of reopen)
+        // step-one: still complete upstream of the invalidation
         "artifacts/step-one-output.md": {
           status: "complete",
           gate: "pass",
           produced_by: "step-one",
         },
-        // step-two: re-completed after reopen
+        // step-two: re-completed after the invalidation
         "artifacts/step-two-output.md": {
           status: "complete",
           gate: "pass",
           produced_by: "step-two",
         },
-        // step-three: stale (downstream of reopened step-two, invalidated by reopen)
+        // step-three: stale because downstream work must be revisited after step-two changed
         "artifacts/step-three-output.md": {
           status: "stale",
           gate: "pending",
@@ -511,7 +511,7 @@ describe("TestResume", () => {
       routes: {
         "step-one": "step-two",
         "step-two": "step-three",
-        // step-three route was cleared by reopen
+        // step-three route was cleared by the reroute
       },
     });
 
@@ -521,8 +521,8 @@ describe("TestResume", () => {
     expect(result.status).toBe("in_progress");
   });
 
-  it("resumes at reopened step when downstream routes are cleared", () => {
-    // Complete A->B->C, reopen B. All downstream state cleared.
+  it("resumes at invalidated step when downstream routes are cleared", () => {
+    // Complete A->B->C, invalidate B, and clear downstream state.
     // Resume MUST return B.
     const state = baseState({
       status: "in_progress",
@@ -546,7 +546,7 @@ describe("TestResume", () => {
       },
       routes: {
         "step-one": "step-two",
-        // step-two and step-three routes cleared by reopen
+        // step-two and step-three routes cleared by the reroute
       },
     });
 
@@ -693,13 +693,13 @@ describe("TestRoundTrip", () => {
     expect(result4.status).toBe("completed");
   });
 
-  it("round trip with reopen", () => {
+  it("round trip with reroute invalidation", () => {
     // Complete step-one
     const state1 = stateWithStepOneComplete();
     const result1 = findResumePoint(MINIMAL_MANIFEST, state1);
     expect(result1.resumeStep).toBe("step-two");
 
-    // Reopen step-one (artifacts become stale, gate reset)
+    // Invalidate step-one so its artifacts become stale and its gate resets.
     const state2 = baseState({
       status: "in_progress",
       current_step: "step-one",

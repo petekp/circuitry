@@ -1,0 +1,18 @@
+# CI Ratchets: Continuity Control Plane
+
+ratchets:
+  - id: no-scan-fallback
+    label: "No continuity scan fallback"
+    pattern: "findLatestActiveRun\\("
+    scope: "scripts/runtime/engine/src"
+    budget: 0
+    rationale: "No backward-compat scan fallback survives."
+    notes: "Budget set to zero on 2026-04-12."
+
+  - id: no-compat-residue
+    label: "No compatibility continuity residue"
+    pattern: "import-legacy|legacy_import|projection_revision|run_local_markdown|canonical_markdown"
+    scope: "scripts/runtime/engine/src schemas"
+    budget: 0
+    rationale: "The continuity design explicitly drops compatibility imports and projection metadata."
+    notes: "Budget set to zero on 2026-04-12."

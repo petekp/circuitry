@@ -195,7 +195,7 @@ describe("session-start integration", () => {
     expect(refreshed).not.toContain("STALE");
   });
 
-  it("ignores mirrored .circuit/current-run when it is not backed by indexed current_run", () => {
+  it("ignores a mirrored current-run marker when it is not backed by indexed current_run", () => {
     const root = mkdtempSync(join(tmpdir(), "circuit-session-mirror-only-"));
     const projectRoot = join(root, "project");
     const runRoot = join(projectRoot, ".circuit", "circuit-runs", "orphan-run");

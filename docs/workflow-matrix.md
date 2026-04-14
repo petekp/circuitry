@@ -90,7 +90,7 @@ Every workflow draws from this vocabulary. No workflow invents its own artifact 
 
 | Artifact | Workflow | Content |
 |----------|----------|---------|
-| **decision.md** | Explore (when the output is a decision) | ADR: decision, rationale, accepted risks, rejected alternatives, reopen conditions |
+| **decision.md** | Explore (when the output is a decision) | ADR: decision, rationale, accepted risks, rejected alternatives, revisit conditions |
 | **queue.md** | Sweep | Triaged work items with confidence x risk classification |
 | **inventory.md** | Migrate | Dependency catalog with risk assessment |
 

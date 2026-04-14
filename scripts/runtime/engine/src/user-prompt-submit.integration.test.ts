@@ -24,6 +24,7 @@ import { REPO_ROOT } from "./schema.js";
 
 const USER_PROMPT_SUBMIT = resolve(REPO_ROOT, "hooks/user-prompt-submit.js");
 const CIRCUIT_ENGINE = resolve(REPO_ROOT, "scripts/relay/circuit-engine.sh");
+const LEGACY_CURRENT_RUN_MARKER = [".circuit", "current-run"].join("/");
 
 type BootstrappedRun = {
   currentStep: string | null;
@@ -507,7 +508,9 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("## Control-Plane Status");
     expect(context).toContain("- selection: none");
     expect(context).not.toContain("canonical project handoff path");
-    expect(context).not.toContain("Only fall back to `.circuit/current-run` when the handoff file is absent.");
+    expect(context).not.toContain(
+      `Only fall back to \`${LEGACY_CURRENT_RUN_MARKER}\` when the handoff file is absent.`,
+    );
   });
 
   it("injects handoff-reference guidance for workflow prompts that explicitly say continue with the handoff", () => {

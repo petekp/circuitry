@@ -1,0 +1,419 @@
+# Migration Slices: Release Contract Convergence
+
+slices:
+  - id: slice-001-contract-docs
+    type: implementation
+    name: "Converge workflow docs onto the parent-to-workers adapter contract"
+    status: done
+    dependencies: []
+    touched_paths:
+      - skills/build/SKILL.md
+      - skills/repair/SKILL.md
+      - skills/migrate/SKILL.md
+      - skills/sweep/SKILL.md
+    external_surfaces:
+      - "/circuit:build"
+      - "/circuit:repair"
+      - "/circuit:migrate"
+      - "/circuit:sweep"
+    contracts:
+      changed:
+        - "Workflow Act/Fix/Execute prose no longer treats workers as a domain skill"
+    denylist_patterns:
+      - '--skills "workers'
+      - 'use --skills "workers" alone'
+    deletion_targets:
+      - 'Workflow bash examples that pass workers via --skills'
+      - 'Fallback wording that suggests workers can be the only domain skill'
+    temp_artifacts: []
+    docs_to_update:
+      - skills/build/SKILL.md
+      - skills/repair/SKILL.md
+      - skills/migrate/SKILL.md
+      - skills/sweep/SKILL.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: '--skills "workers'
+        scope: "skills/build/SKILL.md skills/repair/SKILL.md skills/migrate/SKILL.md skills/sweep/SKILL.md"
+      - pattern: 'use --skills "workers" alone'
+        scope: "skills/build/SKILL.md skills/repair/SKILL.md skills/migrate/SKILL.md skills/sweep/SKILL.md"
+    verification_commands:
+      - "cd scripts/runtime/engine && npx vitest run src/release-integrity.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "Docs can drift from architecture examples if workers/SKILL.md is not updated in the same migration"
+    notes: "Completed via release-integrity ratchets and workflow SKILL.md updates"
+
+  - id: slice-002-utility-taxonomy
+    type: implementation
+    name: "Converge public and contributor docs on workflow-vs-utility taxonomy"
+    status: done
+    dependencies: [slice-001-contract-docs]
+    touched_paths:
+      - README.md
+      - CIRCUITS.md
+      - ARCHITECTURE.md
+      - CUSTOM-CIRCUITS.md
+    external_surfaces:
+      - "/circuit:review"
+      - "/circuit:handoff"
+      - "Custom circuit authoring docs"
+    contracts:
+      changed:
+        - "Review and handoff are described as utilities everywhere"
+    denylist_patterns:
+      - 'Direct circuits:'
+    deletion_targets:
+      - "README direct-circuit framing that includes review and handoff"
+      - "Any contributor wording that implies a circuit can exist without circuit.yaml"
+    temp_artifacts: []
+    docs_to_update:
+      - README.md
+      - CIRCUITS.md
+      - ARCHITECTURE.md
+      - CUSTOM-CIRCUITS.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'Direct circuits:'
+        scope: README.md
+    verification_commands:
+      - "cd scripts/runtime/engine && npx vitest run src/release-integrity.test.ts src/catalog/catalog-validator.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "Catalog and docs can drift if tests do not check all four surfaces together"
+    notes: "Completed via README, ARCHITECTURE, and CUSTOM-CIRCUITS convergence; CIRCUITS.md already matched the target taxonomy"
+
+  - id: slice-003-workers-and-architecture-examples
+    type: implementation
+    name: "Make workers and architecture examples the single source of truth"
+    status: done
+    dependencies: [slice-001-contract-docs, slice-002-utility-taxonomy]
+    touched_paths:
+      - skills/workers/SKILL.md
+      - ARCHITECTURE.md
+    external_surfaces:
+      - "Contributor relay and adapter documentation"
+    contracts:
+      changed:
+        - "Only workers and architecture docs contain executable template assembly examples"
+    denylist_patterns:
+      - '--template implement'
+    deletion_targets:
+      - "Duplicate template-assembly examples in parent workflow docs"
+    temp_artifacts: []
+    docs_to_update:
+      - skills/workers/SKILL.md
+      - ARCHITECTURE.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: '--template implement'
+        scope: "skills/build/SKILL.md skills/repair/SKILL.md skills/migrate/SKILL.md skills/sweep/SKILL.md"
+    verification_commands:
+      - "cd scripts/runtime/engine && npx vitest run src/release-integrity.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "Architecture examples can reintroduce duplicate contract drift if not ratcheted"
+    notes: "Completed by removing template examples from parent workflow docs, preserving workers as the source of truth, and ratcheting the isolation in release-integrity"
+
+  - id: slice-004-installed-verifier
+    type: implementation
+    name: "Rewrite verify-install into an installed-surface ship gate"
+    status: done
+    dependencies: [slice-003-workers-and-architecture-examples]
+    touched_paths:
+      - scripts/verify-install.sh
+      - README.md
+    external_surfaces:
+      - "Installed troubleshooting flow"
+      - "Repo-root contributor verifier"
+    contracts:
+      changed:
+        - "verify-install proves installed-surface contract checks, config precedence, and CLI round trips"
+    denylist_patterns:
+      - "compose-prompt.sh smoke test"
+    deletion_targets:
+      - "Template-only smoke-test framing in verify-install"
+    temp_artifacts:
+      - "Temp install roots and temp HOME directories created by verify-install"
+    docs_to_update:
+      - README.md
+      - scripts/verify-install.sh
+    dependency_changes: []
+    residue_queries:
+      - pattern: "smoke test"
+        scope: "scripts/verify-install.sh README.md"
+    verification_commands:
+      - "./scripts/verify-install.sh"
+    replay_scenarios:
+      - "Run verify-install from a temp reconstructed install root"
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "Stricter verifier can expose runtime gaps that require helper fixes"
+    notes: "Completed with a self-contained verifier that proves template composition, config precedence, malformed-config failure, and bundled CLI round trips"
+
+  - id: slice-005-runtime-regression-ratchets
+    type: implementation
+    name: "Add release-integrity and subprocess integration ratchets"
+    status: done
+    dependencies: [slice-004-installed-verifier]
+    touched_paths:
+      - scripts/runtime/engine/src/release-integrity.test.ts
+      - scripts/runtime/engine/src/relay-scripts.test.ts
+      - scripts/runtime/engine/src/runtime-cli-integration.test.ts
+      - scripts/runtime/engine/src/cli/read-config.ts
+      - scripts/runtime/engine/src/cli/resume.ts
+      - scripts/runtime/engine/src/resume.ts
+      - scripts/runtime/engine/src/resume.test.ts
+    external_surfaces:
+      - "Installed engine CLI behavior"
+    contracts:
+      changed:
+        - "Installed-surface runtime checks are ratcheted by tests"
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts:
+      - "Temp git repos and temp HOME directories used by integration tests"
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && npx vitest run src/release-integrity.test.ts src/relay-scripts.test.ts src/runtime-cli-integration.test.ts src/resume.test.ts"
+    replay_scenarios:
+      - "append-event -> derive-state -> resume subprocess round trip"
+      - "Stale-state rebuild"
+      - "Corrupted state or events fail-loud path"
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "Existing dirty worktree changes in resume/config paths may overlap with new fixes"
+    notes: "Completed with new release-integrity, relay-scripts, and runtime CLI integration coverage; existing dirty worktree runtime helper fixes were carried forward without additional edits in this migration"
+
+  - id: slice-006-ci-convergence
+    type: implementation
+    name: "Keep CI simple but aligned with the stronger verifier"
+    status: done
+    dependencies: [slice-005-runtime-regression-ratchets]
+    touched_paths:
+      - .github/workflows/ci.yml
+    external_surfaces:
+      - "GitHub Actions verify job"
+    contracts:
+      changed:
+        - "CI treats verify-install as a real ship gate"
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && node esbuild.config.mjs"
+      - "git diff --quiet scripts/runtime/bin/"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks:
+      - "CI may need no YAML changes if verify-install already becomes authoritative"
+    notes: "Completed as a no-op: the existing CI job already calls verify-install, so the stronger verifier made CI alignment automatic"
+
+  - id: slice-999-closeout
+    type: convergence
+    name: "Residue sweep, ship gate, cache sync, and final handoff"
+    status: done
+    dependencies:
+      - slice-001-contract-docs
+      - slice-002-utility-taxonomy
+      - slice-003-workers-and-architecture-examples
+      - slice-004-installed-verifier
+      - slice-005-runtime-regression-ratchets
+      - slice-006-ci-convergence
+    touched_paths:
+      - .claude/migration/release-contract-convergence/MAP.csv
+      - .claude/migration/release-contract-convergence/RATCHETS.yaml
+      - .claude/migration/release-contract-convergence/HANDOFF.md
+      - scripts/runtime/bin/
+    external_surfaces:
+      - "Cached plugin copy used by Claude Code"
+    contracts:
+      changed:
+        - "Final ship gate reflects repo truth and cache truth"
+    denylist_patterns: []
+    deletion_targets:
+      - "Any temporary migration notes or stale map entries discovered during closeout"
+    temp_artifacts: []
+    docs_to_update:
+      - .claude/migration/release-contract-convergence/HANDOFF.md
+      - .claude/migration/release-contract-convergence/MAP.csv
+      - .claude/migration/release-contract-convergence/RATCHETS.yaml
+    dependency_changes: []
+    residue_queries:
+      - pattern: '--skills "workers'
+        scope: "skills/"
+      - pattern: 'Direct circuits:'
+        scope: "."
+    verification_commands:
+      - "npm ci --prefix scripts/runtime/engine"
+      - "./scripts/verify-install.sh"
+      - "cd scripts/runtime/engine && node esbuild.config.mjs && npx vitest run"
+      - "git diff --quiet scripts/runtime/bin/"
+      - "./scripts/sync-to-cache.sh"
+    replay_scenarios:
+      - "Run verify-install from repo root and reconstructed install root"
+    smoke_scenarios: []
+    manual_checks:
+      - "Tell the user to /clear after syncing the plugin cache"
+    risks:
+      - "Bundled bin freshness may require committing rebuilt runtime outputs"
+    notes: "Completed with targeted suites, full Vitest, repo-root verify-install, bundle rebuild, and cache sync"
+
+  - id: slice-1000-command-surface-supplement
+    type: convergence
+    name: "Close remaining command-surface convergence findings from adversarial review"
+    status: done
+    dependencies:
+      - slice-999-closeout
+    touched_paths:
+      - scripts/verify-install.sh
+      - schemas/circuit-manifest.schema.json
+      - scripts/runtime/engine/src/catalog/extract.ts
+      - scripts/runtime/engine/src/catalog/extract.test.ts
+      - scripts/runtime/engine/src/runtime-cli-integration.test.ts
+      - scripts/runtime/engine/src/schema-regressions.test.ts
+      - scripts/runtime/engine/src/release-integrity.test.ts
+      - scripts/runtime/bin/catalog-compiler.js
+      - CIRCUITS.md
+      - commands/handoff.md
+      - ARCHITECTURE.md
+      - CUSTOM-CIRCUITS.md
+      - skills/handoff/SKILL.md
+    external_surfaces:
+      - "Installed verify-install ship gate"
+      - "Public command shim surface"
+      - "Manifest authoring contract"
+      - "README/CIRCUITS command inventory ratchets"
+    contracts:
+      changed:
+        - "verify-install proves shipped public-surface freshness from authoritative metadata"
+        - "entry.command is rejected and entry.usage is a single placeholder token"
+        - "Hyphenated public command ids are safe in doc-surface verification"
+        - "workers remains internal-only and handoff descriptions stay consistent across generated/public docs"
+    denylist_patterns:
+      - 'entry:\s*\n\s*command:'
+      - 'Core lifecycle primitive'
+    deletion_targets:
+      - "Legacy entry.command acceptance"
+      - "Stale workers public-surface false green"
+      - "Contradictory public handoff descriptions"
+    temp_artifacts:
+      - "Temp surface roots created by verify-install for authoritative catalog regeneration"
+    docs_to_update:
+      - ARCHITECTURE.md
+      - CUSTOM-CIRCUITS.md
+      - CIRCUITS.md
+      - commands/handoff.md
+      - skills/handoff/SKILL.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'entry:\s*\n\s*command:'
+        scope: "skills/ scripts/runtime/engine/src/ schemas/"
+      - pattern: 'Core lifecycle primitive'
+        scope: "README.md CIRCUITS.md commands/ skills/ ARCHITECTURE.md CUSTOM-CIRCUITS.md"
+    verification_commands:
+      - "cd scripts/runtime/engine && npm run prepare"
+      - "cd scripts/runtime/engine && npm test -- --run src/catalog/catalog-validator.test.ts src/catalog/extract.test.ts src/catalog/generate.test.ts src/release-integrity.test.ts src/lifecycle-regressions.test.ts src/runtime-cli-integration.test.ts src/schema-regressions.test.ts"
+      - "./scripts/verify-install.sh"
+      - "./scripts/sync-to-cache.sh"
+    replay_scenarios:
+      - "verify-install fails when stale generated files still publicly ship workers"
+      - "README/CIRCUITS inventory parsing preserves hyphenated public command ids"
+    smoke_scenarios: []
+    manual_checks:
+      - "Tell the user to /clear after syncing the cache"
+    risks:
+      - "Bundled runtime output must stay aligned with source changes in catalog/extract/verify logic"
+    notes: "Completed with authoritative public-surface regeneration in verify-install, manifest entry contract hardening, hyphen-safe ratchets, doc convergence, and cache sync"
+
+  - id: slice-1001-public-surface-hardening
+    type: implementation
+    name: "Make continuity explicit and public slash-command entry action-first"
+    status: done
+    dependencies:
+      - slice-1000-command-surface-supplement
+    touched_paths:
+      - hooks/session-start.sh
+      - skills/handoff/SKILL.md
+      - skills/review/SKILL.md
+      - skills/run/SKILL.md
+      - skills/build/SKILL.md
+      - skills/explore/SKILL.md
+      - skills/repair/SKILL.md
+      - skills/migrate/SKILL.md
+      - skills/sweep/SKILL.md
+      - scripts/runtime/engine/src/catalog/public-surface.ts
+      - scripts/runtime/engine/src/catalog/generate.test.ts
+      - scripts/runtime/engine/src/session-start.integration.test.ts
+      - scripts/runtime/engine/src/public-surface-contract.test.ts
+      - scripts/runtime/engine/src/manual-host-surface-smoke.test.ts
+      - scripts/qa/manual-host-surface-smoke.sh
+      - commands/run.md
+      - commands/build.md
+      - commands/explore.md
+      - commands/repair.md
+      - commands/migrate.md
+      - commands/sweep.md
+      - commands/review.md
+      - commands/handoff.md
+      - scripts/runtime/generated/surface-manifest.json
+    external_surfaces:
+      - "Fresh Claude host sessions for /circuit:* commands"
+      - "/circuit:handoff resume"
+      - "Manual host acceptance harness"
+    contracts:
+      changed:
+        - "SessionStart announces continuity passively and never auto-resumes it"
+        - "Public workflow shims are action-first and bootstrap-first"
+        - "Public utility shims and skills expose fast modes explicitly"
+        - "Manual host-surface smoke harness is the required local acceptance gate"
+    denylist_patterns:
+      - "Resume from the handoff above."
+      - "Review the active run state above and resume from the current phase."
+      - "Use the circuit:"
+    deletion_targets:
+      - "Imperative auto-resume SessionStart text"
+      - "Advisory generated command shim wording"
+    temp_artifacts:
+      - "Manual harness temp repos and per-case logs under .circuit/manual-host-surface-smoke/"
+    docs_to_update:
+      - .claude/migration/release-contract-convergence/DECISIONS.md
+      - .claude/migration/release-contract-convergence/SHIP_CHECKLIST.md
+      - .claude/migration/release-contract-convergence/HANDOFF.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: "Resume from the handoff above."
+        scope: "hooks/session-start.sh scripts/runtime/engine/src/session-start.integration.test.ts"
+      - pattern: "Review the active run state above and resume from the current phase."
+        scope: "hooks/session-start.sh scripts/runtime/engine/src/session-start.integration.test.ts"
+      - pattern: "Use the circuit:"
+        scope: "commands/"
+    verification_commands:
+      - "cd scripts/runtime/engine && npm run prepare"
+      - "node scripts/runtime/bin/catalog-compiler.js generate"
+      - "cd scripts/runtime/engine && npx vitest run"
+      - "./scripts/verify-install.sh"
+      - "./scripts/sync-to-cache.sh"
+    replay_scenarios: []
+    smoke_scenarios:
+      - "./scripts/qa/manual-host-surface-smoke.sh"
+    manual_checks:
+      - "Run the manual host-surface smoke harness before merge and inspect failed-case logs if any"
+      - "Tell the user to /clear after syncing the cache"
+    risks:
+      - "The manual host harness exercises real Claude host behavior and remains a separate local gate from CI"
+    notes: "Completed deterministic hardening for passive continuity, action-first shims, explicit resume/done contracts, and the local host-smoke harness"

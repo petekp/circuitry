@@ -53,9 +53,9 @@
         "queue_adjustment_required",
         "re_envision",
         "ready",
-        "reopen",
-        "reopen_execute",
-        "reopen_plan",
+        "reroute",
+        "reroute_execute",
+        "reroute_plan",
         "repair_again",
         "retriage",
         "reviews_complete",
@@ -359,7 +359,7 @@
       "if": { "properties": { "protocol": { "const": "execution-ratchet@v1" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["partial", "ready", "reopen_plan"] }
+          "verdict": { "enum": ["partial", "ready", "reroute_plan"] }
         }
       }
     },
@@ -376,7 +376,7 @@
       "then": {
         "properties": {
           "verdict": {
-            "enum": ["issues_found", "partial", "reopen_execute", "ship_ready"]
+            "enum": ["issues_found", "partial", "reroute_execute", "ship_ready"]
           }
         }
       }
@@ -385,7 +385,7 @@
       "if": { "properties": { "protocol": { "const": "forensic-flow-audit@v1" } } },
       "then": {
         "properties": {
-          "verdict": { "enum": ["audit_complete", "closed", "partial", "reopen"] }
+          "verdict": { "enum": ["audit_complete", "closed", "partial", "reroute"] }
         }
       }
     },

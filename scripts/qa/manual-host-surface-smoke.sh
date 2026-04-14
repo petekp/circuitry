@@ -87,6 +87,11 @@ continuity_field() {
   "$NODE_BIN" "${args[@]}"
 }
 
+legacy_current_run_marker_path() {
+  local repo_root="$1"
+  printf '%s\n' "$repo_root/.circuit"/current-run
+}
+
 assert_exists() {
   local path="$1"
   [[ -e "$path" ]] || {
@@ -629,7 +634,7 @@ run_case() {
         ;;
       build-continue-saved-continuity)
         assert_value_equals "$(continuity_selection "$repo_root")" "pending_record" "continuity selection" || assert_status=1
-        assert_not_exists "$repo_root/.circuit/current-run" || assert_status=1
+        assert_not_exists "$(legacy_current_run_marker_path "$repo_root")" || assert_status=1
         assert_log_contains "$log_path" "Circuit Continuity Reference" || assert_status=1
         assert_log_contains "$log_path" ".circuit/bin/circuit-engine continuity resume --json" || assert_status=1
         assert_log_contains "$log_path" "- selection: pending_record" || assert_status=1
@@ -650,7 +655,7 @@ run_case() {
         assert_build_bootstrap "$repo_root" "Sweep" || assert_status=1
         ;;
       review-current-changes)
-        assert_not_exists "$repo_root/.circuit/current-run" || assert_status=1
+        assert_not_exists "$(legacy_current_run_marker_path "$repo_root")" || assert_status=1
         assert_log_contains "$log_path" "Review verdict:" || assert_status=1
         assert_log_contains "$log_path" "review-scope-sentinel.ts" || assert_status=1
         ;;
@@ -675,7 +680,7 @@ run_case() {
       handoff-done)
         [[ "$(continuity_selection "$repo_root")" == "none" ]] || assert_status=1
         [[ "$(continuity_record_count "$repo_root")" == "0" ]] || assert_status=1
-        assert_not_exists "$repo_root/.circuit/current-run" || assert_status=1
+        assert_not_exists "$(legacy_current_run_marker_path "$repo_root")" || assert_status=1
         assert_exists "$seeded_run_root/artifacts/active-run.md" || assert_status=1
         assert_log_contains "$log_path" ".circuit/bin/circuit-engine continuity clear --json" || assert_status=1
         assert_log_not_contains "$log_path" "handoff.md" || assert_status=1

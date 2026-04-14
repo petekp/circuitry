@@ -1,0 +1,54 @@
+# CI Ratchets: Release Contract Convergence
+
+ratchets:
+  - id: workers-alone-fallback
+    pattern: 'use --skills "workers" alone'
+    scope: "skills/build/SKILL.md skills/repair/SKILL.md skills/migrate/SKILL.md skills/sweep/SKILL.md"
+    budget: 0
+    target: 0
+    problem: "Parent workflow docs describe workers as a domain skill fallback instead of an adapter utility"
+    eliminated_by:
+      - slice-001-contract-docs
+
+  - id: workers-domain-skill-examples
+    pattern: '--skills "workers'
+    scope: "skills/build/SKILL.md skills/repair/SKILL.md skills/migrate/SKILL.md skills/sweep/SKILL.md"
+    budget: 0
+    target: 0
+    problem: "Parent workflow bash examples pass workers through --skills instead of handing off to the adapter utility"
+    eliminated_by:
+      - slice-001-contract-docs
+
+  - id: taxonomy-drift
+    pattern: "circuit-vs-utility classification mismatch"
+    scope: "README.md CIRCUITS.md ARCHITECTURE.md CUSTOM-CIRCUITS.md"
+    budget: 0
+    target: 0
+    problem: "Public and contributor docs disagree about what counts as a circuit versus a utility"
+    enforced_by:
+      - "scripts/runtime/engine/src/release-integrity.test.ts"
+    eliminated_by:
+      - slice-002-utility-taxonomy
+
+  - id: verifier-smoke-only
+    pattern: "template-only verify-install smoke coverage"
+    scope: "scripts/verify-install.sh .github/workflows/ci.yml"
+    budget: 0
+    target: 0
+    problem: "The installed verifier can pass without exercising the public installed-surface contract"
+    enforced_by:
+      - "scripts/runtime/engine/src/release-integrity.test.ts"
+      - "scripts/runtime/engine/src/runtime-cli-integration.test.ts"
+    eliminated_by:
+      - slice-004-installed-verifier
+
+  - id: installed-cli-round-trip-gap
+    pattern: "missing subprocess coverage for read-config + append-event + derive-state + resume"
+    scope: "scripts/runtime/engine/src/"
+    budget: 0
+    target: 0
+    problem: "Existing unit tests do not fully prove installed-surface CLI behavior and recovery paths"
+    enforced_by:
+      - "scripts/runtime/engine/src/runtime-cli-integration.test.ts"
+    eliminated_by:
+      - slice-005-runtime-regression-ratchets

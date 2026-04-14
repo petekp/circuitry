@@ -1,0 +1,279 @@
+# Migration Slices: Continuity Control Plane
+
+slices:
+  - id: slice-000-characterization
+    type: implementation
+    name: "Characterize current continuity behavior"
+    status: done
+    dependencies: []
+    touched_paths:
+      - scripts/runtime/engine/src/session-start.integration.test.ts
+      - scripts/runtime/engine/src/user-prompt-submit.integration.test.ts
+      - scripts/runtime/engine/src/catalog/prompt-surface-contracts.test.ts
+    external_surfaces:
+      - "/circuit:handoff"
+      - "session-start"
+    contracts:
+      added: []
+      changed:
+        - "Continuity prompt-surface behavior is pinned by tests"
+      removed: []
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && npm test -- src/session-start.integration.test.ts src/user-prompt-submit.integration.test.ts src/catalog/prompt-surface-contracts.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Complete before the no-compat cutover"
+
+  - id: slice-001-storage
+    type: implementation
+    name: "Add no-compat continuity schemas and storage helpers"
+    status: done
+    dependencies:
+      - slice-000-characterization
+    touched_paths:
+      - schemas/continuity-index.schema.json
+      - schemas/continuity-record.schema.json
+      - scripts/runtime/engine/src/continuity-control-plane.ts
+      - scripts/runtime/engine/src/continuity-control-plane.test.ts
+      - scripts/runtime/engine/src/schema.ts
+    external_surfaces:
+      - ".circuit/control-plane/continuity-index.json"
+      - ".circuit/control-plane/continuity-records/<record-id>.json"
+    contracts:
+      added:
+        - "Atomic validated continuity record/index storage"
+      changed:
+        - "Schema helpers cache continuity schemas"
+      removed:
+        - "Legacy/projection metadata from the continuity control plane"
+    denylist_patterns:
+      - "legacy_import"
+      - "projection_revision"
+    deletion_targets: []
+    temp_artifacts:
+      - "Atomic write temp files"
+    docs_to_update:
+      - docs/continuity-control-plane-rfc.md
+      - docs/continuity-control-plane-implementation-plan.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'legacy_import|projection_revision'
+        scope: 'scripts/runtime/engine/src/continuity-control-plane.ts schemas/continuity-*.schema.json'
+        reason: "Compatibility metadata must stay deleted."
+    verification_commands:
+      - "cd scripts/runtime/engine && npm run typecheck"
+      - "cd scripts/runtime/engine && npm test -- src/continuity-control-plane.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12"
+
+  - id: slice-002-index-current-run
+    type: implementation
+    name: "Make indexed current_run authoritative"
+    status: done
+    dependencies:
+      - slice-001-storage
+    touched_paths:
+      - scripts/runtime/engine/src/bootstrap.ts
+      - scripts/runtime/engine/src/command-support.ts
+      - scripts/runtime/engine/src/bootstrap.test.ts
+      - scripts/runtime/engine/src/runtime-cli-integration.test.ts
+    external_surfaces:
+      - ".circuit/current-run"
+    contracts:
+      added:
+        - "Index-backed current run attachment"
+      changed:
+        - "Pointer becomes a mirror of indexed state"
+      removed: []
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && npm test -- src/bootstrap.test.ts src/runtime-cli-integration.test.ts src/continuity-control-plane.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12 by making bootstrap attach current_run in the continuity index, making .circuit/current-run a mirror of indexed state, detaching current_run on terminal completion, and extending bundled CLI coverage."
+
+  - id: slice-003-engine-commands
+    type: implementation
+    name: "Add save, resume, status, and clear continuity commands"
+    status: done
+    dependencies:
+      - slice-002-index-current-run
+    touched_paths:
+      - scripts/runtime/engine/src/cli/circuit-engine.ts
+      - scripts/runtime/engine/src/cli/continuity.ts
+      - scripts/runtime/bin/circuit-engine.js
+      - scripts/runtime/bin/continuity.js
+    external_surfaces:
+      - "circuit-engine continuity status"
+      - "circuit-engine continuity save"
+      - "circuit-engine continuity resume"
+      - "circuit-engine continuity clear"
+    contracts:
+      added:
+        - "Engine continuity command family"
+      changed: []
+      removed:
+        - "The idea of continuity render/import subcommands"
+    denylist_patterns:
+      - "import-legacy"
+      - "render"
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && npm test -- src/runtime-cli-integration.test.ts src/continuity-control-plane.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12 by adding engine-owned continuity status/save/resume/clear commands, wiring both circuit-engine and the standalone continuity CLI to the control plane, and verifying bundled/runtime behavior."
+
+  - id: slice-004-cutover
+    type: implementation
+    name: "Cut handoff prompt surfaces and session-start over to engine continuity"
+    status: done
+    dependencies:
+      - slice-003-engine-commands
+    touched_paths:
+      - scripts/runtime/engine/src/cli/session-start.ts
+      - scripts/runtime/engine/src/cli/user-prompt-submit.ts
+      - scripts/runtime/engine/src/catalog/prompt-surface-contracts.ts
+      - skills/handoff/SKILL.md
+    external_surfaces:
+      - "/circuit:handoff"
+      - "session-start"
+    contracts:
+      added: []
+      changed:
+        - "Prompt surfaces instruct the model to use engine continuity commands"
+      removed:
+        - "Handoff path authority wording"
+    denylist_patterns:
+      - "Read this handoff file first if it exists"
+      - "handoff first, active-run fallback second"
+    deletion_targets:
+      - "Markdown continuity guidance"
+    temp_artifacts: []
+    docs_to_update:
+      - skills/handoff/SKILL.md
+      - docs/continuity-control-plane-rfc.md
+    dependency_changes: []
+    residue_queries: []
+    verification_commands:
+      - "cd scripts/runtime/engine && npm test -- src/session-start.integration.test.ts src/user-prompt-submit.integration.test.ts src/catalog/prompt-surface-contracts.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12 by making session-start read only control-plane continuity status, cutting /circuit:handoff guidance over to engine continuity commands, updating generated prompt contracts and skill text, extending integration coverage, rebuilding bundles, and refreshing generated prompt surfaces."
+
+  - id: slice-005-heuristic-deletion
+    type: implementation
+    name: "Delete heuristic continuity selector code"
+    status: done
+    dependencies:
+      - slice-001-storage
+    touched_paths:
+      - scripts/runtime/engine/src/continuity.ts
+      - scripts/runtime/engine/src/cli/user-prompt-submit.ts
+      - scripts/runtime/engine/src/catalog/prompt-surface-contracts.ts
+      - scripts/runtime/engine/src/session-start.integration.test.ts
+      - scripts/runtime/engine/src/user-prompt-submit.integration.test.ts
+      - skills/handoff/SKILL.md
+    external_surfaces:
+      - "/circuit:handoff"
+      - "session-start"
+    contracts:
+      added: []
+      changed:
+        - "Removed run-local handoff preference and scan fallback"
+      removed:
+        - "Compatibility-only runtime heuristics"
+    denylist_patterns:
+      - "findLatestActiveRun\\("
+      - "Session Handoff"
+    deletion_targets:
+      - "Run-local handoff selection"
+      - "Scan fallback for continuity"
+    temp_artifacts: []
+    docs_to_update:
+      - skills/handoff/SKILL.md
+      - docs/continuity-control-plane-*.md
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'findLatestActiveRun\\('
+        scope: 'scripts/runtime/engine/src'
+        reason: "No scan fallback survives."
+    verification_commands:
+      - "cd scripts/runtime/engine && npm run typecheck"
+      - "cd scripts/runtime/engine && npm test -- src/session-start.integration.test.ts src/user-prompt-submit.integration.test.ts src/catalog/prompt-surface-contracts.test.ts src/continuity-control-plane.test.ts"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12 by removing run-local handoff preference, removing scan fallback, deleting `# Session Handoff` parsing, simplifying prompt-surface wording, and keeping the temporary canonical-handoff path only until engine-owned continuity commands land."
+
+  - id: slice-006-closeout
+    type: convergence
+    name: "Refresh bundled surfaces, verify, and sync cache"
+    status: done
+    dependencies:
+      - slice-004-cutover
+      - slice-005-heuristic-deletion
+    touched_paths:
+      - scripts/runtime/engine/src/project-root.ts
+      - scripts/runtime/engine/src/continuity.ts
+      - scripts/runtime/engine/src/continuity-commands.ts
+      - scripts/runtime/engine/src/session-start.integration.test.ts
+      - scripts/runtime/bin/*
+      - scripts/runtime/generated/*
+      - .claude/migration/continuity-control-plane/*
+    external_surfaces:
+      - "bundled runtime CLIs"
+      - "generated prompt contracts"
+      - "cache copy"
+    contracts:
+      added: []
+      changed: []
+      removed: []
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'resolveHandoffPath\(|hasValidHandoff\(|inspectContinuity\(|resolveCurrentRun\(|projectSlug\('
+        scope: 'scripts/runtime/engine/src'
+        reason: "Legacy continuity selector helpers must stay deleted after closeout."
+    verification_commands:
+      - "cd scripts/runtime/engine && node esbuild.config.mjs"
+      - "cd /Users/petepetrash/Code/circuit && node scripts/runtime/bin/catalog-compiler.js generate"
+      - "cd scripts/runtime/engine && npm test -- src/session-start.integration.test.ts src/user-prompt-submit.integration.test.ts src/runtime-cli-integration.test.ts src/render-active-run.test.ts src/resume.test.ts src/catalog/prompt-surface-contracts.test.ts src/continuity-control-plane.test.ts"
+      - "cd /Users/petepetrash/Code/circuit && ./scripts/verify-install.sh --mode repo"
+      - "cd /Users/petepetrash/Code/circuit && ./.claude/migration/continuity-control-plane/guard.sh"
+      - "cd /Users/petepetrash/Code/circuit && ./scripts/sync-to-cache.sh"
+    replay_scenarios: []
+    smoke_scenarios: []
+    manual_checks: []
+    risks: []
+    notes: "Completed on 2026-04-12 by deleting the legacy `scripts/runtime/engine/src/continuity.ts` selector surface, extracting `resolveProjectRoot()` into `project-root.ts`, updating the legacy-home fixture coverage to prove session-start ignores handoff markdown even when `CIRCUIT_HANDOFF_HOME` is set, adding a zero-budget selector residue ratchet to the migration guard, rebuilding bundled CLIs, refreshing generated surfaces, passing the full closeout suite, and syncing the cache."

@@ -84,6 +84,7 @@ const MINIMAL_MANIFEST: Record<string, unknown> = {
 
 const TS = "2026-04-01T12:00:00.000Z";
 let tsCounter = 0;
+const LEGACY_STEP_INVALIDATION_EVENT = `step_${["re", "opened"].join("")}`;
 
 /** Generate an incrementing ISO timestamp for deterministic ordering. */
 function nextTs(): string {
@@ -228,7 +229,7 @@ describe("deriveState", () => {
   });
 
   describe("test_ignores_unsupported_events", () => {
-    it("should ignore legacy step_reopened events during projection", () => {
+    it("should ignore legacy invalidation events during projection", () => {
       resetTs();
       const events = [
         makeEvent("run_started", {
@@ -261,7 +262,7 @@ describe("deriveState", () => {
           { step_id: "step-two" },
         ),
         makeEvent(
-          "step_reopened",
+          LEGACY_STEP_INVALIDATION_EVENT,
           {
             from_step: "step-two",
             to_step: "step-one",

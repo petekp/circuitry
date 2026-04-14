@@ -1,0 +1,75 @@
+slices:
+  - id: slice-001
+    type: implementation
+    name: "Isolated Codex dispatch default"
+    status: done
+    dependencies: []
+    touched_paths:
+      - scripts/runtime/engine/src/codex-runtime.ts
+      - scripts/runtime/engine/src/dispatch.ts
+      - scripts/runtime/engine/src/command-support.ts
+      - scripts/runtime/engine/src/dispatch.test.ts
+      - scripts/runtime/engine/src/codex-runtime.test.ts
+      - scripts/runtime/engine/src/dispatch-contract.test.ts
+      - scripts/runtime/engine/src/cli/verify-install.ts
+      - scripts/runtime/bin/dispatch.js
+      - scripts/runtime/bin/verify-install.js
+      - scripts/runtime/generated/surface-manifest.json
+      - README.md
+      - circuit.config.example.yaml
+    external_surfaces:
+      - "dispatch CLI"
+      - "verify-install repo mode"
+      - "README adapter docs"
+      - "example config"
+    contracts:
+      added:
+        - "DispatchReceipt.runtime_boundary"
+        - "DispatchReceipt.diagnostics_path"
+        - "DispatchReceipt.warnings"
+      changed:
+        - "`codex` now means isolated runtime"
+        - "`auto` resolves to `codex-isolated` when Codex exists"
+      removed: []
+    denylist_patterns:
+      - "spawnSync\\(\"codex\""
+    deletion_targets:
+      - "direct ambient built-in Codex spawn path in dispatch.ts"
+    temp_artifacts: []
+    docs_to_update:
+      - README.md
+      - circuit.config.example.yaml
+    dependency_changes: []
+    residue_queries:
+      - pattern: 'spawnSync\\("codex"'
+        scope: scripts/runtime/engine/src
+      - pattern: "\\[mcp_servers\\]"
+        scope: scripts/runtime/engine/src/codex-runtime.ts README.md
+    verification_commands:
+      - "npm run typecheck"
+      - "npx vitest run src/dispatch.test.ts src/codex-runtime.test.ts src/dispatch-contract.test.ts"
+      - "./scripts/verify-install.sh --mode repo"
+    notes:
+      - "Repo-mode verify-install now uses a fake codex shim to validate CODEX_HOME, TMPDIR, cwd, auth bootstrap, and config isolation."
+
+  - id: slice-002
+    type: implementation
+    name: "Dedicated verification runner"
+    status: proposed
+    dependencies: [slice-001]
+    touched_paths: []
+    external_surfaces:
+      - "verification workflow"
+    contracts:
+      added: []
+      changed: []
+      removed: []
+    denylist_patterns: []
+    deletion_targets: []
+    temp_artifacts: []
+    docs_to_update: []
+    dependency_changes: []
+    residue_queries: []
+    verification_commands: []
+    notes:
+      - "Deferred by charter; do not fold into the isolation wave."
