@@ -63,6 +63,19 @@ Replace prompt-authored markdown continuity with engine-owned structured continu
         active-run.md
 ```
 
+## Retention
+
+Legacy handoff stores are deprecated. The only active continuity store is
+`.circuit/control-plane/`.
+
+- Do not delete legacy handoff files automatically as part of ordinary engine
+  commands.
+- Use `scripts/runtime/bin/reap-legacy-handoffs.sh` to inventory
+  `~/.claude/handoffs`, `~/.relay/handoffs`, and any project-local
+  `.relay/handoffs` directories.
+- Run the reaper in dry-run mode first. Use `--execute` only when you want to
+  archive those legacy files into `$HOME/.circuit/archive/legacy-handoffs/`.
+
 ## Schemas
 
 ### ContinuityIndexV1
