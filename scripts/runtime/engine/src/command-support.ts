@@ -367,7 +367,7 @@ function projectRootForRunRoot(runRoot: string): string {
   return resolve(runRoot, "..", "..", "..");
 }
 
-function syncIndexedCurrentRun(
+export function syncIndexedCurrentRun(
   projectRoot: string,
   runRoot: string,
   renderResult: RenderActiveRunResult,

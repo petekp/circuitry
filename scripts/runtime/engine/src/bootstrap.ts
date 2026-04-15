@@ -6,10 +6,10 @@ import {
   appendValidatedEvents,
   readGitHead,
   renderRunState,
+  syncIndexedCurrentRun,
   validateManifestDocument,
   writeManifestSnapshot,
 } from "./command-support.js";
-import { upsertContinuityCurrentRun } from "./continuity-control-plane.js";
 import {
   recordInvocationFailed,
   recordInvocationRouted,
@@ -171,20 +171,7 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
   }
 
   if (attachment === "attached") {
-    upsertContinuityCurrentRun({
-      currentStep:
-        typeof renderResult.state.current_step === "string"
-          ? renderResult.state.current_step
-          : null,
-      lastValidatedAt:
-        typeof renderResult.state.updated_at === "string"
-          ? renderResult.state.updated_at
-          : undefined,
-      manifestPresent: existsSync(manifestSnapshotPath),
-      projectRoot,
-      runSlug,
-      runtimeStatus: renderResult.status,
-    });
+    syncIndexedCurrentRun(projectRoot, runRoot, renderResult);
   }
 
   if (attachment === "attached") {

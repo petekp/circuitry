@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, describe, it } from "vitest";
 
 import { bootstrapRun } from "./bootstrap.js";
+import { recordEventsAndRender } from "./command-support.js";
 import { readContinuityIndex } from "./continuity-control-plane.js";
 import {
   loadBuildManifest,
@@ -123,6 +124,47 @@ describe("bootstrap", () => {
         runRoot,
       }),
     ).toThrow(/without manifest snapshot/i);
+  });
+
+  it("clears continuity when re-bootstrapped against a terminal run", () => {
+    const { projectRoot, runRoot } = makeTempProject("terminal-rebootstrap");
+    const manifestPath = join(projectRoot, "build.manifest.yaml");
+    writeManifestFile(manifestPath, loadBuildManifest());
+
+    bootstrapRun({
+      entryMode: "default",
+      manifestPath,
+      projectRoot,
+      runRoot,
+    });
+
+    // Mark the run terminal via recordEventsAndRender. This also clears
+    // current_run from continuity, establishing the baseline that
+    // bootstrap must honor on re-entry.
+    recordEventsAndRender(runRoot, [
+      {
+        eventType: "run_completed",
+        payload: {
+          status: "completed",
+          terminal_target: "@complete",
+        },
+        stepId: "frame",
+      },
+    ]);
+
+    expect(readContinuityIndex(projectRoot)?.current_run ?? null).toBeNull();
+
+    // Re-bootstrap the same run (manifest-snapshot-match fast path).
+    // current_run must remain cleared, matching the canonical semantic
+    // already enforced by recordEventsAndRender.
+    bootstrapRun({
+      entryMode: "default",
+      manifestPath,
+      projectRoot,
+      runRoot,
+    });
+
+    expect(readContinuityIndex(projectRoot)?.current_run ?? null).toBeNull();
   });
 
   it("supports detached bootstrap without mutating project attachment state", () => {
