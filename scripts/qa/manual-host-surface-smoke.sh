@@ -490,12 +490,25 @@ process.exit(0);
 NODE
 }
 
-assert_continuity_banner() {
+assert_pending_continuity_banner() {
   local log_path="$1"
-  assert_log_contains "$log_path" "Circuit continuity available"
-  assert_log_contains "$log_path" "This is context only."
-  assert_log_contains "$log_path" 'Fresh `/circuit:*` commands should be honored as the active task.'
+  assert_log_contains "$log_path" "Circuit continuity pending"
   assert_log_contains "$log_path" "/circuit:handoff resume"
+  assert_log_contains "$log_path" "/circuit:run continue"
+  assert_log_contains "$log_path" "/circuit:handoff done"
+  assert_log_contains "$log_path" "Available: pending continuity"
+  assert_log_not_contains "$log_path" "short ack"
+  assert_log_not_contains "$log_path" "Reply with a continuation signal"
+}
+
+assert_current_run_fallback_banner() {
+  local log_path="$1"
+  assert_log_contains "$log_path" "Circuit active run attached"
+  assert_log_contains "$log_path" "/circuit:handoff resume"
+  assert_log_contains "$log_path" "Available: active run"
+  assert_log_not_contains "$log_path" "Circuit continuity pending"
+  assert_log_not_contains "$log_path" "/circuit:handoff done"
+  assert_log_not_contains "$log_path" "short ack"
 }
 
 assert_build_bootstrap() {
@@ -611,16 +624,14 @@ run_case() {
         assert_build_bootstrap "$repo_root" || assert_status=1
         assert_bootstrap_only_log "$log_path" || assert_status=1
         assert_build_semantic_bootstrap_log "$log_path" || assert_status=1
-        assert_continuity_banner "$log_path" || assert_status=1
-        assert_log_contains "$log_path" "pending continuity" || assert_status=1
+        assert_pending_continuity_banner "$log_path" || assert_status=1
         assert_log_not_contains "$log_path" "PENDING_CONTINUITY_SENTINEL" || assert_status=1
         ;;
       run-develop-active-run)
         assert_build_bootstrap "$repo_root" || assert_status=1
         assert_bootstrap_only_log "$log_path" || assert_status=1
         assert_build_semantic_bootstrap_log "$log_path" || assert_status=1
-        assert_continuity_banner "$log_path" || assert_status=1
-        assert_log_contains "$log_path" "active run" || assert_status=1
+        assert_current_run_fallback_banner "$log_path" || assert_status=1
         assert_log_not_contains "$log_path" "ACTIVE_RUN_CONTINUITY_SENTINEL" || assert_status=1
         if [[ "$(current_run_target "$repo_root")" == "$seeded_run_root" ]]; then
           printf 'fresh workflow command did not replace the seeded active run\n' >&2

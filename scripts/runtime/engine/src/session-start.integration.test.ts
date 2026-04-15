@@ -62,10 +62,10 @@ function writePendingRunContinuity(projectRoot: string, runRoot: string): void {
       head: null,
     },
     narrative: {
-      debt_markdown: "- CONSTRAINT: stay passive",
-      goal: "Keep continuity engine-owned",
-      next: "DO: pending-record-sentinel",
-      state_markdown: "- pending-record-sentinel",
+      debt_markdown: "- CONSTRAINT: debt-sentinel-do-not-leak",
+      goal: "goal-display-ok",
+      next: "DO: next-display-ok",
+      state_markdown: "- state-sentinel-do-not-leak",
     },
     project_root: canonicalProjectRoot,
     record_id: `continuity-${runSlug}`,
@@ -96,7 +96,7 @@ function writePendingRunContinuity(projectRoot: string, runRoot: string): void {
 }
 
 describe("session-start integration", () => {
-  it("announces pending continuity as passive context without injecting resume instructions", () => {
+  it("announces pending continuity with goal/next and explicit slash-command guidance", () => {
     const { projectRoot, runRoot } = createBuildRun("Pending continuity should stay passive");
     const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
 
@@ -110,12 +110,15 @@ describe("session-start integration", () => {
     const result = runSessionStart(projectRoot, homeDir);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Circuit continuity available");
-    expect(result.stdout).toContain("This is context only.");
-    expect(result.stdout).toContain("Fresh `/circuit:*` commands should be honored as the active task.");
+    expect(result.stdout).toContain("Circuit continuity pending");
+    expect(result.stdout).toContain("Goal: goal-display-ok");
+    expect(result.stdout).toContain("Next: DO: next-display-ok");
     expect(result.stdout).toContain("/circuit:handoff resume");
-    expect(result.stdout).toContain("pending continuity");
-    expect(result.stdout).not.toContain("pending-record-sentinel");
+    expect(result.stdout).toContain("/circuit:run continue");
+    expect(result.stdout).toContain("Available: pending continuity");
+    expect(result.stdout).not.toContain("short ack");
+    expect(result.stdout).not.toContain("state-sentinel-do-not-leak");
+    expect(result.stdout).not.toContain("debt-sentinel-do-not-leak");
     expect(result.stdout).not.toContain("Resume from the handoff above.");
     expect(result.stdout).not.toContain("execute NEXT");
 
@@ -155,14 +158,14 @@ describe("session-start integration", () => {
     const defaultResult = runSessionStart(projectRoot, homeDir);
     expect(defaultResult.status).toBe(0);
     expect(defaultResult.stdout).toContain("Circuit is active.");
-    expect(defaultResult.stdout).not.toContain("Circuit continuity available");
+    expect(defaultResult.stdout).not.toContain("Circuit continuity pending");
 
     const overrideResult = runSessionStart(projectRoot, homeDir, {
       CIRCUIT_HANDOFF_HOME: siblingHome,
     });
     expect(overrideResult.status).toBe(0);
     expect(overrideResult.stdout).toContain("Circuit is active.");
-    expect(overrideResult.stdout).not.toContain("Circuit continuity available");
+    expect(overrideResult.stdout).not.toContain("Circuit continuity pending");
   });
 
   it("refreshes event-backed runs before announcing passive active-run continuity", () => {
@@ -178,10 +181,12 @@ describe("session-start integration", () => {
     const result = runSessionStart(projectRoot, homeDir);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Circuit continuity available");
-    expect(result.stdout).toContain("This is context only.");
+    expect(result.stdout).toContain("Circuit active run attached");
     expect(result.stdout).toContain("/circuit:handoff resume");
-    expect(result.stdout).toContain("active run");
+    expect(result.stdout).toContain("Available: active run");
+    expect(result.stdout).not.toContain("Circuit continuity pending");
+    expect(result.stdout).not.toContain("/circuit:handoff done");
+    expect(result.stdout).not.toContain("short ack");
     expect(result.stdout).not.toContain("## Workflow\nBuild");
     expect(result.stdout).not.toContain("Refresh before injection");
     expect(result.stdout).not.toContain("STALE");
@@ -193,6 +198,43 @@ describe("session-start integration", () => {
     );
     expect(refreshed).toContain("## Workflow\nBuild");
     expect(refreshed).not.toContain("STALE");
+  });
+
+  it("current-run-only banner does not advertise /circuit:handoff done or pending-continuity copy", () => {
+    const { projectRoot, runRoot } = createBuildRun("Current run only, no pending record");
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
+
+    writeFileSync(
+      join(runRoot, "artifacts", "active-run.md"),
+      "# Active Run\n## Workflow\nBuild\n",
+      "utf-8",
+    );
+
+    const result = runSessionStart(projectRoot, homeDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Circuit active run attached");
+    expect(result.stdout).toContain("Available: active run");
+    expect(result.stdout).not.toContain("/circuit:handoff done");
+    expect(result.stdout).not.toContain("Circuit continuity pending.");
+    expect(result.stdout).not.toContain("auto-resumes saved state");
+    expect(result.stdout).not.toContain("Available: pending continuity");
+    expect(result.stdout).not.toContain("short ack");
+  });
+
+  it("pending-record banner uses explicit slash-command guidance, not bare-word continuation", () => {
+    const { projectRoot, runRoot } = createBuildRun("Pending banner must cite explicit slash commands");
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
+
+    writePendingRunContinuity(projectRoot, runRoot);
+
+    const result = runSessionStart(projectRoot, homeDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("/circuit:handoff resume");
+    expect(result.stdout).not.toContain("short ack");
+    expect(result.stdout).not.toMatch(/Reply with a continuation signal \([^)]*\bok\b/);
+    expect(result.stdout).not.toMatch(/Reply with a continuation signal \([^)]*\byep\b/);
   });
 
   it("ignores a mirrored current-run marker when it is not backed by indexed current_run", () => {
@@ -218,7 +260,7 @@ describe("session-start integration", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Circuit is active.");
-    expect(result.stdout).not.toContain("Circuit continuity available");
+    expect(result.stdout).not.toContain("Circuit continuity pending");
 
     const saved = readFileSync(join(runRoot, "artifacts", "active-run.md"), "utf-8");
     expect(saved).toContain("## Workflow\nLegacy");

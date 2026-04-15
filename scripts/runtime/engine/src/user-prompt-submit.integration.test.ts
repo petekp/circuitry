@@ -55,7 +55,7 @@ function runUserPromptSubmit(
 }
 
 function readAdditionalContext(result: ReturnType<typeof spawnSync>): string {
-  const payload = JSON.parse(result.stdout);
+  const payload = JSON.parse(result.stdout as string);
   expect(payload.suppressOutput).toBe(true);
   expect(payload.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
   return payload.hookSpecificOutput.additionalContext as string;
@@ -334,6 +334,16 @@ describe("user-prompt-submit integration", () => {
     expect(existsSync(pluginRootPath)).toBe(false);
   });
 
+  it("does not intercept bare-word continuation replies (session-start banner must never promise this)", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-bare-continuation-"));
+
+    for (const bareWord of ["continue", "go", "resume", "pick up", "keep going", "ok", "yes", "yep"]) {
+      const result = runUserPromptSubmit(bareWord, { cwd: projectRoot });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("");
+    }
+  });
+
   it("persists the installed plugin root and authors local helper wrappers for circuit prompts", () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-root-"));
     const pluginRootPath = resolve(projectRoot, ".circuit", "plugin-root");
@@ -532,7 +542,7 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("Do not stop after merely summarizing current status");
     expect(context).toContain("/circuit:handoff resume");
     expect(context).toContain("/circuit:handoff done");
-    expect(context).toContain("Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.");
+    expect(context).toContain("Handoff saved. Next session: run `/circuit:handoff resume` to inspect and continue, or name a new task via `/circuit:run <task>` to start fresh.");
     expect(context).toContain("Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.");
     expect(context).toContain("## Control-Plane Status");
     expect(context).toContain("- selection: none");

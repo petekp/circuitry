@@ -3,22 +3,55 @@
 import { existsSync } from "node:fs";
 
 import { getContinuityStatus } from "../continuity-commands.js";
-import { clearContinuityCurrentRun } from "../continuity-control-plane.js";
+import {
+  clearContinuityCurrentRun,
+  type ContinuityRecordV1,
+} from "../continuity-control-plane.js";
 import { ensureCircuitHome } from "../ensure-circuit-dirs.js";
 import { resolveProjectRoot } from "../project-root.js";
 import { renderActiveRun } from "../render-active-run.js";
 
-function printContinuityBanner(available: string, warnings: string[]): void {
-  process.stdout.write(
-    [
-      "> **Circuit continuity available.** This is context only.",
-      "> Fresh `/circuit:*` commands should be honored as the active task.",
-      "> Resume saved continuity only through `/circuit:handoff resume`.",
-      `> Available: ${available}`,
-      ...warnings.map((warning) => `> Warning: ${warning}`),
-      "",
-    ].join("\n"),
+function printPendingContinuityBanner(
+  record: ContinuityRecordV1 | null,
+  warnings: string[],
+): void {
+  const lines: string[] = ["> **Circuit continuity pending.**"];
+
+  if (record?.narrative.goal) {
+    lines.push(`> Goal: ${record.narrative.goal}`);
+  }
+  if (record?.narrative.next) {
+    lines.push(`> Next: ${record.narrative.next}`);
+  }
+
+  lines.push(
+    ">",
+    "> **To pick back up:**",
+    "> - Run `/circuit:handoff resume` to inspect and continue the saved record.",
+    "> - Or invoke a Circuit workflow with a continuation arg (for example `/circuit:run continue`) -- Circuit auto-resumes from pending continuity.",
+    "> - Or name a concrete new task via `/circuit:run <task>` -- Circuit treats that as override and starts fresh.",
+    "> - Or run `/circuit:handoff done` to clear pending continuity.",
+    "> Available: pending continuity",
+    ...warnings.map((warning) => `> Warning: ${warning}`),
+    "",
   );
+
+  process.stdout.write(lines.join("\n"));
+}
+
+function printCurrentRunFallbackBanner(): void {
+  const lines: string[] = [
+    "> **Circuit active run attached.**",
+    "> No pending continuity record -- the indexed current_run is a fallback attachment, not saved handoff authority.",
+    ">",
+    "> **To pick back up:**",
+    "> - Run `/circuit:handoff resume` to inspect the attached run and decide how to proceed.",
+    "> - Or name a concrete new task via `/circuit:run <task>` -- Circuit starts fresh.",
+    "> Available: active run",
+    "",
+  ];
+
+  process.stdout.write(lines.join("\n"));
 }
 
 function printWelcome(): void {
@@ -71,12 +104,12 @@ function main(): number {
   }
 
   if (continuity.pending_record) {
-    printContinuityBanner("pending continuity", continuity.warnings);
+    printPendingContinuityBanner(continuity.record, continuity.warnings);
     return 0;
   }
 
   if (continuity.current_run) {
-    printContinuityBanner("active run", []);
+    printCurrentRunFallbackBanner();
     return 0;
   }
 

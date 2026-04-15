@@ -254,9 +254,9 @@ const SEMANTIC_WORKFLOW_CONTRACTS_BY_SLUG = Object.fromEntries(
   SEMANTIC_WORKFLOW_CONTRACTS.map((contract) => [contract.slug, contract]),
 ) as Record<SemanticWorkflowContract["slug"], SemanticWorkflowContract>;
 
-const HANDOFF_CONTINUATION_RULE = `If the user explicitly says to continue or resume from a handoff, resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` before unrelated repo exploration. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to \`current_run\`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.`;
+const HANDOFF_CONTINUATION_RULE = `When pending continuity exists, route as follows. If the Circuit slash-command args are an explicit continuation signal (\`continue\`, \`go\`, \`resume\`, \`pick up\`, \`keep going\`), resolve it through \`${CONTINUITY_RESUME_JSON_COMMAND}\` and auto-resume without asking first. Skip resume and treat the request as fresh when the args name a concrete new task -- a new task overrides saved continuity. For any other input -- including empty args, short acknowledgments like \`ok\`/\`yes\`/\`yep\`, or genuinely ambiguous args -- call AskUserQuestion with predicted responses (\`Resume pending continuity\` / \`Start fresh\` / \`Clear pending then start fresh\`) before consuming saved continuity. Only continue a run when the selected continuity output is run-backed and warning-free. If continuity resolves only to \`current_run\`, treat that as fallback instead of saved handoff authority. Do not invent attach or rebind commands.`;
 
-const HANDOFF_CAPTURE_CONFIRMATION = "After a successful save, confirm briefly with: Handoff saved. In the next session, use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work; use `/circuit:handoff done` only to clear it.";
+const HANDOFF_CAPTURE_CONFIRMATION = "After a successful save, confirm briefly with: Handoff saved. Next session: run `/circuit:handoff resume` to inspect and continue, or name a new task via `/circuit:run <task>` to start fresh.";
 
 export const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
   build_smoke: {
@@ -297,10 +297,16 @@ export const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
     lines: [
       "# Circuit Handoff Capture Contract",
       "This prompt is the default continuity capture mode for `/circuit:handoff`.",
+      "Capture in four phases: draft from conversation, preview, confirm via AskUserQuestion, save.",
       `Check current control-plane status with \`${CONTINUITY_STATUS_JSON_COMMAND}\` before deciding what to save.`,
       "Treat that status as reference only. An existing `pending_record` does not satisfy the current bare `/circuit:handoff` request.",
-      "For bare `/circuit:handoff`, save a fresh continuity record whenever this session has any new hard-to-rediscover state worth preserving.",
-      `If capture is warranted, save through \`${LOCAL_HELPER_DIR}/circuit-engine continuity save --cwd \"$PWD\" --goal \"...\" --next \"DO: ...\" --state-markdown \"$STATE_MARKDOWN\" --debt-markdown \"$DEBT_MARKDOWN\" --json\`.`,
+      "Phase 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
+      "Phase 2 -- Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
+      "Phase 3 -- Show a compact preview of the draft (no more than ~10 lines) and confirm via AskUserQuestion with predicted responses: `Save as drafted (Recommended)`, `Let me edit a field`, `This is a closeout`, `Don't save`. Do not dump the full draft body into the question text.",
+      "If the user picks `Let me edit a field`, follow up with AskUserQuestion choosing which field (Goal / Next / State / Debt) to revise, then apply the edit before saving.",
+      "If `This is a closeout` is selected or closeout framing was detected, call AskUserQuestion to pick the seed for the next session. Infer 2-3 candidate seeds from conversation context; the user can always type their own via Other.",
+      "If `Don't save` is selected, stop without saving.",
+      `Phase 4 -- If capture is warranted, save through \`${LOCAL_HELPER_DIR}/circuit-engine continuity save --cwd \"$PWD\" --goal \"...\" --next \"DO: ...\" --state-markdown \"$STATE_MARKDOWN\" --debt-markdown \"$DEBT_MARKDOWN\" --json\`.`,
       "When real debt exists, encode it as typed `--debt-markdown` bullets.",
       "Do not move `DECIDED:`, `CONSTRAINT:`, `BLOCKED:`, or `RULED OUT:` bullets into `--state-markdown`; those belong only in `--debt-markdown`.",
       "If there is no real debt, literal `none` is allowed only as a CLI convenience; the engine normalizes it before persistence so resume never shows the sentinel.",

@@ -259,12 +259,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "9de5b15ea92327ddf949f9eb7dc91c8117baf1df8b48eef92c2e6316413ea685"
+      "sha256": "d733c3012b9166ca00f6927d913284fcd1b2c4caec2634f15cefc9b8e4b03967"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "a528e56b089b158ef67875d28853bcd79ab0a91defb7b37f2734f803933f67ec"
+      "sha256": "edbd99505b0f526322f844738ed86642921175867b715fb250bbcb8dd6c9b63d"
     },
     {
       "executable": true,
@@ -274,7 +274,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "e4555438e8162267a3445fafcb5d375c28ffdc26cd7e512ba243571cade2d629"
+      "sha256": "464cd88c4e5074eef15ce8c8825a29cd88f59bc5f332a586947f7ef6473a54de"
     },
     {
       "executable": true,
@@ -309,7 +309,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "c701b0ff7e0e43a922ec27fa998f8ca6df7e1e1f1628e594e22a9caceea51b4b"
+      "sha256": "d46e84c14c5a058ef8bd06593146c5fc99ee7c720351545d55ebe9028c4be31a"
     },
     {
       "executable": true,
@@ -324,17 +324,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "8cb36ceab3bb7fc4b297f823ecc30cec2f8e18dc8dabb4aaf1bead3feec685a6"
+      "sha256": "f4309369229c5a185cb9fc119f3a347fa11b1073865ad43b6fcfae0ea9b4f7e0"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "d34e2c0a8b2440543303e6afde02f7da8ec99d8b6f22a3509d4380ed32ab597d"
+      "sha256": "75694c7c5834d85b54488d7bf3825202c2bd5ecb6dc3e4e8c0464e20c27af9e9"
     },
     {
       "executable": false,
       "path": "scripts/runtime/generated/prompt-contracts.json",
-      "sha256": "d1005db1010c4a0f0cadd3fa6215d90264609591da4d665ef9854d8304e141de"
+      "sha256": "7460bd3f55e73f9fbbe22f049c51c519b66273e0b92072287f19d1b3d07192aa"
     },
     {
       "executable": true,
@@ -354,7 +354,7 @@
     {
       "executable": false,
       "path": "skills/build/SKILL.md",
-      "sha256": "6b4c5ca97c57018d90a7d5c753d45a72d3320cf8e8e38ca1ac59b32f01b7df41"
+      "sha256": "8942e89d2784b2ac1cc9ccda7fd9e9331c22c800d0cd0cecec92847a5c1c2f79"
     },
     {
       "executable": false,
@@ -369,7 +369,7 @@
     {
       "executable": false,
       "path": "skills/explore/SKILL.md",
-      "sha256": "554089459a7ac6f85f96506148d63a58bf2c0c22b61f514c1079d06ddf763feb"
+      "sha256": "6b7c3daa7c7d1d7aca44899188f898ecf3ce17adb0bc4bcdcd2322f8f72e32f9"
     },
     {
       "executable": true,
@@ -379,7 +379,7 @@
     {
       "executable": false,
       "path": "skills/handoff/SKILL.md",
-      "sha256": "89ec03b0b7922e44016a8a2ef5a91bff4fc452fa4a64923fc313aa4e5e4c32ce"
+      "sha256": "73a7ce5c2856ad744e9b99b5623b729471a146a8c37797a2b36e5b49b08963ed"
     },
     {
       "executable": false,
@@ -389,7 +389,7 @@
     {
       "executable": false,
       "path": "skills/migrate/SKILL.md",
-      "sha256": "611e2faf35334d0c282b980bdb605c72aa1f9bef2d6ec4f86cd4e2f07ba36908"
+      "sha256": "4af2c5dbb3d50403e04799471bc257872a461e02d0cbf25778f827a1f66e0405"
     },
     {
       "executable": false,
@@ -399,7 +399,7 @@
     {
       "executable": false,
       "path": "skills/repair/SKILL.md",
-      "sha256": "a406a7e77d449b1f5994a8b0319adddce5079170b52e76dbf3e39e8f7f43fff3"
+      "sha256": "9df5ce5ffc39cc3114d854b40aefca43aa5384ba5a7ea9ca4bb6bc1f8f230535"
     },
     {
       "executable": false,
@@ -429,7 +429,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "f35c5de1f9a8ff53d053f56d55dd8c4454835d9a441c0c3b5280b688f5cfd611"
+      "sha256": "96c234fd6114aca3cf54ae18eb106c800c3f6c4f8f3c5960aeceb2933a810440"
     },
     {
       "executable": false,
@@ -439,7 +439,7 @@
     {
       "executable": false,
       "path": "skills/sweep/SKILL.md",
-      "sha256": "6c1d6dca5b52b79a982792c61c4d91f733b875f5f51e11e2664c6d76318a02c4"
+      "sha256": "96ef9f86d58fd158394f4bc7fd0a824ff1cff88bcbf95b7f08567dbedaad356b"
     },
     {
       "executable": false,

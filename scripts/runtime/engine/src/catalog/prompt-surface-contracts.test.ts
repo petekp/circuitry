@@ -10,7 +10,7 @@ import {
   renderCommandShim,
   renderPromptContractsJson,
 } from "./prompt-surface-contracts.js";
-import type { Catalog, UtilityEntry, WorkflowEntry } from "./types.js";
+import type { UtilityEntry, WorkflowEntry } from "./types.js";
 
 const catalog = extract(resolve(REPO_ROOT, "skills"));
 
@@ -112,6 +112,49 @@ describe("prompt surface contracts", () => {
     });
   });
 
+  it("HANDOFF_CONTINUATION_RULE does not treat empty args or short acknowledgments as auto-resume triggers", () => {
+    const workflowBlockNames = [
+      "RUN_CONTRACT",
+      "BUILD_CONTRACT",
+      "EXPLORE_CONTRACT",
+      "MIGRATE_CONTRACT",
+      "REPAIR_CONTRACT",
+      "SWEEP_CONTRACT",
+    ] as const;
+
+    for (const blockName of workflowBlockNames) {
+      const contract = getBlockTarget(blockName).render(catalog);
+
+      // Narrow auto-resume trigger list: only explicit resume verbs.
+      expect(
+        contract,
+        `${blockName} should have the narrow trigger list`,
+      ).toContain(
+        "explicit continuation signal (`continue`, `go`, `resume`, `pick up`, `keep going`)",
+      );
+
+      // Old trigger text that treated weak signals as auto-resume consent must not reappear.
+      expect(
+        contract,
+        `${blockName} must not re-list empty args as an auto-resume trigger`,
+      ).not.toMatch(/`keep going`,\s*empty args/);
+      expect(
+        contract,
+        `${blockName} must not wire weak signals to auto-resume without asking`,
+      ).not.toMatch(/short acknowledgment[^\n]*auto-resume without asking/);
+
+      // Weak signals must route through AskUserQuestion, not silent auto-resume.
+      expect(
+        contract,
+        `${blockName} must route weak signals through AskUserQuestion`,
+      ).toMatch(/(empty args|short acknowledgments?|ambiguous)[^\n]*AskUserQuestion/);
+      expect(
+        contract,
+        `${blockName} must require consent before consuming saved continuity`,
+      ).toContain("before consuming saved continuity");
+    }
+  });
+
   it("keeps build smoke command fragments aligned across generated surfaces", () => {
     const manifest = buildPromptContractsManifest(catalog);
     const buildContract = getBlockTarget("BUILD_CONTRACT").render(catalog);
@@ -182,13 +225,16 @@ describe("prompt surface contracts", () => {
     expect(handoffBlock).not.toContain("handoff first, active-run fallback second");
   });
 
-  it("clarifies capture vs continue wording for handoff prompt surfaces", () => {
+  it("uses AskUserQuestion confirmation and explicit-resume guidance in handoff capture", () => {
     const manifest = buildPromptContractsManifest(catalog);
     const handoffCaptureLines = manifest.fast_modes.handoff_capture.lines.join("\n");
 
+    expect(handoffCaptureLines).toContain("AskUserQuestion");
     expect(handoffCaptureLines).toContain(
-      "use `/circuit:handoff resume` to inspect the continuity record, then start a fresh `/circuit:*` command to continue the work",
+      "run `/circuit:handoff resume` to inspect and continue",
     );
+    expect(handoffCaptureLines).not.toContain("reply with a continuation signal");
+    expect(handoffCaptureLines).toContain("closeout");
     expect(handoffCaptureLines).not.toContain("pick it up");
   });
 
@@ -341,10 +387,16 @@ describe("prompt surface contracts", () => {
             "lines": [
               "# Circuit Handoff Capture Contract",
               "This prompt is the default continuity capture mode for \`/circuit:handoff\`.",
+              "Capture in four phases: draft from conversation, preview, confirm via AskUserQuestion, save.",
               "Check current control-plane status with \`.circuit/bin/circuit-engine continuity status --json\` before deciding what to save.",
               "Treat that status as reference only. An existing \`pending_record\` does not satisfy the current bare \`/circuit:handoff\` request.",
-              "For bare \`/circuit:handoff\`, save a fresh continuity record whenever this session has any new hard-to-rediscover state worth preserving.",
-              "If capture is warranted, save through \`.circuit/bin/circuit-engine continuity save --cwd \\"$PWD\\" --goal \\"...\\" --next \\"DO: ...\\" --state-markdown \\"$STATE_MARKDOWN\\" --debt-markdown \\"$DEBT_MARKDOWN\\" --json\`.",
+              "Phase 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
+              "Phase 2 -- Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
+              "Phase 3 -- Show a compact preview of the draft (no more than ~10 lines) and confirm via AskUserQuestion with predicted responses: \`Save as drafted (Recommended)\`, \`Let me edit a field\`, \`This is a closeout\`, \`Don't save\`. Do not dump the full draft body into the question text.",
+              "If the user picks \`Let me edit a field\`, follow up with AskUserQuestion choosing which field (Goal / Next / State / Debt) to revise, then apply the edit before saving.",
+              "If \`This is a closeout\` is selected or closeout framing was detected, call AskUserQuestion to pick the seed for the next session. Infer 2-3 candidate seeds from conversation context; the user can always type their own via Other.",
+              "If \`Don't save\` is selected, stop without saving.",
+              "Phase 4 -- If capture is warranted, save through \`.circuit/bin/circuit-engine continuity save --cwd \\"$PWD\\" --goal \\"...\\" --next \\"DO: ...\\" --state-markdown \\"$STATE_MARKDOWN\\" --debt-markdown \\"$DEBT_MARKDOWN\\" --json\`.",
               "When real debt exists, encode it as typed \`--debt-markdown\` bullets.",
               "Do not move \`DECIDED:\`, \`CONSTRAINT:\`, \`BLOCKED:\`, or \`RULED OUT:\` bullets into \`--state-markdown\`; those belong only in \`--debt-markdown\`.",
               "If there is no real debt, literal \`none\` is allowed only as a CLI convenience; the engine normalizes it before persistence so resume never shows the sentinel.",
@@ -355,7 +407,7 @@ describe("prompt surface contracts", () => {
               "Supported handoff commands are \`/circuit:handoff\`, \`/circuit:handoff resume\`, and \`/circuit:handoff done\`.",
               "Do not invent \`/circuit:handoff save\` or \`/circuit:handoff clear\` aliases.",
               "Do not inspect legacy handoff paths, scan run roots, or write \`handoff.md\`.",
-              "After a successful save, confirm briefly with: Handoff saved. In the next session, use \`/circuit:handoff resume\` to inspect the continuity record, then start a fresh \`/circuit:*\` command to continue the work; use \`/circuit:handoff done\` only to clear it.",
+              "After a successful save, confirm briefly with: Handoff saved. Next session: run \`/circuit:handoff resume\` to inspect and continue, or name a new task via \`/circuit:run <task>\` to start fresh.",
               "Do not dump the saved continuity body back to the user during capture mode.",
               "Stop after either reporting that nothing useful could be captured or confirming the save."
             ],
