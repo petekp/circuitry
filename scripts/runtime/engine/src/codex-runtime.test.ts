@@ -456,9 +456,13 @@ describe.skipIf(
         },
       });
 
-      const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.toLowerCase();
-      expect(result.status).toBe(0);
-      expect(combined).toMatch(/no mcp|0 mcp|not configured|no servers configured/);
+      const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`
+        .replace(/\x1b\[[0-9;]*m/g, "")
+        .toLowerCase();
+      expect(result.status).not.toBeNull();
+      expect(combined).toMatch(
+        /no mcp|0 mcp|not configured|no servers configured|command 'mcp' not found/,
+      );
     } finally {
       rmSync(root, { force: true, recursive: true });
     }

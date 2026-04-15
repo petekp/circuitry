@@ -259,17 +259,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "a88ee2a39ce79e04453e571641dfe32a4413119c39080c5203f25e373d9b1153"
+      "sha256": "d278402754a66bd83f3b095540f35c1b14038c45e298f7e6a633bf6b389dccdf"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/continuity.js",
-      "sha256": "34d710b65906be31a898ce92b922d347a15dd2f5bc84de62519b8a11cfb35fb6"
+      "sha256": "6fcb45f31f757ec3ac101259e1a883c2d1c5c4753501cdd88979dcd725a5d9ef"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "dbf51950e6058bd014c69552441c27d222985a078adaf77b9793562ba83cae18"
+      "sha256": "f743e52ef5216597db85c2303d3591f3dce87a06a69416106793352bb2cd7441"
     },
     {
       "executable": true,
@@ -293,13 +293,18 @@
     },
     {
       "executable": true,
+      "path": "scripts/runtime/bin/reap-legacy-handoffs.sh",
+      "sha256": "51a0acddc90e97c412f655eadd15af3cadd30be59bc17727794688ffa604e71e"
+    },
+    {
+      "executable": true,
       "path": "scripts/runtime/bin/resume.js",
       "sha256": "b070032cbf5019e71c304d68ec9494eac6e55009196edd7f5079d3711e76f268"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "a03aa496684efdeebc54d4a83b0fe38324c799347a1ca0513d6efe37d5e0bd95"
+      "sha256": "809cc8f970adcdf1bc842ce4f93b6d5caec6970469cc48c5af8be7a512fc7710"
     },
     {
       "executable": true,
@@ -314,7 +319,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "17a0df2e2fb0a61ba7473305be4d67133c51f552e28f8e2f457063c167f63505"
+      "sha256": "250ad977770e5d3238dc53c0dfe2c0c0952feac9b8546da57f5d09e8c22256f7"
     },
     {
       "executable": true,
@@ -419,7 +424,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "b9d8ba22621f7c675cbe553e5bce86cec160db506ad7c419f37bb5d0e6b54482"
+      "sha256": "857dc184d0859f65309f4a840e8f966dc63e650980267a0ed1c939b74c008814"
     },
     {
       "executable": false,
