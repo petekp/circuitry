@@ -241,12 +241,40 @@ Use `/reload-plugins` if you want the current session to pick up cache changes.
 Claude Code's Agent tool for worker dispatch. Install Codex only if you want
 faster parallel execution through Circuit's isolated Codex runtime.
 
-**Circuit resumes from the wrong step.** State lives in `.circuit/`. If a run
-is corrupt, delete the run directory (`rm -rf .circuit/circuit-runs/<slug>`)
+**Circuit resumes from the wrong step.** State lives in `.circuit/`. First try
+to abort the run cleanly so continuity detaches:
+
+```bash
+.circuit/bin/circuit-engine abort-run \
+  --run-root .circuit/circuit-runs/<slug> \
+  --reason "aborted manually"
+```
+
+If several runs are stuck and you want to clear them in bulk, preview and then
+execute the included migration script:
+
+```bash
+./scripts/runtime/bin/abort-stuck-runs.sh --dry-run
+./scripts/runtime/bin/abort-stuck-runs.sh --execute
+```
+
+As a last resort, delete the run directory (`rm -rf .circuit/circuit-runs/<slug>`)
 and start fresh.
+
+**Legacy handoff files from pre-control-plane installs.** If you upgraded from
+an earlier version that wrote handoffs under `~/.claude/handoffs`,
+`~/.relay/handoffs`, or `<project>/.relay/handoffs`, the bundled reaper will
+inventory them and move them into `~/.circuit/archive/legacy-handoffs/` on
+request:
+
+```bash
+./scripts/runtime/bin/reap-legacy-handoffs.sh            # dry-run
+./scripts/runtime/bin/reap-legacy-handoffs.sh --execute  # archive
+```
 
 ## Further Reading
 
+- **[docs/literate-guide.md](docs/literate-guide.md):** Narrative walkthrough of how Circuit works as a whole system.
 - **[CIRCUITS.md](CIRCUITS.md):** Catalog/reference.
 - **[CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md):** End-user create/publish flow plus manual custom circuit authoring.
 - **[ARCHITECTURE.md](ARCHITECTURE.md):** Internal architecture reference for circuit authors and maintainers.

@@ -203,7 +203,7 @@ The dispatch pipeline:
 #    (mission, inputs, output path, schema, success criteria)
 
 # 2. Assemble the full prompt
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
+.circuit/bin/compose-prompt \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -211,7 +211,7 @@ The dispatch pipeline:
   --out "${STEP_ROOT}/prompt.md"
 
 # 3. Dispatch to worker (auto-detects Codex or Agent adapter)
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
+.circuit/bin/dispatch \
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt" \
   --circuit build \
@@ -220,6 +220,13 @@ The dispatch pipeline:
 # 4. Orchestrator reads the report and verifies
 test -f "${STEP_ROOT}/reports/report.md"
 ```
+
+The `.circuit/bin/*` wrappers are the current calling convention for skill
+instructions and agent dispatch. They're written by the `/circuit:*`
+user-prompt-submit hook before the model runs, and they resolve to the
+installed plugin's shims under `scripts/relay/*.sh` and the runtime CLIs
+under `scripts/runtime/bin/`. The installed shims keep working for
+out-of-band scripts that cannot rely on the hook having fired.
 
 Dispatch steps come in several flavors:
 
@@ -263,7 +270,7 @@ The orchestrator never modifies `batch.json` by hand. All state transitions go
 through `update-batch.sh`:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/update-batch.sh" --root "${CHILD_ROOT}" \
+.circuit/bin/update-batch --root "${CHILD_ROOT}" \
   --slice slice-001 --event review_clean
 ```
 
@@ -382,15 +389,18 @@ Universal circuit breakers:
 
 ## Relay Infrastructure
 
-Two shell scripts and a set of templates handle prompt assembly, state
-management, and the report protocol between orchestrator and workers.
+Three helper wrappers and a set of templates handle prompt assembly, state
+management, and the report protocol between orchestrator and workers. The
+wrappers are written under `.circuit/bin/` by the `/circuit:*`
+user-prompt-submit hook; older installed shims under `scripts/relay/` stay
+as out-of-band entry points.
 
-### `compose-prompt.sh`: Prompt Assembly
+### `compose-prompt`: Prompt Assembly
 
-This script assembles a worker prompt from modular pieces:
+This wrapper assembles a worker prompt from modular pieces:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
+.circuit/bin/compose-prompt \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -430,13 +440,13 @@ The assembly pipeline:
    blocks. If any remain, the script fails with a diagnostic error naming the
    source file.
 
-### `dispatch.sh`: Adapter Dispatch Shim
+### `dispatch`: Adapter Dispatch Shim
 
-`dispatch.sh` is now a thin shim around the typed `circuit-dispatch` runtime
-CLI. The CLI resolves the adapter after applying config-driven routing:
+`.circuit/bin/dispatch` resolves to the typed `circuit-dispatch` runtime CLI.
+The CLI resolves the adapter after applying config-driven routing:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/dispatch.sh" \
+.circuit/bin/dispatch \
   --prompt "${STEP_ROOT}/prompt.md" \
   --output "${STEP_ROOT}/last-messages/last-message.txt" \
   --circuit build \
@@ -469,11 +479,11 @@ Every receipt includes `adapter`, `transport`, and `resolved_from`.
 - Agent receipts use `transport: "agent"` and carry `agent_params`.
 - Process receipts use `transport: "process"` and carry `command_argv`.
 
-### `update-batch.sh`: Deterministic State Machine
+### `update-batch`: Deterministic State Machine
 
-This script manages `batch.json`, the state file that tracks every slice in a
-`workers` run. The orchestrator never hand-edits `batch.json`. All mutations go through this
-script.
+`.circuit/bin/update-batch` manages `batch.json`, the state file that tracks
+every slice in a `workers` run. The orchestrator never hand-edits
+`batch.json`. All mutations go through this wrapper.
 
 The script supports these events:
 
@@ -506,7 +516,7 @@ Every worker writes a report file with these exact sections:
 ### Next Steps
 ```
 
-`compose-prompt.sh` checks for the explicit `<!-- circuit:relay-protocol-inline -->`
+`compose-prompt` checks for the explicit `<!-- circuit:relay-protocol-inline -->`
 sentinel. If absent, it appends `relay-protocol.md` as a fallback. Workers that
 omit the required sections produce reports the orchestrator cannot parse.
 
@@ -591,7 +601,7 @@ Domain skills (`rust`, `swift-apps`, `tdd`) are separate from circuits. They are
 composed at dispatch time and injected via `--skills`:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT/scripts/relay/compose-prompt.sh" \
+.circuit/bin/compose-prompt \
   --header "${STEP_ROOT}/prompt-header.md" \
   --skills "rust,tdd" \
   --template implement \
@@ -850,63 +860,86 @@ When authoring or reviewing a circuit, check these six categories:
 
 ### File Layout
 
+Selected tree, pruned to the files referenced elsewhere in this doc. The
+authoritative file inventory lives in
+`scripts/runtime/generated/surface-manifest.json`; ask that when in doubt.
+
 ```
 circuit/
   .claude-plugin/
-    plugin.json               # Plugin manifest
+    plugin.json                      # Plugin manifest
   hooks/
-    hooks.json                # SessionStart hook registration
-    session-start.sh          # Handoff + active-run detection
+    hooks.json                       # SessionStart + UserPromptSubmit hook registration
+    session-start.sh                 # Passive continuity banner + active-run refresh
+    user-prompt-submit.js            # Thin wrapper that writes .circuit/bin/* and context
   scripts/
     relay/
-      compose-prompt.sh       # Prompt assembly pipeline
-      dispatch.sh             # Backend-agnostic worker dispatch
-      update-batch.sh         # Deterministic batch.json state machine
+      compose-prompt.sh              # Shim, unchanged for out-of-band callers
+      dispatch.sh                    # Shim around scripts/runtime/bin/dispatch.js
+      update-batch.sh                # Shim for batch.json event machine
     runtime/
-      bin/
-        append-event.js       # Bundled CLIs (committed, no build step needed)
+      bin/                           # Bundled CLIs (committed, no build step)
+        abort-stuck-runs.sh          # Bulk stuck-run migration helper
+        append-event.js
         catalog-compiler.js
+        circuit-engine.js            # Main semantic engine CLI (bootstrap, abort-run, ...)
+        continuity.js
+        custom-circuits.js
         derive-state.js
+        dispatch.js
+        list-installed-surface-roots.js
+        reap-legacy-handoffs.sh      # Legacy ~/.claude/handoffs archival helper
         resume.js
+        session-start.js
+        user-prompt-submit.js
+        verify-install.js
       engine/
         src/
-          append-event.ts     # Event log append
-          derive-state.ts     # State derivation from event log
-          resume.ts           # Resume logic
-          schema.ts           # Shared JSON-Schema validation
+          abort-run.ts               # Engine-level abort + continuity detach
+          bootstrap.ts               # Run-root bootstrap
+          checkpoint-step.ts
+          command-support.ts
+          codex-runtime.ts           # Isolated Codex runtime owner
+          complete-synthesis.ts
+          config.ts                  # Config discovery
+          continuity-commands.ts     # Continuity resume/done/refresh
+          continuity-control-plane.ts # Continuity index + records
+          derive-state.ts
+          dispatch.ts                # Adapter resolution + dispatch
+          dispatch-step.ts
+          invocation-ledger.ts       # /circuit:* launch ledger
+          render-active-run.ts
+          resume.ts
+          schema.ts
           catalog/
-            types.ts          # CatalogEntry types (shared contract)
-            extract.ts        # Filesystem -> Catalog
-            generate.ts       # Catalog -> marker blocks
+            extract.ts
+            generate.ts
+            public-surface.ts
+            catalog-doc-projections.ts
+            prompt-surface-contracts.ts
+            surface-roots.ts
+            surface-fs.ts
+            surface-inventory.ts
+            surface-manifest.ts
+            verify-installed-surface.ts
+            custom-circuits.ts
           cli/
-            append-event.ts   # CLI entry point
-            catalog-compiler.ts # generate + catalog subcommands
-            derive-state.ts   # CLI entry point
-            read-config.ts    # Config file reader
-            resume.ts         # CLI entry point
-    sync-to-cache.sh          # Plugin cache sync
-    verify-install.sh         # Installation verification
+            circuit-engine.ts        # bootstrap | abort-run | ... subcommands
+            user-prompt-submit.ts
+            session-start.ts
+            verify-install.ts
+            catalog-compiler.ts
+            read-config.ts
+    sync-to-cache.sh                 # Plugin cache sync (repo -> ~/.claude/plugins/cache)
+    verify-install.sh                # Installation verification (wraps cli/verify-install.ts)
   skills/
-    run/
-      circuit.yaml            # Lightweight router (1 step)
-      SKILL.md                # Classification + dispatch
-    explore/
-      circuit.yaml            # 4-step exploration circuit
-      SKILL.md
-    build/
-      circuit.yaml            # 6-step build circuit
-      SKILL.md
-    repair/
-      circuit.yaml            # 6-step repair circuit
-      SKILL.md
-    migrate/
-      circuit.yaml            # 7-step migration circuit
-      SKILL.md
-    sweep/
-      circuit.yaml            # 7-step sweep circuit
-      SKILL.md
-    workers/
-      SKILL.md                # Batch worker orchestrator (internal adapter, no circuit.yaml)
+    run/                             # Router workflow
+    explore/                         # Investigation workflow
+    build/                           # Build workflow (driving the outer runtime end-to-end)
+    repair/                          # Repair workflow
+    migrate/                         # Migration workflow
+    sweep/                           # Sweep workflow
+    workers/                         # Internal adapter (role: adapter)
       references/
         implement-template.md
         review-template.md
@@ -915,11 +948,9 @@ circuit/
         review-preamble.md
         relay-protocol.md
         agents-md-template.md
-    review/
-      SKILL.md                # Standalone review (utility, no circuit.yaml)
-    handoff/
-      SKILL.md                # Session handoff (utility, no circuit.yaml)
-      scripts/
+    review/                          # Utility (role: utility)
+    handoff/                         # Utility (role: utility)
+    create/                          # Utility: custom-circuit draft/validate/publish
 ```
 
 ### Runtime Layout (Example)
