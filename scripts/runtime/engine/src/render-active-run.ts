@@ -104,12 +104,31 @@ function isTerminalStatus(status: string): boolean {
   return ["aborted", "completed", "stopped", "blocked", "handed_off"].includes(status);
 }
 
+function terminalPhaseToken(status: string | undefined): string {
+  switch (status) {
+    case "completed":
+      return "close";
+    case "aborted":
+      return "aborted";
+    case "blocked":
+      return "blocked";
+    case "handed_off":
+      return "pause";
+    case "stopped":
+      return "pause";
+    default:
+      return "initialized";
+  }
+}
+
 function currentPhase(state: Record<string, any>): string {
   if (typeof state.current_step === "string" && state.current_step.length > 0) {
     return state.current_step;
   }
 
-  return typeof state.status === "string" ? state.status : "initialized";
+  return terminalPhaseToken(
+    typeof state.status === "string" ? state.status : undefined,
+  );
 }
 
 function routeAllowsVerdict(
@@ -238,10 +257,10 @@ export function renderActiveRun(runRoot: string): RenderActiveRunResult {
   const manifest = loadManifest(runRoot) as Record<string, any>;
   const state = deriveValidatedStateFromRun(runRoot, { persist: true });
   const activeRunPath = join(runRoot, "artifacts/active-run.md");
-  const phase = currentPhase(state);
   const step = typeof state.current_step === "string"
     ? findStepById(manifest, state.current_step)
     : null;
+  const phase = currentPhase(state);
   const markdown = [
     "# Active Run",
     "## Workflow",

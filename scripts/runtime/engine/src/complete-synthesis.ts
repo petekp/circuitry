@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import {
+  type Announce,
+  composeTransitionLine,
+  silentAnnouncer,
+} from "./announcer.js";
+import {
   appendStepTransitionEvents,
   appendValidatedEvents,
   assertNextStepExists,
@@ -16,6 +21,7 @@ import { extractH2SectionBodies } from "./markdown-utils.js";
 import { resolveRunRelativePath } from "./path-utils.js";
 
 export interface CompleteSynthesisOptions {
+  announce?: Announce;
   projectRoot: string;
   route?: string;
   runRoot: string;
@@ -29,6 +35,13 @@ export interface CompleteSynthesisResult {
   route?: string;
   status: string;
   step: string;
+  workflowId: string;
+}
+
+function workflowIdFromManifest(manifest: Record<string, unknown>): string {
+  const circuit = manifest.circuit as Record<string, unknown> | undefined;
+  const id = circuit && typeof circuit === "object" ? circuit.id : undefined;
+  return typeof id === "string" ? id : "";
 }
 
 function validateRequiredSections(
@@ -47,12 +60,14 @@ function validateRequiredSections(
 export function completeSynthesisStep(
   options: CompleteSynthesisOptions,
 ): CompleteSynthesisResult {
+  const announce = options.announce ?? silentAnnouncer;
   const context = {
     ...loadRunContext(options.runRoot),
     projectRoot: options.projectRoot,
   };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
+  const workflowId = workflowIdFromManifest(context.manifest);
 
   if (step.executor !== "orchestrator" || step.kind !== "synthesis") {
     throw new Error(`step ${stepId} is not an orchestrator synthesis step`);
@@ -77,6 +92,7 @@ export function completeSynthesisStep(
       route: precondition.route,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -139,6 +155,16 @@ export function completeSynthesisStep(
     stepId,
   });
 
+  announce(
+    composeTransitionLine({
+      extra: { route },
+      kind: "synthesis_complete",
+      stepId,
+      stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+      workflowId,
+    }),
+  );
+
   const renderResult = recordEventsAndRender(context.runRoot, transitionEvents, {
     projectRoot: context.projectRoot,
   });
@@ -149,5 +175,6 @@ export function completeSynthesisStep(
     route,
     status: renderResult.status,
     step: stepId,
+    workflowId,
   };
 }

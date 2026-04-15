@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import {
+  type Announce,
+  composeTransitionLine,
+  silentAnnouncer,
+} from "./announcer.js";
+import {
   appendStepTransitionEvents,
   appendValidatedEvents,
   assertNextStepExists,
@@ -22,12 +27,14 @@ import {
 import { resolveRunRelativePath } from "./path-utils.js";
 
 export interface DispatchStepOptions {
+  announce?: Announce;
   projectRoot: string;
   runRoot: string;
   step: string;
 }
 
 export interface ReconcileDispatchOptions {
+  announce?: Announce;
   completion?: string;
   projectRoot: string;
   route?: string;
@@ -44,6 +51,13 @@ export interface DispatchCommandResult {
   route?: string;
   status: string;
   step: string;
+  workflowId: string;
+}
+
+function workflowIdFromManifest(manifest: Record<string, unknown>): string {
+  const circuit = manifest.circuit as Record<string, unknown> | undefined;
+  const id = circuit && typeof circuit === "object" ? circuit.id : undefined;
+  return typeof id === "string" ? id : "";
 }
 
 function normalizeCompletion(value: string): "blocked" | "complete" | "partial" {
@@ -136,12 +150,14 @@ function canSkipReconcile(
 export function dispatchStep(
   options: DispatchStepOptions,
 ): DispatchCommandResult {
+  const announce = options.announce ?? silentAnnouncer;
   const context = {
     ...loadRunContext(options.runRoot),
     projectRoot: options.projectRoot,
   };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
+  const workflowId = workflowIdFromManifest(context.manifest);
 
   if (step.kind !== "dispatch") {
     throw new Error(`step ${stepId} is not a dispatch step`);
@@ -167,6 +183,7 @@ export function dispatchStep(
       route: precondition.route,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -212,6 +229,7 @@ export function dispatchStep(
       noOp: events.length === 0,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -251,6 +269,15 @@ export function dispatchStep(
     stepId,
   });
 
+  announce(
+    composeTransitionLine({
+      kind: "dispatch_requested",
+      stepId,
+      stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+      workflowId,
+    }),
+  );
+
   if (existsSync(receiptFullPath)) {
     events.push({
       attempt,
@@ -275,18 +302,21 @@ export function dispatchStep(
     noOp: false,
     status: renderResult.status,
     step: stepId,
+    workflowId,
   };
 }
 
 export function reconcileDispatch(
   options: ReconcileDispatchOptions,
 ): DispatchCommandResult {
+  const announce = options.announce ?? silentAnnouncer;
   const context = {
     ...loadRunContext(options.runRoot),
     projectRoot: options.projectRoot,
   };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
+  const workflowId = workflowIdFromManifest(context.manifest);
 
   if (step.kind !== "dispatch") {
     throw new Error(`step ${stepId} is not a dispatch step`);
@@ -312,6 +342,7 @@ export function reconcileDispatch(
       route: precondition.route,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -415,6 +446,7 @@ export function reconcileDispatch(
       noOp: events.length === 0,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -473,6 +505,15 @@ export function reconcileDispatch(
   );
 
   if (completion !== "complete" || !verdict || !passList.includes(verdict)) {
+    announce(
+      composeTransitionLine({
+        extra: { completion, verdict },
+        kind: "dispatch_reconciled_fail",
+        stepId,
+        stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+        workflowId,
+      }),
+    );
     const renderResult = recordEventsAndRender(context.runRoot, events, {
       projectRoot: context.projectRoot,
     });
@@ -483,6 +524,7 @@ export function reconcileDispatch(
       noOp: false,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -496,6 +538,16 @@ export function reconcileDispatch(
     stepId,
   });
 
+  announce(
+    composeTransitionLine({
+      extra: { route, verdict },
+      kind: "dispatch_reconciled_pass",
+      stepId,
+      stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+      workflowId,
+    }),
+  );
+
   const renderResult = recordEventsAndRender(context.runRoot, events, {
     projectRoot: context.projectRoot,
   });
@@ -507,5 +559,6 @@ export function reconcileDispatch(
     route,
     status: renderResult.status,
     step: stepId,
+    workflowId,
   };
 }

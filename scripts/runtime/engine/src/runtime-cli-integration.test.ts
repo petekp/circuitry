@@ -434,6 +434,47 @@ describe("runtime CLI integration", () => {
     );
   });
 
+  it("circuit-engine bootstrap --json silences announcements on stderr", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const runRoot = resolve(projectRoot, ".circuit", "circuit-runs", "json-silences-stderr");
+    const manifestRoot = resolve(tempRoot, "manifest-root");
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(runRoot, { recursive: true });
+    mkdirSync(manifestRoot, { recursive: true });
+    const manifestPath = resolve(manifestRoot, "source.manifest.yaml");
+    writeManifest(manifestRoot);
+    cpSync(resolve(manifestRoot, "circuit.manifest.yaml"), manifestPath);
+    run("git", ["init", "-q"], { cwd: projectRoot });
+
+    const bootstrap = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "bootstrap",
+        "--run-root",
+        runRoot,
+        "--manifest",
+        manifestPath,
+        "--entry-mode",
+        "default",
+        "--goal",
+        "JSON silences stderr",
+        "--head-at-start",
+        "abc1234",
+        "--project-root",
+        projectRoot,
+        "--json",
+      ],
+      { cwd: projectRoot },
+    );
+
+    expect(bootstrap.status).toBe(0);
+    const payload = JSON.parse(bootstrap.stdout);
+    expect(payload.bootstrapped).toBe(true);
+    expect(bootstrap.stderr).toBe("");
+  });
+
   it("circuit-engine record-classification appends classified_trivial entries to the ledger", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const projectRoot = resolve(tempRoot, "project");

@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import { bootstrapRun } from "./bootstrap.js";
 import {
-  advanceToReview,
-  buildPlanMarkdown,
   createBuildRun,
   startAct,
   writeFrameInputs,
@@ -10,8 +13,33 @@ import {
 import { appendValidatedEvents } from "./command-support.js";
 import { requestCheckpoint } from "./checkpoint-step.js";
 import { reconcileDispatch } from "./dispatch-step.js";
-import { writeRunJson } from "./outer-engine-test-utils.js";
+import {
+  makeTempProject,
+  writeManifestFile,
+  writeRunJson,
+} from "./outer-engine-test-utils.js";
 import { renderActiveRun } from "./render-active-run.js";
+import { REPO_ROOT } from "./schema.js";
+
+function createWorkflowRun(workflowSlug: string, goal: string) {
+  const { projectRoot, runRoot, slug } = makeTempProject();
+  const manifestPath = join(projectRoot, `${workflowSlug}.manifest.yaml`);
+  const manifest = parseYaml(
+    readFileSync(join(REPO_ROOT, `skills/${workflowSlug}/circuit.yaml`), "utf-8"),
+  ) as Record<string, unknown>;
+  writeManifestFile(manifestPath, manifest);
+
+  bootstrapRun({
+    entryMode: "default",
+    goal,
+    headAtStart: "abc1234",
+    manifestPath,
+    projectRoot,
+    runRoot,
+  });
+
+  return { manifestPath, projectRoot, runRoot, slug };
+}
 
 describe("render-active-run", () => {
   it("renders a new bootstrapped run at frame", () => {
@@ -108,8 +136,73 @@ describe("render-active-run", () => {
     ]);
 
     const markdown = renderActiveRun(completed.runRoot).markdown;
-    expect(markdown).toContain("## Current Phase\ncompleted");
+    expect(markdown).toContain("## Current Phase\nclose");
     expect(markdown).toContain("## Next Step\ncomplete");
     expect(markdown).toContain("## Blockers\nnone");
+  });
+
+  it("emits canonical step id for Repair analyze despite humanized step title", () => {
+    const { runRoot } = createWorkflowRun("repair", "Diagnose the flake");
+    appendValidatedEvents(runRoot, [
+      {
+        eventType: "step_started",
+        payload: { step_id: "analyze" },
+        stepId: "analyze",
+      },
+    ]);
+
+    const markdown = renderActiveRun(runRoot).markdown;
+    expect(markdown).toContain("## Current Phase\nanalyze");
+    expect(markdown).not.toContain("reproduce and isolate");
+  });
+
+  it("emits canonical step id for Explore decide despite humanized step title", () => {
+    const { runRoot } = createWorkflowRun("explore", "Compare options");
+    appendValidatedEvents(runRoot, [
+      {
+        eventType: "step_started",
+        payload: { step_id: "decide" },
+        stepId: "decide",
+      },
+    ]);
+
+    const markdown = renderActiveRun(runRoot).markdown;
+    expect(markdown).toContain("## Current Phase\ndecide");
+    expect(markdown).not.toContain("decide/plan");
+  });
+
+  it("maps handed_off terminal status to pause", () => {
+    const handoff = createBuildRun();
+    appendValidatedEvents(handoff.runRoot, [
+      {
+        eventType: "run_completed",
+        payload: {
+          handoff_path: "artifacts/handoff.json",
+          status: "handed_off",
+          terminal_target: "@handoff",
+        },
+        stepId: "frame",
+      },
+    ]);
+
+    const markdown = renderActiveRun(handoff.runRoot).markdown;
+    expect(markdown).toContain("## Current Phase\npause");
+  });
+
+  it("maps stopped terminal status to pause", () => {
+    const stopped = createBuildRun();
+    appendValidatedEvents(stopped.runRoot, [
+      {
+        eventType: "run_completed",
+        payload: {
+          status: "stopped",
+          terminal_target: "@stop",
+        },
+        stepId: "frame",
+      },
+    ]);
+
+    const markdown = renderActiveRun(stopped.runRoot).markdown;
+    expect(markdown).toContain("## Current Phase\npause");
   });
 });

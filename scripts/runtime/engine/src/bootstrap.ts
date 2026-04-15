@@ -3,6 +3,11 @@ import { basename, dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import {
+  type Announce,
+  composeTransitionLine,
+  silentAnnouncer,
+} from "./announcer.js";
+import {
   appendValidatedEvents,
   readGitHead,
   renderRunState,
@@ -17,6 +22,7 @@ import {
 import { requireStepById } from "./manifest-utils.js";
 
 export interface BootstrapOptions {
+  announce?: Announce;
   attachment?: "attached" | "detached";
   commandArgs?: string;
   circuitId?: string;
@@ -39,6 +45,7 @@ export interface BootstrapResult {
   runRoot: string;
   runSlug: string;
   status: string;
+  workflowId: string;
 }
 
 function assertAttachedRunRoot(projectRoot: string, runRoot: string): void {
@@ -61,6 +68,7 @@ function assertAttachedRunRoot(projectRoot: string, runRoot: string): void {
 }
 
 export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
+  const announce = options.announce ?? silentAnnouncer;
   const attachment = options.attachment ?? "attached";
   const runRoot = resolve(options.runRoot);
   const projectRoot = resolve(options.projectRoot ?? process.cwd());
@@ -109,7 +117,7 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
     throw new Error(`entry mode not found in manifest: ${options.entryMode}`);
   }
   const startStep = selectedMode.start_at as string;
-  requireStepById(manifest, startStep);
+  const startStepManifest = requireStepById(manifest, startStep);
 
   mkdirSync(join(runRoot, "artifacts"), { recursive: true });
   mkdirSync(join(runRoot, "phases"), { recursive: true });
@@ -154,6 +162,25 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
     bootstrapped = true;
   }
 
+  const resolvedCircuitId =
+    options.circuitId
+    ?? ((manifest.circuit as Record<string, any>)?.id as string | undefined)
+    ?? runSlug;
+
+  if (bootstrapped) {
+    announce(
+      composeTransitionLine({
+        kind: "bootstrap",
+        stepId: startStep,
+        stepTitle:
+          typeof startStepManifest.title === "string"
+            ? (startStepManifest.title as string)
+            : undefined,
+        workflowId: resolvedCircuitId,
+      }),
+    );
+  }
+
   let renderResult: ReturnType<typeof renderRunState>;
   try {
     renderResult = renderRunState(runRoot);
@@ -175,19 +202,16 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
 
   if (attachment === "attached") {
     // Best-effort: record successful routing in the invocation ledger.
-    const circuitId = options.circuitId
-      ?? ((manifest.circuit as Record<string, any>)?.id as string | undefined)
-      ?? runSlug;
     recordInvocationRouted({
       commandArgs: options.commandArgs,
-      circuitId,
+      circuitId: resolvedCircuitId,
       entryMode: options.entryMode,
       goal: options.goal,
       homeDir: process.env.HOME ?? undefined,
       invocationId: options.invocationId,
       projectRoot,
       requestedCommand: options.routedCommand,
-      routedCommand: options.routedCommand ?? `circuit:${circuitId}`,
+      routedCommand: options.routedCommand ?? `circuit:${resolvedCircuitId}`,
       routedTargetKind: options.routedTargetKind ?? "built_in",
       runId: runSlug,
       runRoot,
@@ -202,5 +226,6 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
     runRoot,
     runSlug,
     status: renderResult.status,
+    workflowId: resolvedCircuitId,
   };
 }

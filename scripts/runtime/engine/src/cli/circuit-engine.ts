@@ -4,6 +4,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
+import {
+  type Announce,
+  composeTransitionLine,
+  silentAnnouncer,
+  stderrAnnouncer,
+  terminalLabelForStatus,
+} from "../announcer.js";
 import { bootstrapRun } from "../bootstrap.js";
 import { abortRun } from "../abort-run.js";
 import {
@@ -24,6 +31,7 @@ type ParsedFlags = {
   flags: Record<string, string>;
   help: boolean;
   json: boolean;
+  quiet: boolean;
   positionals: string[];
 };
 
@@ -51,6 +59,7 @@ function parseFlags(args: string[]): ParsedFlags {
   const flags: Record<string, string> = {};
   let help = false;
   let json = false;
+  let quiet = false;
   const positionals: string[] = [];
 
   for (let index = 0; index < args.length; index++) {
@@ -58,6 +67,11 @@ function parseFlags(args: string[]): ParsedFlags {
 
     if (value === "--json") {
       json = true;
+      continue;
+    }
+
+    if (value === "--quiet") {
+      quiet = true;
       continue;
     }
 
@@ -76,7 +90,7 @@ function parseFlags(args: string[]): ParsedFlags {
     index++;
   }
 
-  return { flags, help, json, positionals };
+  return { flags, help, json, quiet, positionals };
 }
 
 function printResult(
@@ -281,12 +295,32 @@ function main(): number {
   }
 
   try {
-    const { flags, help, json, positionals } = parseFlags(rest);
+    const { flags, help, json, quiet, positionals } = parseFlags(rest);
 
     if (help) {
       process.stdout.write(command === "bootstrap" ? BOOTSTRAP_USAGE : USAGE);
       return 0;
     }
+
+    const announce: Announce = (quiet || json) ? silentAnnouncer : stderrAnnouncer();
+
+    const emitTerminalLine = (
+      status: string,
+      workflowId: string,
+    ): void => {
+      const terminalLabel = terminalLabelForStatus(status);
+      if (!terminalLabel) {
+        return;
+      }
+
+      announce(
+        composeTransitionLine({
+          extra: { terminalLabel },
+          kind: "terminal",
+          workflowId,
+        }),
+      );
+    };
 
     if (command !== "bootstrap" && positionals.length > 0) {
       throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, abort-run, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, record-classification, continuity)`);
@@ -311,6 +345,7 @@ function main(): number {
         }
 
         const result = bootstrapRun({
+          announce,
           commandArgs: rest.join(" "),
           entryMode,
           goal,
@@ -320,6 +355,8 @@ function main(): number {
           projectRoot: flags["project-root"] ? resolveProjectRoot(flags["project-root"]) : undefined,
           runRoot,
         });
+
+        emitTerminalLine(result.status, result.workflowId);
 
         return printResult(
           {
@@ -341,7 +378,8 @@ function main(): number {
           throw new Error("circuit: --reason is required");
         }
 
-        const result = abortRun({ reason, runRoot });
+        const result = abortRun({ announce, reason, runRoot });
+        emitTerminalLine(result.status, result.workflowId);
         return printResult(
           {
             already_terminal: result.alreadyTerminal,
@@ -365,11 +403,14 @@ function main(): number {
         }
 
         const result = completeSynthesisStep({
+          announce,
           projectRoot,
           route: flags.route,
           runRoot,
           step,
         });
+
+        emitTerminalLine(result.status, result.workflowId);
 
         return printResult(
           {
@@ -391,7 +432,8 @@ function main(): number {
           throw new Error("circuit: --step is required");
         }
 
-        const result = requestCheckpoint({ projectRoot, runRoot, step });
+        const result = requestCheckpoint({ announce, projectRoot, runRoot, step });
+        emitTerminalLine(result.status, result.workflowId);
         return printResult(
           {
             active_run_path: result.activeRunPath,
@@ -413,12 +455,14 @@ function main(): number {
         }
 
         const result = resolveCheckpoint({
+          announce,
           projectRoot,
           route: flags.route,
           runRoot,
           selection: flags.selection,
           step,
         });
+        emitTerminalLine(result.status, result.workflowId);
         return printResult(
           {
             active_run_path: result.activeRunPath,
@@ -440,7 +484,8 @@ function main(): number {
           throw new Error("circuit: --step is required");
         }
 
-        const result = dispatchStep({ projectRoot, runRoot, step });
+        const result = dispatchStep({ announce, projectRoot, runRoot, step });
+        emitTerminalLine(result.status, result.workflowId);
         return printResult(
           {
             active_run_path: result.activeRunPath,
@@ -463,6 +508,7 @@ function main(): number {
         }
 
         const result = reconcileDispatch({
+          announce,
           completion: flags.completion,
           projectRoot,
           route: flags.route,
@@ -470,6 +516,7 @@ function main(): number {
           step,
           verdict: flags.verdict,
         });
+        emitTerminalLine(result.status, result.workflowId);
         return printResult(
           {
             active_run_path: result.activeRunPath,

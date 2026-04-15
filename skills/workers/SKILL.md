@@ -179,7 +179,9 @@ Never restart completed slices.
 
 ## User Briefing
 
-One-line status between phases. Full briefing only for escalations or batch completion.
+Workers do not narrate themselves. Parent orchestration (the engine transition
+commands) is the only speaker for per-phase status updates. Workers speak only
+on escalations or at batch completion.
 
 ## Verification Boundary
 

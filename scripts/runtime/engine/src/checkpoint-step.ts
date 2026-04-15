@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 
 import {
+  type Announce,
+  composeTransitionLine,
+  silentAnnouncer,
+} from "./announcer.js";
+import {
   appendStepTransitionEvents,
   appendValidatedEvents,
   assertNextStepExists,
@@ -18,12 +23,14 @@ import {
 } from "./manifest-utils.js";
 
 export interface RequestCheckpointOptions {
+  announce?: Announce;
   projectRoot: string;
   runRoot: string;
   step: string;
 }
 
 export interface ResolveCheckpointOptions {
+  announce?: Announce;
   projectRoot: string;
   route?: string;
   runRoot: string;
@@ -39,6 +46,13 @@ export interface CheckpointCommandResult {
   selection?: string;
   status: string;
   step: string;
+  workflowId: string;
+}
+
+function workflowIdFromManifest(manifest: Record<string, unknown>): string {
+  const circuit = manifest.circuit as Record<string, unknown> | undefined;
+  const id = circuit && typeof circuit === "object" ? circuit.id : undefined;
+  return typeof id === "string" ? id : "";
 }
 
 function parseSelection(
@@ -67,12 +81,14 @@ function parseSelection(
 export function requestCheckpoint(
   options: RequestCheckpointOptions,
 ): CheckpointCommandResult {
+  const announce = options.announce ?? silentAnnouncer;
   const context = {
     ...loadRunContext(options.runRoot),
     projectRoot: options.projectRoot,
   };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
+  const workflowId = workflowIdFromManifest(context.manifest);
 
   if (step.kind !== "checkpoint") {
     throw new Error(`step ${stepId} is not a checkpoint step`);
@@ -93,6 +109,7 @@ export function requestCheckpoint(
       noOp: true,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -115,6 +132,7 @@ export function requestCheckpoint(
       route: precondition.route,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -151,6 +169,15 @@ export function requestCheckpoint(
     stepId,
   });
 
+  announce(
+    composeTransitionLine({
+      kind: "checkpoint_requested",
+      stepId,
+      stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+      workflowId,
+    }),
+  );
+
   const renderResult = recordEventsAndRender(context.runRoot, events, {
     projectRoot: context.projectRoot,
   });
@@ -160,18 +187,21 @@ export function requestCheckpoint(
     noOp: false,
     status: renderResult.status,
     step: stepId,
+    workflowId,
   };
 }
 
 export function resolveCheckpoint(
   options: ResolveCheckpointOptions,
 ): CheckpointCommandResult {
+  const announce = options.announce ?? silentAnnouncer;
   const context = {
     ...loadRunContext(options.runRoot),
     projectRoot: options.projectRoot,
   };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
+  const workflowId = workflowIdFromManifest(context.manifest);
 
   if (step.kind !== "checkpoint") {
     throw new Error(`step ${stepId} is not a checkpoint step`);
@@ -197,6 +227,7 @@ export function resolveCheckpoint(
       selection: context.state.checkpoints?.[stepId]?.selection,
       status: renderResult.status,
       step: stepId,
+      workflowId,
     };
   }
 
@@ -246,6 +277,16 @@ export function resolveCheckpoint(
     stepId,
   });
 
+  announce(
+    composeTransitionLine({
+      extra: { route },
+      kind: "checkpoint_resolved",
+      stepId,
+      stepTitle: typeof step.title === "string" ? (step.title as string) : undefined,
+      workflowId,
+    }),
+  );
+
   const renderResult = recordEventsAndRender(context.runRoot, events, {
     projectRoot: context.projectRoot,
   });
@@ -257,5 +298,6 @@ export function resolveCheckpoint(
     selection,
     status: renderResult.status,
     step: stepId,
+    workflowId,
   };
 }
