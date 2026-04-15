@@ -94,7 +94,7 @@ export function recordInvocationReceived(options: {
     const cwd = process.cwd();
     const gitBranch = readGitBranch(options.projectRoot);
 
-    appendLedgerEntry({
+    const appended = appendLedgerEntry({
       schema_version: "1",
       invocation_id: invocationId,
       occurred_at: occurredAt,
@@ -108,7 +108,7 @@ export function recordInvocationReceived(options: {
       command_args: options.commandArgs,
     }, options.homeDir);
 
-    return { invocationId };
+    return appended ? { invocationId } : null;
   } catch {
     return null;
   }

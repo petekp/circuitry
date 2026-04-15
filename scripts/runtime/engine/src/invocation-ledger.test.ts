@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -77,6 +77,26 @@ describe("invocation-ledger", () => {
         project_root: "/tmp/circuit-project",
       }),
     );
+  });
+
+  it("returns null when the ledger write fails", () => {
+    const root = mkdtempSync(join(tmpdir(), "circuit-ledger-block-"));
+    const homeDir = join(root, "home");
+    mkdirSync(homeDir, { recursive: true });
+    // resolveCircuitHomePaths resolves circuitHome to <homeDir>/.claude/circuit.
+    // Placing a file at <homeDir>/.claude makes mkdirSync in appendLedgerEntry
+    // fail with ENOTDIR, causing appendLedgerEntry to return false.
+    writeFileSync(join(homeDir, ".claude"), "not a directory");
+
+    const recorded = recordInvocationReceived({
+      commandArgs: "anything",
+      commandSlug: "build",
+      homeDir,
+      projectRoot: "/tmp/circuit-project",
+      requestedCommand: "circuit:build",
+    });
+
+    expect(recorded).toBeNull();
   });
 
   it("records a routed entry keyed by the explicit invocation id", () => {
