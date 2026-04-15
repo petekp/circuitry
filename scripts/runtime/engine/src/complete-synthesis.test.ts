@@ -126,14 +126,14 @@ function expectFailureWithoutMutation(
 
 describe("complete-synthesis", () => {
   it("passes required sections and advances", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
       "# Plan\n## Approach\nUse the semantic engine.\n## Verification Commands\nnpm test\n",
     );
 
-    const result = completeSynthesisStep({ runRoot, step: "plan" });
+    const result = completeSynthesisStep({ projectRoot, runRoot, step: "plan" });
 
     expect(result.gatePassed).toBe(true);
     expect(result.route).toBe("close");
@@ -141,20 +141,20 @@ describe("complete-synthesis", () => {
   });
 
   it("emits run_completed when close passes", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
       "# Plan\n## Approach\nUse the semantic engine.\n## Verification Commands\nnpm test\n",
     );
-    completeSynthesisStep({ runRoot, step: "plan" });
+    completeSynthesisStep({ projectRoot, runRoot, step: "plan" });
     writeRunFile(
       runRoot,
       "artifacts/result.md",
       "# Result\n## Changes\nDone.\n## Verification\nPassed.\n## PR Summary\nReady.\n",
     );
 
-    const result = completeSynthesisStep({ runRoot, step: "close" });
+    const result = completeSynthesisStep({ projectRoot, runRoot, step: "close" });
     const events = readEvents(runRoot);
 
     expect(result.route).toBe("@complete");
@@ -163,7 +163,7 @@ describe("complete-synthesis", () => {
   });
 
   it("fails without route advancement when required sections are missing", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
@@ -171,7 +171,7 @@ describe("complete-synthesis", () => {
     );
 
     expect(() =>
-      completeSynthesisStep({ runRoot, step: "plan" }),
+      completeSynthesisStep({ projectRoot, runRoot, step: "plan" }),
     ).toThrow(/missing required sections/i);
 
     const state = readState(runRoot);
@@ -181,7 +181,7 @@ describe("complete-synthesis", () => {
   });
 
   it("rejects a non-current synthesis step without mutating runtime state", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/result.md",
@@ -190,13 +190,13 @@ describe("complete-synthesis", () => {
 
     expectFailureWithoutMutation(
       runRoot,
-      () => completeSynthesisStep({ runRoot, step: "close" }),
+      () => completeSynthesisStep({ projectRoot, runRoot, step: "close" }),
       /complete-synthesis/i,
     );
   });
 
   it("rejects synthesis completion outside in_progress without mutating runtime state", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
@@ -217,13 +217,13 @@ describe("complete-synthesis", () => {
 
     expectFailureWithoutMutation(
       runRoot,
-      () => completeSynthesisStep({ runRoot, step: "plan" }),
+      () => completeSynthesisStep({ projectRoot, runRoot, step: "plan" }),
       /complete-synthesis/i,
     );
   });
 
   it("rejects route overrides that do not match the manifest route without mutating runtime state", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
@@ -234,6 +234,7 @@ describe("complete-synthesis", () => {
       runRoot,
       () =>
         completeSynthesisStep({
+          projectRoot,
           runRoot,
           route: "@complete",
           step: "plan",
@@ -243,16 +244,16 @@ describe("complete-synthesis", () => {
   });
 
   it("is idempotent after success", () => {
-    const { runRoot } = createSynthesisRun();
+    const { projectRoot, runRoot } = createSynthesisRun();
     writeRunFile(
       runRoot,
       "artifacts/plan.md",
       "# Plan\n## Approach\nUse the semantic engine.\n## Verification Commands\nnpm test\n",
     );
-    completeSynthesisStep({ runRoot, step: "plan" });
+    completeSynthesisStep({ projectRoot, runRoot, step: "plan" });
     const before = readEvents(runRoot).length;
 
-    const result = completeSynthesisStep({ runRoot, step: "plan" });
+    const result = completeSynthesisStep({ projectRoot, runRoot, step: "plan" });
 
     expect(result.noOp).toBe(true);
     expect(readEvents(runRoot)).toHaveLength(before);

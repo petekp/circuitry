@@ -22,12 +22,14 @@ import {
 import { resolveRunRelativePath } from "./path-utils.js";
 
 export interface DispatchStepOptions {
+  projectRoot: string;
   runRoot: string;
   step: string;
 }
 
 export interface ReconcileDispatchOptions {
   completion?: string;
+  projectRoot: string;
   route?: string;
   runRoot: string;
   step: string;
@@ -134,7 +136,10 @@ function canSkipReconcile(
 export function dispatchStep(
   options: DispatchStepOptions,
 ): DispatchCommandResult {
-  const context = loadRunContext(options.runRoot);
+  const context = {
+    ...loadRunContext(options.runRoot),
+    projectRoot: options.projectRoot,
+  };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
 
@@ -151,7 +156,9 @@ export function dispatchStep(
   });
 
   if (precondition.noOp) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       attempt: context.state.jobs?.[stepId]?.attempt ?? 1,
@@ -195,7 +202,9 @@ export function dispatchStep(
       });
     }
 
-    const renderResult = recordEventsAndRender(context.runRoot, events);
+    const renderResult = recordEventsAndRender(context.runRoot, events, {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       attempt,
@@ -256,7 +265,9 @@ export function dispatchStep(
     });
   }
 
-  const renderResult = recordEventsAndRender(context.runRoot, events);
+  const renderResult = recordEventsAndRender(context.runRoot, events, {
+    projectRoot: context.projectRoot,
+  });
   return {
     activeRunPath: renderResult.activeRunPath,
     attempt,
@@ -270,7 +281,10 @@ export function dispatchStep(
 export function reconcileDispatch(
   options: ReconcileDispatchOptions,
 ): DispatchCommandResult {
-  const context = loadRunContext(options.runRoot);
+  const context = {
+    ...loadRunContext(options.runRoot),
+    projectRoot: options.projectRoot,
+  };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
 
@@ -287,7 +301,9 @@ export function reconcileDispatch(
   });
 
   if (precondition.noOp) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       attempt: context.state.jobs?.[stepId]?.attempt ?? 1,
@@ -389,7 +405,9 @@ export function reconcileDispatch(
       resultPath,
     )
   ) {
-    const renderResult = recordEventsAndRender(context.runRoot, events);
+    const renderResult = recordEventsAndRender(context.runRoot, events, {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       attempt,
@@ -455,7 +473,9 @@ export function reconcileDispatch(
   );
 
   if (completion !== "complete" || !verdict || !passList.includes(verdict)) {
-    const renderResult = recordEventsAndRender(context.runRoot, events);
+    const renderResult = recordEventsAndRender(context.runRoot, events, {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       attempt,
@@ -476,7 +496,9 @@ export function reconcileDispatch(
     stepId,
   });
 
-  const renderResult = recordEventsAndRender(context.runRoot, events);
+  const renderResult = recordEventsAndRender(context.runRoot, events, {
+    projectRoot: context.projectRoot,
+  });
   return {
     activeRunPath: renderResult.activeRunPath,
     attempt,

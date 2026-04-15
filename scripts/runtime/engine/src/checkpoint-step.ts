@@ -18,11 +18,13 @@ import {
 } from "./manifest-utils.js";
 
 export interface RequestCheckpointOptions {
+  projectRoot: string;
   runRoot: string;
   step: string;
 }
 
 export interface ResolveCheckpointOptions {
+  projectRoot: string;
   route?: string;
   runRoot: string;
   selection?: string;
@@ -65,7 +67,10 @@ function parseSelection(
 export function requestCheckpoint(
   options: RequestCheckpointOptions,
 ): CheckpointCommandResult {
-  const context = loadRunContext(options.runRoot);
+  const context = {
+    ...loadRunContext(options.runRoot),
+    projectRoot: options.projectRoot,
+  };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
 
@@ -79,7 +84,9 @@ export function requestCheckpoint(
     context.state.current_step === stepId &&
     context.state.status === "waiting_checkpoint"
   ) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       gatePassed: false,
@@ -98,7 +105,9 @@ export function requestCheckpoint(
   });
 
   if (precondition.noOp) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       gatePassed: true,
@@ -142,7 +151,9 @@ export function requestCheckpoint(
     stepId,
   });
 
-  const renderResult = recordEventsAndRender(context.runRoot, events);
+  const renderResult = recordEventsAndRender(context.runRoot, events, {
+    projectRoot: context.projectRoot,
+  });
   return {
     activeRunPath: renderResult.activeRunPath,
     gatePassed: false,
@@ -155,7 +166,10 @@ export function requestCheckpoint(
 export function resolveCheckpoint(
   options: ResolveCheckpointOptions,
 ): CheckpointCommandResult {
-  const context = loadRunContext(options.runRoot);
+  const context = {
+    ...loadRunContext(options.runRoot),
+    projectRoot: options.projectRoot,
+  };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
 
@@ -172,7 +186,9 @@ export function resolveCheckpoint(
   });
 
   if (precondition.noOp) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       gatePassed: true,
@@ -230,7 +246,9 @@ export function resolveCheckpoint(
     stepId,
   });
 
-  const renderResult = recordEventsAndRender(context.runRoot, events);
+  const renderResult = recordEventsAndRender(context.runRoot, events, {
+    projectRoot: context.projectRoot,
+  });
   return {
     activeRunPath: renderResult.activeRunPath,
     gatePassed: true,

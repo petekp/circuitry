@@ -29,9 +29,9 @@ describe("render-active-run", () => {
   });
 
   it("renders waiting checkpoint state", () => {
-    const { runRoot } = createBuildRun();
+    const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
 
     const markdown = renderActiveRun(runRoot).markdown;
     expect(markdown).toContain("## Current Phase\nframe");
@@ -42,41 +42,53 @@ describe("render-active-run", () => {
 
   it("renders waiting worker, partial, blocked, and verdict-mismatch states", () => {
     const waiting = createBuildRun();
-    startAct(waiting.runRoot, true);
+    startAct(waiting.runRoot, waiting.projectRoot, true);
     let markdown = renderActiveRun(waiting.runRoot).markdown;
     expect(markdown).toContain("## Current Phase\nact");
     expect(markdown).toContain("Reconcile phases/implement/jobs/act-1.result.json and run reconcile-dispatch for act.");
     expect(markdown).toContain("waiting on worker result at phases/implement/jobs/act-1.result.json");
 
     const partial = createBuildRun();
-    startAct(partial.runRoot);
+    startAct(partial.runRoot, partial.projectRoot);
     writeRunJson(partial.runRoot, "phases/implement/jobs/act-1.result.json", {
       completion: "partial",
       verdict: "issues_remain",
     });
-    reconcileDispatch({ runRoot: partial.runRoot, step: "act" });
+    reconcileDispatch({
+      projectRoot: partial.projectRoot,
+      runRoot: partial.runRoot,
+      step: "act",
+    });
     markdown = renderActiveRun(partial.runRoot).markdown;
     expect(markdown).toContain("Retry dispatch for act with attempt 2.");
     expect(markdown).toContain("partial completion for act; retry with next dispatch attempt");
 
     const blocked = createBuildRun();
-    startAct(blocked.runRoot);
+    startAct(blocked.runRoot, blocked.projectRoot);
     writeRunJson(blocked.runRoot, "phases/implement/jobs/act-1.result.json", {
       completion: "blocked",
       verdict: "issues_remain",
     });
-    reconcileDispatch({ runRoot: blocked.runRoot, step: "act" });
+    reconcileDispatch({
+      projectRoot: blocked.projectRoot,
+      runRoot: blocked.runRoot,
+      step: "act",
+    });
     markdown = renderActiveRun(blocked.runRoot).markdown;
     expect(markdown).toContain("Resolve the dependency blocking act, then retry dispatch.");
     expect(markdown).toContain("blocked completion for act; resolve dependency before retry");
 
     const mismatch = createBuildRun();
-    startAct(mismatch.runRoot);
+    startAct(mismatch.runRoot, mismatch.projectRoot);
     writeRunJson(mismatch.runRoot, "phases/implement/jobs/act-1.result.json", {
       completion: "complete",
       verdict: "issues_found",
     });
-    reconcileDispatch({ runRoot: mismatch.runRoot, step: "act" });
+    reconcileDispatch({
+      projectRoot: mismatch.projectRoot,
+      runRoot: mismatch.runRoot,
+      step: "act",
+    });
     markdown = renderActiveRun(mismatch.runRoot).markdown;
     expect(markdown).toContain("Fix findings from verdict issues_found and re-dispatch act.");
     expect(markdown).toContain("verdict mismatch for act: issues_found");

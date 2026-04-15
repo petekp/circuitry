@@ -247,6 +247,17 @@ function resolveBootstrapRunRoot(
   return resolve(runRoot, "circuit-runs", runSlug);
 }
 
+function projectRootForAttachedRun(
+  flags: Record<string, string | undefined>,
+  runRoot: string,
+): string {
+  if (flags["project-root"]) {
+    return resolveProjectRoot(flags["project-root"]);
+  }
+
+  return resolve(runRoot, "..", "..", "..");
+}
+
 function main(): number {
   const [command, ...rest] = process.argv.slice(2);
 
@@ -320,12 +331,14 @@ function main(): number {
       }
       case "complete-synthesis": {
         const runRoot = requireRunRoot(flags);
+        const projectRoot = projectRootForAttachedRun(flags, runRoot);
         const step = flags.step;
         if (!step) {
           throw new Error("circuit: --step is required");
         }
 
         const result = completeSynthesisStep({
+          projectRoot,
           route: flags.route,
           runRoot,
           step,
@@ -345,12 +358,13 @@ function main(): number {
       }
       case "request-checkpoint": {
         const runRoot = requireRunRoot(flags);
+        const projectRoot = projectRootForAttachedRun(flags, runRoot);
         const step = flags.step;
         if (!step) {
           throw new Error("circuit: --step is required");
         }
 
-        const result = requestCheckpoint({ runRoot, step });
+        const result = requestCheckpoint({ projectRoot, runRoot, step });
         return printResult(
           {
             active_run_path: result.activeRunPath,
@@ -365,12 +379,14 @@ function main(): number {
       }
       case "resolve-checkpoint": {
         const runRoot = requireRunRoot(flags);
+        const projectRoot = projectRootForAttachedRun(flags, runRoot);
         const step = flags.step;
         if (!step) {
           throw new Error("circuit: --step is required");
         }
 
         const result = resolveCheckpoint({
+          projectRoot,
           route: flags.route,
           runRoot,
           selection: flags.selection,
@@ -391,12 +407,13 @@ function main(): number {
       }
       case "dispatch-step": {
         const runRoot = requireRunRoot(flags);
+        const projectRoot = projectRootForAttachedRun(flags, runRoot);
         const step = flags.step;
         if (!step) {
           throw new Error("circuit: --step is required");
         }
 
-        const result = dispatchStep({ runRoot, step });
+        const result = dispatchStep({ projectRoot, runRoot, step });
         return printResult(
           {
             active_run_path: result.activeRunPath,
@@ -412,6 +429,7 @@ function main(): number {
       }
       case "reconcile-dispatch": {
         const runRoot = requireRunRoot(flags);
+        const projectRoot = projectRootForAttachedRun(flags, runRoot);
         const step = flags.step;
         if (!step) {
           throw new Error("circuit: --step is required");
@@ -419,6 +437,7 @@ function main(): number {
 
         const result = reconcileDispatch({
           completion: flags.completion,
+          projectRoot,
           route: flags.route,
           runRoot,
           step,

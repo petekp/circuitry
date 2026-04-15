@@ -363,10 +363,6 @@ export function readGitHead(projectRoot: string): string {
   return /^[0-9a-f]{7,40}$/.test(value) ? value : "0000000";
 }
 
-function projectRootForRunRoot(runRoot: string): string {
-  return resolve(runRoot, "..", "..", "..");
-}
-
 export function syncIndexedCurrentRun(
   projectRoot: string,
   runRoot: string,
@@ -474,15 +470,22 @@ export function readDispatchReceiptEventPayload(
   return payload;
 }
 
+export interface AttachmentContext {
+  projectRoot: string;
+}
+
 export function recordEventsAndRender(
   runRoot: string,
   specs: EventSpec[],
+  attachment?: AttachmentContext,
 ): RenderActiveRunResult {
   if (specs.length > 0) {
     appendValidatedEvents(runRoot, specs);
   }
 
   const renderResult = renderRunState(runRoot);
-  syncIndexedCurrentRun(projectRootForRunRoot(runRoot), runRoot, renderResult);
+  if (attachment) {
+    syncIndexedCurrentRun(attachment.projectRoot, runRoot, renderResult);
+  }
   return renderResult;
 }

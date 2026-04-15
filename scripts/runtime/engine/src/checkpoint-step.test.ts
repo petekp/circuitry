@@ -101,7 +101,7 @@ function createCheckpointRun() {
     runRoot,
   });
 
-  return { runRoot };
+  return { projectRoot, runRoot };
 }
 
 function writeCheckpointRequest(
@@ -153,14 +153,14 @@ function expectFailureWithoutMutation(
 
 describe("checkpoint-step", () => {
   it("handles request and resolution happy path", () => {
-    const { runRoot } = createBuildRun();
+    const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
 
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     writeRunJson(runRoot, "checkpoints/frame-1.response.json", {
       selection: "continue",
     });
-    const result = resolveCheckpoint({ runRoot, step: "frame" });
+    const result = resolveCheckpoint({ projectRoot, runRoot, step: "frame" });
 
     expect(result.gatePassed).toBe(true);
     expect(result.selection).toBe("continue");
@@ -168,29 +168,29 @@ describe("checkpoint-step", () => {
   });
 
   it("supports the auto-resolve continue path for non-deep frame", () => {
-    const { runRoot } = createBuildRun();
+    const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     writeRunJson(runRoot, "checkpoints/frame-1.response.json", {
       selection: "continue",
     });
 
-    const result = resolveCheckpoint({ runRoot, step: "frame" });
+    const result = resolveCheckpoint({ projectRoot, runRoot, step: "frame" });
 
     expect(result.route).toBe("plan");
     expect(readState(runRoot).routes.frame).toBe("plan");
   });
 
   it("leaves the step incomplete on invalid selection", () => {
-    const { runRoot } = createBuildRun();
+    const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     writeRunJson(runRoot, "checkpoints/frame-1.response.json", {
       selection: "invalid",
     });
 
     expect(() =>
-      resolveCheckpoint({ runRoot, step: "frame" }),
+      resolveCheckpoint({ projectRoot, runRoot, step: "frame" }),
     ).toThrow(/does not satisfy checkpoint gate/i);
 
     const state = readState(runRoot);
@@ -199,18 +199,18 @@ describe("checkpoint-step", () => {
   });
 
   it("rejects request-checkpoint for a non-current step without mutating runtime state", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointRequest(runRoot, "review");
 
     expectFailureWithoutMutation(
       runRoot,
-      () => requestCheckpoint({ runRoot, step: "review" }),
+      () => requestCheckpoint({ projectRoot, runRoot, step: "review" }),
       /request-checkpoint/i,
     );
   });
 
   it("rejects request-checkpoint outside in_progress without mutating runtime state", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointRequest(runRoot, "frame");
     appendValidatedEvents(runRoot, [
       {
@@ -227,55 +227,56 @@ describe("checkpoint-step", () => {
 
     expectFailureWithoutMutation(
       runRoot,
-      () => requestCheckpoint({ runRoot, step: "frame" }),
+      () => requestCheckpoint({ projectRoot, runRoot, step: "frame" }),
       /request-checkpoint/i,
     );
   });
 
   it("keeps request-checkpoint idempotent for the same already-requested checkpoint", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointRequest(runRoot, "frame");
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     const before = readEvents(runRoot).length;
 
-    const result = requestCheckpoint({ runRoot, step: "frame" });
+    const result = requestCheckpoint({ projectRoot, runRoot, step: "frame" });
 
     expect(result.noOp).toBe(true);
     expect(readEvents(runRoot)).toHaveLength(before);
   });
 
   it("rejects resolve-checkpoint for a non-current step without mutating runtime state", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointResponse(runRoot, "review");
 
     expectFailureWithoutMutation(
       runRoot,
-      () => resolveCheckpoint({ runRoot, step: "review" }),
+      () => resolveCheckpoint({ projectRoot, runRoot, step: "review" }),
       /resolve-checkpoint/i,
     );
   });
 
   it("rejects resolve-checkpoint outside waiting_checkpoint without mutating runtime state", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointResponse(runRoot, "frame");
 
     expectFailureWithoutMutation(
       runRoot,
-      () => resolveCheckpoint({ runRoot, step: "frame" }),
+      () => resolveCheckpoint({ projectRoot, runRoot, step: "frame" }),
       /resolve-checkpoint/i,
     );
   });
 
   it("rejects route overrides that do not match the manifest checkpoint route without mutating runtime state", () => {
-    const { runRoot } = createCheckpointRun();
+    const { projectRoot, runRoot } = createCheckpointRun();
     writeCheckpointRequest(runRoot, "frame");
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     writeCheckpointResponse(runRoot, "frame");
 
     expectFailureWithoutMutation(
       runRoot,
       () =>
         resolveCheckpoint({
+          projectRoot,
           runRoot,
           route: "@complete",
           step: "frame",
@@ -285,16 +286,16 @@ describe("checkpoint-step", () => {
   });
 
   it("is idempotent after resolution", () => {
-    const { runRoot } = createBuildRun();
+    const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
-    requestCheckpoint({ runRoot, step: "frame" });
+    requestCheckpoint({ projectRoot, runRoot, step: "frame" });
     writeRunJson(runRoot, "checkpoints/frame-1.response.json", {
       selection: "continue",
     });
-    resolveCheckpoint({ runRoot, step: "frame" });
+    resolveCheckpoint({ projectRoot, runRoot, step: "frame" });
     const before = readEvents(runRoot).length;
 
-    const result = resolveCheckpoint({ runRoot, step: "frame" });
+    const result = resolveCheckpoint({ projectRoot, runRoot, step: "frame" });
 
     expect(result.noOp).toBe(true);
     expect(readEvents(runRoot)).toHaveLength(before);

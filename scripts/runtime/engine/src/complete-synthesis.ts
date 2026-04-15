@@ -16,6 +16,7 @@ import { extractH2SectionBodies } from "./markdown-utils.js";
 import { resolveRunRelativePath } from "./path-utils.js";
 
 export interface CompleteSynthesisOptions {
+  projectRoot: string;
   route?: string;
   runRoot: string;
   step: string;
@@ -46,7 +47,10 @@ function validateRequiredSections(
 export function completeSynthesisStep(
   options: CompleteSynthesisOptions,
 ): CompleteSynthesisResult {
-  const context = loadRunContext(options.runRoot);
+  const context = {
+    ...loadRunContext(options.runRoot),
+    projectRoot: options.projectRoot,
+  };
   const step = requireStepById(context.manifest, options.step);
   const stepId = step.id;
 
@@ -63,7 +67,9 @@ export function completeSynthesisStep(
   });
 
   if (precondition.noOp) {
-    const renderResult = recordEventsAndRender(context.runRoot, []);
+    const renderResult = recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     return {
       activeRunPath: renderResult.activeRunPath,
       gatePassed: true,
@@ -114,11 +120,15 @@ export function completeSynthesisStep(
         Array.isArray(gate.required) ? gate.required : [],
       );
     } catch (error) {
-      recordEventsAndRender(context.runRoot, []);
+      recordEventsAndRender(context.runRoot, [], {
+        projectRoot: context.projectRoot,
+      });
       throw error;
     }
   } else {
-    recordEventsAndRender(context.runRoot, []);
+    recordEventsAndRender(context.runRoot, [], {
+      projectRoot: context.projectRoot,
+    });
     throw new Error(`unsupported synthesis gate for ${stepId}: ${String(gate.kind)}`);
   }
 
@@ -129,7 +139,9 @@ export function completeSynthesisStep(
     stepId,
   });
 
-  const renderResult = recordEventsAndRender(context.runRoot, transitionEvents);
+  const renderResult = recordEventsAndRender(context.runRoot, transitionEvents, {
+    projectRoot: context.projectRoot,
+  });
   return {
     activeRunPath: renderResult.activeRunPath,
     gatePassed: true,

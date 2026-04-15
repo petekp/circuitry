@@ -150,7 +150,7 @@ describe("bootstrap", () => {
         },
         stepId: "frame",
       },
-    ]);
+    ], { projectRoot });
 
     expect(readContinuityIndex(projectRoot)?.current_run ?? null).toBeNull();
 

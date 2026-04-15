@@ -101,23 +101,27 @@ export function writeFrameInputs(runRoot: string): void {
   });
 }
 
-export function resolveFrame(runRoot: string): void {
+export function resolveFrame(runRoot: string, projectRoot: string): void {
   writeFrameInputs(runRoot);
-  requestCheckpoint({ runRoot, step: "frame" });
+  requestCheckpoint({ projectRoot, runRoot, step: "frame" });
   writeRunJson(runRoot, "checkpoints/frame-1.response.json", {
     selection: "continue",
   });
-  resolveCheckpoint({ runRoot, step: "frame" });
+  resolveCheckpoint({ projectRoot, runRoot, step: "frame" });
 }
 
-export function advanceToAct(runRoot: string): void {
-  resolveFrame(runRoot);
+export function advanceToAct(runRoot: string, projectRoot: string): void {
+  resolveFrame(runRoot, projectRoot);
   writeRunFile(runRoot, "artifacts/plan.md", buildPlanMarkdown());
-  completeSynthesisStep({ runRoot, step: "plan" });
+  completeSynthesisStep({ projectRoot, runRoot, step: "plan" });
 }
 
-export function startAct(runRoot: string, withReceipt = false): void {
-  advanceToAct(runRoot);
+export function startAct(
+  runRoot: string,
+  projectRoot: string,
+  withReceipt = false,
+): void {
+  advanceToAct(runRoot, projectRoot);
   writeRunFile(
     runRoot,
     "artifacts/implementation-handoff.md",
@@ -136,26 +140,30 @@ export function startAct(runRoot: string, withReceipt = false): void {
       transport: "process",
     });
   }
-  dispatchStep({ runRoot, step: "act" });
+  dispatchStep({ projectRoot, runRoot, step: "act" });
 }
 
-export function finishAct(runRoot: string): void {
-  startAct(runRoot);
+export function finishAct(runRoot: string, projectRoot: string): void {
+  startAct(runRoot, projectRoot);
   writeRunJson(runRoot, "phases/implement/jobs/act-1.result.json", {
     completion: "complete",
     verdict: "complete_and_hardened",
   });
-  reconcileDispatch({ runRoot, step: "act" });
+  reconcileDispatch({ projectRoot, runRoot, step: "act" });
 }
 
-export function advanceToReview(runRoot: string): void {
-  finishAct(runRoot);
+export function advanceToReview(runRoot: string, projectRoot: string): void {
+  finishAct(runRoot, projectRoot);
   writeRunFile(runRoot, "artifacts/verification.md", buildVerificationMarkdown());
-  completeSynthesisStep({ runRoot, step: "verify" });
+  completeSynthesisStep({ projectRoot, runRoot, step: "verify" });
 }
 
-export function startReview(runRoot: string, withReceipt = false): void {
-  advanceToReview(runRoot);
+export function startReview(
+  runRoot: string,
+  projectRoot: string,
+  withReceipt = false,
+): void {
+  advanceToReview(runRoot, projectRoot);
   writeRunFile(runRoot, "artifacts/review.md", "# Review\n\nReview findings.\n");
   writeRunJson(runRoot, "phases/review/jobs/review-1.request.json", {
     task: "review",
@@ -170,5 +178,5 @@ export function startReview(runRoot: string, withReceipt = false): void {
       transport: "process",
     });
   }
-  dispatchStep({ runRoot, step: "review" });
+  dispatchStep({ projectRoot, runRoot, step: "review" });
 }
