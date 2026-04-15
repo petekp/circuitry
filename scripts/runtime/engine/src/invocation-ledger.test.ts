@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import {
   appendLedgerEntry,
   ledgerPath,
+  recordInvocationClassifiedStandalone,
+  recordInvocationClassifiedTrivial,
   recordInvocationFailed,
   recordInvocationReceived,
   recordInvocationRouted,
@@ -165,6 +167,39 @@ describe("invocation-ledger", () => {
     );
   });
 
+  it("records classified_standalone and classified_trivial entries with minimal payload", () => {
+    const { homeDir } = makeTempHome();
+
+    expect(recordInvocationClassifiedStandalone({
+      homeDir,
+      invocationId: "inv-standalone",
+      projectRoot: "/tmp/circuit-project",
+    })).toBe(true);
+
+    expect(recordInvocationClassifiedTrivial({
+      homeDir,
+      invocationId: "inv-trivial",
+      projectRoot: "/tmp/circuit-project",
+    })).toBe(true);
+
+    const entries = readLedgerEntries(homeDir);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toEqual({
+      invocation_id: "inv-standalone",
+      occurred_at: expect.any(String),
+      project_root: "/tmp/circuit-project",
+      schema_version: "1",
+      status: "classified_standalone",
+    });
+    expect(entries[1]).toEqual({
+      invocation_id: "inv-trivial",
+      occurred_at: expect.any(String),
+      project_root: "/tmp/circuit-project",
+      schema_version: "1",
+      status: "classified_trivial",
+    });
+  });
+
   it("refuses to record routed or failed entries without an explicit invocation id", () => {
     const { homeDir } = makeTempHome();
 
@@ -181,6 +216,16 @@ describe("invocation-ledger", () => {
 
     expect(recordInvocationFailed({
       failureReason: "missing invocation id",
+      homeDir,
+      projectRoot: "/tmp/circuit-project",
+    })).toBe(false);
+
+    expect(recordInvocationClassifiedStandalone({
+      homeDir,
+      projectRoot: "/tmp/circuit-project",
+    })).toBe(false);
+
+    expect(recordInvocationClassifiedTrivial({
       homeDir,
       projectRoot: "/tmp/circuit-project",
     })).toBe(false);

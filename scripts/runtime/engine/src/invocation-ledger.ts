@@ -14,7 +14,13 @@ export interface LedgerEntry {
   schema_version: "1";
   invocation_id: string;
   occurred_at: string;
-  status: "received" | "routed" | "failed" | "abandoned";
+  status:
+    | "received"
+    | "routed"
+    | "failed"
+    | "abandoned"
+    | "classified_standalone"
+    | "classified_trivial";
 
   session_id?: string;
   project_root?: string;
@@ -190,4 +196,45 @@ export function recordInvocationFailed(options: {
   } catch {
     return false;
   }
+}
+
+function recordInvocationClassification(
+  status: "classified_standalone" | "classified_trivial",
+  options: {
+    homeDir?: string;
+    invocationId?: string;
+    projectRoot: string;
+  },
+): boolean {
+  try {
+    if (!options.invocationId) {
+      return false;
+    }
+
+    return appendLedgerEntry({
+      schema_version: "1",
+      invocation_id: options.invocationId,
+      occurred_at: new Date().toISOString(),
+      project_root: options.projectRoot,
+      status,
+    }, options.homeDir);
+  } catch {
+    return false;
+  }
+}
+
+export function recordInvocationClassifiedStandalone(options: {
+  homeDir?: string;
+  invocationId?: string;
+  projectRoot: string;
+}): boolean {
+  return recordInvocationClassification("classified_standalone", options);
+}
+
+export function recordInvocationClassifiedTrivial(options: {
+  homeDir?: string;
+  invocationId?: string;
+  projectRoot: string;
+}): boolean {
+  return recordInvocationClassification("classified_trivial", options);
 }

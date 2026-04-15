@@ -20,6 +20,7 @@ import {
   type ContinuityRecordV1,
   writeContinuityRecord,
 } from "./continuity-control-plane.js";
+import { ledgerPath } from "./invocation-ledger.js";
 import { REPO_ROOT } from "./schema.js";
 
 const USER_PROMPT_SUBMIT = resolve(REPO_ROOT, "hooks/user-prompt-submit.js");
@@ -77,6 +78,14 @@ function runCircuitEngine(
       ...options?.env,
     },
   });
+}
+
+function readLedgerEntries(homeDir: string): Array<Record<string, unknown>> {
+  return readFileSync(ledgerPath(homeDir), "utf-8")
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 function makeInstalledHookRoot(root: string): string {
@@ -436,6 +445,38 @@ describe("user-prompt-submit integration", () => {
     const context = readAdditionalContext(result);
     expect(context).toContain("Circuit Review Current-Changes Contract");
     expect(context).toContain("Review verdict:");
+  });
+
+  it("records synchronous fast modes as classified_standalone in the invocation ledger", () => {
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-prompt-ledger-home-"));
+    const cases = [
+      "/circuit:review current changes",
+      "/circuit:handoff done",
+      "/circuit:handoff resume",
+      "/circuit:handoff",
+      "/circuit:explore smoke inspect the public-surface bootstrap path",
+    ];
+
+    for (const prompt of cases) {
+      const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-ledger-project-"));
+      mkdirSync(projectRoot, { recursive: true });
+
+      const result = runUserPromptSubmit(prompt, {
+        cwd: projectRoot,
+        env: { HOME: homeDir },
+      });
+
+      expect(result.status).toBe(0);
+    }
+
+    const entries = readLedgerEntries(homeDir);
+    expect(entries).toHaveLength(cases.length * 2);
+
+    for (let index = 0; index < entries.length; index += 2) {
+      expect(entries[index]?.status).toBe("received");
+      expect(entries[index + 1]?.status).toBe("classified_standalone");
+      expect(entries[index + 1]?.invocation_id).toBe(entries[index]?.invocation_id);
+    }
   });
 
   it("still routes /circuit:review current changes through the parsed-intent path", () => {

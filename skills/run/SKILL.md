@@ -165,6 +165,13 @@ say so and do the work inline. No workflow overhead.
 
 > This is straightforward. Doing it inline.
 
+If the hook provided a Circuit invocation id for this `/circuit:run` request,
+record the trivial classification before continuing:
+
+```bash
+.circuit/bin/circuit-engine record-classification --invocation-id "<invocation-id>" --status classified_trivial
+```
+
 ### Step 4: Dispatch
 
 **If classification is confident** (>80% of tasks):

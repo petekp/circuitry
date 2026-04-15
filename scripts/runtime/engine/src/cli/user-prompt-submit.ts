@@ -13,7 +13,10 @@ import {
   type PromptHelperWrapper,
 } from "../catalog/prompt-surface-contracts.js";
 import { ensureProjectCircuitRoot } from "../ensure-circuit-dirs.js";
-import { recordInvocationReceived } from "../invocation-ledger.js";
+import {
+  recordInvocationClassifiedStandalone,
+  recordInvocationReceived,
+} from "../invocation-ledger.js";
 import { resolveProjectRoot } from "../project-root.js";
 import {
   parseCircuitSlashCommand,
@@ -171,6 +174,21 @@ function emitContext(additionalContext: string): never {
     suppressOutput: true,
   }));
   process.exit(0);
+}
+
+function recordStandaloneClassification(
+  invocationId: string | null,
+  projectRoot: string,
+): void {
+  if (!invocationId) {
+    return;
+  }
+
+  recordInvocationClassifiedStandalone({
+    homeDir: process.env.HOME ?? undefined,
+    invocationId,
+    projectRoot,
+  });
 }
 
 function renderInvocationContext(invocationId: string): string {
@@ -441,6 +459,7 @@ async function main(): Promise<number> {
   };
 
   if (isReviewCurrentChanges(command)) {
+    recordStandaloneClassification(invocationId, projectRoot);
     emitContext(mergeContextSections(
       invocationId,
       renderTemplate(FAST_MODE_CONTRACTS.review_current_changes.lines, {}),
@@ -448,6 +467,7 @@ async function main(): Promise<number> {
   }
 
   if (isHandoffDone(command)) {
+    recordStandaloneClassification(invocationId, projectRoot);
     emitContext(mergeContextSections(
       invocationId,
       renderHandoffDoneContext(),
@@ -455,6 +475,7 @@ async function main(): Promise<number> {
   }
 
   if (isHandoffResume(command)) {
+    recordStandaloneClassification(invocationId, projectRoot);
     emitContext(mergeContextSections(
       invocationId,
       renderHandoffResumeContext(await readContinuityStatus()),
@@ -462,6 +483,7 @@ async function main(): Promise<number> {
   }
 
   if (isHandoffCapture(command)) {
+    recordStandaloneClassification(invocationId, projectRoot);
     emitContext(mergeContextSections(
       invocationId,
       renderHandoffCaptureContext(await readContinuityStatus()),
@@ -469,6 +491,7 @@ async function main(): Promise<number> {
   }
 
   if (isWorkflowSmoke(command)) {
+    recordStandaloneClassification(invocationId, projectRoot);
     emitContext(mergeContextSections(
       invocationId,
       renderTemplate(

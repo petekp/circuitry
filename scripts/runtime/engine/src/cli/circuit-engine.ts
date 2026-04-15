@@ -5,6 +5,10 @@ import { basename, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { bootstrapRun } from "../bootstrap.js";
+import {
+  recordInvocationClassifiedStandalone,
+  recordInvocationClassifiedTrivial,
+} from "../invocation-ledger.js";
 import { resolveProjectRoot } from "../project-root.js";
 import { requestCheckpoint, resolveCheckpoint } from "../checkpoint-step.js";
 import { completeSynthesisStep } from "../complete-synthesis.js";
@@ -23,7 +27,7 @@ type ParsedFlags = {
 };
 
 const USAGE =
-  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|resume|render|continuity> [options]\n";
+  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|resume|render|record-classification|continuity> [options]\n";
 const BOOTSTRAP_USAGE = [
   "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--invocation-id <id>] [--json]",
   "",
@@ -284,7 +288,7 @@ function main(): number {
     }
 
     if (command !== "bootstrap" && positionals.length > 0) {
-      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, continuity)`);
+      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, record-classification, continuity)`);
     }
 
     switch (command) {
@@ -485,6 +489,45 @@ function main(): number {
             current_phase: result.currentPhase,
             next_step: result.nextStep,
             status: result.status,
+          },
+          json,
+        );
+      }
+      case "record-classification": {
+        const projectRoot = resolveProjectRoot(flags["project-root"] ?? process.cwd());
+        const invocationId = flags["invocation-id"];
+        const status = flags.status;
+
+        if (!invocationId) {
+          throw new Error("circuit: --invocation-id is required");
+        }
+        if (!status) {
+          throw new Error("circuit: --status is required");
+        }
+
+        let recorded = false;
+        if (status === "classified_standalone") {
+          recorded = recordInvocationClassifiedStandalone({
+            homeDir: process.env.HOME ?? undefined,
+            invocationId,
+            projectRoot,
+          });
+        } else if (status === "classified_trivial") {
+          recorded = recordInvocationClassifiedTrivial({
+            homeDir: process.env.HOME ?? undefined,
+            invocationId,
+            projectRoot,
+          });
+        } else {
+          throw new Error(`circuit: unsupported classification status: ${status}`);
+        }
+
+        return printResult(
+          {
+            invocation_id: invocationId,
+            project_root: projectRoot,
+            recorded,
+            status,
           },
           json,
         );

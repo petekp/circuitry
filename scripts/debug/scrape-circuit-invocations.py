@@ -36,6 +36,7 @@ CIRCUIT_COMMAND_PATTERN = re.compile(r"/circuit:([a-z0-9-]+)([^\r\n]*)", re.IGNO
 DATE_ONLY_PATTERN = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 
 WORKFLOW_COMMANDS = BUILTIN_WORKFLOW_COMMANDS
+MATCHED_LEDGER_STATUSES = {"routed", "classified_standalone", "classified_trivial"}
 
 
 def repo_root() -> Path:
@@ -244,6 +245,20 @@ def ledger_invocations_to_finalized(
         occurred_at = as_str(entry.get("occurred_at"))
         occurred_ms = parse_timestamp(occurred_at) if occurred_at else None
 
+        status = as_str(entry.get("status")) or ""
+        if status == "routed":
+            launch_outcome_category = "workflow_launched"
+        elif status == "classified_standalone":
+            launch_outcome_category = "standalone_complete"
+        elif status == "classified_trivial":
+            launch_outcome_category = "trivial_complete"
+        elif status == "abandoned":
+            launch_outcome_category = "abandoned"
+        else:
+            launch_outcome_category = "no_terminal_status"
+
+        matched_run = status in MATCHED_LEDGER_STATUSES
+
         invocation: dict[str, Any] = {
             "assistant_message_count": None,
             "assistant_tool_use_count": None,
@@ -258,9 +273,10 @@ def ledger_invocations_to_finalized(
             "git_branch": as_str(entry.get("git_branch")),
             "hook_error_count": 0,
             "invocation_id": as_str(entry.get("invocation_id")) or "",
-            "launch_confirmed": entry.get("status") == "routed",
+            "launch_confirmed": status == "routed",
             "launch_confirmed_at": None,
-            "matched_run": entry.get("status") == "routed",
+            "launch_outcome_category": launch_outcome_category,
+            "matched_run": matched_run,
             "matched_run_circuit_id": as_str(entry.get("circuit_id")),
             "matched_run_current_step": None,
             "matched_run_duration_ms": None,
@@ -269,7 +285,7 @@ def ledger_invocations_to_finalized(
             "matched_run_root": as_str(entry.get("run_root")),
             "matched_run_selected_entry_mode": as_str(entry.get("entry_mode")),
             "matched_run_started_at": occurred_at,
-            "matched_run_status": "routed" if entry.get("status") == "routed" else None,
+            "matched_run_status": status if matched_run else None,
             "matched_run_terminal_target": None,
             "matched_run_updated_at": None,
             "next_invocation_at": None,
@@ -1009,6 +1025,15 @@ def build_summary(invocations: list[dict[str, Any]], known_commands: list[str], 
         key=lambda item: (priority_rank[item["priority"]], -item["evidence_count"], item["title"])
     )
 
+    launch_outcome_breakdown = dict(
+        sorted(
+            Counter(
+                (row.get("launch_outcome_category") or "no_terminal_status")
+                for row in invocations
+            ).items()
+        )
+    )
+
     return {
         "analysis_intent": "internal_debug",
         "by_command": command_summaries,
@@ -1019,6 +1044,7 @@ def build_summary(invocations: list[dict[str, Any]], known_commands: list[str], 
         "issue_signals": issue_signals,
         "invocations_total": len(invocations),
         "known_commands": known_commands,
+        "launch_outcome_breakdown": launch_outcome_breakdown,
         "maintainer_notes": [
             "This report is for Circuit maintainer debugging and product improvement, not end-user reporting.",
             "Non-built-in surfaces usually mean custom or experimental circuits, not necessarily a built-in product defect.",
@@ -1046,9 +1072,20 @@ def render_summary_markdown(summary: dict[str, Any]) -> str:
         f"- Matched run records: {summary['matched_runs_total']}",
         f"- Workflow invocations: {summary['workflow_invocations_total']}",
         "",
-        "## Maintainer Notes",
+        "## Launch Outcomes",
         "",
     ]
+    lines.extend(
+        f"- {category}: {count}"
+        for category, count in summary["launch_outcome_breakdown"].items()
+    )
+    lines.extend(
+        [
+            "",
+        "## Maintainer Notes",
+        "",
+        ]
+    )
     lines.extend(f"- {note}" for note in summary["maintainer_notes"])
     lines.extend(
         [

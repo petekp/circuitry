@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { readContinuityIndex } from "./continuity-control-plane.js";
+import { ledgerPath } from "./invocation-ledger.js";
 
 const THIS_DIR =
   typeof __dirname !== "undefined"
@@ -80,6 +81,14 @@ function writeManifest(runRoot: string) {
     ].join("\n"),
     "utf-8",
   );
+}
+
+function readLedgerEntries(homeDir: string): Array<Record<string, unknown>> {
+  return readFileSync(ledgerPath(homeDir), "utf-8")
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 function copyInstallRoot(targetRoot: string) {
@@ -421,6 +430,50 @@ describe("runtime CLI integration", () => {
         run_root_rel: ".circuit/circuit-runs/plain-text-bootstrap",
         run_slug: "plain-text-bootstrap",
         runtime_status: "in_progress",
+      }),
+    );
+  });
+
+  it("circuit-engine record-classification appends classified_trivial entries to the ledger", () => {
+    const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
+    const projectRoot = resolve(tempRoot, "project");
+    const homeDir = resolve(tempRoot, "home");
+
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(homeDir, { recursive: true });
+
+    const result = run(
+      "node",
+      [
+        CIRCUIT_ENGINE,
+        "record-classification",
+        "--project-root",
+        projectRoot,
+        "--invocation-id",
+        "inv-trivial-cli",
+        "--status",
+        "classified_trivial",
+        "--json",
+      ],
+      {
+        cwd: projectRoot,
+        env: { HOME: homeDir },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      invocation_id: "inv-trivial-cli",
+      project_root: projectRoot,
+      recorded: true,
+      status: "classified_trivial",
+    });
+
+    expect(readLedgerEntries(homeDir)).toContainEqual(
+      expect.objectContaining({
+        invocation_id: "inv-trivial-cli",
+        project_root: projectRoot,
+        status: "classified_trivial",
       }),
     );
   });
@@ -792,7 +845,7 @@ describe("runtime CLI integration", () => {
     expect(save.status).toBe(0);
     const savePayload = JSON.parse(save.stdout);
     expect(existsSync(savePayload.record_path)).toBe(true);
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
 
     const clear = run(
       "node",
@@ -999,7 +1052,7 @@ describe("runtime CLI integration", () => {
     expect(bootstrap.status).toBe(0);
     expect(bootstrap.stdout).toContain(`run_root=${expectedRunRoot}`);
     expect(bootstrap.stdout).toContain("resume_step=frame");
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "circuit.manifest.yaml"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
@@ -1046,7 +1099,7 @@ describe("runtime CLI integration", () => {
     expect(bootstrap.status).toBe(0);
     expect(bootstrap.stdout).toContain(`run_root=${expectedRunRoot}`);
     expect(bootstrap.stdout).toContain("resume_step=frame");
-    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(false);
+    expect(existsSync(resolve(projectRoot, ".circuit", "current-run"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "circuit.manifest.yaml"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "events.ndjson"))).toBe(true);
     expect(existsSync(resolve(expectedRunRoot, "state.json"))).toBe(true);
