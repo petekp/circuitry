@@ -15,10 +15,6 @@ import {
 import { writeTextFileAtomic } from "./file-utils.js";
 import {
   requireStepById,
-  resolveRequestPath,
-  resolveResponsePath,
-  resolveReceiptPath,
-  resolveResultPath,
   type CircuitManifestStep,
 } from "./manifest-utils.js";
 import { resolveRunRelativePath, assertSafeRelativePath } from "./path-utils.js";

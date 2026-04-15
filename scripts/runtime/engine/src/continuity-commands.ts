@@ -12,7 +12,6 @@ import {
   continuityRunRootPath,
   continuityRunRootRel,
   createContinuityRecordId,
-  createEmptyContinuityIndex,
   deleteContinuityRecordByPayload,
   readContinuityIndexOrEmpty,
   readPendingContinuityRecord,

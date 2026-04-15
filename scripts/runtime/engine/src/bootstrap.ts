@@ -42,7 +42,6 @@ export interface BootstrapResult {
 }
 
 function assertAttachedRunRoot(projectRoot: string, runRoot: string): void {
-  const runSlug = basename(runRoot);
   const canonicalProjectRoot = existsSync(projectRoot)
     ? realpathSync(projectRoot)
     : projectRoot;
