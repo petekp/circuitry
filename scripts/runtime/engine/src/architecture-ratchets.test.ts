@@ -48,10 +48,6 @@ const BANNED_RESIDUE_RATCHETS = [
     label: "ambient codex adapter",
     needle: ["codex", "ambient"].join("-"),
   },
-  {
-    label: "legacy current-run mirror",
-    needle: [".circuit", "current-run"].join("/"),
-  },
 ] as const;
 
 const STATE_AUTHORITY_SCAN_PREFIXES = ["hooks/", "scripts/"] as const;

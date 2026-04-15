@@ -1,10 +1,13 @@
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -15,6 +18,7 @@ import { loadJsonSchemaCached, validate } from "./schema.js";
 export const CONTINUITY_CONTROL_PLANE_DIR_REL = ".circuit/control-plane";
 export const CONTINUITY_INDEX_REL = `${CONTINUITY_CONTROL_PLANE_DIR_REL}/continuity-index.json`;
 export const CONTINUITY_RECORDS_DIR_REL = `${CONTINUITY_CONTROL_PLANE_DIR_REL}/continuity-records`;
+export const CURRENT_RUN_LINK_REL = ".circuit/current-run";
 
 export type ContinuityKind = "run_ref" | "standalone";
 
@@ -145,6 +149,10 @@ export function continuityRunRootRel(
 
 export function continuityRecordPath(projectRoot: string, recordId: string): string {
   return resolve(projectRoot, continuityRecordPayloadRel(recordId));
+}
+
+export function currentRunLinkPath(projectRoot: string): string {
+  return resolve(projectRoot, CURRENT_RUN_LINK_REL);
 }
 
 export function continuityRunRootPath(
@@ -297,6 +305,65 @@ function readJsonFile(targetPath: string): unknown {
   return JSON.parse(contents) as unknown;
 }
 
+function currentRunLinkTarget(runSlug: string): string {
+  return join("circuit-runs", runSlug);
+}
+
+function markerExists(markerPath: string): boolean {
+  try {
+    lstatSync(markerPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function syncCurrentRunLink(
+  projectRoot: string,
+  currentRun: ContinuityCurrentRunV1 | null,
+  options?: { warnOnRemoval?: boolean },
+): void {
+  const markerPath = currentRunLinkPath(projectRoot);
+
+  try {
+    if (!currentRun) {
+      if (markerExists(markerPath)) {
+        rmSync(markerPath, { force: true, recursive: true });
+        if (options?.warnOnRemoval) {
+          console.warn(
+            `circuit: removed stale .circuit/current-run marker because continuity-index current_run is null: ${markerPath}`,
+          );
+        }
+      }
+      return;
+    }
+
+    const expectedTarget = currentRunLinkTarget(currentRun.run_slug);
+
+    if (markerExists(markerPath)) {
+      const markerStats = lstatSync(markerPath);
+      if (markerStats.isSymbolicLink() && readlinkSync(markerPath) === expectedTarget) {
+        return;
+      }
+
+      rmSync(markerPath, { force: true, recursive: true });
+    }
+
+    mkdirSync(dirname(markerPath), { recursive: true });
+    symlinkSync(expectedTarget, markerPath);
+  } catch (error) {
+    throw new ContinuityControlPlaneError(
+      "continuity_index_io",
+      "Failed to synchronize .circuit/current-run with continuity-index current_run",
+      {
+        cause: error instanceof Error ? error.message : String(error),
+        current_run: currentRun?.run_slug ?? null,
+        path: markerPath,
+      },
+    );
+  }
+}
+
 export function readContinuityIndex(projectRoot: string): ContinuityIndexV1 | null {
   const path = continuityIndexPath(projectRoot);
   if (!existsSync(path)) {
@@ -316,6 +383,10 @@ export function readContinuityIndex(projectRoot: string): ContinuityIndexV1 | nu
         { errors, path },
       );
     }
+
+    syncCurrentRunLink(projectRoot, parsed.current_run, {
+      warnOnRemoval: parsed.current_run === null,
+    });
 
     return parsed;
   } catch (error) {
@@ -349,6 +420,7 @@ export function writeContinuityIndex(projectRoot: string, index: ContinuityIndex
 
   const path = continuityIndexPath(projectRoot);
   writeJsonAtomically(path, index as unknown as object, "continuity_index_io");
+  syncCurrentRunLink(projectRoot, index.current_run);
   return path;
 }
 

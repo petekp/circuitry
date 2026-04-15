@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readlinkSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
@@ -9,7 +10,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   ContinuityControlPlaneError,
@@ -21,6 +22,7 @@ import {
   clearContinuityPendingRecord,
   createContinuityRecordId,
   createEmptyContinuityIndex,
+  currentRunLinkPath,
   deleteContinuityRecordByPayload,
   continuityControlPlaneDir,
   continuityIndexPath,
@@ -167,6 +169,7 @@ describe("continuity control plane", () => {
       runtime_status: "waiting_worker",
     });
     expect(readContinuityIndex(projectRoot)?.current_run).toEqual(updated.current_run);
+    expect(readlinkSync(currentRunLinkPath(projectRoot))).toBe("circuit-runs/run-002");
   });
 
   it("clears indexed current_run without deleting the pending record", () => {
@@ -179,6 +182,52 @@ describe("continuity control plane", () => {
     expect(cleared.current_run).toBeNull();
     expect(cleared.pending_record).toEqual(index.pending_record);
     expect(readContinuityIndex(projectRoot)?.current_run).toBeNull();
+    expect(existsSync(currentRunLinkPath(projectRoot))).toBe(false);
+  });
+
+  it("writes a current-run symlink that agrees with the continuity index", () => {
+    const projectRoot = makeProjectRoot();
+    const index = makeIndex(projectRoot);
+
+    writeContinuityIndex(projectRoot, index);
+
+    expect(readlinkSync(currentRunLinkPath(projectRoot))).toBe("circuit-runs/run-001");
+  });
+
+  it("removes a stale current-run symlink when the loaded index has current_run: null", () => {
+    const projectRoot = makeProjectRoot();
+    const index = createEmptyContinuityIndex(projectRoot);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mkdirSync(resolve(projectRoot, ".circuit", "circuit-runs", "run-001"), {
+      recursive: true,
+    });
+
+    writeContinuityIndex(projectRoot, {
+      ...index,
+      current_run: {
+        attached_at: "2026-04-12T12:00:00.000Z",
+        current_step: "frame",
+        last_validated_at: "2026-04-12T12:01:00.000Z",
+        manifest_present: true,
+        run_root_rel: ".circuit/circuit-runs/run-001",
+        run_slug: "run-001",
+        runtime_status: "in_progress",
+      },
+    });
+    expect(existsSync(currentRunLinkPath(projectRoot))).toBe(true);
+
+    writeContinuityIndex(projectRoot, index);
+    writeFileSync(currentRunLinkPath(projectRoot), "orphan-run\n", "utf-8");
+    expect(existsSync(currentRunLinkPath(projectRoot))).toBe(true);
+
+    expect(readContinuityIndex(projectRoot)).toEqual(index);
+    expect(existsSync(currentRunLinkPath(projectRoot))).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("removed stale .circuit/current-run marker"),
+    );
+
+    warn.mockRestore();
   });
 
   it("writes and reads a validated continuity record atomically", () => {
