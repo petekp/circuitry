@@ -115,6 +115,7 @@ const RUN_STATE_ARTIFACTS_TEXT =
 const BUILD_SMOKE_RUN_SLUG = 'RUN_SLUG="smoke-bootstrap-build-workflow-host-surface"';
 const BUILD_SMOKE_RUN_ROOT_LINE = 'RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"';
 const BUILD_SMOKE_ENGINE_CHECK_LINE = `test -x ${LOCAL_HELPER_DIR}/circuit-engine`;
+const BOOTSTRAP_INVOCATION_ID_FLAG = '--invocation-id "${INVOCATION_ID:-}"';
 const BUILD_SMOKE_BOOTSTRAP_PREFIX_LINES = [
   `${LOCAL_HELPER_DIR}/circuit-engine bootstrap \\`,
   '  --run-root "$RUN_ROOT" \\',
@@ -122,6 +123,7 @@ const BUILD_SMOKE_BOOTSTRAP_PREFIX_LINES = [
 ];
 const BUILD_SMOKE_BOOTSTRAP_SUFFIX_LINES = [
   '  --goal "<smoke bootstrap objective>" \\',
+  `  ${BOOTSTRAP_INVOCATION_ID_FLAG} \\`,
   '  --project-root "$PWD"',
 ];
 const BUILD_SMOKE_VALIDATION_CHECK_LINES = [
@@ -395,6 +397,7 @@ function renderBuildSmokeBootstrapInlineCommand(entryMode: string): string {
     `--manifest "${BUILD_MANIFEST_ALIAS}"`,
     `--entry-mode ${entryMode}`,
     '--goal "<smoke bootstrap objective>"',
+    BOOTSTRAP_INVOCATION_ID_FLAG,
     '--project-root "$PWD"',
   ].join(" ");
 }
@@ -409,6 +412,7 @@ function renderWorkflowSmokeBootstrapInlineCommand(
     '--run-root "$RUN_ROOT"',
     `--entry-mode ${entryMode}`,
     '--goal "<smoke bootstrap objective>"',
+    BOOTSTRAP_INVOCATION_ID_FLAG,
     '--project-root "$PWD"',
   ].join(" ");
 }
@@ -562,6 +566,7 @@ function renderSemanticWorkflowContractBlock(
       '  --run-root "$RUN_ROOT" \\',
       '  --entry-mode "$ENTRY_MODE" \\',
       '  --goal "<smoke bootstrap objective>" \\',
+      `  ${BOOTSTRAP_INVOCATION_ID_FLAG} \\`,
       '  --project-root "$PWD"',
       "",
       ...BUILD_SMOKE_VALIDATION_CHECK_LINES,

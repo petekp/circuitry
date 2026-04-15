@@ -72,6 +72,7 @@ test -x .circuit/bin/circuit-engine
   --manifest "@build" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<smoke bootstrap objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 
 test -f "$RUN_ROOT/circuit.manifest.yaml"
@@ -99,17 +100,23 @@ the semantic bootstrap wrapper. Bootstrap is idempotent, so call it even if the
 router already initialized the run.
 
 Do not read unrelated parts of the repo before this bootstrap finishes:
+If the hook injected a `# Circuit Invocation` section with an id, thread it
+through every bootstrap in this request via `--invocation-id "<that-id>"` or
+per-command ledger correlation breaks.
 
 ```bash
 RUN_SLUG="add-dark-mode-support"  # derived from task description
 RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 ENTRY_MODE="default"              # map from the selected rigor
 
+# Thread the Circuit Invocation id when the hook set one.
+# INVOCATION_ID='inv_...' comes from the UserPromptSubmit context.
 .circuit/bin/circuit-engine bootstrap \
   --run-root "$RUN_ROOT" \
   --manifest "@build" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<task description>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 ```
 

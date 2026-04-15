@@ -69,6 +69,7 @@ test -x .circuit/bin/circuit-engine
   --run-root "$RUN_ROOT" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<smoke bootstrap objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 
 test -f "$RUN_ROOT/circuit.manifest.yaml"
@@ -86,6 +87,9 @@ and sweep objective (cleanup, quality improvement, coverage, docs-sync).
 **Direct invocation:** When invoked directly via `/circuit:sweep` (not through
 the router), bootstrap the run root immediately if one does not already exist.
 Do not do unrelated repo exploration before this setup finishes:
+If the hook injected a `# Circuit Invocation` section with an id, thread it
+through every bootstrap in this request via `--invocation-id "<that-id>"` or
+per-command ledger correlation breaks.
 
 Derive `RUN_SLUG` from the task description: lowercase, replace spaces and
 special characters with hyphens, collapse consecutive hyphens, trim to 50
@@ -98,11 +102,14 @@ ENTRY_MODE="default"  # Standard -> default, Lite -> lite, Deep -> deep, Autonom
 
 test -x .circuit/bin/circuit-engine
 
+# Thread the Circuit Invocation id when the hook set one.
+# INVOCATION_ID='inv_...' comes from the UserPromptSubmit context.
 .circuit/bin/circuit-engine bootstrap \
   --workflow "sweep" \
   --run-root "$RUN_ROOT" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<sweep objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 ```
 

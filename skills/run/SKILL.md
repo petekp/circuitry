@@ -78,6 +78,7 @@ test -x .circuit/bin/circuit-engine
   --manifest "@build" \
   --entry-mode "$BUILD_ENTRY_MODE" \
   --goal "<smoke bootstrap objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 
 test -f "$RUN_ROOT/circuit.manifest.yaml"
@@ -226,6 +227,9 @@ RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 ```
 
 Map the routed workflow and rigor to the workflow entry mode, then call semantic bootstrap:
+If the hook injected a `# Circuit Invocation` section with an id, thread it
+through every bootstrap in this request via `--invocation-id "<that-id>"` or
+per-command ledger correlation breaks.
 
 | Workflow | Rigor -> Entry Mode |
 |----------|---------------------|
@@ -239,11 +243,14 @@ Map the routed workflow and rigor to the workflow entry mode, then call semantic
 WORKFLOW_ID="explore"       # set from classification or intent hint
 ENTRY_MODE="tournament"     # mapped from routed rigor for the selected workflow
 
+# Thread the Circuit Invocation id when the hook set one.
+# INVOCATION_ID='inv_...' comes from the UserPromptSubmit context.
 .circuit/bin/circuit-engine bootstrap \
   --workflow "$WORKFLOW_ID" \
   --run-root "$RUN_ROOT" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<task objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 ```
 

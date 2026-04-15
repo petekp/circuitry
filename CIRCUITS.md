@@ -53,6 +53,7 @@ test -x .circuit/bin/circuit-engine
   --manifest "@build" \
   --entry-mode "lite" \
   --goal "<smoke bootstrap objective>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 ```
 - Valid proof is the canonical manifest/event pair plus derived outputs on disk: `circuit.manifest.yaml`, `events.ndjson`, the derived `state.json` snapshot, and `artifacts/active-run.md`.

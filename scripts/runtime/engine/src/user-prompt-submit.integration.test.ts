@@ -39,12 +39,15 @@ function runUserPromptSubmit(
   prompt: string,
   options?: { cwd?: string; env?: Record<string, string> },
 ): ReturnType<typeof spawnSync> {
+  const testHomeDir = options?.env?.HOME ?? mkdtempSync(join(tmpdir(), "circuit-prompt-home-"));
+
   return spawnSync(USER_PROMPT_SUBMIT, {
     cwd: options?.cwd,
     input: JSON.stringify({ prompt }),
     encoding: "utf-8",
     env: {
       ...process.env,
+      HOME: testHomeDir,
       CLAUDE_PLUGIN_ROOT: REPO_ROOT,
       ...options?.env,
     },
@@ -300,6 +303,7 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
+    expectInvocationContext(context);
     expect(context).toContain("Build bootstrap smoke verification");
     expect(context).toContain(".circuit/bin/circuit-engine bootstrap");
     expect(context).toContain('--manifest "@build"');
@@ -314,6 +318,7 @@ describe("user-prompt-submit integration", () => {
 
     expect(result.status).toBe(0);
     const context = readAdditionalContext(result);
+    expectInvocationContext(context);
     expect(context).toContain("Build bootstrap smoke verification");
     expect(context).toContain(".circuit/bin/circuit-engine bootstrap");
     expect(context).toContain('--manifest "@build"');
