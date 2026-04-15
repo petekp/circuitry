@@ -37,7 +37,8 @@
         "gate_failed",
         "checkpoint_requested",
         "checkpoint_resolved",
-        "run_completed"
+        "run_completed",
+        "run_aborted"
       ]
     },
     "occurred_at": { "type": "string", "format": "date-time" },
@@ -316,6 +317,21 @@
                 }
               }
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "run_aborted" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["reason", "aborted_at"],
+            "properties": {
+              "reason": { "type": "string", "minLength": 1 },
+              "aborted_at": { "type": "string", "format": "date-time" }
+            }
           }
         }
       }

@@ -374,7 +374,8 @@ export function syncIndexedCurrentRun(
     typeof state.status === "string" ? state.status : null;
 
   if (
-    runtimeStatus === "completed"
+    runtimeStatus === "aborted"
+    || runtimeStatus === "completed"
     || runtimeStatus === "stopped"
     || runtimeStatus === "blocked"
     || runtimeStatus === "handed_off"

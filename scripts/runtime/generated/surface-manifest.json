@@ -204,7 +204,7 @@
     {
       "executable": false,
       "path": "schemas/event.schema.json",
-      "sha256": "8f8ad9021688a9fdd36acf14e3e96244256e3fb645dc42ac49939075fd0481fb"
+      "sha256": "535ae131bb1e01e7b2421a1dbcc7ecf1d50ff642103dc550c2e950092323467d"
     },
     {
       "executable": false,
@@ -219,7 +219,7 @@
     {
       "executable": false,
       "path": "schemas/state.schema.json",
-      "sha256": "e91a0e80e37e0bf59649a1edaba058976e7528a0049aa19427ed8298355e3bb6"
+      "sha256": "38eed83eac54b706aa186812b66001a028a4a84fdab5b545655fb12d843e7598"
     },
     {
       "executable": false,
@@ -248,6 +248,11 @@
     },
     {
       "executable": true,
+      "path": "scripts/runtime/bin/abort-stuck-runs.sh",
+      "sha256": "1e7cdbe8c50901a43b8db11ffaea764e3b897ddb1465b7ea30d6b3cba7788ffb"
+    },
+    {
+      "executable": true,
       "path": "scripts/runtime/bin/append-event.js",
       "sha256": "581a9c6b83f7b49471e2685a43a82fa183b74daf381ca789c861f244383da750"
     },
@@ -259,22 +264,22 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "d278402754a66bd83f3b095540f35c1b14038c45e298f7e6a633bf6b389dccdf"
+      "sha256": "aaba2178f2dbe80adbc663f8de14faaf48ee561e8f9a8cb4744179ae74be4c79"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/continuity.js",
-      "sha256": "6fcb45f31f757ec3ac101259e1a883c2d1c5c4753501cdd88979dcd725a5d9ef"
+      "sha256": "dd16f6eb2c44b06d2ed3063ba4ce780092fd92836216eec221dedf031e371320"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "f743e52ef5216597db85c2303d3591f3dce87a06a69416106793352bb2cd7441"
+      "sha256": "dcd1262563eb543bd419fab15825e51704857709e86a1ecd6c20d25b74b5aa8b"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/derive-state.js",
-      "sha256": "838d6728189c9a69fa264f404b8f46bc2b9ca55347626456fc9f996068f5fd71"
+      "sha256": "977e6016fad5556a239810f1ff6294f16419e87e85f409b99824b9f33cdd5c84"
     },
     {
       "executable": true,
@@ -299,12 +304,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/resume.js",
-      "sha256": "b070032cbf5019e71c304d68ec9494eac6e55009196edd7f5079d3711e76f268"
+      "sha256": "fbe8190ae7477a47ba38349c8b2341fbfb48c9a322c201a412e3995f6f398724"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "809cc8f970adcdf1bc842ce4f93b6d5caec6970469cc48c5af8be7a512fc7710"
+      "sha256": "fb5f91ee07c609244b02cd7f281bef8034482ff6570a0c6537822f8e1715cb4d"
     },
     {
       "executable": true,
@@ -319,7 +324,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "250ad977770e5d3238dc53c0dfe2c0c0952feac9b8546da57f5d09e8c22256f7"
+      "sha256": "614dbebd90447998f9859abcff77c8d355eb4697c72ca37a3e96ebc71def4733"
     },
     {
       "executable": true,

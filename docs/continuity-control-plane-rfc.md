@@ -44,6 +44,9 @@ Replace prompt-authored markdown continuity with engine-owned structured continu
 | Continuity | `.circuit/control-plane/continuity-index.json` + pointed record |
 | Active-run dashboard | `<runRoot>/artifacts/active-run.md` as runtime output only |
 
+Runtime terminal statuses are `aborted`, `completed`, `stopped`, `blocked`, and `handed_off`.
+When a run reaches a terminal state, continuity must not keep it attached as `.circuit/current-run`.
+
 `active-run.md` may still exist as a runtime dashboard, but it is not continuity authority and is not a continuity compatibility surface.
 
 ## Storage Layout

@@ -26,6 +26,7 @@
         "in_progress",
         "waiting_checkpoint",
         "waiting_worker",
+        "aborted",
         "completed",
         "stopped",
         "blocked",
@@ -41,6 +42,7 @@
     },
     "selected_entry_mode": { "type": "string", "minLength": 1 },
     "goal": { "type": "string", "minLength": 1 },
+    "abort_reason": { "type": "string", "minLength": 1 },
     "started_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" },
     "git": {

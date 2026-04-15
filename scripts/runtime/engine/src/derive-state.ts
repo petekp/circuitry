@@ -276,6 +276,17 @@ export function deriveState(
       state.current_step = null;
       state.updated_at = occurredAt;
     }
+    else if (eventType === "run_aborted") {
+      state.status = "aborted";
+      state.current_step = null;
+      state.updated_at =
+        typeof payload.aborted_at === "string" && payload.aborted_at.length > 0
+          ? payload.aborted_at
+          : occurredAt;
+      if (typeof payload.reason === "string" && payload.reason.length > 0) {
+        state.abort_reason = payload.reason;
+      }
+    }
   }
 
   return state;

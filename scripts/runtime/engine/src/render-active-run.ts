@@ -101,7 +101,7 @@ function verificationCommands(runRoot: string): string {
 }
 
 function isTerminalStatus(status: string): boolean {
-  return ["completed", "stopped", "blocked", "handed_off"].includes(status);
+  return ["aborted", "completed", "stopped", "blocked", "handed_off"].includes(status);
 }
 
 function currentPhase(state: Record<string, any>): string {

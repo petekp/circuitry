@@ -5,6 +5,7 @@ import { basename, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { bootstrapRun } from "../bootstrap.js";
+import { abortRun } from "../abort-run.js";
 import {
   recordInvocationClassifiedStandalone,
   recordInvocationClassifiedTrivial,
@@ -27,7 +28,7 @@ type ParsedFlags = {
 };
 
 const USAGE =
-  "Usage: circuit-engine <bootstrap|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|resume|render|record-classification|continuity> [options]\n";
+  "Usage: circuit-engine <bootstrap|abort-run|complete-synthesis|request-checkpoint|resolve-checkpoint|dispatch-step|reconcile-dispatch|resume|render|record-classification|continuity> [options]\n";
 const BOOTSTRAP_USAGE = [
   "Usage: circuit-engine bootstrap --run-root <path> [--workflow <slug> | --manifest <path|@workflow>] [--entry-mode <mode> | --rigor <rigor>] [--goal <text>] [--project-root <path>] [--head-at-start <sha>] [--invocation-id <id>] [--json]",
   "",
@@ -288,7 +289,7 @@ function main(): number {
     }
 
     if (command !== "bootstrap" && positionals.length > 0) {
-      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, record-classification, continuity)`);
+      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, abort-run, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, record-classification, continuity)`);
     }
 
     switch (command) {
@@ -329,6 +330,28 @@ function main(): number {
             run_root: result.runRoot,
             run_slug: result.runSlug,
             status: result.status,
+          },
+          json,
+        );
+      }
+      case "abort-run": {
+        const runRoot = requireRunRoot(flags);
+        const reason = flags.reason;
+        if (!reason) {
+          throw new Error("circuit: --reason is required");
+        }
+
+        const result = abortRun({ reason, runRoot });
+        return printResult(
+          {
+            already_terminal: result.alreadyTerminal,
+            continuity_cleared: result.continuityCleared,
+            message: result.message,
+            reason: result.reason,
+            run_root: result.runRoot,
+            run_slug: result.runSlug,
+            status: result.status,
+            updated_at: result.updatedAt,
           },
           json,
         );

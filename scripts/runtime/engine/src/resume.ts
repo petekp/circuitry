@@ -203,6 +203,7 @@ export function findResumePoint(manifest: any, state: any): ResumeResult {
 
   // Terminal states
   const terminalStatuses = [
+    "aborted",
     "completed",
     "stopped",
     "blocked",
