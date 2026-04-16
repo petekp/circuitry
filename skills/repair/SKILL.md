@@ -334,7 +334,7 @@ regression test.
 
 **Gate:** Regression test passes. No new regressions. All verification commands pass.
 
-Update `active-run.md`: phase=verify, next step=Review (or Close for Lite).
+Update `active-run.md`: phase=verify, next step=Review (skipped at Lite rigor).
 
 ## Phase: Review
 
