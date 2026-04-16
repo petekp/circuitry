@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 
 import {
+  classifyAdapterExitError,
+  classifyAdapterStartError,
+} from "./adapter-errors.js";
+import {
   runIsolatedCodexDispatch,
   type DispatchProcessResult,
   type RuntimeBoundary,
@@ -316,7 +320,15 @@ function runProcessAdapter(
   });
 
   if (result.error) {
-    throw new Error(`circuit: adapter "${resolution.adapter}" failed to start: ${result.error.message}`);
+    const errnoCode = (result.error as NodeJS.ErrnoException).code;
+    const { hint } = classifyAdapterStartError(
+      resolution.adapter,
+      errnoCode,
+      resolution.resolvedFrom,
+    );
+    throw new Error(
+      `circuit: adapter "${resolution.adapter}" failed to start: ${result.error.message}${hint ? `\n${hint}` : ""}`,
+    );
   }
 
   if (result.status !== 0) {
@@ -324,8 +336,12 @@ function runProcessAdapter(
       .filter((value) => value && value.trim().length > 0)
       .join("\n")
       .trim();
+    const { hint } = classifyAdapterExitError(
+      resolution.adapter,
+      resolution.resolvedFrom,
+    );
     throw new Error(
-      `circuit: adapter "${resolution.adapter}" exited with status ${result.status}${detail ? `\n${detail}` : ""}`,
+      `circuit: adapter "${resolution.adapter}" exited with status ${result.status}${detail ? `\n${detail}` : ""}\n${hint}`,
     );
   }
 

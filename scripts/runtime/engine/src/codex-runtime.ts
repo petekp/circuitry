@@ -12,6 +12,10 @@ import {
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
+import {
+  classifyAdapterExitError,
+  classifyAdapterStartError,
+} from "./adapter-errors.js";
 import { resolveProjectRoot } from "./project-root.js";
 import { writeTextFileAtomic } from "./file-utils.js";
 
@@ -796,13 +800,18 @@ function finalizeSpawnResult(
   result: SpawnSyncReturns<string>,
 ): void {
   if (result.error) {
-    throw new Error(`circuit: adapter "${adapter}" failed to start: ${result.error.message}`);
+    const errnoCode = (result.error as NodeJS.ErrnoException).code;
+    const { hint } = classifyAdapterStartError(adapter, errnoCode);
+    throw new Error(
+      `circuit: adapter "${adapter}" failed to start: ${result.error.message}${hint ? `\n${hint}` : ""}`,
+    );
   }
 
   if (result.status !== 0) {
     const detail = readResultOutput(result);
+    const { hint } = classifyAdapterExitError(adapter);
     throw new Error(
-      `circuit: adapter "${adapter}" exited with status ${result.status}${detail ? `\n${detail}` : ""}`,
+      `circuit: adapter "${adapter}" exited with status ${result.status}${detail ? `\n${detail}` : ""}\n${hint}`,
     );
   }
 }

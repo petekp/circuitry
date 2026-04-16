@@ -289,7 +289,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/dispatch.js",
-      "sha256": "dee9766b2efaec5ade287e34d8396d05ea14f3c56906225e7d70020ccf2044cf"
+      "sha256": "26a1bda4dc7bc5b032a61727ccacced63eb2569d1dc9763884aa34f50a14eae5"
     },
     {
       "executable": true,
