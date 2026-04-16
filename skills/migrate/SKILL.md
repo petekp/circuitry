@@ -257,17 +257,34 @@ Read brief.md and inventory.md. Write `artifacts/plan.md`:
 - [ ] Compatibility: API versioning during transition?
 ```
 
-**Checkpoint:** This is the main migration steering checkpoint. In interactive
-runs, present the plan and ask:
+**Checkpoint:** This is the migration steering gate. Frame it as a single
+go/no-go on the plan as a whole, with four independent review lenses the user
+can inspect before deciding:
 
-> Here is the coexistence plan and batch order.
-> 1. Does the coexistence strategy match how your system works?
-> 2. Does the batch order feel right?
-> 3. Are the rollback procedures realistic?
-> 4. Any scope cuts or batches to defer?
+> **Coexistence plan ready for review.**
+>
+> Four things to confirm before Execute:
+>
+> - **Coexistence strategy** — does old-new data flow, state sharing, and
+>   routing match how your system actually works?
+> - **Batch order** — risk-first and blast-radius-sensitive, or does something
+>   need to move earlier or later?
+> - **Rollback procedures** — realistic at the batch granularity and actually
+>   revertible under load?
+> - **Scope** — any batches to defer, split, or cut before we commit?
+>
+> Choose `continue` to proceed to batch execution, or `adjust` to revise
+> `plan.md`. When adjusting, name which dimension(s) need revision so the next
+> draft is targeted instead of a full rewrite.
 
-If the checkpoint response is `adjust`, revise `plan.md` and stay in Plan. Only
-move to Execute on `continue`. `autonomous` mode does not skip this checkpoint.
+If the checkpoint response is `adjust`, revise only the named dimensions in
+`plan.md` and re-present. Only move to Execute on `continue`.
+
+**Autonomous mode:** auto-resolve `continue` when the plan has concrete entries
+under every lens, and when the coexistence strategy reuses an established
+pattern (same-DB dual-write, strangler routing, blue-green). Hold for human
+review when coexistence is novel, or when any lens is missing or hand-wavy --
+novel coexistence is the most common source of silent data-loss regressions.
 
 **Gate:** plan.md exists with explicit coexistence strategy, batch definitions with risk-first ordering, per-batch rollback procedures, verification commands, cutover criteria.
 
