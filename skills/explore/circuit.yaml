@@ -13,18 +13,23 @@ circuit:
   entry_modes:
     default:
       start_at: frame
+      rigor: Standard
       description: Standard exploration with evidence probes.
     lite:
       start_at: frame
+      rigor: Lite
       description: Quick investigation. Read codebase directly, no external research.
     deep:
       start_at: frame
+      rigor: Deep
       description: Standard plus seam proof.
     tournament:
       start_at: frame
+      rigor: Tournament
       description: Bounded adversarial evaluation.
     autonomous:
       start_at: frame
+      rigor: Autonomous
       description: Standard with auto-resolved checkpoints and deferred findings.
 
   steps:

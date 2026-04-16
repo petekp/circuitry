@@ -30,19 +30,23 @@ function titleCaseLabel(value: string): string {
     .join(" ");
 }
 
-function rigorLabel(entryMode: string): string {
-  switch (entryMode) {
-    case "default":
-      return "Standard";
-    case "lite":
-      return "Lite";
-    case "deep":
-      return "Deep";
-    case "autonomous":
-      return "Autonomous";
-    default:
-      return titleCaseLabel(entryMode);
+function rigorLabel(
+  entryMode: string,
+  manifest: Record<string, any>,
+): string {
+  const entryModes = (manifest.circuit as Record<string, any>)?.entry_modes;
+  const declared = entryModes?.[entryMode]?.rigor;
+  if (typeof declared === "string" && declared.trim().length > 0) {
+    return declared.trim();
   }
+
+  // Fallback for entry modes whose manifests don't declare a rigor label yet
+  // (e.g. the run workflow's routing entry). Named rigor convention:
+  // default -> Standard, and otherwise the title-cased mode slug.
+  if (entryMode === "default") {
+    return "Standard";
+  }
+  return titleCaseLabel(entryMode);
 }
 
 function readMarkdownIfPresent(path: string): string | null {
@@ -266,7 +270,7 @@ export function renderActiveRun(runRoot: string): RenderActiveRunResult {
     "## Workflow",
     titleCaseLabel(manifest.circuit.id as string),
     "## Rigor",
-    rigorLabel((state.selected_entry_mode ?? "default") as string),
+    rigorLabel((state.selected_entry_mode ?? "default") as string, manifest),
     "## Current Phase",
     phase,
     "## Goal",

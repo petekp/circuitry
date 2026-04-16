@@ -194,7 +194,7 @@
     {
       "executable": false,
       "path": "schemas/circuit-manifest.schema.json",
-      "sha256": "ca176a28aaff671bfc81aa9905721627bd4defdf0f36a4f44959ddeb9c577eca"
+      "sha256": "26da20b64f2d736bc67d38512fbc87fa33ff7b98387f9b0fd0e008b1f4c171b2"
     },
     {
       "executable": false,
@@ -269,17 +269,17 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "f92d6d496169c77eb7291977e2ca62822e646bdce563d40c4ac03df2e58f8c00"
+      "sha256": "3b47e15889c18c25a73b25f0ac868be6ed7346a6fd65694ca5fdafe05be35548"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/continuity.js",
-      "sha256": "7877fb23262d3b510bff4a2abfc880949fd624355cd5c56e0bf58422d95d424e"
+      "sha256": "6ea14ef033b50ed0e94272db4d81977df431dd9579939416916c209f67374121"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "b964f75ab5be15af65eb9d47df9271b32118c1643be2afbade30e6964f86eab0"
+      "sha256": "dbb7825ccf77be6971f4d89ab18912fb7e35f66f4022f0115e439d9cfe0695ea"
     },
     {
       "executable": true,
@@ -314,7 +314,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "77d5711b546df7236a87eaec30340dce5c86f02dec42ac00faa67030c6cc9932"
+      "sha256": "f2ebe4f7d067b5692a5921536127cc91f33991e8a894b1594c4980dd1eb71706"
     },
     {
       "executable": true,
@@ -329,7 +329,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "9de69fe467073aecb4a1c453b6065d5bcc070c6084476c038e7e5cdd8fa6964d"
+      "sha256": "0f70ae05c05ecc94b95bab0d9b9c804af0f5bf8953b912eafa31aa7fa2e0af8b"
     },
     {
       "executable": true,
@@ -354,7 +354,7 @@
     {
       "executable": false,
       "path": "skills/build/circuit.yaml",
-      "sha256": "0aca879c22d147243f534da75f9c83c6ef42e78f89e04b55aae3b766bdc149cb"
+      "sha256": "6723ffbd6402b2996fe59432405698929e73eaa4d1e4b79889db0cfc93d487b2"
     },
     {
       "executable": false,
@@ -369,7 +369,7 @@
     {
       "executable": false,
       "path": "skills/explore/circuit.yaml",
-      "sha256": "1cffae56e99f83146bee3cd1c4de079ff5e50dac9fa91d798fcffb9ec11e25de"
+      "sha256": "36779b6a631d4e8a45ae1a252edcc54f5eb8939f652c1405438b1891c67d9ae5"
     },
     {
       "executable": false,
@@ -389,7 +389,7 @@
     {
       "executable": false,
       "path": "skills/migrate/circuit.yaml",
-      "sha256": "2b5010caf48302f6fb9ef93057f500febd16929d252666ad0a538a4dfb3c6f9a"
+      "sha256": "6406361c36cf3c0f66cf6a01c37f42b231f8d02c8735b434ab3d96670c97095b"
     },
     {
       "executable": false,
@@ -399,7 +399,7 @@
     {
       "executable": false,
       "path": "skills/repair/circuit.yaml",
-      "sha256": "0168f039eca717b472d869a8a300a3c141b6a283e2e3fdc02b9b8a281a640ad9"
+      "sha256": "bb95ddbbfc4cdaf6f3ca46c1e9e3663715b90c6b3b58543cfbb39f65e1e3ad99"
     },
     {
       "executable": false,
@@ -439,7 +439,7 @@
     {
       "executable": false,
       "path": "skills/sweep/circuit.yaml",
-      "sha256": "606efab0bc6aac2e57411a9dba2c3e06a2eb20b9364c6403bf00fbb2f101c15a"
+      "sha256": "0077957f1e5de4337558c6da8fc37b5838f8c269ce2ee60c9deed348e0c0fd9d"
     },
     {
       "executable": false,

@@ -14,15 +14,19 @@ circuit:
   entry_modes:
     default:
       start_at: frame
+      rigor: Standard
       description: Standard sweep. Pauses only at high-risk boundaries.
     lite:
       start_at: frame
+      rigor: Lite
       description: Quick scan, high-confidence items only.
     deep:
       start_at: frame
+      rigor: Deep
       description: Standard plus evidence adjudication with 9-point checklist.
     autonomous:
       start_at: frame
+      rigor: Autonomous
       description: Unattended sweep with evidence-gated auto-approval.
 
   steps:

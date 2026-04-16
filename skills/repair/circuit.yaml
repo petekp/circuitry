@@ -14,15 +14,19 @@ circuit:
   entry_modes:
     default:
       start_at: frame
+      rigor: Standard
       description: Standard repair with independent review.
     lite:
       start_at: frame
+      rigor: Lite
       description: Quick fix, test-first, no independent review.
     deep:
       start_at: frame
+      rigor: Deep
       description: Broad investigation with evidence probes.
     autonomous:
       start_at: frame
+      rigor: Autonomous
       description: Standard with auto-resolved checkpoints. Escalates on no-repro.
 
   steps:

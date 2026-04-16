@@ -13,15 +13,19 @@ circuit:
   entry_modes:
     default:
       start_at: frame
+      rigor: Standard
       description: Standard build on the fixed graph. Pauses only on ambiguity or irreversibility.
     lite:
       start_at: frame
+      rigor: Lite
       description: Faster build rigor inside the fixed graph. Review still runs.
     deep:
       start_at: frame
+      rigor: Deep
       description: Standard build with deeper rigor inside Frame and Plan.
     autonomous:
       start_at: frame
+      rigor: Autonomous
       description: Standard fixed-graph build with auto-resolved checkpoints.
 
   steps:

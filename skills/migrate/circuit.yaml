@@ -14,12 +14,15 @@ circuit:
   entry_modes:
     default:
       start_at: frame
+      rigor: Standard
       description: Standard migration. Coexistence plan checkpoint only.
     deep:
       start_at: frame
+      rigor: Deep
       description: Deep migration with steering checkpoints.
     autonomous:
       start_at: frame
+      rigor: Autonomous
       description: Unattended migration. Auto-resolve checkpoints except coexistence plan.
 
   steps:

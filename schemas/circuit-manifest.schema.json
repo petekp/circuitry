@@ -75,7 +75,12 @@
       "additionalProperties": false,
       "properties": {
         "start_at": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "rigor": {
+          "type": "string",
+          "enum": ["Lite", "Standard", "Deep", "Tournament", "Autonomous"],
+          "description": "Named router rigor this entry mode maps to. Surfaces in active-run.md."
+        }
       }
     },
     "signal": {

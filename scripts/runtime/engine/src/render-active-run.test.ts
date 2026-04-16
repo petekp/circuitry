@@ -56,6 +56,22 @@ describe("render-active-run", () => {
     expect(result.markdown).toContain("## Blockers\nnone");
   });
 
+  it("surfaces the manifest-declared rigor for each workflow default entry mode", () => {
+    const cases: Array<{ slug: string; rigor: string }> = [
+      { slug: "build", rigor: "Standard" },
+      { slug: "explore", rigor: "Standard" },
+      { slug: "migrate", rigor: "Standard" },
+      { slug: "repair", rigor: "Standard" },
+      { slug: "sweep", rigor: "Standard" },
+    ];
+
+    for (const { slug, rigor } of cases) {
+      const { runRoot } = createWorkflowRun(slug, `rigor label test for ${slug}`);
+      const markdown = renderActiveRun(runRoot).markdown;
+      expect(markdown).toContain(`## Rigor\n${rigor}`);
+    }
+  });
+
   it("renders waiting checkpoint state", () => {
     const { projectRoot, runRoot } = createBuildRun();
     writeFrameInputs(runRoot);
