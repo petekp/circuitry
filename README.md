@@ -22,7 +22,8 @@ Install from the plugin marketplace:
 /reload-plugins
 ```
 
-Start a new Claude Code session and run:
+`/reload-plugins` picks up Circuit in the current session -- no restart needed.
+Then run:
 
 ```
 /circuit:run {{your task}}
