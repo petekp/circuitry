@@ -85,6 +85,8 @@ test -f "$RUN_ROOT/artifacts/active-run.md"
 The router passes: task description, rigor profile (Standard, Deep, Autonomous).
 YAML entry modes are `default`, `deep`, and `autonomous`. Standard rigor maps to
 `default`, Deep rigor maps to `deep`. Default rigor for direct invocation: Deep.
+Lite is intentionally unavailable for Migrate: coexistence, rollback, and
+cutover review are load-bearing safety gates that cannot be collapsed.
 
 **Direct invocation:** When invoked directly via `/circuit:migrate` (not through
 the router), bootstrap the run root immediately if one does not already exist.
