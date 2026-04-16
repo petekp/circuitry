@@ -24,8 +24,11 @@ import { dispatchStep, reconcileDispatch } from "../dispatch-step.js";
 import { loadManifest } from "../derive-state.js";
 import { renderActiveRun } from "../render-active-run.js";
 import { findResumePoint, loadOrRebuildState } from "../resume.js";
+import { checkNodeMajor } from "../node-version.js";
 import { REPO_ROOT } from "../schema.js";
 import { runContinuityCommand } from "../continuity-commands.js";
+
+const MIN_NODE_MAJOR = 20;
 
 type ParsedFlags = {
   flags: Record<string, string>;
@@ -278,6 +281,12 @@ function projectRootForAttachedRun(
 }
 
 function main(): number {
+  const versionCheck = checkNodeMajor(process.versions.node, MIN_NODE_MAJOR);
+  if (!versionCheck.ok) {
+    process.stderr.write(`circuit-engine: ${versionCheck.message}\n`);
+    return 1;
+  }
+
   const [command, ...rest] = process.argv.slice(2);
 
   if (!command) {

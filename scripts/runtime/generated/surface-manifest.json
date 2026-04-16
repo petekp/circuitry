@@ -269,7 +269,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "dc6420f74f2a50aa689927c802690caffec35647023345176baaf82e0e13dddb"
+      "sha256": "c25ebd862004ce64780544f00dcf7e020338289a62b7ce13c03698c1fed57512"
     },
     {
       "executable": true,
