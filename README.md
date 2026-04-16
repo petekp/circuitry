@@ -5,8 +5,7 @@
 <p align="center"><strong>Automate your Claude Code workflows with a single command.</strong></p>
 <br />
 
-Enter `/circuit:run` and describe your task. It'll pick the most suitable workflow from the core set -- or from ones you've created -- and
-execute it, making sure each step's output is valid before moving onto the next.
+Circuit is an orchestration layer for structured, resumable, multi-phase workflows inside Claude Code. Enter `/circuit:run` and describe your task. It'll pick the most suitable workflow from the core set -- or from ones you've created -- and execute it, making sure each step's output is valid before moving onto the next.
  
 - **Orchestrate your skills.** You can pre-configure any skill(s) be applied at the phase or step level.
 - **Resumable.** If a session dies, you can still pick up where you left off.
@@ -42,7 +41,7 @@ Circuit replaces ad-hoc skill invocation and having to copy-paste or re-type the
 
 **Core Workflows:**
 
-These workflows are included and ready to use. You can create your own by following the guide in `CUSTOM-CIRCUITS.md`.
+These workflows are included and ready to use. You can create your own by following the guide in `CUSTOM-CIRCUITS.md` -- skim [CIRCUITS.md](CIRCUITS.md) first for the per-workflow phase breakdowns that custom circuits mirror.
 
 | Workflow | Purpose |
 |----------|-------------|
@@ -61,6 +60,8 @@ These workflows are included and ready to use. You can create your own by follow
 | **Deep** | Research phase, seam proof. Workflows that include review still run it. |
 | **Tournament** | Competing proposals, adversarial evaluation, convergence. |
 | **Autonomous** | Checkpoints auto-resolve. Useful for unattended runs. |
+
+Rigor specifics (review scope, checkpoint count, test gates) vary by workflow. See [CIRCUITS.md](CIRCUITS.md) for the per-workflow breakdown.
 
 Every workflow follows these phases: **Frame, Analyze, Plan, Act, Verify,
 Review, Close, Pause**. Not every workflow goes through every phase, but the order remains consistent.
@@ -112,7 +113,9 @@ Review, Close, Pause**. Not every workflow goes through every phase, but the ord
 
 See [CIRCUITS.md](CIRCUITS.md) for the full catalog with phase breakdowns and
 usage examples. See [CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md) for the end-user
-create/publish flow and the manual authoring track.
+create/publish flow and the manual authoring track. Custom circuits live under
+`~/.claude/circuit/skills/<slug>/` and appear in the slash menu after
+`/reload-plugins`.
 
 ## Key Features
 
@@ -233,7 +236,7 @@ simple and avoids shell interpolation. See
 ```
 
 This checks the installed surface Circuit actually ships: Node.js, engine CLIs,
-skill directories, relay templates, config discovery behavior, and CLI
+skill directories, relay scripts, config discovery behavior, and CLI
 round trips. Fix any failures it reports.
 
 **Changes not taking effect after editing plugin files.** Claude Code runs the
