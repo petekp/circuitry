@@ -166,12 +166,13 @@ JSON
   --step frame
 ```
 
-Rigor behavior:
-- Lite, Standard, Autonomous: auto-write `{"selection":"continue"}` to
-  `checkpoints/frame-1.response.json`, then call `resolve-checkpoint`.
-- Deep: stop for user confirmation. Once the user confirms, write
-  `checkpoints/frame-1.response.json` with `selection: continue`, then call
-  `resolve-checkpoint`.
+**Rigor gating (what to decide before running commands):**
+
+- **Lite, Standard, Autonomous:** proceed immediately to the resolve commands below.
+- **Deep:** stop and wait for explicit user confirmation. Once the user
+  confirms, proceed to the resolve commands below.
+
+**Resolve commands (identical across rigor once gating clears):**
 
 ```bash
 cat > "$RUN_ROOT/checkpoints/frame-1.response.json" <<'JSON'
