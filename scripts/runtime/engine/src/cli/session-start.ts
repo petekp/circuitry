@@ -43,10 +43,7 @@ function printCurrentRunFallbackBanner(): void {
   const lines: string[] = [
     "> **Circuit active run attached.**",
     "> No pending continuity record -- the indexed current_run is a fallback attachment, not saved handoff authority.",
-    ">",
-    "> **To pick back up:**",
-    "> - Run `/circuit:handoff resume` to inspect the attached run and decide how to proceed.",
-    "> - Or name a concrete new task via `/circuit:run <task>` -- Circuit starts fresh.",
+    "> Name your next task to continue, or use a Circuit handoff command to manage the attachment.",
     "> Available: active run",
     "",
   ];
@@ -63,6 +60,11 @@ function printWelcome(): void {
       "  /circuit:run add dark mode support to the settings page  Router picks the right workflow",
       "  /circuit:run decide: REST vs GraphQL for the new API     Adversarial evaluation of options",
       "  /circuit:create research workflow for RFC pre-reads      Draft and publish a reusable custom circuit",
+      "",
+      "Intent-hint prefixes skip routing and dispatch directly:",
+      "  fix: → Repair Lite      repair: → Repair Deep      develop: → Build Standard",
+      "  decide: → Explore Tournament      migrate: → Migrate Deep",
+      "  cleanup: → Sweep Standard      overnight: → Sweep Autonomous",
       "",
       "Circuit classifies your task into the right workflow (Explore, Build, Repair,",
       "Migrate, Sweep), selects a rigor level, and runs it. You step in at checkpoints.",

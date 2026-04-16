@@ -306,7 +306,8 @@ describe("user-prompt-submit integration", () => {
     expectInvocationContext(context);
     expect(context).toContain("Build bootstrap smoke verification");
     expect(context).toContain(".circuit/bin/circuit-engine bootstrap");
-    expect(context).toContain('--manifest "@build"');
+    expect(context).toContain('--workflow "build"');
+    expect(context).not.toContain('--manifest "@build"');
     expect(context).toContain("Do not use `Write`, `Edit`, heredocs, or manual file creation");
     expect(context).toContain("Do not continue into Frame, Plan, Act, Verify, Review, or Close");
   });
@@ -321,7 +322,8 @@ describe("user-prompt-submit integration", () => {
     expectInvocationContext(context);
     expect(context).toContain("Build bootstrap smoke verification");
     expect(context).toContain(".circuit/bin/circuit-engine bootstrap");
-    expect(context).toContain('--manifest "@build"');
+    expect(context).toContain('--workflow "build"');
+    expect(context).not.toContain('--manifest "@build"');
   });
 
   it("stays silent for unrelated prompts", () => {

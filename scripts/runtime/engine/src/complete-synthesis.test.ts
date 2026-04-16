@@ -80,6 +80,91 @@ function makeSynthesisManifest() {
   };
 }
 
+function makePluralWritesManifest() {
+  return {
+    schema_version: "2",
+    circuit: {
+      id: "synthesis-plural-test",
+      version: "2026-04-15",
+      purpose: "Plural writes synthesis tests",
+      entry: {
+        signals: {
+          include: ["decision"],
+        },
+      },
+      entry_modes: {
+        default: {
+          start_at: "decide",
+        },
+      },
+      steps: [
+        {
+          id: "decide",
+          title: "Decide/Plan",
+          executor: "orchestrator",
+          kind: "synthesis",
+          protocol: "plural-decide@v1",
+          reads: ["user.task"],
+          writes: {
+            artifacts: [
+              { path: "artifacts/plan.md", schema: "plan@v1" },
+              { path: "artifacts/decision.md", schema: "decision@v1" },
+            ],
+          },
+          gate: {
+            kind: "schema_sections",
+            source: "artifacts/plan.md",
+            required: ["Approach"],
+            alternate_source: "artifacts/decision.md",
+            alternate_required: ["Decision", "Rationale"],
+          },
+          routes: {
+            pass: "close",
+          },
+        },
+        {
+          id: "close",
+          title: "Close",
+          executor: "orchestrator",
+          kind: "synthesis",
+          protocol: "close@v1",
+          reads: ["artifacts/plan.md"],
+          writes: {
+            artifact: {
+              path: "artifacts/result.md",
+              schema: "result@v1",
+            },
+          },
+          gate: {
+            kind: "schema_sections",
+            source: "artifacts/result.md",
+            required: ["Changes", "Verification", "PR Summary"],
+          },
+          routes: {
+            pass: "@complete",
+          },
+        },
+      ],
+    },
+  };
+}
+
+function createPluralWritesRun() {
+  const { projectRoot, runRoot } = makeTempProject("synthesis-plural-run");
+  const manifestPath = join(projectRoot, "synthesis.manifest.yaml");
+  writeManifestFile(manifestPath, makePluralWritesManifest());
+  bootstrapRun({
+    entryMode: "default",
+    goal: "Complete plural-writes synthesis",
+    headAtStart: "abc1234",
+    manifestPath,
+    projectRoot,
+    runRoot,
+  });
+
+  return { projectRoot, runRoot };
+}
+
 function createSynthesisRun() {
   const { projectRoot, runRoot } = makeTempProject("synthesis-run");
   const manifestPath = join(projectRoot, "synthesis.manifest.yaml");
@@ -241,6 +326,72 @@ describe("complete-synthesis", () => {
         }),
       /route/i,
     );
+  });
+
+  it("passes a plural-writes step when the primary gate source is satisfied", () => {
+    const { projectRoot, runRoot } = createPluralWritesRun();
+    writeRunFile(
+      runRoot,
+      "artifacts/plan.md",
+      "# Plan\n## Approach\nChoose option A.\n",
+    );
+    writeRunFile(
+      runRoot,
+      "artifacts/decision.md",
+      "# Decision\n## Decision\nGo with option A.\n## Rationale\nHighest leverage.\n",
+    );
+
+    const result = completeSynthesisStep({ projectRoot, runRoot, step: "decide" });
+
+    expect(result.gatePassed).toBe(true);
+    expect(result.route).toBe("close");
+    expect(readState(runRoot).current_step).toBe("close");
+
+    const events = readEvents(runRoot);
+    const written = events
+      .filter((e) => e.event_type === "artifact_written")
+      .map((e) => e.payload.artifact_path);
+    expect(written).toEqual([
+      "artifacts/plan.md",
+      "artifacts/decision.md",
+    ]);
+  });
+
+  it("passes a plural-writes step when only the alternate gate source is satisfied", () => {
+    const { projectRoot, runRoot } = createPluralWritesRun();
+    writeRunFile(
+      runRoot,
+      "artifacts/decision.md",
+      "# Decision\n## Decision\nGo with option B.\n## Rationale\nLower risk.\n",
+    );
+
+    const result = completeSynthesisStep({ projectRoot, runRoot, step: "decide" });
+
+    expect(result.gatePassed).toBe(true);
+    expect(result.route).toBe("close");
+    expect(readState(runRoot).current_step).toBe("close");
+  });
+
+  it("fails a plural-writes step when neither source satisfies the gate", () => {
+    const { projectRoot, runRoot } = createPluralWritesRun();
+    writeRunFile(
+      runRoot,
+      "artifacts/plan.md",
+      "# Plan\nNo Approach heading here.\n",
+    );
+    writeRunFile(
+      runRoot,
+      "artifacts/decision.md",
+      "# Decision\nNo required headings.\n",
+    );
+
+    expect(() =>
+      completeSynthesisStep({ projectRoot, runRoot, step: "decide" }),
+    ).toThrow(/missing required sections/i);
+
+    const state = readState(runRoot);
+    expect(state.routes.decide).toBeUndefined();
+    expect(state.current_step).toBe("decide");
   });
 
   it("is idempotent after success", () => {

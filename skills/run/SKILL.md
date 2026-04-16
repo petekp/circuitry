@@ -74,8 +74,8 @@ BUILD_ENTRY_MODE="lite"
 test -x .circuit/bin/circuit-engine
 
 .circuit/bin/circuit-engine bootstrap \
+  --workflow "build" \
   --run-root "$RUN_ROOT" \
-  --manifest "@build" \
   --entry-mode "$BUILD_ENTRY_MODE" \
   --goal "<smoke bootstrap objective>" \
   --invocation-id "${INVOCATION_ID:-}" \

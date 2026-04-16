@@ -305,6 +305,7 @@ function runProcessAdapter(
   const commandArgv = [...resolution.commandArgv, promptFile, outputFile];
   const result = spawnSync(commandArgv[0], commandArgv.slice(1), {
     encoding: "utf-8",
+    maxBuffer: 64 * 1024 * 1024,
   });
 
   if (result.error) {

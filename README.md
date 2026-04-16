@@ -108,7 +108,7 @@ Review, Close, Pause**. Not every workflow goes through every phase, but the ord
 |----------|-------------|
 | `/circuit:create` | Draft, validate, and publish a user-global custom circuit |
 | `/circuit:review` | Standalone fresh-context code review |
-| `/circuit:handoff` | Save session state for the next session |
+| `/circuit:handoff` | Save, resume, or clear session continuity |
 
 See [CIRCUITS.md](CIRCUITS.md) for the full catalog with phase breakdowns and
 usage examples. See [CUSTOM-CIRCUITS.md](CUSTOM-CIRCUITS.md) for the end-user
@@ -201,7 +201,11 @@ Dispatch resolves adapters in this order:
 
 Built-in adapter names are reserved:
 
-- `agent`: structured Claude Code Agent transport with worktree isolation
+- `agent`: structured Claude Code Agent transport with worktree isolation. The
+  recommended choice for setups without Codex CLI installed, and a first-class
+  option even when Codex is available. Pin it via `--adapter agent` or
+  `dispatch.default: agent` in `circuit.config.yaml` if you want every dispatch
+  to go through the in-process Agent transport.
 - `codex`: alias for `codex-isolated`
 - `codex-isolated`: Codex CLI launched inside Circuit's isolated runtime home
 

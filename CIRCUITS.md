@@ -49,8 +49,8 @@ RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
 test -x .circuit/bin/circuit-engine
 
 .circuit/bin/circuit-engine bootstrap \
+  --workflow "build" \
   --run-root "$RUN_ROOT" \
-  --manifest "@build" \
   --entry-mode "lite" \
   --goal "<smoke bootstrap objective>" \
   --invocation-id "${INVOCATION_ID:-}" \
@@ -229,6 +229,36 @@ passive.
 
 Works alongside `active-run.md` (runtime dashboard only) as the intentional
 high-quality continuity path.
+
+### Troubleshooting
+
+**Abort a stuck run.** If a run is wedged in `in_progress` after a crashed
+adapter or aborted session, emit a terminal `run_aborted` event through the
+engine:
+
+```bash
+.circuit/bin/circuit-engine abort-run \
+  --run-root .circuit/circuit-runs/<slug> \
+  --reason "manual cleanup"
+```
+
+Abort is idempotent: a run already in a terminal status (`aborted`,
+`completed`, `stopped`, `blocked`, `handed_off`) returns `alreadyTerminal: true`
+without re-appending. The indexed `current_run` clears; `pending_record` is
+untouched, so saved handoff authority survives.
+
+Batch wrapper: `scripts/runtime/bin/abort-stuck-runs.sh` inventories stuck runs
+and aborts them one by one.
+
+**Reap legacy handoff files.** Upgrades from pre-control-plane installs may
+leave `~/.claude/handoffs`, `~/.relay/handoffs`, or `<project>/.relay/handoffs`
+on disk. The reaper inventories them (dry-run by default) and archives to
+`~/.circuit/archive/legacy-handoffs/`:
+
+```bash
+./scripts/runtime/bin/reap-legacy-handoffs.sh            # dry-run
+./scripts/runtime/bin/reap-legacy-handoffs.sh --execute  # archive
+```
 
 ## Shared Phase Spine
 

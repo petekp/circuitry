@@ -188,6 +188,7 @@ function defaultProcessOps(): ProcessOps {
     listProcesses() {
       const result = spawnSync("ps", ["-axww", "-o", "pid=,pgid=,command="], {
         encoding: "utf-8",
+        maxBuffer: 64 * 1024 * 1024,
       });
 
       if (result.error) {
@@ -879,6 +880,7 @@ export function runIsolatedCodexDispatch(options: CodexDispatchOptions): Dispatc
           ),
           [CODEX_SPAWN_PID_FILE]: spawnPidFile,
         },
+        maxBuffer: 64 * 1024 * 1024,
       },
     );
 

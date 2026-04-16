@@ -125,30 +125,70 @@ export function readJsonFile(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf-8"));
 }
 
+interface StepArtifactEntry {
+  path: string;
+  schema?: string;
+}
+
+function collectStepArtifactEntries(
+  step: CircuitManifestStep,
+): StepArtifactEntry[] {
+  const writes = (step.writes ?? {}) as Record<string, unknown>;
+  const entries: StepArtifactEntry[] = [];
+
+  const singular = writes.artifact as Record<string, unknown> | undefined;
+  const plural = writes.artifacts;
+
+  if (singular && Array.isArray(plural)) {
+    throw new Error(
+      `step ${String(step.id)} declares both writes.artifact and writes.artifacts; pick one`,
+    );
+  }
+
+  if (singular && typeof singular.path === "string") {
+    entries.push({
+      path: assertSafeRelativePath(singular.path, "artifact path"),
+      schema: typeof singular.schema === "string" ? singular.schema : undefined,
+    });
+  }
+
+  if (Array.isArray(plural)) {
+    for (const raw of plural) {
+      if (!raw || typeof raw !== "object") {
+        continue;
+      }
+      const entry = raw as Record<string, unknown>;
+      if (typeof entry.path !== "string") {
+        continue;
+      }
+      entries.push({
+        path: assertSafeRelativePath(entry.path, "artifact path"),
+        schema: typeof entry.schema === "string" ? entry.schema : undefined,
+      });
+    }
+  }
+
+  return entries;
+}
+
+export function resolveStepArtifactPaths(
+  step: CircuitManifestStep,
+): string[] {
+  return collectStepArtifactEntries(step).map((entry) => entry.path);
+}
+
 export function resolveStepArtifactPath(
   step: CircuitManifestStep,
 ): string | null {
-  const writes = (step.writes ?? {}) as Record<string, unknown>;
-  const artifact = (writes.artifact ?? null) as
-    | Record<string, unknown>
-    | null;
-
-  if (!artifact || typeof artifact.path !== "string") {
-    return null;
-  }
-
-  return assertSafeRelativePath(artifact.path, "artifact path");
+  const [first] = collectStepArtifactEntries(step);
+  return first ? first.path : null;
 }
 
 export function resolveStepArtifactSchema(
   step: CircuitManifestStep,
 ): string | undefined {
-  const writes = (step.writes ?? {}) as Record<string, unknown>;
-  const artifact = (writes.artifact ?? null) as
-    | Record<string, unknown>
-    | null;
-
-  return typeof artifact?.schema === "string" ? artifact.schema : undefined;
+  const [first] = collectStepArtifactEntries(step);
+  return first?.schema;
 }
 
 export function shouldRecordArtifact(
@@ -171,35 +211,35 @@ export function maybeAppendArtifactWrittenEvent(
   stepId: string,
   events: EventSpec[],
 ): string | null {
-  const artifactPath = resolveStepArtifactPath(step);
-  if (!artifactPath) {
+  const entries = collectStepArtifactEntries(step);
+  if (entries.length === 0) {
     return null;
   }
 
-  const fullPath = resolveRunRelativePath(runRoot, artifactPath);
-  if (!existsSync(fullPath)) {
-    return artifactPath;
+  for (const entry of entries) {
+    const fullPath = resolveRunRelativePath(runRoot, entry.path);
+    if (!existsSync(fullPath)) {
+      continue;
+    }
+    if (!shouldRecordArtifact(state, stepId, entry.path)) {
+      continue;
+    }
+
+    const payload: Record<string, unknown> = {
+      artifact_path: entry.path,
+    };
+    if (entry.schema) {
+      payload.schema = entry.schema;
+    }
+
+    events.push({
+      eventType: "artifact_written",
+      payload,
+      stepId,
+    });
   }
 
-  if (!shouldRecordArtifact(state, stepId, artifactPath)) {
-    return artifactPath;
-  }
-
-  const payload: Record<string, unknown> = {
-    artifact_path: artifactPath,
-  };
-  const schema = resolveStepArtifactSchema(step);
-  if (schema) {
-    payload.schema = schema;
-  }
-
-  events.push({
-    eventType: "artifact_written",
-    payload,
-    stepId,
-  });
-
-  return artifactPath;
+  return entries[0].path;
 }
 
 export interface StepCommandPreconditionOptions {

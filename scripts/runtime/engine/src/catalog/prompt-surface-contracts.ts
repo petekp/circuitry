@@ -20,7 +20,6 @@ import type {
 
 export const LOCAL_HELPER_DIR = ".circuit/bin";
 export const PROMPT_CONTRACTS_PATH = "scripts/runtime/generated/prompt-contracts.json";
-export const BUILD_MANIFEST_ALIAS = "@build";
 export const CONTINUITY_STATUS_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engine continuity status --json`;
 export const CONTINUITY_RESUME_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engine continuity resume --json`;
 export const CONTINUITY_CLEAR_JSON_COMMAND = `${LOCAL_HELPER_DIR}/circuit-engine continuity clear --json`;
@@ -118,8 +117,8 @@ const BUILD_SMOKE_ENGINE_CHECK_LINE = `test -x ${LOCAL_HELPER_DIR}/circuit-engin
 const BOOTSTRAP_INVOCATION_ID_FLAG = '--invocation-id "${INVOCATION_ID:-}"';
 const BUILD_SMOKE_BOOTSTRAP_PREFIX_LINES = [
   `${LOCAL_HELPER_DIR}/circuit-engine bootstrap \\`,
+  '  --workflow "build" \\',
   '  --run-root "$RUN_ROOT" \\',
-  `  --manifest "${BUILD_MANIFEST_ALIAS}" \\`,
 ];
 const BUILD_SMOKE_BOOTSTRAP_SUFFIX_LINES = [
   '  --goal "<smoke bootstrap objective>" \\',
@@ -136,7 +135,7 @@ const BUILD_SMOKE_VALIDATION_CHECK_LINES = [
 const SURFACE_SUMMARIES: Record<string, Omit<PromptSurfaceSummary, "canonical_invocation" | "kind">> = {
   build: {
     bootstrap_style: "semantic-bootstrap",
-    canonical_command: `${LOCAL_HELPER_DIR}/circuit-engine bootstrap --manifest ${BUILD_MANIFEST_ALIAS}`,
+    canonical_command: `${LOCAL_HELPER_DIR}/circuit-engine bootstrap --workflow build`,
     helper_wrappers: ["circuit-engine", "compose-prompt", "dispatch"],
     proof_artifacts: BUILD_PROOF_ARTIFACTS,
     stop_condition: "Stop after validation for smoke/bootstrap requests. Do not continue into Frame, Plan, Act, Verify, Review, or Close.",
@@ -193,7 +192,7 @@ const SURFACE_SUMMARIES: Record<string, Omit<PromptSurfaceSummary, "canonical_in
   },
   run: {
     bootstrap_style: "router-then-bootstrap",
-    canonical_command: `${LOCAL_HELPER_DIR}/circuit-engine bootstrap --manifest ${BUILD_MANIFEST_ALIAS}`,
+    canonical_command: `${LOCAL_HELPER_DIR}/circuit-engine bootstrap --workflow build`,
     helper_wrappers: ["circuit-engine", "dispatch"],
     proof_artifacts: BUILD_PROOF_ARTIFACTS,
     stop_condition: "If the task is an explicit smoke/bootstrap verification, stop after validating the selected workflow run state.",
@@ -297,16 +296,15 @@ export const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
     lines: [
       "# Circuit Handoff Capture Contract",
       "This prompt is the default continuity capture mode for `/circuit:handoff`.",
-      "Capture in four phases: draft from conversation, preview, confirm via AskUserQuestion, save.",
+      "Default flow: draft from conversation, print a compact preview, save through the engine immediately. No modal cascade.",
       `Check current control-plane status with \`${CONTINUITY_STATUS_JSON_COMMAND}\` before deciding what to save.`,
       "Treat that status as reference only. An existing `pending_record` does not satisfy the current bare `/circuit:handoff` request.",
-      "Phase 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
-      "Phase 2 -- Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
-      "Phase 3 -- Show a compact preview of the draft (no more than ~10 lines) and confirm via AskUserQuestion with predicted responses: `Save as drafted (Recommended)`, `Let me edit a field`, `This is a closeout`, `Don't save`. Do not dump the full draft body into the question text.",
-      "If the user picks `Let me edit a field`, follow up with AskUserQuestion choosing which field (Goal / Next / State / Debt) to revise, then apply the edit before saving.",
-      "If `This is a closeout` is selected or closeout framing was detected, call AskUserQuestion to pick the seed for the next session. Infer 2-3 candidate seeds from conversation context; the user can always type their own via Other.",
-      "If `Don't save` is selected, stop without saving.",
-      `Phase 4 -- If capture is warranted, save through \`${LOCAL_HELPER_DIR}/circuit-engine continuity save --cwd \"$PWD\" --goal \"...\" --next \"DO: ...\" --state-markdown \"$STATE_MARKDOWN\" --debt-markdown \"$DEBT_MARKDOWN\" --json\`.`,
+      "Step 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
+      "Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
+      "Step 2 -- Print a compact preview (no more than ~8 lines: Goal, Next, the State headline, the Debt count). Do not dump the full body. The preview is the user's chance to interrupt before save by typing.",
+      "Step 3 -- Save through the engine immediately. Do NOT call AskUserQuestion in the default path. The chained `Save? / Edit? / Closeout? / Don't save?` modal cascade is removed.",
+      "Only call AskUserQuestion when inference genuinely fails: (a) the auto-draft produced an empty or trivially-restated Goal or Next, or (b) closeout was detected and conversation context provided no clear seed candidate. When asking is warranted, ask exactly one question with predicted responses; never chain a second modal. Field edits go through a free-text revision after save, not through a follow-up modal.",
+      `Save with \`${LOCAL_HELPER_DIR}/circuit-engine continuity save --cwd \"$PWD\" --goal \"...\" --next \"DO: ...\" --state-markdown \"$STATE_MARKDOWN\" --debt-markdown \"$DEBT_MARKDOWN\" --json\`.`,
       "When real debt exists, encode it as typed `--debt-markdown` bullets.",
       "Do not move `DECIDED:`, `CONSTRAINT:`, `BLOCKED:`, or `RULED OUT:` bullets into `--state-markdown`; those belong only in `--debt-markdown`.",
       "If there is no real debt, literal `none` is allowed only as a CLI convenience; the engine normalizes it before persistence so resume never shows the sentinel.",
@@ -399,8 +397,8 @@ function renderBuildSmokeRunSlugLine(comment?: string): string {
 function renderBuildSmokeBootstrapInlineCommand(entryMode: string): string {
   return [
     `${LOCAL_HELPER_DIR}/circuit-engine bootstrap`,
+    '--workflow "build"',
     '--run-root "$RUN_ROOT"',
-    `--manifest "${BUILD_MANIFEST_ALIAS}"`,
     `--entry-mode ${entryMode}`,
     '--goal "<smoke bootstrap objective>"',
     BOOTSTRAP_INVOCATION_ID_FLAG,

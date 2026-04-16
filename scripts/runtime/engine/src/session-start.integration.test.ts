@@ -182,7 +182,7 @@ describe("session-start integration", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Circuit active run attached");
-    expect(result.stdout).toContain("/circuit:handoff resume");
+    expect(result.stdout).not.toContain("/circuit:handoff resume");
     expect(result.stdout).toContain("Available: active run");
     expect(result.stdout).not.toContain("Circuit continuity pending");
     expect(result.stdout).not.toContain("/circuit:handoff done");

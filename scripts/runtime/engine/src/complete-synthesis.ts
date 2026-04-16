@@ -14,7 +14,7 @@ import {
   loadRunContext,
   maybeAppendArtifactWrittenEvent,
   recordEventsAndRender,
-  resolveStepArtifactPath,
+  resolveStepArtifactPaths,
 } from "./command-support.js";
 import { requireStepById } from "./manifest-utils.js";
 import { extractH2SectionBodies } from "./markdown-utils.js";
@@ -57,6 +57,45 @@ function validateRequiredSections(
   }
 }
 
+interface SchemaSectionsGateContext {
+  gateFullPath: string;
+  gateSourceExists: boolean;
+  alternateFullPath: string | null;
+  alternateSourceExists: boolean;
+}
+
+function validateSchemaSectionsGate(
+  gate: Record<string, unknown>,
+  ctx: SchemaSectionsGateContext,
+): void {
+  const primaryRequired = Array.isArray(gate.required)
+    ? (gate.required as string[])
+    : [];
+  const alternateRequired = Array.isArray(gate.alternate_required)
+    ? (gate.alternate_required as string[])
+    : primaryRequired;
+
+  if (ctx.gateSourceExists) {
+    try {
+      validateRequiredSections(ctx.gateFullPath, primaryRequired);
+      return;
+    } catch (primaryError) {
+      if (!ctx.alternateSourceExists || !ctx.alternateFullPath) {
+        throw primaryError;
+      }
+      validateRequiredSections(ctx.alternateFullPath, alternateRequired);
+      return;
+    }
+  }
+
+  if (ctx.alternateSourceExists && ctx.alternateFullPath) {
+    validateRequiredSections(ctx.alternateFullPath, alternateRequired);
+    return;
+  }
+
+  throw new Error("missing required sections: gate source unavailable");
+}
+
 export function completeSynthesisStep(
   options: CompleteSynthesisOptions,
 ): CompleteSynthesisResult {
@@ -96,14 +135,34 @@ export function completeSynthesisStep(
     };
   }
 
-  const artifactPath = resolveStepArtifactPath(step);
-  if (!artifactPath) {
+  const artifactPaths = resolveStepArtifactPaths(step);
+  if (artifactPaths.length === 0) {
     throw new Error(`step ${stepId} has no artifact path`);
   }
 
-  const artifactFullPath = resolveRunRelativePath(context.runRoot, artifactPath);
-  if (!existsSync(artifactFullPath)) {
-    throw new Error(`artifact not found: ${artifactPath}`);
+  const gate = (step.gate ?? {}) as Record<string, any>;
+  const gateSource =
+    typeof gate.source === "string" && gate.source.length > 0
+      ? gate.source
+      : artifactPaths[0];
+  const gateFullPath = resolveRunRelativePath(context.runRoot, gateSource);
+  const gateSourceExists = existsSync(gateFullPath);
+
+  const alternateSource =
+    typeof gate.alternate_source === "string" && gate.alternate_source.length > 0
+      ? gate.alternate_source
+      : null;
+  const alternateFullPath = alternateSource
+    ? resolveRunRelativePath(context.runRoot, alternateSource)
+    : null;
+  const alternateSourceExists = !!(
+    alternateFullPath && existsSync(alternateFullPath)
+  );
+
+  if (!gateSourceExists && !alternateSourceExists) {
+    throw new Error(
+      `artifact not found: ${alternateSource ? `${gateSource} or ${alternateSource}` : gateSource}`,
+    );
   }
 
   const route = assertNextStepExists(
@@ -128,13 +187,14 @@ export function completeSynthesisStep(
     appendValidatedEvents(context.runRoot, events);
   }
 
-  const gate = (step.gate ?? {}) as Record<string, any>;
   if (gate.kind === "schema_sections") {
     try {
-      validateRequiredSections(
-        artifactFullPath,
-        Array.isArray(gate.required) ? gate.required : [],
-      );
+      validateSchemaSectionsGate(gate, {
+        gateFullPath,
+        gateSourceExists,
+        alternateFullPath,
+        alternateSourceExists,
+      });
     } catch (error) {
       recordEventsAndRender(context.runRoot, [], {
         projectRoot: context.projectRoot,

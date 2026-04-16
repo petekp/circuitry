@@ -68,8 +68,8 @@ ENTRY_MODE="lite"
 test -x .circuit/bin/circuit-engine
 
 .circuit/bin/circuit-engine bootstrap \
+  --workflow "build" \
   --run-root "$RUN_ROOT" \
-  --manifest "@build" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<smoke bootstrap objective>" \
   --invocation-id "${INVOCATION_ID:-}" \
@@ -112,8 +112,8 @@ ENTRY_MODE="default"              # map from the selected rigor
 # Thread the Circuit Invocation id when the hook set one.
 # INVOCATION_ID='inv_...' comes from the UserPromptSubmit context.
 .circuit/bin/circuit-engine bootstrap \
+  --workflow "build" \
   --run-root "$RUN_ROOT" \
-  --manifest "@build" \
   --entry-mode "$ENTRY_MODE" \
   --goal "<task description>" \
   --invocation-id "${INVOCATION_ID:-}" \

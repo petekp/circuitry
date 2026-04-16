@@ -13,6 +13,7 @@ const result = spawnSync(nodeBin, [cliPath], {
   encoding: "utf-8",
   env: process.env,
   input,
+  maxBuffer: 64 * 1024 * 1024,
 });
 
 if (typeof result.stdout === "string" && result.stdout.length > 0) {

@@ -56,7 +56,7 @@ Do not scan `.circuit/circuit-runs/` to guess continuity.
 
 ## Modes
 
-- `/circuit:handoff` -- capture current state. Auto-draft from conversation, confirm with one structured question, save through the engine.
+- `/circuit:handoff` -- capture current state. Auto-draft from conversation, print a one-line preview, save through the engine. No modal cascade by default; AskUserQuestion only fires when inference fails.
 - `/circuit:handoff resume` -- resolve continuity explicitly through the engine and present it.
 - `/circuit:handoff done` -- clear pending continuity and detach the indexed current run.
 
@@ -111,12 +111,11 @@ pending_record | current_run
 
 ## Capture Mode
 
-Capture works in four phases: **draft from context**, **preview**, **confirm with
-AskUserQuestion**, **save**. Do not interrogate the user with a long list of
-questions; infer what you can from conversation and ask only where inference
-genuinely fails.
+Default flow: **draft from context**, **preview**, **save**. No modal cascade.
+Call `AskUserQuestion` only when auto-draft inference genuinely fails — never
+in the happy path.
 
-### Phase 1: Auto-draft from conversation context
+### Step 1: Auto-draft from conversation context
 
 Pull these fields from what you already know from the session:
 
@@ -134,65 +133,56 @@ Do **not**:
 Optionally run `.circuit/bin/gather-git-state` for reference context, but do not
 copy its output into the draft.
 
-### Phase 2: Detect closeout framing
+Detect closeout framing in the same step. If the user signaled a chapter close
+("we just finished", "wrapping up", "starting fresh on", "handoff, next time
+work on"), treat the draft as a **closeout**:
 
-If the user's request signals a chapter close -- phrases like "we just
-finished", "wrapping up", "done with", "starting fresh on", "handoff, next
-time work on" -- treat this as a **closeout** handoff rather than a continuation.
-Closeout semantics:
-
-- **Goal** becomes the seed for the NEXT chapter, not a restatement of the completed one.
+- **Goal** seeds the NEXT chapter, not a restatement of the completed one.
 - **Next** is the first concrete step toward the new seed.
-- **State** lists the completed work as `DONE:` reference bullets so next session knows what's already shipped.
+- **State** lists completed work as `DONE:` reference bullets so next session knows what's shipped.
 - **Debt** carries forward only decisions/constraints that still bind the next chapter.
 
-If closeout framing is present, branch into the Closeout flow (below) after
-drafting.
+When closeout is detected, infer the seed from conversation context. Only ask
+the user when no clear seed candidate emerges (see Step 3).
 
-### Phase 3: Preview + confirm with AskUserQuestion
+### Step 2: Print a compact preview
 
-Present a compact preview of the draft (no more than ~10 lines), then call
-AskUserQuestion with structured options. Do **not** dump the full draft body
-into the question text; put it in the preview so the user can scan it.
+Print no more than ~8 lines covering Goal, Next, the State headline, and the
+Debt count. Do not dump the full body. The preview is the user's window to
+interrupt before save by typing.
 
-Example question shape:
-
-```
-Question: "Save this handoff?"
-Header: "Handoff"
-Options:
-  1. "Save as drafted (Recommended)" -- description: "Use the inferred goal/next/state/debt as-is."
-  2. "Let me edit a field" -- description: "Pick one field to revise before saving."
-  3. "This is a closeout" -- description: "Close current chapter, seed next session with a new goal."
-  4. "Don't save" -- description: "Nothing hard-to-rediscover is worth preserving."
-```
-
-If the user picks option 1, go to Phase 4 (save). For option 2, call a follow-up
-AskUserQuestion asking which field to edit (Goal / Next / State / Debt) and
-apply the user's edit. For option 3, branch to the Closeout flow. For option 4,
-stop without saving.
-
-#### Closeout flow
-
-When closeout is selected or detected, call AskUserQuestion to pick the seed
-for the next session:
+Example preview shape:
 
 ```
-Question: "What seeds the next session?"
-Header: "Next chapter"
-Options (infer 2-3 from conversation context; user can always select Other):
-  1. "<inferred next topic A>"  -- description: "<why this is a candidate>"
-  2. "<inferred next topic B>"  -- description: "<why this is a candidate>"
-  3. "No seed -- just close it" -- description: "Save the closeout as reference; next session starts from scratch."
+Handoff preview:
+- Goal: <one sentence>
+- Next: DO: <one sentence>
+- State: <N facts captured (top: <leading bullet>)>
+- Debt: <N typed bullets>
+Saving now…
 ```
 
-The user's selected seed becomes `--goal`. `--next` becomes the first concrete
-step toward that seed (often `DECIDE:` when the next session should pick an
-approach, `DO:` when the seed is execution-ready). `--state-markdown` records
-what was completed this chapter (`DONE:` bullets). `--debt-markdown` carries
-forward any binding constraints; otherwise use literal `none`.
+### Step 3: Save immediately
 
-### Phase 4: Save through the engine
+Save through the engine with the drafted fields. Do **not** call
+`AskUserQuestion` in the default path. The chained `Save? / Edit? / Closeout? /
+Don't save?` modal cascade is removed; the preview already gives the user a
+chance to interrupt.
+
+Only call `AskUserQuestion` when inference genuinely fails:
+
+- **Inference-failure case:** the auto-draft produced an empty Goal, an empty
+  Next, or a Goal/Next that just restates the user's literal message.
+- **Closeout-no-seed case:** closeout was detected and conversation context
+  provided no clear seed candidate.
+
+When asking is warranted, ask exactly one question with predicted responses
+(`Save as drafted` / `Edit before saving` / `Don't save`, or for closeout
+seeds: 2-3 inferred candidates plus `Other`). Never chain a second modal. Field
+edits flow through a free-text revision after save, not through a follow-up
+modal.
+
+### Engine call shape
 
 Use the indexed current run when the save should stay run-backed. Only pass
 `--run-root` when you need a specific run root under `.circuit/circuit-runs/<slug>`.
@@ -216,7 +206,7 @@ If the save must bind to a specific run, add:
   --run-root ".circuit/circuit-runs/<run-slug>" \
 ```
 
-### Phase 5: Confirm briefly
+### Confirm briefly
 
 After saving, confirm without dumping the continuity body:
 
@@ -239,5 +229,5 @@ Do not display the saved continuity body during capture mode.
 
 If there is no indexed current run, no pending record, and no hard-to-rediscover
 session state worth preserving, say so briefly and stop instead of inventing an
-empty save. If the "Don't save" option in Phase 3 is chosen for the same
-reason, stop silently.
+empty save. If the user explicitly declines a save during the inference-failure
+modal in Step 3, stop silently.

@@ -155,6 +155,48 @@ describe("prompt surface contracts", () => {
     }
   });
 
+  it("forbids built-in workflow contracts from using the custom-circuit `--manifest \"@...\"` flag form", () => {
+    // Built-in workflows must canonicalize on `--workflow "<slug>"`. The
+    // `--manifest "@..."` alias form is reserved for custom circuits per
+    // skills/create/SKILL.md. This lint catches drift like "Build's bootstrap
+    // contract uses the custom-circuit flag form" (review I3).
+    const builtInBlocks = [
+      "BUILD_CONTRACT",
+      "EXPLORE_CONTRACT",
+      "MIGRATE_CONTRACT",
+      "REPAIR_CONTRACT",
+      "RUN_CONTRACT",
+      "SWEEP_CONTRACT",
+      "SMOKE_BOOTSTRAP_VERIFICATION",
+    ] as const;
+
+    for (const blockName of builtInBlocks) {
+      const contract = getBlockTarget(blockName).render(catalog);
+      expect(
+        contract,
+        `${blockName} must not use the custom-circuit \`--manifest "@..."\` flag form`,
+      ).not.toMatch(/--manifest\s+"?@/);
+    }
+
+    // Built-in fast-mode contracts have the same constraint.
+    const manifest = buildPromptContractsManifest(catalog);
+    const builtInFastModes = [
+      "build_smoke",
+      "smoke_explore",
+      "smoke_migrate",
+      "smoke_repair",
+      "smoke_sweep",
+    ] as const;
+
+    for (const id of builtInFastModes) {
+      const lines = manifest.fast_modes[id].lines.join("\n");
+      expect(
+        lines,
+        `fast mode ${id} must not use the custom-circuit \`--manifest "@..."\` flag form`,
+      ).not.toMatch(/--manifest\s+"?@/);
+    }
+  });
+
   it("keeps build smoke command fragments aligned across generated surfaces", () => {
     const manifest = buildPromptContractsManifest(catalog);
     const buildContract = getBlockTarget("BUILD_CONTRACT").render(catalog);
@@ -164,20 +206,24 @@ describe("prompt surface contracts", () => {
     expect(manifest.fast_modes.build_smoke.lines.join("\n")).toContain(
       ".circuit/bin/circuit-engine bootstrap",
     );
-    expect(manifest.fast_modes.build_smoke.lines.join("\n")).toContain('--manifest "@build"');
+    expect(manifest.fast_modes.build_smoke.lines.join("\n")).toContain('--workflow "build"');
+    expect(manifest.fast_modes.build_smoke.lines.join("\n")).not.toContain('--manifest "@build"');
     expect(manifest.fast_modes.build_smoke.lines.join("\n")).toContain('--entry-mode "lite"');
 
     expect(circuitsSmokeContract).toContain(".circuit/bin/circuit-engine bootstrap");
-    expect(circuitsSmokeContract).toContain('--manifest "@build"');
+    expect(circuitsSmokeContract).toContain('--workflow "build"');
+    expect(circuitsSmokeContract).not.toContain('--manifest "@build"');
     expect(circuitsSmokeContract).toContain('--entry-mode "lite"');
 
     expect(buildContract).toContain(".circuit/bin/circuit-engine bootstrap");
-    expect(buildContract).toContain('--manifest "@build"');
+    expect(buildContract).toContain('--workflow "build"');
+    expect(buildContract).not.toContain('--manifest "@build"');
     expect(buildContract).toContain('ENTRY_MODE="lite"');
     expect(buildContract).toContain('--entry-mode "$ENTRY_MODE"');
 
     expect(runContract).toContain(".circuit/bin/circuit-engine bootstrap");
-    expect(runContract).toContain('--manifest "@build"');
+    expect(runContract).toContain('--workflow "build"');
+    expect(runContract).not.toContain('--manifest "@build"');
     expect(runContract).toContain('BUILD_ENTRY_MODE="lite"');
     expect(runContract).toContain('--entry-mode "$BUILD_ENTRY_MODE"');
   });
@@ -359,7 +405,7 @@ describe("prompt surface contracts", () => {
               "RUN_SLUG=\\"smoke-bootstrap-build-workflow-host-surface\\"  # or the same slug derived from the task",
               "RUN_ROOT=\\".circuit/circuit-runs/\${RUN_SLUG}\\"",
               "test -x .circuit/bin/circuit-engine",
-              ".circuit/bin/circuit-engine bootstrap --run-root \\"$RUN_ROOT\\" --manifest \\"@build\\" --entry-mode \\"lite\\" --goal \\"<smoke bootstrap objective>\\" --invocation-id \\"\${INVOCATION_ID:-}\\" --project-root \\"$PWD\\"",
+              ".circuit/bin/circuit-engine bootstrap --workflow \\"build\\" --run-root \\"$RUN_ROOT\\" --entry-mode \\"lite\\" --goal \\"<smoke bootstrap objective>\\" --invocation-id \\"\${INVOCATION_ID:-}\\" --project-root \\"$PWD\\"",
               "Do not use \`Write\`, \`Edit\`, heredocs, or manual file creation to fabricate \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, or \`artifacts/active-run.md\`.",
               "After bootstrap, validate with \`test -f\` checks for \`circuit.manifest.yaml\`, \`events.ndjson\`, the derived \`state.json\` snapshot, and \`artifacts/active-run.md\` under \`$RUN_ROOT\`.",
               "After bootstrap, validate those on-disk artifacts, report the selected run root briefly, and stop.",
@@ -387,16 +433,15 @@ describe("prompt surface contracts", () => {
             "lines": [
               "# Circuit Handoff Capture Contract",
               "This prompt is the default continuity capture mode for \`/circuit:handoff\`.",
-              "Capture in four phases: draft from conversation, preview, confirm via AskUserQuestion, save.",
+              "Default flow: draft from conversation, print a compact preview, save through the engine immediately. No modal cascade.",
               "Check current control-plane status with \`.circuit/bin/circuit-engine continuity status --json\` before deciding what to save.",
               "Treat that status as reference only. An existing \`pending_record\` does not satisfy the current bare \`/circuit:handoff\` request.",
-              "Phase 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
-              "Phase 2 -- Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
-              "Phase 3 -- Show a compact preview of the draft (no more than ~10 lines) and confirm via AskUserQuestion with predicted responses: \`Save as drafted (Recommended)\`, \`Let me edit a field\`, \`This is a closeout\`, \`Don't save\`. Do not dump the full draft body into the question text.",
-              "If the user picks \`Let me edit a field\`, follow up with AskUserQuestion choosing which field (Goal / Next / State / Debt) to revise, then apply the edit before saving.",
-              "If \`This is a closeout\` is selected or closeout framing was detected, call AskUserQuestion to pick the seed for the next session. Infer 2-3 candidate seeds from conversation context; the user can always type their own via Other.",
-              "If \`Don't save\` is selected, stop without saving.",
-              "Phase 4 -- If capture is warranted, save through \`.circuit/bin/circuit-engine continuity save --cwd \\"$PWD\\" --goal \\"...\\" --next \\"DO: ...\\" --state-markdown \\"$STATE_MARKDOWN\\" --debt-markdown \\"$DEBT_MARKDOWN\\" --json\`.",
+              "Step 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
+              "Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",
+              "Step 2 -- Print a compact preview (no more than ~8 lines: Goal, Next, the State headline, the Debt count). Do not dump the full body. The preview is the user's chance to interrupt before save by typing.",
+              "Step 3 -- Save through the engine immediately. Do NOT call AskUserQuestion in the default path. The chained \`Save? / Edit? / Closeout? / Don't save?\` modal cascade is removed.",
+              "Only call AskUserQuestion when inference genuinely fails: (a) the auto-draft produced an empty or trivially-restated Goal or Next, or (b) closeout was detected and conversation context provided no clear seed candidate. When asking is warranted, ask exactly one question with predicted responses; never chain a second modal. Field edits go through a free-text revision after save, not through a follow-up modal.",
+              "Save with \`.circuit/bin/circuit-engine continuity save --cwd \\"$PWD\\" --goal \\"...\\" --next \\"DO: ...\\" --state-markdown \\"$STATE_MARKDOWN\\" --debt-markdown \\"$DEBT_MARKDOWN\\" --json\`.",
               "When real debt exists, encode it as typed \`--debt-markdown\` bullets.",
               "Do not move \`DECIDED:\`, \`CONSTRAINT:\`, \`BLOCKED:\`, or \`RULED OUT:\` bullets into \`--state-markdown\`; those belong only in \`--debt-markdown\`.",
               "If there is no real debt, literal \`none\` is allowed only as a CLI convenience; the engine normalizes it before persistence so resume never shows the sentinel.",
@@ -554,7 +599,7 @@ describe("prompt surface contracts", () => {
         "surfaces": {
           "build": {
             "bootstrap_style": "semantic-bootstrap",
-            "canonical_command": ".circuit/bin/circuit-engine bootstrap --manifest @build",
+            "canonical_command": ".circuit/bin/circuit-engine bootstrap --workflow build",
             "helper_wrappers": [
               "circuit-engine",
               "compose-prompt",
@@ -689,7 +734,7 @@ describe("prompt surface contracts", () => {
           },
           "run": {
             "bootstrap_style": "router-then-bootstrap",
-            "canonical_command": ".circuit/bin/circuit-engine bootstrap --manifest @build",
+            "canonical_command": ".circuit/bin/circuit-engine bootstrap --workflow build",
             "helper_wrappers": [
               "circuit-engine",
               "dispatch"
