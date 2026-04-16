@@ -297,7 +297,7 @@ export const FAST_MODE_CONTRACTS: Record<string, PromptFastModeContract> = {
       "# Circuit Handoff Capture Contract",
       "This prompt is the default continuity capture mode for `/circuit:handoff`.",
       "Default flow: draft from conversation, print a compact preview, save through the engine immediately. No modal cascade.",
-      `Check current control-plane status with \`${CONTINUITY_STATUS_JSON_COMMAND}\` before deciding what to save.`,
+      `Check current control-plane status with \`${CONTINUITY_STATUS_JSON_COMMAND}\` before deciding what to save. Bare \`/circuit:handoff\` does not pre-inject status; pass \`/circuit:handoff --verbose\` when you want the preamble to include a Control-Plane Status / Warnings block instead of running the status command yourself.`,
       "Treat that status as reference only. An existing `pending_record` does not satisfy the current bare `/circuit:handoff` request.",
       "Step 1 -- Draft from conversation context. Infer goal, next (prefixed DO: or DECIDE:), state (facts the next session needs that git/log/diff cannot show), and debt (typed bullets: DECIDED:, CONSTRAINT:, BLOCKED:, RULED OUT:). Do not interrogate the user for fields the conversation already made clear.",
       "Detect closeout framing. If the user signaled a chapter close (e.g. 'we just finished', 'wrapping up', 'starting fresh on'), treat this as a closeout: goal seeds the next chapter; state lists completed work as DONE: reference bullets; debt carries forward only binding constraints.",

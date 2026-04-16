@@ -546,11 +546,29 @@ describe("user-prompt-submit integration", () => {
     expect(context).toContain("/circuit:handoff done");
     expect(context).toContain("Handoff saved. Next session: run `/circuit:handoff resume` to inspect and continue, or name a new task via `/circuit:run <task>` to start fresh.");
     expect(context).toContain("Do not invent `/circuit:handoff save` or `/circuit:handoff clear` aliases.");
+    expect(context).toContain("Do not inspect legacy handoff paths, scan run roots, or write `handoff.md`.");
+    // Default capture stays quiet: no pre-injected Control-Plane Status block.
+    // The contract already instructs the model to run the status command.
+    expect(context).not.toContain("## Control-Plane Status");
+    expect(context).not.toContain("- selection:");
+    expect(context).toContain("/circuit:handoff --verbose");
+  });
+
+  it("inlines control-plane status in handoff capture when --verbose is passed", () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "circuit-prompt-handoff-capture-verbose-"));
+    mkdirSync(projectRoot, { recursive: true });
+
+    const result = runUserPromptSubmit("/circuit:handoff --verbose", {
+      cwd: projectRoot,
+    });
+
+    expect(result.status).toBe(0);
+    const context = readAdditionalContext(result);
+    expect(context).toContain("Circuit Handoff Capture Contract");
     expect(context).toContain("## Control-Plane Status");
     expect(context).toContain("- selection: none");
     expect(context).toContain("- pending_record: none");
     expect(context).toContain("- current_run: none");
-    expect(context).toContain("Do not inspect legacy handoff paths, scan run roots, or write `handoff.md`.");
   });
 
   it("injects handoff resume fast mode context with control-plane status", () => {

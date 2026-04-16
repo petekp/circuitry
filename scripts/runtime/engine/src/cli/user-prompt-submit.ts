@@ -60,6 +60,15 @@ function isHandoffCapture(command: ParsedSlashCommand): boolean {
   return command.slug === "handoff" && !isHandoffDone(command) && !isHandoffResume(command);
 }
 
+// --verbose on a bare /circuit:handoff asks the capture hook to inline
+// control-plane status + warnings into the injected context. Default capture
+// stays quiet: the contract already tells the model to run
+// `circuit-engine continuity status --json` itself before saving, so pre-
+// reading and inlining it is wasted work on every invocation.
+function isHandoffCaptureVerbose(command: ParsedSlashCommand): boolean {
+  return isHandoffCapture(command) && /(?:^|\s)--verbose(?:\s|$)/.test(command.argsLower);
+}
+
 function isReviewCurrentChanges(command: ParsedSlashCommand): boolean {
   return command.slug === "review" && /^current\s+changes(\s|$)/.test(command.argsLower);
 }
@@ -391,9 +400,13 @@ function renderHandoffDoneContext(): string {
 }
 
 function renderHandoffCaptureContext(
-  status: ContinuityStatusPayload,
+  status: ContinuityStatusPayload | null,
 ): string {
   const lines = renderTemplate(FAST_MODE_CONTRACTS.handoff_capture.lines, {});
+
+  if (!status) {
+    return lines;
+  }
 
   return [
     lines,
@@ -484,9 +497,12 @@ async function main(): Promise<number> {
 
   if (isHandoffCapture(command)) {
     recordStandaloneClassification(invocationId, projectRoot);
+    const status = isHandoffCaptureVerbose(command)
+      ? await readContinuityStatus()
+      : null;
     emitContext(mergeContextSections(
       invocationId,
-      renderHandoffCaptureContext(await readContinuityStatus()),
+      renderHandoffCaptureContext(status),
     ) ?? "");
   }
 

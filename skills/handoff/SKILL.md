@@ -115,6 +115,11 @@ Default flow: **draft from context**, **preview**, **save**. No modal cascade.
 Call `AskUserQuestion` only when auto-draft inference genuinely fails — never
 in the happy path.
 
+Bare `/circuit:handoff` does not pre-inject control-plane status into the
+capture preamble. Run `.circuit/bin/circuit-engine continuity status --json`
+yourself when you need it, or invoke `/circuit:handoff --verbose` to have the
+hook include the Control-Plane Status / Warnings block inline.
+
 ### Step 1: Auto-draft from conversation context
 
 Pull these fields from what you already know from the session:
