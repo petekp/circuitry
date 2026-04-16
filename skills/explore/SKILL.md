@@ -328,8 +328,10 @@ If the exploration produces a decision among alternatives:
 ## Reopen Conditions
 ```
 
-Budget: 2 meaningful options max, 1 critique pass, 1 user checkpoint if
-consequential.
+Standard/Deep budget: 2 meaningful options max, 1 critique pass, 1 user
+checkpoint if consequential. The Tournament checkpoint below is unconditional
+because Tournament only fires for consequential decisions (see When Tournament
+fires above).
 
 **Tournament:** Bounded adversarial evaluation inside the Decide phase. The
 manifest exposes Tournament as an entry mode; the sequence below is
