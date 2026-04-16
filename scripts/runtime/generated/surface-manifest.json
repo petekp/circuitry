@@ -269,7 +269,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "3939dec81851ea9844dde827d06f50053646673e03fe0b13108a7ee4d07c7473"
+      "sha256": "9188bc3166d6d9316f1d5a6d73ad9fdcf92e443abe41c524d6f3edc359b276b8"
     },
     {
       "executable": true,
@@ -279,7 +279,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "a0319b00b70f146ad9534815b6d042ed84b265fafb41b75c0f81fa4c84bac065"
+      "sha256": "6fca430f8f5e813cd98f563aef9b0039b44e29a40f2a51f1e72ebc3e37aa907f"
     },
     {
       "executable": true,
@@ -314,7 +314,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "ddef65eff5f57bef4bb4056df436133dc43d400774641cc025ccb5fdca6e6985"
+      "sha256": "f6b31d1145e6850e05ea50159faff8f255c31939b10728535ca6f8704d6b2103"
     },
     {
       "executable": true,
@@ -329,12 +329,12 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "71edab83d399f99d0cb86def0ea821e3cab5954f79e059cb99ec3c23025b52b9"
+      "sha256": "506e2b6449e79b99018820394625acd9772903543502d98b624cd5452101f1a4"
     },
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "1a9325d93e0e9ffa759fc8f3f7984ae2996ba6950495e21f973f90d16e5fd294"
+      "sha256": "64a4f9a836df3c612d6822321b7ff06ebd618aff14073d747e7fe5c1957e8db4"
     },
     {
       "executable": false,

@@ -64,18 +64,18 @@ export function composeTransitionLine(
     case "checkpoint_requested":
       return `${workflow}: ${step} waiting on checkpoint.`;
     case "checkpoint_resolved":
-      return `${workflow}: ${step} resolved, advancing to ${extra.route ?? "?"}.`;
+      return `${workflow}: ${step} resolved; moving to ${extra.route ?? "?"}.`;
     case "dispatch_requested":
-      return `${workflow}: ${step} dispatching.`;
+      return `${workflow}: ${step} running.`;
     case "dispatch_reconciled_pass":
-      return `${workflow}: ${step} reconciled (${extra.verdict ?? "pass"}), advancing to ${extra.route ?? "?"}.`;
+      return `${workflow}: ${step} passed (${extra.verdict ?? "pass"}); moving to ${extra.route ?? "?"}.`;
     case "dispatch_reconciled_fail": {
       const completion = extra.completion ?? "incomplete";
       const verdictSuffix = extra.verdict ? `, ${extra.verdict}` : "";
-      return `${workflow}: ${step} reconciled (${completion}${verdictSuffix}); not advancing.`;
+      return `${workflow}: ${step} failed (${completion}${verdictSuffix}); holding.`;
     }
     case "synthesis_complete":
-      return `${workflow}: ${step} synthesis complete, advancing to ${extra.route ?? "?"}.`;
+      return `${workflow}: ${step} summary ready; moving to ${extra.route ?? "?"}.`;
     case "aborted":
       return `${workflow}: run aborted.`;
     case "terminal":
@@ -87,18 +87,18 @@ export function composeTransitionLine(
   }
 }
 
+// Canonical terminal label per run status. `stopped` and `handed_off` share
+// the "paused" framing because both represent work that is pausable and
+// resumable. Batch-step statuses like "done" are intentionally absent -- they
+// describe a step inside a run, not the run itself.
+const TERMINAL_LABEL_BY_STATUS: Readonly<Record<string, string>> = Object.freeze({
+  aborted: "aborted",
+  blocked: "blocked",
+  completed: "complete",
+  handed_off: "paused",
+  stopped: "paused",
+});
+
 export function terminalLabelForStatus(status: string): string | null {
-  switch (status) {
-    case "completed":
-      return "complete";
-    case "aborted":
-      return "aborted";
-    case "blocked":
-      return "blocked";
-    case "stopped":
-    case "handed_off":
-      return "paused";
-    default:
-      return null;
-  }
+  return TERMINAL_LABEL_BY_STATUS[status] ?? null;
 }

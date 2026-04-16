@@ -43,7 +43,7 @@ describe("composeTransitionLine", () => {
         stepTitle: "Frame",
         workflowId: "build",
       }),
-    ).toBe("Build: frame resolved, advancing to plan.");
+    ).toBe("Build: frame resolved; moving to plan.");
   });
 
   it("renders dispatch_requested line", () => {
@@ -53,7 +53,7 @@ describe("composeTransitionLine", () => {
         stepTitle: "Act",
         workflowId: "build",
       }),
-    ).toBe("Build: act dispatching.");
+    ).toBe("Build: act running.");
   });
 
   it("renders dispatch_reconciled_pass line", () => {
@@ -65,7 +65,7 @@ describe("composeTransitionLine", () => {
         workflowId: "build",
       }),
     ).toBe(
-      "Build: act reconciled (complete_and_hardened), advancing to verify.",
+      "Build: act passed (complete_and_hardened); moving to verify.",
     );
   });
 
@@ -77,7 +77,7 @@ describe("composeTransitionLine", () => {
         stepTitle: "Act",
         workflowId: "build",
       }),
-    ).toBe("Build: act reconciled (partial, issues_remain); not advancing.");
+    ).toBe("Build: act failed (partial, issues_remain); holding.");
   });
 
   it("renders synthesis_complete line", () => {
@@ -88,7 +88,7 @@ describe("composeTransitionLine", () => {
         stepTitle: "Plan",
         workflowId: "build",
       }),
-    ).toBe("Build: plan synthesis complete, advancing to act.");
+    ).toBe("Build: plan summary ready; moving to act.");
   });
 
   it("renders aborted line", () => {
