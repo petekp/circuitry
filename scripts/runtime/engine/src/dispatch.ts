@@ -36,8 +36,15 @@ interface AgentParams {
   prompt: string;
 }
 
+export interface DispatchAdapterFallback {
+  fallback_adapter: string;
+  original_adapter: string;
+  reason: string;
+}
+
 export interface DispatchReceipt {
   adapter: string;
+  adapter_fallback?: DispatchAdapterFallback;
   agent_params?: AgentParams;
   command_argv?: string[];
   diagnostics_path?: string;
@@ -329,6 +336,49 @@ function runProcessAdapter(
   };
 }
 
+function buildAgentReceipt(
+  options: DispatchTaskOptions,
+  resolvedFrom: string,
+  fallback?: DispatchAdapterFallback,
+): DispatchReceipt {
+  const prompt = readFileSync(options.promptFile, "utf-8");
+  const receipt: DispatchReceipt = {
+    adapter: "agent",
+    agent_params: {
+      description: extractDescription(prompt),
+      isolation: "worktree",
+      output_path: options.outputFile,
+      prompt,
+    },
+    output_file: options.outputFile,
+    prompt_file: options.promptFile,
+    resolved_from: resolvedFrom,
+    status: "ready",
+    runtime_boundary: "agent",
+    transport: "agent",
+  };
+  if (fallback) {
+    receipt.adapter_fallback = fallback;
+  }
+  return receipt;
+}
+
+// Adapter-start failures are the ones where the process never successfully
+// reached the worker stage: missing binary, spawn-level failure (ENOBUFS,
+// EACCES), or the codex-isolated commandExists guard. Non-zero-exit
+// failures from a successfully-spawned worker are worker-side problems and
+// must NOT trigger fallback — they represent legitimate failures the caller
+// should see directly.
+function isAdapterStartFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.message.includes("failed to start")
+    || error.message.includes("requires the codex CLI to be installed")
+  );
+}
+
 export function dispatchTask(options: DispatchTaskOptions): DispatchReceipt {
   if (!options.promptFile || !options.outputFile) {
     throw new Error("circuit: --prompt and --output are required. Run with --prompt <file> --output <file>.");
@@ -343,40 +393,45 @@ export function dispatchTask(options: DispatchTaskOptions): DispatchReceipt {
   const resolution = resolveDispatchAdapter(config, options, configPath);
 
   if (resolution.transport === "agent") {
-    const prompt = readFileSync(options.promptFile, "utf-8");
+    return buildAgentReceipt(options, resolution.resolvedFrom);
+  }
+
+  try {
+    const processResult = runProcessAdapter(
+      resolution,
+      options,
+      options.promptFile,
+      options.outputFile,
+    );
     return {
       adapter: resolution.adapter,
-      agent_params: {
-        description: extractDescription(prompt),
-        isolation: "worktree",
-        output_path: options.outputFile,
-        prompt,
-      },
+      command_argv: processResult.commandArgv,
+      diagnostics_path: processResult.diagnosticsPath,
       output_file: options.outputFile,
       prompt_file: options.promptFile,
       resolved_from: resolution.resolvedFrom,
-      status: "ready",
-      runtime_boundary: "agent",
-      transport: "agent",
+      status: "completed",
+      runtime_boundary: processResult.runtimeBoundary,
+      transport: "process",
+      warnings: processResult.warnings.length > 0 ? processResult.warnings : undefined,
     };
+  } catch (error) {
+    // Review finding I5: on an adapter-start failure (missing binary,
+    // spawn-level error, codex-isolated guard), retry exactly once with
+    // --adapter agent and surface the original failure via a typed
+    // receipt field. If the agent retry itself fails, re-throw the
+    // ORIGINAL error (cap at one fallback per attempt).
+    if (!isAdapterStartFailure(error)) {
+      throw error;
+    }
+    try {
+      return buildAgentReceipt(options, resolution.resolvedFrom, {
+        original_adapter: resolution.adapter,
+        fallback_adapter: "agent",
+        reason: (error as Error).message,
+      });
+    } catch {
+      throw error;
+    }
   }
-
-  const processResult = runProcessAdapter(
-    resolution,
-    options,
-    options.promptFile,
-    options.outputFile,
-  );
-  return {
-    adapter: resolution.adapter,
-    command_argv: processResult.commandArgv,
-    diagnostics_path: processResult.diagnosticsPath,
-    output_file: options.outputFile,
-    prompt_file: options.promptFile,
-    resolved_from: resolution.resolvedFrom,
-    status: "completed",
-    runtime_boundary: processResult.runtimeBoundary,
-    transport: "process",
-    warnings: processResult.warnings.length > 0 ? processResult.warnings : undefined,
-  };
 }

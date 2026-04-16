@@ -308,6 +308,52 @@ describe("dispatch adapter contract", () => {
     expect(receipt.resolved_from).toBe("auto");
   });
 
+  // Review finding I5 from
+  // .circuit/circuit-runs/review-circuit-usage-across-recent-sessions/artifacts/decision.md
+  // When the codex-isolated adapter fails to *start*, dispatch should retry
+  // once with adapter=agent and surface the original failure via a typed
+  // adapter_fallback field on the receipt. Cap at one fallback per attempt.
+  it("falls back to agent exactly once when codex-isolated fails to start", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "circuit-dispatch-i5-"));
+    const prompt = writePrompt(root, "# I5 fallback\n");
+    const output = outputPath(root);
+    initRepo(root);
+
+    // --adapter codex-isolated explicitly requested, but codex is not on PATH.
+    // This is the exact shape the I5 review captured: ENOBUFS or any
+    // adapter-start failure. commandExists("codex") returns false and
+    // runProcessAdapter throws "requires the codex CLI to be installed".
+    const result = runDispatch(
+      [
+        "--prompt",
+        prompt,
+        "--output",
+        output,
+        "--adapter",
+        "codex-isolated",
+      ],
+      { cwd: root, env: { NODE_BIN: process.execPath, PATH: "/usr/bin:/bin" } },
+    );
+
+    expect(result.status).toBe(0);
+    const receipt = JSON.parse(result.stdout);
+
+    // The retry lands on agent and returns an agent-shaped receipt.
+    expect(receipt.adapter).toBe("agent");
+    expect(receipt.runtime_boundary).toBe("agent");
+    expect(receipt.transport).toBe("agent");
+    expect(receipt.agent_params).toBeDefined();
+    expect(receipt.agent_params.prompt).toBe("# I5 fallback\n");
+
+    // The original start failure is preserved in a typed field so the
+    // fallback is observable after the fact (review I5: "no follow-on
+    // adapter-fallback event in the run ledger").
+    expect(receipt.adapter_fallback).toBeDefined();
+    expect(receipt.adapter_fallback.original_adapter).toBe("codex-isolated");
+    expect(receipt.adapter_fallback.fallback_adapter).toBe("agent");
+    expect(receipt.adapter_fallback.reason).toMatch(/codex CLI|failed to start/i);
+  });
+
   it("fails loudly for unsupported explicit roles", () => {
     const root = mkdtempSync(resolve(tmpdir(), "circuit-dispatch-"));
     const prompt = writePrompt(root, "# Unsupported role\n");
