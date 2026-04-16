@@ -236,6 +236,19 @@ a seam proof. The seam proof runs after Plan, before handing to Build.
 Same as Standard for evidence gathering. The tournament divergence happens in the
 Decide phase.
 
+**When Tournament fires.** Tournament is not auto-selected by the router on its
+own. It enters on an explicit trigger:
+
+- The user typed `/circuit:run decide: <choice>` or `/circuit:explore --rigor tournament`.
+- The user accepted a tournament suggestion when the router flagged competing
+  architectural or product options as the decision class.
+
+If Tournament was not explicitly requested, prefer Standard or Deep. Tournament
+is the right call for architecture decisions with more than one credible
+option and non-trivial cost to reverse; it is the wrong call for
+straightforward investigations where the answer is mostly a matter of
+reading code.
+
 ### Autonomous
 
 Same as Standard. Checkpoints auto-resolve. Ambiguous findings do not block the

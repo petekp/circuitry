@@ -124,7 +124,9 @@ Skip the router by using a prefix:
 
 ### Explore
 
-**Phases:** Frame -> Analyze -> Decide/Plan -> Close
+**Phases:** Frame -> Analyze -> Plan (named `decision.md` in decision mode) -> Close
+**Omits from the shared spine:** Act, Verify, Review. Explore produces plans and
+decisions, not code changes to verify or review.
 
 Investigate, understand, choose. Covers codebase exploration, architectural
 investigation, RFC/PRD review, and decision-making.
@@ -142,6 +144,9 @@ investigation, RFC/PRD review, and decision-making.
 ### Build
 
 **Phases:** Frame -> Plan -> Act -> Verify -> Review -> Close
+**Omits from the shared spine:** Analyze. If architecture uncertainty surfaces
+during Frame or Plan, Build stops and restarts through Explore rather than
+absorbing an Analyze phase itself.
 
 The doing workflow. Docs and tests are first-class outputs, not afterthoughts.
 If architecture uncertainty appears, transfers to Explore.
@@ -157,7 +162,10 @@ If architecture uncertainty appears, transfers to Explore.
 
 ### Repair
 
-**Phases:** Frame -> Analyze (reproduce + isolate) -> Fix -> Verify -> Review -> Close
+**Phases:** Frame -> Analyze (reproduce + isolate) -> Fix (= shared-spine Act) -> Verify -> Review -> Close
+**Omits from the shared spine:** dedicated Plan. Repair's plan is the regression
+contract captured in `brief.md` during Frame; Fix executes directly against that
+contract.
 
 Test-first discipline. Forces expected vs actual, repro recipe, regression
 contract. When reproducible, the regression test is Slice 0. For flaky or
@@ -175,7 +183,10 @@ is available within Analyze.
 
 ### Migrate
 
-**Phases:** Frame -> Inventory -> Coexistence Plan -> Batch Execution -> Verify -> Cutover Review -> Close
+**Phases:** Frame -> Inventory (= Analyze) -> Coexistence Plan (= Plan) -> Batch Execution (= Act) -> Verify -> Cutover Review (= Review) -> Close
+**Spine alignment:** every shared-spine phase is present; several are renamed
+to match migration vocabulary. Rollback and coexistence are first-class inside
+Plan, not a separate phase.
 
 Coexistence and rollback are first-class. Each batch is independently verifiable.
 Risk drives ordering. Uses Build as the inner executor for batches.
@@ -186,7 +197,10 @@ Risk drives ordering. Uses Build as the inner executor for batches.
 
 ### Sweep
 
-**Phases:** Frame -> Survey -> Queue/Triage -> Batch Execute -> Verify -> Deferred Review -> Close
+**Phases:** Frame -> Survey (= Analyze) -> Queue/Triage (= Plan) -> Batch Execute (= Act) -> Verify -> Deferred Review (= Review) -> Close
+**Spine alignment:** every shared-spine phase is present with a sweep-specific
+name. Review is folded into Verify via the verify -> deferred flow and emits
+`review.md` from there; there is no separate Review phase.
 
 Scan broadly, triage by confidence x risk, batch by risk order, verify after
 each batch, defer ambiguous cases. Stale docs are worse than dead code because

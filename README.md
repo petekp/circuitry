@@ -35,6 +35,12 @@ When you want a reusable workflow of your own, use:
 /circuit:create {{workflow idea}}
 ```
 
+Optional but recommended: drop a personal config at
+`~/.claude/circuit.config.yaml` (start from
+[circuit.config.example.yaml](circuit.config.example.yaml)) to set
+default adapters, skills, and dispatch routing across every project.
+See [User-Space Configuration](#user-space-configuration) for details.
+
 ## How It Works
 
 Circuit replaces ad-hoc skill invocation and having to copy-paste or re-type the same instructions over and over (and over). Instead, use `/circuit:run` or select a specific circuit. You can optionally provide a level of autonomy and rigor for more control.
@@ -58,7 +64,7 @@ These workflows are included and ready to use. You can create your own by follow
 | **Lite** | Plan and do. |
 | **Standard** | Plan, do, independent review. One fix loop. |
 | **Deep** | Research phase, seam proof. Workflows that include review still run it. |
-| **Tournament** | Competing proposals, adversarial evaluation, convergence. |
+| **Tournament** | Competing proposals, adversarial evaluation, convergence. Fires on architecture decisions — explicitly via `/circuit:run decide:`, or when Explore runs with competing options in play. |
 | **Autonomous** | Checkpoints auto-resolve. Useful for unattended runs. |
 
 Rigor specifics (review scope, checkpoint count, test gates) vary by workflow. See [CIRCUITS.md](CIRCUITS.md) for the per-workflow breakdown.
