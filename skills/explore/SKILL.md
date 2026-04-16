@@ -480,6 +480,12 @@ Include: failure context, options (narrow scope, re-frame, abort).
 Check artifacts in chain order:
 1. brief.md missing -> Frame
 2. analysis.md missing -> Analyze
-3. plan.md or decision.md missing -> Decide/Plan
+3. Neither plan.md nor decision.md present -> Decide/Plan
 4. result.md missing -> Close
 5. All present -> complete
+
+Decide/Plan produces exactly one of plan.md or decision.md depending on the
+task shape, not both. The Lite profile only produces plan.md; the Tournament
+profile only produces decision.md; Standard/Deep can produce either. Either
+artifact alone satisfies the phase gate; resume only re-enters the phase when
+both are missing.

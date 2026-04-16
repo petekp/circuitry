@@ -185,6 +185,7 @@ fail_if_unresolved_placeholders() {
 
   local IFS=', '
   echo "ERROR: unresolved placeholder(s) remain in $out_file: ${unresolved[*]}; introduced by: $source_summary" >&2
+  echo "ERROR: each {placeholder} token must either have a --set or --set-file value, or the token must not appear in the listed source templates." >&2
   exit 1
 }
 

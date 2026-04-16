@@ -239,7 +239,7 @@
     {
       "executable": true,
       "path": "scripts/relay/compose-prompt.sh",
-      "sha256": "13fc9e15cfadd43eb1ced526fbc3f8baa752d844130f819bdb4f5f84156fb534"
+      "sha256": "df14fd7d41297157f37a80be994299bc54c9f93a8a5bd3b319513d78aaa64312"
     },
     {
       "executable": true,
@@ -314,7 +314,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/session-start.js",
-      "sha256": "f2ebe4f7d067b5692a5921536127cc91f33991e8a894b1594c4980dd1eb71706"
+      "sha256": "9d3811011ea7fc7fb77e86604430d1ce67a60ba38032073bc565586dc5d42b27"
     },
     {
       "executable": true,
@@ -329,7 +329,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "0f70ae05c05ecc94b95bab0d9b9c804af0f5bf8953b912eafa31aa7fa2e0af8b"
+      "sha256": "ee58dc26d11247a3b63c26b87dc2bd9ac8b60904ae8d1b7761c65353b368767d"
     },
     {
       "executable": true,
@@ -374,7 +374,7 @@
     {
       "executable": false,
       "path": "skills/explore/SKILL.md",
-      "sha256": "76fa038d66dcaa4b3798fe98bd0127224af99c0c68520b5075e07fb92a0d8b24"
+      "sha256": "1ef5601dd9de305236379ad2fe31460dee8b88d59ee635e806df6af890492a70"
     },
     {
       "executable": true,

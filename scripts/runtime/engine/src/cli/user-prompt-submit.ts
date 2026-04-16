@@ -40,10 +40,6 @@ function currentProjectRoot(): string {
   return resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
 }
 
-function isCircuitPrompt(prompt: string): boolean {
-  return parseCircuitSlashCommand(prompt) !== null;
-}
-
 // Intent matchers require the intent token to be the FIRST action after the
 // slug, not a substring. This keeps ordinary work like
 // `/circuit:repair fix flaky smoke test` from accidentally tripping the
@@ -429,26 +425,30 @@ function renderHandoffCaptureContext(
 async function main(): Promise<number> {
   const input = readInput();
   const prompt = typeof input.prompt === "string" ? input.prompt : "";
-  const projectRoot = currentProjectRoot();
 
-  if (isCircuitPrompt(prompt)) {
-    // Best-effort: ensure per-project circuit directories exist.
-    const projInit = ensureProjectCircuitRoot(projectRoot);
-    for (const warning of projInit.warnings) {
-      process.stderr.write(`circuit: ${warning}\n`);
-    }
-
-    persistPluginRoot(projectRoot);
-    try {
-      ensureLocalHelperWrappers(projectRoot);
-    } catch {
-      // Best effort only. The persisted plugin root remains the primary recovery path.
-    }
-  }
-
+  // Content-aware gate: skip all project-root resolution, directory creation,
+  // and helper wrapper writes when the prompt does not reference a Circuit
+  // slash command. The UserPromptSubmit hook fires for every user turn, so
+  // paying for git rev-parse and fs setup on non-Circuit prompts is wasted
+  // overhead on the common path.
   const command = parseCircuitSlashCommand(prompt);
   if (!command) {
     return 0;
+  }
+
+  const projectRoot = currentProjectRoot();
+
+  // Best-effort: ensure per-project circuit directories exist.
+  const projInit = ensureProjectCircuitRoot(projectRoot);
+  for (const warning of projInit.warnings) {
+    process.stderr.write(`circuit: ${warning}\n`);
+  }
+
+  persistPluginRoot(projectRoot);
+  try {
+    ensureLocalHelperWrappers(projectRoot);
+  } catch {
+    // Best effort only. The persisted plugin root remains the primary recovery path.
   }
 
   const recordedInvocation = recordInvocationReceived({

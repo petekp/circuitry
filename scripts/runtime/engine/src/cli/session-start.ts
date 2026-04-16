@@ -82,9 +82,11 @@ function main(): number {
   }
 
   const projectRoot = resolveProjectRoot(process.cwd());
-  const continuity = getContinuityStatus(projectRoot);
+  let continuity = getContinuityStatus(projectRoot);
 
-  // Clear stale current_run pointers whose run root no longer exists.
+  // Clear stale current_run pointers whose run root no longer exists, then
+  // re-read the control-plane snapshot so downstream banner/render decisions
+  // don't operate on the pre-clear in-memory state.
   if (continuity.current_run) {
     const runRoot = continuity.current_run.run_root;
     if (!existsSync(runRoot)) {
@@ -92,6 +94,7 @@ function main(): number {
       process.stderr.write(
         `circuit: cleared stale current_run attachment: ${continuity.current_run.run_slug}\n`,
       );
+      continuity = getContinuityStatus(projectRoot);
     }
   }
 

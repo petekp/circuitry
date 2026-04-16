@@ -1,4 +1,10 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -235,6 +241,28 @@ describe("session-start integration", () => {
     expect(result.stdout).not.toContain("short ack");
     expect(result.stdout).not.toMatch(/Reply with a continuation signal \([^)]*\bok\b/);
     expect(result.stdout).not.toMatch(/Reply with a continuation signal \([^)]*\byep\b/);
+  });
+
+  it("falls through to the welcome banner after clearing a stale current_run whose run root was deleted", () => {
+    const { projectRoot, runRoot } = createBuildRun("stale run root sentinel");
+    const homeDir = mkdtempSync(join(tmpdir(), "circuit-session-home-"));
+
+    // Simulate the user rm -rf'ing the run root after the indexed current_run
+    // was already written. Session-start detects the missing directory and
+    // clears the attachment, but must not follow that with a fallback banner
+    // based on the in-memory snapshot from before the clear.
+    rmSync(runRoot, { recursive: true, force: true });
+
+    const result = runSessionStart(projectRoot, homeDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("cleared stale current_run attachment");
+    // The stale in-memory current_run must not cause the fallback banner to
+    // print, and renderActiveRun must not be invoked on the deleted run root.
+    expect(result.stdout).not.toContain("Circuit active run attached");
+    expect(result.stderr).not.toContain("circuit-engine render failed");
+    // Nothing attached, nothing pending -> welcome banner.
+    expect(result.stdout).toContain("Circuit is active.");
   });
 
   it("ignores a mirrored current-run marker when it is not backed by indexed current_run", () => {
