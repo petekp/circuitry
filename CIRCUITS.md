@@ -84,8 +84,8 @@ test -x .circuit/bin/circuit-engine
 ### Migrate
 
 - autonomous
+- deep
 - default
-- standard
 
 ### Repair
 

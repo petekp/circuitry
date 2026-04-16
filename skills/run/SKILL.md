@@ -236,7 +236,7 @@ per-command ledger correlation breaks.
 | Explore | Standard -> `default`, Lite -> `lite`, Deep -> `deep`, Tournament -> `tournament`, Autonomous -> `autonomous` |
 | Build | Standard -> `default`, Lite -> `lite`, Deep -> `deep`, Autonomous -> `autonomous` |
 | Repair | Standard -> `default`, Lite -> `lite`, Deep -> `deep`, Autonomous -> `autonomous` |
-| Migrate | Standard -> `standard`, Deep -> `default`, Autonomous -> `autonomous` |
+| Migrate | Standard -> `default`, Deep -> `deep`, Autonomous -> `autonomous` |
 | Sweep | Standard -> `default`, Lite -> `lite`, Deep -> `deep`, Autonomous -> `autonomous` |
 
 ```bash

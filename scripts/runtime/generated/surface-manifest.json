@@ -389,12 +389,12 @@
     {
       "executable": false,
       "path": "skills/migrate/circuit.yaml",
-      "sha256": "900c4a3776ee396cdfd421420791c0d79d48899d525353ba42ca60248d8632c8"
+      "sha256": "2b5010caf48302f6fb9ef93057f500febd16929d252666ad0a538a4dfb3c6f9a"
     },
     {
       "executable": false,
       "path": "skills/migrate/SKILL.md",
-      "sha256": "4af2c5dbb3d50403e04799471bc257872a461e02d0cbf25778f827a1f66e0405"
+      "sha256": "8226d3407f6884fc9e8ee060a3c99b374077147a9834701a5c8b5caf1ad922e6"
     },
     {
       "executable": false,
@@ -434,7 +434,7 @@
     {
       "executable": false,
       "path": "skills/run/SKILL.md",
-      "sha256": "0a4789a528fdb250c807c07a168665d14482aae7ed7455dffcb7ba73a1dad7e5"
+      "sha256": "b42c66e36971cd74517c50495256aa28cac0d6a00f3e873b121aa9b6a4584a51"
     },
     {
       "executable": false,

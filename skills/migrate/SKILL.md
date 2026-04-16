@@ -83,8 +83,8 @@ test -f "$RUN_ROOT/artifacts/active-run.md"
 ## Entry
 
 The router passes: task description, rigor profile (Standard, Deep, Autonomous).
-YAML entry modes are `standard`, `default`, and `autonomous`; `default` maps to
-Deep rigor. Default rigor: Deep.
+YAML entry modes are `default`, `deep`, and `autonomous`. Standard rigor maps to
+`default`, Deep rigor maps to `deep`. Default rigor for direct invocation: Deep.
 
 **Direct invocation:** When invoked directly via `/circuit:migrate` (not through
 the router), bootstrap the run root immediately if one does not already exist.
@@ -100,7 +100,7 @@ characters. Example: "Migrate Auth to OAuth2" produces `migrate-auth-to-oauth2`.
 ```bash
 RUN_SLUG="migrate-auth-to-oauth2"  # derived from task description
 RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
-ENTRY_MODE="default"  # Deep -> default, Standard -> standard, Autonomous -> autonomous
+ENTRY_MODE="deep"  # Deep -> deep, Standard -> default, Autonomous -> autonomous
 
 test -x .circuit/bin/circuit-engine
 
