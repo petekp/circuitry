@@ -151,7 +151,71 @@ function firstLineForMatch(content: string, match: RegExpMatchArray): number {
   return content.slice(0, index).split("\n").length;
 }
 
+interface EnobufsRatchetSite {
+  readonly path: string;
+  readonly expectedCount: number;
+  readonly skipMatcher?: RegExp;
+}
+
+const ENOBUFS_RATCHET_SITES: readonly EnobufsRatchetSite[] = [
+  {
+    path: "hooks/user-prompt-submit.js",
+    expectedCount: 1,
+  },
+  {
+    path: "scripts/runtime/engine/src/dispatch.ts",
+    expectedCount: 1,
+    skipMatcher: /commandExists/,
+  },
+  {
+    path: "scripts/runtime/engine/src/codex-runtime.ts",
+    expectedCount: 2,
+  },
+];
+
+const MAX_BUFFER_PATTERN = /maxBuffer:\s*64\s*\*\s*1024\s*\*\s*1024/;
+
 describe("architecture ratchets", () => {
+  it("pins maxBuffer on every spawnSync site that pipes child CLI output", () => {
+    const findings: string[] = [];
+
+    for (const site of ENOBUFS_RATCHET_SITES) {
+      const content = readFileSync(resolve(REPO_ROOT, site.path), "utf-8");
+      const lines = content.split("\n");
+
+      const qualifyingCallIndices: number[] = [];
+      for (let index = 0; index < lines.length; index += 1) {
+        if (!lines[index].includes("spawnSync(")) {
+          continue;
+        }
+        if (site.skipMatcher) {
+          const contextStart = Math.max(0, index - 5);
+          const contextWindow = lines.slice(contextStart, index + 1).join("\n");
+          if (site.skipMatcher.test(contextWindow)) {
+            continue;
+          }
+        }
+        qualifyingCallIndices.push(index);
+      }
+
+      if (qualifyingCallIndices.length !== site.expectedCount) {
+        findings.push(
+          `${site.path}: expected ${site.expectedCount} qualifying spawnSync call(s), found ${qualifyingCallIndices.length}`,
+        );
+      }
+
+      for (const callIndex of qualifyingCallIndices) {
+        const windowEnd = Math.min(lines.length, callIndex + 40);
+        const window = lines.slice(callIndex, windowEnd).join("\n");
+        if (!MAX_BUFFER_PATTERN.test(window)) {
+          findings.push(`${site.path}:${callIndex + 1} missing maxBuffer: 64 * 1024 * 1024`);
+        }
+      }
+    }
+
+    expect(findings).toEqual([]);
+  });
+
   it("keeps removed architecture vocabulary out of live non-generated surfaces", () => {
     const findings: string[] = [];
 

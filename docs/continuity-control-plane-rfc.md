@@ -187,7 +187,7 @@ There is no `render` or `import-legacy` command.
 - `/circuit:handoff resume` calls `circuit-engine continuity resume`
 - `/circuit:handoff done` calls `circuit-engine continuity clear`
 - host `/clear` re-runs passive `SessionStart`; it does not clear saved continuity
-- `/circuit:handoff` save calls `circuit-engine continuity save`
+- bare `/circuit:handoff` (capture mode) calls `circuit-engine continuity save` under the hood; there is no `/circuit:handoff save` or `/circuit:handoff clear` slash alias
 
 Prompt surfaces may present record content or active-run fallback, but they do not read or mutate continuity files directly.
 

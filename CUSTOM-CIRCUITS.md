@@ -320,6 +320,7 @@ RUN_ROOT=".circuit/circuit-runs/${RUN_SLUG}"
   --manifest "<path-to-manifest>" \
   --entry-mode "<entry-mode>" \
   --goal "<goal>" \
+  --invocation-id "${INVOCATION_ID:-}" \
   --project-root "$PWD"
 \```
 

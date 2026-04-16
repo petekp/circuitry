@@ -284,6 +284,36 @@ describe("prompt surface contracts", () => {
     expect(handoffCaptureLines).not.toContain("pick it up");
   });
 
+  it("forbids AskUserQuestion in the handoff capture happy path", () => {
+    const manifest = buildPromptContractsManifest(catalog);
+    const lines = manifest.fast_modes.handoff_capture.lines;
+    const joined = lines.join("\n");
+
+    expect(joined).toContain("No modal cascade");
+    expect(joined).toContain("Do NOT call AskUserQuestion in the default path");
+    expect(joined).not.toContain("Save? / Edit? / Closeout? / Don't save?\n");
+    expect(joined).toContain(
+      "Only call AskUserQuestion when inference genuinely fails",
+    );
+
+    const stepOneIndex = lines.findIndex((line) =>
+      line.startsWith("Step 1 -- Draft from conversation context"),
+    );
+    const stepTwoIndex = lines.findIndex((line) =>
+      line.startsWith("Step 2 -- Print a compact preview"),
+    );
+    const stepThreeIndex = lines.findIndex((line) =>
+      line.startsWith("Step 3 -- Save through the engine immediately"),
+    );
+
+    expect(stepOneIndex).toBeGreaterThan(-1);
+    expect(stepTwoIndex).toBeGreaterThan(stepOneIndex);
+    expect(stepThreeIndex).toBeGreaterThan(stepTwoIndex);
+
+    const happyPath = lines.slice(stepOneIndex, stepThreeIndex).join("\n");
+    expect(happyPath).not.toContain("AskUserQuestion");
+  });
+
   it("returns the expected prompt surface block targets", () => {
     const pairs = getPromptSurfaceBlockTargets(REPO_ROOT, catalog)
       .map((target) => ({
