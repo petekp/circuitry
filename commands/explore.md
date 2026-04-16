@@ -4,6 +4,19 @@ description: "Investigate, understand, choose among options, or shape an executi
 
 Direct slash-command invocation for `/circuit:explore`.
 
+## Purpose
+
+Investigate, understand, choose among options, or shape an execution plan.
+
+## Examples
+
+```
+/circuit:explore options for replacing zustand
+/circuit:explore how does the upload flow work
+```
+
+## Bootstrap Contract
+
 Launch the `circuit:explore` skill immediately.
 Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.
 If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.

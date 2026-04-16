@@ -4,6 +4,19 @@ description: "Build features, scoped refactors, docs, tests, or mixed changes."
 
 Direct slash-command invocation for `/circuit:build`.
 
+## Purpose
+
+Build features, scoped refactors, docs, tests, or mixed changes.
+
+## Examples
+
+```
+/circuit:build add a dark-mode toggle
+/circuit:build refactor the auth middleware
+```
+
+## Bootstrap Contract
+
 Launch the `circuit:build` skill immediately.
 Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.
 If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.

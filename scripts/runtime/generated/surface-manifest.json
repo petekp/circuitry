@@ -134,47 +134,47 @@
     {
       "executable": false,
       "path": "commands/build.md",
-      "sha256": "6207650a4b08ef08e47d0572137e435653cadf21c4743ed5fa7b2abdae8e52e4"
+      "sha256": "62057ddc1e79492095ef922228859afc29a1a88a1100699839299b38a7ff15be"
     },
     {
       "executable": false,
       "path": "commands/create.md",
-      "sha256": "9ea1bd8f3d0281292b26ccd798c696ec5c5296c38cbc6fb3aa17ed445cd53acb"
+      "sha256": "771632a1613ee7e98242ac5eb455c1c432a79c268260794f40628707795da729"
     },
     {
       "executable": false,
       "path": "commands/explore.md",
-      "sha256": "a69b3432d004d5972b67b0a3e6b62726364ddc37ebea115ee6794a673e552e88"
+      "sha256": "c4a0ab7c86f6f27a56a7283343d18937929f500f3b715b7b5e1498bf8b8b2122"
     },
     {
       "executable": false,
       "path": "commands/handoff.md",
-      "sha256": "35a6673a54316bfab7104eaafa6ccfdb3814af11ac091bba788938bef165786f"
+      "sha256": "c16188ef6a9877bc25820fdaaa09d6e4fa238f743bf997216ba59020ae994044"
     },
     {
       "executable": false,
       "path": "commands/migrate.md",
-      "sha256": "4a305d7b685024e6da4b9d9da6b3540cbb6e82dfa5c4d89dc001a490081501ec"
+      "sha256": "c3bf900f5aacb7bd696f9d9ed79254b2f5253f82c4e876abb39a8b053737b811"
     },
     {
       "executable": false,
       "path": "commands/repair.md",
-      "sha256": "27b2f454a4c5cf06b566e5d8928b138947c78e57812157da79f5d7f9f8c10062"
+      "sha256": "3b0e03c90a5a222ff88db508bdfb30de3201ee26f19e5b6bd18625003044c36d"
     },
     {
       "executable": false,
       "path": "commands/review.md",
-      "sha256": "fc9a3d578bac5dc516bf191d5a01f9ef0c07ab8fcdb652e1dfae7e481b8a41ea"
+      "sha256": "421c06e765e2da5c1e5de620f9727c1332be60ae3a2c7475aba4d9eb8f2ff76d"
     },
     {
       "executable": false,
       "path": "commands/run.md",
-      "sha256": "e0900eb5065ef6c3d1438efc7e9109946076d99ea025111d1fddf62672790c70"
+      "sha256": "47f51afcbc1735211791e80e18c8f16ce8faa67689311c158aa2b729dda453b9"
     },
     {
       "executable": false,
       "path": "commands/sweep.md",
-      "sha256": "0a2d13279788eb6e8db15600dd003042c018efa1af5c3ee9bccea8f4ba55722b"
+      "sha256": "1ca1e2e1f38060983e0f8689052e5161a9de8c29b6eaf16ac588f1a0a73b4131"
     },
     {
       "executable": false,
@@ -264,7 +264,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "399e320470a1ce6e674e0122cc2f6e3df8d5c06dcbbf104687cf47da92b4ee7a"
+      "sha256": "3d8c83811df2f109c7cb8032758e9bf3f10be8a26b40516a5724464a9600b2b8"
     },
     {
       "executable": true,
@@ -279,7 +279,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "e2dda40930d2f2ad3b2a07898316567a5164e6bec4d78ee84c36ace89e3b3fa7"
+      "sha256": "a0319b00b70f146ad9534815b6d042ed84b265fafb41b75c0f81fa4c84bac065"
     },
     {
       "executable": true,

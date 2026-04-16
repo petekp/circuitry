@@ -4,6 +4,19 @@ description: "Systematic codebase sweeps: cleanup, quality passes, coverage impr
 
 Direct slash-command invocation for `/circuit:sweep`.
 
+## Purpose
+
+Systematic codebase sweeps: cleanup, quality passes, coverage improvements, docs-sync.
+
+## Examples
+
+```
+/circuit:sweep unused exports under src/
+/circuit:sweep any-types in the engine package
+```
+
+## Bootstrap Contract
+
 Launch the `circuit:sweep` skill immediately.
 Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.
 If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.

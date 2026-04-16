@@ -697,25 +697,120 @@ export function renderPromptContractsJson(catalog: Catalog): string {
   return `${JSON.stringify(buildPromptContractsManifest(catalog), null, 2)}\n`;
 }
 
-function renderWorkflowCommandShim(entry: WorkflowEntry): string {
-  if (entry.origin === "user_global") {
-    return [
-      `Direct custom slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`,
-      "",
-      "This command is overlay-managed from the user-global custom circuit catalog.",
-      `Before broader repo exploration, verify \`${entry.skillMdPath}\` and \`${entry.manifestPath}\` both exist.`,
-      `Read \`${entry.skillMdPath}\` directly and treat it as the authoritative execution contract for this command.`,
-      `For explicit smoke/bootstrap verification, bootstrap with \`${LOCAL_HELPER_DIR}/circuit-engine bootstrap --manifest "${entry.manifestPath}"\` and validate the resulting run state before stopping.`,
-      "Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.",
-      "Treat this custom workflow as already selected. Do not reroute it through `/circuit:run`.",
-      "If the external skill or manifest is missing, stop and tell the user to recreate or republish the custom circuit with `/circuit:create`.",
-      "",
-    ].join("\n");
-  }
+const WORKFLOW_EXAMPLE_INVOCATIONS: Record<string, string[]> = {
+  build: [
+    "/circuit:build add a dark-mode toggle",
+    "/circuit:build refactor the auth middleware",
+  ],
+  explore: [
+    "/circuit:explore options for replacing zustand",
+    "/circuit:explore how does the upload flow work",
+  ],
+  repair: [
+    "/circuit:repair login drops the session after refresh",
+    "/circuit:repair flaky auth-e2e test on CI",
+  ],
+  migrate: [
+    "/circuit:migrate zustand -> redux-toolkit",
+    "/circuit:migrate webpack -> vite",
+  ],
+  sweep: [
+    "/circuit:sweep unused exports under src/",
+    "/circuit:sweep any-types in the engine package",
+  ],
+};
 
-  const summary = getSurfaceSummary(entry);
+interface RouterIntentPrefix {
+  prefix: string;
+  workflow: string;
+  rigor: string;
+}
+
+const ROUTER_INTENT_PREFIXES: readonly RouterIntentPrefix[] = [
+  { prefix: "fix:", workflow: "Repair", rigor: "Lite" },
+  { prefix: "repair:", workflow: "Repair", rigor: "Deep" },
+  { prefix: "develop:", workflow: "Build", rigor: "Standard" },
+  { prefix: "decide:", workflow: "Explore", rigor: "Tournament" },
+  { prefix: "migrate:", workflow: "Migrate", rigor: "Deep" },
+  { prefix: "cleanup:", workflow: "Sweep", rigor: "Standard" },
+  { prefix: "overnight:", workflow: "Sweep", rigor: "Autonomous" },
+];
+
+function renderShimExampleCodeBlock(lines: string[]): string {
+  return ["```", ...lines, "```"].join("\n");
+}
+
+function renderShimPurposeSection(description: string): string {
+  return ["## Purpose", "", firstSentence(description)].join("\n");
+}
+
+function renderShimExamplesSection(body: string): string {
+  return ["## Examples", "", body].join("\n");
+}
+
+function renderWorkflowExamplesBody(slug: string): string {
+  const invocations = WORKFLOW_EXAMPLE_INVOCATIONS[slug] ?? [`/circuit:${slug} <task>`];
+  return renderShimExampleCodeBlock(invocations);
+}
+
+function renderRunExamplesBody(): string {
+  const tableRows = ROUTER_INTENT_PREFIXES
+    .map((row) => `| \`${row.prefix}\` | ${row.workflow} | ${row.rigor} |`)
+    .join("\n");
+
+  return [
+    "Prefix a task with a built-in intent to skip classification and dispatch directly:",
+    "",
+    "| Prefix | Workflow | Rigor |",
+    "|--------|----------|-------|",
+    tableRows,
+    "| (none) | (classify) | (auto) |",
+    "",
+    renderShimExampleCodeBlock([
+      "/circuit:run <task>                         # Router classifies",
+      "/circuit:run fix: login drops the session   # Dispatch to Repair Lite",
+      "/circuit:run develop: add SSO flow          # Dispatch to Build Standard",
+      "/circuit:run cleanup: unused exports        # Dispatch to Sweep Standard",
+    ]),
+  ].join("\n");
+}
+
+function renderHandoffExamplesBody(): string {
+  return [
+    "Fast modes are positional subcommands:",
+    "",
+    renderShimExampleCodeBlock([
+      "/circuit:handoff                            # Draft continuity from conversation and save",
+      "/circuit:handoff resume                     # Present saved continuity and pick up",
+      "/circuit:handoff done                       # Clear continuity and detach the current run",
+    ]),
+  ].join("\n");
+}
+
+function renderReviewExamplesBody(): string {
+  return [
+    "Scope selection is mechanical. Name a scope or fall back to the repo's current diff:",
+    "",
+    renderShimExampleCodeBlock([
+      "/circuit:review                             # Uncommitted diff, else most recent commit",
+      "/circuit:review src/auth/                   # Explicit scope: named paths",
+      "/circuit:review HEAD~3..HEAD                # Explicit scope: diff target",
+    ]),
+  ].join("\n");
+}
+
+function renderCreateExamplesBody(): string {
+  return renderShimExampleCodeBlock([
+    "/circuit:create                             # Guided flow: draft, validate, publish",
+  ]);
+}
+
+function renderWorkflowBootstrapContractBody(
+  entry: WorkflowEntry,
+  summary: PromptSurfaceSummary,
+): string {
   const lines = [
-    `Direct slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`,
+    "## Bootstrap Contract",
     "",
     `Launch the \`circuit:${entry.slug}\` skill immediately.`,
     "Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.",
@@ -733,32 +828,98 @@ function renderWorkflowCommandShim(entry: WorkflowEntry): string {
     );
   }
 
-  return `${lines.join("\n")}\n`;
+  return lines.join("\n");
+}
+
+function renderCustomWorkflowShimBody(entry: WorkflowEntry & { origin: "user_global" }): string {
+  const header = `Direct custom slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`;
+  const purpose = renderShimPurposeSection(entry.skillDescription);
+  const examples = renderShimExamplesSection(
+    renderShimExampleCodeBlock([`${getPublicCommandInvocation(entry)}   # Custom workflow dispatch`]),
+  );
+  const contract = [
+    "## Bootstrap Contract",
+    "",
+    "This command is overlay-managed from the user-global custom circuit catalog.",
+    `Before broader repo exploration, verify \`${entry.skillMdPath}\` and \`${entry.manifestPath}\` both exist.`,
+    `Read \`${entry.skillMdPath}\` directly and treat it as the authoritative execution contract for this command.`,
+    `For explicit smoke/bootstrap verification, bootstrap with \`${LOCAL_HELPER_DIR}/circuit-engine bootstrap --manifest "${entry.manifestPath}"\` and validate the resulting run state before stopping.`,
+    "Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.",
+    "Treat this custom workflow as already selected. Do not reroute it through `/circuit:run`.",
+    "If the external skill or manifest is missing, stop and tell the user to recreate or republish the custom circuit with `/circuit:create`.",
+  ].join("\n");
+
+  return `${[header, "", purpose, "", examples, "", contract].join("\n")}\n`;
+}
+
+function renderWorkflowCommandShim(entry: WorkflowEntry): string {
+  if (entry.origin === "user_global") {
+    return renderCustomWorkflowShimBody(entry as WorkflowEntry & { origin: "user_global" });
+  }
+
+  const summary = getSurfaceSummary(entry);
+  const header = `Direct slash-command invocation for \`${getPublicCommandInvocation(entry)}\`.`;
+  const purpose = renderShimPurposeSection(entry.skillDescription);
+  const examplesBody = entry.slug === "run"
+    ? renderRunExamplesBody()
+    : renderWorkflowExamplesBody(entry.slug);
+  const examples = renderShimExamplesSection(examplesBody);
+  const contract = renderWorkflowBootstrapContractBody(entry, summary);
+
+  return `${[header, "", purpose, "", examples, "", contract].join("\n")}\n`;
 }
 
 function renderUtilityCommandShim(entry: UtilityEntry): string {
-  if (entry.slug === "create") {
-    return [
-      `Direct utility invocation for \`${getPublicCommandInvocation(entry)}\`.`,
-      "",
-      "Launch the `circuit:create` skill immediately.",
-      "First resolve the installed plugin root from `.circuit/plugin-root`.",
-      "Do not search the whole repo, plugin cache, or `$HOME` to rediscover Circuit docs or skills.",
-      "Use exact paths plus the bundled `custom-circuits` helper CLI for catalog checks, draft validation, and publish.",
-      "Keep shell steps short and single-purpose; avoid long chained one-liners unless they are unavoidable.",
-      "",
-    ].join("\n");
+  const header = `Direct utility invocation for \`${getPublicCommandInvocation(entry)}\`.`;
+  const purpose = renderShimPurposeSection(entry.skillDescription);
+
+  let examplesBody: string;
+  let contractBody: string[];
+
+  switch (entry.slug) {
+    case "handoff":
+      examplesBody = renderHandoffExamplesBody();
+      contractBody = [
+        `Launch the \`circuit:${entry.slug}\` skill immediately.`,
+        "Execute argument-selected fast modes before context gathering.",
+        "Use hook-authored helper wrappers from `.circuit/bin/` when the utility needs Circuit helpers.",
+        "Do not do broad repo exploration unless the utility contract explicitly requires it.",
+      ];
+      break;
+    case "review":
+      examplesBody = renderReviewExamplesBody();
+      contractBody = [
+        `Launch the \`circuit:${entry.slug}\` skill immediately.`,
+        "Execute argument-selected fast modes before context gathering.",
+        "Use hook-authored helper wrappers from `.circuit/bin/` when the utility needs Circuit helpers.",
+        "Do not do broad repo exploration unless the utility contract explicitly requires it.",
+      ];
+      break;
+    case "create":
+      examplesBody = renderCreateExamplesBody();
+      contractBody = [
+        "Launch the `circuit:create` skill immediately.",
+        "First resolve the installed plugin root from `.circuit/plugin-root`.",
+        "Do not search the whole repo, plugin cache, or `$HOME` to rediscover Circuit docs or skills.",
+        "Use exact paths plus the bundled `custom-circuits` helper CLI for catalog checks, draft validation, and publish.",
+        "Keep shell steps short and single-purpose; avoid long chained one-liners unless they are unavoidable.",
+      ];
+      break;
+    default:
+      examplesBody = renderShimExampleCodeBlock([`/circuit:${entry.slug}`]);
+      contractBody = [
+        `Launch the \`circuit:${entry.slug}\` skill immediately.`,
+        "Execute argument-selected fast modes before context gathering.",
+        "Use hook-authored helper wrappers from `.circuit/bin/` when the utility needs Circuit helpers.",
+        "Do not do broad repo exploration unless the utility contract explicitly requires it.",
+      ];
+      break;
   }
 
-  return [
-    `Direct utility invocation for \`${getPublicCommandInvocation(entry)}\`.`,
-    "",
-    `Launch the \`circuit:${entry.slug}\` skill immediately.`,
-    "Execute argument-selected fast modes before context gathering.",
-    "Use hook-authored helper wrappers from `.circuit/bin/` when the utility needs Circuit helpers.",
-    "Do not do broad repo exploration unless the utility contract explicitly requires it.",
-    "",
-  ].join("\n");
+  const examples = renderShimExamplesSection(examplesBody);
+  const contract = ["## Bootstrap Contract", "", ...contractBody].join("\n");
+
+  return `${[header, "", purpose, "", examples, "", contract].join("\n")}\n`;
 }
 
 function escapeYamlDoubleQuotedString(value: string): string {

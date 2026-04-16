@@ -4,6 +4,19 @@ description: "Fix bugs, regressions, flaky behavior, and incidents."
 
 Direct slash-command invocation for `/circuit:repair`.
 
+## Purpose
+
+Fix bugs, regressions, flaky behavior, and incidents.
+
+## Examples
+
+```
+/circuit:repair login drops the session after refresh
+/circuit:repair flaky auth-e2e test on CI
+```
+
+## Bootstrap Contract
+
 Launch the `circuit:repair` skill immediately.
 Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.
 If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.

@@ -4,6 +4,19 @@ description: "Large-scale migrations: framework swaps, dependency replacements, 
 
 Direct slash-command invocation for `/circuit:migrate`.
 
+## Purpose
+
+Large-scale migrations: framework swaps, dependency replacements, architecture transitions, incremental rewrites.
+
+## Examples
+
+```
+/circuit:migrate zustand -> redux-toolkit
+/circuit:migrate webpack -> vite
+```
+
+## Bootstrap Contract
+
 Launch the `circuit:migrate` skill immediately.
 Use hook-authored helper wrappers from `.circuit/bin/` instead of rediscovering plugin paths or cache layout.
 If the request is an explicit smoke/bootstrap verification of the workflow, bootstrap and validate run state, then stop without unrelated repo exploration.
