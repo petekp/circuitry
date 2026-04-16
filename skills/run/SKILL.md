@@ -128,6 +128,12 @@ Routing rules for custom circuits:
 
 **Quiet by default.** Route and proceed unless ambiguity or risk is material.
 
+**`--explain` flag:** if the user passes `/circuit:run --explain <task>`, prefix
+the one-line dispatch summary with a short "chosen because:" breadcrumb naming
+the signal that won the classification. Without the flag, keep classification
+reasoning to yourself; surfacing it on every dispatch is noise for the common
+case.
+
 ### Step 1: Classify Task Kind
 
 Match signal patterns to determine the workflow:
@@ -183,6 +189,10 @@ record the trivial classification before continuing:
    Build continues to use the full event-backed lifecycle after bootstrap; the other workflow skills still own their downstream phase artifacts directly.
 2. Show a one-line summary:
    > **Build / Standard** -- I'll plan the change, implement with independent review, then close.
+
+   With `--explain`, prefix the summary with a short breadcrumb:
+   > **Build / Standard** (chosen because: default -- no Repair/Sweep/Migrate/Explore signals in the task)
+   > -- I'll plan the change, implement with independent review, then close.
 3. Load the workflow skill and follow its instructions.
 
 **If genuinely ambiguous** (mixed signals spanning two workflows):
