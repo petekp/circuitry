@@ -82,6 +82,8 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
   }
 
   if (!existsSync(manifestPath)) {
+    const hint =
+      "If this was derived from --workflow, valid workflows are: build, explore, migrate, repair, run, sweep. Run `.circuit/bin/circuit-engine bootstrap --help` for usage.";
     recordInvocationFailed({
       commandArgs: options.commandArgs,
       failureReason: `manifest not found: ${manifestPath}`,
@@ -90,7 +92,7 @@ export function bootstrapRun(options: BootstrapOptions): BootstrapResult {
       projectRoot,
       requestedCommand: options.routedCommand,
     });
-    throw new Error(`manifest not found: ${manifestPath}`);
+    throw new Error(`manifest not found: ${manifestPath}. ${hint}`);
   }
 
   if (!existsSync(manifestSnapshotPath) && existsSync(existingActiveRunPath)) {

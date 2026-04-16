@@ -269,7 +269,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/circuit-engine.js",
-      "sha256": "9188bc3166d6d9316f1d5a6d73ad9fdcf92e443abe41c524d6f3edc359b276b8"
+      "sha256": "dc6420f74f2a50aa689927c802690caffec35647023345176baaf82e0e13dddb"
     },
     {
       "executable": true,
@@ -279,7 +279,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/custom-circuits.js",
-      "sha256": "6fca430f8f5e813cd98f563aef9b0039b44e29a40f2a51f1e72ebc3e37aa907f"
+      "sha256": "82e164a3f946af6596c3bc7be0d28c0a0520aa864cb896704b8bff80f4bb083c"
     },
     {
       "executable": true,
@@ -289,7 +289,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/dispatch.js",
-      "sha256": "ccc25ca3e6ac0fdd4eb17b42b71e2f02f60fbea897a118f47db87cd36ebcf930"
+      "sha256": "dee9766b2efaec5ade287e34d8396d05ea14f3c56906225e7d70020ccf2044cf"
     },
     {
       "executable": true,
@@ -319,7 +319,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/update-batch.js",
-      "sha256": "6e6d24adcf6e643d6915f68c9cb602db19911f1acb5a76510201fc498ac0f203"
+      "sha256": "0f22f5f29e2b4f5c1ce1aeb7693145f96913d7fd57bb57309402f956390a23ab"
     },
     {
       "executable": true,
@@ -329,7 +329,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/user-prompt-submit.js",
-      "sha256": "506e2b6449e79b99018820394625acd9772903543502d98b624cd5452101f1a4"
+      "sha256": "f0fab36d6048cc3783f5a2f4cadd14b1ec1e714edcd8646f7d70a03eddf3c5b3"
     },
     {
       "executable": true,

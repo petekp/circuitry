@@ -240,7 +240,11 @@ export function findSlice(batch: Batch, sid: string): Slice {
   for (const current of batch.slices || []) {
     if (current.id === sid) return current;
   }
-  process.stderr.write(`ERROR: slice ${sid} not found in batch.json\n`);
+  const existing = (batch.slices || []).map((s) => s.id).filter(Boolean);
+  const listing = existing.length > 0 ? existing.join(", ") : "(none)";
+  process.stderr.write(
+    `ERROR: slice ${sid} not found in batch.json. Existing slice ids: ${listing}\n`,
+  );
   process.exit(1);
 }
 

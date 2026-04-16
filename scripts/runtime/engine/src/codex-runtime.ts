@@ -331,7 +331,9 @@ export function bootstrapCodexAuth(runtimeRoot: string, homeDir = homedir()): st
 
   if (!existsSync(sourcePath)) {
     rmSync(targetPath, { force: true });
-    throw new Error("circuit: Codex login required. Run `codex login` and retry.");
+    throw new Error(
+      `circuit: codex adapter Codex login required; ${sourcePath} is missing. Run \`codex login\` once and retry.`,
+    );
   }
 
   mkdirSync(runtimeRoot, { recursive: true });

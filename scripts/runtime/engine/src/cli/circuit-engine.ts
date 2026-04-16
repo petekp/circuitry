@@ -323,7 +323,9 @@ function main(): number {
     };
 
     if (command !== "bootstrap" && positionals.length > 0) {
-      throw new Error(`circuit: unknown argument: ${positionals[0]} (valid subcommands: bootstrap, abort-run, complete-synthesis, request-checkpoint, resolve-checkpoint, dispatch-step, reconcile-dispatch, resume, render, record-classification, continuity)`);
+      throw new Error(
+        `circuit: unknown argument '${positionals[0]}'; run \`.circuit/bin/circuit-engine --help\` for supported subcommands.`,
+      );
     }
 
     switch (command) {

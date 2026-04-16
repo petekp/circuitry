@@ -121,7 +121,7 @@ function renderWrapper(wrapper: PromptHelperWrapper): string {
     "PLUGIN_ROOT_FILE=\"$STATE_DIR/plugin-root\"",
     "",
     "if [[ ! -f \"$PLUGIN_ROOT_FILE\" ]]; then",
-    "  printf 'circuit: installed plugin root not found at %s; run a /circuit:* prompt first\\n' \"$PLUGIN_ROOT_FILE\" >&2",
+    "  printf 'circuit: installed plugin root not found at %s; invoke any /circuit:* command in this project first (e.g. /circuit:run) so the plugin hook populates it\\n' \"$PLUGIN_ROOT_FILE\" >&2",
     "  exit 1",
     "fi",
     "",
