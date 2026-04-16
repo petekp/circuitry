@@ -23,9 +23,12 @@
   "scripts": {
     "build": "tsc",
     "bundle": "node esbuild.config.mjs",
+    "catalog": "node ../bin/catalog-compiler.js generate",
+    "catalog:check": "node ../bin/catalog-compiler.js generate --check",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "prepare": "tsc && node esbuild.config.mjs",
+    "prepare-ship": "npm run catalog && node esbuild.config.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

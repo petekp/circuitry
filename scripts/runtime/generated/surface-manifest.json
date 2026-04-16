@@ -339,7 +339,7 @@
     {
       "executable": true,
       "path": "scripts/sync-to-cache.sh",
-      "sha256": "9e8deef8a5cf1d2a276a004e766ca131761531a59362c3284df1981baee6c592"
+      "sha256": "952e602afea5a1ad98f3623e09e800e3c0511ef192833e58833162803d2de459"
     },
     {
       "executable": true,

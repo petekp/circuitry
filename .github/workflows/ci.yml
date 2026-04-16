@@ -17,6 +17,18 @@ jobs:
       - run: npm ci --prefix scripts/runtime/engine
       - run: ./scripts/verify-install.sh
 
+      # Verify generated markdown/JSON surfaces are fresh.
+      # catalog-compiler is the single source of truth for the following and
+      # will overwrite them on generate: commands/*.md shims, CIRCUITS.md
+      # blocks, skills/*/SKILL.md contract blocks, .claude-plugin/public-commands.txt,
+      # scripts/runtime/generated/*.json.
+      - name: Check catalog-compiler freshness
+        run: |
+          if ! node scripts/runtime/bin/catalog-compiler.js generate --check; then
+            echo "::error::Generated surfaces are stale. Run 'node scripts/runtime/bin/catalog-compiler.js generate' and commit the result."
+            exit 1
+          fi
+
       # Verify committed bundles are fresh -- rebuild and diff against committed artifacts
       - name: Check bundle freshness
         run: |

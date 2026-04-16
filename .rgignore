@@ -1,0 +1,8 @@
+# Ripgrep-only ignores. Files here are tracked in git (so the plugin ships
+# self-contained) but searching them is not useful.
+
+# scripts/runtime/bin/*.js are esbuild bundles (single-line, ~200-500 KB).
+# Grepping matches there surfaces 2 KB previews of compiled JS in the agent
+# thread. Search scripts/runtime/engine/src/ for TypeScript source instead.
+scripts/runtime/bin/
+!scripts/runtime/bin/*.sh

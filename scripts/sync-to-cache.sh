@@ -22,6 +22,24 @@ else
   CACHE_ALIAS_ROOT=""
 fi
 
+CATALOG_COMPILER_CLI="$PLUGIN_ROOT/scripts/runtime/bin/catalog-compiler.js"
+ESBUILD_CONFIG="$PLUGIN_ROOT/scripts/runtime/engine/esbuild.config.mjs"
+
+# Regenerate compiler-owned surfaces before syncing so the cache never reflects
+# stale markdown, JSON manifests, or esbuild bundles. catalog-compiler owns
+# commands/*.md, CIRCUITS.md blocks, skills/*/SKILL.md contract blocks,
+# .claude-plugin/public-commands.txt, and scripts/runtime/generated/*.json.
+# esbuild owns scripts/runtime/bin/*.js.
+if [[ -f "$CATALOG_COMPILER_CLI" ]]; then
+  printf 'Regenerating catalog-compiler surfaces\n'
+  (cd "$PLUGIN_ROOT" && "$NODE_BIN" "$CATALOG_COMPILER_CLI" generate)
+fi
+
+if [[ -f "$ESBUILD_CONFIG" ]]; then
+  printf 'Rebuilding runtime bundles\n'
+  (cd "$(dirname "$ESBUILD_CONFIG")" && "$NODE_BIN" "$ESBUILD_CONFIG")
+fi
+
 CACHE_DIRS=()
 
 recover_custom_cache_root() {
