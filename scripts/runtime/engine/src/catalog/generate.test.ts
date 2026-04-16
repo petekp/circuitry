@@ -70,6 +70,7 @@ function writeRepoFixture(root: string): void {
   writeFileSync(resolve(root, "scripts/verify-install.sh"), "#!/usr/bin/env bash\n", "utf-8");
   chmodSync(resolve(root, "scripts/verify-install.sh"), 0o755);
   writeFileSync(resolve(root, "circuit.config.example.yaml"), "dispatch: {}\n", "utf-8");
+  writeFileSync(resolve(root, ".rgignore"), "scripts/runtime/bin/*.js\n", "utf-8");
   writeFileSync(
     resolve(root, "skills/build/SKILL.md"),
     [

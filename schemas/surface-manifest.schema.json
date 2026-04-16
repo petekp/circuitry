@@ -168,7 +168,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^(\\.claude-plugin|commands|hooks|schemas|scripts|skills)(?:/[^/].*)?$|^circuit\\.config\\.example\\.yaml$"
+          "pattern": "^(\\.claude-plugin|commands|hooks|schemas|scripts|skills)(?:/[^/].*)?$|^\\.rgignore$|^circuit\\.config\\.example\\.yaml$"
         },
         "sha256": {
           "type": "string",

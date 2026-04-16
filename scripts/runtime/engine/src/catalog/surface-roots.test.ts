@@ -18,6 +18,7 @@ describe("surface-roots owner", () => {
   it("owns the installed roots, repo-only roots, and manifest path", () => {
     expect(INSTALLED_SURFACE_ROOTS).toEqual([
       ".claude-plugin",
+      ".rgignore",
       "commands",
       "hooks",
       "schemas",
@@ -38,6 +39,7 @@ describe("surface-roots owner", () => {
     expect(listInstalledSurfaceSeedPaths("installed")).toEqual([...INSTALLED_SURFACE_ROOTS]);
     expect(listInstalledSurfaceSeedPaths("repo")).toEqual([
       ".claude-plugin",
+      ".rgignore",
       "commands",
       "hooks",
       "schemas",
@@ -55,7 +57,7 @@ describe("surface-roots owner", () => {
     expect(shouldIgnoreInstalledPath("scripts/runtime/bin/.vite/results.json")).toBe(true);
     expect(shouldIgnoreInstalledPath("scripts/runtime/bin/dispatch.js")).toBe(false);
     expect(getInstalledSurfacePathPattern()).toBe(
-      "^(\\.claude-plugin|commands|hooks|schemas|scripts|skills)(?:/[^/].*)?$|^circuit\\.config\\.example\\.yaml$",
+      "^(\\.claude-plugin|commands|hooks|schemas|scripts|skills)(?:/[^/].*)?$|^\\.rgignore$|^circuit\\.config\\.example\\.yaml$",
     );
   });
 

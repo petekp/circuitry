@@ -30,14 +30,19 @@ ESBUILD_CONFIG="$PLUGIN_ROOT/scripts/runtime/engine/esbuild.config.mjs"
 # commands/*.md, CIRCUITS.md blocks, skills/*/SKILL.md contract blocks,
 # .claude-plugin/public-commands.txt, and scripts/runtime/generated/*.json.
 # esbuild owns scripts/runtime/bin/*.js.
-if [[ -f "$CATALOG_COMPILER_CLI" ]]; then
-  printf 'Regenerating catalog-compiler surfaces\n'
-  (cd "$PLUGIN_ROOT" && "$NODE_BIN" "$CATALOG_COMPILER_CLI" generate)
-fi
-
+#
+# Order matters: esbuild runs first so catalog-compiler executes through a
+# freshly-rebuilt bundle. If catalog-compiler ran first it would regenerate
+# surfaces using the PREVIOUS bundle, and the newly-bundled compiler would
+# only take effect on the next sync.
 if [[ -f "$ESBUILD_CONFIG" ]]; then
   printf 'Rebuilding runtime bundles\n'
   (cd "$(dirname "$ESBUILD_CONFIG")" && "$NODE_BIN" "$ESBUILD_CONFIG")
+fi
+
+if [[ -f "$CATALOG_COMPILER_CLI" ]]; then
+  printf 'Regenerating catalog-compiler surfaces\n'
+  (cd "$PLUGIN_ROOT" && "$NODE_BIN" "$CATALOG_COMPILER_CLI" generate)
 fi
 
 CACHE_DIRS=()
@@ -233,6 +238,17 @@ sync_target() {
       "$target/circuit.config.example.yaml" || return 1
   else
     rm -f "$target/circuit.config.example.yaml" || return 1
+  fi
+
+  # Sync .rgignore so ripgrep-backed tools (Grep, etc.) running inside the
+  # installed plugin cache also skip the esbuild bundles. Without this the
+  # noise-reduction only applies when an agent greps the dev repo.
+  if [[ -f "$PLUGIN_ROOT/.rgignore" ]]; then
+    rsync "${RSYNC_ARGS[@]}" \
+      "$PLUGIN_ROOT/.rgignore" \
+      "$target/.rgignore" || return 1
+  else
+    rm -f "$target/.rgignore" || return 1
   fi
 
   if [[ -f "$CUSTOM_CIRCUITS_CLI" ]]; then

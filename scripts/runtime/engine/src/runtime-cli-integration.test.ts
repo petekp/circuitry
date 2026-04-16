@@ -94,6 +94,7 @@ function readLedgerEntries(homeDir: string): Array<Record<string, unknown>> {
 function copyInstallRoot(targetRoot: string) {
   for (const entry of [
     ".claude-plugin",
+    ".rgignore",
     "commands",
     "hooks",
     "schemas",
@@ -1322,6 +1323,7 @@ describe("runtime CLI integration", () => {
 
     for (const entry of [
       ".claude-plugin",
+      ".rgignore",
       "commands",
       "hooks",
       "schemas",
@@ -1361,6 +1363,7 @@ describe("runtime CLI integration", () => {
 
     for (const entry of [
       ".claude-plugin",
+      ".rgignore",
       "commands",
       "hooks",
       "schemas",

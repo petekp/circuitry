@@ -4,5 +4,13 @@
 # scripts/runtime/bin/*.js are esbuild bundles (single-line, ~200-500 KB).
 # Grepping matches there surfaces 2 KB previews of compiled JS in the agent
 # thread. Search scripts/runtime/engine/src/ for TypeScript source instead.
-scripts/runtime/bin/
+#
+# Use a file pattern (not a directory pattern). `scripts/runtime/bin/` as a
+# directory ignore hides only traversal matches; an explicit-path invocation
+# like `rg foo scripts/runtime/bin/` still descended into the directory in
+# some ripgrep versions, bypassing the ignore. Matching `*.js` directly keeps
+# the directory visible but prevents any .js file inside from being searched.
+# The `!*.sh` re-inclusion keeps shell shims greppable (currently empty set,
+# but reserved for future scripts).
+scripts/runtime/bin/*.js
 !scripts/runtime/bin/*.sh

@@ -7,6 +7,7 @@ export type InstalledSurfaceMode = "repo" | "installed";
 
 export const INSTALLED_SURFACE_ROOTS = [
   ".claude-plugin",
+  ".rgignore",
   "commands",
   "hooks",
   "schemas",
@@ -26,7 +27,10 @@ export const REPO_ONLY_SURFACE_ROOTS = [
 
 export const SURFACE_MANIFEST_PATH = "scripts/runtime/generated/surface-manifest.json";
 
-const TOP_LEVEL_FILE_ROOTS = new Set<string>(["circuit.config.example.yaml"]);
+const TOP_LEVEL_FILE_ROOTS = new Set<string>([
+  ".rgignore",
+  "circuit.config.example.yaml",
+]);
 
 const REPO_INSTALLED_SCRIPT_PATHS = [
   "scripts/sync-to-cache.sh",

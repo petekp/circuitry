@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "prepare": "tsc && node esbuild.config.mjs",
-    "prepare-ship": "npm run catalog && node esbuild.config.mjs",
+    "prepare-ship": "node esbuild.config.mjs && npm run catalog",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -123,6 +123,11 @@
     },
     {
       "executable": false,
+      "path": ".rgignore",
+      "sha256": "c3f74479e391b590ef57ab32cc969a381fd585aa824f8bad4fd55b2207c2c5ad"
+    },
+    {
+      "executable": false,
       "path": "circuit.config.example.yaml",
       "sha256": "3a04057cb3275a41f269442ffdb313b022f06c75d51fc9aaaded74b82d3489ca"
     },
@@ -224,7 +229,7 @@
     {
       "executable": false,
       "path": "schemas/surface-manifest.schema.json",
-      "sha256": "c8c2a04fd47dd32dfaeae25ecca3bee57539c51aa5f64b931dd7e247cff45b6c"
+      "sha256": "2f2019bcb0d7fcea5042120237155076d29be9ba2cc44eeb898af2f6540e1804"
     },
     {
       "executable": true,
@@ -259,7 +264,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/catalog-compiler.js",
-      "sha256": "7297ff5da5e9b2bb1eb218516ac32612019dfa95a621dac93b261d061edfe0ba"
+      "sha256": "399e320470a1ce6e674e0122cc2f6e3df8d5c06dcbbf104687cf47da92b4ee7a"
     },
     {
       "executable": true,
@@ -289,7 +294,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/list-installed-surface-roots.js",
-      "sha256": "d97c52f862ac9367239eb79bb593e9fecd43811486897cb009337f0e25448a4f"
+      "sha256": "db474e2fc022f64586f8c1f9af7b9082488de0c393cf1bc8661666e06ad41ec2"
     },
     {
       "executable": true,
@@ -319,7 +324,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/update-surface-manifest-schema.js",
-      "sha256": "0dcf59af17e6ee7fd7a962df92e683771cb99d594f1354c4a9df49430888be88"
+      "sha256": "d45256c998d683e87b7dc60e93f87747627b8d0442ab1b3a26ab974c55910009"
     },
     {
       "executable": true,
@@ -329,7 +334,7 @@
     {
       "executable": true,
       "path": "scripts/runtime/bin/verify-install.js",
-      "sha256": "86770cd55ec7ae274ce3be9551b60636f62ee61faa9a1949f9b4d9689a4551fb"
+      "sha256": "1a9325d93e0e9ffa759fc8f3f7984ae2996ba6950495e21f973f90d16e5fd294"
     },
     {
       "executable": false,
@@ -339,7 +344,7 @@
     {
       "executable": true,
       "path": "scripts/sync-to-cache.sh",
-      "sha256": "952e602afea5a1ad98f3623e09e800e3c0511ef192833e58833162803d2de459"
+      "sha256": "a8221b94d4c166cb79d3ae42a274bcd5967f4fa19759383423248bb4188f60ec"
     },
     {
       "executable": true,

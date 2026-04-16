@@ -63,6 +63,7 @@ function writeFixture(root: string): void {
     "utf-8",
   );
   writeFileSync(resolve(root, "circuit.config.example.yaml"), "dispatch: {}\n", "utf-8");
+  writeFileSync(resolve(root, ".rgignore"), "scripts/runtime/bin/*.js\n", "utf-8");
 }
 
 function makeFixture(): string {

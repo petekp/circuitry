@@ -107,6 +107,7 @@ async function makePluginRoot(root: string): Promise<void> {
       "const lines = args.includes('--repo-paths')",
       "  ? [",
       "      '.claude-plugin',",
+      "      '.rgignore',",
       "      'commands',",
       "      'hooks',",
       "      'schemas',",
@@ -120,6 +121,7 @@ async function makePluginRoot(root: string): Promise<void> {
       "    ]",
       "  : [",
       "      '.claude-plugin',",
+      "      '.rgignore',",
       "      'commands',",
       "      'hooks',",
       "      'schemas',",
@@ -160,6 +162,11 @@ async function makePluginRoot(root: string): Promise<void> {
   await writeFile(
     resolve(root, "circuit.config.example.yaml"),
     "roles:\n  implementer: example-role\n",
+    "utf-8",
+  );
+  await writeFile(
+    resolve(root, ".rgignore"),
+    "scripts/runtime/bin/*.js\n!scripts/runtime/bin/*.sh\n",
     "utf-8",
   );
 }
@@ -288,6 +295,9 @@ async function expectSyncedTarget(target: string): Promise<void> {
   expect(await readFile(resolve(target, "circuit.config.example.yaml"), "utf-8")).toBe(
     "roles:\n  implementer: example-role\n",
   );
+  expect(await readFile(resolve(target, ".rgignore"), "utf-8")).toBe(
+    "scripts/runtime/bin/*.js\n!scripts/runtime/bin/*.sh\n",
+  );
   const mode = (await stat(resolve(target, "hooks/session-start.sh"))).mode;
   expect(mode & 0o100).not.toBe(0);
 }
@@ -295,6 +305,7 @@ async function expectSyncedTarget(target: string): Promise<void> {
 async function expectCacheTargetLayout(target: string): Promise<void> {
   expect((await readdir(target)).sort()).toEqual([
     ".claude-plugin",
+    ".rgignore",
     "circuit.config.example.yaml",
     "commands",
     "hooks",
