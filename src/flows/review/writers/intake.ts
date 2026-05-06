@@ -11,7 +11,7 @@ import { isAbsolute, relative, resolve } from 'node:path';
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import {
   type ReviewEvidence,
   type ReviewEvidenceText,

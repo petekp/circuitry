@@ -10,7 +10,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { MigrateBrief } from '../reports.js';
 
 const DEFAULT_MIGRATE_VERIFICATION_COMMAND = {

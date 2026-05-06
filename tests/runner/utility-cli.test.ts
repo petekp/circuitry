@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
+import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from '../../src/cli/runtime-compatibility-policy.js';
 import { CompiledFlow, ContinuityIndex, ContinuityRecord } from '../../src/index.js';
 
 const tempRoots: string[] = [];
@@ -76,6 +77,8 @@ describe('utility CLI commands', () => {
     };
     expect(output).toMatchObject({ status: 'published', slug: 'release-note-flow' });
     expect(existsSync(output.operator_summary_markdown_path)).toBe(true);
+    const summary = readFileSync(output.operator_summary_markdown_path, 'utf8');
+    expect(summary).toContain(CUSTOM_FLOW_ROOT_RUNTIME_POLICY);
     expect(existsSync(join(home, 'skills/release-note-flow/SKILL.md'))).toBe(true);
     expect(existsSync(join(home, 'skills/release-note-flow/circuit.yaml'))).toBe(true);
     expect(existsSync(join(home, 'commands/release-note-flow.md'))).toBe(true);
@@ -667,7 +670,7 @@ describe('utility CLI commands', () => {
     expect(empty.stdout).toBe('');
   });
 
-  it('can bind handoff continuity to a waiting run and write active-run output', async () => {
+  it('can bind handoff continuity to a core-v2 waiting run and write active-run output', async () => {
     const root = tempRoot('circuit-handoff-run-');
     const runFolder = join(root, 'run');
     const controlPlane = join(root, 'control-plane');
@@ -721,5 +724,127 @@ describe('utility CLI commands', () => {
     expect(readFileSync(output.active_run_path, 'utf8')).toContain(
       'DO: resolve the Build checkpoint',
     );
+  });
+
+  it('can still bind handoff continuity to a retained waiting run', async () => {
+    const root = tempRoot('circuit-handoff-retained-run-');
+    const runFolder = join(root, 'run');
+    const controlPlane = join(root, 'control-plane');
+    const oldDisabled = process.env.CIRCUIT_DISABLE_V2_RUNTIME;
+    process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
+    let run: Awaited<ReturnType<typeof captureMain>> | undefined;
+    try {
+      run = await captureMain(
+        [
+          'run',
+          'build',
+          '--goal',
+          'retained deep change that asks for scope',
+          '--entry-mode',
+          'deep',
+          '--run-folder',
+          runFolder,
+        ],
+        {
+          runId: '55555555-5555-4555-8555-555555555556',
+          now: () => new Date('2026-04-29T23:25:00.000Z'),
+        },
+      );
+    } finally {
+      if (oldDisabled === undefined) {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = undefined;
+      } else {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = oldDisabled;
+      }
+    }
+    if (run === undefined) throw new Error('retained Build run did not execute');
+    expect(run.code, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      outcome: 'checkpoint_waiting',
+      runtime: 'retained',
+    });
+
+    const save = await captureMain([
+      'handoff',
+      'save',
+      '--goal',
+      'Resume retained waiting Build run',
+      '--next',
+      'DO: resolve the retained Build checkpoint',
+      '--run-folder',
+      runFolder,
+      '--control-plane',
+      controlPlane,
+      '--record-id',
+      'continuity-33333333-3333-4333-8333-333333333333',
+      '--created-at',
+      '2026-04-29T23:26:00.000Z',
+    ]);
+
+    expect(save.code, save.stderr).toBe(0);
+    const output = JSON.parse(save.stdout) as { continuity_path: string };
+    const record = ContinuityRecord.parse(JSON.parse(readFileSync(output.continuity_path, 'utf8')));
+    expect(record).toMatchObject({
+      continuity_kind: 'run-backed',
+      run_ref: { runtime_status: 'in_progress', current_step: 'frame-step' },
+    });
+  });
+
+  it('does not use v2 run-status fallback for corrupted unmarked retained folders', async () => {
+    const root = tempRoot('circuit-handoff-retained-corrupt-');
+    const runFolder = join(root, 'run');
+    const controlPlane = join(root, 'control-plane');
+    const oldDisabled = process.env.CIRCUIT_DISABLE_V2_RUNTIME;
+    process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
+    let run: Awaited<ReturnType<typeof captureMain>> | undefined;
+    try {
+      run = await captureMain(
+        [
+          'run',
+          'build',
+          '--goal',
+          'retained deep change that will be corrupted',
+          '--entry-mode',
+          'deep',
+          '--run-folder',
+          runFolder,
+        ],
+        {
+          runId: '55555555-5555-4555-8555-555555555557',
+          now: () => new Date('2026-04-29T23:30:00.000Z'),
+        },
+      );
+    } finally {
+      if (oldDisabled === undefined) {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = undefined;
+      } else {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = oldDisabled;
+      }
+    }
+    if (run === undefined) throw new Error('retained Build run did not execute');
+    expect(run.code, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout)).toMatchObject({ outcome: 'checkpoint_waiting' });
+
+    writeFileSync(join(runFolder, 'trace.ndjson'), '{not-json}\n');
+
+    const save = await captureMain([
+      'handoff',
+      'save',
+      '--goal',
+      'Do not project corrupted retained folder as v2',
+      '--next',
+      'DO: inspect the retained trace corruption',
+      '--run-folder',
+      runFolder,
+      '--control-plane',
+      controlPlane,
+      '--record-id',
+      'continuity-44444444-4444-4444-8444-444444444444',
+      '--created-at',
+      '2026-04-29T23:31:00.000Z',
+    ]);
+
+    expect(save.code).toBe(1);
+    expect(save.stderr).toContain('trace.ndjson: line 0 is not valid JSON');
   });
 });

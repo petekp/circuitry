@@ -4,9 +4,9 @@
   "flow_id": "build",
   "goal": "deep change that asks for scope",
   "outcome": "complete",
-  "summary": "build v0.1.0 closed 6 step(s) for goal \"deep change that asks for scope\".",
-  "closed_at": "2026-04-29T19:30:38.000Z",
-  "trace_entries_observed": 36,
-  "manifest_hash": "a008ee51358bf22d880dc72f920f3bf6e7e0f1c31c5dc82e70064fedc0090f0d",
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-04-29T19:30:36.000Z",
+  "trace_entries_observed": 34,
+  "manifest_hash": "b2968b6d208c4eff750527c4c398f9c6390698479a279d7a209f88bf0bdecfba",
   "verdict": "accept"
 }

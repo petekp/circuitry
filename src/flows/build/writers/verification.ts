@@ -7,14 +7,14 @@
 // plan, not the result).
 
 import { readFileSync } from 'node:fs';
-import { reportPathForSchemaInCompiledFlow } from '../../../runtime/registries/close-writers/shared.js';
+import { resolveRunRelative } from '../../../shared/run-relative-path.js';
+import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
 import type {
   VerificationBuildContext,
   VerificationBuilder,
   VerificationCommand,
   VerificationCommandObservation,
-} from '../../../runtime/registries/verification-writers/types.js';
-import { resolveRunRelative } from '../../../shared/run-relative-path.js';
+} from '../../registries/verification-writers/types.js';
 import { BuildPlan, BuildVerification } from '../reports.js';
 
 export const buildVerificationWriter: VerificationBuilder = {

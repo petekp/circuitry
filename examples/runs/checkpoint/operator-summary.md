@@ -10,7 +10,7 @@ Circuit finished Build. The change was implemented, verification passed, and rev
 ## Details
 
 - Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.
-- Run note: Circuit completed 6 Build steps for this goal.
+- Run note: Run closed with outcome complete via @complete.
 - Result: Implemented the requested synthetic change.
 - Verification: passed
 - Review verdict: accept

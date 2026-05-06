@@ -4,9 +4,9 @@
   "flow_id": "review",
   "goal": "review this change",
   "outcome": "complete",
-  "summary": "review v0.1.0 closed 3 step(s) for goal \"review this change\".",
-  "closed_at": "2026-04-29T19:00:18.000Z",
-  "trace_entries_observed": 18,
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-04-29T19:00:17.000Z",
+  "trace_entries_observed": 16,
   "manifest_hash": "2e8460d537d23bb2a0f9cd30f2498f7b3c8cf631d63807701848a410b0bbbf6e",
   "verdict": "NO_ISSUES_FOUND"
 }

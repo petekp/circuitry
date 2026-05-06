@@ -35,14 +35,14 @@ Context (from reads):
 --- reports/migrate/batch-result.json ---
 {
   "schema_version": 1,
-  "run_id": "8fafe2b8-090a-4d6d-b0d2-4f64547b26d6",
+  "run_id": "c9c678bd-8b99-4bc3-834a-97f048687e0b",
   "flow_id": "build",
   "goal": "Migrate the inventoried targets per migrate.coexistence@v1 batch plan",
   "outcome": "complete",
-  "summary": "build v0.1.0 closed 6 step(s) for goal \"Migrate the inventoried targets per migrate.coexistence@v1 batch plan\".",
-  "closed_at": "2026-04-29T21:01:00.000Z",
-  "trace_entries_observed": 36,
-  "manifest_hash": "a008ee51358bf22d880dc72f920f3bf6e7e0f1c31c5dc82e70064fedc0090f0d",
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-04-29T21:00:57.000Z",
+  "trace_entries_observed": 34,
+  "manifest_hash": "b2968b6d208c4eff750527c4c398f9c6390698479a279d7a209f88bf0bdecfba",
   "verdict": "accept"
 }
 
@@ -61,7 +61,7 @@ Context (from reads):
       "cwd": ".",
       "exit_code": 0,
       "status": "passed",
-      "duration_ms": 1855,
+      "duration_ms": 2532,
       "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
       "stderr_summary": ""
     }

@@ -43,6 +43,20 @@ Context (from reads):
 
 
 --- reports/fix/context.json ---
-{"verdict":"accept","sources":[{"kind":"file","ref":"src/login.ts:1","summary":"Synthetic login test fixture."}],"observations":["The missing token path needs a guard."],"open_questions":[]}
+{
+  "verdict": "accept",
+  "sources": [
+    {
+      "kind": "file",
+      "ref": "src/login.ts:1",
+      "summary": "Synthetic login test fixture."
+    }
+  ],
+  "observations": [
+    "The missing token path needs a guard."
+  ],
+  "open_questions": []
+}
+
 
 Respond with a single raw JSON object whose top-level shape is exactly { "verdict": "<one-of-accepted-verdicts>" } (additional fields permitted). Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse and rejects the run on any parse failure or on a verdict not drawn from the accepted-verdicts list.

@@ -5,11 +5,11 @@
 // final decision report from the tournament aggregate plus stress review.
 
 import { readFileSync } from 'node:fs';
+import { resolveRunRelative } from '../../../shared/run-relative-path.js';
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
-import { resolveRunRelative } from '../../../shared/run-relative-path.js';
+} from '../../registries/compose-writers/types.js';
 import {
   ExploreDecision,
   ExploreDecisionOptionId,

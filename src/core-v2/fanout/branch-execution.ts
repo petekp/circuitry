@@ -1,14 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
+import { parseReport } from '../../flows/registries/report-schemas.js';
 import { CompiledFlow as CompiledFlowSchema } from '../../schemas/compiled-flow.js';
 import { RunResult } from '../../schemas/result.js';
+import type { RelayStep as CompiledRelayStepV1 } from '../../shared/relay-support.js';
 import {
+  type ProductionRelayAttemptValidationInputV2,
   type RelayConnectorV2,
+  executeProductionRelayAttemptV2,
   relayWithResolvedConnectorV2,
   resolveRelayExecutionV2,
 } from '../executors/relay.js';
-import type { FanoutStepV2 } from '../manifest/executable-flow.js';
+import type { FanoutStepV2, RelayStepV2 } from '../manifest/executable-flow.js';
 import type { WorktreeRunnerV2 } from '../run/child-runner.js';
 import type { RunContextV2 } from '../run/run-context.js';
 import {
@@ -62,6 +67,122 @@ function relayBranchProvenanceFailure(
   return undefined;
 }
 
+function relayBranchReads(step: FanoutStepV2): readonly string[] {
+  return (step.reads ?? []).map((ref) => ref.path);
+}
+
+function syntheticRelayTitle(step: FanoutStepV2, branch: ResolvedRelayBranchV2): string {
+  return `${step.title ?? step.id} / ${branch.branch_id}: ${branch.goal}`;
+}
+
+function syntheticRelayStepV2(
+  step: FanoutStepV2,
+  branch: ResolvedRelayBranchV2,
+  branchDirRel: string,
+): RelayStepV2 {
+  const selection =
+    branch.selection === undefined || branch.selection === null
+      ? {}
+      : { selection: branch.selection as NonNullable<RelayStepV2['selection']> };
+  return {
+    id: `${step.id}-${branch.branch_id}`,
+    title: syntheticRelayTitle(step, branch),
+    ...(step.protocol === undefined ? {} : { protocol: step.protocol }),
+    routes: { pass: { kind: 'terminal', target: '@complete' } },
+    ...(step.reads === undefined ? {} : { reads: step.reads }),
+    writes: {
+      request: { path: `${branchDirRel}/request.txt` },
+      receipt: { path: `${branchDirRel}/receipt.txt` },
+      result: { path: `${branchDirRel}/result.json` },
+      report: { path: `${branchDirRel}/report.json`, schema: branch.report_schema },
+    },
+    ...selection,
+    check: {
+      kind: 'result_verdict',
+      source: { kind: 'relay_result', ref: 'result' },
+      pass: admitList(step),
+    },
+    kind: 'relay',
+    role: branch.role,
+    report: { path: `${branchDirRel}/report.json`, schema: branch.report_schema },
+  };
+}
+
+function syntheticCompiledRelayStepV1(
+  step: FanoutStepV2,
+  branch: ResolvedRelayBranchV2,
+  branchDirRel: string,
+): CompiledRelayStepV1 {
+  return {
+    id: `${step.id}-${branch.branch_id}` as never,
+    title: syntheticRelayTitle(step, branch),
+    protocol: (step.protocol ?? `${step.id}@v1`) as never,
+    reads: relayBranchReads(step) as never,
+    routes: { pass: '@complete' },
+    ...(branch.selection === undefined ? {} : { selection: branch.selection as never }),
+    executor: 'worker',
+    kind: 'relay',
+    role: branch.role as never,
+    writes: {
+      request: `${branchDirRel}/request.txt` as never,
+      receipt: `${branchDirRel}/receipt.txt` as never,
+      result: `${branchDirRel}/result.json` as never,
+      report: {
+        path: `${branchDirRel}/report.json` as never,
+        schema: branch.report_schema,
+      },
+    },
+    check: {
+      kind: 'result_verdict',
+      source: { kind: 'relay_result', ref: 'result' },
+      pass: [...admitList(step)],
+    },
+  };
+}
+
+function validateAcceptedRelayFanoutBranchV2(
+  branch: ResolvedRelayBranchV2,
+  input: ProductionRelayAttemptValidationInputV2,
+) {
+  const parseResult = parseReport(branch.report_schema, input.relayResult.result_body);
+  if (parseResult.kind === 'fail') {
+    return {
+      evaluation: {
+        kind: 'fail' as const,
+        reason: `relay fanout branch '${branch.branch_id}': ${parseResult.reason}`,
+        observedVerdict: input.checkEvaluation.verdict,
+      },
+    };
+  }
+  const parsedBody = JSON.parse(input.relayResult.result_body) as unknown;
+  const provenanceFailure = relayBranchProvenanceFailure(branch, parsedBody);
+  if (provenanceFailure !== undefined) {
+    return {
+      evaluation: {
+        kind: 'fail' as const,
+        reason: provenanceFailure,
+        observedVerdict: input.checkEvaluation.verdict,
+      },
+    };
+  }
+  const crossResult = runCrossReportValidator(
+    branch.report_schema,
+    input.compiledFlow,
+    input.context.runDir,
+    input.relayResult.result_body,
+  );
+  if (crossResult.kind === 'fail') {
+    return {
+      evaluation: {
+        kind: 'fail' as const,
+        reason: `relay fanout branch '${branch.branch_id}': ${crossResult.reason}`,
+        observedVerdict: input.checkEvaluation.verdict,
+      },
+    };
+  }
+  return { evaluation: input.checkEvaluation, parsedBody };
+}
+
 export async function executeRelayFanoutBranchV2(
   step: FanoutStepV2,
   context: RunContextV2,
@@ -85,6 +206,64 @@ export async function executeRelayFanoutBranchV2(
   });
 
   try {
+    if (relayConnector === undefined && context.compiledFlowV1 !== undefined) {
+      const relayStep = syntheticRelayStepV2(step, branch, branchDirRel);
+      const relayAttempt = await executeProductionRelayAttemptV2({
+        step: relayStep,
+        compiledStep: syntheticCompiledRelayStepV1(step, branch, branchDirRel),
+        context,
+        formatConnectorFailureReason: (_stepId, error) => {
+          const reason = error instanceof Error ? error.message : String(error);
+          return `relay fanout branch '${branch.branch_id}': connector invocation failed (${reason})`;
+        },
+        validateAcceptedResult: (input) => validateAcceptedRelayFanoutBranchV2(branch, input),
+      });
+      const durationMs = Math.max(0, Date.now() - startMs);
+      const outcome =
+        relayAttempt.kind === 'connector_failed'
+          ? {
+              child_outcome: 'aborted' as const,
+              verdict: NO_VERDICT_SENTINEL_V2,
+              result_path: resultPath,
+              admitted: false,
+              failure_reason: relayAttempt.reason,
+            }
+          : relayAttempt.evaluation.kind === 'pass'
+            ? {
+                child_outcome: 'complete' as const,
+                verdict: relayAttempt.evaluation.verdict,
+                result_path: relayAttempt.report_path ?? reportPath,
+                result_body: relayAttempt.parsed_body,
+                admitted: true,
+              }
+            : {
+                child_outcome: 'aborted' as const,
+                verdict: relayAttempt.relay_completed_verdict,
+                result_path: resultPath,
+                admitted: false,
+                failure_reason: relayAttempt.evaluation.reason,
+              };
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'fanout.branch_completed',
+        step_id: step.id,
+        branch_id: branch.branch_id,
+        branch_kind: 'relay',
+        child_run_id: childRunId,
+        child_outcome: outcome.child_outcome,
+        verdict: outcome.verdict,
+        duration_ms: durationMs,
+        result_path: outcome.result_path,
+      });
+      return {
+        branch_id: branch.branch_id,
+        child_run_id: childRunId,
+        worktree_path: branchDirAbs,
+        duration_ms: durationMs,
+        ...outcome,
+      };
+    }
+
     const requestPath = context.files.resolve(`${branchDirRel}/request.json`);
     await mkdir(dirname(requestPath), { recursive: true });
     await writeFile(

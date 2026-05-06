@@ -4,9 +4,9 @@
   "flow_id": "build",
   "goal": "simulate connector failure",
   "outcome": "aborted",
-  "summary": "build v0.1.0 closed 4 step(s) for goal \"simulate connector failure\".",
-  "closed_at": "2026-04-29T20:00:25.000Z",
-  "trace_entries_observed": 25,
-  "manifest_hash": "a008ee51358bf22d880dc72f920f3bf6e7e0f1c31c5dc82e70064fedc0090f0d",
-  "reason": "route 'retry' for step 'act-step' exhausted max_attempts=2; last recovery reason: relay step 'act-step': connector invocation failed (proof connector failure while implementing the synthetic Build change)"
+  "summary": "Run closed with outcome aborted.",
+  "closed_at": "2026-04-29T20:00:23.000Z",
+  "trace_entries_observed": 22,
+  "manifest_hash": "b2968b6d208c4eff750527c4c398f9c6390698479a279d7a209f88bf0bdecfba",
+  "reason": "route 'retry' for step 'act-step' exhausted max_attempts=2"
 }

@@ -4,7 +4,12 @@ Phase 4.18 is a planning checkpoint. It does not move registries, catalog
 derivation code, flow packages, selector behavior, or checkpoint resume
 ownership.
 
-The current registry modules live under `src/runtime/`, but they are not old
+Phase 5.13 implements the neutral registry ownership move described here:
+`src/flows/catalog-derivations.ts` and `src/flows/registries/**` now own the
+shared flow-package infrastructure, while `src/runtime/catalog-derivations.ts`
+and `src/runtime/registries/**` remain compatibility re-exports.
+
+The registry modules used to live under `src/runtime/`, but they were not old
 graph-runner debris. They are flow package and report infrastructure shared by
 the retained runtime, core-v2, generated-flow validation, tests, and release
 evidence.
@@ -15,13 +20,16 @@ The source of truth is:
 
 - `src/flows/catalog.ts`;
 - `src/flows/types.ts`;
-- `src/runtime/catalog-derivations.ts`;
-- `src/runtime/registries/**`.
+- `src/flows/catalog-derivations.ts`;
+- `src/flows/registries/**`.
+
+The old `src/runtime/**` registry paths are compatibility wrappers.
 
 `src/flows/catalog.ts` aggregates flow packages. `src/flows/types.ts` defines
-the package shape. `src/runtime/catalog-derivations.ts` turns packages into
+the package shape. `src/flows/catalog-derivations.ts` turns packages into
 maps with duplicate detection and default-flow invariants. Registry modules
-wrap those derivations for runtime and test consumers.
+wrap those derivations for runtime and test consumers. The old `src/runtime`
+paths re-export the neutral modules for compatibility.
 
 ## Registry Classification
 
@@ -56,12 +64,13 @@ The current imports are intentionally broad because registries are shared
 infrastructure. Reducing `src/runtime/` namespace pressure should not be
 mistaken for deleting or weakening this infrastructure.
 
-## Move Strategy
+## Original Move Strategy
 
-Do not move registries as the next implementation slice. First choose the
-neutral owner explicitly.
+Phase 4.18 recommended not moving registries yet. Phase 5.13 later implements
+the move after a consolidated compatibility review identified registry/catalog
+neutralization as the next useful implementation checkpoint.
 
-Recommended future strategy, if the team decides to move:
+The implemented strategy matches the original future plan:
 
 1. Create a neutral registry namespace, likely `src/flows/registries/`, because
    registry state is derived from flow packages and catalog data.
@@ -96,7 +105,7 @@ Before moving registry modules, run:
 
 ## Recommendation
 
-Recommendation for this checkpoint:
+Original recommendation for this checkpoint:
 
 ```text
 D. Do not move registries yet. Treat registry movement as a separate
@@ -105,3 +114,7 @@ D. Do not move registries yet. Treat registry movement as a separate
 ```
 
 Old runtime deletion is still not approved.
+
+Phase 5.13 supersedes the "do not move yet" part of this recommendation after a
+consolidated compatibility review asked for implementation-backed neutral
+ownership work. It does not approve old runtime deletion.

@@ -4,10 +4,34 @@ This is the post-default-selector deletion-readiness plan.
 
 The default selector now routes matrix-supported fresh runs through core-v2.
 That does not make the old runtime deletable. The retained runtime still owns
-fallback behavior, checkpoint resume, checkpoint-waiting depths, arbitrary
-fixtures, programmatic compose writer injection, and many oracle tests.
+fallback behavior, retained/v1 checkpoint resume, arbitrary fixtures, custom
+flow roots, programmatic compose writer injection, rollback, and many oracle
+tests. Phase 5.11 moves Explore tournament into the core-v2 matrix, so the
+current generated public entry-mode catalog is now covered by default routing.
+That is parity progress, not deletion approval.
 
 No old runtime files are approved for deletion in this phase.
+
+Phase 4.42 formalizes checkpoint resume as an intentional retained-runtime
+boundary for the default-selector milestone. Phase 5.0 adds and passes an
+automated selector soak gate. Phase 5.1 plans v2 checkpoint resume as the next
+product feature needed before old runtime deletion can become realistic. Phase
+5.2 implements fixture-level v2 checkpoint pause/resume for new core-v2-marked
+run folders. The default-selector milestone is complete for matrix-supported
+fresh-run modes. Phase 5.5 adds a deletion-readiness inventory and confirms
+that no old runtime file or retained runner/handler test is deletion-ready.
+Phase 5.7 resolves programmatic `composeWriter` as retained-runtime-only
+compatibility, not a core-v2 API. Phase 5.8 keeps candidate diagnostics as a
+temporary runtime decision display flag, and Phase 5.8.1 adds
+`CIRCUIT_SHOW_RUNTIME_DECISION=1` with `CIRCUIT_V2_RUNTIME_CANDIDATE=1` as a
+temporary alias. Phase 5.11 routes Explore tournament through core-v2 after
+fanout relay parity hardening and production wait/resume proof. Phase 5.12
+adds explicit retained/v1 checkpoint folder compatibility proof. The release
+golden Fix proof no longer uses public `composeWriter`; it uses internal v2
+executor injection. Phase 5.14 adds a retained compatibility facade so
+CLI/status/handoff code reaches retained fresh-run fallback, retained/v1 resume,
+snapshot derivation, trace reading, and trace reduction through
+`src/compat/retained-runtime.ts`.
 
 ## 1. Current Runtime Selector
 
@@ -15,11 +39,15 @@ Normal CLI routing is a selector:
 
 ```text
 matrix-supported fresh run -> core-v2
-checkpoint resume -> retained runtime
-checkpoint-waiting mode -> retained runtime
-unsupported flow/mode/depth -> retained runtime
+core-v2-marked checkpoint resume -> core-v2
+retained/v1 checkpoint resume -> retained runtime
+future or unproven generated entry modes -> retained runtime until proven or retired
+unsupported flow/mode/depth outside the generated catalog -> retained runtime
 arbitrary explicit fixture -> retained runtime unless strict opt-in is set
-programmatic composeWriter injection -> retained runtime
+custom flow root -> retained runtime unless strict opt-in is set and support checks pass
+official wrapper-provenanced packaged host flow root -> selector matrix
+unprovenanced packaged host flow root -> retained runtime by default
+programmatic composeWriter injection -> retained runtime-only compatibility
 ```
 
 The emergency rollback switch remains:
@@ -35,11 +63,20 @@ CIRCUIT_V2_RUNTIME=1
 ```
 
 Strict opt-in force-tests v2 and fails closed when an invocation is not safe for
-v2. Candidate mode is diagnostic only after the default selector:
+v2. Runtime decision diagnostics are display-only:
+
+```text
+CIRCUIT_SHOW_RUNTIME_DECISION=1
+```
+
+The old migration name remains a temporary alias:
 
 ```text
 CIRCUIT_V2_RUNTIME_CANDIDATE=1
 ```
+
+The candidate support matrix currently aliases the default support matrix. The
+alias should be removed later only through an explicit operator-facing slice.
 
 ## 2. Not Deletable Yet
 
@@ -47,12 +84,12 @@ These old execution files still have live product or test ownership.
 
 | Path | Current owner | Why retain |
 |---|---|---|
-| `src/runtime/runner.ts` | retained execution path and public resume wrapper | The CLI still imports `runCompiledFlow` for unsupported modes, rollback, arbitrary fixtures, `composeWriter`, and `resumeCompiledFlowCheckpoint(...)`. Phase 4.37 moved resume discovery/validation out, and Phase 4.41 moved pure terminal verdict derivation out, but the retained execution loop, close/result tail, and public resume wrapper still live here. Release proof scripts and many runner tests still use it. |
-| `src/runtime/checkpoint-resume.ts` | retained checkpoint resume preparation | Phase 4.37 moved manifest/trace/request/report validation and waiting-checkpoint discovery here. Keep while checkpoint resume remains retained-runtime-owned. |
+| `src/runtime/runner.ts` | retained execution implementation | The CLI now reaches retained fresh-run fallback and retained/v1 resume through `src/compat/retained-runtime.ts`, but that facade still delegates to `runCompiledFlow(...)` and `resumeCompiledFlowCheckpoint(...)`. Phase 4.37 moved resume discovery/validation out, and Phase 4.41 moved pure terminal verdict derivation out, but the retained execution loop, close/result tail, and public resume wrapper still live here. Many runner tests still use it. |
+| `src/runtime/checkpoint-resume.ts` | retained checkpoint resume preparation | Phase 4.37 moved manifest/trace/request/report validation and waiting-checkpoint discovery here. Keep for retained/v1 checkpoint folders and public checkpoint modes that have not moved to core-v2. |
 | `src/runtime/terminal-verdict.ts` | retained close/result helper | Phase 4.41 moved pure terminal admitted verdict derivation here. Keep while retained close/result finalization uses this helper. |
 | `src/runtime/runner-types.ts` | compatibility re-export plus retained runtime types | core-v2 imports shared relay/progress/run callback types from `src/shared/relay-runtime-types.ts`. Keep this file until retained runtime and tests stop importing the old surface. |
-| `src/runtime/step-handlers/checkpoint.ts` | checkpoint pause/resume and retained checkpoint modes | v2 handles fresh safe checkpoint choices, but checkpoint waiting and resume stay retained-runtime-owned. |
-| `src/runtime/step-handlers/compose.ts` | retained fallback and programmatic compose writer hook | core-v2 uses catalog writers, but `main(..., { composeWriter })` intentionally falls back to retained runtime. |
+| `src/runtime/step-handlers/checkpoint.ts` | checkpoint pause/resume and retained checkpoint modes | Phase 5.2 adds fixture-level core-v2 pause/resume for new v2 folders, but retained/v1 checkpoint folders and public checkpoint modes that are not yet routed through core-v2 still use the retained handler. |
+| `src/runtime/step-handlers/compose.ts` | retained fallback and programmatic compose writer hook | core-v2 uses catalog writers. Phase 5.7 keeps `main(..., { composeWriter })` retained-runtime-only and does not add a v2 hook. |
 | `src/runtime/step-handlers/relay.ts` | retained relay handler and oracle tests | core-v2 no longer imports this file directly, but retained runtime and handler tests still do. |
 | `src/runtime/step-handlers/sub-run.ts` | retained fallback and oracle tests | core-v2 has sub-run coverage, but unsupported fallback paths and old tests still rely on the old handler. |
 | `src/runtime/step-handlers/fanout.ts` and `src/runtime/step-handlers/fanout/*` | retained fallback and fanout oracle tests | core-v2 has fanout slices, but old fanout behavior remains the comparison oracle. |
@@ -64,6 +101,25 @@ The earliest possible deletion slice is a narrow one after a heavy review that
 confirms each retained execution responsibility has either moved to core-v2 or
 has been intentionally kept behind a smaller retained module.
 
+## 2.1 Phase 5.5 Deletion Readiness Result
+
+The current file-by-file inventory lives in:
+
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+
+The result is intentionally conservative:
+
+- no `src/runtime` file is a current deletion candidate;
+- no retained runner or handler test is obsolete;
+- compatibility wrappers remain because old-path imports still exist;
+- neutral infrastructure under `src/runtime` should move only behind focused
+  reviewed plans;
+- retained fallback and checkpoint compatibility still block broad deletion.
+
+No review packet was prepared for Phase 5.5 because it is inventory-only. A
+review packet is required before deletion, risky movement, route widening, or
+product-policy change.
+
 ## 3. Runtime Files To Keep Or Move
 
 These files live under `src/runtime/`, but they are not simply old graph-runner
@@ -72,8 +128,8 @@ code. Most should move to neutral homes over time rather than be deleted.
 | Path | Classification | Why retain or move |
 |---|---|---|
 | `src/runtime/compile-schematic-to-flow.ts` | keep / compiler infrastructure | `scripts/emit-flows.mjs`, compiler tests, and generated flow output still use it. |
-| `src/runtime/catalog-derivations.ts` | keep / catalog infrastructure | Router, generated surfaces, and catalog tests depend on catalog-derived data. |
-| `src/runtime/registries/**` | keep / later move | Flow packages, v2 report validation, writer discovery, cross-report validators, and shape hints depend on these registries. |
+| `src/runtime/catalog-derivations.ts` | compatibility re-export | Neutral implementation moved to `src/flows/catalog-derivations.ts` in Phase 5.13. Keep old path until compatibility imports retire. |
+| `src/runtime/registries/**` | compatibility re-exports | Neutral implementations moved to `src/flows/registries/**` in Phase 5.13. Keep old paths until compatibility imports retire. |
 | `src/runtime/connectors/**` | keep / later move | core-v2 reuses real connector subprocesses, relay materialization, and argv validation. The relay data/hash surface moved to `src/shared/connector-relay.ts` in Phase 4.16, and connector parsing/model helpers moved to `src/shared/connector-helpers.ts` in Phase 4.17. Subprocess modules and materialization remain production safety infrastructure. |
 | `src/runtime/relay-support.ts` | compatibility re-export | Relay prompt and check helpers moved to `src/shared/relay-support.ts` in Phase 4.13. Keep this wrapper until retained relay handler imports and old tests stop using the old path. |
 | `src/runtime/config-loader.ts` | compatibility re-export | Config discovery moved to `src/shared/config-loader.ts` in Phase 4.22. Keep this wrapper until old-path tests and external imports stop using it. |
@@ -106,11 +162,12 @@ Current import groups:
 
 | Reference group | Current consumers | Classification | Next action |
 |---|---|---|---|
-| `runtime/runner` | `src/cli/circuit.ts`, release proof script, many `tests/runner/*`, selected contract tests | retained execution and public resume wrapper | Keep until unsupported modes, rollback, `composeWriter`, fixtures, and the public resume wrapper have explicit replacement or retained-module ownership. |
+| `compat/retained-runtime` | `src/cli/circuit.ts`, `src/cli/handoff.ts`, `src/run-status/*` | retained compatibility facade | Keep as the narrow boundary for retained fresh-run fallback, retained/v1 resume, snapshot derivation, trace reading, and trace reduction. |
+| `runtime/runner` | `src/compat/retained-runtime.ts`, many `tests/runner/*`, selected contract tests | retained execution implementation | Keep until unsupported modes, rollback, `composeWriter`, fixtures, and the public resume wrapper have explicit replacement, compatibility-package ownership, or deprecation. |
 | `runtime/checkpoint-resume` | `src/runtime/runner.ts` | retained checkpoint resume preparation | Keep while checkpoint resume remains retained-runtime-owned. This module is not a v2 resume implementation and does not make trace/reducer/snapshot/checkpoint internals deletable. |
 | `runtime/runner-types` | retained runtime, `src/cli/circuit.ts`, tests | compatibility re-export | core-v2 no longer imports this file. Keep until retained runtime and tests stop importing the old type surface. |
 | `runtime/step-handlers` | direct handler tests and retained runner | retained execution oracle | Migrate tests only after v2 owns the behavior or the behavior stays retained by policy. |
-| `runtime/registries` | flow packages, core-v2 report validation, tests | live infrastructure | Move to neutral flow-package infrastructure before deleting any runtime namespace. |
+| `runtime/registries` | retained runtime and old-path compatibility tests | compatibility re-exports | Neutral source ownership now lives in `src/flows/registries/**`; keep wrappers until old imports retire. |
 | `runtime/connectors` | core-v2 relay bridge, retained runtime, connector tests | live connector infrastructure | Keep. Shared relay data/hash ownership moved to `src/shared/connector-relay.ts`, and connector helper ownership moved to `src/shared/connector-helpers.ts`, but subprocess modules and materialization remain production safety infrastructure. |
 | `runtime/relay-support` | old relay handler and compatibility imports | compatibility re-export | core-v2 no longer imports this file. Shared helper ownership now lives in `src/shared/relay-support.ts`. |
 | `runtime/relay-selection` | retained relay handler, old runner, and old relay tests | retained relay decision bridge | core-v2 no longer imports this file. Keep until retained relayer resolution and connector bridge behavior move or stay behind an explicit retained module. |
@@ -129,6 +186,7 @@ Core-v2 now has real replacements for the supported fresh-run path:
 - `src/core-v2/run-files/run-file-store.ts`
 - `src/core-v2/run-files/paths.ts`
 - `src/core-v2/run/compiled-flow-runner.ts`
+- `src/core-v2/run/checkpoint-resume.ts`
 - `src/core-v2/run/graph-runner.ts`
 - `src/core-v2/run/result-writer.ts`
 - `src/core-v2/run/manifest-snapshot.ts`
@@ -165,6 +223,15 @@ selector still intentionally routes some invocations outside core-v2.
 Current v2 evidence includes:
 
 - core-v2 unit tests under `tests/core-v2/`;
+- fixture-level v2 checkpoint pause/resume tests in
+  `tests/core-v2/checkpoint-resume-v2.test.ts`;
+- v2 checkpoint hardening tests for request-path validation, choice
+  consistency in resume and status projection, stale/missing request files,
+  already-resolved checkpoints, closed runs, checkpoint report validation, and
+  saved-engine resume dispatch;
+- Build deep default-route smoke for core-v2 checkpoint pause/resume, plus
+  rollback evidence that retained Build deep remains available when
+  `CIRCUIT_DISABLE_V2_RUNTIME=1`;
 - generated-flow parity tests under `tests/parity/`;
 - CLI default-selector tests under `tests/runner/cli-v2-runtime.test.ts`;
 - v2 run folder status tests under `tests/runner/run-status-projection.test.ts`;
@@ -229,6 +296,35 @@ approval.
 | Plan retained runner execution-loop boundary | Done in Phase 4.38. `docs/architecture/v2-retained-runner-boundary-plan.md` maps the remaining runner responsibilities and recommends stopping runner shrinkage for now. | Do not move `executeCompiledFlow(...)` or trace/progress/reducer/snapshot/checkpoint handler behavior. If another shrink is desired, prepare a close/result finalization proposal first. |
 | Refresh old runner/handler test and import inventory | Done in Phase 4.39. `docs/architecture/v2-runner-handler-test-classification.md` and `docs/architecture/v2-runner-handler-current-import-inventory.md` now reflect the Phase 4.37 checkpoint resume extraction and Phase 4.38 runner-boundary decision. | No old runner/handler test or file is deletion-ready. Keep using these docs as guardrails before any close/result finalization proposal. |
 | Propose close/result finalization boundary | Done in Phase 4.40. `docs/architecture/v2-close-result-finalization-proposal.md` maps the retained close tail and recommends keeping it in `runner.ts` for now. | Review before moving close/result finalization, terminal verdict derivation, retained close progress, or final snapshot behavior. |
+| Move pure terminal verdict derivation | Done in Phase 4.41. `src/runtime/terminal-verdict.ts` owns latest admitted result verdict derivation for retained close/result finalization. | Keep close/result finalization, close progress, final snapshot derivation, and `executeCompiledFlow(...)` in `runner.ts`. |
+| Formalize retained runtime boundary and start selector soak | Done in Phase 4.42. `docs/architecture/v2-retained-runtime-boundary.md` records checkpoint resume as intentionally retained-runtime-owned, and `docs/architecture/v2-selector-soak-checklist.md` tracks selector soak evidence. | Default selector for matrix-supported fresh-run modes is complete. This does not approve old runtime deletion, checkpoint resume v2 routing, or risky infrastructure movement. |
+| Add automated selector soak gate | Done in Phase 5.0. `tests/soak/v2-runtime-surface.test.ts` and `npm run soak:v2` prove the current selector boundary across supported fresh runs, retained fallbacks, strict opt-in, rollback, status, progress, connector safety, child runs, fanout, and manifest/result consistency. | The default-selector milestone is complete for matrix-supported fresh-run modes. This does not approve checkpoint resume v2 routing or old runtime deletion. |
+| Plan v2 checkpoint resume parity | Done in Phase 5.1. `docs/architecture/v2-checkpoint-resume-parity-plan.md` defines v2 checkpoint pause/resume for new core-v2 checkpoint folders only, with retained checkpoint folders continuing through retained resume. | Review before implementing Phase 5.2. Do not route public checkpoint modes through v2 or delete retained checkpoint files until fixture-level pause/resume is proven. |
+| Implement fixture-level v2 checkpoint pause/resume | Done in Phase 5.2 for dedicated fixture-level core-v2 checkpoint folders. `src/core-v2/run/checkpoint-resume.ts` owns v2 resume for marked v2 folders, and `src/run-status/v2-run-folder.ts` projects v2 waiting checkpoints. | Retained/v1 checkpoint folders still use retained resume, and no retained runtime deletion is approved. |
+| Harden v2 checkpoint resume validation | Done in Phase 5.2 preflight. Resume and status now validate traced checkpoint request paths against the saved flow's declared request path, and both resume/status validate trace/request choice consistency against the saved flow. | Request focused review before Build-deep candidate smoke. This hardening does not approve default routing for checkpoint modes or deletion of retained checkpoint infrastructure. |
+| Smoke Build deep as a v2 checkpoint candidate | Done in Phase 5.2.1. Build deep can pause/resume through core-v2 under `CIRCUIT_V2_RUNTIME_CANDIDATE=1` or `CIRCUIT_V2_RUNTIME=1`. | Candidate smoke approved the focused default-routing decision. No retained checkpoint infrastructure is deletion-ready. |
+| Route Build deep through core-v2 by default | Done in Phase 5.3. Build deep is now in the default v2 support matrix and proves checkpoint wait, `runs show`, progress, resume by saved engine marker, result writing, Build result parsing, and final status without v2 env vars. | Build tournament and other unproven checkpoint/tournament modes remain retained. Rollback keeps Build deep on retained runtime. Old retained/v1 checkpoint folders still resume retained. |
+| Route Build autonomous through core-v2 by default | Done after the full-parity gameplan review. Build autonomous is now in the default v2 support matrix and proves safe-autonomous checkpoint auto-resolution, no operator prompt progress, `runs show`, result writing, Build result parsing, and rollback. | This was not selector widening for other autonomous modes. Fix/Migrate/Sweep/Explore autonomous and Explore tournament now have their own proof. Arbitrary roots, rollback, and retained/v1 checkpoint folders still need their own retained-compatibility plan. |
+| Route Fix default through core-v2 by default | Done after Build autonomous. Fix default is now in the default v2 support matrix and is covered by parity, CLI selector, soak, and rollback tests. | Fix deep remained retained until its own checkpoint/deep proof exists. |
+| Move release Fix proof off public `composeWriter` | Done after Fix default. `scripts/release/capture-golden-run-proofs.mjs` now uses internal v2 compose executor injection for its deterministic Fix brief and no longer imports `dist/runtime/runner.js`. | Public `composeWriter` remains retained-runtime-only compatibility; this is not an API retirement or old runtime deletion. |
+| Route Fix autonomous through core-v2 by default | Done after release-proof cleanup. Fix autonomous is now in the default v2 support matrix and is covered by parity, CLI selector, safe-autonomous no-repro checkpoint, soak, and rollback tests. | Fix deep remains retained until mode-specific checkpoint/deep proof exists. |
+| Route Fix deep through core-v2 by default | Done after Sweep deep. Fix deep is now in the default v2 support matrix and is covered by parity, CLI selector, forced no-repro checkpoint wait/resume, soak, and rollback tests. | Migrate deep, Explore non-tournament modes, and Explore tournament now have their own proof. |
+| Route Sweep autonomous through core-v2 by default | Done after Fix autonomous. Sweep autonomous is now in the default v2 support matrix and is covered by parity, CLI selector, safe-autonomous triage checkpoint, soak, and rollback tests. | Sweep lite/deep remain retained until mode-specific proof exists. |
+| Route Migrate autonomous through core-v2 by default | Done after Sweep autonomous. Migrate autonomous is now in the default v2 support matrix and is covered by parity, CLI selector, safe-autonomous coexistence checkpoint, Build child-run, soak, and rollback tests. | Migrate deep remains retained until mode-specific checkpoint/deep proof exists. |
+| Route Migrate deep through core-v2 by default | Done after Fix deep. Migrate deep is now in the default v2 support matrix and is covered by CLI selector checkpoint wait/resume, Build child-run, soak, and rollback tests. | Explore non-tournament modes and Explore tournament now have their own proof. |
+| Route Explore lite/deep/autonomous through core-v2 by default | Done after Migrate deep. These modes share the non-tournament Explore compose/relay graph and are covered by parity, CLI selector, diagnostics, soak, and rollback tests. | Explore tournament was handled later because it combines fanout and tournament checkpoint UX. |
+| Route Sweep lite through core-v2 by default | Done after Migrate autonomous. Sweep lite is now in the default v2 support matrix and is covered by parity, CLI selector, safe-default triage checkpoint, soak, and rollback tests. | Sweep deep remains retained until checkpoint wait/resume proof exists. |
+| Route Sweep deep through core-v2 by default | Done after Sweep lite. Sweep deep is now in the default v2 support matrix and is covered by CLI selector checkpoint wait/resume, soak, and rollback tests. | Fix deep, Migrate deep, and Explore tournament now have their own mode-specific proof. |
+| Formalize retained checkpoint-folder and fallback policy | Done in Phase 5.4. `docs/architecture/v2-retained-checkpoint-folder-policy.md` keeps retained/v1 checkpoint folders on retained resume, and `docs/architecture/v2-retained-fallback-policy.md` classifies unsupported modes, arbitrary fixtures, `composeWriter`, rollback, and old tests. | This is policy documentation, not deletion approval. Build has no current tournament entry mode; if introduced later, it needs its own proof. |
+| Produce deletion-readiness inventory | Done in Phase 5.5. `docs/architecture/v2-deletion-readiness-inventory.md` classifies every `src/runtime` file and retained runner/handler test. | No old runtime file or retained runner/handler test is deletion-ready. Use this inventory before proposing any deletion or policy change. |
+| Prepare fallback API disposition review | Done in Phase 5.6. `docs/architecture/v2-fallback-api-disposition-review.md` frames arbitrary fixtures, `composeWriter`, rollback, unsupported public modes, and candidate diagnostics as the next compatibility decisions. | Stop for external review before changing any of those behaviors or starting deletion work. |
+| Decide composeWriter API disposition | Done in Phase 5.7. `docs/architecture/v2-compose-writer-disposition.md` classifies current consumers and keeps `composeWriter` as retained-runtime-only compatibility. | Do not clone the old compose writer hook into core-v2. Internal v2 customization should use executor injection or generated reports. |
+| Decide candidate diagnostics disposition | Done in Phase 5.8. `docs/architecture/v2-candidate-diagnostics-disposition.md` keeps `CIRCUIT_V2_RUNTIME_CANDIDATE=1` temporarily as runtime decision output and recommends a later rename. | Do not rename or remove the env var in this slice. A follow-up should decide alias/removal behavior. |
+| Add runtime decision diagnostics alias | Done in Phase 5.8.1. `CIRCUIT_SHOW_RUNTIME_DECISION=1` is now the preferred flag, and `CIRCUIT_V2_RUNTIME_CANDIDATE=1` remains a temporary alias. | Diagnostics report the actual selected runtime reason. Rollback wins the reason when rollback selects retained runtime; strict v2 still wins over rollback. |
+| Decide arbitrary fixture policy | Done in Phase 5.9. `docs/architecture/v2-arbitrary-fixture-policy.md` keeps arbitrary explicit fixtures, custom flow roots, and packaged host flow roots retained by default. Generated fixtures under `generated/flows/**` keep following the selector matrix. | A future trusted-generated-mirror change would need focused selector policy and tests. |
+| Trust installed plugin generated mirror | Done in Phase 5.10. The Codex plugin wrapper sets `CIRCUIT_GENERATED_FLOW_MIRROR_ROOT` only when it injects its packaged flow root, and the CLI lets that root follow the selector matrix only when the marker matches. | Arbitrary external roots and custom flow roots remain retained by default. No old runtime deletion. |
+| Route Explore tournament through core-v2 by default | Done in Phase 5.11. Explore tournament now has production relay fanout branch validation, tournament checkpoint wait/resume, enriched progress/status, CLI/soak proof, and rollback coverage. | This removes the last known generated public entry-mode gap in the current catalog. It does not approve old runtime deletion. |
+| Introduce retained compatibility facade | Done in Phase 5.14. `src/compat/retained-runtime.ts` now owns the CLI/status/handoff boundary to retained fresh-run fallback, retained/v1 checkpoint resume, retained snapshot derivation, retained trace reading, and retained trace reduction. | This narrows dependencies but does not make the retained implementations deletion-ready. |
 
 Avoid mixing these moves with old runner or handler deletion. A move slice should
 prove that imports and behavior remain identical before any deletion proposal.
@@ -238,12 +334,14 @@ prove that imports and behavior remain identical before any deletion proposal.
 Request a heavy deletion review only after the team decides which of these
 paths should change:
 
-1. checkpoint resume is implemented in v2, or retained permanently behind a
-   smaller resume module;
+1. checkpoint resume is implemented in v2, or explicitly retained behind the
+   retained runtime boundary;
 2. unsupported flow/mode/depth combinations are either proven in v2 or
    intentionally retained;
-3. arbitrary fixture behavior is either v2-owned or retained by policy;
-4. `composeWriter` has either a v2 equivalent or remains retained by policy;
+3. arbitrary fixture behavior is either v2-owned, retained by policy, or
+   deprecated with a migration path;
+4. `composeWriter` remains retained by policy, is moved behind a smaller
+   compatibility module, or is retired by explicit product decision;
 5. remaining retained-runtime-only types in `runner-types.ts` are moved or the
    file is explicitly retained as a compatibility module;
 6. connector, registry, router, compiler, and projection helpers are moved to
@@ -263,7 +361,17 @@ retained runtime for everything not yet v2-owned
 The next heavy review should not ask whether the default selector works in
 general. That gate has been passed.
 
-It should ask:
+The Phase 5.6 external review decided retained fallback API posture. Phase 5.7
+applies the first narrow decision for `composeWriter`.
+
+Remaining fallback review questions:
+
+```text
+Should rollback become a permanent operator safety feature?
+When should the old `CIRCUIT_V2_RUNTIME_CANDIDATE` diagnostics alias be removed?
+```
+
+Deletion review should later still ask:
 
 ```text
 Which retained runtime responsibilities are still product-owned, and which old

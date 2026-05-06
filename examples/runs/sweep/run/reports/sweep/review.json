@@ -1,1 +1,5 @@
-{"verdict":"clean","summary":"No cleanup regression found.","findings":[]}
+{
+  "verdict": "clean",
+  "summary": "No cleanup regression found.",
+  "findings": []
+}

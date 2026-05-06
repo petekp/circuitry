@@ -5,16 +5,19 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import {
+  appendAndDeriveRetainedTrace as appendAndDerive,
+  bootstrapRetainedRun as bootstrapRun,
+} from '../../src/compat/retained-runtime.js';
 import { type CodexRelayResult, relayCodex } from '../../src/runtime/connectors/codex.js';
 import { materializeRelay } from '../../src/runtime/connectors/relay-materializer.js';
-import { sha256Hex } from '../../src/runtime/connectors/shared.js';
 import { reduce } from '../../src/runtime/reducer.js';
-import { appendAndDerive, bootstrapRun } from '../../src/runtime/runner.js';
 import { readRunTrace } from '../../src/runtime/trace-reader.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlowId, RunId, StepId } from '../../src/schemas/ids.js';
 import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
+import { sha256Hex } from '../../src/shared/connector-relay.js';
 
 // Codex-relay-roundtrip test, bound to the five-trace_entry transcript
 // shape and the second connector (`codex`).
@@ -83,7 +86,7 @@ const ADAPTER_SOURCE_PATHS = [
   resolve('src/runtime/connectors/shared.ts'),
   resolve('src/runtime/connectors/relay-materializer.ts'),
   resolve('src/runtime/runner.ts'),
-  resolve('src/runtime/registries/report-schemas.ts'),
+  resolve('src/flows/registries/report-schemas.ts'),
 ] as const;
 
 function connectorSourceSha256(): string {

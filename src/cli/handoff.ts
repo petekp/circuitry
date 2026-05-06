@@ -3,7 +3,8 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deriveSnapshot } from '../runtime/snapshot-writer.js';
+import { deriveRetainedSnapshot } from '../compat/retained-checkpoint-folders.js';
+import { projectRunStatusFromRunFolder } from '../run-status/project-run-folder.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import {
   ContinuityIndex,
@@ -12,7 +13,7 @@ import {
   type ContinuityRecord as ContinuityRecordValue,
 } from '../schemas/continuity.js';
 import type { ControlPlaneFileStem } from '../schemas/scalars.js';
-import type { Snapshot } from '../schemas/snapshot.js';
+import type { Snapshot, SnapshotStatus } from '../schemas/snapshot.js';
 import { readManifestSnapshot } from '../shared/manifest-snapshot.js';
 import { utilityProgress } from './utility-progress.js';
 
@@ -879,24 +880,92 @@ function runHandoffHooksCommand(args: HandoffArgs): unknown {
   throw new Error('handoff hooks requires install, uninstall, or doctor');
 }
 
+function stageForCurrentStep(flow: CompiledFlow, currentStep: string): string {
+  const stage = flow.stages.find((candidate) => candidate.steps.includes(currentStep as never));
+  return stage?.canonical ?? stage?.id ?? 'frame';
+}
+
+function isCoreV2MarkedRunFolder(runFolder: string): boolean {
+  try {
+    const firstLine = readFileSync(join(runFolder, 'trace.ndjson'), 'utf8').split(/\r?\n/, 1)[0];
+    if (firstLine === undefined || firstLine.length === 0) return false;
+    const raw: unknown = JSON.parse(firstLine);
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const entry = raw as Record<string, unknown>;
+    return (
+      entry.kind === 'run.bootstrapped' &&
+      entry.engine === 'core-v2' &&
+      typeof entry.manifest_hash === 'string'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function snapshotStatusFromRunStatus(
+  status: ReturnType<typeof projectRunStatusFromRunFolder>,
+): SnapshotStatus {
+  switch (status.engine_state) {
+    case 'open':
+    case 'waiting_checkpoint':
+      return 'in_progress';
+    case 'completed':
+      return status.terminal_outcome;
+    case 'aborted':
+      return 'aborted';
+    case 'invalid':
+      throw new Error('cannot save run-backed continuity: run status is invalid');
+  }
+}
+
 function loadRunBackedSnapshot(runFolder: string): {
-  readonly snapshot: Snapshot;
+  readonly snapshot: Pick<
+    Snapshot,
+    'run_id' | 'invocation_id' | 'current_step' | 'status' | 'updated_at'
+  >;
   readonly currentStage: string;
 } {
-  const snapshot = deriveSnapshot(runFolder);
   const manifest = readManifestSnapshot(runFolder);
   const flow = CompiledFlow.parse(
     JSON.parse(Buffer.from(manifest.bytes_base64, 'base64').toString('utf8')),
   );
-  const currentStep = snapshot.current_step ?? flow.entry_modes[0]?.start_at;
-  if (currentStep === undefined) {
-    throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
+
+  try {
+    const snapshot = deriveRetainedSnapshot(runFolder);
+    const currentStep = snapshot.current_step ?? flow.entry_modes[0]?.start_at;
+    if (currentStep === undefined) {
+      throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
+    }
+    return {
+      snapshot: { ...snapshot, current_step: currentStep },
+      currentStage: stageForCurrentStep(flow, currentStep),
+    };
+  } catch (err) {
+    if (!isCoreV2MarkedRunFolder(runFolder)) throw err;
+    const status = projectRunStatusFromRunFolder(runFolder);
+    if (status.engine_state === 'invalid') {
+      throw new Error(`cannot save run-backed continuity: ${status.error.message}`);
+    }
+    const currentStep =
+      ('current_step' in status ? status.current_step?.step_id : undefined) ??
+      flow.entry_modes[0]?.start_at;
+    if (currentStep === undefined) {
+      throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
+    }
+    const updatedAt = status.last_event?.timestamp;
+    if (updatedAt === undefined) {
+      throw new Error(`cannot save run-backed continuity: ${runFolder} has no latest event`);
+    }
+    return {
+      snapshot: {
+        run_id: status.run_id,
+        current_step: currentStep,
+        status: snapshotStatusFromRunStatus(status),
+        updated_at: updatedAt,
+      },
+      currentStage: stageForCurrentStep(flow, currentStep),
+    };
   }
-  const stage = flow.stages.find((candidate) => candidate.steps.includes(currentStep as never));
-  return {
-    snapshot: { ...snapshot, current_step: currentStep },
-    currentStage: stage?.canonical ?? stage?.id ?? 'frame',
-  };
 }
 
 function buildRecord(args: HandoffArgs, now: () => Date): ContinuityRecordValue {

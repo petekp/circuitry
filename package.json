@@ -17,6 +17,8 @@
     "test:fast": "vitest run --exclude 'tests/runner/**'",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "soak:v2:fast": "vitest run tests/soak tests/runner/cli-v2-runtime.test.ts tests/core-v2 tests/parity",
+    "soak:v2": "vitest run tests/soak && npm run verify && npm run check-flow-drift",
     "lint": "biome check .",
     "format": "biome format --write .",
     "emit-flows": "npm run build && node scripts/emit-flows.mjs",

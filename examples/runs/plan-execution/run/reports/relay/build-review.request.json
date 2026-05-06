@@ -6,7 +6,7 @@ Accepted verdicts: accept, accept-with-fixes
 Context (from reads):
 --- reports/build/brief.json ---
 {
-  "objective": "Execute this plan: ./docs/public-release-readiness.md",
+  "objective": "Execute this plan: ./docs/specs/headless-engine-host-api-v1.md",
   "scope": "Make the smallest safe change that satisfies the requested goal.",
   "success_criteria": [
     "The requested behavior is implemented",
@@ -39,7 +39,7 @@ Context (from reads):
 
 --- reports/build/plan.json ---
 {
-  "objective": "Execute this plan: ./docs/public-release-readiness.md",
+  "objective": "Execute this plan: ./docs/specs/headless-engine-host-api-v1.md",
   "approach": "Make the smallest safe change inside scope: Make the smallest safe change that satisfies the requested goal.",
   "slices": [
     "Satisfy: The requested behavior is implemented",
@@ -66,7 +66,17 @@ Context (from reads):
 
 
 --- reports/build/implementation.json ---
-{"verdict":"accept","summary":"Implemented the requested synthetic change.","changed_files":["src/example.ts"],"evidence":["Deterministic Build implementation proof."]}
+{
+  "verdict": "accept",
+  "summary": "Implemented the requested synthetic change.",
+  "changed_files": [
+    "src/example.ts"
+  ],
+  "evidence": [
+    "Deterministic Build implementation proof."
+  ]
+}
+
 
 --- reports/build/verification.json ---
 {
@@ -82,7 +92,7 @@ Context (from reads):
       "cwd": ".",
       "exit_code": 0,
       "status": "passed",
-      "duration_ms": 1850,
+      "duration_ms": 2530,
       "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
       "stderr_summary": ""
     }

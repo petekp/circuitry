@@ -1,0 +1,876 @@
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { main } from '../../src/cli/circuit.js';
+import type { StepOutcomeV2 } from '../../src/core-v2/domain/step.js';
+import type { TraceEntryV2 } from '../../src/core-v2/domain/trace.js';
+import type { ExecutorRegistryV2 } from '../../src/core-v2/executors/index.js';
+import { resumeCompiledFlowV2 } from '../../src/core-v2/run/checkpoint-resume.js';
+import { runCompiledFlowV2WithWaiting } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { isGraphCheckpointWaitingResultV2 } from '../../src/core-v2/run/graph-runner.js';
+import { projectRunStatusFromRunFolder } from '../../src/run-status/project-run-folder.js';
+import { LayeredConfig } from '../../src/schemas/config.js';
+import { ProgressEvent } from '../../src/schemas/progress-event.js';
+import { RunResult } from '../../src/schemas/result.js';
+import { sha256Hex } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+
+const GOAL = 'prove v2 checkpoint resume';
+const RUN_ID = '11111111-1111-4111-8111-111111111111';
+
+function deterministicNow(startMs: number): () => Date {
+  let n = 0;
+  return () => new Date(startMs + n++ * 1000);
+}
+
+function checkpointFixtureFlow(
+  overrides: {
+    readonly checkpointRoutes?: Record<string, string>;
+    readonly checkpointChoices?: readonly { readonly id: string; readonly label?: string }[];
+  } = {},
+): unknown {
+  const checkpointChoices = overrides.checkpointChoices ?? [{ id: 'continue', label: 'Continue' }];
+  const checkpointRoutes = overrides.checkpointRoutes ?? {
+    continue: 'relay-step',
+    pass: 'relay-step',
+    stop: '@stop',
+  };
+  return {
+    schema_version: '2',
+    id: 'checkpoint-fixture',
+    version: '0.1.0',
+    purpose: 'Dedicated core-v2 checkpoint pause/resume fixture.',
+    entry: {
+      signals: { include: [], exclude: [] },
+      intent_prefixes: [],
+    },
+    entry_modes: [
+      {
+        name: 'deep',
+        start_at: 'checkpoint-step',
+        depth: 'deep',
+        description: 'Pause at the fixture checkpoint.',
+      },
+    ],
+    stages: [
+      { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['checkpoint-step'] },
+      { id: 'act-stage', title: 'Act', canonical: 'act', steps: ['relay-step'] },
+      { id: 'verify-stage', title: 'Verify', canonical: 'verify', steps: ['verify-step'] },
+      { id: 'close-stage', title: 'Close', canonical: 'close', steps: ['close-step'] },
+    ],
+    stage_path_policy: {
+      mode: 'partial',
+      omits: ['analyze', 'plan', 'review'],
+      rationale: 'The checkpoint fixture keeps only the steps needed for v2 resume parity.',
+    },
+    steps: [
+      {
+        id: 'checkpoint-step',
+        title: 'Checkpoint - wait for operator',
+        protocol: 'checkpoint-fixture-frame@v1',
+        reads: [],
+        routes: checkpointRoutes,
+        executor: 'orchestrator',
+        kind: 'checkpoint',
+        policy: {
+          prompt: 'Choose whether the v2 fixture should continue.',
+          choices: checkpointChoices,
+          safe_default_choice: checkpointChoices[0]?.id,
+          safe_autonomous_choice: checkpointChoices[0]?.id,
+        },
+        writes: {
+          request: 'reports/checkpoints/checkpoint-step-request.json',
+          response: 'reports/checkpoints/checkpoint-step-response.json',
+        },
+        check: {
+          kind: 'checkpoint_selection',
+          source: { kind: 'checkpoint_response', ref: 'response' },
+          allow: checkpointChoices.map((choice) => choice.id),
+        },
+      },
+      {
+        id: 'relay-step',
+        title: 'Relay - continue after checkpoint',
+        protocol: 'checkpoint-fixture-relay@v1',
+        reads: ['reports/checkpoints/checkpoint-step-response.json'],
+        routes: {
+          pass: 'verify-step',
+          retry: 'relay-step',
+          stop: '@stop',
+        },
+        executor: 'worker',
+        kind: 'relay',
+        role: 'reviewer',
+        writes: {
+          request: 'reports/relay/fixture.request.json',
+          receipt: 'reports/relay/fixture.receipt.txt',
+          result: 'reports/relay/fixture.result.json',
+        },
+        check: {
+          kind: 'result_verdict',
+          source: { kind: 'relay_result', ref: 'result' },
+          pass: ['accept'],
+        },
+      },
+      {
+        id: 'verify-step',
+        title: 'Verify - prove resumed context',
+        protocol: 'checkpoint-fixture-verify@v1',
+        reads: ['reports/relay/fixture.result.json'],
+        routes: {
+          pass: 'close-step',
+          retry: 'relay-step',
+          stop: '@stop',
+        },
+        executor: 'orchestrator',
+        kind: 'verification',
+        writes: {
+          report: {
+            path: 'reports/verification.json',
+            schema: 'checkpoint.fixture.verification@v1',
+          },
+        },
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['overall_status'],
+        },
+      },
+      {
+        id: 'close-step',
+        title: 'Close - complete fixture',
+        protocol: 'checkpoint-fixture-close@v1',
+        reads: ['reports/verification.json'],
+        routes: {
+          pass: '@complete',
+          complete: '@complete',
+          stop: '@stop',
+        },
+        executor: 'orchestrator',
+        kind: 'compose',
+        writes: {
+          report: {
+            path: 'reports/fixture-result.json',
+            schema: 'checkpoint.fixture.result@v1',
+          },
+        },
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
+      },
+    ],
+  };
+}
+
+function completedAttemptFixtureFlow(): unknown {
+  const base = checkpointFixtureFlow({
+    checkpointRoutes: {
+      loop: 'pre-step',
+      pass: 'relay-step',
+      stop: '@stop',
+    },
+    checkpointChoices: [{ id: 'loop', label: 'Loop' }],
+  }) as {
+    readonly stages: readonly Record<string, unknown>[];
+    readonly steps: readonly Record<string, unknown>[];
+    readonly [key: string]: unknown;
+  };
+  return {
+    ...base,
+    id: 'checkpoint-cycle-fixture',
+    entry_modes: [
+      {
+        name: 'deep',
+        start_at: 'pre-step',
+        depth: 'deep',
+        description: 'Complete a pre-step before pausing at checkpoint.',
+      },
+    ],
+    stages: base.stages.map((stage) =>
+      stage.id === 'frame-stage' ? { ...stage, steps: ['pre-step', 'checkpoint-step'] } : stage,
+    ),
+    steps: [
+      {
+        id: 'pre-step',
+        title: 'Pre - completed before checkpoint',
+        protocol: 'checkpoint-cycle-pre@v1',
+        reads: [],
+        routes: {
+          pass: 'checkpoint-step',
+        },
+        executor: 'orchestrator',
+        kind: 'compose',
+        writes: {
+          report: {
+            path: 'reports/pre.json',
+            schema: 'checkpoint.fixture.pre@v1',
+          },
+        },
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
+      },
+      ...base.steps,
+    ],
+  };
+}
+
+function fixtureBytes(flow: unknown = checkpointFixtureFlow()): Buffer {
+  return Buffer.from(JSON.stringify(flow));
+}
+
+function fixtureRelayer(): RelayFn {
+  return {
+    connectorName: 'claude-code',
+    relay: async (input: RelayInput) => ({
+      request_payload: input.prompt,
+      receipt_id: 'checkpoint-fixture-receipt',
+      result_body: JSON.stringify({
+        verdict: 'accept',
+        summary: 'Resumed relay accepted the checkpoint selection.',
+      }),
+      duration_ms: 1,
+      cli_version: '0.0.0-test',
+    }),
+  };
+}
+
+function fixtureExecutors(
+  observed: {
+    verificationContexts?: Array<{
+      readonly projectRoot?: string;
+      readonly selectionConfigLayerCount: number;
+    }>;
+    composeCalls?: string[];
+  } = {},
+): Partial<ExecutorRegistryV2> {
+  return {
+    compose: async (step, context): Promise<StepOutcomeV2> => {
+      if (step.kind !== 'compose') throw new Error('expected compose step');
+      observed.composeCalls?.push(step.id);
+      const report = step.writes?.report;
+      if (report === undefined) throw new Error(`compose step '${step.id}' has no report write`);
+      await context.files.writeJson(
+        { path: report.path },
+        {
+          summary: `compose ${step.id} completed`,
+        },
+      );
+      return { route: 'pass', details: { writer: step.writer } };
+    },
+    verification: async (step, context): Promise<StepOutcomeV2> => {
+      if (step.kind !== 'verification') throw new Error('expected verification step');
+      const report = step.writes?.report;
+      if (report === undefined)
+        throw new Error(`verification step '${step.id}' has no report write`);
+      observed.verificationContexts?.push({
+        ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
+        selectionConfigLayerCount: context.selectionConfigLayers?.length ?? 0,
+      });
+      await context.files.writeJson(
+        { path: report.path },
+        {
+          overall_status: 'passed',
+          ...(context.projectRoot === undefined ? {} : { project_root: context.projectRoot }),
+          selection_config_layer_count: context.selectionConfigLayers?.length ?? 0,
+        },
+      );
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'step.report_written',
+        step_id: step.id,
+        attempt: context.activeStepAttempt ?? 1,
+        report_path: report.path,
+        ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+      });
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'check.evaluated',
+        step_id: step.id,
+        attempt: context.activeStepAttempt ?? 1,
+        check_kind: 'schema_sections',
+        outcome: 'pass',
+      });
+      return { route: 'pass', details: { overall_status: 'passed' } };
+    },
+  };
+}
+
+function selectionLayer() {
+  return LayeredConfig.parse({
+    layer: 'project',
+    config: {
+      schema_version: 1,
+      host: { kind: 'generic-shell' },
+      relay: {
+        default: 'auto',
+        roles: {},
+        circuits: {},
+        connectors: {},
+      },
+      circuits: {},
+      defaults: {},
+    },
+  });
+}
+
+async function readTrace(runDir: string): Promise<TraceEntryV2[]> {
+  const text = await readFile(join(runDir, 'trace.ndjson'), 'utf8');
+  return text
+    .trim()
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as TraceEntryV2);
+}
+
+async function writeTrace(runDir: string, entries: readonly TraceEntryV2[]): Promise<void> {
+  await writeFile(
+    join(runDir, 'trace.ndjson'),
+    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
+  );
+}
+
+async function rewriteCheckpointRequestTrace(
+  runDir: string,
+  rewrite: (entry: TraceEntryV2) => TraceEntryV2,
+): Promise<void> {
+  const entries = await readTrace(runDir);
+  await writeTrace(
+    runDir,
+    entries.map((entry) => (entry.kind === 'checkpoint.requested' ? rewrite(entry) : entry)),
+  );
+}
+
+async function createWaitingFixture(input: {
+  readonly runDir: string;
+  readonly now?: () => Date;
+  readonly progress?: (event: unknown) => void;
+  readonly flowBytes?: Buffer;
+}) {
+  const result = await runCompiledFlowV2WithWaiting({
+    flowBytes: input.flowBytes ?? fixtureBytes(),
+    runDir: input.runDir,
+    runId: RUN_ID,
+    goal: GOAL,
+    entryModeName: 'deep',
+    projectRoot: input.runDir,
+    selectionConfigLayers: [selectionLayer()],
+    ...(input.now === undefined ? {} : { now: input.now }),
+    ...(input.progress === undefined ? {} : { progress: input.progress }),
+    executors: fixtureExecutors(),
+  });
+  expect(isGraphCheckpointWaitingResultV2(result)).toBe(true);
+  if (!isGraphCheckpointWaitingResultV2(result)) throw new Error('expected waiting checkpoint');
+  return result;
+}
+
+async function captureStdout(fn: () => Promise<number>): Promise<{
+  readonly code: number;
+  readonly output: Record<string, unknown>;
+}> {
+  const originalWrite = process.stdout.write;
+  let stdout = '';
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    const code = await fn();
+    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
+  } finally {
+    process.stdout.write = originalWrite;
+  }
+}
+
+describe('core-v2 checkpoint pause/resume fixture', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'circuit-core-v2-checkpoint-'));
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('pauses as an open checkpoint instead of closing as an abort', async () => {
+    const runDir = join(tempDir, 'pause');
+    const progressEvents: unknown[] = [];
+
+    const result = await createWaitingFixture({
+      runDir,
+      now: deterministicNow(Date.UTC(2026, 0, 1)),
+      progress: (event) => progressEvents.push(ProgressEvent.parse(event)),
+    });
+
+    expect(result.outcome).toBe('checkpoint_waiting');
+    expect(result.checkpoint).toMatchObject({
+      stepId: 'checkpoint-step',
+      attempt: 1,
+      allowedChoices: ['continue'],
+    });
+    expect(result.checkpoint.requestPath).toBe(
+      join(runDir, 'reports/checkpoints/checkpoint-step-request.json'),
+    );
+    expect(existsSync(join(runDir, 'reports/result.json'))).toBe(false);
+
+    const trace = await readTrace(runDir);
+    expect(trace.map((entry) => entry.kind)).toContain('checkpoint.requested');
+    expect(trace.map((entry) => entry.kind)).not.toContain('step.aborted');
+    expect(trace.map((entry) => entry.kind)).not.toContain('run.closed');
+    const requested = trace.find((entry) => entry.kind === 'checkpoint.requested');
+    expect(requested).toMatchObject({
+      step_id: 'checkpoint-step',
+      attempt: 1,
+      request_path: 'reports/checkpoints/checkpoint-step-request.json',
+      allowed_choices: ['continue'],
+    });
+    expect(requested?.report_path).toBeUndefined();
+
+    expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
+      engine_state: 'waiting_checkpoint',
+      reason: 'checkpoint_waiting',
+      legal_next_actions: ['inspect', 'resume'],
+      checkpoint: {
+        checkpoint_id: 'checkpoint-step:1',
+        step_id: 'checkpoint-step',
+        attempt: 1,
+        choices: [{ id: 'continue', label: 'Continue', value: 'continue' }],
+        request_path: join(runDir, 'reports/checkpoints/checkpoint-step-request.json'),
+      },
+    });
+
+    const progressTypes = progressEvents.map((event) => (event as { readonly type: string }).type);
+    expect(progressTypes).toContain('checkpoint.waiting');
+    expect(progressTypes).toContain('user_input.requested');
+  });
+
+  it('resumes a v2 checkpoint, restores saved context, continues the graph, and closes', async () => {
+    const runDir = join(tempDir, 'resume');
+    const before = await createWaitingFixture({
+      runDir,
+      now: deterministicNow(Date.UTC(2026, 0, 2)),
+    });
+    const entriesBeforeResume = await readTrace(runDir);
+    const observed: {
+      verificationContexts: Array<{ projectRoot?: string; selectionConfigLayerCount: number }>;
+    } = {
+      verificationContexts: [],
+    };
+
+    const result = await resumeCompiledFlowV2({
+      runDir,
+      selection: 'continue',
+      now: deterministicNow(Date.UTC(2026, 0, 3)),
+      relayer: fixtureRelayer(),
+      executors: fixtureExecutors(observed),
+    });
+
+    expect(result.outcome).toBe('complete');
+    expect(RunResult.parse(JSON.parse(readFileSync(result.resultPath, 'utf8')))).toMatchObject({
+      run_id: RUN_ID,
+      flow_id: 'checkpoint-fixture',
+      outcome: 'complete',
+      manifest_hash: result.manifest_hash,
+    });
+    expect(observed.verificationContexts).toEqual([
+      {
+        projectRoot: runDir,
+        selectionConfigLayerCount: 1,
+      },
+    ]);
+
+    const trace = await readTrace(runDir);
+    const resolved = trace.find((entry) => entry.kind === 'checkpoint.resolved');
+    expect(resolved).toMatchObject({
+      step_id: 'checkpoint-step',
+      attempt: before.checkpoint.attempt,
+      selection: 'continue',
+      auto_resolved: false,
+      resolution_source: 'operator',
+      response_path: 'reports/checkpoints/checkpoint-step-response.json',
+    });
+    expect(trace.map((entry) => entry.kind)).toEqual(
+      expect.arrayContaining([
+        'checkpoint.resolved',
+        'relay.completed',
+        'step.report_written',
+        'run.closed',
+      ]),
+    );
+    expect(trace.map((entry) => entry.sequence)).toEqual(trace.map((_, index) => index));
+    expect(trace.length).toBeGreaterThan(entriesBeforeResume.length);
+    expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
+      engine_state: 'completed',
+      reason: 'run_closed',
+      terminal_outcome: 'complete',
+    });
+  });
+
+  it('rejects invalid selections and tampered checkpoint request bytes', async () => {
+    const invalidChoiceRun = join(tempDir, 'invalid-choice');
+    await createWaitingFixture({ runDir: invalidChoiceRun });
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir: invalidChoiceRun,
+        selection: 'stop',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/selection 'stop' is not allowed/);
+
+    const tamperedRun = join(tempDir, 'tampered-request');
+    const waiting = await createWaitingFixture({ runDir: tamperedRun });
+    await writeFile(waiting.checkpoint.requestPath, '{not json');
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir: tamperedRun,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/checkpoint request hash differs from trace/);
+  });
+
+  it('rejects and hides checkpoints whose traced request path differs from the saved flow', async () => {
+    const runDir = join(tempDir, 'path-mismatch');
+    await createWaitingFixture({ runDir });
+    const alternatePath = 'reports/checkpoints/alternate-request.json';
+    const alternateAbs = join(runDir, alternatePath);
+    await mkdir(join(runDir, 'reports/checkpoints'), { recursive: true });
+    const alternateRequest = {
+      schema_version: 1,
+      step_id: 'checkpoint-step',
+      prompt: 'alternate request',
+      allowed_choices: ['continue'],
+      execution_context: {
+        project_root: runDir,
+        selection_config_layers: [selectionLayer()],
+      },
+    };
+    const alternateText = `${JSON.stringify(alternateRequest, null, 2)}\n`;
+    await writeFile(alternateAbs, alternateText);
+    await rewriteCheckpointRequestTrace(runDir, (entry) => ({
+      ...entry,
+      request_path: alternatePath,
+      request_report_hash: sha256Hex(alternateText),
+    }));
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/does not match saved flow path/);
+    expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
+      engine_state: 'invalid',
+      reason: 'checkpoint_invalid',
+      legal_next_actions: ['none'],
+      error: { code: 'checkpoint_request_path_mismatch' },
+    });
+  });
+
+  it('rejects missing checkpoint request files', async () => {
+    const runDir = join(tempDir, 'missing-request');
+    const waiting = await createWaitingFixture({ runDir });
+    await rm(waiting.checkpoint.requestPath);
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/no such file or directory|ENOENT/);
+  });
+
+  it('projects checkpoints with mismatched request choices as invalid', async () => {
+    const runDir = join(tempDir, 'request-choice-mismatch');
+    const waiting = await createWaitingFixture({ runDir });
+    const staleRequest = {
+      schema_version: 1,
+      step_id: 'checkpoint-step',
+      prompt: 'stale choices',
+      allowed_choices: ['continue', 'other'],
+      execution_context: {
+        project_root: runDir,
+        selection_config_layers: [selectionLayer()],
+      },
+    };
+    const staleText = `${JSON.stringify(staleRequest, null, 2)}\n`;
+    await writeFile(waiting.checkpoint.requestPath, staleText);
+    await rewriteCheckpointRequestTrace(runDir, (entry) => ({
+      ...entry,
+      request_report_hash: sha256Hex(staleText),
+    }));
+
+    expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
+      engine_state: 'invalid',
+      reason: 'checkpoint_invalid',
+      legal_next_actions: ['none'],
+      error: { code: 'checkpoint_choice_mismatch' },
+    });
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/request choices for 'checkpoint-step' are stale/);
+  });
+
+  it('rejects stale request bodies after the request hash passes', async () => {
+    const runDir = join(tempDir, 'stale-request');
+    const waiting = await createWaitingFixture({ runDir });
+    const staleRequest = {
+      schema_version: 2,
+      step_id: 'checkpoint-step',
+      prompt: 'stale request',
+      allowed_choices: ['continue'],
+      execution_context: {
+        project_root: runDir,
+        selection_config_layers: [selectionLayer()],
+      },
+    };
+    const staleText = `${JSON.stringify(staleRequest, null, 2)}\n`;
+    await writeFile(waiting.checkpoint.requestPath, staleText);
+    const entries = await readTrace(runDir);
+    await writeTrace(
+      runDir,
+      entries.map((entry) =>
+        entry.kind === 'checkpoint.requested'
+          ? { ...entry, request_report_hash: sha256Hex(staleText) }
+          : entry,
+      ),
+    );
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/request for 'checkpoint-step' is stale/);
+  });
+
+  it('rejects stale request step ids after the request hash passes', async () => {
+    const runDir = join(tempDir, 'stale-step-id');
+    const waiting = await createWaitingFixture({ runDir });
+    const staleRequest = {
+      schema_version: 1,
+      step_id: 'other-step',
+      prompt: 'stale request',
+      allowed_choices: ['continue'],
+      execution_context: {
+        project_root: runDir,
+        selection_config_layers: [selectionLayer()],
+      },
+    };
+    const staleText = `${JSON.stringify(staleRequest, null, 2)}\n`;
+    await writeFile(waiting.checkpoint.requestPath, staleText);
+    await rewriteCheckpointRequestTrace(runDir, (entry) => ({
+      ...entry,
+      request_report_hash: sha256Hex(staleText),
+    }));
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/request for 'checkpoint-step' is stale/);
+  });
+
+  it('rejects tampered trace choices before writing checkpoint.resolved', async () => {
+    const runDir = join(tempDir, 'stale-trace-choices');
+    await createWaitingFixture({ runDir });
+    await rewriteCheckpointRequestTrace(runDir, (entry) => ({
+      ...entry,
+      allowed_choices: ['continue', 'other'],
+    }));
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'other',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/checkpoint trace choices for 'checkpoint-step' are stale/);
+    const trace = await readTrace(runDir);
+    expect(trace.some((entry) => entry.kind === 'checkpoint.resolved')).toBe(false);
+  });
+
+  it('rejects already resolved and closed checkpoint runs', async () => {
+    const resolvedRun = join(tempDir, 'already-resolved');
+    await createWaitingFixture({ runDir: resolvedRun });
+    await rewriteCheckpointRequestTrace(resolvedRun, (entry) => ({
+      ...entry,
+    }));
+    const entries = await readTrace(resolvedRun);
+    await writeTrace(resolvedRun, [
+      ...entries,
+      {
+        sequence: entries.length,
+        recorded_at: '2026-01-01T00:00:10.000Z',
+        run_id: RUN_ID,
+        kind: 'checkpoint.resolved',
+        step_id: 'checkpoint-step',
+        attempt: 1,
+        selection: 'continue',
+        auto_resolved: false,
+        resolution_source: 'operator',
+        response_path: 'reports/checkpoints/checkpoint-step-response.json',
+      },
+    ]);
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir: resolvedRun,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/run has no unresolved checkpoint request/);
+
+    const closedRun = join(tempDir, 'closed-run');
+    await createWaitingFixture({ runDir: closedRun });
+    const closedEntries = await readTrace(closedRun);
+    await writeTrace(closedRun, [
+      ...closedEntries,
+      {
+        sequence: closedEntries.length,
+        recorded_at: '2026-01-01T00:00:10.000Z',
+        run_id: RUN_ID,
+        kind: 'run.closed',
+        outcome: 'aborted',
+        reason: 'closed for rejection coverage',
+      },
+    ]);
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir: closedRun,
+        selection: 'continue',
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/run is already closed/);
+  });
+
+  it('validates checkpoint report hashes when the request carries one', async () => {
+    const runDir = join(tempDir, 'report-hash');
+    const buildBytes = await readFile(join(process.cwd(), 'generated/flows/build/circuit.json'));
+    const result = await runCompiledFlowV2WithWaiting({
+      flowBytes: buildBytes,
+      runDir,
+      runId: randomUUID(),
+      goal: 'build checkpoint report hash proof',
+      entryModeName: 'deep',
+      projectRoot: tempDir,
+    });
+    expect(isGraphCheckpointWaitingResultV2(result)).toBe(true);
+    writeFileSync(join(runDir, 'reports/build/brief.json'), '{"tampered":true}\n');
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+      }),
+    ).rejects.toThrow(/waiting Build brief hash differs from request/);
+  });
+
+  it('rejects a missing checkpoint report when the request carries its hash', async () => {
+    const runDir = join(tempDir, 'missing-report');
+    const buildBytes = await readFile(join(process.cwd(), 'generated/flows/build/circuit.json'));
+    const result = await runCompiledFlowV2WithWaiting({
+      flowBytes: buildBytes,
+      runDir,
+      runId: randomUUID(),
+      goal: 'build checkpoint missing report proof',
+      entryModeName: 'deep',
+      projectRoot: tempDir,
+    });
+    expect(isGraphCheckpointWaitingResultV2(result)).toBe(true);
+    await rm(join(runDir, 'reports/build/brief.json'));
+
+    await expect(
+      resumeCompiledFlowV2({
+        runDir,
+        selection: 'continue',
+      }),
+    ).rejects.toThrow(/brief\.json|ENOENT|no such file or directory/);
+  });
+
+  it('reconstructs completed step state before continuing a resumed graph', async () => {
+    const runDir = join(tempDir, 'completed-state');
+    const composeCalls: string[] = [];
+    await createWaitingFixture({
+      runDir,
+      flowBytes: fixtureBytes(completedAttemptFixtureFlow()),
+    });
+
+    const result = await resumeCompiledFlowV2({
+      runDir,
+      selection: 'loop',
+      executors: fixtureExecutors({ composeCalls }),
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain("already completed step 'pre-step'");
+    expect(composeCalls).toEqual([]);
+    const trace = await readTrace(runDir);
+    const enteredPreStepCount = trace.filter(
+      (entry) => entry.kind === 'step.entered' && entry.step_id === 'pre-step',
+    ).length;
+    expect(enteredPreStepCount).toBe(1);
+  });
+
+  it('routes CLI resume by saved core-v2 engine marker even when default v2 routing is disabled', async () => {
+    const runDir = join(tempDir, 'cli-resume');
+    await createWaitingFixture({ runDir });
+    const oldDisable = process.env.CIRCUIT_DISABLE_V2_RUNTIME;
+    process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
+    try {
+      const { code, output } = await captureStdout(() =>
+        main(['resume', '--run-folder', runDir, '--checkpoint-choice', 'continue'], {
+          now: deterministicNow(Date.UTC(2026, 0, 4)),
+          relayer: fixtureRelayer(),
+          v2Executors: fixtureExecutors(),
+        }),
+      );
+
+      expect(code).toBe(0);
+      expect(output).toMatchObject({
+        run_id: RUN_ID,
+        flow_id: 'checkpoint-fixture',
+        outcome: 'complete',
+        runtime: 'v2',
+        runtime_reason: 'checkpoint resume follows the saved core-v2 run folder engine marker',
+      });
+      expect(typeof output.result_path).toBe('string');
+    } finally {
+      if (oldDisable === undefined) {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = undefined;
+      } else {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = oldDisable;
+      }
+    }
+  });
+});

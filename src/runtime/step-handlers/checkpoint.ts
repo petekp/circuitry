@@ -106,7 +106,7 @@ function checkpointFailureReason(stepId: string, err: unknown): string {
 // Checkpoint report writer. Most checkpoints don't write reports;
 // when they do, a registered CheckpointBriefBuilder owns the flow-
 // specific assembly. Adding a new flow's checkpoint-with-report
-// means adding a builder under src/runtime/registries/checkpoint-writers/.
+// means adding a builder under src/flows/registries/checkpoint-writers/.
 //
 // The brief is written exactly once per checkpoint instance, with the
 // brief.checkpoint.response_path already pointing at step.writes.response.

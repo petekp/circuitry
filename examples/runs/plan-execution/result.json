@@ -10,7 +10,7 @@
   "entry_mode_source": "classifier",
   "run_folder": "<repo>/examples/runs/plan-execution/run",
   "outcome": "complete",
-  "trace_entries_observed": 36,
+  "trace_entries_observed": 34,
   "result_path": "<repo>/examples/runs/plan-execution/run/reports/result.json",
   "operator_summary_path": "<repo>/examples/runs/plan-execution/run/reports/operator-summary.json",
   "operator_summary_markdown_path": "<repo>/examples/runs/plan-execution/run/reports/operator-summary.md"

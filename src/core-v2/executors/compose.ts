@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import {
   findCloseBuilder,
   resolveCloseReadPaths,
-} from '../../runtime/registries/close-writers/registry.js';
+} from '../../flows/registries/close-writers/registry.js';
 import {
   findComposeBuilder,
   resolveComposeReadPaths,
-} from '../../runtime/registries/compose-writers/registry.js';
+} from '../../flows/registries/compose-writers/registry.js';
 import type { StepOutcomeV2 } from '../domain/step.js';
 import type { ComposeStepV2 } from '../manifest/executable-flow.js';
 import type { RunContextV2 } from '../run/run-context.js';

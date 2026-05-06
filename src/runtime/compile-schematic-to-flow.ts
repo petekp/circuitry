@@ -68,14 +68,14 @@ function ensureSupportedKindReportPair(item: SchematicStep): void {
   if (item.execution.kind === 'verification') {
     if (findVerificationWriter(item.output as unknown as string) === undefined) {
       fail(
-        `schematic item '${item.id}' has verification kind but writes '${item.output}'; no verification writer is registered for that schema (see src/runtime/registries/verification-writers/registry.ts)`,
+        `schematic item '${item.id}' has verification kind but writes '${item.output}'; no verification writer is registered for that schema (see src/flows/registries/verification-writers/registry.ts)`,
       );
     }
   }
   if (item.execution.kind === 'checkpoint' && item.writes?.report_path !== undefined) {
     if (findCheckpointBriefBuilder(item.output as unknown as string) === undefined) {
       fail(
-        `schematic item '${item.id}' has checkpoint kind writing report '${item.output}'; no checkpoint writer is registered for that schema (see src/runtime/registries/checkpoint-writers/registry.ts)`,
+        `schematic item '${item.id}' has checkpoint kind writing report '${item.output}'; no checkpoint writer is registered for that schema (see src/flows/registries/checkpoint-writers/registry.ts)`,
       );
     }
   }

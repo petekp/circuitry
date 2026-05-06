@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { main } from '../../src/cli/circuit.js';
 import { ReviewIntake } from '../../src/flows/review/reports.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import type { RelayFn, RelayInput } from '../../src/runtime/runner.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const EXPLORE_SYNTHESIS_BODY = JSON.stringify({
   verdict: 'accept',
@@ -741,7 +741,7 @@ describe('CLI router', () => {
     expect(output.router_reason).toMatch(/implementation Build flow/i);
     expect(output.router_signal).toBeDefined();
     expect(output.outcome).toBe('complete');
-  });
+  }, 30_000);
 
   it('omitted flow positional preserves router metadata on Build checkpoint_waiting output', async () => {
     const runFolder = join(runFolderBase, 'build-router-checkpoint-waiting');

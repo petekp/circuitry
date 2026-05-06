@@ -1,1 +1,10 @@
-{"verdict":"accept","reproduction_status":"reproduced","cause_summary":"The missing token path skipped the fallback guard.","confidence":"high","evidence":["Synthetic regression evidence."],"residual_uncertainty":[]}
+{
+  "verdict": "accept",
+  "reproduction_status": "reproduced",
+  "cause_summary": "The missing token path skipped the fallback guard.",
+  "confidence": "high",
+  "evidence": [
+    "Synthetic regression evidence."
+  ],
+  "residual_uncertainty": []
+}

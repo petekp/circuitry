@@ -33,7 +33,21 @@ Context (from reads):
 
 
 --- reports/sweep/batch.json ---
-{"verdict":"accept","summary":"Acted on the safe cleanup candidate and deferred the risky one.","changed_files":["src/example.ts"],"items":[{"candidate_id":"cand-1","status":"acted","evidence":"Removed the unused helper function in the synthetic proof."}]}
+{
+  "verdict": "accept",
+  "summary": "Acted on the safe cleanup candidate and deferred the risky one.",
+  "changed_files": [
+    "src/example.ts"
+  ],
+  "items": [
+    {
+      "candidate_id": "cand-1",
+      "status": "acted",
+      "evidence": "Removed the unused helper function in the synthetic proof."
+    }
+  ]
+}
+
 
 --- reports/sweep/verification.json ---
 {
@@ -49,7 +63,7 @@ Context (from reads):
       "cwd": ".",
       "exit_code": 0,
       "status": "passed",
-      "duration_ms": 1862,
+      "duration_ms": 2490,
       "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
       "stderr_summary": ""
     }

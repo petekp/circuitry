@@ -1,6 +1,6 @@
 import { constants, accessSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { readRunTrace } from '../runtime/trace-reader.js';
+import { readRetainedRunTrace } from '../compat/retained-checkpoint-folders.js';
 import type { EngineErrorCodeV1 } from '../schemas/run-status.js';
 import type { RunStatusProjectionV1 } from '../schemas/run-status.js';
 import { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
@@ -81,7 +81,7 @@ export function projectRunStatusFromRunFolder(runFolder: string): RunStatusProje
   }
 
   try {
-    const log = readRunTrace(resolvedRunFolder);
+    const log = readRetainedRunTrace(resolvedRunFolder);
     return projectV1RunStatusFromTrace({
       runFolder: resolvedRunFolder,
       manifest,

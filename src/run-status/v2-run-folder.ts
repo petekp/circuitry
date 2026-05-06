@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tournamentCheckpointPresentationV2 } from '../core-v2/projections/tournament-checkpoint-context.js';
+import { resolveRunFilePath } from '../core-v2/run-files/paths.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { RunStatusProjectionV1 } from '../schemas/run-status.js';
+import { sha256Hex } from '../shared/connector-relay.js';
 import type { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
 import {
   errorMessage,
@@ -46,6 +49,23 @@ function traceDataString(entry: RawTraceEntry, key: string): string | undefined 
   if (!isRecord(data)) return undefined;
   const value = data[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function traceStringArray(entry: RawTraceEntry, key: string): string[] | undefined {
+  const value = entry[key];
+  if (!Array.isArray(value)) return undefined;
+  const entries = value.filter((item): item is string => typeof item === 'string');
+  return entries.length === value.length && entries.length > 0 ? entries : undefined;
+}
+
+function stringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries = value.filter((item): item is string => typeof item === 'string');
+  return entries.length === value.length && entries.length > 0 ? entries : undefined;
+}
+
+function sameStringArray(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function v2TraceString(entry: RawTraceEntry, key: string): string | undefined {
@@ -133,6 +153,209 @@ function v2CurrentStepProjection(
     };
   }
   return undefined;
+}
+
+function latestUnresolvedV2Checkpoint(log: readonly RawTraceEntry[]): RawTraceEntry | undefined {
+  const resolved = new Set<string>();
+  for (const entry of log) {
+    if (entry.kind !== 'checkpoint.resolved') continue;
+    const stepId = traceString(entry, 'step_id');
+    const attempt = traceNumber(entry, 'attempt');
+    if (stepId !== undefined && attempt !== undefined) resolved.add(`${stepId}:${attempt}`);
+  }
+  for (let i = log.length - 1; i >= 0; i--) {
+    const entry = log[i];
+    if (entry === undefined || entry.kind !== 'checkpoint.requested') continue;
+    const stepId = traceString(entry, 'step_id');
+    const attempt = traceNumber(entry, 'attempt');
+    if (stepId === undefined || attempt === undefined) continue;
+    if (!resolved.has(`${stepId}:${attempt}`)) return entry;
+  }
+  return undefined;
+}
+
+function v2WaitingCheckpointProjection(input: {
+  readonly runFolder: string;
+  readonly log: readonly RawTraceEntry[];
+  readonly flow: CompiledFlow | undefined;
+  readonly bootstrapRunId: string;
+  readonly bootstrapFlowId: string;
+  readonly bootstrapGoal: string;
+  readonly event: ReturnType<typeof v2LastEvent>;
+  readonly reportPaths: ReturnType<typeof optionalReportPaths>;
+  readonly manifestIdentity: { readonly run_id: string; readonly flow_id: string };
+}): RunStatusProjectionV1 | undefined {
+  const requested = latestUnresolvedV2Checkpoint(input.log);
+  if (requested === undefined) return undefined;
+
+  const stepId = traceString(requested, 'step_id');
+  const attempt = traceNumber(requested, 'attempt');
+  const requestPath = traceString(requested, 'request_path');
+  const expectedHash = traceString(requested, 'request_report_hash');
+  const allowedChoices = traceStringArray(requested, 'allowed_choices');
+  if (
+    stepId === undefined ||
+    attempt === undefined ||
+    requestPath === undefined ||
+    expectedHash === undefined ||
+    allowedChoices === undefined
+  ) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_trace_incomplete',
+      message: 'v2 checkpoint.requested trace entry is missing resume fields',
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  const flow = input.flow;
+  if (flow === undefined) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_flow_unavailable',
+      message: 'saved flow bytes are unavailable for v2 checkpoint projection',
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+  const step = flow.steps.find((candidate) => (candidate.id as unknown as string) === stepId);
+  if (step === undefined || step.kind !== 'checkpoint') {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_step_missing',
+      message: `saved flow does not contain checkpoint step '${stepId}'`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+  const declaredRequestPath = step.writes.request;
+  if (requestPath !== declaredRequestPath) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_request_path_mismatch',
+      message: `v2 checkpoint request path '${requestPath}' does not match saved flow path '${declaredRequestPath}'`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+  const savedChoices = step.policy.choices.map((choice) => choice.id as unknown as string);
+  if (!sameStringArray(allowedChoices, savedChoices)) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_choice_mismatch',
+      message: `v2 checkpoint trace choices for '${stepId}' do not match saved flow choices`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  let requestText: string;
+  let requestAbs: string;
+  try {
+    requestAbs = resolveRunFilePath(input.runFolder, requestPath);
+    requestText = readFileSync(requestAbs, 'utf8');
+  } catch (err) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_request_unreadable',
+      message: `v2 checkpoint request is missing or unreadable (${errorMessage(err)})`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  if (sha256Hex(requestText) !== expectedHash) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_request_hash_mismatch',
+      message: 'v2 checkpoint request hash differs from trace',
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  let requestRecord: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(requestText) as unknown;
+    if (!isRecord(parsed)) throw new Error('request is not a JSON object');
+    requestRecord = parsed;
+  } catch (err) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_request_invalid_json',
+      message: `v2 checkpoint request is invalid (${errorMessage(err)})`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  if (requestRecord.schema_version !== 1 || requestRecord.step_id !== stepId) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_request_stale',
+      message: `v2 checkpoint request for '${stepId}' is stale`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+  const requestChoices = stringArray(requestRecord.allowed_choices);
+  if (requestChoices === undefined || !sameStringArray(requestChoices, savedChoices)) {
+    return invalidProjection({
+      runFolder: input.runFolder,
+      reason: 'checkpoint_invalid',
+      code: 'checkpoint_choice_mismatch',
+      message: `v2 checkpoint request choices for '${stepId}' do not match saved flow choices`,
+      manifestIdentity: input.manifestIdentity,
+    });
+  }
+
+  const prompt = typeof requestRecord.prompt === 'string' ? requestRecord.prompt : undefined;
+  const policyChoiceLabels = new Map(
+    step.policy.choices.map((choice) => [
+      choice.id as unknown as string,
+      (choice.label as unknown as string | undefined) ?? (choice.id as unknown as string),
+    ]),
+  );
+  const presentation = tournamentCheckpointPresentationV2({
+    runDir: input.runFolder,
+    allowedChoices: requestChoices,
+    fallbackPrompt: prompt ?? 'Choose how to continue this checkpoint.',
+    fallbackLabel: (choice) => policyChoiceLabels.get(choice) ?? choice,
+    fallbackDescription: (choice) => `Resume with '${choice}'.`,
+  });
+  const choices = presentation.choices.map((choice) => ({
+    id: choice.id,
+    label: choice.label,
+    value: choice.id,
+  }));
+
+  return RunStatusProjectionV1.parse({
+    api_version: 'run-status-v1',
+    schema_version: 1,
+    run_folder: input.runFolder,
+    engine_state: 'waiting_checkpoint',
+    reason: 'checkpoint_waiting',
+    legal_next_actions: ['inspect', 'resume'],
+    run_id: input.bootstrapRunId,
+    flow_id: input.bootstrapFlowId,
+    goal: input.bootstrapGoal,
+    current_step: {
+      step_id: stepId,
+      attempt,
+      ...stepMetadata(flow, stepId),
+    },
+    checkpoint: {
+      checkpoint_id: `${stepId}:${attempt}`,
+      step_id: stepId,
+      attempt,
+      prompt: presentation.prompt,
+      choices,
+      request_path: requestAbs,
+    },
+    last_event: input.event,
+    ...input.reportPaths,
+  });
 }
 
 export function projectV2RunStatusFromRunFolder(
@@ -257,6 +480,22 @@ export function projectV2RunStatusFromRunFolder(
         : { ...base, engine_state: 'completed' as const },
     );
   }
+
+  const waiting = v2WaitingCheckpointProjection({
+    runFolder,
+    log,
+    flow,
+    bootstrapRunId,
+    bootstrapFlowId,
+    bootstrapGoal,
+    event,
+    reportPaths,
+    manifestIdentity: {
+      run_id: manifest.run_id as unknown as string,
+      flow_id: manifest.flow_id as unknown as string,
+    },
+  });
+  if (waiting !== undefined) return waiting;
 
   return RunStatusProjectionV1.parse({
     api_version: 'run-status-v1',

@@ -1,6 +1,21 @@
 # Circuit v2 Runtime Import Inventory
 
-Generated for Phase 4.28 retained-runtime narrowing prep. This file records current command output and targeted ownership evidence for deletion-readiness review. The inventory excludes this generated file from the rg scans so it does not cite itself.
+Generated for Phase 4.28 retained-runtime narrowing prep. This file records
+command output and targeted ownership evidence for deletion-readiness review.
+The inventory excludes this generated file from the rg scans so it does not cite
+itself.
+
+Phase 5.5 adds the current deletion-readiness disposition in
+`docs/architecture/v2-deletion-readiness-inventory.md`. Treat that file as the
+current owner map and this file as supporting import evidence.
+
+Phase 5.5 result:
+
+- no `src/runtime` file is deletion-ready;
+- no retained runner or handler test is obsolete;
+- old-path compatibility wrappers still have intentional import support;
+- neutral infrastructure under `src/runtime` needs focused move plans, not broad
+  deletion.
 
 ## Runtime file tree
 

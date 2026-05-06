@@ -1,1 +1,11 @@
-{"verdict":"accept","summary":"Added the fallback guard for the synthetic missing token path.","diagnosis_ref":"fix.diagnosis@v1","changed_files":["src/login.ts"],"evidence":["Synthetic regression proof remained green."]}
+{
+  "verdict": "accept",
+  "summary": "Added the fallback guard for the synthetic missing token path.",
+  "diagnosis_ref": "fix.diagnosis@v1",
+  "changed_files": [
+    "src/login.ts"
+  ],
+  "evidence": [
+    "Synthetic regression proof remained green."
+  ]
+}

@@ -26,6 +26,34 @@ stdout:
       "detail": "<repo>/plugins/circuit/.codex-plugin/plugin.json"
     },
     {
+      "name": "codex_bundled_handoff_hooks_unregistered",
+      "ok": true,
+      "detail": "Codex bundled plugin hooks are not registered in V1; use circuit-next handoff hooks install --host codex",
+      "severity": "warning"
+    },
+    {
+      "name": "bundled_hooks_config_absent",
+      "ok": true,
+      "detail": "Codex loads hooks/hooks.json by default; V1 uses user-level hooks instead"
+    },
+    {
+      "name": "session_start_hook_exists",
+      "ok": true,
+      "detail": "<repo>/plugins/circuit/hooks/session-start.mjs"
+    },
+    {
+      "name": "codex_hooks_feature_flag_visible",
+      "ok": true,
+      "detail": "Codex SessionStart hooks require codex_hooks to be enabled or stable",
+      "severity": "warning"
+    },
+    {
+      "name": "codex_user_handoff_hook_installed",
+      "ok": false,
+      "detail": "Install with: circuit-next handoff hooks install --host codex (checks <home>/.codex/hooks.json)",
+      "severity": "warning"
+    },
+    {
       "name": "skills_directory_exists",
       "ok": true,
       "detail": "<repo>/plugins/circuit/skills"
@@ -33,12 +61,52 @@ stdout:
     {
       "name": "skills_present",
       "ok": true,
-      "detail": "1 skills"
+      "detail": "9 skills"
+    },
+    {
+      "name": "skill_name_build",
+      "ok": true,
+      "detail": "name=build"
+    },
+    {
+      "name": "skill_name_create",
+      "ok": true,
+      "detail": "name=create"
+    },
+    {
+      "name": "skill_name_explore",
+      "ok": true,
+      "detail": "name=explore"
+    },
+    {
+      "name": "skill_name_fix",
+      "ok": true,
+      "detail": "name=fix"
+    },
+    {
+      "name": "skill_name_handoff",
+      "ok": true,
+      "detail": "name=handoff"
+    },
+    {
+      "name": "skill_name_migrate",
+      "ok": true,
+      "detail": "name=migrate"
+    },
+    {
+      "name": "skill_name_review",
+      "ok": true,
+      "detail": "name=review"
     },
     {
       "name": "skill_name_run",
       "ok": true,
       "detail": "name=run"
+    },
+    {
+      "name": "skill_name_sweep",
+      "ok": true,
+      "detail": "name=sweep"
     },
     {
       "name": "wrapper_exists",
@@ -138,17 +206,17 @@ stdout:
     {
       "name": "temp_repo_review_smoke",
       "ok": true,
-      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"6051a42e-08fd-4105-aca4-fa52748d33ac\",\"flow_id\":\"review\",\"recorded_at\":\"2026-04-30T07:38:27.514Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit selected review: matched change review request; routed to audit-only review flow\",\"importance\":\"major\",\"tone\":\"info\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review flow\",\"router_signal\":\"change review request\"}\n{\"sc"
+      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"b31701bb-b315-486f-9858-313fcfdfb06e\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-05T23:02:54.962Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit selected review: matched change review request; routed to audit-only review flow\",\"importance\":\"major\",\"tone\":\"info\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review flow\",\"router_signal\":\"change review request\"}\n{\"sc"
     },
     {
       "name": "temp_repo_review_progress",
       "ok": true,
-      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,evidence.collected,evidence.warning,step.completed,task_list.updated,step.started,task_list.updated,relay.started,relay.completed,step.completed,task_list.updated,step.started,task_list.updated,evidence.collected,evidence.warning,step.completed,task_list.updated,run.completed"
+      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,step.completed,task_list.updated,step.started,task_list.updated,relay.started,step.completed,task_list.updated,step.started,task_list.updated,step.completed,task_list.updated,run.completed"
     },
     {
       "name": "temp_repo_review_progress_display",
       "ok": true,
-      "detail": "display_events=22"
+      "detail": "display_events=17"
     },
     {
       "name": "temp_repo_review_operator_summary",
@@ -158,7 +226,7 @@ stdout:
     {
       "name": "temp_repo_checkpoint_user_input_requested",
       "ok": true,
-      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,checkpoint.waiting,user_input.requested"
+      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,checkpoint.waiting,user_input.requested,task_list.updated"
     }
   ]
 }

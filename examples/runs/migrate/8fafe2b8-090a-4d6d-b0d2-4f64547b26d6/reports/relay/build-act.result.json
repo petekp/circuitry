@@ -1,1 +1,0 @@
-{"verdict":"accept","summary":"Implemented the requested synthetic change.","changed_files":["src/example.ts"],"evidence":["Deterministic Build implementation proof."]}

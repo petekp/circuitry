@@ -7,12 +7,9 @@
 // summary references brief.subject so the result is self-contained.
 
 import { readFileSync } from 'node:fs';
-import { reportPathForSchemaInCompiledFlow } from '../../../runtime/registries/close-writers/shared.js';
-import type {
-  CloseBuildContext,
-  CloseBuilder,
-} from '../../../runtime/registries/close-writers/types.js';
 import { resolveRunRelative } from '../../../shared/run-relative-path.js';
+import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
+import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
 import {
   ExploreBrief,
   ExploreCompose,

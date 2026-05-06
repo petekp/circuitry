@@ -4,21 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { main } from '../../src/cli/circuit.js';
+import { resumeRetainedCompiledFlowCheckpoint as resumeCompiledFlowCheckpoint } from '../../src/compat/retained-checkpoint-folders.js';
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import { sha256Hex } from '../../src/runtime/connectors/shared.js';
-import {
-  type RelayFn,
-  type RelayInput,
-  resumeCompiledFlowCheckpoint,
-  runCompiledFlow,
-} from '../../src/runtime/runner.js';
 import { traceEntryLogPath } from '../../src/runtime/trace-writer.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';
 import { SkillId } from '../../src/schemas/ids.js';
+import { type RelayResult, sha256Hex } from '../../src/shared/connector-relay.js';
 import { manifestSnapshotPath } from '../../src/shared/manifest-snapshot.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
@@ -69,6 +66,24 @@ function rewriteTraceEntry(
   }
   lines[index] = JSON.stringify(rewrite(parsed as Record<string, unknown>));
   writeFileSync(tracePath, `${lines.join('\n')}\n`);
+}
+
+async function captureStdout(fn: () => Promise<number>): Promise<{
+  readonly code: number;
+  readonly output: Record<string, unknown>;
+}> {
+  const originalWrite = process.stdout.write;
+  let stdout = '';
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    const code = await fn();
+    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
+  } finally {
+    process.stdout.write = originalWrite;
+  }
 }
 
 function checkpointCompiledFlow(options: {
@@ -504,6 +519,103 @@ describe('Build checkpoint execution substrate', () => {
         trace_entry.report_path === 'reports/build/brief.json',
     );
     expect(briefReportWrites).toHaveLength(1);
+  });
+
+  it('routes retained checkpoint resume by saved folder shape even when strict v2 is enabled', async () => {
+    const runFolder = join(runFolderBase, 'resume-retained-with-strict-v2');
+    await startPausedBuildCheckpoint({
+      runFolder,
+      runId: 'b3000000-0000-0000-0000-000000000018',
+      goal: 'Resume retained checkpoint with strict v2 enabled',
+    });
+    const oldStrict = process.env.CIRCUIT_V2_RUNTIME;
+    process.env.CIRCUIT_V2_RUNTIME = '1';
+    try {
+      const { code, output } = await captureStdout(() =>
+        main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
+          now: deterministicNow(Date.UTC(2026, 3, 25, 5, 30, 0)),
+          configCwd: process.cwd(),
+        }),
+      );
+
+      expect(code).toBe(0);
+      expect(output).toMatchObject({
+        run_id: 'b3000000-0000-0000-0000-000000000018',
+        flow_id: 'build-checkpoint-exec-test',
+        outcome: 'complete',
+        runtime: 'retained',
+        runtime_reason: 'checkpoint resume remains on the retained runtime',
+      });
+    } finally {
+      if (oldStrict === undefined) {
+        process.env.CIRCUIT_V2_RUNTIME = undefined;
+      } else {
+        process.env.CIRCUIT_V2_RUNTIME = oldStrict;
+      }
+    }
+  });
+
+  it('projects and resumes retained checkpoint folders through retained compatibility', async () => {
+    const runFolder = join(runFolderBase, 'retained-status-and-resume');
+    await startPausedBuildCheckpoint({
+      runFolder,
+      runId: 'b3000000-0000-0000-0000-000000000019',
+      goal: 'Project retained checkpoint before resume',
+    });
+
+    const status = await captureStdout(() =>
+      main(['runs', 'show', '--run-folder', runFolder, '--json']),
+    );
+    expect(status.code).toBe(0);
+    expect(status.output).toMatchObject({
+      api_version: 'run-status-v1',
+      run_id: 'b3000000-0000-0000-0000-000000000019',
+      flow_id: 'build-checkpoint-exec-test',
+      engine_state: 'waiting_checkpoint',
+      reason: 'checkpoint_waiting',
+      legal_next_actions: ['inspect', 'resume'],
+      current_step: { step_id: 'frame-step', attempt: 1 },
+      checkpoint: {
+        step_id: 'frame-step',
+        choices: [
+          { id: 'continue', value: 'continue' },
+          { id: 'revise', value: 'revise' },
+        ],
+      },
+    });
+
+    const oldDisabled = process.env.CIRCUIT_DISABLE_V2_RUNTIME;
+    const oldDiagnostics = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
+    process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
+    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
+    try {
+      const resumed = await captureStdout(() =>
+        main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
+          now: deterministicNow(Date.UTC(2026, 3, 25, 5, 45, 0)),
+          configCwd: process.cwd(),
+        }),
+      );
+
+      expect(resumed.code).toBe(0);
+      expect(resumed.output).toMatchObject({
+        run_id: 'b3000000-0000-0000-0000-000000000019',
+        flow_id: 'build-checkpoint-exec-test',
+        outcome: 'complete',
+        runtime: 'retained',
+        runtime_reason: 'checkpoint resume remains on the retained runtime',
+      });
+    } finally {
+      if (oldDisabled === undefined) {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = undefined;
+      } else {
+        process.env.CIRCUIT_DISABLE_V2_RUNTIME = oldDisabled;
+      }
+      if (oldDiagnostics === undefined) {
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
+      } else {
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDiagnostics;
+      }
+    }
   });
 
   it('rejects checkpoint resume choices outside the declared allow list', async () => {

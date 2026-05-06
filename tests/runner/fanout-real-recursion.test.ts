@@ -21,17 +21,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type {
+  ChildCompiledFlowResolver,
+  WorktreeRunner,
+} from '../../src/compat/retained-runtime.js';
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import {
-  type ChildCompiledFlowResolver,
-  type RelayFn,
-  type WorktreeRunner,
-  runCompiledFlow,
-} from '../../src/runtime/runner.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const PARENT_WORKFLOW_ID = 'parent-fanout-recursion-test' as unknown as CompiledFlowId;
 const CHILD_WORKFLOW_ID = 'child-fanout-recursion-test' as unknown as CompiledFlowId;

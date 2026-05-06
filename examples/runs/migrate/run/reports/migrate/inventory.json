@@ -1,1 +1,22 @@
-{"verdict":"accept","summary":"One legacy API site found for the synthetic migration proof.","items":[{"id":"item-1","path":"src/legacy-api.ts","category":"import-site","description":"Synthetic legacy API import site."}],"batches":[{"id":"batch-1","title":"Replace the legacy API import","item_ids":["item-1"],"rationale":"Single safe batch for the proof."}]}
+{
+  "verdict": "accept",
+  "summary": "One legacy API site found for the synthetic migration proof.",
+  "items": [
+    {
+      "id": "item-1",
+      "path": "src/legacy-api.ts",
+      "category": "import-site",
+      "description": "Synthetic legacy API import site."
+    }
+  ],
+  "batches": [
+    {
+      "id": "batch-1",
+      "title": "Replace the legacy API import",
+      "item_ids": [
+        "item-1"
+      ],
+      "rationale": "Single safe batch for the proof."
+    }
+  ]
+}

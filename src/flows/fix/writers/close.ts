@@ -11,11 +11,8 @@
 // review_status is 'completed' when the review input is present (and
 // review_verdict is set), 'skipped' otherwise (with a default skip reason).
 
-import { reportPathForSchemaInCompiledFlow } from '../../../runtime/registries/close-writers/shared.js';
-import type {
-  CloseBuildContext,
-  CloseBuilder,
-} from '../../../runtime/registries/close-writers/types.js';
+import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
+import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
 import {
   FixBrief,
   FixChange,

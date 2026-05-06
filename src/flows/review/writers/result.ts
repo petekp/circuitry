@@ -8,12 +8,12 @@
 // relay result, so the path resolver is custom.
 
 import { readFileSync } from 'node:fs';
+import type { CompiledFlow } from '../../../schemas/compiled-flow.js';
+import { resolveRunRelative } from '../../../shared/run-relative-path.js';
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
-import type { CompiledFlow } from '../../../schemas/compiled-flow.js';
-import { resolveRunRelative } from '../../../shared/run-relative-path.js';
+} from '../../registries/compose-writers/types.js';
 import {
   type ReviewEvidence,
   type ReviewEvidenceSummary,

@@ -9,7 +9,7 @@
   "entry_mode_source": "explicit",
   "run_folder": "<repo>/examples/runs/migrate/run",
   "outcome": "complete",
-  "trace_entries_observed": 44,
+  "trace_entries_observed": 41,
   "result_path": "<repo>/examples/runs/migrate/run/reports/result.json",
   "operator_summary_path": "<repo>/examples/runs/migrate/run/reports/operator-summary.json",
   "operator_summary_markdown_path": "<repo>/examples/runs/migrate/run/reports/operator-summary.md"

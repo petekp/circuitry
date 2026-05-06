@@ -24,12 +24,12 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { RoutablePackage } from '../../../src/flows/catalog-derivations.js';
 import type {
   CompiledFlowPackage,
   CompiledFlowRoutingMetadata,
   CompiledFlowSignal,
 } from '../../../src/flows/types.js';
-import type { RoutablePackage } from '../../../src/runtime/catalog-derivations.js';
 import { classifyTaskAgainstRoutables } from '../../../src/runtime/router.js';
 
 function mulberry32(seed: number): () => number {

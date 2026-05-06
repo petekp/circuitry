@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { findCloseBuilder } from '../../src/runtime/registries/close-writers/registry.js';
-import { findComposeBuilder } from '../../src/runtime/registries/compose-writers/registry.js';
-import { parseReport } from '../../src/runtime/registries/report-schemas.js';
+import { findCloseBuilder } from '../../src/flows/registries/close-writers/registry.js';
+import { findComposeBuilder } from '../../src/flows/registries/compose-writers/registry.js';
+import { parseReport } from '../../src/flows/registries/report-schemas.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
 const REPO_ROOT = resolve('.');

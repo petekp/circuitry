@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
+import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from './runtime-compatibility-policy.js';
 import { utilityProgress } from './utility-progress.js';
 
 interface CreateArgs {
@@ -413,6 +414,9 @@ function summaryMarkdown(input: {
     '',
     '## Validation',
     'The generated compiled flow parsed successfully and passed flow-kind policy validation.',
+    '',
+    '## Runtime Policy',
+    CUSTOM_FLOW_ROOT_RUNTIME_POLICY,
     '',
     '## Usage',
     `\`${invocation}\``,

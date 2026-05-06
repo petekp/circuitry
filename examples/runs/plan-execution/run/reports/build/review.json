@@ -1,1 +1,5 @@
-{"verdict":"accept","summary":"No blocking issue found in the synthetic Build proof.","findings":[]}
+{
+  "verdict": "accept",
+  "summary": "No blocking issue found in the synthetic Build proof.",
+  "findings": []
+}

@@ -11,11 +11,8 @@
 // Build's RunResult copied verbatim by the sub-run handler — its
 // `outcome` field tells us whether the underlying Build succeeded.
 
-import { reportPathForSchemaInCompiledFlow } from '../../../runtime/registries/close-writers/shared.js';
-import type {
-  CloseBuildContext,
-  CloseBuilder,
-} from '../../../runtime/registries/close-writers/types.js';
+import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
+import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
 import {
   MigrateBatch,
   MigrateBrief,

@@ -3,13 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
 import {
-  type RelayFn,
-  runCompiledFlow,
-  writePrototypeComposeReport,
-} from '../../src/runtime/runner.js';
+  runRetainedCompiledFlow as runCompiledFlow,
+  writeRetainedPrototypeComposeReport as writePrototypeComposeReport,
+} from '../../src/compat/retained-runtime.js';
+import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
 import { readRunTrace } from '../../src/runtime/trace-reader.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
@@ -18,6 +16,8 @@ import { RunResult } from '../../src/schemas/result.js';
 import { RunProjection } from '../../src/schemas/run.js';
 import { Snapshot } from '../../src/schemas/snapshot.js';
 import type { RunClosedOutcome } from '../../src/schemas/trace-entry.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 type TerminalRoute = '@complete' | '@stop' | '@escalate' | '@handoff';
 type RichRoute = 'ask' | 'retry' | 'revise' | 'stop' | 'handoff' | 'escalate';

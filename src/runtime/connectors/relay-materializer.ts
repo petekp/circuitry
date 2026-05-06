@@ -94,7 +94,7 @@ export interface RelayMaterializeOutput {
 // call around the materializer call site); by the time `writes.report`
 // reaches this function the caller has already decided that the
 // report is safe to write. Schema parsing uses the report schema
-// registry at `src/runtime/registries/report-schemas.ts`; unknown schema names
+// registry at `src/flows/registries/report-schemas.ts`; unknown schema names
 // are fail-closed and never reach this call site with a populated
 // `writes.report` slot. The body bytes written here are the same
 // bytes that satisfied the schema parse — the report file and the

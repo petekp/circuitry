@@ -9,7 +9,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { SweepAnalysis, SweepQueue } from '../reports.js';
 
 type TriageAction = 'act' | 'prove-then-act' | 'prove' | 'defer';

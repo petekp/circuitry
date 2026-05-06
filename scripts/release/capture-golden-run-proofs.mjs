@@ -13,12 +13,13 @@ import {
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { writeComposeReport } from '../../dist/runtime/runner.js';
+import { executeComposeV2 } from '../../dist/core-v2/executors/compose.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = resolve(__dirname, '../..');
 const scrubbedProjectRoot = '<repo>';
+const homeDir = process.env.HOME;
 
 function deterministicNow(startMs) {
   let n = 0;
@@ -60,6 +61,7 @@ async function runCli(argv, options) {
 function scrubText(text, pathAliases = []) {
   let scrubbed = text
     .replaceAll(projectRoot, scrubbedProjectRoot)
+    .replaceAll(homeDir === undefined || homeDir.length === 0 ? '\0' : homeDir, '<home>')
     .replace(/\/private\/var\/folders\/[^\s"')]+/g, '<tmp>')
     .replace(/\/var\/folders\/[^\s"')]+/g, '<tmp>')
     .replace(/\/tmp\/[^\s"')]+/g, '<tmp>');
@@ -216,12 +218,15 @@ function fixRelayer() {
   };
 }
 
-function fixProofComposeWriter(input) {
-  if (input.step.id !== 'fix-frame') {
-    writeComposeReport(input);
-    return;
+async function fixProofComposeExecutor(step, context) {
+  if (step.kind !== 'compose' || step.id !== 'fix-frame') {
+    return await executeComposeV2(step, context);
   }
-  const goal = input.goal;
+  const report = step.writes?.report;
+  if (report?.schema === undefined) {
+    throw new Error("Fix proof compose executor expected 'fix-frame' to write a report");
+  }
+  const goal = context.goal;
   const brief = {
     problem_statement: goal,
     expected_behavior: `After fix: ${goal}`,
@@ -251,9 +256,19 @@ function fixProofComposeWriter(input) {
       },
     ],
   };
-  const reportPath = join(input.runFolder, input.step.writes.report.path);
-  mkdirSync(dirname(reportPath), { recursive: true });
-  writeFileSync(reportPath, `${JSON.stringify(brief, null, 2)}\n`);
+  await context.files.writeJson(report, brief);
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'step.report_written',
+    step_id: step.id,
+    report_path: report.path,
+    report_schema: report.schema,
+  });
+  return { route: 'pass', details: { writer: step.writer, proof: 'release-fix-brief' } };
+}
+
+function fixProofExecutors() {
+  return { compose: fixProofComposeExecutor };
 }
 
 function migrateRelayer() {
@@ -495,7 +510,7 @@ async function captureCliScenario(scenario) {
     const now = deterministicNow(scenario.startMs);
     const run = await runCli([...scenario.argv, '--run-folder', runFolder, '--progress', 'jsonl'], {
       relayer: scenario.relayer,
-      ...(scenario.composeWriter === undefined ? {} : { composeWriter: scenario.composeWriter }),
+      ...(scenario.v2Executors === undefined ? {} : { v2Executors: scenario.v2Executors }),
       runId: scenario.runId,
       now,
       configCwd: projectRoot,
@@ -755,7 +770,7 @@ const scenarios = [
     slug: 'fix',
     argv: ['run', '--goal', 'quick fix: restore the failing login test'],
     relayer: fixRelayer(),
-    composeWriter: fixProofComposeWriter,
+    v2Executors: fixProofExecutors(),
     runId: '44444444-4444-4444-4444-444444444407',
     startMs: Date.UTC(2026, 3, 29, 20, 30, 0),
   },

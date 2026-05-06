@@ -13,8 +13,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { reportPathForSchemaInCompiledFlow } from '../../../src/runtime/registries/close-writers/shared.js';
-import { runCrossReportValidator } from '../../../src/runtime/registries/cross-report-validators.js';
+import { reportPathForSchemaInCompiledFlow } from '../../../src/flows/registries/close-writers/shared.js';
+import { runCrossReportValidator } from '../../../src/flows/registries/cross-report-validators.js';
 import { CompiledFlow } from '../../../src/schemas/compiled-flow.js';
 
 const SWEEP_FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'sweep', 'circuit.json');

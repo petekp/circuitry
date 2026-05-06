@@ -12,9 +12,12 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { findComposeBuilder } from '../../src/runtime/registries/compose-writers/registry.js';
-import type { ComposeBuilder } from '../../src/runtime/registries/compose-writers/types.js';
-import { runCompiledFlow, writeComposeReport } from '../../src/runtime/runner.js';
+import {
+  runRetainedCompiledFlow as runCompiledFlow,
+  writeRetainedComposeReport as writeComposeReport,
+} from '../../src/compat/retained-runtime.js';
+import { findComposeBuilder } from '../../src/flows/registries/compose-writers/registry.js';
+import type { ComposeBuilder } from '../../src/flows/registries/compose-writers/types.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';

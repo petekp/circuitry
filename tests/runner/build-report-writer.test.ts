@@ -5,6 +5,11 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  type ComposeWriterFn,
+  runRetainedCompiledFlow as runCompiledFlow,
+  writeRetainedComposeReport as writeComposeReport,
+} from '../../src/compat/retained-runtime.js';
+import {
   BuildBrief,
   BuildImplementation,
   BuildPlan,
@@ -12,11 +17,6 @@ import {
   BuildReview,
   BuildVerification,
 } from '../../src/flows/build/reports.js';
-import {
-  type ComposeWriterFn,
-  runCompiledFlow,
-  writeComposeReport,
-} from '../../src/runtime/runner.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';

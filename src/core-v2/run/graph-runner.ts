@@ -10,6 +10,8 @@ import type {
 } from '../../shared/relay-runtime-types.js';
 import type { TerminalTarget } from '../domain/route.js';
 import type { RunClosedOutcomeV2 } from '../domain/run.js';
+import { isWaitingCheckpointStepOutcomeV2 } from '../domain/step.js';
+import type { TraceEntryV2 } from '../domain/trace.js';
 import { type ExecutorRegistryV2, createDefaultExecutorsV2 } from '../executors/index.js';
 import type { RelayConnectorV2 } from '../executors/relay.js';
 import type { ExecutableFlowV2, ExecutableStepV2 } from '../manifest/executable-flow.js';
@@ -49,10 +51,38 @@ export interface GraphRunnerOptionsV2 {
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
   readonly progress?: ProgressReporter;
   readonly maxSteps?: number;
+  readonly resumeCheckpoint?: {
+    readonly stepId: string;
+    readonly attempt: number;
+    readonly selection: string;
+  };
 }
 
 export interface GraphRunResultV2 extends RunResultV2 {
   readonly resultPath: string;
+}
+
+export interface GraphCheckpointWaitingResultV2 {
+  readonly kind: 'checkpoint_waiting';
+  readonly outcome: 'checkpoint_waiting';
+  readonly runFolder: string;
+  readonly runId: string;
+  readonly flowId: string;
+  readonly traceEntriesObserved: number;
+  readonly checkpoint: {
+    readonly stepId: string;
+    readonly attempt: number;
+    readonly requestPath: string;
+    readonly allowedChoices: readonly string[];
+  };
+}
+
+export type GraphExecutionResultV2 = GraphRunResultV2 | GraphCheckpointWaitingResultV2;
+
+export function isGraphCheckpointWaitingResultV2(
+  result: GraphExecutionResultV2,
+): result is GraphCheckpointWaitingResultV2 {
+  return 'kind' in result && result.kind === 'checkpoint_waiting';
 }
 
 const RECOVERY_ROUTE_LABELS = new Set(['retry', 'revise']);
@@ -99,6 +129,15 @@ function configuredMaxAttempts(step: ExecutableStepV2): number | undefined {
 
 function maxAttemptsForRoute(step: ExecutableStepV2, route: string | undefined): number {
   return configuredMaxAttempts(step) ?? (isRecoveryRoute(route) ? 2 : 1);
+}
+
+function completedStepCountsFromTrace(entries: readonly TraceEntryV2[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.kind !== 'step.completed' || entry.step_id === undefined) continue;
+    counts.set(entry.step_id, (counts.get(entry.step_id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 async function assertFreshRunDir(runDir: string): Promise<void> {
@@ -156,13 +195,16 @@ async function closeRun(
   return { ...result, resultPath };
 }
 
-export async function executeExecutableFlowV2(
+export async function executeExecutableFlowV2WithWaiting(
   flow: ExecutableFlowV2,
   options: GraphRunnerOptionsV2,
-): Promise<GraphRunResultV2> {
+): Promise<GraphExecutionResultV2> {
   assertExecutableFlowV2(flow);
   await mkdir(options.runDir, { recursive: true });
-  await assertFreshRunDir(options.runDir);
+  const isResume = options.resumeCheckpoint !== undefined;
+  if (!isResume) {
+    await assertFreshRunDir(options.runDir);
+  }
 
   const runId = options.runId ?? randomUUID();
   const progressProjector = createProgressProjectorV2({
@@ -177,8 +219,14 @@ export async function executeExecutableFlowV2(
     onAppend: progressProjector,
   });
   const existingTrace = await trace.load();
-  if (existingTrace.length > 0) {
+  if (!isResume && existingTrace.length > 0) {
     throw new Error('core-v2 baseline requires a fresh run directory');
+  }
+  if (isResume && existingTrace.length === 0) {
+    throw new Error('core-v2 resume requires an existing trace');
+  }
+  if (isResume && existingTrace.some((entry) => entry.kind === 'run.closed')) {
+    throw new Error('core-v2 resume rejected: run is already closed');
   }
 
   const files = new RunFileStore(options.runDir, validateReportValueV2);
@@ -208,6 +256,9 @@ export async function executeExecutableFlowV2(
       ? {}
       : { selectionConfigLayers: options.selectionConfigLayers }),
     ...(options.progress === undefined ? {} : { progress: options.progress }),
+    ...(options.resumeCheckpoint === undefined
+      ? {}
+      : { resumeCheckpoint: options.resumeCheckpoint }),
   };
   const executors: ExecutorRegistryV2 = {
     ...createDefaultExecutorsV2({
@@ -216,11 +267,13 @@ export async function executeExecutableFlowV2(
     ...options.executors,
   };
   const steps = new Map(flow.steps.map((step) => [step.id, step]));
-  const completedStepCounts = new Map<string, number>();
+  const completedStepCounts = isResume
+    ? completedStepCountsFromTrace(existingTrace)
+    : new Map<string, number>();
   const maxSteps = options.maxSteps ?? Math.max(flow.steps.length * 4, 8);
 
   const bootstrapRecordedAt = context.now().toISOString();
-  if (options.manifestBytes !== undefined) {
+  if (!isResume && options.manifestBytes !== undefined) {
     await writeManifestSnapshotV2({
       runDir: options.runDir,
       runId,
@@ -230,27 +283,29 @@ export async function executeExecutableFlowV2(
     });
   }
 
-  await trace.append({
-    run_id: runId,
-    kind: 'run.bootstrapped',
-    engine: 'core-v2',
-    recorded_at: bootstrapRecordedAt,
-    flow_id: flow.id,
-    goal: context.goal,
-    manifest_hash: context.manifestHash,
-    ...(context.depth === undefined ? {} : { depth: context.depth }),
-    data: {
-      flow_id: flow.id,
+  if (!isResume) {
+    await trace.append({
+      run_id: runId,
+      kind: 'run.bootstrapped',
       engine: 'core-v2',
-      version: flow.version,
-      entry: flow.entry,
+      recorded_at: bootstrapRecordedAt,
+      flow_id: flow.id,
+      goal: context.goal,
       manifest_hash: context.manifestHash,
-      ...(context.entryModeName === undefined ? {} : { entry_mode: context.entryModeName }),
       ...(context.depth === undefined ? {} : { depth: context.depth }),
-    },
-  });
+      data: {
+        flow_id: flow.id,
+        engine: 'core-v2',
+        version: flow.version,
+        entry: flow.entry,
+        manifest_hash: context.manifestHash,
+        ...(context.entryModeName === undefined ? {} : { entry_mode: context.entryModeName }),
+        ...(context.depth === undefined ? {} : { depth: context.depth }),
+      },
+    });
+  }
 
-  let currentStepId = flow.entry;
+  let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken: string | undefined;
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
@@ -263,10 +318,12 @@ export async function executeExecutableFlowV2(
       );
     }
 
+    const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
     const maxAttempts = maxAttemptsForRoute(step, incomingRouteTaken);
-    const attempt = completedCount + 1;
+    const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
     if (
+      !isResumedCheckpoint &&
       completedCount > 0 &&
       (!isRecoveryRoute(incomingRouteTaken) || completedCount >= maxAttempts)
     ) {
@@ -285,12 +342,32 @@ export async function executeExecutableFlowV2(
       return await closeRun(context, 'aborted', undefined, reason);
     }
 
-    await trace.append({ run_id: runId, kind: 'step.entered', step_id: step.id, attempt });
+    if (!isResumedCheckpoint) {
+      await trace.append({ run_id: runId, kind: 'step.entered', step_id: step.id, attempt });
+    }
 
     let route: string;
     let details: Record<string, unknown>;
     try {
-      const outcome = await executors[step.kind](step, context);
+      const stepContext: RunContextV2 = {
+        ...context,
+        activeStepAttempt: attempt,
+        ...(isResumedCheckpoint && options.resumeCheckpoint !== undefined
+          ? { resumeCheckpoint: options.resumeCheckpoint }
+          : {}),
+      };
+      const outcome = await executors[step.kind](step, stepContext);
+      if (isWaitingCheckpointStepOutcomeV2(outcome)) {
+        return {
+          kind: 'checkpoint_waiting',
+          outcome: 'checkpoint_waiting',
+          runFolder: options.runDir,
+          runId,
+          flowId: flow.id,
+          traceEntriesObserved: trace.getAll().length,
+          checkpoint: outcome.checkpoint,
+        };
+      }
       route = outcome.route;
       details = outcome.details ?? {};
     } catch (error) {
@@ -385,4 +462,17 @@ export async function executeExecutableFlowV2(
   }
 
   return await closeRun(context, 'aborted', undefined, `maxSteps exceeded: ${maxSteps}`);
+}
+
+export async function executeExecutableFlowV2(
+  flow: ExecutableFlowV2,
+  options: GraphRunnerOptionsV2,
+): Promise<GraphRunResultV2> {
+  const result = await executeExecutableFlowV2WithWaiting(flow, options);
+  if (isGraphCheckpointWaitingResultV2(result)) {
+    throw new Error(
+      `core-v2 run '${result.runId}' paused at checkpoint '${result.checkpoint.stepId}', which requires checkpoint-aware resume routing`,
+    );
+  }
+  return result;
 }

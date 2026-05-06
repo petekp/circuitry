@@ -1,0 +1,171 @@
+// Pure derivation helpers that turn flow packages into engine
+// registries. Each registry file delegates to one of these so the
+// derivation logic (with its duplicate-detection and default-package
+// invariants) is testable in isolation against synthetic packages.
+
+import type { z } from 'zod';
+import type { CheckpointBriefBuilder } from './registries/checkpoint-writers/types.js';
+import type { CloseBuilder } from './registries/close-writers/types.js';
+import type { ComposeBuilder } from './registries/compose-writers/types.js';
+import type { CrossReportValidator } from './registries/cross-report-validators.js';
+import type { StructuralShapeHint } from './registries/shape-hints/types.js';
+import type { VerificationBuilder } from './registries/verification-writers/types.js';
+import type { CompiledFlowPackage, CompiledFlowRoutingMetadata } from './types.js';
+
+// Build a Map keyed by builder.resultSchemaName from one writer slot
+// across all packages. Throws on duplicate keys with a message that
+// names both the slot and the offending flow id.
+function buildBuilderRegistry<B extends { readonly resultSchemaName: string }>(
+  packages: readonly CompiledFlowPackage[],
+  slot: 'compose' | 'close' | 'verification' | 'checkpoint',
+  pluck: (pkg: CompiledFlowPackage) => readonly B[],
+): ReadonlyMap<string, B> {
+  const map = new Map<string, B>();
+  for (const pkg of packages) {
+    for (const builder of pluck(pkg)) {
+      if (map.has(builder.resultSchemaName)) {
+        throw new Error(
+          `duplicate ${slot} builder registered for schema '${builder.resultSchemaName}' (flow ${pkg.id})`,
+        );
+      }
+      map.set(builder.resultSchemaName, builder);
+    }
+  }
+  return map;
+}
+
+export function buildComposeRegistry(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, ComposeBuilder> {
+  return buildBuilderRegistry(packages, 'compose', (pkg) => pkg.writers.compose);
+}
+
+export function buildCloseRegistry(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, CloseBuilder> {
+  return buildBuilderRegistry(packages, 'close', (pkg) => pkg.writers.close);
+}
+
+export function buildVerificationRegistry(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, VerificationBuilder> {
+  return buildBuilderRegistry(packages, 'verification', (pkg) => pkg.writers.verification);
+}
+
+export function buildCheckpointRegistry(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, CheckpointBriefBuilder> {
+  return buildBuilderRegistry(packages, 'checkpoint', (pkg) => pkg.writers.checkpoint);
+}
+
+// Compose the relay-report zod registry from the catalog plus an
+// optional fixtures map (used by tests). Throws when a schema name
+// collides between fixtures and packages, or across packages.
+export function buildReportSchemaRegistry(
+  packages: readonly CompiledFlowPackage[],
+  fixtures: Readonly<Record<string, z.ZodType<unknown>>> = {},
+): Readonly<Record<string, z.ZodType<unknown>>> {
+  const out: Record<string, z.ZodType<unknown>> = { ...fixtures };
+  for (const pkg of packages) {
+    for (const report of pkg.relayReports) {
+      if (Object.hasOwn(out, report.schemaName)) {
+        throw new Error(
+          `duplicate relay report schema '${report.schemaName}' registered (flow ${pkg.id})`,
+        );
+      }
+      out[report.schemaName] = report.schema;
+    }
+  }
+  return Object.freeze(out);
+}
+
+// Schema-keyed relay shape hints. Throws on duplicates so a hint
+// authoring error fails loudly at registry construction.
+export function buildSchemaHintMap(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, string> {
+  const map = new Map<string, string>();
+  for (const pkg of packages) {
+    for (const report of pkg.relayReports) {
+      if (report.relayHint === undefined) continue;
+      if (map.has(report.schemaName)) {
+        throw new Error(
+          `duplicate shape hint registered for schema '${report.schemaName}' (flow ${pkg.id})`,
+        );
+      }
+      map.set(report.schemaName, report.relayHint);
+    }
+  }
+  return map;
+}
+
+export function buildCrossReportValidatorRegistry(
+  packages: readonly CompiledFlowPackage[],
+): ReadonlyMap<string, CrossReportValidator> {
+  const map = new Map<string, CrossReportValidator>();
+  for (const pkg of packages) {
+    for (const report of pkg.relayReports) {
+      if (report.crossReportValidate === undefined) continue;
+      if (map.has(report.schemaName)) {
+        throw new Error(
+          `duplicate cross-report validator registered for schema '${report.schemaName}' (flow ${pkg.id})`,
+        );
+      }
+      map.set(report.schemaName, report.crossReportValidate);
+    }
+  }
+  return map;
+}
+
+export function buildStructuralHintList(
+  packages: readonly CompiledFlowPackage[],
+): readonly StructuralShapeHint[] {
+  const list: StructuralShapeHint[] = [];
+  const seen = new Set<string>();
+  for (const pkg of packages) {
+    if (pkg.structuralHints === undefined) continue;
+    for (const hint of pkg.structuralHints) {
+      if (seen.has(hint.id)) {
+        throw new Error(`duplicate structural shape hint id '${hint.id}' (flow ${pkg.id})`);
+      }
+      seen.add(hint.id);
+      list.push(hint);
+    }
+  }
+  return list;
+}
+
+export interface RoutablePackage {
+  readonly pkg: CompiledFlowPackage;
+  readonly routing: CompiledFlowRoutingMetadata;
+}
+
+// Walk packages, keep the routable ones (those with a routing block),
+// and sort by routing.order ascending. Stable sort: input order breaks
+// ties.
+export function buildRoutablePackages(
+  packages: readonly CompiledFlowPackage[],
+): readonly RoutablePackage[] {
+  const out: RoutablePackage[] = [];
+  for (const pkg of packages) {
+    if (pkg.routing === undefined) continue;
+    out.push({ pkg, routing: pkg.routing });
+  }
+  return out.sort((a, b) => a.routing.order - b.routing.order);
+}
+
+// Find the unique default package across the routable set. Throws if
+// no package or more than one package is marked isDefault.
+export function findDefaultRoutablePackage(routables: readonly RoutablePackage[]): RoutablePackage {
+  const defaults = routables.filter((entry) => entry.routing.isDefault === true);
+  const [first, ...rest] = defaults;
+  if (first === undefined) {
+    throw new Error('no flow package marked isDefault — router has no fallback');
+  }
+  if (rest.length > 0) {
+    throw new Error(
+      `more than one default flow package: ${defaults.map((entry) => entry.pkg.id).join(', ')}`,
+    );
+  }
+  return first;
+}

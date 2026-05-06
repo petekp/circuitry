@@ -19,10 +19,13 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  runRetainedCompiledFlow as runCompiledFlow,
+  writeRetainedPrototypeComposeReport as writePrototypeComposeReport,
+} from '../../src/compat/retained-runtime.js';
+import {
   type CompileResult,
   compileSchematicToCompiledFlow,
 } from '../../src/runtime/compile-schematic-to-flow.js';
-import { runCompiledFlow, writePrototypeComposeReport } from '../../src/runtime/runner.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import type { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { FlowBlockCatalog } from '../../src/schemas/flow-blocks.js';

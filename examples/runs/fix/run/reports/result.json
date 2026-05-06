@@ -4,9 +4,9 @@
   "flow_id": "fix",
   "goal": "quick fix: restore the failing login test",
   "outcome": "complete",
-  "summary": "fix v0.1.0 closed 6 step(s) for goal \"quick fix: restore the failing login test\".",
-  "closed_at": "2026-04-29T20:30:38.000Z",
-  "trace_entries_observed": 38,
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-04-29T20:30:37.000Z",
+  "trace_entries_observed": 36,
   "manifest_hash": "e6563ed0c92b97314441bdece592c7c8ebcf40238fe886a4d8e11fdecd3482d4",
   "verdict": "accept"
 }

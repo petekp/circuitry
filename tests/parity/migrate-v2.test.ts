@@ -46,39 +46,48 @@ async function buildChildRunner(options: CompiledFlowRunOptionsV2Like): Promise<
 }
 
 describe('migrate core-v2 parity', () => {
-  it('runs the generated migrate flow through the v2 sub-run path', async () => {
-    const migrate = await loadCompiledFlowFixture('migrate');
-    const build = await loadCompiledFlowFixture('build');
+  it.each([
+    { label: 'default', entryModeName: undefined },
+    { label: 'autonomous', entryModeName: 'autonomous' },
+  ])(
+    'runs the generated migrate $label flow through the v2 sub-run path',
+    async ({ entryModeName }) => {
+      const migrate = await loadCompiledFlowFixture('migrate');
+      const build = await loadCompiledFlowFixture('build');
 
-    await withTempRun(async (runDir) => {
-      const result = await runSimpleCompiledFlowV2({
-        flowBytes: migrate.bytes,
-        runDir,
-        runId: '44444444-4444-4444-8444-444444444444',
-        goal: 'Migrate a dependency with v2',
-        executors: {
-          ...createSimpleParityExecutors(),
-        },
-        childCompiledFlowResolver: (ref) => {
-          expect(ref.flowId).toBe('build');
-          return { flowBytes: build.bytes };
-        },
-        childRunner: buildChildRunner,
+      await withTempRun(async (runDir) => {
+        const result = await runSimpleCompiledFlowV2({
+          flowBytes: migrate.bytes,
+          runDir,
+          runId: '44444444-4444-4444-8444-444444444444',
+          goal: 'Migrate a dependency with v2',
+          ...(entryModeName === undefined ? {} : { entryModeName }),
+          executors: {
+            ...createSimpleParityExecutors(),
+          },
+          childCompiledFlowResolver: (ref) => {
+            expect(ref.flowId).toBe('build');
+            return { flowBytes: build.bytes };
+          },
+          childRunner: buildChildRunner,
+        });
+
+        expect(result.outcome).toBe('complete');
+        expect(result.verdict).toBe('accept');
+        await expectCompleteTrace(runDir);
+        expect(await completedStepIds(runDir)).toContain('batch-step');
+        const entries = await readTrace(runDir);
+        expect(entries.find((entry) => entry.kind === 'sub_run.started')?.child_flow_id).toBe(
+          'build',
+        );
+        expect(entries.find((entry) => entry.kind === 'sub_run.completed')?.verdict).toBe('accept');
+        const copied = RunResult.parse(
+          JSON.parse(
+            await readFile(join(runDir, 'reports', 'migrate', 'batch-result.json'), 'utf8'),
+          ),
+        );
+        expect(copied.flow_id).toBe('build');
       });
-
-      expect(result.outcome).toBe('complete');
-      expect(result.verdict).toBe('accept');
-      await expectCompleteTrace(runDir);
-      expect(await completedStepIds(runDir)).toContain('batch-step');
-      const entries = await readTrace(runDir);
-      expect(entries.find((entry) => entry.kind === 'sub_run.started')?.child_flow_id).toBe(
-        'build',
-      );
-      expect(entries.find((entry) => entry.kind === 'sub_run.completed')?.verdict).toBe('accept');
-      const copied = RunResult.parse(
-        JSON.parse(await readFile(join(runDir, 'reports', 'migrate', 'batch-result.json'), 'utf8')),
-      );
-      expect(copied.flow_id).toBe('build');
-    });
-  });
+    },
+  );
 });

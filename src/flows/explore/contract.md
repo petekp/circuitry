@@ -366,7 +366,7 @@ Complement to the check-evaluation semantics above. When a relay step
 declares `writes.report` and the verdict check admits the connector's
 declared verdict, the runtime parses `result_body` against a Zod schema
 looked up by `writes.report.schema` from the registry at
-`src/runtime/registries/report-schemas.ts`. The canonical report at
+`src/flows/registries/report-schemas.ts`. The canonical report at
 `writes.report.path` is materialized ONLY when BOTH (a) the verdict check
 passes and (b) the schema parse succeeds.
 
@@ -384,7 +384,7 @@ the report-schema registry (fail-closed default)"). No report is written;
 the step is aborted. Fail-closed is mandatory.
 
 **Registered schemas.** The registry at
-`src/runtime/registries/report-schemas.ts` carries the strict
+`src/flows/registries/report-schemas.ts` carries the strict
 `ExploreCompose` schema for `explore.compose@v1`, the strict
 `ExploreReviewVerdict` schema for `explore.review-verdict@v1`, the
 minimal-shape `{ verdict: z.string().min(1) }.passthrough()` schema for

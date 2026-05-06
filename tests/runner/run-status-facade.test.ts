@@ -24,16 +24,21 @@ describe('run-status public facade', () => {
     const dispatcher = readFileSync(resolve('src/run-status/project-run-folder.ts'), 'utf8');
     expect(dispatcher).toContain("'./v1-run-folder.js'");
     expect(dispatcher).toContain("'./v2-run-folder.js'");
+    expect(dispatcher).toContain('../compat/retained-checkpoint-folders.js');
+    expect(dispatcher).not.toContain('../compat/retained-runtime.js');
     expect(dispatcher).not.toContain('function projectV1RunStatusFromTrace');
     expect(dispatcher).not.toContain('function projectV2RunStatusFromRunFolder');
+    expect(dispatcher).not.toContain('../runtime/trace-reader.js');
 
     const projectionCommon = readFileSync(resolve('src/run-status/projection-common.ts'), 'utf8');
     expect(projectionCommon).toContain('../shared/result-path.js');
     expect(projectionCommon).not.toContain('../runtime/result-writer.js');
 
     const v1Projector = readFileSync(resolve('src/run-status/v1-run-folder.ts'), 'utf8');
-    expect(v1Projector).toContain('../runtime/reducer.js');
+    expect(v1Projector).toContain('../compat/retained-checkpoint-folders.js');
+    expect(v1Projector).not.toContain('../compat/retained-runtime.js');
     expect(v1Projector).toContain('../shared/run-relative-path.js');
+    expect(v1Projector).not.toContain('../runtime/reducer.js');
     expect(v1Projector).not.toContain('../runtime/run-relative-path.js');
     expect(v1Projector).not.toContain('../runtime/trace-reader.js');
     expect(v1Projector).not.toContain('../runtime/trace-writer.js');

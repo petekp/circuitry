@@ -52,6 +52,14 @@ export interface TraceEntryInputV2 {
   readonly result_path?: string;
   readonly report_path?: string;
   readonly report_schema?: string;
+  readonly request_path?: string;
+  readonly request_report_hash?: string;
+  readonly allowed_choices?: readonly string[];
+  readonly checkpoint_report_sha256?: string;
+  readonly selection?: string;
+  readonly auto_resolved?: boolean;
+  readonly resolution_source?: 'operator' | 'safe-default' | 'safe-autonomous';
+  readonly response_path?: string;
   readonly branch_ids?: readonly string[];
   readonly branch_id?: string;
   readonly branch_kind?: 'relay' | 'sub-run';

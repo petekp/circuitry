@@ -14,11 +14,12 @@ import { delimiter, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { main } from '../../src/cli/circuit.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import type { RelayInput } from '../../src/runtime/runner.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/circuit');
+const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const EXPECTED_CODEX_COMMANDS = [
   'build',
   'create',
@@ -58,6 +59,15 @@ const PluginManifest = z
     }),
   })
   .passthrough();
+
+function collectJsonFiles(root: string, prefix = ''): string[] {
+  const entries = readdirSync(resolve(root, prefix), { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const rel = join(prefix, entry.name);
+    if (entry.isDirectory()) return collectJsonFiles(root, rel);
+    return entry.isFile() && entry.name.endsWith('.json') ? [rel] : [];
+  });
+}
 
 describe('Codex host plugin package', () => {
   it('declares an installable Codex plugin manifest', () => {
@@ -246,7 +256,7 @@ describe('Codex host plugin package', () => {
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
           argvPath,
-        )}, JSON.stringify(process.argv.slice(2)));\n`,
+        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null }));\n`,
       );
       chmodSync(fakeBin, 0o755);
 
@@ -265,13 +275,17 @@ describe('Codex host plugin package', () => {
           env: {
             ...process.env,
             PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: 'stale-parent-marker',
           },
         },
       );
 
       expect(result.status, result.stderr).toBe(0);
-      const argv = JSON.parse(readFileSync(argvPath, 'utf8')) as string[];
-      expect(argv).toEqual([
+      const capture = JSON.parse(readFileSync(argvPath, 'utf8')) as {
+        argv: string[];
+        marker: string | null;
+      };
+      expect(capture.argv).toEqual([
         'run',
         'review',
         '--goal',
@@ -279,6 +293,64 @@ describe('Codex host plugin package', () => {
         '--flow-root',
         resolve(PLUGIN_ROOT, 'flows'),
       ]);
+      expect(capture.marker).toBe(resolve(PLUGIN_ROOT, 'flows'));
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('wrapper does not set the trusted mirror marker for caller-supplied flow roots', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-host-custom-root-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const customRoot = join(tempDir, 'custom-flows');
+      mkdirSync(binDir, { recursive: true });
+      const argvPath = join(tempDir, 'argv.json');
+      const fakeBin = join(binDir, 'circuit-next');
+      writeFileSync(
+        fakeBin,
+        `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
+          argvPath,
+        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null }));\n`,
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'run',
+          'review',
+          '--goal',
+          'outside repo custom root',
+          '--flow-root',
+          customRoot,
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: 'stale-parent-marker',
+          },
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      const capture = JSON.parse(readFileSync(argvPath, 'utf8')) as {
+        argv: string[];
+        marker: string | null;
+      };
+      expect(capture.argv).toEqual([
+        'run',
+        'review',
+        '--goal',
+        'outside repo custom root',
+        '--flow-root',
+        customRoot,
+      ]);
+      expect(capture.marker).toBeNull();
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -295,7 +367,7 @@ describe('Codex host plugin package', () => {
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
           argvPath,
-        )}, JSON.stringify(process.argv.slice(2)));\n`,
+        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null }));\n`,
       );
       chmodSync(fakeBin, 0o755);
 
@@ -315,19 +387,24 @@ describe('Codex host plugin package', () => {
           env: {
             ...process.env,
             PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: 'stale-parent-marker',
           },
         },
       );
 
       expect(result.status, result.stderr).toBe(0);
-      const argv = JSON.parse(readFileSync(argvPath, 'utf8')) as string[];
-      expect(argv).toEqual([
+      const capture = JSON.parse(readFileSync(argvPath, 'utf8')) as {
+        argv: string[];
+        marker: string | null;
+      };
+      expect(capture.argv).toEqual([
         'resume',
         '--run-folder',
         '/tmp/run',
         '--checkpoint-choice',
         'continue',
       ]);
+      expect(capture.marker).toBeNull();
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -451,11 +528,18 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('mirrors canonical flow files into the Codex host output tree', () => {
-    for (const flow of ['build', 'explore', 'fix', 'migrate', 'review', 'sweep']) {
-      const canonical = readFileSync(resolve(REPO_ROOT, `generated/flows/${flow}/circuit.json`));
-      const codex = readFileSync(resolve(PLUGIN_ROOT, `flows/${flow}/circuit.json`));
-      expect(codex).toEqual(canonical);
+  it('mirrors every canonical generated flow JSON file into the Codex host output tree', () => {
+    const canonicalRoot = resolve(REPO_ROOT, 'generated/flows');
+    const codexRoot = resolve(PLUGIN_ROOT, 'flows');
+    const canonicalFiles = collectJsonFiles(canonicalRoot).sort();
+    const codexFiles = collectJsonFiles(codexRoot).sort();
+
+    expect(codexFiles).toEqual(canonicalFiles.filter((file) => !file.startsWith('runtime-proof/')));
+
+    for (const file of codexFiles) {
+      const canonical = readFileSync(resolve(canonicalRoot, file));
+      const codex = readFileSync(resolve(codexRoot, file));
+      expect(codex, file).toEqual(canonical);
     }
     expect(existsSync(resolve(PLUGIN_ROOT, 'flows/runtime-proof'))).toBe(false);
     expect(existsSync(resolve(REPO_ROOT, '.claude-plugin/skills/runtime-proof'))).toBe(false);

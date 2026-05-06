@@ -8,7 +8,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { ExploreBrief } from '../reports.js';
 
 export const exploreBriefComposeBuilder: ComposeBuilder = {

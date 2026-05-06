@@ -136,4 +136,34 @@ describe('build v2 parity', () => {
       });
     });
   });
+
+  it('starts from the generated autonomous entry mode and records autonomous depth', async () => {
+    const fixture = await loadCompiledFlowFixture('build');
+    const flow = CompiledFlowSchema.parse(JSON.parse(fixture.bytes.toString('utf8')));
+
+    await withTempRun(async (runDir) => {
+      const result = await runSimpleCompiledFlowV2({
+        flowBytes: fixture.bytes,
+        runDir,
+        runId: '77777777-7777-4777-8777-777777777777',
+        goal: 'build autonomously',
+        entryModeName: 'autonomous',
+      });
+
+      expect(result).toMatchObject({
+        flow_id: 'build',
+        outcome: 'complete',
+      });
+      expect(await completedStepIds(runDir)).toEqual(expectedPassStepIds(flow, 'autonomous'));
+      const trace = await readTrace(runDir);
+      expect(trace[0]).toMatchObject({
+        kind: 'run.bootstrapped',
+        data: expect.objectContaining({
+          entry: 'frame-step',
+          entry_mode: 'autonomous',
+          depth: 'autonomous',
+        }),
+      });
+    });
+  });
 });

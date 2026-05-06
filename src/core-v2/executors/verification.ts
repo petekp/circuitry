@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
-import { findVerificationWriter } from '../../runtime/registries/verification-writers/registry.js';
-import type { VerificationCommand } from '../../runtime/registries/verification-writers/types.js';
+import { findVerificationWriter } from '../../flows/registries/verification-writers/registry.js';
+import type { VerificationCommand } from '../../flows/registries/verification-writers/types.js';
 import type { StepOutcomeV2 } from '../domain/step.js';
 import type { VerificationStepV2 } from '../manifest/executable-flow.js';
 import type { RunContextV2 } from '../run/run-context.js';
@@ -78,6 +78,11 @@ function summarizeOutput(value: string, maxBytes: number): string {
   return bytes.subarray(0, maxBytes).toString('utf8');
 }
 
+function verificationFailureReason(stepId: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `verification step '${stepId}': report writer failed (${message})`;
+}
+
 function runCommand(command: VerificationCommand, projectRoot: string) {
   const started = Date.now();
   const result = spawnSync(command.argv[0] as string, command.argv.slice(1), {
@@ -112,39 +117,60 @@ export async function executeVerificationV2(
   step: VerificationStepV2,
   context: RunContextV2,
 ): Promise<StepOutcomeV2> {
-  const report = step.writes?.report;
-  if (report?.schema === undefined) {
-    throw new Error(`verification step '${step.id}' is missing writes.report schema`);
-  }
-  if (context.projectRoot === undefined) {
-    throw new Error(
-      `verification step '${step.id}' requires projectRoot for project-relative cwd resolution`,
-    );
-  }
-  const projectRoot = context.projectRoot;
-  const compiledFlow = requireCompiledFlowV1(context, step);
-  const compiledStep = requireCompiledStepV1(context, step, 'verification');
-  const builder = findVerificationWriter(report.schema);
-  if (builder === undefined) {
-    throw new Error(`verification step '${step.id}' has unsupported report schema`);
-  }
-
-  const commands = builder.loadCommands({
-    runFolder: context.runDir,
-    flow: compiledFlow,
-    step: compiledStep,
-  });
-  const observations = commands.map((command) => runCommand(command, projectRoot));
-  const body = builder.buildResult(observations) as {
+  let report: NonNullable<NonNullable<VerificationStepV2['writes']>['report']>;
+  let reportSchema: string;
+  let body: {
     readonly overall_status?: unknown;
   };
-  await context.files.writeJson(report, body);
+  try {
+    const stepReport = step.writes?.report;
+    if (stepReport === undefined || stepReport.schema === undefined) {
+      throw new Error(`verification step '${step.id}' is missing writes.report schema`);
+    }
+    report = stepReport;
+    reportSchema = stepReport.schema;
+    if (context.projectRoot === undefined) {
+      throw new Error(
+        `verification step '${step.id}' requires projectRoot for project-relative cwd resolution`,
+      );
+    }
+    const projectRoot = context.projectRoot;
+    const compiledFlow = requireCompiledFlowV1(context, step);
+    const compiledStep = requireCompiledStepV1(context, step, 'verification');
+    const builder = findVerificationWriter(reportSchema);
+    if (builder === undefined) {
+      throw new Error(`verification step '${step.id}' has unsupported report schema`);
+    }
+
+    const commands = builder.loadCommands({
+      runFolder: context.runDir,
+      flow: compiledFlow,
+      step: compiledStep,
+    });
+    const observations = commands.map((command) => runCommand(command, projectRoot));
+    body = builder.buildResult(observations) as {
+      readonly overall_status?: unknown;
+    };
+    await context.files.writeJson(report, body);
+  } catch (error) {
+    const reason = verificationFailureReason(step.id, error);
+    await context.trace.append({
+      run_id: context.runId,
+      kind: 'check.evaluated',
+      step_id: step.id,
+      check_kind: 'schema_sections',
+      outcome: 'fail',
+      reason,
+    });
+    throw new Error(reason);
+  }
+
   await context.trace.append({
     run_id: context.runId,
     kind: 'step.report_written',
     step_id: step.id,
     report_path: report.path,
-    report_schema: report.schema,
+    report_schema: reportSchema,
   });
 
   if (body.overall_status === 'passed') {

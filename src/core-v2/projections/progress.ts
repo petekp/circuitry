@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import {
   BUILTIN_CONNECTOR_CAPABILITIES,
@@ -16,6 +17,7 @@ import {
 } from '../../shared/write-capable-worker-disclosure.js';
 import type { TraceEntryV2 } from '../domain/trace.js';
 import type { ExecutableFlowV2 } from '../manifest/executable-flow.js';
+import { tournamentCheckpointPresentationV2 } from './tournament-checkpoint-context.js';
 
 function connectorFilesystemCapability(connector: ResolvedConnector): FilesystemCapability {
   return connector.kind === 'builtin'
@@ -120,6 +122,25 @@ function stringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const entries = value.filter((entry): entry is string => typeof entry === 'string');
   return entries.length === value.length && entries.length > 0 ? entries : undefined;
+}
+
+function checkpointPrompt(entry: TraceEntryV2): string {
+  const prompt = entry.data?.prompt;
+  return typeof prompt === 'string' && prompt.length > 0
+    ? prompt
+    : 'Choose how to continue this checkpoint.';
+}
+
+function checkpointChoiceLabel(choice: string): string {
+  return choice
+    .split(/[-_]/)
+    .filter((part) => part.length > 0)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function checkpointRequestPath(runDir: string, requestPath: string): string {
+  return requestPath.startsWith('/') ? requestPath : join(runDir, requestPath);
 }
 
 function fanoutChildOutcome(
@@ -418,6 +439,93 @@ export function createProgressProjectorV2(input: {
           ...(entry.selected_branch_id === undefined
             ? {}
             : { selected_branch_id: entry.selected_branch_id }),
+        });
+        break;
+      }
+      case 'checkpoint.requested': {
+        const stepId = entry.step_id;
+        const allowedChoices = stringArray(entry.allowed_choices);
+        if (
+          stepId === undefined ||
+          entry.request_path === undefined ||
+          allowedChoices === undefined
+        ) {
+          break;
+        }
+        if (entry.auto_resolved === true) {
+          break;
+        }
+        const requestPath = checkpointRequestPath(input.runDir, entry.request_path);
+        taskStatuses.set(stepId, 'in_progress');
+        const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
+        const checkpointPromptText = checkpointPrompt(entry);
+        const presentation = tournamentCheckpointPresentationV2({
+          runDir: input.runDir,
+          allowedChoices,
+          fallbackPrompt: checkpointPromptText,
+          fallbackLabel: checkpointChoiceLabel,
+          fallbackDescription: (choice) => `Resume with '${choice}'.`,
+        });
+        reportProgress(input.progress, {
+          schema_version: 1,
+          type: 'checkpoint.waiting',
+          run_id: runId,
+          flow_id: flowId,
+          recorded_at: recordedAt,
+          label: `Waiting for checkpoint ${stepId}`,
+          display: progressDisplay(
+            `Circuit is waiting for a checkpoint choice: ${presentation.choices
+              .map((choice) => choice.label)
+              .join(', ')}.`,
+            'major',
+            'checkpoint',
+          ),
+          step_id: stepId as StepId,
+          request_path: requestPath,
+          allowed_choices: allowedChoices,
+        });
+        reportProgress(input.progress, {
+          schema_version: 1,
+          type: 'user_input.requested',
+          run_id: runId,
+          flow_id: flowId,
+          recorded_at: recordedAt,
+          label: 'Checkpoint choice requested',
+          display: progressDisplay(presentation.prompt, 'major', 'checkpoint'),
+          checkpoint: {
+            step_id: stepId as StepId,
+            request_path: requestPath,
+            allowed_choices: allowedChoices,
+          },
+          questions: [
+            {
+              id: 'checkpoint-choice',
+              header: 'Choice',
+              question: presentation.prompt,
+              options: presentation.choices.map((choice) => ({
+                label: choice.label,
+                description: choice.description,
+                checkpoint_choice: choice.id,
+              })),
+              allow_free_text: false,
+            },
+          ],
+          resume: {
+            run_folder: input.runDir,
+            checkpoint_choice_arg: '<choice>',
+            command: `circuit-next resume --run-folder ${input.runDir} --checkpoint-choice <choice>`,
+          },
+        });
+        reportTaskListProgressV2({
+          progress: input.progress,
+          runId,
+          flowId,
+          flow: input.flow,
+          recordedAt,
+          statuses: taskStatuses,
+          label: `${title} waiting`,
+          displayText: `Circuit is waiting on ${title}.`,
+          tone: 'checkpoint',
         });
         break;
       }

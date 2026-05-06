@@ -9,8 +9,6 @@ import {
   projectConfigPath as runtimeProjectConfigPath,
   userGlobalConfigPath as runtimeUserGlobalConfigPath,
 } from '../../src/runtime/config-loader.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import type { RelayFn, RelayInput } from '../../src/runtime/runner.js';
 import { CompiledFlowId, SkillId } from '../../src/schemas/ids.js';
 import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import {
@@ -18,6 +16,8 @@ import {
   projectConfigPath,
   userGlobalConfigPath,
 } from '../../src/shared/config-loader.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 let root: string;
 let homeDir: string;
@@ -225,11 +225,15 @@ circuits:
     const runFolder = join(root, 'run');
     const stdout = captureStdout();
     const originalStrictRuntime = process.env.CIRCUIT_V2_RUNTIME;
+    const originalShowRuntimeDecision = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     const originalCandidateRuntime = process.env.CIRCUIT_V2_RUNTIME_CANDIDATE;
     const originalDisableRuntime = process.env.CIRCUIT_DISABLE_V2_RUNTIME;
+    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
     process.env.CIRCUIT_V2_RUNTIME = undefined;
+    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
     process.env.CIRCUIT_V2_RUNTIME_CANDIDATE = undefined;
     process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
     try {
       const exit = await main(
         ['explore', '--goal', 'prove config reaches selection evidence', '--run-folder', runFolder],
@@ -245,8 +249,10 @@ circuits:
     } finally {
       stdout.restore();
       process.env.CIRCUIT_V2_RUNTIME = originalStrictRuntime;
+      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalShowRuntimeDecision;
       process.env.CIRCUIT_V2_RUNTIME_CANDIDATE = originalCandidateRuntime;
       process.env.CIRCUIT_DISABLE_V2_RUNTIME = originalDisableRuntime;
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
     }
 
     const expected: ResolvedSelection = {

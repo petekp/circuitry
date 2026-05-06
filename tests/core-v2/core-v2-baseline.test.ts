@@ -18,6 +18,7 @@ import {
 } from '../../src/core-v2/run/manifest-snapshot.js';
 import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
+import { RunResult } from '../../src/schemas/result.js';
 
 async function withTempRun<T>(fn: (runDir: string) => Promise<T>): Promise<T> {
   const runDir = await mkdtemp(join(tmpdir(), 'circuit-core-v2-'));
@@ -322,7 +323,8 @@ describe('core-v2 baseline', () => {
         },
         {
           runDir,
-          runId: 'run-failure',
+          runId: '40000000-0000-4000-8000-000000000001',
+          goal: 'prove core-v2 closes cleanly when an executor throws',
           executors: {
             compose: async () => {
               throw new Error('compose failed');
@@ -333,12 +335,23 @@ describe('core-v2 baseline', () => {
 
       const trace = new TraceStore(runDir);
       const entries = await trace.load();
+      const resultJson = RunResult.parse(
+        JSON.parse(await readFile(join(runDir, 'reports', 'result.json'), 'utf8')),
+      );
+      const reason = "step 'compose' handler threw: compose failed";
       expect(result.outcome).toBe('aborted');
+      expect(result.reason).toBe(reason);
+      expect(resultJson.outcome).toBe('aborted');
+      expect(resultJson.reason).toBe(reason);
       expect(entries.map((entry) => entry.kind)).toContain('step.aborted');
       expect(entries.at(-1)).toMatchObject({
         kind: 'run.closed',
+        reason,
         data: { outcome: 'aborted' },
       });
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({ kind: 'step.completed', step_id: 'compose' }),
+      );
     });
   });
 
@@ -400,7 +413,8 @@ describe('core-v2 baseline', () => {
         },
         {
           runDir,
-          runId: 'run-pass-self-route',
+          runId: '40000000-0000-4000-8000-000000000002',
+          goal: 'prove core-v2 aborts pass self-routes cleanly',
           executors: {
             compose: async () => ({ route: 'pass' }),
           },
@@ -408,7 +422,14 @@ describe('core-v2 baseline', () => {
       );
 
       const entries = await new TraceStore(runDir).load();
+      const resultJson = RunResult.parse(
+        JSON.parse(await readFile(join(runDir, 'reports', 'result.json'), 'utf8')),
+      );
       expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason: "route cycle detected: step 'compose' routes via 'pass' to itself",
+      });
+      expect(resultJson).toMatchObject({
         outcome: 'aborted',
         reason: "route cycle detected: step 'compose' routes via 'pass' to itself",
       });

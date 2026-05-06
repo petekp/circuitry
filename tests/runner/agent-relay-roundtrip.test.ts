@@ -4,17 +4,20 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  appendAndDeriveRetainedTrace as appendAndDerive,
+  bootstrapRetainedRun as bootstrapRun,
+} from '../../src/compat/retained-runtime.js';
+import {
   type ClaudeCodeRelayResult,
   relayClaudeCode,
 } from '../../src/runtime/connectors/claude-code.js';
 import { materializeRelay } from '../../src/runtime/connectors/relay-materializer.js';
-import { sha256Hex } from '../../src/runtime/connectors/shared.js';
 import { reduce } from '../../src/runtime/reducer.js';
-import { appendAndDerive, bootstrapRun } from '../../src/runtime/runner.js';
 import { readRunTrace } from '../../src/runtime/trace-reader.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlowId, RunId, StepId } from '../../src/schemas/ids.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
+import { sha256Hex } from '../../src/shared/connector-relay.js';
 
 // Agent-relay-roundtrip test with the five-trace_entry transcript binding.
 //

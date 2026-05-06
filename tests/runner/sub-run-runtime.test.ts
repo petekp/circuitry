@@ -3,20 +3,20 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type {
+  ChildCompiledFlowResolver,
+  CompiledFlowInvocation,
+  CompiledFlowRunResult,
+  CompiledFlowRunner,
+} from '../../src/compat/retained-runtime.js';
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import { resultPath } from '../../src/runtime/result-writer.js';
-import {
-  type ChildCompiledFlowResolver,
-  type CompiledFlowInvocation,
-  type CompiledFlowRunResult,
-  type CompiledFlowRunner,
-  type RelayFn,
-  runCompiledFlow,
-} from '../../src/runtime/runner.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { Snapshot } from '../../src/schemas/snapshot.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Sub-run runtime test. Verifies that a parent flow declaring a
 // `sub-run` step:

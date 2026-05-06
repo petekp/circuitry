@@ -6,6 +6,15 @@ Phase 4.39 refreshes the same map after Phase 4.37 extracted retained
 checkpoint resume preparation into `src/runtime/checkpoint-resume.ts` and
 Phase 4.38 recommended stopping further runner shrinkage for now.
 Phase 4.41 adds a focused helper test for the extracted terminal verdict rule.
+Phase 5.5 adds the current deletion-readiness conclusion: no retained runner or
+handler test is obsolete. Phase 5.15 starts moving accidental test-only type
+imports to shared/facade modules, but it does not delete retained tests or
+change retained behavior. The second Phase 5.15 batch split more retained-runner
+tests so old runner imports are value-level execution/helper calls, while relay
+and retained callback/data types come from shared or facade modules. Phase 5.16
+adds more v2 twins for relay recovery, report gating, and connector invocation
+failure behavior, while keeping the retained tests live. Phase 5.17 adds strict
+v2 final-result proof for executor throws and pass-route cycles.
 
 No code moves are approved by this document.
 
@@ -20,13 +29,25 @@ No code moves are approved by this document.
 | compatibility import | Imports old runtime type/helper surfaces but does not primarily test old execution. Migrate imports only when the old surface is intentionally retired. |
 | delete only after obsolete | No current file is in this bucket. |
 
+## Phase 5.5 Four-Bucket Summary
+
+| Bucket | Current disposition |
+|---|---|
+| retained fallback coverage | Keep. This includes retained/v1 checkpoint resume, rollback, unsupported rows, retained run folder status/progress, connector/materializer fallback, handoff run-backed continuity, and old import compatibility. |
+| oracle coverage | Keep. Direct handler tests, flow runtime wiring tests, report writer tests, sub-run/fanout recursion tests, and fanout join-policy property tests still compare behavior v2 must preserve or deliberately retire. |
+| migrated to v2 | No retained runner or handler test moves to this bucket yet. V2 coverage exists, but it does not retire retained fallback/oracle proof. |
+| obsolete candidate | None. |
+
+See `docs/architecture/v2-deletion-readiness-inventory.md` for the current
+inventory table.
+
 ## Direct Checkpoint Resume Coverage
 
 | Test | Classification | Why keep |
 |---|---|---|
 | `tests/runner/build-checkpoint-exec.test.ts` | checkpoint-resume product coverage | Covers deep checkpoint waiting, operator resume, invalid choices, manifest/trace identity rejection, missing/tampered brief, request hash tampering, original selection/config restoration, original project root restoration, post-checkpoint relay, and post-checkpoint verification. |
-| `tests/runner/explore-tournament-runtime.test.ts` | checkpoint-resume product coverage | Covers Explore tournament retained checkpoint behavior and resume paths. |
-| `tests/runner/cli-v2-runtime.test.ts` | retained product fallback | Proves default selector keeps checkpoint resume and checkpoint-waiting modes on retained runtime. |
+| `tests/runner/explore-tournament-runtime.test.ts` | oracle coverage | Covers the retained Explore tournament behavior that core-v2 now mirrors for generated tournament runs. Keep as comparison proof until retained fanout/checkpoint ownership is retired. |
+| `tests/runner/cli-v2-runtime.test.ts` | retained product fallback and v2 selector coverage | Proves retained/v1 checkpoint resume, rollback, arbitrary fixtures, custom roots, `composeWriter`, and current core-v2 selector rows. |
 | `tests/runner/run-status-projection.test.ts` | checkpoint-resume product coverage | Proves `runs show` projects waiting checkpoints and validates malformed checkpoint request/report state. |
 
 Decision: these tests are non-negotiable until checkpoint resume ownership
@@ -114,21 +135,68 @@ registries. They prove those boundaries remain live.
 
 ## Compatibility Import Tests
 
-These tests import `RelayFn`, `RelayInput`, `ComposeWriterFn`, or helper exports
-from `src/runtime/runner.ts`, but they are not primarily old execution tests:
+Phase 5.15 moved the casual shared relay type imports in
+`tests/contracts/codex-host-plugin.test.ts`, `tests/runner/cli-router.test.ts`,
+`tests/runner/config-loader.test.ts`, `tests/runner/cli-v2-runtime.test.ts`,
+and `tests/soak/v2-runtime-surface.test.ts` to `src/shared/**` or
+`src/compat/**`. The second batch made the same split across retained runner,
+direct handler, and contract tests: shared relay types now come from
+`src/shared/relay-runtime-types.ts`, retained callback/data types now come from
+`src/compat/retained-runtime.ts`, and old `src/runtime/runner.ts` imports remain
+only where a test intentionally calls retained execution or old helper values.
 
-```text
-tests/contracts/codex-host-plugin.test.ts
-tests/contracts/flow-model-effort.test.ts
-tests/contracts/orphan-blocks.test.ts
-tests/runner/cli-router.test.ts
-tests/runner/config-loader.test.ts
-tests/runner/cli-v2-runtime.test.ts
-```
+Phase 5.15 also moved casual `sha256Hex` helper imports to
+`src/shared/connector-relay.ts`, leaving
+`tests/runner/connector-shared-compat.test.ts` as the explicit old-path
+compatibility proof for `src/runtime/connectors/shared.ts`.
 
-Decision: migrate imports to neutral type/helper modules only when the old
-runtime compatibility surface is intentionally retired. Do not combine that
-with checkpoint resume or handler moves.
+Phase 5.19 moves retained execution calls behind the retained compatibility
+facade across the runner/contract test suite. Tests no longer import
+`runCompiledFlow` or `resumeCompiledFlowCheckpoint` directly from
+`src/runtime/runner.js`; they import
+`runRetainedCompiledFlow as runCompiledFlow` or
+`resumeRetainedCompiledFlowCheckpoint as resumeCompiledFlowCheckpoint` from
+`src/compat/retained-runtime.ts`. Direct old runner imports now remain for
+helper-specific compatibility/oracle surfaces such as `writeComposeReport`,
+`writePrototypeComposeReport`, `appendAndDerive`, `bootstrapRun`,
+`initRunFolder`, and fresh-run claim helpers.
+
+Phase 5.20 puts those retained helper calls behind the facade too. The helpers
+still live in retained runtime implementation modules, and
+`tests/runner/fix-report-writer.test.ts` remains as the explicit public
+`writeComposeReport` old-path proof. Other tests now use retained-named facade
+exports for append/bootstrap/init/fresh-run-claim and compose report helpers.
+
+Phase 5.23 narrows the remaining direct test imports of retained checkpoint
+resume to `src/compat/retained-checkpoint-folders.ts`, matching the production
+CLI/handoff/run-status saved-folder boundary. The broad
+`src/compat/retained-runtime.ts` still re-exports those helpers for compatibility
+but should not be the default import path for new saved-folder test code.
+
+Decision: continue moving accidental type/helper imports to neutral modules as
+low-risk implementation work. Keep explicit old-path compatibility tests and
+tests that intentionally execute `runCompiledFlow(...)` through the retained
+compatibility facade.
+
+## V2 Twin Tests Added From Old Oracles
+
+| Test | Old oracle covered | What it proves |
+|---|---|---|
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/terminal-outcome-mapping.test.ts` | Core-v2 maps `@complete`, `@stop`, `@handoff`, and `@escalate` to the retained terminal outcome vocabulary and writes matching final results. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/terminal-outcome-mapping.test.ts` | Core-v2 executes rich checkpoint route labels through their declared routes and bounds retry loops with `budgets.max_attempts`. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/check-evaluation.test.ts` | Core-v2 admits the actual connector verdict from the relay body, including non-first `check.pass` members, and rejects malformed or unaccepted verdicts without carrying them into the final result. |
+| `tests/core-v2/control-loop-v2.test.ts` and `tests/core-v2/connectors-v2.test.ts` | `tests/runner/runner-relay-provenance.test.ts` and `tests/runner/runner-relay-connector-identity.test.ts` | Core-v2 production relay traces carry connector identity plus the connector resolution source, and the resolver preserves provenance through default, role, explicit, and custom connector decisions. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/terminal-outcome-mapping.test.ts` | Core-v2 routes failed relay checks through declared recovery routes without admitting the rejected verdict into the final result. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/check-evaluation.test.ts` | Core-v2 keeps relay transcript files for failed checks, omits the canonical admitted report and `relay.completed.report_path`, and writes both only after relay admission passes. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/relay-invocation-failure.test.ts` | Core-v2 connector invocation failures recover through a declared route when available, otherwise abort cleanly without an admitted final verdict. |
+| `tests/core-v2/control-loop-v2.test.ts` | `tests/runner/verification-handler-direct.test.ts` | Core-v2 verification pre-write failures emit `check.evaluated`/fail, abort without `step.report_written`, and do not write the canonical verification report. |
+| `tests/core-v2/core-v2-baseline.test.ts` | `tests/runner/handler-throw-recovery.test.ts` | Core-v2 executor throws close cleanly, write a parseable aborted `reports/result.json`, and do not write `step.completed` for the failed step. |
+| `tests/core-v2/core-v2-baseline.test.ts` | `tests/runner/pass-route-cycle-guard.test.ts` | Core-v2 pass-route cycles abort before step completion and write a parseable final result with the route-cycle reason. |
+
+Decision: these v2 twins reduce oracle risk but do not make the retained tests
+obsolete. The retained tests still prove retained fallback behavior while
+arbitrary fixtures, custom roots, rollback, public `composeWriter`, and v1 run
+folders remain supported through retained compatibility.
 
 ## Trace And Snapshot Tests
 
@@ -146,8 +214,8 @@ plan.
 Useful future v2 test targets:
 
 - checkpoint waiting and resume parity, if Option A is selected later;
-- retained route-cycle and terminal-outcome behavior, if old fallback narrows;
-- relay provenance and connector identity, if retained relay behavior narrows;
+- more retained route-cycle behavior, if old fallback narrows;
+- more relay provenance and connector identity behavior, if retained relay behavior narrows;
 - direct handler invariants that become v2 executor invariants.
 
 Not migration candidates yet:

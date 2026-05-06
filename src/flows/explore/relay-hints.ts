@@ -1,6 +1,6 @@
 // Explore flow relay shape hints.
 
-import type { SchemaShapeHint } from '../../runtime/registries/shape-hints/types.js';
+import type { SchemaShapeHint } from '../registries/shape-hints/types.js';
 
 export const exploreComposeShapeHint: SchemaShapeHint = {
   kind: 'schema',

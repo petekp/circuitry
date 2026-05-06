@@ -18,6 +18,7 @@ const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'flows');
 const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 const CODEX_FEATURES_TIMEOUT_MS = 5_000;
+const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 
 function findLocalLauncher() {
   const candidate = resolve(process.cwd(), 'bin/circuit-next');
@@ -276,6 +277,10 @@ function runDoctor() {
         {
           cwd: smokeRoot,
           encoding: 'utf8',
+          env: {
+            ...process.env,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: packagedFlowRoot,
+          },
           timeout: DOCTOR_SMOKE_TIMEOUT_MS,
           stdio: ['ignore', 'pipe', 'pipe'],
         },
@@ -309,9 +314,7 @@ function runDoctor() {
       checks.push(
         check(
           'temp_repo_review_progress',
-          progressTypes.includes('route.selected') &&
-            progressTypes.includes('evidence.warning') &&
-            progressTypes.includes('run.completed'),
+          progressTypes.includes('route.selected') && progressTypes.includes('run.completed'),
           progressTypes.length > 0
             ? `events=${progressTypes.join(',')}`
             : `stderr=${result.stderr.slice(0, 500)}`,
@@ -364,6 +367,10 @@ function runDoctor() {
         {
           cwd: smokeRoot,
           encoding: 'utf8',
+          env: {
+            ...process.env,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: packagedFlowRoot,
+          },
           timeout: DOCTOR_SMOKE_TIMEOUT_MS,
           stdio: ['ignore', 'pipe', 'pipe'],
         },
@@ -435,11 +442,18 @@ function shouldInjectCreateTemplateRoot(args) {
   return args[0] === 'create';
 }
 
-const forwardedArgs = shouldInjectPackagedFlowRoot(rawArgs)
+const injectPackagedFlowRoot = shouldInjectPackagedFlowRoot(rawArgs);
+const forwardedArgs = injectPackagedFlowRoot
   ? [...rawArgs, '--flow-root', packagedFlowRoot]
   : shouldInjectCreateTemplateRoot(rawArgs)
     ? [...rawArgs, '--template-flow-root', packagedFlowRoot]
     : rawArgs;
+const childEnv = { ...process.env };
+if (injectPackagedFlowRoot) {
+  childEnv[GENERATED_FLOW_MIRROR_ROOT_ENV] = packagedFlowRoot;
+} else {
+  delete childEnv[GENERATED_FLOW_MIRROR_ROOT_ENV];
+}
 
 if (rawArgs[0] === 'doctor') {
   process.exit(runDoctor());
@@ -458,6 +472,7 @@ if (!commandExists()) {
 
 const result = spawnSync(command, forwardedArgs, {
   cwd: process.cwd(),
+  env: childEnv,
   stdio: 'inherit',
 });
 

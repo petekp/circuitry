@@ -113,6 +113,7 @@ describe('core-v2 connector safety', () => {
     });
 
     expect(decision.connectorName).toBe('codex');
+    expect(decision.resolvedFrom).toEqual({ source: 'default' });
   });
 
   it('honors a builtin step connector without a supplied relay connector', () => {
@@ -124,6 +125,7 @@ describe('core-v2 connector safety', () => {
 
     expect(decision.connectorName).toBe('claude-code');
     expect(decision.connector).toEqual({ kind: 'builtin', name: 'claude-code' });
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
   });
 
   it('rejects read-only step connectors without a supplied relay connector', () => {
@@ -170,6 +172,7 @@ describe('core-v2 connector safety', () => {
 
     expect(decision.connectorName).toBe('local-reviewer');
     expect(decision.connector).toEqual(custom);
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
   });
 
   it('uses merged config precedence for custom step connector descriptors', () => {
@@ -229,6 +232,7 @@ describe('core-v2 connector safety', () => {
 
     expect(decision.connectorName).toBe('local-reviewer');
     expect(decision.connector).toEqual(higherPrecedence);
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
   });
 
   it('rejects a custom step connector that has no resolved capabilities', () => {

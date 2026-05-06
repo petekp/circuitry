@@ -1,1 +1,22 @@
-{"verdict":"accept","summary":"Two cleanup candidates surfaced.","candidates":[{"id":"cand-1","category":"dead-code","path":"src/example.ts","description":"Unused helper function.","confidence":"high","risk":"low"},{"id":"cand-2","category":"stale-docs","path":"docs/old.md","description":"Outdated documentation paragraph.","confidence":"low","risk":"high"}]}
+{
+  "verdict": "accept",
+  "summary": "Two cleanup candidates surfaced.",
+  "candidates": [
+    {
+      "id": "cand-1",
+      "category": "dead-code",
+      "path": "src/example.ts",
+      "description": "Unused helper function.",
+      "confidence": "high",
+      "risk": "low"
+    },
+    {
+      "id": "cand-2",
+      "category": "stale-docs",
+      "path": "docs/old.md",
+      "description": "Outdated documentation paragraph.",
+      "confidence": "low",
+      "risk": "high"
+    }
+  ]
+}

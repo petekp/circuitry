@@ -1,14 +1,19 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RelayConnectorV2 } from '../../src/core-v2/executors/relay.js';
 import type { ExecutableFlowV2 } from '../../src/core-v2/manifest/executable-flow.js';
+import { fromCompiledFlowV1 } from '../../src/core-v2/manifest/from-compiled-flow-v1.js';
 import type { CompiledFlowRunOptionsV2Like } from '../../src/core-v2/run/child-runner.js';
 import type { GraphRunResultV2 } from '../../src/core-v2/run/graph-runner.js';
 import { executeExecutableFlowV2 } from '../../src/core-v2/run/graph-runner.js';
 import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
+import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunResult } from '../../src/schemas/result.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 let baseDir: string;
 
@@ -81,6 +86,156 @@ function dynamicRelayFanoutFlow(
       },
     ],
   };
+}
+
+function compiledRelayFanoutFlow(
+  opts: {
+    readonly reportSchema?: string;
+    readonly admit?: readonly string[];
+    readonly provenanceField?: string;
+    readonly seedSweepQueue?: boolean;
+  } = {},
+): CompiledFlow {
+  const reportSchema = opts.reportSchema ?? 'explore.tournament-proposal@v1';
+  const admit = opts.admit ?? ['accept'];
+  const seedSweepQueue = opts.seedSweepQueue === true;
+  const fanoutStep = {
+    id: 'fanout-step',
+    title: 'Fanout relay branch',
+    protocol: 'fanout-protocol@v1',
+    reads: seedSweepQueue ? ['reports/sweep-queue.json'] : [],
+    routes: { pass: '@complete' },
+    executor: 'orchestrator',
+    kind: 'fanout',
+    branches: {
+      kind: 'static',
+      branches: [
+        {
+          branch_id: 'option-1',
+          execution: {
+            kind: 'relay',
+            role: 'researcher',
+            goal: 'branch-a goal',
+            report_schema: reportSchema,
+            ...(opts.provenanceField === undefined
+              ? {}
+              : { provenance_field: opts.provenanceField }),
+          },
+        },
+      ],
+    },
+    concurrency: { kind: 'bounded', max: 1 },
+    on_child_failure: 'abort-all',
+    writes: {
+      branches_dir: 'reports/branches',
+      aggregate: { path: 'reports/aggregate.json', schema: 'explore.tournament-aggregate@v1' },
+    },
+    check: {
+      kind: 'fanout_aggregate',
+      source: { kind: 'fanout_results', ref: 'aggregate' },
+      join: { policy: 'aggregate-only' },
+      verdicts: { admit },
+    },
+  };
+  const steps = seedSweepQueue
+    ? [
+        {
+          id: 'seed-sweep-queue',
+          title: 'Seed Sweep queue',
+          protocol: 'seed-sweep-queue@v1',
+          reads: [],
+          routes: { pass: 'fanout-step' },
+          executor: 'orchestrator',
+          kind: 'compose',
+          writes: { report: { path: 'reports/sweep-queue.json', schema: 'sweep.queue@v1' } },
+          check: {
+            kind: 'schema_sections',
+            source: { kind: 'report', ref: 'report' },
+            required: ['classified', 'to_execute', 'deferred'],
+          },
+        },
+        fanoutStep,
+      ]
+    : [fanoutStep];
+  return CompiledFlow.parse({
+    schema_version: '2',
+    id: seedSweepQueue ? 'sweep' : 'explore',
+    version: '0.1.0',
+    purpose: 'core-v2 relay fanout production parity test',
+    entry: {
+      signals: { include: ['fanout-relay-v2'], exclude: [] },
+      intent_prefixes: ['fanout-relay-v2'],
+    },
+    entry_modes: [
+      {
+        name: 'default',
+        start_at: seedSweepQueue ? 'seed-sweep-queue' : 'fanout-step',
+        depth: 'standard',
+        description: 'Relay fanout entry.',
+      },
+    ],
+    stages: [
+      {
+        id: 'plan-stage',
+        title: 'Plan',
+        canonical: 'plan',
+        steps: seedSweepQueue ? ['seed-sweep-queue', 'fanout-step'] : ['fanout-step'],
+      },
+    ],
+    stage_path_policy: {
+      mode: 'partial',
+      omits: ['frame', 'analyze', 'act', 'verify', 'review', 'close'],
+      rationale: 'narrow relay fanout v2 test.',
+    },
+    steps,
+  });
+}
+
+function validProposalBody(optionId = 'option-1'): string {
+  return JSON.stringify({
+    verdict: 'accept',
+    option_id: optionId,
+    option_label: `Option ${optionId}`,
+    case_summary: `Case for ${optionId}`,
+    assumptions: [],
+    evidence_refs: ['reports/options.json'],
+    risks: [],
+    next_action: 'Continue.',
+  });
+}
+
+async function runCompiledRelayFanoutV2(input: {
+  readonly flow?: CompiledFlow;
+  readonly relayer: RelayFn;
+}) {
+  const compiledFlow = input.flow ?? compiledRelayFanoutFlow();
+  const runDir = join(baseDir, `compiled-relay-fanout-${randomUUID()}`);
+  const result = await executeExecutableFlowV2(fromCompiledFlowV1(compiledFlow), {
+    runDir,
+    runId: 'compiled-relay-fanout-run',
+    goal: 'fanout goal',
+    manifestHash: 'compiled-relay-fanout-hash',
+    compiledFlowV1: compiledFlow,
+    relayer: input.relayer,
+    executors: {
+      compose: async (_step, context) => {
+        await context.files.writeJson(
+          { path: 'reports/sweep-queue.json', schema: 'sweep.queue@v1' },
+          {
+            classified: [
+              { candidate_id: 'c-1', action: 'act', rationale: 'authorized cleanup' },
+              { candidate_id: 'c-99', action: 'defer', rationale: 'not authorized' },
+            ],
+            to_execute: ['c-1'],
+            deferred: ['c-99'],
+          },
+        );
+        return { route: 'pass' };
+      },
+    },
+    now: () => new Date('2026-05-03T00:00:00.000Z'),
+  });
+  return { result, runDir, entries: await trace(runDir) };
 }
 
 function subRunFanoutFlow(): ExecutableFlowV2 {
@@ -212,6 +367,134 @@ async function trace(runDir: string) {
 }
 
 describe('core-v2 fanout executor', () => {
+  it('runs compiled relay branches through the production relayer prompt path', async () => {
+    const prompts: string[] = [];
+    const { result, runDir, entries } = await runCompiledRelayFanoutV2({
+      relayer: {
+        connectorName: 'claude-code',
+        relay: async (input) => {
+          prompts.push(input.prompt);
+          return {
+            request_payload: input.prompt,
+            receipt_id: 'receipt-a',
+            result_body: validProposalBody(),
+            duration_ms: 3,
+            cli_version: 'test-relay',
+          };
+        },
+      },
+    });
+
+    expect(result.outcome).toBe('complete');
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toContain('Step: fanout-step-option-1');
+    expect(prompts[0]).toContain('Title: Fanout relay branch / option-1: branch-a goal');
+    expect(prompts[0]).toContain('Accepted verdicts: accept');
+    await expect(
+      readFile(join(runDir, 'reports', 'branches', 'option-1', 'request.txt'), 'utf8'),
+    ).resolves.toContain('Step: fanout-step-option-1');
+    expect(existsSync(join(runDir, 'reports', 'branches', 'option-1', 'request.json'))).toBe(false);
+    expect(entries.find((entry) => entry.kind === 'fanout.branch_completed')).toMatchObject({
+      child_outcome: 'complete',
+      verdict: 'accept',
+      result_path: 'reports/branches/option-1/report.json',
+    });
+  });
+
+  it('does not write relay branch reports for invalid JSON', async () => {
+    const { result, runDir } = await runCompiledRelayFanoutV2({
+      relayer: {
+        connectorName: 'claude-code',
+        relay: async (input) => ({
+          request_payload: input.prompt,
+          receipt_id: 'receipt-a',
+          result_body: 'not-json{{{',
+          duration_ms: 3,
+          cli_version: 'test-relay',
+        }),
+      },
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain('did not parse as JSON');
+    expect(existsSync(join(runDir, 'reports', 'branches', 'option-1', 'result.json'))).toBe(true);
+    expect(existsSync(join(runDir, 'reports', 'branches', 'option-1', 'report.json'))).toBe(false);
+  });
+
+  it('does not write relay branch reports for schema or provenance failures', async () => {
+    const badSchema = await runCompiledRelayFanoutV2({
+      flow: compiledRelayFanoutFlow({ reportSchema: 'runtime-proof-strict@v1', admit: ['ok'] }),
+      relayer: {
+        connectorName: 'claude-code',
+        relay: async (input) => ({
+          request_payload: input.prompt,
+          receipt_id: 'receipt-a',
+          result_body: JSON.stringify({ verdict: 'ok' }),
+          duration_ms: 3,
+          cli_version: 'test-relay',
+        }),
+      },
+    });
+
+    expect(badSchema.result.outcome).toBe('aborted');
+    expect(badSchema.result.reason).toContain('runtime-proof-strict@v1');
+    expect(
+      existsSync(join(badSchema.runDir, 'reports', 'branches', 'option-1', 'report.json')),
+    ).toBe(false);
+
+    const provenance = await runCompiledRelayFanoutV2({
+      flow: compiledRelayFanoutFlow({ provenanceField: 'option_id' }),
+      relayer: {
+        connectorName: 'claude-code',
+        relay: async (input) => ({
+          request_payload: input.prompt,
+          receipt_id: 'receipt-a',
+          result_body: validProposalBody('option-2'),
+          duration_ms: 3,
+          cli_version: 'test-relay',
+        }),
+      },
+    });
+
+    expect(provenance.result.outcome).toBe('aborted');
+    expect(provenance.result.reason).toContain(
+      "report field 'option_id' must equal branch_id 'option-1'",
+    );
+    expect(
+      existsSync(join(provenance.runDir, 'reports', 'branches', 'option-1', 'report.json')),
+    ).toBe(false);
+  });
+
+  it('runs cross-report validation before admitting compiled relay fanout branches', async () => {
+    const offPrescriptionBatch = {
+      verdict: 'accept',
+      summary: 'executed the wrong candidate',
+      changed_files: ['src/off-prescription.ts'],
+      items: [{ candidate_id: 'c-99', status: 'acted', evidence: 'off prescription' }],
+    };
+    const { result, runDir } = await runCompiledRelayFanoutV2({
+      flow: compiledRelayFanoutFlow({
+        reportSchema: 'sweep.batch@v1',
+        admit: ['accept'],
+        seedSweepQueue: true,
+      }),
+      relayer: {
+        connectorName: 'claude-code',
+        relay: async (input) => ({
+          request_payload: input.prompt,
+          receipt_id: 'receipt-a',
+          result_body: JSON.stringify(offPrescriptionBatch),
+          duration_ms: 3,
+          cli_version: 'test-relay',
+        }),
+      },
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain('not in queue.to_execute');
+    expect(existsSync(join(runDir, 'reports', 'branches', 'option-1', 'report.json'))).toBe(false);
+  });
+
   it('expands dynamic relay branches, writes an aggregate, and joins aggregate-only', async () => {
     const runDir = join(baseDir, 'dynamic-relay-run');
     const relayConnector: RelayConnectorV2 = {

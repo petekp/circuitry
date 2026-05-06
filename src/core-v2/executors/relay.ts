@@ -1,17 +1,24 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
+import { parseReport } from '../../flows/registries/report-schemas.js';
 import { relayClaudeCode } from '../../runtime/connectors/claude-code.js';
 import { relayCodex } from '../../runtime/connectors/codex.js';
 import { relayCustom } from '../../runtime/connectors/custom.js';
-import { runCrossReportValidator } from '../../runtime/registries/cross-report-validators.js';
-import { parseReport } from '../../runtime/registries/report-schemas.js';
+import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
 import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
 import { deriveResolvedSelection } from '../../shared/relay-selection.js';
-import { composeRelayPrompt, evaluateRelayCheck } from '../../shared/relay-support.js';
+import {
+  type CheckEvaluation,
+  type RelayStep as CompiledRelayStepV1,
+  NO_VERDICT_SENTINEL,
+  composeRelayPrompt,
+  evaluateRelayCheck,
+} from '../../shared/relay-support.js';
 import {
   assertConnectorSelectionCompatibleV2,
   resolveConnectorForRelayV2,
@@ -144,6 +151,7 @@ export function resolveRelayExecutionV2(input: {
   readonly role: string;
   readonly connectorName: string;
   readonly connector: ResolvedConnector;
+  readonly resolvedFrom: ReturnType<typeof resolveConnectorForRelayV2>['resolvedFrom'];
 } {
   const role = RelayRole.parse(input.role);
   const explicitConnector = requestedConnectorForRelay({
@@ -164,7 +172,12 @@ export function resolveRelayExecutionV2(input: {
     resolvedConnector.name,
     selectionForCompatibility(input.selection),
   );
-  return { role, connectorName: resolvedConnector.name, connector: resolvedConnector };
+  return {
+    role,
+    connectorName: resolvedConnector.name,
+    connector: resolvedConnector,
+    resolvedFrom: resolved.resolvedFrom,
+  };
 }
 
 export async function relayWithResolvedConnectorV2(
@@ -208,6 +221,244 @@ function suppliedConnectorFromRelayer(context: RunContextV2): RelayConnectorV2 |
     async relay() {
       throw new Error('relay identity placeholder should not be invoked');
     },
+  };
+}
+
+export interface ProductionRelayAttemptValidationInputV2 {
+  readonly compiledFlow: CompiledFlow;
+  readonly context: RunContextV2;
+  readonly step: RelayStepV2;
+  readonly compiledStep: CompiledRelayStepV1;
+  readonly relayResult: RelayResult;
+  readonly checkEvaluation: Extract<CheckEvaluation, { kind: 'pass' }>;
+}
+
+export interface ProductionRelayAttemptValidationResultV2 {
+  readonly evaluation: CheckEvaluation;
+  readonly parsedBody?: unknown;
+}
+
+export type ProductionRelayAttemptResultV2 =
+  | {
+      readonly kind: 'connector_failed';
+      readonly reason: string;
+      readonly duration_ms: number;
+    }
+  | {
+      readonly kind: 'completed';
+      readonly evaluation: CheckEvaluation;
+      readonly relay_completed_verdict: string;
+      readonly duration_ms: number;
+      readonly result_path: string;
+      readonly parsed_body?: unknown;
+      readonly report_path?: string;
+    };
+
+function defaultValidateAcceptedProductionRelayV2(
+  input: ProductionRelayAttemptValidationInputV2,
+): ProductionRelayAttemptValidationResultV2 {
+  const { compiledFlow, context, step, relayResult, checkEvaluation } = input;
+  if (step.report?.schema === undefined) return { evaluation: checkEvaluation };
+  const parseResult = parseReport(step.report.schema, relayResult.result_body);
+  if (parseResult.kind === 'fail') {
+    return {
+      evaluation: {
+        kind: 'fail',
+        reason: `relay step '${step.id}': ${parseResult.reason}`,
+        observedVerdict: checkEvaluation.verdict,
+      },
+    };
+  }
+  const crossResult = runCrossReportValidator(
+    step.report.schema,
+    compiledFlow,
+    context.runDir,
+    relayResult.result_body,
+  );
+  if (crossResult.kind === 'fail') {
+    return {
+      evaluation: {
+        kind: 'fail',
+        reason: `relay step '${step.id}': ${crossResult.reason}`,
+        observedVerdict: checkEvaluation.verdict,
+      },
+    };
+  }
+  return { evaluation: checkEvaluation };
+}
+
+export async function executeProductionRelayAttemptV2(input: {
+  readonly step: RelayStepV2;
+  readonly compiledStep: CompiledRelayStepV1;
+  readonly context: RunContextV2;
+  readonly formatConnectorFailureReason?: (stepId: string, error: unknown) => string;
+  readonly validateAcceptedResult?: (
+    input: ProductionRelayAttemptValidationInputV2,
+  ) => ProductionRelayAttemptValidationResultV2;
+}): Promise<ProductionRelayAttemptResultV2> {
+  const { step, compiledStep, context } = input;
+  const compiledFlow = requireCompiledFlowV1(context, step);
+  const prompt = composeRelayPrompt(compiledStep, context.runDir);
+  const suppliedConnector = suppliedConnectorFromRelayer(context);
+  const relayExecution = resolveRelayExecutionV2({
+    flowId: context.flow.id,
+    role: step.role,
+    ...(suppliedConnector === undefined ? {} : { suppliedConnector }),
+    ...(context.selectionConfigLayers === undefined
+      ? {}
+      : { configLayers: context.selectionConfigLayers }),
+    ...(step.selection === undefined ? {} : { selection: step.selection }),
+    ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
+  });
+  const resolvedSelection = deriveResolvedSelection(
+    {
+      ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
+      ...(context.selectionConfigLayers === undefined
+        ? {}
+        : { selectionConfigLayers: context.selectionConfigLayers }),
+    },
+    compiledFlow,
+    compiledStep,
+    Depth.parse(context.depth ?? 'standard'),
+  );
+  assertConnectorSelectionCompatibleV2(relayExecution.connectorName, resolvedSelection);
+
+  const request = step.writes?.request;
+  const receipt = step.writes?.receipt;
+  const result = step.writes?.result;
+  if (request === undefined || receipt === undefined || result === undefined) {
+    throw new Error(
+      `relay step '${step.id}' requires writes.request, writes.receipt, and writes.result`,
+    );
+  }
+  const requestPath = context.files.resolve(request);
+  await mkdir(dirname(requestPath), { recursive: true });
+  await writeFile(requestPath, prompt, 'utf8');
+  const requestPayloadHash = sha256Hex(prompt);
+  const startMs = Date.now();
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'relay.started',
+    step_id: step.id,
+    data: {
+      connector: relayExecution.connector,
+      resolved_from: relayExecution.resolvedFrom,
+      role: step.role,
+      resolved_selection: resolvedSelection,
+    },
+  });
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'relay.request',
+    step_id: step.id,
+    data: { request_payload_hash: requestPayloadHash },
+  });
+
+  let relayResult: RelayResult;
+  try {
+    const relayTimeoutMs = timeoutMs(step);
+    relayResult =
+      context.relayer === undefined
+        ? await relayWithResolvedConnectorV2(relayExecution.connector, {
+            prompt,
+            ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
+            resolvedSelection,
+          })
+        : await context.relayer.relay({
+            prompt,
+            ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
+            resolvedSelection,
+          });
+  } catch (error) {
+    const reason = (
+      input.formatConnectorFailureReason ??
+      ((stepId: string, caught: unknown) =>
+        `relay step '${stepId}': connector invocation failed (${(caught as Error).message})`)
+    )(step.id, error);
+    await context.trace.append({
+      run_id: context.runId,
+      kind: 'relay.failed',
+      step_id: step.id,
+      reason,
+      data: { request_payload_hash: requestPayloadHash },
+    });
+    return { kind: 'connector_failed', reason, duration_ms: Math.max(0, Date.now() - startMs) };
+  }
+
+  await context.files.writeText(receipt, relayResult.receipt_id);
+  await context.files.writeText(result, relayResult.result_body);
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'relay.receipt',
+    step_id: step.id,
+    data: { receipt_id: relayResult.receipt_id },
+  });
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'relay.result',
+    step_id: step.id,
+    data: { result_report_hash: sha256Hex(relayResult.result_body) },
+  });
+
+  const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
+  let evaluation: CheckEvaluation = checkEvaluation;
+  let parsedBody: unknown;
+  if (checkEvaluation.kind === 'pass') {
+    const validation = (input.validateAcceptedResult ?? defaultValidateAcceptedProductionRelayV2)({
+      compiledFlow,
+      context,
+      step,
+      compiledStep,
+      relayResult,
+      checkEvaluation,
+    });
+    evaluation = validation.evaluation;
+    parsedBody = validation.parsedBody;
+  }
+
+  const relayCompletedVerdict =
+    evaluation.kind === 'pass'
+      ? evaluation.verdict
+      : (evaluation.observedVerdict ?? NO_VERDICT_SENTINEL);
+  const durationMs = Math.max(0, Date.now() - startMs);
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'relay.completed',
+    step_id: step.id,
+    verdict: relayCompletedVerdict,
+    duration_ms: relayResult.duration_ms,
+    result_path: result.path,
+    ...(step.report === undefined || evaluation.kind !== 'pass'
+      ? {}
+      : { report_path: step.report.path }),
+    data: { admitted: evaluation.kind === 'pass' },
+  });
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'check.evaluated',
+    step_id: step.id,
+    check_kind: 'result_verdict',
+    outcome: evaluation.kind === 'pass' ? 'pass' : 'fail',
+    ...(evaluation.kind === 'pass' ? {} : { reason: evaluation.reason }),
+  });
+
+  if (evaluation.kind === 'pass' && step.report !== undefined) {
+    const reportBody =
+      parsedBody === undefined ? (JSON.parse(relayResult.result_body) as unknown) : parsedBody;
+    await context.files.writeJson(step.report, reportBody);
+    parsedBody = reportBody;
+  }
+
+  return {
+    kind: 'completed',
+    evaluation,
+    relay_completed_verdict: relayCompletedVerdict,
+    duration_ms: durationMs,
+    result_path: result.path,
+    ...(parsedBody === undefined ? {} : { parsed_body: parsedBody }),
+    ...(step.report === undefined || evaluation.kind !== 'pass'
+      ? {}
+      : { report_path: step.report.path }),
   };
 }
 
@@ -258,179 +509,19 @@ async function executeProductionRelayV2(
   step: RelayStepV2,
   context: RunContextV2,
 ): Promise<StepOutcomeV2> {
-  const compiledFlow = requireCompiledFlowV1(context, step);
   const compiledStep = requireCompiledStepV1(context, step, 'relay');
-  const prompt = composeRelayPrompt(compiledStep, context.runDir);
-  const suppliedConnector = suppliedConnectorFromRelayer(context);
-  const relayExecution = resolveRelayExecutionV2({
-    flowId: context.flow.id,
-    role: step.role,
-    ...(suppliedConnector === undefined ? {} : { suppliedConnector }),
-    ...(context.selectionConfigLayers === undefined
-      ? {}
-      : { configLayers: context.selectionConfigLayers }),
-    ...(step.selection === undefined ? {} : { selection: step.selection }),
-    ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
-  });
-  const resolvedSelection = deriveResolvedSelection(
-    {
-      ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
-      ...(context.selectionConfigLayers === undefined
-        ? {}
-        : { selectionConfigLayers: context.selectionConfigLayers }),
-    },
-    compiledFlow,
-    compiledStep,
-    Depth.parse(context.depth ?? 'standard'),
-  );
-  assertConnectorSelectionCompatibleV2(relayExecution.connectorName, resolvedSelection);
-
-  const request = step.writes?.request;
-  const receipt = step.writes?.receipt;
-  const result = step.writes?.result;
-  if (request === undefined || receipt === undefined || result === undefined) {
-    throw new Error(
-      `relay step '${step.id}' requires writes.request, writes.receipt, and writes.result`,
-    );
-  }
-  const requestPath = context.files.resolve(request);
-  await mkdir(dirname(requestPath), { recursive: true });
-  await writeFile(requestPath, prompt, 'utf8');
-  const requestPayloadHash = sha256Hex(prompt);
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'relay.started',
-    step_id: step.id,
-    data: {
-      connector: relayExecution.connector,
-      role: step.role,
-      resolved_selection: resolvedSelection,
-    },
-  });
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'relay.request',
-    step_id: step.id,
-    data: { request_payload_hash: requestPayloadHash },
-  });
-
-  let relayResult: RelayResult;
-  try {
-    const relayTimeoutMs = timeoutMs(step);
-    relayResult =
-      context.relayer === undefined
-        ? await relayWithResolvedConnectorV2(relayExecution.connector, {
-            prompt,
-            ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
-            resolvedSelection,
-          })
-        : await context.relayer.relay({
-            prompt,
-            ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
-            resolvedSelection,
-          });
-  } catch (error) {
-    const reason = `relay step '${step.id}': connector invocation failed (${(error as Error).message})`;
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'relay.failed',
-      step_id: step.id,
-      reason,
-      data: { request_payload_hash: requestPayloadHash },
-    });
+  const relayAttempt = await executeProductionRelayAttemptV2({ step, context, compiledStep });
+  if (relayAttempt.kind === 'connector_failed') {
     const recoveryRoute = recoveryRouteForExecutableStep(step);
-    if (recoveryRoute !== undefined) return { route: recoveryRoute, details: { reason } };
-    throw new Error(reason);
+    if (recoveryRoute !== undefined)
+      return { route: recoveryRoute, details: { reason: relayAttempt.reason } };
+    throw new Error(relayAttempt.reason);
   }
 
-  await context.files.writeText(receipt, relayResult.receipt_id);
-  await context.files.writeText(result, relayResult.result_body);
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'relay.receipt',
-    step_id: step.id,
-    data: { receipt_id: relayResult.receipt_id },
-  });
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'relay.result',
-    step_id: step.id,
-    data: { result_report_hash: sha256Hex(relayResult.result_body) },
-  });
-
-  const evaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
-  if (evaluation.kind === 'pass' && step.report?.schema !== undefined) {
-    const parseResult = parseReport(step.report.schema, relayResult.result_body);
-    if (parseResult.kind === 'fail') {
-      const reason = `relay step '${step.id}': ${parseResult.reason}`;
-      await context.trace.append({
-        run_id: context.runId,
-        kind: 'check.evaluated',
-        step_id: step.id,
-        check_kind: 'result_verdict',
-        outcome: 'fail',
-        reason,
-      });
-      const recoveryRoute = recoveryRouteForExecutableStep(step);
-      if (recoveryRoute !== undefined) return { route: recoveryRoute, details: { reason } };
-      throw new Error(reason);
-    }
-    const crossResult = runCrossReportValidator(
-      step.report.schema,
-      compiledFlow,
-      context.runDir,
-      relayResult.result_body,
-    );
-    if (crossResult.kind === 'fail') {
-      const reason = `relay step '${step.id}': ${crossResult.reason}`;
-      await context.trace.append({
-        run_id: context.runId,
-        kind: 'check.evaluated',
-        step_id: step.id,
-        check_kind: 'result_verdict',
-        outcome: 'fail',
-        reason,
-      });
-      const recoveryRoute = recoveryRouteForExecutableStep(step);
-      if (recoveryRoute !== undefined) return { route: recoveryRoute, details: { reason } };
-      throw new Error(reason);
-    }
-    await context.files.writeJson(step.report, JSON.parse(relayResult.result_body) as unknown);
-  }
-
-  const relayCompletedVerdict =
-    evaluation.kind === 'pass'
-      ? evaluation.verdict
-      : (evaluation.observedVerdict ?? '<no-verdict>');
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'relay.completed',
-    step_id: step.id,
-    verdict: relayCompletedVerdict,
-    duration_ms: relayResult.duration_ms,
-    result_path: result.path,
-    ...(step.report === undefined ? {} : { report_path: step.report.path }),
-  });
-
-  if (evaluation.kind === 'pass') {
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'check.evaluated',
-      step_id: step.id,
-      check_kind: 'result_verdict',
-      outcome: 'pass',
-    });
+  const { evaluation } = relayAttempt;
+  if (evaluation.kind === 'pass')
     return { route: 'pass', details: { verdict: evaluation.verdict } };
-  }
 
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'check.evaluated',
-    step_id: step.id,
-    check_kind: 'result_verdict',
-    outcome: 'fail',
-    reason: evaluation.reason,
-  });
   const recoveryRoute = recoveryRouteForExecutableStep(step);
   if (recoveryRoute !== undefined)
     return { route: recoveryRoute, details: { reason: evaluation.reason } };

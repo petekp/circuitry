@@ -1,1 +1,14 @@
-{"verdict":"accept","sources":[{"kind":"file","ref":"src/login.ts:1","summary":"Synthetic login test fixture."}],"observations":["The missing token path needs a guard."],"open_questions":[]}
+{
+  "verdict": "accept",
+  "sources": [
+    {
+      "kind": "file",
+      "ref": "src/login.ts:1",
+      "summary": "Synthetic login test fixture."
+    }
+  ],
+  "observations": [
+    "The missing token path needs a guard."
+  ],
+  "open_questions": []
+}

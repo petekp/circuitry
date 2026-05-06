@@ -14,13 +14,13 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
 import { runRelayStep } from '../../src/runtime/step-handlers/relay.js';
 import type { RunState, StepHandlerContext } from '../../src/runtime/step-handlers/types.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import type { TraceEntry } from '../../src/schemas/trace-entry.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
 import { expectStepAborted, expectStepAdvance } from '../helpers/failure-message.js';
 
 const WORKFLOW_ID = 'relay-direct-test' as unknown as CompiledFlowId;

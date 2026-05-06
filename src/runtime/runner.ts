@@ -436,9 +436,9 @@ function reportUserInputRequested(input: {
 }
 
 // Compose writer fallback. CompiledFlow-specific compose logic lives
-// under src/runtime/registries/compose-writers/ and is registered by
+// under src/flows/registries/compose-writers/ and is registered by
 // output schema name; close-with-evidence relay lives in
-// src/runtime/registries/close-writers/. The runner stays flow-
+// src/flows/registries/close-writers/. The runner stays flow-
 // agnostic — adding a new compose step means adding a ComposeBuilder
 // file + registry entry.
 function tryWriteRegisteredComposeReport(input: ComposeWriterInput): boolean {

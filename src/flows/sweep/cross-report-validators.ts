@@ -13,12 +13,12 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import {
   flowHasReportSchemaInCompiledFlow,
   reportPathForSchemaInCompiledFlow,
-} from '../../runtime/registries/close-writers/shared.js';
-import type { CrossReportResult } from '../../runtime/registries/cross-report-validators.js';
-import type { CompiledFlow } from '../../schemas/compiled-flow.js';
+} from '../registries/close-writers/shared.js';
+import type { CrossReportResult } from '../registries/cross-report-validators.js';
 import { SweepBatch, SweepQueue } from './reports.js';
 
 export function validateSweepBatchAgainstQueue(

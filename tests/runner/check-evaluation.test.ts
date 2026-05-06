@@ -7,9 +7,10 @@ import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';
 
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import { type RelayFn, runCompiledFlow } from '../../src/runtime/runner.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Relay verdict truth.
 //

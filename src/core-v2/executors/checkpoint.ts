@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { findCheckpointBriefBuilder } from '../../runtime/registries/checkpoint-writers/registry.js';
+import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import type { StepOutcomeV2 } from '../domain/step.js';
 import type { CheckpointStepV2 } from '../manifest/executable-flow.js';
@@ -10,8 +10,8 @@ type CheckpointResolution =
   | {
       readonly kind: 'resolved';
       readonly selection: string;
-      readonly resolutionSource: 'safe-default' | 'safe-autonomous';
-      readonly autoResolved: true;
+      readonly resolutionSource: 'operator' | 'safe-default' | 'safe-autonomous';
+      readonly autoResolved: boolean;
     }
   | { readonly kind: 'waiting' }
   | { readonly kind: 'failed'; readonly reason: string };
@@ -88,6 +88,7 @@ export async function executeCheckpointV2(
   step: CheckpointStepV2,
   context: RunContextV2,
 ): Promise<StepOutcomeV2> {
+  const attempt = context.activeStepAttempt ?? 1;
   const request = step.writes?.request;
   const response = step.writes?.response;
   if (request === undefined || response === undefined) {
@@ -97,81 +98,120 @@ export async function executeCheckpointV2(
 
   let checkpointReportSha256: string | undefined;
   const report = step.writes?.report;
-  if (report !== undefined) {
-    const builder =
-      report.schema === undefined ? undefined : findCheckpointBriefBuilder(report.schema);
-    if (builder === undefined || report.schema === undefined) {
-      throw new Error(`checkpoint step '${step.id}' has unsupported report schema`);
+  const resumedSelection =
+    context.resumeCheckpoint?.stepId === step.id ? context.resumeCheckpoint.selection : undefined;
+  const resolution = resolveCheckpoint(step, context.depth);
+  if (resumedSelection === undefined) {
+    if (report !== undefined) {
+      const builder =
+        report.schema === undefined ? undefined : findCheckpointBriefBuilder(report.schema);
+      if (builder === undefined || report.schema === undefined) {
+        throw new Error(`checkpoint step '${step.id}' has unsupported report schema`);
+      }
+      const body = builder.build({
+        runFolder: context.runDir,
+        step: compiledStep,
+        goal: context.goal,
+        responsePath: response.path,
+      });
+      await context.files.writeJson(report, body);
+      checkpointReportSha256 = sha256Hex(readFileSync(context.files.resolve(report), 'utf8'));
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'step.report_written',
+        step_id: step.id,
+        attempt,
+        report_path: report.path,
+        report_schema: report.schema,
+      });
     }
-    const body = builder.build({
-      runFolder: context.runDir,
-      step: compiledStep,
-      goal: context.goal,
-      responsePath: response.path,
+
+    const requestBody = checkpointRequestBody({
+      step,
+      context,
+      ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
     });
-    await context.files.writeJson(report, body);
-    checkpointReportSha256 = sha256Hex(readFileSync(context.files.resolve(report), 'utf8'));
+    await context.files.writeJson(request, requestBody);
+    const requestText = readFileSync(context.files.resolve(request), 'utf8');
     await context.trace.append({
       run_id: context.runId,
-      kind: 'step.report_written',
+      kind: 'checkpoint.requested',
       step_id: step.id,
-      report_path: report.path,
-      report_schema: report.schema,
+      attempt,
+      request_path: request.path,
+      request_report_hash: sha256Hex(requestText),
+      allowed_choices: step.choices,
+      ...(resolution.kind === 'resolved' && resolution.autoResolved
+        ? {
+            auto_resolved: true,
+            resolution_source: resolution.resolutionSource,
+          }
+        : {}),
+      ...(checkpointReportSha256 === undefined
+        ? {}
+        : { checkpoint_report_sha256: checkpointReportSha256 }),
+      data: { prompt: policy(step).prompt },
     });
   }
 
-  const requestBody = checkpointRequestBody({
-    step,
-    context,
-    ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
-  });
-  await context.files.writeJson(request, requestBody);
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'checkpoint.requested',
-    step_id: step.id,
-    report_path: request.path,
-    data: { options: step.choices },
-  });
-
-  const resolution = resolveCheckpoint(step, context.depth);
-  if (resolution.kind === 'waiting') {
-    throw new Error(
-      `checkpoint step '${step.id}' requires v2 resume support for depth '${context.depth ?? 'standard'}'; keep old checkpoint runtime retained`,
-    );
+  const effectiveResolution: CheckpointResolution =
+    resumedSelection === undefined
+      ? resolution
+      : {
+          kind: 'resolved',
+          selection: resumedSelection,
+          resolutionSource: 'operator',
+          autoResolved: false,
+        };
+  if (effectiveResolution.kind === 'waiting') {
+    return {
+      kind: 'waiting_checkpoint',
+      checkpoint: {
+        stepId: step.id,
+        attempt,
+        requestPath: context.files.resolve(request),
+        allowedChoices: step.choices,
+      },
+    };
   }
-  if (resolution.kind === 'failed') {
+  if (effectiveResolution.kind === 'failed') {
     await context.trace.append({
       run_id: context.runId,
       kind: 'check.evaluated',
       step_id: step.id,
+      attempt,
       check_kind: 'checkpoint_selection',
       outcome: 'fail',
-      reason: resolution.reason,
+      reason: effectiveResolution.reason,
     });
-    throw new Error(resolution.reason);
+    throw new Error(effectiveResolution.reason);
   }
 
   const allowed = (step.check as { readonly allow?: unknown }).allow;
-  if (Array.isArray(allowed) && !allowed.includes(resolution.selection)) {
+  if (Array.isArray(allowed) && !allowed.includes(effectiveResolution.selection)) {
     throw new Error(
-      `checkpoint step '${step.id}' selected '${resolution.selection}' but check.allow is [${allowed.join(', ')}]`,
+      `checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${allowed.join(', ')}]`,
     );
   }
   await context.files.writeJson(response, {
     schema_version: 1,
     step_id: step.id,
-    selection: resolution.selection,
-    resolution_source: resolution.resolutionSource,
+    selection: effectiveResolution.selection,
+    resolution_source: effectiveResolution.resolutionSource,
   });
   await context.trace.append({
     run_id: context.runId,
     kind: 'checkpoint.resolved',
     step_id: step.id,
+    attempt,
+    selection: effectiveResolution.selection,
+    auto_resolved: effectiveResolution.autoResolved,
+    resolution_source: effectiveResolution.resolutionSource,
+    response_path: response.path,
     data: {
-      selection: resolution.selection,
-      auto_resolved: resolution.autoResolved,
-      resolution_source: resolution.resolutionSource,
+      selection: effectiveResolution.selection,
+      auto_resolved: effectiveResolution.autoResolved,
+      resolution_source: effectiveResolution.resolutionSource,
       response_path: response.path,
     },
   });
@@ -179,12 +219,15 @@ export async function executeCheckpointV2(
     run_id: context.runId,
     kind: 'check.evaluated',
     step_id: step.id,
+    attempt,
     check_kind: 'checkpoint_selection',
     outcome: 'pass',
   });
 
   return {
-    route: Object.hasOwn(step.routes, resolution.selection) ? resolution.selection : 'pass',
-    details: { selection: resolution.selection },
+    route: Object.hasOwn(step.routes, effectiveResolution.selection)
+      ? effectiveResolution.selection
+      : 'pass',
+    details: { selection: effectiveResolution.selection },
   };
 }

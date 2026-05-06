@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { reduce } from '../runtime/reducer.js';
-import { findCheckpointBriefBuilder } from '../runtime/registries/checkpoint-writers/registry.js';
+import { reduceRetainedRunTrace } from '../compat/retained-checkpoint-folders.js';
+import { findCheckpointBriefBuilder } from '../flows/registries/checkpoint-writers/registry.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { LayeredConfig } from '../schemas/config.js';
 import { RunStatusProjectionV1 } from '../schemas/run-status.js';
@@ -371,7 +371,7 @@ export function projectV1RunStatusFromTrace(input: {
 
   let snapshot: Snapshot;
   try {
-    snapshot = reduce(input.log);
+    snapshot = reduceRetainedRunTrace(input.log);
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,

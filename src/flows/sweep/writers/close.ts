@@ -8,11 +8,8 @@
 // review reports minor injections; 'reverted' iff batch is 'reverted';
 // otherwise 'failed'.
 
-import { reportPathForSchemaInCompiledFlow } from '../../../runtime/registries/close-writers/shared.js';
-import type {
-  CloseBuildContext,
-  CloseBuilder,
-} from '../../../runtime/registries/close-writers/types.js';
+import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
+import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
 import {
   SweepAnalysis,
   SweepBatch,

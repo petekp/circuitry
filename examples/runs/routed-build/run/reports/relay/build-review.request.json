@@ -66,7 +66,17 @@ Context (from reads):
 
 
 --- reports/build/implementation.json ---
-{"verdict":"accept","summary":"Implemented the requested synthetic change.","changed_files":["src/example.ts"],"evidence":["Deterministic Build implementation proof."]}
+{
+  "verdict": "accept",
+  "summary": "Implemented the requested synthetic change.",
+  "changed_files": [
+    "src/example.ts"
+  ],
+  "evidence": [
+    "Deterministic Build implementation proof."
+  ]
+}
+
 
 --- reports/build/verification.json ---
 {
@@ -82,7 +92,7 @@ Context (from reads):
       "cwd": ".",
       "exit_code": 0,
       "status": "passed",
-      "duration_ms": 1873,
+      "duration_ms": 2567,
       "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
       "stderr_summary": ""
     }

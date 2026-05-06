@@ -1,0 +1,103 @@
+Step: review-step
+Title: Review - implementation review relay
+Role: reviewer
+Accepted verdicts: accept, accept-with-fixes
+
+Context (from reads):
+--- reports/build/brief.json ---
+{
+  "objective": "Migrate the inventoried targets per migrate.coexistence@v1 batch plan",
+  "scope": "Make the smallest safe change that satisfies the requested goal.",
+  "success_criteria": [
+    "The requested behavior is implemented",
+    "Verification passes",
+    "Review completes without a blocking issue"
+  ],
+  "verification_command_candidates": [
+    {
+      "id": "npm-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "timeout_ms": 120000,
+      "max_output_bytes": 200000,
+      "env": {}
+    }
+  ],
+  "checkpoint": {
+    "request_path": "reports/checkpoints/frame-step-request.json",
+    "response_path": "reports/checkpoints/frame-step-response.json",
+    "allowed_choices": [
+      "continue"
+    ]
+  }
+}
+
+
+--- reports/build/plan.json ---
+{
+  "objective": "Migrate the inventoried targets per migrate.coexistence@v1 batch plan",
+  "approach": "Make the smallest safe change inside scope: Make the smallest safe change that satisfies the requested goal.",
+  "slices": [
+    "Satisfy: The requested behavior is implemented",
+    "Satisfy: Verification passes",
+    "Satisfy: Review completes without a blocking issue"
+  ],
+  "verification": {
+    "commands": [
+      {
+        "id": "npm-check",
+        "cwd": ".",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ],
+        "timeout_ms": 120000,
+        "max_output_bytes": 200000,
+        "env": {}
+      }
+    ]
+  }
+}
+
+
+--- reports/build/implementation.json ---
+{
+  "verdict": "accept",
+  "summary": "Implemented the requested synthetic change.",
+  "changed_files": [
+    "src/example.ts"
+  ],
+  "evidence": [
+    "Deterministic Build implementation proof."
+  ]
+}
+
+
+--- reports/build/verification.json ---
+{
+  "overall_status": "passed",
+  "commands": [
+    {
+      "command_id": "npm-check",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "status": "passed",
+      "duration_ms": 2591,
+      "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
+      "stderr_summary": ""
+    }
+  ]
+}
+
+
+Respond with a single raw JSON object whose top-level shape is exactly: { "verdict": "<accept|accept-with-fixes|reject>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] } Review the change against the requested scope, not just against passing tests. Flag behavior that broadens semantics beyond the goal even when verification passes. Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against build.review@v1 before writing reports/build/review.json.

@@ -7,7 +7,7 @@
 // plus the NO_ISSUES_FOUND/ISSUES_FOUND check verdicts that mirror the
 // review.relay-result body shape.
 
-import type { StructuralShapeHint } from '../../runtime/registries/shape-hints/types.js';
+import type { StructuralShapeHint } from '../registries/shape-hints/types.js';
 
 export const reviewRelayShapeHint: StructuralShapeHint = {
   kind: 'structural',

@@ -15,14 +15,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { resultPath } from '../../src/runtime/result-writer.js';
 import type {
   ChildCompiledFlowResolver,
   CompiledFlowInvocation,
   CompiledFlowRunResult,
   CompiledFlowRunner,
   WorktreeRunner,
-} from '../../src/runtime/runner.js';
+} from '../../src/compat/retained-runtime.js';
+import { resultPath } from '../../src/runtime/result-writer.js';
 import { runFanoutStep } from '../../src/runtime/step-handlers/fanout.js';
 import type { RunState, StepHandlerContext } from '../../src/runtime/step-handlers/types.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';

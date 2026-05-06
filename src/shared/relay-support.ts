@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { findRelayShapeHint } from '../runtime/registries/shape-hints/registry.js';
+import { findRelayShapeHint } from '../flows/registries/shape-hints/registry.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { resolveRunRelative } from './run-relative-path.js';
 

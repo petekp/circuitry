@@ -17,8 +17,8 @@ import {
   findRelayShapeHint,
   listRegisteredSchemaHints,
   listRegisteredStructuralHints,
-} from '../../src/runtime/registries/shape-hints/registry.js';
-import type { RelayStep } from '../../src/runtime/registries/shape-hints/types.js';
+} from '../../src/flows/registries/shape-hints/registry.js';
+import type { RelayStep } from '../../src/flows/registries/shape-hints/types.js';
 
 const EXPECTED_SCHEMA_HINTS: readonly string[] = flowPackages.flatMap((pkg) =>
   pkg.relayReports.filter((a) => a.relayHint !== undefined).map((a) => a.schemaName),

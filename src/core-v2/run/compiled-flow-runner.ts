@@ -17,7 +17,12 @@ import type {
   CompiledFlowRunnerV2,
   WorktreeRunnerV2,
 } from './child-runner.js';
-import { type GraphRunResultV2, executeExecutableFlowV2 } from './graph-runner.js';
+import {
+  type GraphExecutionResultV2,
+  type GraphRunResultV2,
+  executeExecutableFlowV2WithWaiting,
+  isGraphCheckpointWaitingResultV2,
+} from './graph-runner.js';
 
 export interface CompiledFlowRunOptionsV2 {
   readonly flowBytes: Uint8Array;
@@ -62,14 +67,14 @@ export function parseCompiledFlowBytesV2(bytes: Uint8Array): CompiledFlow {
   return CompiledFlowSchema.parse(raw);
 }
 
-export async function runCompiledFlowV2(
+export async function runCompiledFlowV2WithWaiting(
   options: CompiledFlowRunOptionsV2,
-): Promise<GraphRunResultV2> {
+): Promise<GraphExecutionResultV2> {
   const flow = parseCompiledFlowBytesV2(options.flowBytes);
   const entry = selectEntryMode(flow, options.entryModeName);
   const executable = fromCompiledFlowV1(flow);
   const depth = options.depth ?? entry.depth;
-  return await executeExecutableFlowV2(
+  return await executeExecutableFlowV2WithWaiting(
     {
       ...executable,
       entry: entry.start_at,
@@ -94,7 +99,7 @@ export async function runCompiledFlowV2(
       ...(options.childCompiledFlowResolver === undefined
         ? {}
         : { childCompiledFlowResolver: options.childCompiledFlowResolver }),
-      childRunner: options.childRunner ?? runCompiledFlowV2,
+      childRunner: options.childRunner ?? runCompiledFlowChildV2,
       ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
       ...(options.evidencePolicy === undefined ? {} : { evidencePolicy: options.evidencePolicy }),
       ...(options.worktreeRunner === undefined ? {} : { worktreeRunner: options.worktreeRunner }),
@@ -107,4 +112,22 @@ export async function runCompiledFlowV2(
       ...(options.maxSteps === undefined ? {} : { maxSteps: options.maxSteps }),
     },
   );
+}
+
+export async function runCompiledFlowV2(
+  options: CompiledFlowRunOptionsV2,
+): Promise<GraphRunResultV2> {
+  const result = await runCompiledFlowV2WithWaiting(options);
+  if (isGraphCheckpointWaitingResultV2(result)) {
+    throw new Error(
+      `core-v2 run '${result.runId}' paused at checkpoint '${result.checkpoint.stepId}', which requires checkpoint-aware resume routing`,
+    );
+  }
+  return result;
+}
+
+export async function runCompiledFlowChildV2(
+  options: CompiledFlowRunOptionsV2,
+): Promise<GraphRunResultV2> {
+  return await runCompiledFlowV2(options);
 }

@@ -11,12 +11,12 @@
 // CompiledFlowPackage, append it to catalog.ts. No edits to the engine.
 
 import type { z } from 'zod';
-import type { CheckpointBriefBuilder } from '../runtime/registries/checkpoint-writers/types.js';
-import type { CloseBuilder } from '../runtime/registries/close-writers/types.js';
-import type { ComposeBuilder } from '../runtime/registries/compose-writers/types.js';
-import type { CrossReportValidator } from '../runtime/registries/cross-report-validators.js';
-import type { StructuralShapeHint } from '../runtime/registries/shape-hints/types.js';
-import type { VerificationBuilder } from '../runtime/registries/verification-writers/types.js';
+import type { CheckpointBriefBuilder } from './registries/checkpoint-writers/types.js';
+import type { CloseBuilder } from './registries/close-writers/types.js';
+import type { ComposeBuilder } from './registries/compose-writers/types.js';
+import type { CrossReportValidator } from './registries/cross-report-validators.js';
+import type { StructuralShapeHint } from './registries/shape-hints/types.js';
+import type { VerificationBuilder } from './registries/verification-writers/types.js';
 
 export interface CompiledFlowSignal {
   readonly label: string;

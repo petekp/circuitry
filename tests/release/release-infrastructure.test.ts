@@ -530,6 +530,19 @@ describe('release truth infrastructure', () => {
     expect(script).toContain("resumeChoice: 'option-2'");
   });
 
+  it('captures the golden Fix proof through v2 executor injection instead of composeWriter', () => {
+    const script = readFileSync(
+      resolve(root, 'scripts/release/capture-golden-run-proofs.mjs'),
+      'utf8',
+    );
+
+    expect(script).toContain("slug: 'fix'");
+    expect(script).toContain('v2Executors: fixProofExecutors()');
+    expect(script).toContain("proof: 'release-fix-brief'");
+    expect(script).not.toContain('../../dist/runtime/runner.js');
+    expect(script).not.toContain('composeWriter:');
+  });
+
   it('captures current golden run proofs with scrubbed, schema-valid files', () => {
     const proofs = ProofScenarioIndex.parse(yamlFile('docs/release/proofs/index.yaml'));
     const expected = new Map([

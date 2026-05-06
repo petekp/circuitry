@@ -39,4 +39,10 @@ export interface RunContextV2 {
   readonly relayer?: RelayFn;
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
   readonly progress?: ProgressReporter;
+  readonly activeStepAttempt?: number;
+  readonly resumeCheckpoint?: {
+    readonly stepId: string;
+    readonly attempt: number;
+    readonly selection: string;
+  };
 }

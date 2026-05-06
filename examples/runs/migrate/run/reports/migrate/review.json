@@ -1,1 +1,5 @@
-{"verdict":"cutover-approved","summary":"Cutover approved for the synthetic migration proof.","findings":[]}
+{
+  "verdict": "cutover-approved",
+  "summary": "Cutover approved for the synthetic migration proof.",
+  "findings": []
+}

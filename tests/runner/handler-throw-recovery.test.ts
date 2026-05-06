@@ -8,10 +8,11 @@ import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';
 import { RunResult } from '../../src/schemas/result.js';
 
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import { type RelayFn, runCompiledFlow } from '../../src/runtime/runner.js';
 import { readRunTrace } from '../../src/runtime/trace-reader.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Adversarial-review fix #4: a handler that throws unexpectedly must not
 // leave the run-folder half-bootstrapped (step.entered on disk, no

@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import type { CompiledFlowPackage } from '../../src/flows/types.js';
 import {
   buildCheckpointRegistry,
   buildCloseRegistry,
@@ -17,12 +16,13 @@ import {
   buildStructuralHintList,
   buildVerificationRegistry,
   findDefaultRoutablePackage,
-} from '../../src/runtime/catalog-derivations.js';
-import type { CheckpointBriefBuilder } from '../../src/runtime/registries/checkpoint-writers/types.js';
-import type { CloseBuilder } from '../../src/runtime/registries/close-writers/types.js';
-import type { ComposeBuilder } from '../../src/runtime/registries/compose-writers/types.js';
-import type { StructuralShapeHint } from '../../src/runtime/registries/shape-hints/types.js';
-import type { VerificationBuilder } from '../../src/runtime/registries/verification-writers/types.js';
+} from '../../src/flows/catalog-derivations.js';
+import type { CheckpointBriefBuilder } from '../../src/flows/registries/checkpoint-writers/types.js';
+import type { CloseBuilder } from '../../src/flows/registries/close-writers/types.js';
+import type { ComposeBuilder } from '../../src/flows/registries/compose-writers/types.js';
+import type { StructuralShapeHint } from '../../src/flows/registries/shape-hints/types.js';
+import type { VerificationBuilder } from '../../src/flows/registries/verification-writers/types.js';
+import type { CompiledFlowPackage } from '../../src/flows/types.js';
 
 function fakePackage(
   opts: Partial<CompiledFlowPackage> & { readonly id: string },
@@ -458,16 +458,16 @@ describe('catalog-derivations: real catalog invariants', () => {
     );
     expect(totalWriters).toBeGreaterThan(0);
     const { findComposeBuilder } = await import(
-      '../../src/runtime/registries/compose-writers/registry.js'
+      '../../src/flows/registries/compose-writers/registry.js'
     );
     const { findCloseBuilder } = await import(
-      '../../src/runtime/registries/close-writers/registry.js'
+      '../../src/flows/registries/close-writers/registry.js'
     );
     const { findVerificationWriter } = await import(
-      '../../src/runtime/registries/verification-writers/registry.js'
+      '../../src/flows/registries/verification-writers/registry.js'
     );
     const { findCheckpointBriefBuilder } = await import(
-      '../../src/runtime/registries/checkpoint-writers/registry.js'
+      '../../src/flows/registries/checkpoint-writers/registry.js'
     );
 
     for (const pkg of flowPackages) {
@@ -496,5 +496,71 @@ describe('catalog-derivations: real catalog invariants', () => {
         ).toBe(builder);
       }
     }
+  });
+
+  it('keeps runtime registry import paths as compatibility re-exports', async () => {
+    const flowCatalogDerivations = await import('../../src/flows/catalog-derivations.js');
+    const runtimeCatalogDerivations = await import('../../src/runtime/catalog-derivations.js');
+    expect(runtimeCatalogDerivations.buildComposeRegistry).toBe(
+      flowCatalogDerivations.buildComposeRegistry,
+    );
+    expect(runtimeCatalogDerivations.findDefaultRoutablePackage).toBe(
+      flowCatalogDerivations.findDefaultRoutablePackage,
+    );
+
+    const flowComposeRegistry = await import(
+      '../../src/flows/registries/compose-writers/registry.js'
+    );
+    const runtimeComposeRegistry = await import(
+      '../../src/runtime/registries/compose-writers/registry.js'
+    );
+    expect(runtimeComposeRegistry.findComposeBuilder).toBe(flowComposeRegistry.findComposeBuilder);
+
+    const flowCloseRegistry = await import('../../src/flows/registries/close-writers/registry.js');
+    const runtimeCloseRegistry = await import(
+      '../../src/runtime/registries/close-writers/registry.js'
+    );
+    expect(runtimeCloseRegistry.findCloseBuilder).toBe(flowCloseRegistry.findCloseBuilder);
+    expect(runtimeCloseRegistry.resolveCloseReadPaths).toBe(
+      flowCloseRegistry.resolveCloseReadPaths,
+    );
+
+    const flowVerificationRegistry = await import(
+      '../../src/flows/registries/verification-writers/registry.js'
+    );
+    const runtimeVerificationRegistry = await import(
+      '../../src/runtime/registries/verification-writers/registry.js'
+    );
+    expect(runtimeVerificationRegistry.findVerificationWriter).toBe(
+      flowVerificationRegistry.findVerificationWriter,
+    );
+
+    const flowCheckpointRegistry = await import(
+      '../../src/flows/registries/checkpoint-writers/registry.js'
+    );
+    const runtimeCheckpointRegistry = await import(
+      '../../src/runtime/registries/checkpoint-writers/registry.js'
+    );
+    expect(runtimeCheckpointRegistry.findCheckpointBriefBuilder).toBe(
+      flowCheckpointRegistry.findCheckpointBriefBuilder,
+    );
+
+    const flowShapeHints = await import('../../src/flows/registries/shape-hints/registry.js');
+    const runtimeShapeHints = await import('../../src/runtime/registries/shape-hints/registry.js');
+    expect(runtimeShapeHints.findRelayShapeHint).toBe(flowShapeHints.findRelayShapeHint);
+
+    const flowReportSchemas = await import('../../src/flows/registries/report-schemas.js');
+    const runtimeReportSchemas = await import('../../src/runtime/registries/report-schemas.js');
+    expect(runtimeReportSchemas.parseReport).toBe(flowReportSchemas.parseReport);
+
+    const flowCrossReportValidators = await import(
+      '../../src/flows/registries/cross-report-validators.js'
+    );
+    const runtimeCrossReportValidators = await import(
+      '../../src/runtime/registries/cross-report-validators.js'
+    );
+    expect(runtimeCrossReportValidators.runCrossReportValidator).toBe(
+      flowCrossReportValidators.runCrossReportValidator,
+    );
   });
 });

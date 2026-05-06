@@ -11,13 +11,14 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
 import { materializeRelay } from '../../src/runtime/connectors/relay-materializer.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import { type RelayFn, runCompiledFlow } from '../../src/runtime/runner.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import type { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId, StepId } from '../../src/schemas/ids.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { resolveRunRelative } from '../../src/shared/run-relative-path.js';
 
 const FIXTURE_PATH = resolve('generated/flows/runtime-proof/circuit.json');

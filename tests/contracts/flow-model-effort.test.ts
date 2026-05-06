@@ -3,14 +3,15 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
-import { type RelayFn, type RelayInput, runCompiledFlow } from '../../src/runtime/runner.js';
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { LayeredConfig } from '../../src/schemas/config.js';
 import { RunId, SkillId } from '../../src/schemas/ids.js';
 import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import { SelectionOverride } from '../../src/schemas/selection-policy.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 import { resolveSelectionForRelay } from '../../src/shared/selection-resolver.js';
 
 const FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');

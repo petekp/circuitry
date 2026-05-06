@@ -13,12 +13,16 @@ import {
 } from '../../../src/shared/manifest-snapshot.js';
 
 import {
+  appendAndDeriveRetainedTrace as appendAndDerive,
+  bootstrapRetainedRun as bootstrapRun,
+  initRetainedRunFolder as initRunFolder,
+} from '../../../src/compat/retained-runtime.js';
+import {
   manifestSnapshotPath,
   readManifestSnapshot,
   writeManifestSnapshot,
 } from '../../../src/runtime/manifest-snapshot-writer.js';
 import { reduce } from '../../../src/runtime/reducer.js';
-import { appendAndDerive, bootstrapRun, initRunFolder } from '../../../src/runtime/runner.js';
 import {
   deriveSnapshot,
   snapshotPath,

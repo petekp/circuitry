@@ -628,6 +628,2198 @@ Concerns:
 
 Next recommended action: continue Phase 4 with sub-run parity before fanout.
 
+## 2026-05-05 - Phase 5.11 Explore Tournament Default Routing
+
+Goal: move Explore tournament from retained fallback to core-v2 default routing
+after the external review identified the real blocker: v2 relay fanout branches
+needed production relay prompt and validation parity before selector widening.
+
+Files inspected:
+
+- `src/core-v2/executors/relay.ts`
+- `src/core-v2/fanout/branch-execution.ts`
+- `src/core-v2/projections/progress.ts`
+- `src/run-status/v2-run-folder.ts`
+- `generated/flows/explore/tournament.json`
+- `tests/runner/explore-tournament-runtime.test.ts`
+- `tests/core-v2/fanout-v2.test.ts`
+- `tests/parity/explore-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `src/core-v2/executors/relay.ts`
+- `src/core-v2/fanout/branch-execution.ts`
+- `src/core-v2/projections/progress.ts`
+- `src/core-v2/projections/tournament-checkpoint-context.ts`
+- `src/run-status/v2-run-folder.ts`
+- `tests/core-v2/fanout-v2.test.ts`
+- `tests/parity/explore-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-checkpoint-5.11.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes. `circuit-next run explore --mode tournament` now follows
+the core-v2 selector matrix by default for generated flows.
+
+What changed:
+
+- v2 relay fanout branches now use production relay prompts and public
+  `relayer` injection when running from compiled generated flows.
+- branch admission now checks parse/schema, branch provenance, and cross-report
+  validators before writing admitted reports.
+- Explore tournament progress and `runs show` now use dynamic option labels from
+  `decision-options.json` and the tradeoff question from
+  `tournament-review.json`.
+- Explore tournament CLI and soak tests now prove wait/resume through core-v2.
+- Rollback still routes Explore tournament to the retained runtime.
+
+Tests run so far:
+
+- `npx vitest run tests/parity/explore-v2.test.ts tests/core-v2/fanout-v2.test.ts`:
+  passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts tests/parity/explore-v2.test.ts tests/core-v2/fanout-v2.test.ts`:
+  passed.
+- `npm run check`: passed.
+
+Concerns:
+
+- Old runtime deletion is still blocked. This slice removes a public generated
+  entry-mode gap, but retained runtime still owns arbitrary fixtures, custom
+  flow roots, rollback, retained/v1 checkpoint folders, public `composeWriter`,
+  release proof `composeWriter`, old oracle tests, connectors/materializer, and
+  registries/router/catalog/compiler infrastructure.
+
+Next recommended action: run full validation, prepare a narrow
+post-implementation review packet for Explore tournament, then choose the next
+implementation blocker. The strongest next candidates are release proof
+`composeWriter` removal or retained/v1 checkpoint folder strategy. Do not start
+old runtime deletion.
+
+## 2026-05-05 - Phase 5.12 Retained Checkpoint Folder Compatibility Proof
+
+Goal: prove retained/v1 checkpoint folders still use retained
+resume/status/handoff behavior after the generated-flow selector moved to
+core-v2 by default.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/run-status/project-run-folder.ts`
+- `src/run-status/v1-run-folder.ts`
+- `src/run-status/v2-run-folder.ts`
+- `src/cli/handoff.ts`
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/core-v2/checkpoint-resume-v2.test.ts`
+- `tests/runner/run-status-projection.test.ts`
+- `tests/runner/utility-cli.test.ts`
+
+Files changed:
+
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-checkpoint-5.12.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed. This is a compatibility proof
+slice.
+
+What changed:
+
+- Added proof that an actual retained waiting checkpoint folder projects through
+  `runs show` with resume actions.
+- Added proof that the same retained folder resumes through retained
+  compatibility when rollback and runtime diagnostics are enabled.
+- Added proof that handoff save does not use the marker-gated v2 run-status
+  fallback for a corrupted unmarked retained folder.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npm run lint`: passed after replacing `delete process.env...` with the
+  existing undefined-assignment restore style.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts tests/runner/utility-cli.test.ts tests/core-v2/checkpoint-resume-v2.test.ts tests/runner/run-status-projection.test.ts`:
+  passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This proves retained checkpoint compatibility remains intact; it does not make
+  retained checkpoint internals deletion-ready.
+
+Next recommended action: stop for a consolidated compatibility review before
+changing remaining retained surfaces. Release proof has already moved off public
+`composeWriter`; the remaining blockers are public or architectural. Do not
+start old runtime deletion.
+
+## 2026-05-06 - Phase 5.13 Registry And Catalog Neutral Ownership
+
+Goal: move shared flow registry and catalog derivation ownership out of
+`src/runtime/**` without changing behavior.
+
+Files inspected:
+
+- `docs/architecture/v2-registry-ownership-plan.md`
+- `src/runtime/catalog-derivations.ts`
+- `src/runtime/registries/**`
+- `src/flows/types.ts`
+- `src/core-v2/**`
+- `src/shared/relay-support.ts`
+- `tests/contracts/catalog-completeness.test.ts`
+- `tests/contracts/engine-flow-boundary.test.ts`
+- `tests/runner/catalog-derivations.test.ts`
+
+Files changed:
+
+- `src/flows/catalog-derivations.ts`
+- `src/flows/registries/**`
+- `src/runtime/catalog-derivations.ts`
+- `src/runtime/registries/**`
+- `src/flows/**`
+- `src/core-v2/**`
+- `src/shared/relay-support.ts`
+- `src/run-status/v1-run-folder.ts`
+- `tests/contracts/catalog-completeness.test.ts`
+- `tests/runner/catalog-derivations.test.ts`
+- `docs/architecture/v2-checkpoint-5.13.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-registry-ownership-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed. Registry and catalog
+derivation implementations now live under `src/flows/**`; old `src/runtime/**`
+paths are compatibility re-exports.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/catalog-derivations.test.ts tests/contracts/catalog-completeness.test.ts tests/runner/compose-builder-registry.test.ts tests/runner/close-builder-registry.test.ts tests/runner/relay-shape-hint-registry.test.ts tests/runner/cross-report-validators.test.ts tests/properties/visible/cross-report-validator.test.ts tests/contracts/explore-report-composition.test.ts`:
+  passed.
+- `npx vitest run tests/contracts/engine-flow-boundary.test.ts`: passed after
+  teaching the boundary guard that `src/flows/catalog-derivations.ts` and
+  `src/flows/registries/**` are shared flow infrastructure.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run check-flow-drift`: passed.
+- `npx vitest run tests/core-v2 tests/parity`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`: passed.
+- `npx vitest run tests/soak/v2-runtime-surface.test.ts`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This narrows the runtime namespace, but old runtime deletion is still blocked
+  by retained execution, arbitrary/custom roots, rollback, `composeWriter`,
+  retained/v1 folders, connector/materializer ownership, router/compiler
+  ownership, and old oracle tests.
+
+Next recommended action: introduce a narrow retained-compatibility facade for
+retained fresh-run fallback, retained/v1 checkpoint resume, rollback fallback,
+and public `composeWriter`, without changing behavior.
+
+## 2026-05-06 - Phase 5.14 Retained Compatibility Facade
+
+Goal: put the retained execution and v1 run-folder boundary behind one neutral
+facade without changing behavior.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/cli/handoff.ts`
+- `src/run-status/project-run-folder.ts`
+- `src/run-status/v1-run-folder.ts`
+- `src/runtime/runner.ts`
+- `src/runtime/snapshot-writer.ts`
+- `src/runtime/trace-reader.ts`
+- `src/runtime/reducer.ts`
+- `tests/runner/run-status-facade.test.ts`
+
+Files changed:
+
+- `src/compat/retained-runtime.ts`
+- `src/cli/circuit.ts`
+- `src/cli/handoff.ts`
+- `src/run-status/project-run-folder.ts`
+- `src/run-status/v1-run-folder.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/run-status-facade.test.ts`
+- `docs/architecture/v2-checkpoint-5.14.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-retained-runtime-boundary.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed. The CLI, handoff, and
+run-status code now use `src/compat/retained-runtime.ts` for retained fresh-run
+fallback, retained/v1 checkpoint resume, retained snapshot derivation, retained
+trace reading, and retained trace reduction.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts`:
+  passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts tests/runner/utility-cli.test.ts tests/runner/run-status-projection.test.ts`:
+  passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`: passed.
+- `npx vitest run tests/soak/v2-runtime-surface.test.ts`: passed.
+- `npm run check-flow-drift`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- This narrows the boundary, but old runtime deletion is still blocked by
+  arbitrary/custom roots, rollback, public `composeWriter`, retained/v1 folders,
+  old oracle tests, connector/materializer ownership, router/compiler ownership,
+  and retained internals.
+
+Next recommended action: decide whether to review public compatibility behavior
+next (`composeWriter`, rollback, arbitrary fixtures, custom roots) or first map
+old runner/handler oracle tests into v2/shared/compat/obsolete buckets without
+changing behavior.
+
+## 2026-05-06 - Phase 5.15 Oracle Test Import Boundary First Batch
+
+Goal: begin the old runner/handler oracle-test mapping lane without changing
+public behavior.
+
+Files inspected:
+
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/cli-router.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- old runner and connector-adjacent test imports
+- `src/shared/connector-relay.ts`
+- `src/shared/relay-runtime-types.ts`
+
+Files changed:
+
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/cli-router.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- runner/contract tests with type-only `RelayResult` imports
+- retained runner and direct handler tests with type-only retained runner imports
+- `docs/architecture/v2-checkpoint-5.15.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed. Tests that only needed shared
+relay data types or the shared `sha256Hex` helper now import from shared/facade
+modules instead of old runtime compatibility paths. Tests that intentionally
+execute the retained runner still use retained runner imports.
+
+Second batch update: more retained runner and direct handler tests now split
+value-level retained execution imports from type-only imports. Remaining
+`src/runtime/runner.ts` test imports are retained execution/helper calls, while
+`RelayFn`, `RelayInput`, child runner, and worktree callback types come from
+`src/shared/**` or `src/compat/retained-runtime.ts`.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts tests/runner/config-loader.test.ts tests/contracts/codex-host-plugin.test.ts tests/runner/cli-router.test.ts`:
+  passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/runner/build-checkpoint-exec.test.ts tests/runner/codex-connector-smoke.test.ts tests/runner/agent-relay-roundtrip.test.ts tests/runner/codex-relay-roundtrip.test.ts tests/runner/connector-shared-compat.test.ts`:
+  passed.
+- `npx vitest run tests/runner/terminal-outcome-mapping.test.ts tests/runner/fanout-runtime.test.ts tests/runner/fix-runtime-wiring.test.ts tests/runner/explore-tournament-runtime.test.ts tests/runner/migrate-runtime-wiring.test.ts tests/runner/build-checkpoint-exec.test.ts tests/runner/fanout-real-recursion.test.ts tests/runner/sub-run-runtime.test.ts tests/runner/fresh-run-root.test.ts tests/runner/sub-run-real-recursion.test.ts tests/runner/build-report-writer.test.ts tests/runner/runtime-smoke.test.ts tests/runner/explore-report-writer.test.ts tests/runner/build-runtime-wiring.test.ts tests/runner/runner-relay-connector-identity.test.ts tests/runner/runner-relay-provenance.test.ts tests/runner/pass-route-cycle-guard.test.ts tests/runner/check-evaluation.test.ts tests/runner/terminal-verdict-derivation.test.ts tests/runner/handler-throw-recovery.test.ts tests/runner/run-relative-path.test.ts tests/runner/push-sequence-authority.test.ts tests/runner/build-verification-exec.test.ts tests/runner/sweep-runtime-wiring.test.ts tests/runner/review-runtime-wiring.test.ts tests/runner/materializer-schema-parse.test.ts tests/contracts/flow-model-effort.test.ts tests/runner/explore-e2e-parity.test.ts tests/runner/relay-invocation-failure.test.ts tests/runner/sub-run-handler-direct.test.ts tests/runner/fanout-handler-direct.test.ts`:
+  passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This is only the first mapping batch. Old runner and handler tests remain
+  valid retained fallback and oracle proof.
+
+Next recommended action: run full validation, then continue this lane by moving
+remaining accidental type/helper imports to shared/facade paths and adding v2 or
+shared twins for old oracle tests that are already v2-owned.
+
+## 2026-05-06 - Phase 5.15 Control-Loop V2 Twin Batch
+
+Goal: add implementation-backed v2 twin tests for old retained runner oracle
+behavior that core-v2 already owns.
+
+Files inspected:
+
+- `tests/runner/terminal-outcome-mapping.test.ts`
+- `tests/runner/pass-route-cycle-guard.test.ts`
+- `tests/runner/check-evaluation.test.ts`
+- `tests/core-v2/core-v2-baseline.test.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `src/core-v2/executors/relay.ts`
+- `src/shared/relay-support.ts`
+
+Files changed:
+
+- `src/core-v2/executors/relay.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.15.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly inside core-v2 relay trace/result correctness.
+`relay.completed` now records `data.admitted` for production relay attempts.
+The v2 result writer already looks for admitted relay/sub-run verdicts; this
+trace detail prevents rejected or malformed relay outputs from being mirrored
+as the final run verdict.
+
+Public selector policy, rollback, arbitrary fixtures, custom roots,
+`composeWriter`, retained/v1 checkpoint folders, connector ownership, and old
+runtime deletion did not change.
+
+Tests run so far:
+
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts`: passed.
+- `npm run check`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts tests/core-v2/core-v2-baseline.test.ts tests/core-v2/default-executors-v2.test.ts tests/runner/check-evaluation.test.ts tests/runner/terminal-outcome-mapping.test.ts tests/runner/pass-route-cycle-guard.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- The new v2 twins reduce oracle risk, but retained tests are still live
+  compatibility proof until retained fallback policy narrows.
+
+Next recommended action: run full validation. If green, continue with another
+small v2 twin batch around relay provenance/connector identity or route-cycle
+details before touching public compatibility behavior.
+
+## 2026-05-06 - Phase 5.15 Connector Provenance V2 Twin Batch
+
+Goal: add v2 proof for retained relay connector identity/provenance oracles
+without moving connector subprocess modules.
+
+Files inspected:
+
+- `tests/runner/runner-relay-provenance.test.ts`
+- `tests/runner/runner-relay-connector-identity.test.ts`
+- `tests/core-v2/connectors-v2.test.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `src/core-v2/connectors/resolver.ts`
+- `src/core-v2/executors/relay.ts`
+
+Files changed:
+
+- `src/core-v2/executors/relay.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `tests/core-v2/connectors-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.15.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly inside core-v2 relay evidence. Production v2
+`relay.started` trace entries now include `data.resolved_from`, preserving the
+connector resolution provenance that core-v2 already computed. Connector
+subprocess ownership and connector execution behavior did not change.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts tests/core-v2/connectors-v2.test.ts tests/runner/runner-relay-provenance.test.ts tests/runner/runner-relay-connector-identity.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This is v2 evidence parity, not connector ownership transfer. Connector
+  subprocess modules and relay materializer still need a separate review before
+  movement.
+
+Next recommended action: run full validation. If green, continue with route
+cycle detail twins or pause at the next public compatibility decision review.
+
+## 2026-05-06 - Phase 5.15 Checkpoint Route V2 Twin Batch
+
+Goal: add v2 proof for retained rich-route and retry-loop control-loop oracles
+without changing checkpoint resume or public routing policy.
+
+Files inspected:
+
+- `tests/runner/terminal-outcome-mapping.test.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `tests/core-v2/core-v2-baseline.test.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/run/graph-runner.ts`
+
+Files changed:
+
+- `tests/core-v2/control-loop-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.15.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed in this batch. The tests cover
+existing core-v2 graph-runner behavior.
+
+Tests run so far:
+
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts tests/core-v2/core-v2-baseline.test.ts tests/runner/terminal-outcome-mapping.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- These v2 twins do not retire retained checkpoint or terminal outcome tests.
+  Retained tests remain live compatibility proof while old fallback paths remain
+  supported.
+
+Next recommended action: run full validation. If green, the next autonomous
+batch should target direct v2 executor invariants only if they are clearly
+already core-v2-owned; otherwise pause for the public compatibility review.
+
+## 2026-05-06 - Phase 5.16 Relay Recovery And Report Gating V2 Twin Batch
+
+Goal: add v2 proof for retained relay recovery, canonical report gating, and
+connector invocation failure oracles without changing public compatibility
+policy.
+
+Files inspected:
+
+- `tests/core-v2/control-loop-v2.test.ts`
+- `src/core-v2/executors/relay.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `src/core-v2/run/v1-compat.ts`
+- `tests/runner/check-evaluation.test.ts`
+- `tests/runner/terminal-outcome-mapping.test.ts`
+- `tests/runner/pass-route-cycle-guard.test.ts`
+- `src/flows/registries/report-schemas.ts`
+
+Files changed:
+
+- `src/core-v2/executors/relay.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.16.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly inside core-v2 relay trace evidence.
+`relay.completed.report_path` is now emitted only when the relay result was
+admitted. The canonical report file was already gated this way; the trace now
+matches the durable report evidence.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts tests/runner/verification-handler-direct.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts tests/core-v2/core-v2-baseline.test.ts`:
+  passed.
+- `npx vitest run tests/runner/check-evaluation.test.ts tests/runner/terminal-outcome-mapping.test.ts tests/runner/pass-route-cycle-guard.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- These v2 twins do not retire retained relay/check-evaluation tests. Retained
+  tests remain live fallback/oracle proof while public compatibility paths stay
+  retained.
+
+Next recommended action: run full validation. If green, continue only with
+low-risk oracle twins/import cleanup. Pause for review before public
+compatibility decisions or ownership movement.
+
+## 2026-05-06 - Phase 5.17 Closed-Abort Result V2 Twin Batch
+
+Goal: strengthen existing core-v2 safety tests so retained handler-throw and
+pass-route-cycle oracles have v2 final-result twins.
+
+Files inspected:
+
+- `tests/core-v2/core-v2-baseline.test.ts`
+- `tests/runner/handler-throw-recovery.test.ts`
+- `tests/runner/pass-route-cycle-guard.test.ts`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+
+Files changed:
+
+- `tests/core-v2/core-v2-baseline.test.ts`
+- `docs/architecture/v2-checkpoint-5.17.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No production behavior changed. This batch adds result-file
+assertions to existing v2 safety tests.
+
+Tests run so far:
+
+- `npx vitest run tests/core-v2/core-v2-baseline.test.ts tests/runner/handler-throw-recovery.test.ts tests/runner/pass-route-cycle-guard.test.ts`:
+  passed.
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- These v2 twins do not retire the retained tests. They reduce oracle risk while
+  retained compatibility remains product policy.
+
+Next recommended action: run full validation. If green, stop at the next public
+compatibility or ownership boundary and prepare a review package.
+
+## 2026-05-06 - Phase 5.18 Public Compatibility Policy Hardening
+
+Goal: implement the approved public compatibility policy as a behavior-preserving
+slice. Keep current defaults, centralize and clarify runtime reasons, strengthen
+tests, and update user-facing text without deprecating or removing anything.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/cli/create.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/utility-cli.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/release/release-infrastructure.test.ts`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `src/cli/create.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-checkpoint-5.18.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No routing behavior changed. Public compatibility surfaces
+remain retained by default: programmatic `composeWriter`, rollback, arbitrary
+fixtures, custom roots, and retained/v1 checkpoint folders. The runtime reason
+text now says `composeWriter` is retained compatibility and points v2
+customization to executor injection or generated reports instead of implying a
+future v2 `composeWriter` hook.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/runner/utility-cli.test.ts`:
+  passed.
+- `npx vitest run tests/soak/v2-runtime-surface.test.ts`: passed.
+- `npx vitest run tests/contracts/codex-host-plugin.test.ts`: passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts`:
+  passed.
+- `npx vitest run tests/release/release-infrastructure.test.ts`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- A new review package is required before any actual public compatibility
+  behavior change, saved-folder policy change, ownership movement, or deletion.
+
+Next recommended action: continue only with behavior-preserving import or
+oracle-test cleanup unless a review packet is prepared.
+
+## 2026-05-06 - Phase 5.19 Retained Execution Test Import Boundary
+
+Goal: continue the old runner/handler oracle-test mapping lane by moving test
+calls to retained execution through `src/compat/retained-runtime.ts`, without
+changing retained behavior or old helper compatibility.
+
+Files inspected:
+
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `src/compat/retained-runtime.ts`
+- `src/runtime/runner-types.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- test files importing `runCompiledFlow` or `resumeCompiledFlowCheckpoint` from
+  `src/runtime/runner.js`
+
+Files changed:
+
+- `tests/contracts/flow-model-effort.test.ts`
+- `tests/contracts/orphan-blocks.test.ts`
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/runner/build-report-writer.test.ts`
+- `tests/runner/build-runtime-wiring.test.ts`
+- `tests/runner/build-verification-exec.test.ts`
+- `tests/runner/check-evaluation.test.ts`
+- `tests/runner/close-builder-registry.test.ts`
+- `tests/runner/compose-builder-registry.test.ts`
+- `tests/runner/explore-e2e-parity.test.ts`
+- `tests/runner/explore-report-writer.test.ts`
+- `tests/runner/explore-tournament-runtime.test.ts`
+- `tests/runner/fanout-real-recursion.test.ts`
+- `tests/runner/fanout-runtime.test.ts`
+- `tests/runner/fix-runtime-wiring.test.ts`
+- `tests/runner/fresh-run-root.test.ts`
+- `tests/runner/handler-throw-recovery.test.ts`
+- `tests/runner/materializer-schema-parse.test.ts`
+- `tests/runner/migrate-runtime-wiring.test.ts`
+- `tests/runner/pass-route-cycle-guard.test.ts`
+- `tests/runner/push-sequence-authority.test.ts`
+- `tests/runner/relay-invocation-failure.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/review-runtime-wiring.test.ts`
+- `tests/runner/run-relative-path.test.ts`
+- `tests/runner/runner-relay-connector-identity.test.ts`
+- `tests/runner/runner-relay-provenance.test.ts`
+- `tests/runner/runtime-smoke.test.ts`
+- `tests/runner/sub-run-real-recursion.test.ts`
+- `tests/runner/sub-run-runtime.test.ts`
+- `tests/runner/sweep-runtime-wiring.test.ts`
+- `tests/runner/terminal-outcome-mapping.test.ts`
+- `tests/runner/terminal-verdict-derivation.test.ts`
+- `docs/architecture/v2-checkpoint-5.19.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. Test calls still execute the retained runtime, but now
+they do it through the retained compatibility facade. Direct old runner imports
+remain only for helper-specific compatibility/oracle surfaces.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/runtime-smoke.test.ts tests/runner/run-relative-path.test.ts tests/runner/explore-report-writer.test.ts tests/runner/terminal-verdict-derivation.test.ts`:
+  passed.
+- `npx vitest run tests/runner/push-sequence-authority.test.ts tests/runner/relay-invocation-failure.test.ts tests/runner/runner-relay-connector-identity.test.ts tests/contracts/flow-model-effort.test.ts tests/runner/retained-compat-facade.test.ts`:
+  passed.
+- `npx vitest run tests/runner/build-verification-exec.test.ts tests/runner/check-evaluation.test.ts tests/runner/explore-e2e-parity.test.ts tests/runner/fanout-real-recursion.test.ts tests/runner/fanout-runtime.test.ts tests/runner/handler-throw-recovery.test.ts tests/runner/materializer-schema-parse.test.ts tests/runner/pass-route-cycle-guard.test.ts tests/runner/runner-relay-provenance.test.ts tests/runner/sub-run-real-recursion.test.ts tests/runner/sub-run-runtime.test.ts tests/runner/retained-compat-facade.test.ts`:
+  passed.
+- `npx vitest run tests/runner/build-runtime-wiring.test.ts tests/runner/migrate-runtime-wiring.test.ts tests/runner/review-runtime-wiring.test.ts tests/runner/sweep-runtime-wiring.test.ts`:
+  passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts tests/runner/explore-tournament-runtime.test.ts tests/contracts/orphan-blocks.test.ts tests/runner/terminal-outcome-mapping.test.ts tests/runner/build-report-writer.test.ts tests/runner/close-builder-registry.test.ts tests/runner/compose-builder-registry.test.ts tests/runner/fix-runtime-wiring.test.ts tests/runner/fresh-run-root.test.ts tests/runner/retained-compat-facade.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- Remaining direct old runner imports are still real compatibility/oracle helper
+  surfaces, not deletion candidates.
+
+Next recommended action: continue only with behavior-preserving import cleanup
+or v2/shared oracle twins.
+
+## 2026-05-06 - Phase 5.20 Retained Helper Facade Boundary
+
+Goal: route remaining retained helper calls in tests through
+`src/compat/retained-runtime.ts`, while keeping old public helper paths intact
+and explicitly tested.
+
+Files inspected:
+
+- `src/compat/retained-runtime.ts`
+- `src/runtime/runner.ts`
+- `tests/runner/fix-report-writer.test.ts`
+- test files importing retained helper values from `src/runtime/runner.js`
+
+Files changed:
+
+- `src/compat/retained-runtime.ts`
+- `tests/contracts/orphan-blocks.test.ts`
+- `tests/runner/agent-relay-roundtrip.test.ts`
+- `tests/runner/build-report-writer.test.ts`
+- `tests/runner/close-builder-registry.test.ts`
+- `tests/runner/codex-relay-roundtrip.test.ts`
+- `tests/runner/compose-builder-registry.test.ts`
+- `tests/runner/fix-runtime-wiring.test.ts`
+- `tests/runner/fresh-run-root.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/terminal-outcome-mapping.test.ts`
+- `tests/unit/runtime/event-log-round-trip.test.ts`
+- `docs/architecture/v2-checkpoint-5.20.md`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. The facade now exposes retained helper names, but those
+helpers still delegate to the retained runtime implementation. Direct old
+runner test imports are limited to the explicit `writeComposeReport` public-path
+proof.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/retained-compat-facade.test.ts tests/contracts/orphan-blocks.test.ts tests/runner/terminal-outcome-mapping.test.ts tests/runner/build-report-writer.test.ts tests/runner/close-builder-registry.test.ts tests/runner/compose-builder-registry.test.ts tests/runner/fix-runtime-wiring.test.ts tests/runner/fresh-run-root.test.ts tests/unit/runtime/event-log-round-trip.test.ts`:
+  passed.
+- `npx vitest run tests/runner/agent-relay-roundtrip.test.ts tests/runner/codex-relay-roundtrip.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Concerns:
+
+- This is not a deletion slice. Remaining retained helper implementations and
+  public paths still need an explicit disposition before deletion.
+
+Next recommended action: continue only with behavior-preserving cleanup or
+v2/shared oracle twins.
+
+## 2026-05-06 - Phase 5.24 Verification Failure Evidence V2 Twin
+
+Goal: add the core-v2 twin for retained verification pre-write failure evidence
+without changing public behavior.
+
+Files inspected:
+
+- `src/core-v2/executors/verification.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `tests/runner/verification-handler-direct.test.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `tests/core-v2/core-v2-baseline.test.ts`
+
+Files changed:
+
+- `src/core-v2/executors/verification.ts`
+- `tests/core-v2/control-loop-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.24.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Only core-v2 verification failure evidence changed. When
+verification fails before writing its canonical report, core-v2 now emits
+`check.evaluated` with `outcome: "fail"` before aborting. Public routing,
+retained fallback, saved-folder behavior, rollback, `composeWriter`, fixture
+policy, and ownership boundaries are unchanged.
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npx vitest run tests/core-v2/control-loop-v2.test.ts`: passed.
+
+Concerns:
+
+- This is not a deletion slice. The retained verification direct handler test
+  remains live retained fallback/oracle evidence.
+
+Next recommended action: continue only with behavior-preserving import/test
+cleanup or v2/shared oracle twins.
+
+## 2026-05-06 - Phase 5.23 Checkpoint Resume Test Import Narrowing
+
+Goal: move remaining retained checkpoint resume test imports to the saved-folder
+compatibility boundary without changing behavior.
+
+Files inspected:
+
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/runner/explore-tournament-runtime.test.ts`
+- `src/compat/retained-checkpoint-folders.ts`
+- `src/compat/retained-runtime.ts`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+
+Files changed:
+
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/runner/explore-tournament-runtime.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `docs/architecture/v2-checkpoint-5.23.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. This only changes test import paths for retained
+checkpoint resume.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts tests/runner/explore-tournament-runtime.test.ts tests/runner/retained-compat-facade.test.ts`:
+  passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This does not change retained/v1 checkpoint folder behavior or old runtime
+  deletion readiness.
+
+Next recommended action: continue autonomously only with behavior-preserving
+import/test cleanup or v2/shared oracle twins.
+
+## 2026-05-06 - Phase 5.22 Public Compatibility Policy Source
+
+Goal: centralize live public compatibility policy strings without changing
+runtime behavior.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/cli/create.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+
+Files changed:
+
+- `src/cli/runtime-compatibility-policy.ts`
+- `src/cli/circuit.ts`
+- `src/cli/create.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-checkpoint-5.22.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. This slice only moves the live runtime-policy strings into
+one CLI policy module and makes tests assert those canonical constants.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/runner/utility-cli.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts tests/release/release-infrastructure.test.ts`:
+  passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This does not change public compatibility behavior or old runtime deletion
+  readiness.
+
+Next recommended action: continue only with behavior-preserving cleanup or stop
+for review before public behavior, saved-folder semantics, ownership, or
+deletion changes.
+
+## 2026-05-06 - Phase 5.21 Retained Checkpoint Folder Boundary
+
+Goal: isolate retained/v1 checkpoint folder support into a smaller compatibility
+boundary without changing saved-folder semantics.
+
+Files inspected:
+
+- `src/compat/retained-runtime.ts`
+- `src/cli/circuit.ts`
+- `src/cli/handoff.ts`
+- `src/run-status/project-run-folder.ts`
+- `src/run-status/v1-run-folder.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/run-status-facade.test.ts`
+- `docs/architecture/v2-retained-checkpoint-folder-policy.md`
+
+Files changed:
+
+- `src/compat/retained-checkpoint-folders.ts`
+- `src/compat/retained-runtime.ts`
+- `src/cli/circuit.ts`
+- `src/cli/handoff.ts`
+- `src/run-status/project-run-folder.ts`
+- `src/run-status/v1-run-folder.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/runner/run-status-facade.test.ts`
+- `docs/architecture/v2-checkpoint-5.21.md`
+- `docs/architecture/v2-retained-checkpoint-folder-policy.md`
+- `docs/architecture/v2-retained-runtime-boundary.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. CLI resume still routes core-v2-marked folders through
+core-v2 and unmarked retained folders through retained resume. Handoff and
+run-status still use retained trace/snapshot behavior for retained folders and
+marker-gated v2 fallback for core-v2 folders. This slice only narrows the import
+boundary.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts tests/runner/utility-cli.test.ts`:
+  passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Concerns:
+
+- This does not make retained/v1 checkpoint folders deletion-ready. It only
+  isolates their compatibility boundary.
+
+Next recommended action: continue only with behavior-preserving cleanup or
+v2/shared oracle twins. Stop for review before changing saved-folder semantics,
+public compatibility behavior, ownership boundaries, or deletion status.
+
+## 2026-05-05 - Phase 5.2 Checkpoint Resume Fixture Slice
+
+Goal: implement fixture-level core-v2 checkpoint pause/resume without routing
+public checkpoint modes through v2 and without deleting retained runtime code.
+
+Files inspected:
+
+- `docs/architecture/v2-checkpoint-resume-parity-plan.md`
+- `generated/flows/build/circuit.json`
+- `src/core-v2/domain/trace.ts`
+- `src/core-v2/domain/step.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/projections/progress.ts`
+- `src/core-v2/run/compiled-flow-runner.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `src/core-v2/run/run-context.ts`
+- `src/run-status/v2-run-folder.ts`
+- `src/cli/circuit.ts`
+- `tests/core-v2/*`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/run-status-projection.test.ts`
+
+Files changed:
+
+- `src/core-v2/domain/trace.ts`
+- `src/core-v2/domain/step.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/projections/progress.ts`
+- `src/core-v2/run/checkpoint-resume.ts`
+- `src/core-v2/run/compiled-flow-runner.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `src/core-v2/run/run-context.ts`
+- `src/run-status/v2-run-folder.ts`
+- `src/cli/circuit.ts`
+- `tests/core-v2/checkpoint-resume-v2.test.ts`
+- `docs/architecture/v2-checkpoint-5.2.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Tests run so far:
+
+- `npm run check`: passed.
+- `npm run lint`: passed after Biome formatting/import fixes.
+- `npm run build`: passed.
+- `npx vitest run tests/core-v2/checkpoint-resume-v2.test.ts`: passed.
+- `npx vitest run tests/core-v2 tests/parity`: passed.
+- `npx vitest run tests/runner/run-status-projection.test.ts tests/runner/cli-v2-runtime.test.ts tests/contracts/progress-event-schema.test.ts`:
+  passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: initially failed on terminology guard for the word
+  `dispatch`, then passed after renaming the active-surface wording.
+- `npm run test:fast`: passed.
+- `npm run check-flow-drift`: passed as part of `npm run soak:v2`.
+- `npm run verify`: passed as part of `npm run soak:v2`.
+- `git diff --check`: passed.
+
+Behavior changed? Yes, inside core-v2 feature scope only. New core-v2-marked
+checkpoint folders can pause, project waiting status/progress, resume by saved
+engine marker, restore request context, validate request/report hashes, continue
+the graph, and close. Public Build deep/default checkpoint routing did not
+change, and retained/v1 checkpoint folders still use retained runtime.
+
+Review hardening added after the Phase 5.2 review:
+
+- `resumeCompiledFlowV2(...)` now rejects a checkpoint whose traced
+  `request_path` does not match the saved checkpoint step's declared request
+  path.
+- `resumeCompiledFlowV2(...)` now validates traced `allowed_choices` against the
+  saved checkpoint step's choices before accepting the operator selection.
+- v2 waiting status projection now returns an invalid checkpoint projection for
+  traced request-path mismatch, traced choice mismatch, request-body choice
+  mismatch, unreadable requests, hash mismatch, invalid JSON, or stale request
+  identity.
+- Public-boundary tests now cover request-path mismatch, missing request files,
+  stale request step ids, stale request choices, stale trace choices before
+  `checkpoint.resolved`, already-resolved checkpoints, closed runs, missing
+  checkpoint reports, and the retained-folder resume path under strict v2.
+
+Concerns:
+
+- This is fixture-level v2 checkpoint parity, not public checkpoint routing.
+- Old retained checkpoint folders are intentionally not migrated.
+- The retained checkpoint handler, trace/reducer/snapshot stack, progress
+  projector, old runner, and old step handlers remain non-deletable.
+
+Next recommended action: request focused review of the Phase 5.2 validation
+hardening packet in the repo root. If approved, the next slice should be Build
+deep candidate smoke, not default routing.
+
+## 2026-05-05 - Phase 5.3 Build Deep Default Routing
+
+Goal: move Build deep from candidate/strict checkpoint routing into the normal
+default selector matrix after the Phase 5.2.1 candidate smoke was approved.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-checkpoint-resume-parity-plan.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-checkpoint-5.3.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-worklog.md`
+- `docs/architecture/v2-checkpoint-resume-parity-plan.md`
+- `HANDOFF.md`
+
+Tests run:
+
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`:
+  passed.
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/core-v2/checkpoint-resume-v2.test.ts`:
+  passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts`: passed.
+- `npx vitest run tests/core-v2 tests/parity`: passed.
+- `npx vitest run tests/runner/run-status-projection.test.ts tests/contracts/progress-event-schema.test.ts`:
+  passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `git diff --check`: passed before this validation-result refresh.
+
+Behavior changed? Yes, deliberately and narrowly. Build deep is now in the
+default v2 support matrix. A no-env Build deep run pauses through core-v2,
+projects `runs show` waiting status, emits checkpoint/user-input progress,
+resumes through the saved core-v2 run-folder marker, restores request context,
+writes `reports/result.json`, parses the Build result report, and reaches
+completed status.
+
+The full soak caught and Phase 5.3 fixed one adjacent compatibility assumption:
+run-backed handoff continuity now falls back to the neutral run-status
+projection for core-v2 run folders instead of assuming every waiting run has a
+retained v1 snapshot.
+
+Concerns:
+
+- Build tournament and other checkpoint/tournament modes remain retained.
+- Retained/v1 checkpoint folders remain retained-runtime-owned.
+- `CIRCUIT_DISABLE_V2_RUNTIME=1` remains the rollback path and keeps Build
+  deep on retained runtime.
+- No retained checkpoint, trace, reducer, snapshot, progress, old runner, old
+  handler, connector, materializer, or registry file is deletion-ready.
+
+Next recommended action: run the full Phase 5.3 validation gate and prepare a
+focused review packet before routing any additional checkpoint/tournament mode
+or discussing retained runtime deletion.
+
+## 2026-05-05 - Phase 5.4 Retained Checkpoint Folder And Fallback Policy
+
+Goal: stop widening routes mechanically after Build deep and document which
+retained runtime responsibilities are compatibility commitments, migration
+targets, fallback policy, or oracle coverage.
+
+Files inspected:
+
+- `src/cli/handoff.ts`
+- `src/core-v2/run/checkpoint-resume.ts`
+- `src/flows/build/schematic.json`
+- `generated/flows/build/circuit.json`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+
+Files changed:
+
+- `src/cli/handoff.ts`
+- `tests/runner/utility-cli.test.ts`
+- `docs/architecture/v2-retained-checkpoint-folder-policy.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-checkpoint-5.4.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Narrowly. Handoff run-backed continuity still uses retained
+snapshot derivation for retained/v1 folders. It now falls back to neutral
+run-status projection only for core-v2-marked folders. Utility CLI tests prove
+handoff can bind to both core-v2 waiting runs and retained waiting runs.
+
+Policy changed? Yes. Retained/v1 checkpoint folders are explicitly
+compatibility-supported through retained resume. Unsupported modes, arbitrary
+fixtures, programmatic `composeWriter`, rollback, and old runner/handler tests
+are classified as retained fallback or oracle surfaces until a later product
+decision migrates or retires them.
+
+Build tournament clarification: Build currently has no public tournament entry
+mode in either the source schematic or generated flow. If introduced later, it
+needs its own selector proof before v2 routing.
+
+Tests run:
+
+- `npm run check`: passed during handoff hardening.
+- `npm run lint`: passed during handoff hardening.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`: passed.
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts`: passed.
+- `npx vitest run tests/runner/utility-cli.test.ts`: passed.
+- `npx vitest run tests/core-v2/checkpoint-resume-v2.test.ts`: passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `git diff --check`: passed before this validation-result refresh.
+
+Concerns:
+
+- This policy does not make deletion safe.
+- No retained checkpoint, trace, reducer, snapshot, progress, old runner, old
+  handler, connector, materializer, registry, router, catalog, or compiler file
+  is deletion-ready.
+
+Next recommended action: run the full Phase 5.4 validation gate and prepare a
+focused policy review packet.
+
+## 2026-05-05 - Phase 5.5 Deletion Readiness Inventory
+
+Goal: inventory deletion readiness without deleting old runtime code or changing
+product policy.
+
+Files inspected:
+
+- `HANDOFF.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-retained-checkpoint-folder-policy.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-runtime-import-inventory.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-runner-handler-current-import-inventory.md`
+- `docs/architecture/v2-checkpoint-5.3.md`
+- `docs/architecture/v2-checkpoint-5.4.md`
+- `src/runtime/**`
+- retained runner and handler tests under `tests/runner/`
+- retained trace/progress tests under `tests/unit/runtime/`
+- v2 proof tests under `tests/core-v2/` and `tests/soak/`
+
+Files changed:
+
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-checkpoint-5.5.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-runtime-import-inventory.md`
+- `docs/architecture/v2-runner-handler-test-classification.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? No. This is a documentation-only inventory.
+
+Policy changed? No. The retained checkpoint-folder and fallback policies from
+Phase 5.4 remain unchanged.
+
+Inventory result:
+
+- no `src/runtime` file is deletion-ready;
+- no retained runner or handler test is obsolete;
+- old-path compatibility wrappers remain intentional until imports retire;
+- neutral infrastructure under `src/runtime` should move only behind focused
+  review;
+- retained fallback, rollback, `composeWriter`, arbitrary fixtures, and
+  retained/v1 checkpoint folders still block broad deletion.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `git diff --check`: passed.
+
+Next recommended action: choose one policy or ownership decision before any
+deletion slice. Good candidates are arbitrary fixtures, programmatic
+`composeWriter`, rollback, retained/v1 checkpoint folder support, or neutral
+ownership for registries/connectors/materializer/router/catalog/compiler
+modules.
+
+## 2026-05-05 - Phase 5.6 Fallback API Disposition Review
+
+Goal: proceed until the next external review checkpoint, then stop before
+changing retained fallback behavior.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `scripts/release/capture-golden-run-proofs.mjs`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-retained-runtime-boundary.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-checkpoint-4.6.1.md`
+- `HANDOFF.md`
+
+Files changed:
+
+- `docs/architecture/v2-fallback-api-disposition-review.md`
+- `docs/architecture/v2-checkpoint-5.6.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `circuit-v2-phase-5.6-fallback-api-disposition-review-prompt-20260505.md`
+- `circuit-v2-phase-5.6-fallback-api-disposition-review-20260505.zip`
+
+Behavior changed? No. This is a review checkpoint packet only.
+
+Policy changed? No. The packet recommends current posture but does not approve
+any policy change.
+
+Review checkpoint:
+
+- arbitrary explicit fixtures;
+- programmatic `composeWriter`;
+- rollback;
+- unsupported public modes;
+- candidate diagnostics.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `git diff --check`: passed.
+
+Next recommended action: stop for external review. Phase 5.7 should not start
+until the reviewer decides which fallback responsibility to keep, migrate,
+shrink, or retire first.
+
+## 2026-05-05 - Phase 5.7 Compose Writer API Disposition
+
+Goal: apply the external review verdict for programmatic `composeWriter`
+without deleting old runtime code or widening core-v2 routing.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/runtime/runner.ts`
+- `src/runtime/runner-types.ts`
+- `src/runtime/step-handlers/compose.ts`
+- `src/runtime/step-handlers/sub-run.ts`
+- `src/runtime/step-handlers/fanout.ts`
+- `src/runtime/step-handlers/types.ts`
+- `scripts/release/capture-golden-run-proofs.mjs`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-fallback-api-disposition-review.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+
+Files changed:
+
+- `tests/runner/cli-v2-runtime.test.ts`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-checkpoint-5.7.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `circuit-v2-phase-5.7-compose-writer-disposition-review-prompt-20260505.md`
+- `circuit-v2-phase-5.7-compose-writer-disposition-review-20260505.zip`
+
+Behavior changed? No runtime routing behavior changed. The test suite now
+explicitly proves candidate diagnostics plus `composeWriter` and rollback plus
+`composeWriter` remain retained-runtime-owned.
+
+Policy changed? Yes, the Phase 5.6 review verdict is now encoded:
+`composeWriter` remains retained-runtime-only compatibility, core-v2 does not
+get a matching hook, and internal v2 customization should use executor
+injection or generated reports.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`: passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `npm run check-flow-drift`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed after final packet refresh.
+
+Next recommended action: stop for external review before migrating release
+proof away from retained `composeWriter`, adding a v2 compose hook, or starting
+any old runtime deletion slice.
+
+## 2026-05-05 - Phase 5.8 Candidate Diagnostics Disposition
+
+Goal: decide the status of `CIRCUIT_V2_RUNTIME_CANDIDATE=1` now that default
+selector routing is active, without renaming the flag or changing routing.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `tests/core-v2/checkpoint-resume-v2.test.ts`
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-fallback-api-disposition-review.md`
+- `HANDOFF.md`
+
+Files changed:
+
+- `docs/architecture/v2-candidate-diagnostics-disposition.md`
+- `docs/architecture/v2-checkpoint-5.8.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `circuit-v2-phase-5.8-candidate-diagnostics-disposition-review-prompt-20260505.md`
+- `circuit-v2-phase-5.8-candidate-diagnostics-disposition-review-20260505.zip`
+
+Behavior changed? No. This is a disposition and review checkpoint only.
+
+Policy changed? Yes, the flag is now classified as a temporary migration
+diagnostic. It stays for now, but it should be renamed later to a clearer
+runtime-decision diagnostics flag in a dedicated follow-up slice.
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`: passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `npm run check-flow-drift`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed after final packet refresh.
+
+Next recommended action: stop for external review before renaming or removing
+`CIRCUIT_V2_RUNTIME_CANDIDATE`, adding a new diagnostics env var, changing
+rollback, or starting any old runtime deletion slice.
+
+## 2026-05-05 - Build Autonomous Default Core-v2 Routing
+
+Goal: move one real public retained mode after the full-parity gameplan review:
+Build autonomous should follow the core-v2 selector matrix by default, while
+other autonomous/tournament modes remain retained until proven.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/projections/progress.ts`
+- `generated/flows/build/circuit.json`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/parity/build-v2.test.ts`
+- `tests/core-v2/checkpoint-resume-v2.test.ts`
+- `tests/runner/build-checkpoint-exec.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/projections/progress.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/parity/build-v2.test.ts`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Build autonomous is now in the default v2
+support matrix. Core-v2 marks auto-resolved checkpoint requests, and v2 progress
+no longer emits checkpoint waiting/user-input progress for auto-resolved
+checkpoints.
+
+Tests run:
+
+- `npx vitest run tests/parity/build-v2.test.ts`
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`
+- `npx vitest run tests/soak/v2-runtime-surface.test.ts`
+- `npx vitest run tests/core-v2/checkpoint-resume-v2.test.ts`
+- `npx vitest run tests/runner/build-checkpoint-exec.test.ts`
+- `npx vitest run tests/core-v2/core-v2-baseline.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run soak:v2:fast`
+- `npm run test:fast`
+- `npm run soak:v2`
+
+Next recommended action: continue moving one public retained mode or one release
+proof dependency at a time. Do not delete old runtime code, route other
+autonomous/tournament modes, change arbitrary roots, remove rollback, or change
+`composeWriter` in this lane.
+
+## 2026-05-05 - Fix Default Default Core-v2 Routing
+
+Goal: move the generated Fix default mode through the core-v2 selector matrix
+without touching release proof `composeWriter` compatibility.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `generated/flows/fix/circuit.json`
+- `tests/parity/fix-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Fix default is now in the default v2 support
+matrix. Fix deep and Fix autonomous remain retained until they have their own
+mode-specific checkpoint/autonomous proof. Release proof `composeWriter` remains
+retained-runtime-owned.
+
+Tests run:
+
+- `npx vitest run tests/parity/fix-v2.test.ts`
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`
+- `npx vitest run tests/soak/v2-runtime-surface.test.ts`
+
+Next recommended action: run the full validation ladder, then pick either the
+next public mode with proof already close at hand or the release proof
+`composeWriter` dependency. Do not change public `composeWriter` semantics
+without a dedicated compatibility review.
+
+## 2026-05-05 - Release Fix Proof Off ComposeWriter
+
+Goal: remove the release golden Fix proof's internal dependency on public
+`composeWriter` without changing the public compatibility API.
+
+Files inspected:
+
+- `scripts/release/capture-golden-run-proofs.mjs`
+- `src/cli/circuit.ts`
+- `src/core-v2/executors/compose.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/release/release-infrastructure.test.ts`
+- `docs/architecture/v2-compose-writer-disposition.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `scripts/release/capture-golden-run-proofs.mjs`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/release/release-infrastructure.test.ts`
+- `docs/release/proofs/index.yaml`
+- `docs/architecture/v2-compose-writer-disposition.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `examples/runs/**`
+
+Behavior changed? Yes, internally. Fresh core-v2 CLI runs now receive
+`v2Executors` from `main(..., options)`, matching the existing checkpoint-resume
+executor injection path. The golden Fix proof now writes its deterministic
+brief through an internal v2 compose executor and no longer imports
+`dist/runtime/runner.js` or passes public `composeWriter`. Public
+`composeWriter` behavior is unchanged: normal, diagnostics, and rollback
+invocations remain retained-runtime-owned, and strict v2 still fails closed.
+
+Tests run:
+
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/release/release-infrastructure.test.ts`
+- `npm run check`
+- `npm run capture-proofs:golden-runs`
+
+Next recommended action: finish validation for this batch, then move another
+real parity row. The best next small public-mode target is likely Fix
+autonomous, because v2 already supports safe-autonomous checkpoint resolution
+and Fix default/lite are now default-routed. Save Explore tournament for a
+larger proof slice because fanout and tournament checkpoint UX still need
+harder parity evidence.
+
+## 2026-05-05 - Fix Autonomous Default Core-v2 Routing
+
+Goal: move generated Fix autonomous through the core-v2 selector matrix and
+prove the no-repro checkpoint takes its safe autonomous choice.
+
+Files inspected:
+
+- `generated/flows/fix/circuit.json`
+- `src/flows/fix/schematic.json`
+- `src/cli/circuit.ts`
+- `tests/parity/fix-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/fix-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Fix autonomous is now in the default v2 support
+matrix. The selector, candidate diagnostics, rollback, parity, and soak tests
+cover it. A dedicated CLI test forces the `fix-no-repro-decision` branch and
+proves core-v2 writes the checkpoint response with
+`resolution_source: safe-autonomous` without emitting checkpoint-waiting or
+user-input progress.
+
+Tests run:
+
+- `npx vitest run tests/parity/fix-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+
+Next recommended action: run broader validation. If green, the next small public
+mode is likely Sweep autonomous or Migrate autonomous, but inspect their
+checkpoint/child-run behavior first. Keep Explore tournament separate; it is a
+larger fanout and tournament checkpoint parity slice.
+
+## 2026-05-05 - Sweep Autonomous Default Core-v2 Routing
+
+Goal: move generated Sweep autonomous through the core-v2 selector matrix and
+prove the triage checkpoint takes its safe autonomous choice.
+
+Files inspected:
+
+- `generated/flows/sweep/circuit.json`
+- `src/flows/sweep/schematic.json`
+- `src/cli/circuit.ts`
+- `tests/parity/sweep-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/sweep-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Sweep autonomous is now in the default v2
+support matrix. The selector, candidate diagnostics, rollback, parity, and soak
+tests cover it. A dedicated CLI test proves core-v2 writes the triage
+checkpoint response with `resolution_source: safe-autonomous` without emitting
+checkpoint-waiting or user-input progress.
+
+Tests run:
+
+- `npx vitest run tests/parity/sweep-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+
+Next recommended action: run broader validation. If green, inspect Migrate
+autonomous next, because it is the next public autonomous row but includes
+sub-run/child-run behavior. Keep Explore tournament as the next review-worthy
+large slice.
+
+## 2026-05-05 - Migrate Autonomous Default Core-v2 Routing
+
+Goal: move generated Migrate autonomous through the core-v2 selector matrix and
+prove the coexistence checkpoint takes its safe autonomous choice before the
+Build child run.
+
+Files inspected:
+
+- `generated/flows/migrate/circuit.json`
+- `src/cli/circuit.ts`
+- `tests/parity/migrate-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/migrate-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Migrate autonomous is now in the default v2
+support matrix. The selector, candidate diagnostics, rollback, parity, and soak
+tests cover it. A dedicated CLI test proves core-v2 writes the coexistence
+checkpoint response with `resolution_source: safe-autonomous`, avoids
+checkpoint-waiting/user-input progress, runs the Build child flow through
+core-v2, and reaches completed `runs show` status.
+
+Tests run:
+
+- `npx vitest run tests/parity/migrate-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: inspect one remaining public retained mode at a time,
+likely Fix deep or Sweep lite/deep, and choose the smallest row whose v2 behavior
+can be proven without changing shared checkpoint semantics. Keep Explore
+tournament as a larger review-worthy slice because it still combines fanout and
+tournament checkpoint UX.
+
+## 2026-05-05 - Sweep Lite Default Core-v2 Routing
+
+Goal: move generated Sweep lite through the core-v2 selector matrix as the
+lowest-risk remaining Sweep mode.
+
+Files inspected:
+
+- `generated/flows/sweep/circuit.json`
+- `src/cli/circuit.ts`
+- `tests/parity/sweep-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/sweep-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Sweep lite is now in the default v2 support
+matrix. The selector, candidate diagnostics, rollback, parity, and soak tests
+cover it. A dedicated CLI test proves core-v2 writes the triage checkpoint
+response with `resolution_source: safe-default`, avoids checkpoint-waiting and
+user-input progress, writes a Sweep result, and reaches completed `runs show`
+status.
+
+Tests run:
+
+- `npx vitest run tests/parity/sweep-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: inspect a true checkpoint-waiting retained row next:
+Sweep deep, Fix deep, or Migrate deep. Pick one and prove pause/resume rather
+than widening all deep modes together.
+
+## 2026-05-05 - Sweep Deep Default Core-v2 Routing
+
+Goal: move generated Sweep deep through the core-v2 selector matrix and prove
+checkpoint wait/resume on the Sweep triage checkpoint.
+
+Files inspected:
+
+- `generated/flows/sweep/circuit.json`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Sweep deep is now in the default v2 support
+matrix. The CLI and soak tests prove it pauses at the triage checkpoint, emits
+checkpoint waiting and user-input progress, projects a waiting `runs show`
+status, resumes by saved core-v2 marker, writes the Sweep result, and keeps
+rollback on retained runtime.
+
+Tests run:
+
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: inspect Fix deep or Migrate deep next. Both are
+checkpoint-waiting rows, but Fix deep is probably the smaller next target
+because it does not add a child-run path.
+
+## 2026-05-05 - Fix Deep Default Core-v2 Routing
+
+Goal: move generated Fix deep through the core-v2 selector matrix and prove the
+no-repro checkpoint waits and resumes when the diagnosis asks for operator
+input.
+
+Files inspected:
+
+- `generated/flows/fix/circuit.json`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/cli/circuit.ts`
+- `tests/parity/fix-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/fix-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Fix deep is now in the default v2 support
+matrix. The normal generated path completes through core-v2. A dedicated CLI
+test forces the no-repro route, proves the checkpoint waits at deep depth,
+projects waiting `runs show` status, resumes by saved core-v2 marker, writes
+the Fix result, and keeps rollback on retained runtime.
+
+Tests run:
+
+- `npx vitest run tests/parity/fix-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: Migrate deep is the last obvious generated deep-mode
+row before Explore's non-default/tournament work. Migrate deep needs checkpoint
+wait/resume plus Build child-run proof.
+
+## 2026-05-05 - Migrate Deep Default Core-v2 Routing
+
+Goal: move generated Migrate deep through the core-v2 selector matrix and prove
+checkpoint wait/resume plus the Build child-run path after resume.
+
+Files inspected:
+
+- `generated/flows/migrate/circuit.json`
+- `src/core-v2/run/checkpoint-resume.ts`
+- `src/core-v2/run/compiled-flow-runner.ts`
+- `src/core-v2/executors/sub-run.ts`
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `src/core-v2/run/checkpoint-resume.ts`
+- `src/core-v2/run/compiled-flow-runner.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Migrate deep is now in the default v2 support
+matrix. The CLI and soak tests prove it pauses at the coexistence checkpoint,
+emits checkpoint waiting and user-input progress, projects a waiting `runs show`
+status, resumes by saved core-v2 marker, runs the Build child flow after resume,
+writes the Migrate result, and keeps rollback on retained runtime. The slice
+also fixes v2 checkpoint resume so resumed runs get the same default child
+runner as fresh core-v2 runs; without that, a resumed Migrate sub-run aborted
+after the checkpoint.
+
+Tests run:
+
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: inspect the remaining public generated Explore modes:
+lite, deep, autonomous, and tournament. Explore tournament is the next
+review-worthy cluster because fanout and tournament checkpoint UX need a
+stronger review before default routing. Explore lite/deep/autonomous may be
+small enough for normal proof-first routing, but inspect before changing them.
+
+## 2026-05-05 - Explore Non-Tournament Default Core-v2 Routing
+
+Goal: move generated Explore lite, deep, and autonomous through the core-v2
+selector matrix while keeping Explore tournament retained.
+
+Files inspected:
+
+- `generated/flows/explore/circuit.json`
+- `generated/flows/explore/tournament.json`
+- `src/cli/circuit.ts`
+- `tests/parity/explore-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/parity/explore-v2.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Explore lite, deep, and autonomous are now in
+the default v2 support matrix. They share the non-tournament Explore
+compose/relay graph, so the slice proves default selector routing, runtime
+diagnostics, rollback retention, parity completion, and soak coverage. Explore
+tournament remains retained because it uses the separate fanout plus tournament
+checkpoint graph.
+
+Tests run:
+
+- `npx vitest run tests/parity/explore-v2.test.ts tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts`
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: stop for an Explore tournament review checkpoint
+before default-routing tournament. That review should focus on production fanout
+parity, tournament checkpoint progress/status/resume UX, and retained-vs-v2
+cross-report validation evidence. Do not delete old runtime code or move
+connector/materializer/registry internals in the same slice.
+
+## 2026-05-05 - Phase 5.10 Trusted Generated Plugin Mirror
+
+Goal: allow the official installed Codex plugin's generated flow mirror to
+follow the core-v2 selector matrix without blessing arbitrary external roots or
+custom flow roots.
+
+Files inspected:
+
+- `HANDOFF.md`
+- `src/cli/circuit.ts`
+- `plugins/circuit/scripts/circuit-next.mjs`
+- `src/cli/create.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+
+Files changed:
+
+- `plugins/circuit/scripts/circuit-next.mjs`
+- `src/cli/circuit.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+- `docs/architecture/v2-checkpoint-5.10.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Behavior changed? Yes, narrowly. Official wrapper-injected installed plugin flow
+mirrors may now follow the selector matrix. Arbitrary external `--fixture`,
+arbitrary external `--flow-root`, and custom flow roots remain retained by
+default.
+
+Tests run:
+
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npx vitest run tests/contracts/codex-host-plugin.test.ts`
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`
+- `npx vitest run tests/soak`
+- `npm run soak:v2:fast`
+- `npm run soak:v2`
+- `npm run test:fast`
+- `npm run check-flow-drift`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: do not delete runtime code or generalize trusted
+mirrors.
+
+## 2026-05-05 - Phase 5.9 Arbitrary Fixture Policy
+
+Goal: decide the arbitrary fixture disposition and clean its active diagnostics
+wording without deleting old runtime code.
+
+Files inspected:
+
+- `HANDOFF.md`
+- `src/cli/circuit.ts`
+- `src/cli/create.ts`
+- `plugins/circuit/scripts/circuit-next.mjs`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/contracts/codex-host-plugin.test.ts`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/contracts/host-adapter.md`
+
+Files changed:
+
+- `docs/architecture/v2-arbitrary-fixture-policy.md`
+- `docs/architecture/v2-checkpoint-5.9.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `circuit-v2-phase-5.10-trusted-generated-mirror-policy-review-prompt-20260505.md`
+- `circuit-v2-phase-5.10-trusted-generated-mirror-policy-review-20260505.zip`
+
+Behavior changed? Only CLI diagnostic wording. Routing did not change.
+
+Decision:
+
+- generated fixtures under `generated/flows/**` follow the selector matrix;
+- arbitrary explicit `--fixture` paths outside `generated/flows/**` stay
+  retained by default;
+- custom flow roots stay retained by default;
+- packaged host flow roots are generated mirrors, but they stay retained by
+  current path policy because they are outside `generated/flows/**`;
+- strict `CIRCUIT_V2_RUNTIME=1` remains the only v2 experiment lane for
+  compatible explicit fixtures.
+
+Tests run:
+
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`
+- `npm run test:fast`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: do not delete runtime code. Any attempt to make
+packaged host flow roots default-route through core-v2 should get deeper review
+first. A focused Phase 5.10 trusted-generated-mirror policy review packet was
+prepared for that question.
+
+## 2026-05-05 - Phase 5.8.1 Runtime Decision Diagnostics Alias
+
+Goal: implement the approved diagnostics rename with a temporary alias, update
+active CLI wording, and make rollback diagnostics report the actual selected
+runtime reason.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `docs/architecture/v2-candidate-diagnostics-disposition.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `HANDOFF.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `tests/runner/config-loader.test.ts`
+- `docs/architecture/v2-candidate-diagnostics-disposition.md`
+- `docs/architecture/v2-checkpoint-5.8.1.md`
+- `docs/architecture/v2-retained-fallback-policy.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+- `circuit-v2-phase-5.8.1-runtime-decision-diagnostics-alias-review-prompt-20260505.md`
+- `circuit-v2-phase-5.8.1-runtime-decision-diagnostics-alias-review-20260505.zip`
+
+Behavior changed? Yes, narrowly. `CIRCUIT_SHOW_RUNTIME_DECISION=1` is now the
+preferred way to include `runtime` and `runtime_reason`. The old
+`CIRCUIT_V2_RUNTIME_CANDIDATE=1` name remains a temporary alias. If diagnostics
+and rollback are both set, retained output now reports the rollback reason
+because rollback selected the actual runtime. Strict v2 still wins over
+rollback.
+
+Routing changed? No. No v2 support rows were added, arbitrary fixture routing
+did not change, `composeWriter` behavior did not change, and no old runtime code
+was deleted or moved.
+
+Tests run:
+
+- `npm run check`
+- `npm run lint`
+- `npm run build`
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts`
+- `npx vitest run tests/soak`
+- `npm run soak:v2:fast`
+- `npm run soak:v2`
+- `npm run test:fast`
+- `npm run check-flow-drift`
+- `npm run verify`
+- `git diff --check`
+
+Next recommended action: stop for external review before removing the old
+candidate diagnostics alias, changing rollback further, or starting any old
+runtime deletion slice.
+
+## 2026-05-05 - Phase 5.2.1 Build Deep Candidate Smoke
+
+Goal: prove Build deep through the core-v2 checkpoint path under explicit
+candidate/strict routing without making Build deep a default-routed mode.
+
+Files inspected:
+
+- `src/cli/circuit.ts`
+- `generated/flows/build/circuit.json`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/run/checkpoint-resume.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+
+Files changed:
+
+- `src/cli/circuit.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-checkpoint-5.2.1.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/runner/cli-v2-runtime.test.ts tests/soak/v2-runtime-surface.test.ts tests/core-v2/checkpoint-resume-v2.test.ts`:
+  passed.
+- `npx vitest run tests/core-v2 tests/parity`: passed.
+- `npx vitest run tests/runner/run-status-projection.test.ts tests/contracts/progress-event-schema.test.ts`:
+  passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `git diff --check`: passed before docs/review-packet refresh.
+
+Behavior changed? Yes, deliberately and narrowly. Build deep is now in the
+candidate/strict v2 support matrix only. Default Build deep still routes to the
+retained checkpoint runtime. Candidate/strict Build deep now proves core-v2
+checkpoint wait, `runs show`, progress, resume by saved engine marker, project
+root restoration, selection config restoration, post-checkpoint continuation,
+result writing, and final status projection.
+
+Concerns:
+
+- Build deep is not default-routed yet.
+- Build tournament and other checkpoint modes remain retained.
+- Retained/v1 checkpoint folders remain retained-runtime-owned.
+- No retained checkpoint, trace, reducer, snapshot, progress, old runner, old
+  handler, connector, materializer, or registry file is deletion-ready.
+
+Next recommended action: request focused review of the Phase 5.2.1 candidate
+smoke packet. If approved, Phase 5.3 can decide whether Build deep should enter
+the default selector matrix.
+
 ## 2026-05-04 - Phase 4.7 Retained Runtime Inventory
 
 Goal: move from default-selector stabilization to the next heavy review
@@ -1484,6 +3676,166 @@ Decision:
 
 Next recommended action: validate. No heavy review is needed for this helper
 extraction unless validation reveals a behavior change.
+
+## 2026-05-05 - Phase 4.42 Retained Boundary And Selector Soak
+
+Goal: record the checkpoint resume ownership decision and mark the
+default-selector milestone complete for matrix-supported fresh-run modes.
+
+Files inspected:
+
+- `HANDOFF.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-heavy-boundary-plan.md`
+- `docs/architecture/v2-retained-runner-boundary-plan.md`
+- `docs/architecture/v2-close-result-finalization-proposal.md`
+
+Files changed:
+
+- `docs/architecture/v2-retained-runtime-boundary.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-checkpoint-4.42.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+
+Tests run:
+
+- `npm run lint`: passed.
+- `npm run check-flow-drift`: passed.
+- `git diff --check`: passed.
+
+Behavior changed? No. This is a docs and evidence checkpoint.
+
+Decision:
+
+- Checkpoint resume remains retained-runtime-owned for the foreseeable future.
+- The default-selector milestone is complete for matrix-supported fresh-run
+  modes.
+- Old runtime deletion is still not approved.
+- Do not move connector subprocesses, relay materialization, registries,
+  trace/progress/reducer/snapshot internals, checkpoint handler behavior,
+  `executeCompiledFlow(...)`, old runner files, or old step handlers without a
+  separate reviewed plan.
+
+Next recommended action: selector soak and deletion-readiness evidence
+gathering. No heavy review is needed for ordinary soak updates.
+
+## 2026-05-05 - Phase 5.0 Automated V2 Selector Soak
+
+Goal: add a deterministic soak command and focused soak suite for the current
+core-v2 selector boundary.
+
+Files inspected:
+
+- `package.json`
+- `tests/runner/cli-v2-runtime.test.ts`
+- `tests/runner/run-status-projection.test.ts`
+- `tests/core-v2/connectors-v2.test.ts`
+- `tests/parity/core-v2-parity-helpers.ts`
+- `src/schemas/manifest.ts`
+- `src/schemas/result.ts`
+- `src/schemas/progress-event.ts`
+
+Files changed:
+
+- `package.json`
+- `tests/soak/v2-runtime-surface.test.ts`
+- `docs/architecture/v2-selector-soak-report.md`
+- `docs/architecture/v2-selector-soak-checklist.md`
+- `docs/architecture/v2-checkpoint-5.0.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+
+Tests run:
+
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npx vitest run tests/soak`: passed.
+- `npm run soak:v2:fast`: passed.
+- `npm run soak:v2`: passed.
+- `npm run test:fast`: passed.
+- `npm run check-flow-drift`: passed on sequential rerun.
+- `npm run verify`: passed on final rerun after report updates.
+- `git diff --check`: passed.
+
+Note: a parallel `npm run check-flow-drift` attempt overlapped with
+`tests/unit/emit-flows-drift.test.ts` and saw that test's temporary stale
+sibling file. The sequential rerun passed after `test:fast` finished.
+
+Behavior changed? No. This phase adds tests, scripts, and documentation only.
+
+What the soak proves:
+
+- matrix-supported fresh runs route through core-v2 by default;
+- retained-owned paths remain retained;
+- rollback and strict opt-in precedence stay explicit;
+- strict opt-in fails closed before unsafe run-folder writes;
+- `runs show --json`, progress JSONL, operator summaries, manifest snapshots,
+  result files, child runs, fanout, and connector safety remain covered.
+
+Next recommended action: declare the default-selector milestone complete with
+precise wording, then begin Phase 5.1 as a v2 checkpoint resume parity plan.
+
+## 2026-05-05 - Phase 5.1 V2 Checkpoint Resume Parity Plan
+
+Goal: design v2 checkpoint pause/resume as a product feature before moving any
+checkpoint mode, retained trace/reducer/snapshot/progress internals, checkpoint
+handler behavior, old runner code, or old step handlers.
+
+Files inspected:
+
+- `docs/architecture/v2-checkpoint-resume-ownership-plan.md`
+- `docs/architecture/v2-retained-runtime-boundary.md`
+- `docs/architecture/v2-selector-soak-report.md`
+- `src/runtime/checkpoint-resume.ts`
+- `src/runtime/step-handlers/checkpoint.ts`
+- `src/core-v2/executors/checkpoint.ts`
+- `src/core-v2/run/graph-runner.ts`
+- `src/core-v2/run/compiled-flow-runner.ts`
+- `src/core-v2/domain/trace.ts`
+- `src/core-v2/projections/progress.ts`
+- `src/run-status/v2-run-folder.ts`
+- `src/schemas/run-status.ts`
+- `tests/runner/build-checkpoint-exec.test.ts`
+- `tests/runner/run-status-projection.test.ts`
+- `tests/runner/cli-v2-runtime.test.ts`
+
+Files changed:
+
+- `docs/architecture/v2-checkpoint-resume-parity-plan.md`
+- `docs/architecture/v2-checkpoint-5.1.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Tests run:
+
+- `npm run lint`: passed.
+- `npx vitest run tests/contracts/terminology-active-surface.test.ts`: passed.
+- `git diff --check`: passed.
+
+Behavior changed? No. This is a planning checkpoint only.
+
+Decision:
+
+- The first v2 checkpoint implementation should support new core-v2 checkpoint
+  folders only.
+- Old retained checkpoint folders should continue to resume through retained
+  runtime.
+- Resume dispatch should follow the saved run folder's engine marker, not
+  fresh-run selector flags.
+- Phase 5.2 should prove fixture-level pause and resume end to end before any
+  public checkpoint mode routes through v2.
+- Checkpoint request/resolution trace fields used by resume/status/progress must
+  be first-class v2 fields, not only `data`.
+- Waiting checkpoint must become a first-class graph result, not a thrown
+  executor error.
+- Resume graph execution must reconstruct completed attempt state from the
+  existing trace before continuing.
+
+Next recommended action: request focused architecture review of the Phase 5.1
+plan before implementing v2 checkpoint pause/resume.
 
 ## 2026-05-04 - Phase 4.37 Extract Retained Checkpoint Resume Preparation
 

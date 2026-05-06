@@ -1,7 +1,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { RuntimeProofCompose } from '../reports.js';
 
 export const runtimeProofComposeBuilder: ComposeBuilder = {

@@ -13,18 +13,18 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { FixBrief, FixResult } from '../../src/flows/fix/reports.js';
-import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
 import {
   type ComposeWriterInput,
-  type RelayFn,
-  runCompiledFlow,
-  writeComposeReport,
-} from '../../src/runtime/runner.js';
+  runRetainedCompiledFlow as runCompiledFlow,
+  writeRetainedComposeReport as writeComposeReport,
+} from '../../src/compat/retained-runtime.js';
+import { FixBrief, FixResult } from '../../src/flows/fix/reports.js';
+import type { ClaudeCodeRelayInput } from '../../src/runtime/connectors/claude-code.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const FIX_LITE_FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'fix', 'lite.json');
 

@@ -11,9 +11,9 @@ Circuit finished Review. Verdict: CLEAN. Findings: 0.
 
 ## Details
 
-- Run note: Circuit completed 3 Review steps for this goal.
+- Run note: Run closed with outcome complete via @complete.
 - Findings: 0
-- Untracked evidence: paths and sizes only for 20 files (294 untracked files found; additional untracked files were not sampled).
+- Untracked evidence: paths and sizes only for 20 files (71 untracked files found; additional untracked files were not sampled).
 
 ## Evidence Warnings
 

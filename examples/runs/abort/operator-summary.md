@@ -12,8 +12,8 @@ Circuit run aborted.
 ## Details
 
 - Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.
-- Run note: Circuit completed 4 Build steps for this goal.
-- Abort reason: route 'retry' for step 'act-step' exhausted max_attempts=2; last recovery reason: relay step 'act-step': connector invocation failed (proof connector failure while implementing the synthetic Build change)
+- Run note: Run closed with outcome aborted.
+- Abort reason: route 'retry' for step 'act-step' exhausted max_attempts=2
 
 ## Evidence Warnings
 

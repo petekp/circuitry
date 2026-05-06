@@ -9,35 +9,7 @@
   "safe_autonomous_choice": "continue",
   "execution_context": {
     "project_root": "<repo>",
-    "selection_config_layers": [
-      {
-        "layer": "invocation",
-        "config": {
-          "schema_version": 1,
-          "host": {
-            "kind": "generic-shell"
-          },
-          "relay": {
-            "default": "auto",
-            "roles": {},
-            "circuits": {},
-            "connectors": {}
-          },
-          "circuits": {
-            "build": {
-              "selection": {
-                "skills": {
-                  "mode": "inherit"
-                },
-                "depth": "deep",
-                "invocation_options": {}
-              }
-            }
-          },
-          "defaults": {}
-        }
-      }
-    ],
+    "selection_config_layers": [],
     "checkpoint_report_sha256": "711278eb313356beb85bb46e7ca7e107f203f49373aaa7a644d657f65643e6fb"
   }
 }

@@ -7,7 +7,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { ExploreAnalysis, ExploreBrief, ExploreDecisionOptions } from '../reports.js';
 
 const FALLBACK_LABELS = [

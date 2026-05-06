@@ -27,10 +27,11 @@ import { flowPackages } from '../../src/flows/catalog.js';
 const WORKFLOWS_ROOT = 'src/flows';
 const ROOT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'] as const;
 
-// Files at the flows root that are NOT flow-package directories
-// (catalog, types, shared schemas/types). Anything else under
-// src/flows/ that isn't in this list is expected to be a package.
-const NON_PACKAGE_FILES = new Set(['catalog.ts', 'types.ts']);
+// Entries at the flows root that are NOT flow-package directories
+// (catalog, types, and shared flow infrastructure). Anything else
+// under src/flows/ is expected to be a package.
+const NON_PACKAGE_FILES = new Set(['catalog.ts', 'catalog-derivations.ts', 'types.ts']);
+const NON_PACKAGE_DIRECTORIES = new Set(['registries']);
 
 function isFile(path: string): boolean {
   try {
@@ -83,7 +84,9 @@ describe('flow catalog completeness', () => {
   it('every src/flows/<id>/ directory is registered in the catalog', () => {
     const onDisk = new Set(listPackageDirectories());
     const inCatalog = new Set(flowPackages.map((pkg) => pkg.id));
-    const missing = [...onDisk].filter((id) => !inCatalog.has(id));
+    const missing = [...onDisk].filter(
+      (id) => !NON_PACKAGE_DIRECTORIES.has(id) && !inCatalog.has(id),
+    );
     const extra = [...inCatalog].filter((id) => !onDisk.has(id));
     expect(
       { missing, extra },

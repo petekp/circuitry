@@ -4,12 +4,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { RelayResult } from '../../src/runtime/connectors/shared.js';
 import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { RunId } from '../../src/schemas/ids.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
-import { type RelayFn, type RelayInput, runCompiledFlow } from '../../src/runtime/runner.js';
+import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import { validateCompiledFlowKindPolicy } from '../../src/shared/flow-kind-policy.js';
 
 // `explore` end-to-end fixture run.
@@ -53,7 +54,7 @@ const AGENT_ADAPTER_SOURCE_PATHS = [
   'src/runtime/connectors/shared.ts',
   'src/runtime/connectors/relay-materializer.ts',
   'src/runtime/runner.ts',
-  'src/runtime/registries/report-schemas.ts',
+  'src/flows/registries/report-schemas.ts',
 ] as const;
 
 function connectorSourceSha256(): string {

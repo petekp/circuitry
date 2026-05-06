@@ -72,6 +72,72 @@ describe('fix v2 parity', () => {
     });
   });
 
+  it('runs the generated fix autonomous entry mode through the v2 compiled-flow path', async () => {
+    const fixture = await loadCompiledFlowFixture('fix');
+    const { flow } = fixture;
+    const expectedSteps = expectedPassStepIds(flow, 'autonomous');
+
+    await withTempRun(async (runDir) => {
+      const result = await runSimpleCompiledFlowV2({
+        flowBytes: fixture.bytes,
+        runDir,
+        runId: '22222222-2222-4222-8222-222222222223',
+        goal: 'fix autonomously with deterministic evidence',
+        entryModeName: 'autonomous',
+      });
+
+      expect(result).toMatchObject({
+        schema_version: 1,
+        run_id: '22222222-2222-4222-8222-222222222223',
+        flow_id: 'fix',
+        outcome: 'complete',
+      });
+      expect(await completedStepIds(runDir)).toEqual(expectedSteps);
+      const files = new RunFileStore(runDir);
+      expect(FixResult.safeParse(await files.readJson('reports/fix-result.json')).success).toBe(
+        true,
+      );
+      expect(RunResult.parse(await files.readJson('reports/result.json'))).toMatchObject({
+        flow_id: 'fix',
+        outcome: 'complete',
+        manifest_hash: fixture.manifestHash,
+      });
+    });
+  });
+
+  it('runs the generated fix deep entry mode through the v2 compiled-flow path', async () => {
+    const fixture = await loadCompiledFlowFixture('fix');
+    const { flow } = fixture;
+    const expectedSteps = expectedPassStepIds(flow, 'deep');
+
+    await withTempRun(async (runDir) => {
+      const result = await runSimpleCompiledFlowV2({
+        flowBytes: fixture.bytes,
+        runDir,
+        runId: '22222222-2222-4222-8222-222222222224',
+        goal: 'fix deeply with deterministic evidence',
+        entryModeName: 'deep',
+      });
+
+      expect(result).toMatchObject({
+        schema_version: 1,
+        run_id: '22222222-2222-4222-8222-222222222224',
+        flow_id: 'fix',
+        outcome: 'complete',
+      });
+      expect(await completedStepIds(runDir)).toEqual(expectedSteps);
+      const files = new RunFileStore(runDir);
+      expect(FixResult.safeParse(await files.readJson('reports/fix-result.json')).success).toBe(
+        true,
+      );
+      expect(RunResult.parse(await files.readJson('reports/result.json'))).toMatchObject({
+        flow_id: 'fix',
+        outcome: 'complete',
+        manifest_hash: fixture.manifestHash,
+      });
+    });
+  });
+
   it('records an aborted close when a fix verification step fails in v2', async () => {
     const fixture = await loadCompiledFlowFixture('fix');
 

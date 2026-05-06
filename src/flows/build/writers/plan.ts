@@ -7,7 +7,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { BuildBrief, BuildPlan } from '../reports.js';
 
 export const buildPlanComposeBuilder: ComposeBuilder = {

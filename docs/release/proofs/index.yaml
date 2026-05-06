@@ -229,8 +229,9 @@ scenarios:
       - examples/runs/handoff/control-plane/active-run.md
       - examples/runs/handoff/control-plane/continuity/index.json
       - examples/runs/handoff/control-plane/continuity/records/continuity-44444444-4444-4444-8444-444444444411.json
+      - examples/runs/handoff/run/manifest.snapshot.json
+      - examples/runs/handoff/run/trace.ndjson
       - examples/runs/handoff/run/reports/checkpoints/frame-step-request.json
-      - examples/runs/handoff/run/state.json
     exception_ids: []
     readiness_refs: [REL-011, REL-014]
   - id: proof:customization

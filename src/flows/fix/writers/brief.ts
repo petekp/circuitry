@@ -9,7 +9,7 @@
 import type {
   ComposeBuildContext,
   ComposeBuilder,
-} from '../../../runtime/registries/compose-writers/types.js';
+} from '../../registries/compose-writers/types.js';
 import { FixBrief } from '../reports.js';
 
 const DEFAULT_FIX_VERIFICATION_COMMAND = {
