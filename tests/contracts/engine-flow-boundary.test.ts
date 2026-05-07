@@ -85,7 +85,7 @@ describe('engine ↔ flow boundary', () => {
     expect(
       runtimeFiles.length,
       'src/runtime walk returned unexpectedly few files — discovery loop is likely broken',
-    ).toBeGreaterThanOrEqual(5);
+    ).toBeGreaterThanOrEqual(4);
     const offenders: { readonly file: string; readonly importPath: string }[] = [];
     for (const file of runtimeFiles) {
       for (const importPath of importPathsFrom(file)) {

@@ -32,8 +32,8 @@ final cutover supersedes that path: `src/compat/retained-runtime.ts`,
 `src/compat/retained-checkpoint-folders.ts`, `src/run-status/v1-run-folder.ts`,
 old handler implementations, old trace/reducer/snapshot implementation files,
 the old relay-selection bridge, the old run-status wrapper, and the old progress
-projection wrapper have been removed. Old runner, checkpoint, and result-writer
-entrypoints remain only as fail-closed public stubs.
+projection wrapper, and old result writer wrapper have been removed. Old runner
+and checkpoint entrypoints remain only as fail-closed public stubs.
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` have also been removed.
 
@@ -92,7 +92,6 @@ and path surfaces.
 |---|---|---|
 | `src/runtime/runner.ts` | fail-closed public stub | Direct `runCompiledFlow(...)` calls fail with the retired fresh-run message. Direct checkpoint resume calls fail with the retired run-folder message. |
 | `src/runtime/checkpoint-resume.ts` | fail-closed public stub | `prepareCheckpointResume(...)` fails with the retired run-folder message. |
-| `src/runtime/result-writer.ts` | result path helper plus fail-closed old writer stub | `resultPath(...)` still points to the shared result path helper; `writeResult(...)` fails closed. |
 | `src/runtime/step-handlers/checkpoint.ts` | fail-closed checkpoint handler stub | The public checkpoint helper types remain; `runCheckpointStep(...)` fails closed. |
 | `src/runtime/runner-types.ts` | compatibility type surface | Kept for old public type imports while implementation entrypoints are retired. |
 | Old shared-helper wrappers under `src/runtime/**` | removed | Neutral owners live under `src/shared/**`; the old runtime wrapper files are retired. |
@@ -130,7 +129,7 @@ wrappers, public type/path surfaces, or fail-closed stubs.
 | `src/runtime/router.ts` | removed | Neutral router implementation lives in `src/flows/router.ts`; the old runtime wrapper is retired. |
 | `src/runtime/relay-selection.ts` | removed | The old relay decision bridge was removed in the final cutover. Core-v2 and tests use `src/shared/relay-selection.ts` and core-v2 connector resolver helpers directly. |
 | `src/runtime/selection-resolver.ts` | removed | Selection precedence logic lives in `src/shared/selection-resolver.ts`; the old runtime wrapper is retired. |
-| `src/runtime/result-writer.ts` | result path helper plus fail-closed writer stub | core-v2 owns result writing. Phase 4.25 moved the shared `reports/result.json` path helper to `src/shared/result-path.ts`; the old `resultPath(...)` export remains, while `writeResult(...)` fails closed. |
+| `src/runtime/result-writer.ts` | removed | Shared result path ownership lives in `src/shared/result-path.ts`; old result writing is retired instead of adapted. |
 | `src/runtime/manifest-snapshot-writer.ts` | removed | Manifest snapshot byte-match helper lives in `src/shared/manifest-snapshot.ts`; the old runtime wrapper is retired. |
 | `src/runtime/snapshot-writer.ts` | removed | Retained state snapshot implementation was removed in the final cutover. Handoff and status paths no longer adapt retained/v1 folders. |
 | `src/runtime/operator-summary-writer.ts` | removed | Operator summary writing lives in `src/shared/operator-summary-writer.ts`; the old runtime wrapper is retired. |
@@ -174,6 +173,7 @@ Current import groups:
 | `runtime/runner-types` | old public type imports and tests | compatibility type surface | Keep until old type imports retire. |
 | `runtime/run-status-projection` | none | removed wrapper | Run-status ownership lives in `src/run-status/project-run-folder.ts`. |
 | `runtime/progress-projector` | none | removed wrapper | Shared progress output ownership lives in `src/shared/progress-output.ts`. |
+| `runtime/result-writer` | none | removed wrapper | Shared result path ownership lives in `src/shared/result-path.ts`. |
 | `runtime/step-handlers` | wrapper compatibility tests and checkpoint fail-closed tests | mostly removed; remaining wrappers/stub only | Do not restore the old handler cluster. |
 | `runtime/registries` | none | removed wrappers | Neutral source ownership now lives in `src/flows/registries/**`. |
 | `runtime/connectors` | none | removed wrappers | Live connector infrastructure now lives in `src/connectors/**`. |

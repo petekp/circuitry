@@ -195,27 +195,32 @@ describe('runtime import boundary', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps result-path helper imports on shared ownership outside the old compatibility proof', () => {
+  it('keeps result-path helper imports on shared ownership after retiring the old wrapper', () => {
+    expect(existsSync(resolve('src/runtime/result-writer.ts'))).toBe(false);
+
     const repoRoot = resolve('.');
-    const retainedHandlerOffenders = collectSourceFiles(resolve('src/runtime/step-handlers'))
-      .flatMap((file) =>
-        readFileSync(file, 'utf8').includes('../result-writer.js')
-          ? [file.slice(repoRoot.length + 1)]
-          : [],
-      )
-      .sort();
-    const testOffenders = collectSourceFiles(resolve('tests'))
-      .filter((file) => file !== resolve('tests/runner/result-path-compat.test.ts'))
+    const forbiddenImports = [
+      '../runtime/result-writer.js',
+      '../../runtime/result-writer.js',
+      '../result-writer.js',
+      'dist/runtime/result-writer.js',
+      'src/runtime/result-writer.js',
+    ];
+    const offenders = [
+      ...collectSourceFiles(resolve('src')),
+      ...collectSourceFiles(resolve('tests')),
+      ...collectFiles(resolve('scripts'), ['.mjs', '.js', '.ts']),
+    ]
       .filter((file) => file !== resolve('tests/runner/retained-compat-facade.test.ts'))
+      .filter((file) => file !== resolve('tests/runner/run-status-facade.test.ts'))
       .flatMap((file) =>
-        readFileSync(file, 'utf8').includes('src/runtime/result-writer.js')
-          ? [file.slice(repoRoot.length + 1)]
-          : [],
+        forbiddenImports
+          .filter((importPath) => readFileSync(file, 'utf8').includes(importPath))
+          .map((importPath) => `${file.slice(repoRoot.length + 1)} imports ${importPath}`),
       )
       .sort();
 
-    expect(retainedHandlerOffenders).toEqual([]);
-    expect(testOffenders).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
   it('keeps retained-execution-only tests on the compatibility facade', () => {

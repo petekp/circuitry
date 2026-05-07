@@ -50,9 +50,9 @@ The final cutover changed this inventory's conclusions:
 - old retained handler implementations, old trace reader/writer, reducer,
   snapshot writer, append-and-derive, and relay-selection implementation code
   are gone;
-- `src/runtime/runner.ts`, `src/runtime/checkpoint-resume.ts`,
-  `src/runtime/result-writer.ts`, and `src/runtime/step-handlers/checkpoint.ts`
-  remain only as fail-closed public stubs or helper re-exports;
+- `src/runtime/runner.ts`, `src/runtime/checkpoint-resume.ts`, and
+  `src/runtime/step-handlers/checkpoint.ts` remain only as fail-closed public
+  stubs or helper re-exports;
 - remaining wrapper imports are governed by
   `src/compat/public-runtime-paths.ts`.
 
@@ -105,7 +105,7 @@ final cutover product decision.
 | `src/runtime/registries/verification-writers/types.ts` | removed | Neutral verification writer types live in `src/flows/registries/verification-writers/types.ts`; the old runtime wrapper is retired. |
 | `src/runtime/relay-selection.ts` | retained fallback | Retained relay decision bridge and connector resolution remain live for fallback paths. |
 | `src/runtime/relay-support.ts` | removed | Neutral relay support lives in `src/shared/relay-support.ts`; the old runtime wrapper is retired. |
-| `src/runtime/result-writer.ts` | retained product behavior | Retained result writer is still used by old runner for retained close/finalization. The shared result path helper lives in `src/shared/result-path.ts`; keep the old `resultPath(...)` export for compatibility. |
+| `src/runtime/result-writer.ts` | removed | Shared result path ownership lives in `src/shared/result-path.ts`; old result writing is retired instead of adapted. |
 | `src/runtime/router.ts` | removed | Neutral router implementation lives in `src/flows/router.ts`; the old runtime wrapper is retired. |
 | `src/runtime/run-relative-path.ts` | removed | Neutral helper lives in `src/shared/run-relative-path.ts`; the old runtime wrapper is retired. |
 | `src/runtime/run-status-projection.ts` | removed | Neutral dispatcher lives in `src/run-status/project-run-folder.ts`; the old runtime wrapper is retired. |
@@ -160,8 +160,7 @@ Those counts are no longer current after final cutover.
 The retained runtime itself is no longer the blocker. The remaining blockers are
 wrapper/package-surface questions:
 
-- old public type/path surfaces such as `src/runtime/runner-types.ts` and
-  `src/runtime/result-writer.ts`;
+- old public type/path surfaces such as `src/runtime/runner-types.ts`;
 - generated plugin and package export drift when old paths are removed.
 
 The next useful slice is to pick one wrapper category, update

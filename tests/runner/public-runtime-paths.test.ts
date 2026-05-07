@@ -88,12 +88,7 @@ describe('public runtime import-path manifest', () => {
     const categories = new Set(PUBLIC_RUNTIME_PATHS.map((entry) => entry.category));
 
     expect(categories).toEqual(
-      new Set([
-        'public-runner-surface',
-        'retained-handler',
-        'retained-implementation',
-        'retained-saved-state',
-      ]),
+      new Set(['public-runner-surface', 'retained-handler', 'retained-saved-state']),
     );
 
     expect(
@@ -128,7 +123,6 @@ describe('public runtime import-path manifest', () => {
     const nonDeprecatedCategories = new Set([
       'public-runner-surface',
       'retained-handler',
-      'retained-implementation',
       'retained-saved-state',
     ]);
     const incorrectlyDeprecated = PUBLIC_RUNTIME_PATHS.filter(
@@ -138,9 +132,8 @@ describe('public runtime import-path manifest', () => {
 
     expect(incorrectlyDeprecated).toEqual([]);
     expect(
-      PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/result-writer.ts')
-        ?.deprecationStage,
-    ).toBe('none');
+      PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/result-writer.ts'),
+    ).toBeUndefined();
   });
 
   it('does not add import-time warning scaffolding to soft-deprecated wrappers', () => {
@@ -185,7 +178,7 @@ describe('public runtime import-path manifest', () => {
     expect(releaseNote).toContain('run-status wrapper');
     expect(releaseNote).toContain('progress projection wrapper');
     expect(releaseNote).toContain('src/run-status/project-run-folder.ts');
-    expect(releaseNote).toContain('old result path helper');
+    expect(releaseNote).toContain('result writer wrapper');
     expect(releaseNote).toContain('old public runner surface');
     expect(releaseNote).toContain('retired fail-closed runtime surfaces');
   });

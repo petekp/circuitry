@@ -40,11 +40,10 @@ stays identical to the manifest.
 
 These categories are not soft-deprecated:
 
-- the old result path helper at `src/runtime/result-writer.ts`;
 - the old public runner surface at `src/runtime/runner.ts` and
   `src/runtime/runner-types.ts`;
 - retired fail-closed runtime surfaces such as checkpoint resume, checkpoint
-  handler, and result writing.
+  handler, and runner entrypoints.
 
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` were retired after production and tooling imports
@@ -69,6 +68,10 @@ retired after live progress output ownership moved to
 `src/shared/progress-output.ts` and old v1 trace projection stopped being
 adapted.
 
+The old result writer wrapper at `src/runtime/result-writer.ts` was retired
+after live result path ownership moved to `src/shared/result-path.ts` and old
+result writing stopped being adapted.
+
 ## Review Boundaries
 
 Use local adversarial review and manifest/test updates before:
@@ -76,7 +79,7 @@ Use local adversarial review and manifest/test updates before:
 - deleting any old wrapper or fail-closed stub;
 - changing package exports;
 - adding import-time or runtime warnings;
-- soft-deprecating result-writer, public runner, or type paths;
+- soft-deprecating public runner or type paths;
 - changing the fail-closed retired-runtime behavior.
 
 Do not prepare an external review packet for those steps by default. Escalate

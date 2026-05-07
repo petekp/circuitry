@@ -8004,3 +8004,55 @@ Next recommended action: choose the result path helper/writer stub or the
 checkpoint fail-closed stubs next. Keep `src/runtime/runner.ts` and
 `src/runtime/runner-types.ts` separate because they carry the widest old public
 surface.
+
+## 2026-05-07 - Result Writer Wrapper Retirement
+
+Goal: retire the old `src/runtime/result-writer.ts` wrapper after confirming
+live result path ownership already sits in `src/shared/result-path.ts` and old
+result writing should not be adapted.
+
+Files changed:
+
+- `src/runtime/result-writer.ts`
+- `src/compat/public-runtime-paths.ts`
+- `src/schemas/result.ts`
+- `tests/runner/result-path-compat.test.ts`
+- `tests/unit/shared/result-path.test.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/contracts/engine-flow-boundary.test.ts`
+- active result/public-runtime policy docs
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted the old runtime result writer wrapper;
+- removed the manifest entry and unused retained-implementation category;
+- replaced the old-path compatibility test with a direct shared result path
+  helper test;
+- updated the runtime import-boundary guard so real source, test, and script
+  imports cannot use the removed wrapper;
+- lowered the `src/runtime` boundary-test anti-vacuity floor from 5 to 4 after
+  the wrapper removal.
+
+Tests run:
+
+- `npx vitest run tests/unit/shared/result-path.test.ts tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/run-status-facade.test.ts tests/runner/cli-router.test.ts tests/runner/cli-v2-runtime.test.ts`:
+  initially failed because the result-wrapper guard matched its own forbidden
+  string fixtures, then passed after excluding guard-only files.
+- `npm run check`: passed.
+- `npm run lint`: initially failed on formatting, then passed.
+- `npm run build`: passed.
+- `npx vitest run tests/contracts/engine-flow-boundary.test.ts tests/unit/shared/result-path.test.ts tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts`:
+  passed after lowering the anti-vacuity floor.
+- `npm run verify`: initially failed on the same anti-vacuity floor, then
+  passed after the floor update.
+
+Behavior changed? Only the old runtime result writer wrapper import path is
+retired. Current result files still use `reports/result.json`; the shared path
+helper remains in `src/shared/result-path.ts`.
+
+Next recommended action: choose the checkpoint fail-closed stubs next, or leave
+them until the final public runner/type surface group if you want the last
+public API removals batched together.

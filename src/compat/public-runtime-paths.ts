@@ -1,7 +1,6 @@
 export type PublicRuntimePathCategory =
   | 'public-runner-surface'
   | 'retained-handler'
-  | 'retained-implementation'
   | 'retained-saved-state';
 
 export type PublicRuntimePathDisposition =
@@ -31,15 +30,6 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     requiresReviewBeforeDeletion: true,
     compatibilityTestPaths: ['tests/runner/retained-compat-facade.test.ts'],
     notes: 'Retired v1 checkpoint resume path; direct preparation fails closed.',
-  },
-  {
-    oldPath: 'src/runtime/result-writer.ts',
-    category: 'retained-implementation',
-    currentDisposition: 'retained-owned',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/result-path-compat.test.ts'],
-    notes: 'Retired result writer path; resultPath remains as compatibility surface.',
   },
   {
     oldPath: 'src/runtime/runner-types.ts',

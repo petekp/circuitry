@@ -11,8 +11,8 @@ import { RunClosedOutcome } from './trace-entry.js';
 //
 // RESULT-I2 — `outcome` and `run_id` must match the closing
 // `run.closed` trace_entry; `flow_id` must match `run.bootstrapped`.
-// Binding is asserted at write-time by the runtime (see
-// src/runtime/result-writer.ts); this schema only enforces shape.
+// Binding is asserted at write-time by the run engine; this schema only
+// enforces shape.
 //
 // RESULT-I3 — `goal` is the original operator-facing goal string from
 // bootstrap; `summary` is a short model-authored or runtime-authored
