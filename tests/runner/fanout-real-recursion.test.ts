@@ -1,10 +1,9 @@
 // Real recursion integration test for fanout.
 //
-// Sister test to `fanout-runtime.test.ts` (which stubs `childRunner`
-// to test the parent's fanout handler in isolation) and to
-// `sub-run-real-recursion.test.ts` (the same no-stub approach for
-// the single-child sub-run case). This test extends real-recursion
-// coverage to the multi-child fanout substrate.
+// Complements `tests/core-v2/fanout-v2.test.ts` (which exercises the
+// fanout executor in isolation) and `sub-run-real-recursion.test.ts`
+// (the same no-stub approach for the single-child sub-run case). This
+// test extends real-recursion coverage to the multi-child fanout substrate.
 //
 // What's specific to fanout: each branch produces its own child run
 // with its own run-folder, run_id, and trace. The handler also

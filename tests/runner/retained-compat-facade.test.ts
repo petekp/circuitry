@@ -354,7 +354,6 @@ describe('retained runtime compatibility facade', () => {
       'tests/runner/explore-e2e-parity.test.ts',
       'tests/runner/explore-report-writer.test.ts',
       'tests/runner/fanout-real-recursion.test.ts',
-      'tests/runner/fanout-runtime.test.ts',
       'tests/runner/handler-throw-recovery.test.ts',
       'tests/runner/materializer-schema-parse.test.ts',
       'tests/runner/migrate-runtime-wiring.test.ts',
