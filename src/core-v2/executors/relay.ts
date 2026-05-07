@@ -391,7 +391,7 @@ export async function executeProductionRelayAttemptV2(input: {
     run_id: context.runId,
     kind: 'relay.receipt',
     step_id: step.id,
-    data: { receipt_id: relayResult.receipt_id },
+    data: { receipt_id: relayResult.receipt_id, cli_version: relayResult.cli_version },
   });
   await context.trace.append({
     run_id: context.runId,

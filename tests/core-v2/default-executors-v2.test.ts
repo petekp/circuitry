@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { ReviewIntake, ReviewRelayResult, ReviewResult } from '../../src/flows/review/reports.js';
 import { RunResult } from '../../src/schemas/result.js';
 
@@ -45,6 +46,12 @@ describe('core-v2 default executors', () => {
         run_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         flow_id: 'review',
         outcome: 'complete',
+      });
+      const trace = await new TraceStore(runDir).load();
+      const relayReceipt = trace.find((entry) => entry.kind === 'relay.receipt');
+      expect(relayReceipt?.data).toMatchObject({
+        receipt_id: 'default-review-receipt',
+        cli_version: 'test-relayer',
       });
       expect(
         ReviewIntake.safeParse(

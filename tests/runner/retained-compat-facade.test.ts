@@ -427,10 +427,8 @@ describe('retained runtime compatibility facade', () => {
 
     expect(imports).toEqual([
       'tests/contracts/relay-transcript-schema.test.ts',
-      'tests/runner/agent-relay-roundtrip.test.ts',
       'tests/runner/build-checkpoint-exec.test.ts',
       'tests/runner/checkpoint-handler-direct.test.ts',
-      'tests/runner/codex-relay-roundtrip.test.ts',
       'tests/runner/run-status-projection.test.ts',
       'tests/unit/runtime/progress-projector.test.ts',
     ]);
