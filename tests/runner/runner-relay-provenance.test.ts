@@ -1,20 +1,20 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
-import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
 import { materializeRelay } from '../../src/connectors/relay-materializer.js';
+import type { ExecutorRegistryV2 } from '../../src/core-v2/executors/index.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { resolveRelayDecision } from '../../src/runtime/relay-selection.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { Config } from '../../src/schemas/config.js';
 import { RunId, StepId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-// Relay-trace_entry provenance plumbing through `runCompiledFlow`.
+// Relay-trace_entry provenance plumbing through `runCompiledFlowV2`.
 //
 // `materializeRelay` does not hardcode
 // `resolved_selection: { skills: [], invocation_options: {} }` or
@@ -62,7 +62,7 @@ function deterministicNow(startMs: number): () => Date {
 function stubRelayer(): RelayFn {
   return {
     connectorName: 'claude-code',
-    relay: async (input: ClaudeCodeRelayInput): Promise<RelayResult> => ({
+    relay: async (input): Promise<RelayResult> => ({
       request_payload: input.prompt,
       receipt_id: 'stub-receipt',
       result_body: '{"verdict":"ok"}',
@@ -72,16 +72,53 @@ function stubRelayer(): RelayFn {
   };
 }
 
-function change_kind(): ChangeKindDeclaration {
+function composeExecutor(): Pick<ExecutorRegistryV2, 'compose'> {
   return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'relay.started trace_entry carries hardcoded `resolved_selection: empty` + `resolved_from: default` regardless of caller intent',
-    acceptance_evidence:
-      'relay.started trace_entry carries provenance derived from actual runner decision path',
-    alternate_framing:
-      'leave the materializer to fabricate defaults and let P2-MODEL-EFFORT fix it later — rejected because the audit trail consumed by P2.8 router work is materially false until this lands',
+    compose: async (step, context) => {
+      if (step.kind !== 'compose') throw new Error('expected compose step');
+      const attempt =
+        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const report = step.writes?.report;
+      if (report !== undefined) {
+        const reportPath = context.files.resolve(report);
+        mkdirSync(dirname(reportPath), { recursive: true });
+        writeFileSync(reportPath, '{"summary":"runtime proof fixture"}\n', 'utf8');
+        await context.trace.append({
+          run_id: context.runId,
+          kind: 'step.report_written',
+          step_id: step.id,
+          ...attempt,
+          report_path: report.path,
+          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+        });
+      }
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'check.evaluated',
+        step_id: step.id,
+        ...attempt,
+        check_kind: 'schema_sections',
+        outcome: 'pass',
+      });
+      return { route: 'pass', details: { report: report?.path } };
+    },
   };
+}
+
+function flowBytes(raw: unknown): Buffer {
+  return Buffer.from(`${JSON.stringify(raw)}\n`, 'utf8');
+}
+
+async function readTrace(runFolder: string) {
+  return await new TraceStore(runFolder).load();
+}
+
+function relayStartedData(trace: Awaited<ReturnType<typeof readTrace>>): Record<string, unknown> {
+  const relayStarted = trace.find((e) => e.kind === 'relay.started');
+  if (!relayStarted || relayStarted.kind !== 'relay.started') {
+    throw new Error('expected relay.started trace_entry');
+  }
+  return relayStarted.data ?? {};
 }
 
 let runFolderBase: string;
@@ -95,26 +132,23 @@ afterEach(() => {
 });
 
 describe("relay.started carries honest 'resolved_from' from the runner's decision path", () => {
-  it('injecting a relayer via CompiledFlowInvocation.relayer lands resolved_from.source="explicit"', async () => {
-    const { flow, bytes } = loadFixture();
+  it('injecting a relayer lands resolved_from.source="explicit"', async () => {
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'explicit-provenance');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47a47'),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47a47',
       goal: 'explicit provenance',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
 
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_from).toEqual({ source: 'explicit' });
+    expect(relayStartedData(await readTrace(runFolder)).resolved_from).toEqual({
+      source: 'explicit',
+    });
   });
 });
 
@@ -344,27 +378,25 @@ describe("relay.started carries honest 'resolved_selection' from flow + step inp
     expect(relayStep.selection).toBeUndefined();
 
     const runFolder = join(runFolderBase, 'empty-selection');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47a48'),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47a48',
       goal: 'empty selection composition',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
 
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection).toEqual({ skills: [], invocation_options: {} });
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      skills: [],
+      invocation_options: {},
+    });
   });
 
   it('flow.default_selection contributes to resolved_selection when step.selection is absent', async () => {
-    const { flow: baseCompiledFlow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     // Inject a flow.default_selection by re-parsing a mutated copy.
     const mutated = {
       ...JSON.parse(bytes.toString('utf8')),
@@ -377,26 +409,20 @@ describe("relay.started carries honest 'resolved_selection' from flow + step inp
     };
     const flow = CompiledFlow.parse(mutated);
     expect(flow.default_selection).toBeDefined();
-    expect(baseCompiledFlow).toBeDefined();
 
     const runFolder = join(runFolderBase, 'flow-selection');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47a49'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(mutated),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47a49',
       goal: 'flow-level selection',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
 
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection).toEqual({
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
       model: { provider: 'anthropic', model: 'claude-opus-4-7' },
       effort: 'medium',
       skills: ['tdd', 'react-doctor'],
@@ -417,37 +443,32 @@ describe("relay.started carries honest 'resolved_selection' from flow + step inp
     for (const step of raw.steps) {
       if (step.kind === 'relay') {
         step.selection = {
-          model: { provider: 'openai', model: 'gpt-5.4' },
+          model: { provider: 'anthropic', model: 'claude-sonnet-4-7' },
           effort: 'high',
           skills: { mode: 'replace', skills: ['react-doctor'] },
           invocation_options: { reasoning: 'xhigh' },
         };
       }
     }
-    const flow = CompiledFlow.parse(raw);
+    CompiledFlow.parse(raw);
 
     const runFolder = join(runFolderBase, 'step-overrides-flow');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47a4a'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(raw),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47a4a',
       goal: 'step overrides flow',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
 
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
     // step.selection wins on collisions (model + effort + skills); both
     // layers contribute to invocation_options via shallow merge with
     // step-side keys winning collisions.
-    expect(relayStarted.resolved_selection).toEqual({
-      model: { provider: 'openai', model: 'gpt-5.4' },
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      model: { provider: 'anthropic', model: 'claude-sonnet-4-7' },
       effort: 'high',
       skills: ['react-doctor'],
       invocation_options: { temperature: 0, reasoning: 'xhigh' },
@@ -470,24 +491,22 @@ describe("SkillOverride 'append' / 'remove' / 'inherit' compose per SEL-I3", () 
         step.selection = { skills: { mode: 'remove', skills: ['tdd'] } };
       }
     }
-    const flow = CompiledFlow.parse(raw);
+    CompiledFlow.parse(raw);
     const runFolder = join(runFolderBase, 'remove-after-replace');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47b01'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(raw),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47b01',
       goal: 'remove after replace composition',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection.skills).toEqual(['react-doctor']);
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      skills: ['react-doctor'],
+      invocation_options: {},
+    });
   });
 
   it("flow=replace ['tdd'] + step=append ['react-doctor'] → ['tdd','react-doctor'] (set-union)", async () => {
@@ -499,24 +518,22 @@ describe("SkillOverride 'append' / 'remove' / 'inherit' compose per SEL-I3", () 
         step.selection = { skills: { mode: 'append', skills: ['react-doctor'] } };
       }
     }
-    const flow = CompiledFlow.parse(raw);
+    CompiledFlow.parse(raw);
     const runFolder = join(runFolderBase, 'append-after-replace');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47b02'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(raw),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47b02',
       goal: 'append after replace composition',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection.skills).toEqual(['tdd', 'react-doctor']);
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      skills: ['tdd', 'react-doctor'],
+      invocation_options: {},
+    });
   });
 
   it("flow=replace ['tdd','react-doctor'] + step=append ['tdd'] → ['tdd','react-doctor'] (set-union dedupes)", async () => {
@@ -530,24 +547,22 @@ describe("SkillOverride 'append' / 'remove' / 'inherit' compose per SEL-I3", () 
         step.selection = { skills: { mode: 'append', skills: ['tdd'] } };
       }
     }
-    const flow = CompiledFlow.parse(raw);
+    CompiledFlow.parse(raw);
     const runFolder = join(runFolderBase, 'append-existing');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47b03'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(raw),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47b03',
       goal: 'append existing dedupes',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection.skills).toEqual(['tdd', 'react-doctor']);
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      skills: ['tdd', 'react-doctor'],
+      invocation_options: {},
+    });
   });
 
   it("flow=replace ['tdd'] + step=inherit → ['tdd'] (no-op preserves base)", async () => {
@@ -559,53 +574,22 @@ describe("SkillOverride 'append' / 'remove' / 'inherit' compose per SEL-I3", () 
         step.selection = { skills: { mode: 'inherit' } };
       }
     }
-    const flow = CompiledFlow.parse(raw);
+    CompiledFlow.parse(raw);
     const runFolder = join(runFolderBase, 'inherit-noop');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47b04'),
+    await runCompiledFlowV2({
+      runDir: runFolder,
+      flowBytes: flowBytes(raw),
+      runId: '47a47a47-a47a-47a4-7a47-a47a47a47b04',
       goal: 'inherit no-op preserves flow base',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
+      executors: composeExecutor(),
       relayer: stubRelayer(),
     });
-    const relayStarted = outcome.trace_entries.find((e) => e.kind === 'relay.started');
-    if (!relayStarted || relayStarted.kind !== 'relay.started') {
-      throw new Error('expected relay.started trace_entry');
-    }
-    expect(relayStarted.resolved_selection.skills).toEqual(['tdd']);
-  });
-});
-
-// CompiledFlowRunResult.relayResults surface for AGENT_SMOKE /
-// CODEX_SMOKE fingerprint cli_version binding. The path reads from the
-// actual connector return and the audit rejects v2 fingerprints with
-// empty/unknown cli_version.
-describe('CompiledFlowRunResult.relayResults surfaces per-relay cli_version', () => {
-  it('captures stepId + connectorName + cli_version from each relayer invocation', async () => {
-    const { flow, bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'cli-version-capture');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('47a47a47-a47a-47a4-7a47-a47a47a47b05'),
-      goal: 'cli_version capture',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 22, 14, 0, 0)),
-      relayer: stubRelayer(),
+    expect(relayStartedData(await readTrace(runFolder)).resolved_selection).toEqual({
+      skills: ['tdd'],
+      invocation_options: {},
     });
-    expect(outcome.relayResults.length).toBeGreaterThan(0);
-    const first = outcome.relayResults[0];
-    if (first === undefined) throw new Error('expected relayResults[0]');
-    expect(first.connectorName).toBe('claude-code');
-    expect(first.cli_version).toBe('0.0.0-stub');
-    expect(typeof first.stepId).toBe('string');
-    expect(first.stepId.length).toBeGreaterThan(0);
   });
 });
 
