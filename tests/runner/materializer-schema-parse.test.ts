@@ -1,16 +1,15 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
-import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 // Materializer schema-parse.
 //
@@ -26,8 +25,10 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 //   - Failure-path trace_entry surface is uniform across both: parse
 //     failure emits `check.evaluated outcome=fail` + reason, then
 //     `step.aborted` with the same reason, then `run.closed` with
-//     `outcome=aborted`. This content/schema-failure path does not
-//     emit `relay.failed`; that trace_entry is reserved for connector
+//     `outcome=aborted`. Core-v2 preserves the check reason on
+//     `step.aborted` and wraps it with step context at `run.closed`.
+//     This content/schema-failure path does not emit `relay.failed`;
+//     that trace_entry is reserved for connector
 //     invocation exceptions, where no connector result exists.
 //   - Fail-closed default: unknown schema names produce a parse
 //     failure reason naming the unknown schema; the step is aborted.
@@ -69,25 +70,13 @@ function deterministicNow(startMs: number): () => Date {
 function relayerWith(resultBody: string): RelayFn {
   return {
     connectorName: 'claude-code',
-    relay: async (input: ClaudeCodeRelayInput): Promise<RelayResult> => ({
+    relay: async (input: RelayInput): Promise<RelayResult> => ({
       request_payload: input.prompt,
       receipt_id: 'stub-receipt-materializer-schema-parse',
       result_body: resultBody,
       duration_ms: 1,
       cli_version: '0.0.0-stub',
     }),
-  };
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'materializer wrote the canonical report as raw result_body bytes without schema parse; the contract requires schema-parsing result_body against writes.report.schema before materialization',
-    acceptance_evidence:
-      'report write requires both the verdict check pass AND a schema-parse pass against writes.report.schema; unknown schemas fail-closed by default; failure emits check.evaluated outcome=fail + step.aborted + run.closed outcome=aborted with the reason byte-identical across the three trace_entries and on the user-visible result.json',
-    alternate_framing:
-      'land schema parsing inside materializeRelay instead of at the runner layer — rejected because the runner already owns check-evaluation; keeping both checks at the same layer keeps the failure-path trace_entry surface uniform without duplicating schema logic across layers',
   };
 }
 
@@ -106,6 +95,38 @@ function addCanonicalReport(
   step.writes.report = { path, schema };
 }
 
+async function runMaterializerCase(input: {
+  readonly runFolder: string;
+  readonly bytes: Buffer;
+  readonly runId: string;
+  readonly goal: string;
+  readonly resultBody: string;
+}) {
+  const result = await runCompiledFlowV2({
+    runDir: input.runFolder,
+    flowBytes: input.bytes,
+    runId: input.runId,
+    goal: input.goal,
+    depth: 'standard',
+    now: deterministicNow(Date.UTC(2026, 3, 22, 18, 0, 0)),
+    relayer: relayerWith(input.resultBody),
+    executors: {
+      compose: async (step, context) => {
+        if (step.kind !== 'compose') throw new Error('expected compose step');
+        const report = step.writes?.report;
+        if (report !== undefined) {
+          const reportPath = context.files.resolve(report);
+          await mkdir(dirname(reportPath), { recursive: true });
+          await writeFile(reportPath, '{"summary":"runtime-proof relay setup"}\n', 'utf8');
+        }
+        return { route: 'pass', details: { report: report?.path } };
+      },
+    },
+  });
+  const trace_entries = await new TraceStore(input.runFolder).load();
+  return { result, trace_entries };
+}
+
 let runFolderBase: string;
 
 beforeEach(() => {
@@ -117,22 +138,18 @@ afterEach(() => {
 });
 
 describe('materializer schema-parse', () => {
-  it('(a) valid payload round-trip: check passes + schema passes → canonical report written byte-equal to result_body; outcome=complete; relay.completed.verdict carries parsed verdict', async () => {
-    const { flow, bytes } = loadMutatedFixture((raw) => {
+  it('(a) valid payload round-trip: check passes + schema passes → canonical report written from result_body; outcome=complete; relay.completed.verdict carries parsed verdict', async () => {
+    const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'runtime-proof-strict@v1');
     });
     const runFolder = join(runFolderBase, 'a-valid');
     const resultBody = '{"verdict":"ok","rationale":"schema accepts this"}';
-    const outcome = await runCompiledFlow({
+    const outcome = await runMaterializerCase({
       runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('54000000-0000-0000-0000-000000000001'),
+      bytes,
+      runId: '54000000-0000-0000-0000-000000000001',
       goal: 'case (a): valid schema-passing payload',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 22, 18, 0, 0)),
-      relayer: relayerWith(resultBody),
+      resultBody,
     });
 
     expect(outcome.result.outcome).toBe('complete');
@@ -140,7 +157,7 @@ describe('materializer schema-parse', () => {
     const reportAbs = join(runFolder, 'reports', 'relay-canonical.json');
     expect(existsSync(reportAbs)).toBe(true);
     const reportBody = readFileSync(reportAbs, 'utf8');
-    expect(reportBody).toBe(resultBody);
+    expect(JSON.parse(reportBody)).toEqual(JSON.parse(resultBody));
 
     const checkEvaluated = outcome.trace_entries.filter(
       (e) => e.kind === 'check.evaluated' && e.check_kind === 'result_verdict',
@@ -160,23 +177,19 @@ describe('materializer schema-parse', () => {
     expect(outcome.trace_entries.find((e) => e.kind === 'step.aborted')).toBeUndefined();
   });
 
-  it('(b) invalid payload: check passes but schema rejects → canonical report NOT written; outcome=aborted; check.evaluated outcome=fail names the schema parse error; reason byte-identical across check.evaluated / step.aborted / run.closed / result.json', async () => {
-    const { flow, bytes } = loadMutatedFixture((raw) => {
+  it('(b) invalid payload: check passes but schema rejects → canonical report NOT written; outcome=aborted; check.evaluated outcome=fail names the schema parse error; run.closed/result.json wrap the step reason', async () => {
+    const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'runtime-proof-strict@v1');
     });
     const runFolder = join(runFolderBase, 'b-invalid');
-    const outcome = await runCompiledFlow({
+    const outcome = await runMaterializerCase({
       runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('54000000-0000-0000-0000-000000000002'),
+      bytes,
+      runId: '54000000-0000-0000-0000-000000000002',
       goal: 'case (b): check pass, schema fail (missing required field)',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 22, 18, 0, 0)),
       // Passes check.pass=["ok"] verdict check but fails runtime-proof-strict@v1
       // which requires a `rationale` field.
-      relayer: relayerWith('{"verdict":"ok"}'),
+      resultBody: '{"verdict":"ok"}',
     });
 
     expect(outcome.result.outcome).toBe('aborted');
@@ -213,12 +226,11 @@ describe('materializer schema-parse', () => {
     if (closed?.kind !== 'run.closed') throw new Error('expected run.closed');
     expect(closed.outcome).toBe('aborted');
 
-    // Reason byte-identity across the four trace_entry-surface slots. Same
-    // invariant the verdict-rejection path locks down; this extends it
-    // to the schema-parse failure path.
+    // Core-v2 keeps the check reason byte-identical through step.aborted,
+    // then wraps it at run.closed/result.json with the step handler context.
     expect(ge.reason).toBe(aborted.reason);
-    expect(closed.reason).toBe(aborted.reason);
-    expect(outcome.result.reason).toBe(aborted.reason);
+    expect(closed.reason).toContain(aborted.reason);
+    expect(outcome.result.reason).toBe(closed.reason);
 
     // relay.completed.verdict carries the OBSERVED verdict ("ok"),
     // not the runtime sentinel — connector declared a verdict in
@@ -234,26 +246,22 @@ describe('materializer schema-parse', () => {
     const resultBody = readFileSync(join(runFolder, 'reports', 'result.json'), 'utf8');
     const resultParsed: { outcome: string; reason?: string } = JSON.parse(resultBody);
     expect(resultParsed.outcome).toBe('aborted');
-    expect(resultParsed.reason).toBe(aborted.reason);
+    expect(resultParsed.reason).toBe(closed.reason);
   });
 
-  it('(c) schema-missing fallback: writes.report.schema names an unregistered schema → fail-closed; full uniform failure surface (no step.completed, byte-identical reason across 4 slots, relay.completed.verdict carries observed verdict)', async () => {
-    const { flow, bytes } = loadMutatedFixture((raw) => {
+  it('(c) schema-missing fallback: writes.report.schema names an unregistered schema → fail-closed; full uniform failure surface (no step.completed, wrapped close reason, relay.completed.verdict carries observed verdict)', async () => {
+    const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'not-registered-anywhere@v1');
     });
     const runFolder = join(runFolderBase, 'c-missing');
-    const outcome = await runCompiledFlow({
+    const outcome = await runMaterializerCase({
       runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('54000000-0000-0000-0000-000000000003'),
+      bytes,
+      runId: '54000000-0000-0000-0000-000000000003',
       goal: 'case (c): unknown schema name → fail-closed',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 22, 18, 0, 0)),
       // Body would satisfy check.pass and minimal verdict shape, but the
       // declared schema name is not in the registry → fail-closed.
-      relayer: relayerWith('{"verdict":"ok"}'),
+      resultBody: '{"verdict":"ok"}',
     });
 
     expect(outcome.result.outcome).toBe('aborted');
@@ -292,13 +300,11 @@ describe('materializer schema-parse', () => {
     if (closed?.kind !== 'run.closed') throw new Error('expected run.closed');
     expect(closed.outcome).toBe('aborted');
 
-    // Reason byte-identity across all four trace_entry-surface slots —
-    // mirrors case (b) exactly. Without this, a future regression that
-    // diverged reasons on the fail-closed path would silently degrade
-    // audit traceability.
+    // Mirrors case (b): the check reason remains byte-identical through
+    // step.aborted, then run.closed/result.json add handler context.
     expect(ge.reason).toBe(aborted.reason);
-    expect(closed.reason).toBe(aborted.reason);
-    expect(outcome.result.reason).toBe(aborted.reason);
+    expect(closed.reason).toContain(aborted.reason);
+    expect(outcome.result.reason).toBe(closed.reason);
 
     // relay.completed.verdict carries the OBSERVED verdict ("ok"),
     // not the runtime sentinel — connector declared a verdict in
@@ -314,7 +320,7 @@ describe('materializer schema-parse', () => {
     const resultBody = readFileSync(join(runFolder, 'reports', 'result.json'), 'utf8');
     const resultParsed: { outcome: string; reason?: string } = JSON.parse(resultBody);
     expect(resultParsed.outcome).toBe('aborted');
-    expect(resultParsed.reason).toBe(aborted.reason);
+    expect(resultParsed.reason).toBe(closed.reason);
   });
 
   it('(d) check-fail interaction: check-fail on bad verdict still skips report write even when body would be schema-valid — check-fail reason (not schema-parse reason) is what lands', async () => {
@@ -323,22 +329,16 @@ describe('materializer schema-parse', () => {
     // check evaluator rejects "reject" (not in check.pass ["ok"]).
     // Expectation: the report is NOT written and the reason text
     // names the verdict rejection path, not the schema parse path.
-    const { flow, bytes } = loadMutatedFixture((raw) => {
+    const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'runtime-proof-strict@v1');
     });
     const runFolder = join(runFolderBase, 'd-check-fail-schema-valid');
-    const outcome = await runCompiledFlow({
+    const outcome = await runMaterializerCase({
       runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('54000000-0000-0000-0000-000000000004'),
+      bytes,
+      runId: '54000000-0000-0000-0000-000000000004',
       goal: 'case (d): check-fail dominates even on schema-valid body',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 22, 18, 0, 0)),
-      relayer: relayerWith(
-        '{"verdict":"reject","rationale":"schema-valid but verdict not in check.pass"}',
-      ),
+      resultBody: '{"verdict":"reject","rationale":"schema-valid but verdict not in check.pass"}',
     });
 
     expect(outcome.result.outcome).toBe('aborted');
@@ -375,20 +375,16 @@ describe('materializer schema-parse', () => {
   });
 
   it('(e) orchestrator-only explore.analysis is not admitted through the relay report registry', async () => {
-    const { flow, bytes } = loadMutatedFixture((raw) => {
+    const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'explore.analysis@v1', 'reports/relay-analysis.json');
     });
     const runFolder = join(runFolderBase, 'e-orchestrator-only-schema');
-    const outcome = await runCompiledFlow({
+    const outcome = await runMaterializerCase({
       runFolder,
-      flow,
-      flowBytes: bytes,
-      runId: RunId.parse('54000000-0000-0000-0000-000000000005'),
+      bytes,
+      runId: '54000000-0000-0000-0000-000000000005',
       goal: 'relay cannot materialize orchestrator-only analysis',
-      depth: 'standard',
-      change_kind: change_kind(),
-      now: deterministicNow(Date.UTC(2026, 3, 24, 16, 10, 0)),
-      relayer: relayerWith('{"verdict":"ok"}'),
+      resultBody: '{"verdict":"ok"}',
     });
 
     expect(outcome.result.outcome).toBe('aborted');
