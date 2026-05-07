@@ -17,6 +17,9 @@ import { type RelayResult, sha256Hex } from '../../src/shared/connector-relay.js
 import { manifestSnapshotPath } from '../../src/shared/manifest-snapshot.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
+const RETIRED_RUNTIME_RUN_FOLDER_MESSAGE =
+  'This run folder was created by the retired runtime. Start a fresh run.';
+
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
@@ -83,6 +86,32 @@ async function captureStdout(fn: () => Promise<number>): Promise<{
     return { code, output: JSON.parse(stdout) as Record<string, unknown> };
   } finally {
     process.stdout.write = originalWrite;
+  }
+}
+
+async function captureOutput(fn: () => Promise<number>): Promise<{
+  readonly code: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}> {
+  const originalStdout = process.stdout.write;
+  const originalStderr = process.stderr.write;
+  let stdout = '';
+  let stderr = '';
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stdout.write;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stderr.write;
+  try {
+    const code = await fn();
+    return { code, stdout, stderr };
+  } finally {
+    process.stdout.write = originalStdout;
+    process.stderr.write = originalStderr;
   }
 }
 
@@ -521,7 +550,7 @@ describe('Build checkpoint execution substrate', () => {
     expect(briefReportWrites).toHaveLength(1);
   });
 
-  it('routes retained checkpoint resume by saved folder shape even when strict v2 is enabled', async () => {
+  it('fails closed for retained checkpoint resume even when strict v2 is enabled', async () => {
     const runFolder = join(runFolderBase, 'resume-retained-with-strict-v2');
     await startPausedBuildCheckpoint({
       runFolder,
@@ -531,21 +560,16 @@ describe('Build checkpoint execution substrate', () => {
     const oldStrict = process.env.CIRCUIT_V2_RUNTIME;
     process.env.CIRCUIT_V2_RUNTIME = '1';
     try {
-      const { code, output } = await captureStdout(() =>
+      const { code, stdout, stderr } = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 30, 0)),
           configCwd: process.cwd(),
         }),
       );
 
-      expect(code).toBe(0);
-      expect(output).toMatchObject({
-        run_id: 'b3000000-0000-0000-0000-000000000018',
-        flow_id: 'build-checkpoint-exec-test',
-        outcome: 'complete',
-        runtime: 'retained',
-        runtime_reason: 'checkpoint resume remains on the retained runtime',
-      });
+      expect(code).toBe(2);
+      expect(stdout).toBe('');
+      expect(stderr.trim()).toBe(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}`);
     } finally {
       if (oldStrict === undefined) {
         process.env.CIRCUIT_V2_RUNTIME = undefined;
@@ -555,7 +579,7 @@ describe('Build checkpoint execution substrate', () => {
     }
   });
 
-  it('projects and resumes retained checkpoint folders through retained compatibility', async () => {
+  it('fails closed for retained checkpoint folders in status and resume', async () => {
     const runFolder = join(runFolderBase, 'retained-status-and-resume');
     await startPausedBuildCheckpoint({
       runFolder,
@@ -569,18 +593,12 @@ describe('Build checkpoint execution substrate', () => {
     expect(status.code).toBe(0);
     expect(status.output).toMatchObject({
       api_version: 'run-status-v1',
-      run_id: 'b3000000-0000-0000-0000-000000000019',
-      flow_id: 'build-checkpoint-exec-test',
-      engine_state: 'waiting_checkpoint',
-      reason: 'checkpoint_waiting',
-      legal_next_actions: ['inspect', 'resume'],
-      current_step: { step_id: 'frame-step', attempt: 1 },
-      checkpoint: {
-        step_id: 'frame-step',
-        choices: [
-          { id: 'continue', value: 'continue' },
-          { id: 'revise', value: 'revise' },
-        ],
+      engine_state: 'invalid',
+      reason: 'unknown',
+      legal_next_actions: ['none'],
+      error: {
+        code: 'retired_runtime_run_folder',
+        message: RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
       },
     });
 
@@ -589,21 +607,16 @@ describe('Build checkpoint execution substrate', () => {
     process.env.CIRCUIT_DISABLE_V2_RUNTIME = '1';
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
     try {
-      const resumed = await captureStdout(() =>
+      const resumed = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 45, 0)),
           configCwd: process.cwd(),
         }),
       );
 
-      expect(resumed.code).toBe(0);
-      expect(resumed.output).toMatchObject({
-        run_id: 'b3000000-0000-0000-0000-000000000019',
-        flow_id: 'build-checkpoint-exec-test',
-        outcome: 'complete',
-        runtime: 'retained',
-        runtime_reason: 'checkpoint resume remains on the retained runtime',
-      });
+      expect(resumed.code).toBe(2);
+      expect(resumed.stdout).toBe('');
+      expect(resumed.stderr.trim()).toBe(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}`);
     } finally {
       if (oldDisabled === undefined) {
         process.env.CIRCUIT_DISABLE_V2_RUNTIME = undefined;

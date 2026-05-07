@@ -1222,7 +1222,8 @@ describe('CLI opt-in v2 runtime', () => {
     expect(text).toContain('Custom roots created by `circuit-next create` are retained by default');
     expect(text).toContain('composeWriter');
     expect(text).toContain('arbitrary fixtures/custom roots');
-    expect(text).toContain('unmarked retained checkpoint folders');
+    expect(text).toContain('Retained and v1 run folders fail closed');
+    expect(text).toContain('instead of a resume adapter');
     expect(text).not.toContain('enables explicitly proven candidate rows');
   });
 

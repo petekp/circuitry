@@ -172,16 +172,18 @@ describe('retained runtime compatibility facade', () => {
     expect(runtimeCompileSchematicToCompiledFlow).toBe(neutralCompileSchematicToCompiledFlow);
   });
 
-  it('keeps CLI and status surfaces off direct retained runtime imports', () => {
+  it('keeps CLI and status surfaces off retained checkpoint-folder adapters', () => {
     const cli = readFileSync(resolve('src/cli/circuit.ts'), 'utf8');
     expect(cli).toContain('../compat/retained-runtime.js');
-    expect(cli).toContain('../compat/retained-checkpoint-folders.js');
+    expect(cli).toContain('../shared/retired-runtime-policy.js');
+    expect(cli).not.toContain('../compat/retained-checkpoint-folders.js');
     expect(cli).not.toContain('../runtime/runner.js');
     expect(cli).toContain('runRetainedCompiledFlow');
-    expect(cli).toContain('resumeRetainedCompiledFlowCheckpoint');
+    expect(cli).not.toContain('resumeRetainedCompiledFlowCheckpoint');
 
     const handoff = readFileSync(resolve('src/cli/handoff.ts'), 'utf8');
-    expect(handoff).toContain('../compat/retained-checkpoint-folders.js');
+    expect(handoff).toContain('../shared/retired-runtime-policy.js');
+    expect(handoff).not.toContain('../compat/retained-checkpoint-folders.js');
     expect(handoff).not.toContain('../compat/retained-runtime.js');
     expect(handoff).not.toContain('../runtime/snapshot-writer.js');
 
@@ -189,7 +191,8 @@ describe('retained runtime compatibility facade', () => {
       resolve('src/run-status/project-run-folder.ts'),
       'utf8',
     );
-    expect(runStatusDispatcher).toContain('../compat/retained-checkpoint-folders.js');
+    expect(runStatusDispatcher).toContain('../shared/retired-runtime-policy.js');
+    expect(runStatusDispatcher).not.toContain('../compat/retained-checkpoint-folders.js');
     expect(runStatusDispatcher).not.toContain('../compat/retained-runtime.js');
     expect(runStatusDispatcher).not.toContain('../runtime/trace-reader.js');
 

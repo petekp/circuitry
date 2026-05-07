@@ -9,6 +9,7 @@ import { ReviewIntake } from '../../src/flows/review/reports.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import { RETIRED_RUNTIME_RUN_FOLDER_MESSAGE } from '../../src/shared/retired-runtime-policy.js';
 
 const EXPLORE_SYNTHESIS_BODY = JSON.stringify({
   verdict: 'accept',
@@ -1290,7 +1291,7 @@ describe('CLI router', () => {
     });
   });
 
-  it('resumes a checkpoint_waiting run from the saved manifest and operator choice', async () => {
+  it('fails closed when resuming a retained checkpoint_waiting run', async () => {
     const fixtureDir = join(runFolderBase, 'resume-fixture');
     mkdirSync(fixtureDir, { recursive: true });
     const fixturePath = join(fixtureDir, 'circuit.json');
@@ -1383,15 +1384,16 @@ describe('CLI router', () => {
     );
     expect(waiting.outcome).toBe('checkpoint_waiting');
 
-    const resumed = await runMainJson(
-      ['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'],
-      '{"verdict":"accept"}',
-    );
+    const resumed = await runMainExit([
+      'resume',
+      '--run-folder',
+      runFolder,
+      '--checkpoint-choice',
+      'continue',
+    ]);
 
-    expect(resumed.schema_version).toBe(1);
-    expect(resumed.outcome).toBe('complete');
-    expect(resumed.run_folder).toBe(runFolder);
-    expect(resumed).toHaveProperty('result_path');
+    expect(resumed.exit).toBe(2);
+    expect(resumed.stderr.trim()).toBe(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}`);
   });
 
   it('rejects resume-only incompatible flags', async () => {

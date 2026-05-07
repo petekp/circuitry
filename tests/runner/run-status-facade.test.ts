@@ -20,11 +20,12 @@ describe('run-status public facade', () => {
     expect(runsCli).not.toContain("'../runtime/run-status-projection.js'");
   });
 
-  it('keeps v1 and v2 run-folder projection outside the public dispatcher', () => {
+  it('keeps v2 projection and retired-folder policy outside the public facade', () => {
     const dispatcher = readFileSync(resolve('src/run-status/project-run-folder.ts'), 'utf8');
-    expect(dispatcher).toContain("'./v1-run-folder.js'");
     expect(dispatcher).toContain("'./v2-run-folder.js'");
-    expect(dispatcher).toContain('../compat/retained-checkpoint-folders.js');
+    expect(dispatcher).toContain('../shared/retired-runtime-policy.js');
+    expect(dispatcher).not.toContain("'./v1-run-folder.js'");
+    expect(dispatcher).not.toContain('../compat/retained-checkpoint-folders.js');
     expect(dispatcher).not.toContain('../compat/retained-runtime.js');
     expect(dispatcher).not.toContain('function projectV1RunStatusFromTrace');
     expect(dispatcher).not.toContain('function projectV2RunStatusFromRunFolder');

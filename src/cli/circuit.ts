@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { resumeRetainedCompiledFlowCheckpoint } from '../compat/retained-checkpoint-folders.js';
 import {
   type ChildCompiledFlowResolver,
   type CompiledFlowInvocation,
@@ -32,6 +31,7 @@ import { discoverConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { writeOperatorSummary } from '../shared/operator-summary-writer.js';
 import { runResultPath } from '../shared/result-path.js';
+import { RETIRED_RUNTIME_RUN_FOLDER_MESSAGE } from '../shared/retired-runtime-policy.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runRunsCommand } from './runs.js';
@@ -629,60 +629,8 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       );
       return 0;
     }
-    const selectionConfigLayers = discoverConfigLayers({
-      ...(options.configHomeDir !== undefined ? { homeDir: options.configHomeDir } : {}),
-      ...(options.configCwd !== undefined ? { cwd: options.configCwd } : {}),
-    });
-    const outcome = await resumeRetainedCompiledFlowCheckpoint({
-      runFolder,
-      selection: args.checkpointChoice,
-      projectRoot: resolve(options.configCwd ?? process.cwd()),
-      now: options.now ?? (() => new Date()),
-      ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
-      childCompiledFlowResolver: defaultChildCompiledFlowResolver(undefined),
-      ...(progress === undefined ? {} : { progress }),
-      ...(selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers }),
-    });
-    const operatorSummary = writeOperatorSummary({
-      runFolder: outcome.runFolder,
-      runResult: outcome.result,
-      route: {
-        selectedFlow: outcome.result.flow_id as unknown as string,
-      },
-    });
-    const resumeResultPath =
-      outcome.result.outcome === 'checkpoint_waiting'
-        ? {}
-        : { result_path: runResultPath(outcome.runFolder) };
-    const resumeRuntimeFields =
-      showRuntimeDecision() || useV2Runtime() || disableDefaultV2Runtime()
-        ? {
-            runtime: 'retained' as const,
-            runtime_reason: RUNTIME_POLICY_REASONS.retainedCheckpointResume,
-          }
-        : {};
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          schema_version: 1,
-          run_id: outcome.result.run_id,
-          flow_id: outcome.result.flow_id,
-          run_folder: outcome.runFolder,
-          outcome: outcome.result.outcome,
-          trace_entries_observed: outcome.result.trace_entries_observed,
-          ...resumeResultPath,
-          ...resumeRuntimeFields,
-          operator_summary_path: operatorSummary.jsonPath,
-          operator_summary_markdown_path: operatorSummary.markdownPath,
-          ...(outcome.result.outcome === 'checkpoint_waiting'
-            ? { checkpoint: outcome.result.checkpoint }
-            : {}),
-        },
-        null,
-        2,
-      )}\n`,
-    );
-    return 0;
+    process.stderr.write(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}\n`);
+    return 2;
   }
 
   if (args.goal === undefined) {

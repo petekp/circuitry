@@ -1,11 +1,13 @@
 import { constants, accessSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { readRetainedRunTrace } from '../compat/retained-checkpoint-folders.js';
 import type { EngineErrorCodeV1 } from '../schemas/run-status.js';
 import type { RunStatusProjectionV1 } from '../schemas/run-status.js';
 import { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
+import {
+  RETIRED_RUNTIME_RUN_FOLDER_ERROR_CODE,
+  RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+} from '../shared/retired-runtime-policy.js';
 import { errorMessage, invalidProjection } from './projection-common.js';
-import { projectV1RunStatusFromTrace } from './v1-run-folder.js';
 import { projectV2RunStatusFromRunFolder } from './v2-run-folder.js';
 
 export class RunStatusFolderError extends Error {
@@ -80,25 +82,17 @@ export function projectRunStatusFromRunFolder(runFolder: string): RunStatusProje
     });
   }
 
-  try {
-    const log = readRetainedRunTrace(resolvedRunFolder);
-    return projectV1RunStatusFromTrace({
-      runFolder: resolvedRunFolder,
-      manifest,
-      log,
-    });
-  } catch (err) {
-    const v2Projection = projectV2RunStatusFromRunFolder(resolvedRunFolder, manifest);
-    if (v2Projection !== undefined) return v2Projection;
-    return invalidProjection({
-      runFolder: resolvedRunFolder,
-      reason: 'trace_invalid',
-      code: 'trace_invalid',
-      message: `trace is missing or invalid (${errorMessage(err)})`,
-      manifestIdentity: {
-        run_id: manifest.run_id as unknown as string,
-        flow_id: manifest.flow_id as unknown as string,
-      },
-    });
-  }
+  const v2Projection = projectV2RunStatusFromRunFolder(resolvedRunFolder, manifest);
+  if (v2Projection !== undefined) return v2Projection;
+
+  return invalidProjection({
+    runFolder: resolvedRunFolder,
+    reason: 'unknown',
+    code: RETIRED_RUNTIME_RUN_FOLDER_ERROR_CODE,
+    message: RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+    manifestIdentity: {
+      run_id: manifest.run_id as unknown as string,
+      flow_id: manifest.flow_id as unknown as string,
+    },
+  });
 }

@@ -9,6 +9,10 @@ import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import { writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
+import {
+  RETIRED_RUNTIME_RUN_FOLDER_ERROR_CODE,
+  RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+} from '../../src/shared/retired-runtime-policy.js';
 
 const tempRoots: string[] = [];
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -195,6 +199,19 @@ function appendWaitingCheckpoint(runFolder: string, requestHash: string): void {
   });
 }
 
+function expectRetiredRunFolderProjection(projection: unknown): void {
+  expect(projection).toMatchObject({
+    api_version: 'run-status-v1',
+    engine_state: 'invalid',
+    reason: 'unknown',
+    legal_next_actions: ['none'],
+    error: {
+      code: RETIRED_RUNTIME_RUN_FOLDER_ERROR_CODE,
+      message: RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+    },
+  });
+}
+
 async function captureMain(argv: readonly string[]): Promise<{
   readonly code: number;
   readonly stdout: string;
@@ -228,7 +245,7 @@ afterEach(() => {
 });
 
 describe('run folder status projection', () => {
-  it('projects completed runs with terminal outcome and result path', () => {
+  it('fails closed for completed retained run folders', () => {
     const runFolder = tempRunFolder('circuit-run-status-complete-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -238,17 +255,11 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'completed',
-      reason: 'run_closed',
-      terminal_outcome: 'complete',
-      legal_next_actions: ['inspect'],
-      result_path: join(runFolder, 'reports', 'result.json'),
-    });
+    expectRetiredRunFolderProjection(projection);
     expect(projection).not.toHaveProperty('current_step');
   });
 
-  it('projects aborted runs without a current step', () => {
+  it('fails closed for aborted retained run folders', () => {
     const runFolder = tempRunFolder('circuit-run-status-aborted-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -257,16 +268,12 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'aborted',
-      reason: 'run_closed',
-      terminal_outcome: 'aborted',
-    });
+    expectRetiredRunFolderProjection(projection);
     expect(projection).not.toHaveProperty('current_step');
   });
 
   it.each(['handoff', 'stopped', 'escalated'] as const)(
-    'projects %s terminal outcomes as completed with preserved outcome',
+    'fails closed for %s retained run folders',
     (outcome) => {
       const runFolder = tempRunFolder(`circuit-run-status-${outcome}-`);
       const manifestHash = writeManifest({ runFolder });
@@ -275,15 +282,11 @@ describe('run folder status projection', () => {
 
       const projection = projectRunStatusFromRunFolder(runFolder);
 
-      expect(projection).toMatchObject({
-        engine_state: 'completed',
-        reason: 'run_closed',
-        terminal_outcome: outcome,
-      });
+      expectRetiredRunFolderProjection(projection);
     },
   );
 
-  it('projects waiting checkpoints only when request data can resume', () => {
+  it('fails closed for waiting retained checkpoints instead of adapting them', () => {
     const runFolder = tempRunFolder('circuit-run-status-checkpoint-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -292,33 +295,11 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'waiting_checkpoint',
-      reason: 'checkpoint_waiting',
-      legal_next_actions: ['inspect', 'resume'],
-      current_step: {
-        step_id: 'fix-no-repro-decision',
-        attempt: 1,
-        stage_id: 'analyze-stage',
-      },
-      checkpoint: {
-        checkpoint_id: 'fix-no-repro-decision:1',
-        step_id: 'fix-no-repro-decision',
-        attempt: 1,
-        choices: [
-          { id: 'continue', label: 'Continue with a focused fix anyway', value: 'continue' },
-        ],
-      },
-    });
-    expect(
-      projection.engine_state === 'waiting_checkpoint' && projection.checkpoint.request_path,
-    ).toBe(join(runFolder, FIX_CHECKPOINT_REQUEST_PATH));
-    expect(
-      projection.engine_state === 'waiting_checkpoint' && projection.current_step?.label,
-    ).toContain('choose path forward');
+    expectRetiredRunFolderProjection(projection);
+    expect(projection).not.toHaveProperty('checkpoint');
   });
 
-  it('marks waiting checkpoints invalid when the request file is missing or corrupt', () => {
+  it('fails closed before validating retained checkpoint request files', () => {
     const runFolder = tempRunFolder('circuit-run-status-bad-checkpoint-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -326,14 +307,10 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'invalid',
-      reason: 'checkpoint_invalid',
-      legal_next_actions: ['none'],
-    });
+    expectRetiredRunFolderProjection(projection);
   });
 
-  it('projects open runs without implying liveness or resume', () => {
+  it('fails closed for open retained run folders', () => {
     const runFolder = tempRunFolder('circuit-run-status-open-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -341,22 +318,11 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'open',
-      reason: 'active_or_unknown',
-      legal_next_actions: ['inspect'],
-      current_step: {
-        step_id: 'fix-gather-context',
-        attempt: 1,
-        stage_id: 'analyze-stage',
-      },
-    });
-    expect(projection.engine_state === 'open' && projection.current_step?.label).toContain(
-      'gather problem context',
-    );
+    expectRetiredRunFolderProjection(projection);
+    expect(projection).not.toHaveProperty('current_step');
   });
 
-  it('does not borrow current-step labels from mismatched saved flow bytes', () => {
+  it('fails closed before reading retained current-step labels', () => {
     const runFolder = tempRunFolder('circuit-run-status-flow-mismatch-open-');
     const manifestHash = writeManifest({ runFolder, bytes: BUILD_FLOW_BYTES });
     append(runFolder, bootstrap({ manifestHash }));
@@ -364,24 +330,10 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'open',
-      reason: 'active_or_unknown',
-      flow_id: 'fix',
-      current_step: {
-        step_id: 'frame-step',
-        attempt: 1,
-      },
-    });
-    expect(projection.engine_state === 'open' && projection.current_step).not.toHaveProperty(
-      'stage_id',
-    );
-    expect(projection.engine_state === 'open' && projection.current_step).not.toHaveProperty(
-      'label',
-    );
+    expectRetiredRunFolderProjection(projection);
   });
 
-  it('does not advertise checkpoint resume when saved flow bytes disagree with manifest flow id', () => {
+  it('fails closed before adapting retained checkpoint identity mismatches', () => {
     const runFolder = tempRunFolder('circuit-run-status-flow-mismatch-checkpoint-');
     const manifestHash = writeManifest({ runFolder, bytes: BUILD_FLOW_BYTES });
     append(runFolder, bootstrap({ manifestHash }));
@@ -390,29 +342,17 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'invalid',
-      reason: 'identity_mismatch',
-      legal_next_actions: ['none'],
-      error: { code: 'flow_identity_mismatch' },
-      flow_id: 'fix',
-      goal: 'Fix the checkout bug',
-    });
+    expectRetiredRunFolderProjection(projection);
   });
 
-  it('returns invalid trace projections without throwing', () => {
+  it('fails closed for retained folders with corrupt traces', () => {
     const runFolder = tempRunFolder('circuit-run-status-corrupt-trace-');
     writeManifest({ runFolder });
     writeFileSync(join(runFolder, 'trace.ndjson'), '{not-json\n');
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'invalid',
-      reason: 'trace_invalid',
-      legal_next_actions: ['none'],
-      flow_id: 'fix',
-    });
+    expectRetiredRunFolderProjection(projection);
     expect(projection).not.toHaveProperty('goal');
   });
 
@@ -430,21 +370,14 @@ describe('run folder status projection', () => {
     expect(projection).not.toHaveProperty('run_id');
   });
 
-  it('returns identity mismatch when manifest and trace disagree', () => {
+  it('fails closed before adapting retained identity mismatches', () => {
     const runFolder = tempRunFolder('circuit-run-status-identity-mismatch-');
     const manifestHash = writeManifest({ runFolder, runId: RUN_ID });
     append(runFolder, bootstrap({ runId: OTHER_RUN_ID, manifestHash }));
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'invalid',
-      reason: 'identity_mismatch',
-      legal_next_actions: ['none'],
-      run_id: RUN_ID,
-      flow_id: 'fix',
-      goal: 'Fix the checkout bug',
-    });
+    expectRetiredRunFolderProjection(projection);
   });
 
   it('projects marked v2 open runs with retry-aware current step attempts', () => {
@@ -472,7 +405,7 @@ describe('run folder status projection', () => {
     );
   });
 
-  it('does not mistake malformed v1 traces without schema_version for v2 traces', () => {
+  it('fails closed for malformed retained traces without treating them as v2', () => {
     const runFolder = tempRunFolder('circuit-run-status-v1-missing-schema-version-');
     const manifestHash = writeManifest({ runFolder });
     writeRawTrace(runFolder, [
@@ -491,13 +424,7 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'invalid',
-      reason: 'trace_invalid',
-      legal_next_actions: ['none'],
-      run_id: RUN_ID,
-      flow_id: 'fix',
-    });
+    expectRetiredRunFolderProjection(projection);
     expect(projection).not.toHaveProperty('goal');
   });
 
@@ -517,7 +444,7 @@ describe('run folder status projection', () => {
     });
   });
 
-  it('does not invalidate closed runs when compiled-flow bytes cannot be parsed', () => {
+  it('fails closed for retained runs even when compiled-flow bytes cannot be parsed', () => {
     const runFolder = tempRunFolder('circuit-run-status-bad-flow-bytes-');
     const badBytes = Buffer.from('not json');
     const manifestHash = writeManifest({ runFolder, bytes: badBytes });
@@ -526,16 +453,12 @@ describe('run folder status projection', () => {
 
     const projection = projectRunStatusFromRunFolder(runFolder);
 
-    expect(projection).toMatchObject({
-      engine_state: 'completed',
-      reason: 'run_closed',
-      terminal_outcome: 'complete',
-    });
+    expectRetiredRunFolderProjection(projection);
   });
 });
 
 describe('runs show CLI', () => {
-  it('prints a projection for a valid run folder', async () => {
+  it('prints a retired-runtime projection for retained run folders', async () => {
     const runFolder = tempRunFolder('circuit-runs-show-valid-');
     const manifestHash = writeManifest({ runFolder });
     append(runFolder, bootstrap({ manifestHash }));
@@ -544,10 +467,7 @@ describe('runs show CLI', () => {
     const result = await captureMain(['runs', 'show', '--run-folder', runFolder, '--json']);
 
     expect(result.code, result.stderr).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      api_version: 'run-status-v1',
-      engine_state: 'completed',
-    });
+    expectRetiredRunFolderProjection(JSON.parse(result.stdout));
   });
 
   it('prints invalid projections with exit 0 for existing broken run folders', async () => {

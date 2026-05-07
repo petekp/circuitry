@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from '../../src/cli/runtime-compatibility-policy.js';
 import { CompiledFlow, ContinuityIndex, ContinuityRecord } from '../../src/index.js';
+import { RETIRED_RUNTIME_RUN_FOLDER_MESSAGE } from '../../src/shared/retired-runtime-policy.js';
 
 const tempRoots: string[] = [];
 
@@ -726,7 +727,7 @@ describe('utility CLI commands', () => {
     );
   });
 
-  it('can still bind handoff continuity to a retained waiting run', async () => {
+  it('fails closed when binding handoff continuity to a retained waiting run', async () => {
     const root = tempRoot('circuit-handoff-retained-run-');
     const runFolder = join(root, 'run');
     const controlPlane = join(root, 'control-plane');
@@ -781,16 +782,12 @@ describe('utility CLI commands', () => {
       '2026-04-29T23:26:00.000Z',
     ]);
 
-    expect(save.code, save.stderr).toBe(0);
-    const output = JSON.parse(save.stdout) as { continuity_path: string };
-    const record = ContinuityRecord.parse(JSON.parse(readFileSync(output.continuity_path, 'utf8')));
-    expect(record).toMatchObject({
-      continuity_kind: 'run-backed',
-      run_ref: { runtime_status: 'in_progress', current_step: 'frame-step' },
-    });
+    expect(save.code).toBe(1);
+    expect(save.stdout).toBe('');
+    expect(save.stderr.trim()).toBe(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}`);
   });
 
-  it('does not use v2 run-status fallback for corrupted unmarked retained folders', async () => {
+  it('fails closed for corrupted unmarked retained folders before any adapter path', async () => {
     const root = tempRoot('circuit-handoff-retained-corrupt-');
     const runFolder = join(root, 'run');
     const controlPlane = join(root, 'control-plane');
@@ -845,6 +842,7 @@ describe('utility CLI commands', () => {
     ]);
 
     expect(save.code).toBe(1);
-    expect(save.stderr).toContain('trace.ndjson: line 0 is not valid JSON');
+    expect(save.stdout).toBe('');
+    expect(save.stderr.trim()).toBe(`error: ${RETIRED_RUNTIME_RUN_FOLDER_MESSAGE}`);
   });
 });

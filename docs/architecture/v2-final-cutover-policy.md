@@ -13,8 +13,8 @@ packet path stops here unless a genuinely new ambiguity appears.
 
 ## Numbered Groups
 
-1. Policy reset only. Record the new direction and leave behavior unchanged.
-2. Code cutover. Retained and v1 run folders must fail closed with exactly:
+1. Policy reset only. Done.
+2. Code cutover. Done: retained and v1 run folders fail closed with exactly:
 
    ```text
    This run folder was created by the retired runtime. Start a fresh run.
@@ -33,5 +33,8 @@ packet path stops here unless a genuinely new ambiguity appears.
 
 ## Immediate Next Step
 
-Start Group 2 by changing the saved-folder policy and tests so retained and v1
-run folders fail closed with the retired-runtime message above.
+Choose the next batch:
+
+- remove dead retained/v1 projection code that no active CLI path calls anymore;
+- or start doc compression and update the historical checkpoint docs in one
+  deliberate pass.
