@@ -4,7 +4,6 @@ import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { projectRunStatusFromRunFolder } from '../../src/run-status/project-run-folder.js';
-import { appendTraceEntry } from '../../src/runtime/trace-writer.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
@@ -53,7 +52,8 @@ function writeManifest(input: {
 }
 
 function append(runFolder: string, candidate: unknown): void {
-  appendTraceEntry(runFolder, TraceEntry.parse(candidate));
+  const parsed = TraceEntry.parse(candidate);
+  writeFileSync(join(runFolder, 'trace.ndjson'), `${JSON.stringify(parsed)}\n`, { flag: 'a' });
 }
 
 function bootstrap(input: {
