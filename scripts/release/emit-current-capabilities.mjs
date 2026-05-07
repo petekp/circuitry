@@ -698,8 +698,12 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
       kind: 'checkpoint',
       title: 'Checkpoints',
       status: 'implemented',
-      summary: 'Checkpoint waiting and resume paths exist in the runner and CLI.',
-      evidence: ['src/runtime/runner.ts', 'src/cli/circuit.ts'],
+      summary: 'Checkpoint waiting and resume paths exist in core-v2 and the CLI.',
+      evidence: [
+        'src/core-v2/executors/checkpoint.ts',
+        'src/core-v2/run/checkpoint-resume.ts',
+        'src/cli/circuit.ts',
+      ],
       axes: {
         checkpoint:
           'Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.',
@@ -712,9 +716,13 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
       title: 'Continuity',
       status: continuityImplemented ? 'implemented' : 'partial',
       summary: continuityImplemented
-        ? 'Run records, checkpoint resume, and explicit handoff continuity records are proven.'
-        : 'Run records and checkpoint resume exist; explicit handoff continuity proof is still pending.',
-      evidence: ['src/runtime/snapshot-writer.ts', 'src/runtime/runner.ts', 'src/cli/handoff.ts'],
+        ? 'Core-v2 run records, checkpoint resume, and explicit handoff continuity records are proven.'
+        : 'Core-v2 run records and checkpoint resume exist; explicit handoff continuity proof is still pending.',
+      evidence: [
+        'src/core-v2/run/checkpoint-resume.ts',
+        'src/core-v2/run/manifest-snapshot.ts',
+        'src/cli/handoff.ts',
+      ],
       readiness_refs: continuityImplemented ? [] : ['REL-014'],
       axes: {
         outputs: ['active-run.md', 'continuity record'],
@@ -773,9 +781,9 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
         'README.md',
         'docs/first-run.md',
         'docs/contracts/host-capabilities.md',
+        'src/core-v2/run/graph-runner.ts',
         'src/shared/operator-summary-writer.ts',
         'src/shared/write-capable-worker-disclosure.ts',
-        'src/runtime/runner.ts',
       ],
       readiness_refs: [],
     },

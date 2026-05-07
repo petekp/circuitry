@@ -565,8 +565,12 @@
       "kind": "checkpoint",
       "title": "Checkpoints",
       "status": "implemented",
-      "summary": "Checkpoint waiting and resume paths exist in the runner and CLI.",
-      "evidence": ["src/runtime/runner.ts", "src/cli/circuit.ts"],
+      "summary": "Checkpoint waiting and resume paths exist in core-v2 and the CLI.",
+      "evidence": [
+        "src/core-v2/executors/checkpoint.ts",
+        "src/core-v2/run/checkpoint-resume.ts",
+        "src/cli/circuit.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -582,8 +586,12 @@
       "kind": "continuity",
       "title": "Continuity",
       "status": "implemented",
-      "summary": "Run records, checkpoint resume, and explicit handoff continuity records are proven.",
-      "evidence": ["src/runtime/snapshot-writer.ts", "src/runtime/runner.ts", "src/cli/handoff.ts"],
+      "summary": "Core-v2 run records, checkpoint resume, and explicit handoff continuity records are proven.",
+      "evidence": [
+        "src/core-v2/run/checkpoint-resume.ts",
+        "src/core-v2/run/manifest-snapshot.ts",
+        "src/cli/handoff.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1802,9 +1810,9 @@
         "README.md",
         "docs/first-run.md",
         "docs/contracts/host-capabilities.md",
+        "src/core-v2/run/graph-runner.ts",
         "src/shared/operator-summary-writer.ts",
-        "src/shared/write-capable-worker-disclosure.ts",
-        "src/runtime/runner.ts"
+        "src/shared/write-capable-worker-disclosure.ts"
       ],
       "readiness_refs": [],
       "axes": {
