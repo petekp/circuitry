@@ -4,18 +4,15 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type {
-  ChildCompiledFlowResolver,
-  CompiledFlowInvocation,
-  CompiledFlowRunResult,
-  CompiledFlowRunner,
-} from '../../src/compat/retained-runtime.js';
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+  ChildCompiledFlowResolverV2,
+  CompiledFlowRunOptionsV2Like,
+  CompiledFlowRunnerV2,
+} from '../../src/core-v2/run/child-runner.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import type { GraphRunResultV2 } from '../../src/core-v2/run/graph-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { RunResult } from '../../src/schemas/result.js';
-import { Snapshot } from '../../src/schemas/snapshot.js';
-import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 
 // Sub-run runtime test. Verifies that a parent flow declaring a
@@ -30,31 +27,12 @@ import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 //     `step.writes.result` slot for downstream consumers.
 //   - Admits or rejects the child against `step.check.pass`.
 
-const PARENT_WORKFLOW_ID = 'parent-test' as unknown as CompiledFlowId;
-const CHILD_WORKFLOW_ID = 'child-test' as unknown as CompiledFlowId;
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'sub-run handler omits child audit linkage or shares parent run id',
-    acceptance_evidence:
-      'parent log carries sub_run.started + sub_run.completed with distinct child_run_id, child run-folder sibling to parent, child result.json copied verbatim into parent writes.result slot',
-    alternate_framing: 'unit test of the sub-run handler in isolation',
-  };
-}
+const PARENT_WORKFLOW_ID = 'parent-test';
+const CHILD_WORKFLOW_ID = 'child-test';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
-}
-
-function unusedRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async () => {
-      throw new Error('relayer should not run during sub-run-only parent execution');
-    },
-  };
 }
 
 function buildParentCompiledFlow(parentCheckPass: readonly string[]): CompiledFlow {
@@ -163,33 +141,30 @@ function buildChildCompiledFlow(): CompiledFlow {
   return CompiledFlow.parse(raw);
 }
 
-function makeChildResolver(child: {
-  flow: CompiledFlow;
-  bytes: Buffer;
-}): ChildCompiledFlowResolver {
-  return () => child;
+function makeChildResolver(child: { bytes: Buffer }): ChildCompiledFlowResolverV2 {
+  return () => ({ flowBytes: child.bytes });
 }
 
 // Stub childRunner that bypasses real child execution. Writes a
 // synthetic child result.json (with a verdict field) into the child's
-// runFolder/reports and returns a minimal CompiledFlowRunResult. This
+// runDir/reports and returns a minimal GraphRunResultV2. This
 // isolates the parent's sub-run handler logic from the child's full
 // loop while still exercising the path-derivation, file-copy, and
 // audit-trace_entry surface the handler is responsible for.
 function makeStubChildRunner(observed: {
   verdict: string;
   outcome: 'complete' | 'aborted';
-  capturedRunIds: { value: RunId | undefined };
-}): CompiledFlowRunner {
-  return async (inv: CompiledFlowInvocation): Promise<CompiledFlowRunResult> => {
-    observed.capturedRunIds.value = inv.runId;
-    const childResultAbs = resultPath(inv.runFolder);
+  capturedRunIds: { value: string | undefined };
+}): CompiledFlowRunnerV2 {
+  return async (options: CompiledFlowRunOptionsV2Like): Promise<GraphRunResultV2> => {
+    observed.capturedRunIds.value = options.runId;
+    const childResultAbs = resultPath(options.runDir);
     mkdirSync(dirname(childResultAbs), { recursive: true });
     const body = RunResult.parse({
       schema_version: 1,
-      run_id: inv.runId as unknown as string,
-      flow_id: inv.flow.id as unknown as string,
-      goal: inv.goal,
+      run_id: options.runId ?? 'child-run',
+      flow_id: CHILD_WORKFLOW_ID,
+      goal: options.goal,
       outcome: observed.outcome,
       summary: 'stub child result',
       closed_at: new Date(0).toISOString(),
@@ -199,24 +174,24 @@ function makeStubChildRunner(observed: {
     });
     writeFileSync(childResultAbs, `${JSON.stringify(body, null, 2)}\n`);
     return {
-      runFolder: inv.runFolder,
-      result: body,
-      snapshot: Snapshot.parse({
-        schema_version: 1,
-        run_id: body.run_id,
-        flow_id: body.flow_id,
-        depth: 'standard',
-        change_kind: inv.change_kind,
-        status: observed.outcome === 'complete' ? 'complete' : 'aborted',
-        steps: [],
-        trace_entries_consumed: 1,
-        manifest_hash: 'stub-manifest-hash',
-        updated_at: new Date(0).toISOString(),
-      }),
-      trace_entries: [],
-      relayResults: [],
+      schema_version: body.schema_version,
+      run_id: body.run_id,
+      flow_id: body.flow_id,
+      goal: body.goal,
+      outcome: body.outcome,
+      summary: body.summary,
+      closed_at: body.closed_at,
+      trace_entries_observed: body.trace_entries_observed,
+      manifest_hash: body.manifest_hash,
+      ...(body.reason === undefined ? {} : { reason: body.reason }),
+      ...(body.verdict === undefined ? {} : { verdict: body.verdict }),
+      resultPath: childResultAbs,
     };
   };
+}
+
+async function readTraceEntries(runFolder: string) {
+  return await new TraceStore(runFolder).load();
 }
 
 let runFolderBase: string;
@@ -239,39 +214,38 @@ describe('sub-run runtime', () => {
     const observed = {
       verdict: 'ok',
       outcome: 'complete' as const,
-      capturedRunIds: { value: undefined as RunId | undefined },
+      capturedRunIds: { value: undefined as string | undefined },
     };
     const stubChildRunner = makeStubChildRunner(observed);
-    const childResolver = makeChildResolver({ flow: childCompiledFlow, bytes: childBytes });
+    const childResolver = makeChildResolver({ bytes: childBytes });
 
-    const parentRunId = RunId.parse('11111111-1111-1111-1111-111111111111');
-    const parentRunFolder = join(runFolderBase, parentRunId as unknown as string);
+    const parentRunId = '11111111-1111-1111-1111-111111111111';
+    const parentRunFolder = join(runFolderBase, parentRunId);
 
-    const outcome = await runCompiledFlow({
-      runFolder: parentRunFolder,
-      flow: parentCompiledFlow,
+    const outcome = await runCompiledFlowV2({
+      runDir: parentRunFolder,
       flowBytes: parentBytes,
       runId: parentRunId,
       goal: 'parent run goal',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 27, 0, 0, 0)),
-      relayer: unusedRelayer(),
       childCompiledFlowResolver: childResolver,
       childRunner: stubChildRunner,
     });
 
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
 
     // RUN-I3: child has a fresh RunId distinct from parent.
     const childRunId = observed.capturedRunIds.value;
     expect(childRunId).toBeDefined();
+    if (childRunId === undefined) throw new Error('expected child run id');
     expect(childRunId).not.toBe(parentRunId);
 
     // sub_run.started + sub_run.completed both fired with matching
     // child_run_id. (The parent's trace_entries log is the audit trail.)
-    const subRunStarted = outcome.trace_entries.find((e) => e.kind === 'sub_run.started');
-    const subRunCompleted = outcome.trace_entries.find((e) => e.kind === 'sub_run.completed');
+    const traceEntries = await readTraceEntries(parentRunFolder);
+    const subRunStarted = traceEntries.find((e) => e.kind === 'sub_run.started');
+    const subRunCompleted = traceEntries.find((e) => e.kind === 'sub_run.completed');
     if (subRunStarted?.kind !== 'sub_run.started') throw new Error('expected sub_run.started');
     if (subRunCompleted?.kind !== 'sub_run.completed')
       throw new Error('expected sub_run.completed');
@@ -281,7 +255,7 @@ describe('sub-run runtime', () => {
     expect(subRunCompleted.child_outcome).toBe('complete');
 
     // Parent's check admitted the child verdict.
-    const passCheck = outcome.trace_entries.find(
+    const passCheck = traceEntries.find(
       (e) =>
         e.kind === 'check.evaluated' &&
         e.check_kind === 'result_verdict' &&
@@ -297,7 +271,7 @@ describe('sub-run runtime', () => {
 
     // Child run-folder is a sibling of parent's run-folder under the same
     // runs-base directory, NOT nested under parent's run-folder.
-    const expectedChildRunFolder = join(runFolderBase, childRunId as unknown as string);
+    const expectedChildRunFolder = join(runFolderBase, childRunId);
     expect(observed.capturedRunIds.value).toBeDefined();
     const childResultJsonExists = readFileSync(
       join(expectedChildRunFolder, 'reports', 'result.json'),
@@ -315,39 +289,37 @@ describe('sub-run runtime', () => {
     const observed = {
       verdict: 'reject',
       outcome: 'complete' as const,
-      capturedRunIds: { value: undefined as RunId | undefined },
+      capturedRunIds: { value: undefined as string | undefined },
     };
     const stubChildRunner = makeStubChildRunner(observed);
-    const childResolver = makeChildResolver({ flow: childCompiledFlow, bytes: childBytes });
+    const childResolver = makeChildResolver({ bytes: childBytes });
 
-    const parentRunId = RunId.parse('11111111-1111-1111-1111-111111111112');
-    const parentRunFolder = join(runFolderBase, parentRunId as unknown as string);
+    const parentRunId = '11111111-1111-1111-1111-111111111112';
+    const parentRunFolder = join(runFolderBase, parentRunId);
 
-    const outcome = await runCompiledFlow({
-      runFolder: parentRunFolder,
-      flow: parentCompiledFlow,
+    const outcome = await runCompiledFlowV2({
+      runDir: parentRunFolder,
       flowBytes: parentBytes,
       runId: parentRunId,
       goal: 'parent check-rejection test',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 27, 0, 30, 0)),
-      relayer: unusedRelayer(),
       childCompiledFlowResolver: childResolver,
       childRunner: stubChildRunner,
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toContain('reject');
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toContain('reject');
 
     // sub_run.completed still fired with the observed verdict before
     // the check rejected — durable transcript of what the child said.
-    const subRunCompleted = outcome.trace_entries.find((e) => e.kind === 'sub_run.completed');
+    const traceEntries = await readTraceEntries(parentRunFolder);
+    const subRunCompleted = traceEntries.find((e) => e.kind === 'sub_run.completed');
     if (subRunCompleted?.kind !== 'sub_run.completed')
       throw new Error('expected sub_run.completed');
     expect(subRunCompleted.verdict).toBe('reject');
 
-    const failCheck = outcome.trace_entries.find(
+    const failCheck = traceEntries.find(
       (e) =>
         e.kind === 'check.evaluated' && e.check_kind === 'result_verdict' && e.outcome === 'fail',
     );
@@ -358,22 +330,19 @@ describe('sub-run runtime', () => {
     const parentCompiledFlow = buildParentCompiledFlow(['ok']);
     const parentBytes = Buffer.from(JSON.stringify(parentCompiledFlow));
 
-    const parentRunId = RunId.parse('11111111-1111-1111-1111-111111111113');
-    const parentRunFolder = join(runFolderBase, parentRunId as unknown as string);
+    const parentRunId = '11111111-1111-1111-1111-111111111113';
+    const parentRunFolder = join(runFolderBase, parentRunId);
 
-    const outcome = await runCompiledFlow({
-      runFolder: parentRunFolder,
-      flow: parentCompiledFlow,
+    const outcome = await runCompiledFlowV2({
+      runDir: parentRunFolder,
       flowBytes: parentBytes,
       runId: parentRunId,
       goal: 'missing-resolver test',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 27, 1, 0, 0)),
-      relayer: unusedRelayer(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toContain('childCompiledFlowResolver');
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toContain('childCompiledFlowResolver');
   });
 });

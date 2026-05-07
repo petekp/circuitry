@@ -4,8 +4,8 @@
 // parent's sub-run handler with a stubbed `childRunner` so the
 // handler's own surface (path derivation, file copy, audit entries,
 // check admission) can be tested in isolation. This test omits the
-// stub: when `childRunner` is undefined on the CompiledFlowInvocation,
-// the runner defaults to `runCompiledFlow` itself, and the parent's
+// stub: when `childRunner` is undefined on the core-v2 invocation,
+// the runner defaults to `runCompiledFlowV2` itself, and the parent's
 // sub-run step recurses into a real child execution end-to-end.
 //
 // Why this is worth its own test: every other parent sub-run / fanout
@@ -22,29 +22,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { ChildCompiledFlowResolver } from '../../src/compat/retained-runtime.js';
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import type { ChildCompiledFlowResolverV2 } from '../../src/core-v2/run/child-runner.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-const PARENT_WORKFLOW_ID = 'parent-recursion-test' as unknown as CompiledFlowId;
-const CHILD_WORKFLOW_ID = 'child-recursion-test' as unknown as CompiledFlowId;
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'sub-run handler skips real child execution or shares the runner instance with the parent',
-    acceptance_evidence:
-      'real runCompiledFlow recurses into the child with a fresh RunId and a sibling run-folder, child emits its own trace, parent admits child verdict',
-    alternate_framing:
-      'integration test of sub-run + real recursive runCompiledFlow rather than handler-isolation unit test',
-  };
-}
+const PARENT_WORKFLOW_ID = 'parent-recursion-test';
+const CHILD_WORKFLOW_ID = 'child-recursion-test';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
@@ -120,7 +107,7 @@ function buildParentCompiledFlow(): CompiledFlow {
     id: PARENT_WORKFLOW_ID as unknown as string,
     version: '0.1.0',
     purpose:
-      'real-recursion test parent — single sub-run step recurses into the child via real runCompiledFlow.',
+      'real-recursion test parent — single sub-run step recurses into the child via real runCompiledFlowV2.',
     entry: { signals: { include: ['parent'], exclude: [] }, intent_prefixes: ['parent'] },
     entry_modes: [
       {
@@ -139,7 +126,7 @@ function buildParentCompiledFlow(): CompiledFlow {
     steps: [
       {
         id: 'sub-run-step',
-        title: 'Sub-run — recurse into child via real runCompiledFlow',
+        title: 'Sub-run — recurse into child via real runCompiledFlowV2',
         protocol: 'real-recursion-parent@v1',
         reads: [],
         routes: { pass: '@complete' },
@@ -172,53 +159,51 @@ afterEach(() => {
   rmSync(runFolderBase, { recursive: true, force: true });
 });
 
+async function readTraceEntries(runFolder: string) {
+  return await new TraceStore(runFolder).load();
+}
+
 describe('sub-run real recursion', () => {
-  it('runs the child via real runCompiledFlow (no childRunner stub) and admits the child verdict', async () => {
+  it('runs the child via real runCompiledFlowV2 (no childRunner stub) and admits the child verdict', async () => {
     const parentCompiledFlow = buildParentCompiledFlow();
     const parentBytes = Buffer.from(JSON.stringify(parentCompiledFlow));
     const childCompiledFlow = buildChildCompiledFlow();
     const childBytes = Buffer.from(JSON.stringify(childCompiledFlow));
 
-    const childResolver: ChildCompiledFlowResolver = () => ({
-      flow: childCompiledFlow,
-      bytes: childBytes,
-    });
+    const childResolver: ChildCompiledFlowResolverV2 = () => ({ flowBytes: childBytes });
 
-    const parentRunId = RunId.parse('22222222-2222-2222-2222-222222222222');
-    const parentRunFolder = join(runFolderBase, parentRunId as unknown as string);
+    const parentRunId = '22222222-2222-2222-2222-222222222222';
+    const parentRunFolder = join(runFolderBase, parentRunId);
 
-    // KEY: NO `childRunner` field — runner defaults to `runCompiledFlow`
+    // KEY: NO `childRunner` field — runner defaults to `runCompiledFlowV2`
     // itself, so the sub-run step recurses through the real runner.
-    const outcome = await runCompiledFlow({
-      runFolder: parentRunFolder,
-      flow: parentCompiledFlow,
+    const outcome = await runCompiledFlowV2({
+      runDir: parentRunFolder,
       flowBytes: parentBytes,
       runId: parentRunId,
       goal: 'parent run goal — exercise real recursion',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 27, 0, 0, 0)),
       relayer: acceptingRelayer(),
       childCompiledFlowResolver: childResolver,
     });
 
     // Parent closed with verdict admitted.
-    if (outcome.result.outcome === 'checkpoint_waiting') {
-      throw new Error('parent unexpectedly waited at a checkpoint');
-    }
-    expect(outcome.result.outcome).toBe('complete');
-    expect(outcome.result.verdict).toBe('accept');
+    expect(outcome.outcome).toBe('complete');
+    expect(outcome.verdict).toBe('accept');
 
     // Sub-run audit linkage on the parent's trace.
-    const subRunStarted = outcome.trace_entries.find((e) => e.kind === 'sub_run.started');
-    const subRunCompleted = outcome.trace_entries.find((e) => e.kind === 'sub_run.completed');
+    const parentTraceEntries = await readTraceEntries(parentRunFolder);
+    const subRunStarted = parentTraceEntries.find((e) => e.kind === 'sub_run.started');
+    const subRunCompleted = parentTraceEntries.find((e) => e.kind === 'sub_run.completed');
     if (subRunStarted?.kind !== 'sub_run.started') throw new Error('expected sub_run.started');
     if (subRunCompleted?.kind !== 'sub_run.completed')
       throw new Error('expected sub_run.completed');
 
     // RUN-I3: child run id is a fresh UUID, not the parent's.
     const childRunId = subRunStarted.child_run_id;
-    expect(childRunId).not.toBe(parentRunId as unknown as string);
+    if (childRunId === undefined) throw new Error('expected child run id');
+    expect(childRunId).not.toBe(parentRunId);
     expect(subRunCompleted.child_run_id).toBe(childRunId);
     expect(subRunCompleted.verdict).toBe('accept');
     expect(subRunCompleted.child_outcome).toBe('complete');
@@ -239,7 +224,7 @@ describe('sub-run real recursion', () => {
       outcome: string;
     };
     expect(childResultBody.run_id).toBe(childRunId);
-    expect(childResultBody.flow_id).toBe(CHILD_WORKFLOW_ID as unknown as string);
+    expect(childResultBody.flow_id).toBe(CHILD_WORKFLOW_ID);
     expect(childResultBody.verdict).toBe('accept');
     expect(childResultBody.outcome).toBe('complete');
 
@@ -254,7 +239,7 @@ describe('sub-run real recursion', () => {
     for (const line of childTraceEntryLines) {
       const parsed = JSON.parse(line) as { run_id: string };
       expect(parsed.run_id).toBe(childRunId);
-      expect(parsed.run_id).not.toBe(parentRunId as unknown as string);
+      expect(parsed.run_id).not.toBe(parentRunId);
     }
     // Child trace includes the relay lifecycle trace_entries that
     // prove the child's relay step actually executed (rather than
@@ -273,7 +258,7 @@ describe('sub-run real recursion', () => {
     expect(parentCopyBytes).toBe(childResultBytes);
 
     // Parent's check admitted the child's verdict.
-    const passCheck = outcome.trace_entries.find(
+    const passCheck = parentTraceEntries.find(
       (e) =>
         e.kind === 'check.evaluated' &&
         e.check_kind === 'result_verdict' &&
@@ -284,7 +269,7 @@ describe('sub-run real recursion', () => {
 
     // Two distinct run-folders exist as siblings under the runs base.
     const runFolderEntries = readdirSync(runFolderBase).sort();
-    expect(runFolderEntries).toContain(parentRunId as unknown as string);
+    expect(runFolderEntries).toContain(parentRunId);
     expect(runFolderEntries).toContain(childRunId);
     expect(runFolderEntries.length).toBeGreaterThanOrEqual(2);
   });
