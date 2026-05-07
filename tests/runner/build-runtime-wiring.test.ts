@@ -1,24 +1,25 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
+import {
+  runCompiledFlowV2,
+  runCompiledFlowV2WithWaiting,
+} from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import {
   BuildImplementation,
   BuildResult,
   BuildReview,
   BuildVerification,
 } from '../../src/flows/build/reports.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'build', 'circuit.json');
-const REPO_ROOT = resolve('.');
 
 function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);
@@ -29,18 +30,6 @@ function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'Build had typed reports but no live fixture proving implementation and review relay through the runtime',
-    acceptance_evidence:
-      'build-runtime-wiring runs the live Build fixture with stubbed worker relay and parses implementation, verification, review, and close reports',
-    alternate_framing:
-      'add entry-mode routing first — rejected because the relay path is the smaller blocker for a real Build stage path',
-  };
 }
 
 function relayerWith(
@@ -97,6 +86,29 @@ function traceEntryByKind<T extends { kind: string }>(
   return trace_entries.find((trace_entry) => trace_entry.kind === kind);
 }
 
+async function readTraceEntries(runFolder: string) {
+  return await new TraceStore(runFolder).load();
+}
+
+function makeVerificationProjectRoot(): string {
+  const projectRoot = join(runFolderBase, 'verification-project');
+  mkdirSync(projectRoot, { recursive: true });
+  writeFileSync(
+    join(projectRoot, 'package.json'),
+    `${JSON.stringify(
+      {
+        private: true,
+        scripts: {
+          check: 'node -e "process.exit(0)"',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return projectRoot;
+}
+
 let runFolderBase: string;
 
 beforeEach(() => {
@@ -119,26 +131,25 @@ describe('Build runtime wiring', () => {
   });
 
   it('runs the live Build fixture through checkpoint, implementation relay, verification, review relay, and close', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'complete');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000000'),
+      runId: 'b2000000-0000-0000-0000-000000000000',
       goal: 'Add a tiny Build feature',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 0, 0)),
       relayer: relayerWith(),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    expect(outcome.result.outcome).toBe('complete');
-    expect(outcome.trace_entries.map(traceEntryLabel)).toContain('checkpoint.resolved:frame-step');
-    expect(outcome.trace_entries.map(traceEntryLabel)).toContain('relay.completed:act-step');
-    expect(outcome.trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
+    expect(outcome.outcome).toBe('complete');
+    const trace_entries = await readTraceEntries(runFolder);
+    expect(trace_entries.map(traceEntryLabel)).toContain('checkpoint.resolved:frame-step');
+    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:act-step');
+    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
 
     const implementation = BuildImplementation.parse(
       JSON.parse(readFileSync(join(runFolder, 'reports/build/implementation.json'), 'utf8')),
@@ -164,17 +175,15 @@ describe('Build runtime wiring', () => {
   });
 
   it('aborts when implementation relay passes the verdict check but fails build.implementation@v1 parsing', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'bad-implementation');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000001'),
+      runId: 'b2000000-0000-0000-0000-000000000001',
       goal: 'Reject malformed implementation report',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 10, 0)),
       relayer: relayerWith({
         implementationBody: JSON.stringify({
@@ -183,28 +192,26 @@ describe('Build runtime wiring', () => {
           changed_files: ['src/example.ts'],
         }),
       }),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toMatch(/build\.implementation@v1/);
-    expect(outcome.result.reason).toMatch(/evidence/);
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/build\.implementation@v1/);
+    expect(outcome.reason).toMatch(/evidence/);
     expect(existsSync(join(runFolder, 'reports/build/implementation.json'))).toBe(false);
     expect(existsSync(join(runFolder, 'reports/relay/build-act.result.json'))).toBe(true);
   });
 
   it('aborts review rejection before writing the canonical Build review report', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-reject');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000002'),
+      runId: 'b2000000-0000-0000-0000-000000000002',
       goal: 'Reject a blocking Build review',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 20, 0)),
       relayer: relayerWith({
         reviewBody: JSON.stringify({
@@ -219,27 +226,25 @@ describe('Build runtime wiring', () => {
           ],
         }),
       }),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toMatch(/connector declared verdict 'reject'/);
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/connector declared verdict 'reject'/);
     expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(false);
     expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
   });
 
   it('aborts accept-with-fixes without findings before writing the canonical Build review report', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-empty-fixes');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000003'),
+      runId: 'b2000000-0000-0000-0000-000000000003',
       goal: 'Reject a non-actionable Build review',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 30, 0)),
       relayer: relayerWith({
         reviewBody: JSON.stringify({
@@ -248,28 +253,26 @@ describe('Build runtime wiring', () => {
           findings: [],
         }),
       }),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toMatch(/build\.review@v1/);
-    expect(outcome.result.reason).toMatch(/findings/);
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/build\.review@v1/);
+    expect(outcome.reason).toMatch(/findings/);
     expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(false);
     expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
   });
 
   it('marks Build as needs_attention when review accepts with required fixes', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-followups');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000004'),
+      runId: 'b2000000-0000-0000-0000-000000000004',
       goal: 'Accept Build with follow-up fixes',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 35, 0)),
       relayer: relayerWith({
         reviewBody: JSON.stringify({
@@ -284,10 +287,10 @@ describe('Build runtime wiring', () => {
           ],
         }),
       }),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     const result = BuildResult.parse(
       JSON.parse(readFileSync(join(runFolder, 'reports/build-result.json'), 'utf8')),
     );
@@ -330,19 +333,17 @@ describe('Build runtime wiring', () => {
   });
 
   it('uses the selected lite entry mode as the run depth when no explicit depth is supplied', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'lite-entry-mode');
     const relayInputs: ClaudeCodeRelayInput[] = [];
     const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000004'),
+      runId: 'b2000000-0000-0000-0000-000000000004',
       goal: 'Add a tiny Build feature in lite mode',
       entryModeName: 'lite',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 40, 0)),
       relayer: {
         connectorName: relayer.connectorName,
@@ -351,64 +352,62 @@ describe('Build runtime wiring', () => {
           return relayer.relay(input);
         },
       },
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    const bootstrap = traceEntryByKind(outcome.trace_entries, 'run.bootstrapped');
-    const checkpoint = outcome.trace_entries.find(
+    const trace_entries = await readTraceEntries(runFolder);
+    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+    const checkpoint = trace_entries.find(
       (trace_entry) =>
         trace_entry.kind === 'checkpoint.resolved' &&
         traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
     );
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     expect(bootstrap).toMatchObject({ depth: 'lite' });
     expect(checkpoint).toMatchObject({
       selection: 'continue',
       resolution_source: 'safe-default',
     });
     expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'lite' });
-    expect(outcome.trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
+    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
   });
 
   it('uses deep entry mode to pause at the operator checkpoint when no explicit depth is supplied', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'deep-entry-mode');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2WithWaiting({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000005'),
+      runId: 'b2000000-0000-0000-0000-000000000005',
       goal: 'Add a tiny Build feature in deep mode',
       entryModeName: 'deep',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 50, 0)),
       relayer: relayerWith(),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    const bootstrap = traceEntryByKind(outcome.trace_entries, 'run.bootstrapped');
-    expect(outcome.result.outcome).toBe('checkpoint_waiting');
+    const trace_entries = await readTraceEntries(runFolder);
+    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+    expect(outcome.outcome).toBe('checkpoint_waiting');
     expect(bootstrap).toMatchObject({ depth: 'deep' });
-    expect(outcome.trace_entries.map(traceEntryLabel)).not.toContain('run.closed');
+    expect(trace_entries.map(traceEntryLabel)).not.toContain('run.closed');
     expect(existsSync(join(runFolder, 'reports/result.json'))).toBe(false);
   });
 
   it('lets an explicit depth override the selected entry mode default', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'entry-mode-depth-override');
     const relayInputs: ClaudeCodeRelayInput[] = [];
     const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000006'),
+      runId: 'b2000000-0000-0000-0000-000000000006',
       goal: 'Add a tiny Build feature with an explicit standard override',
       entryModeName: 'deep',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 9, 0, 0)),
       relayer: {
         connectorName: relayer.connectorName,
@@ -417,30 +416,29 @@ describe('Build runtime wiring', () => {
           return relayer.relay(input);
         },
       },
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    const bootstrap = traceEntryByKind(outcome.trace_entries, 'run.bootstrapped');
-    expect(outcome.result.outcome).toBe('complete');
+    const trace_entries = await readTraceEntries(runFolder);
+    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+    expect(outcome.outcome).toBe('complete');
     expect(bootstrap).toMatchObject({ depth: 'standard' });
     expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'standard' });
   });
 
   it('uses explicit autonomous depth over the default entry mode for checkpoint policy', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'default-entry-autonomous-override');
     const relayInputs: ClaudeCodeRelayInput[] = [];
     const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000009'),
+      runId: 'b2000000-0000-0000-0000-000000000009',
       goal: 'Add a tiny Build feature with explicit autonomous depth',
       entryModeName: 'default',
       depth: 'autonomous',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 9, 5, 0)),
       relayer: {
         connectorName: relayer.connectorName,
@@ -449,16 +447,17 @@ describe('Build runtime wiring', () => {
           return relayer.relay(input);
         },
       },
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    const bootstrap = traceEntryByKind(outcome.trace_entries, 'run.bootstrapped');
-    const checkpoint = outcome.trace_entries.find(
+    const trace_entries = await readTraceEntries(runFolder);
+    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+    const checkpoint = trace_entries.find(
       (trace_entry) =>
         trace_entry.kind === 'checkpoint.resolved' &&
         traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
     );
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     expect(bootstrap).toMatchObject({ depth: 'autonomous' });
     expect(checkpoint).toMatchObject({
       selection: 'continue',
@@ -468,29 +467,28 @@ describe('Build runtime wiring', () => {
   });
 
   it('uses autonomous entry mode to take the declared safe autonomous checkpoint choice', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'autonomous-entry-mode');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b2000000-0000-0000-0000-000000000007'),
+      runId: 'b2000000-0000-0000-0000-000000000007',
       goal: 'Add a tiny Build feature in autonomous mode',
       entryModeName: 'autonomous',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 9, 10, 0)),
       relayer: relayerWith(),
-      projectRoot: REPO_ROOT,
+      projectRoot: makeVerificationProjectRoot(),
     });
 
-    const bootstrap = traceEntryByKind(outcome.trace_entries, 'run.bootstrapped');
-    const checkpoint = outcome.trace_entries.find(
+    const trace_entries = await readTraceEntries(runFolder);
+    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+    const checkpoint = trace_entries.find(
       (trace_entry) =>
         trace_entry.kind === 'checkpoint.resolved' &&
         traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
     );
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     expect(bootstrap).toMatchObject({ depth: 'autonomous' });
     expect(checkpoint).toMatchObject({
       selection: 'continue',
@@ -499,23 +497,21 @@ describe('Build runtime wiring', () => {
   });
 
   it('rejects an unknown entry mode before bootstrapping a run folder', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'unknown-entry-mode');
 
     await expect(
-      runCompiledFlow({
-        runFolder,
-        flow,
+      runCompiledFlowV2({
+        runDir: runFolder,
         flowBytes: bytes,
-        runId: RunId.parse('b2000000-0000-0000-0000-000000000008'),
+        runId: 'b2000000-0000-0000-0000-000000000008',
         goal: 'Try a missing entry mode',
         entryModeName: 'missing',
-        change_kind: change_kind(),
         now: deterministicNow(Date.UTC(2026, 3, 25, 9, 20, 0)),
         relayer: relayerWith(),
-        projectRoot: REPO_ROOT,
+        projectRoot: makeVerificationProjectRoot(),
       }),
-    ).rejects.toThrow(/entry_mode named 'missing'/);
+    ).rejects.toThrow(/entry mode named 'missing'/);
     expect(existsSync(runFolder)).toBe(false);
   });
 });
