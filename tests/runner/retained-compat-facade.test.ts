@@ -7,26 +7,6 @@ import {
   type PublicRuntimePathCategory,
 } from '../../src/compat/public-runtime-paths.js';
 import {
-  deriveRetainedSnapshot as deriveRetainedCheckpointSnapshot,
-  readRetainedRunTrace as readRetainedCheckpointRunTrace,
-  reduceRetainedRunTrace as reduceRetainedCheckpointRunTrace,
-  resumeRetainedCompiledFlowCheckpoint as resumeRetainedCheckpoint,
-} from '../../src/compat/retained-checkpoint-folders.js';
-import {
-  appendAndDeriveRetainedTrace,
-  bootstrapRetainedRun,
-  claimRetainedFreshRunFolder,
-  deriveRetainedSnapshot,
-  initRetainedRunFolder,
-  readRetainedRunTrace,
-  reduceRetainedRunTrace,
-  releaseRetainedFreshRunFolderClaim,
-  resumeRetainedCompiledFlowCheckpoint,
-  runRetainedCompiledFlow,
-  writeRetainedComposeReport,
-  writeRetainedPrototypeComposeReport,
-} from '../../src/compat/retained-runtime.js';
-import {
   compileSchematicToCompiledFlow as neutralCompileSchematicToCompiledFlow,
   FlowSchematicCompileError as neutralFlowSchematicCompileError,
 } from '../../src/flows/compile-schematic-to-flow.js';
@@ -127,40 +107,28 @@ function oldRuntimeWrapperImportOffenders(input: {
     .sort();
 }
 
-describe('retained runtime compatibility facade', () => {
-  it('exposes the retained execution and v1 run-folder operations through one neutral module', () => {
-    expect(typeof runRetainedCompiledFlow).toBe('function');
-    expect(typeof resumeRetainedCompiledFlowCheckpoint).toBe('function');
-    expect(typeof deriveRetainedSnapshot).toBe('function');
-    expect(typeof readRetainedRunTrace).toBe('function');
-    expect(typeof reduceRetainedRunTrace).toBe('function');
-    expect(typeof appendAndDeriveRetainedTrace).toBe('function');
-    expect(typeof bootstrapRetainedRun).toBe('function');
-    expect(typeof initRetainedRunFolder).toBe('function');
-    expect(typeof claimRetainedFreshRunFolder).toBe('function');
-    expect(typeof releaseRetainedFreshRunFolderClaim).toBe('function');
-    expect(typeof writeRetainedComposeReport).toBe('function');
-    expect(typeof writeRetainedPrototypeComposeReport).toBe('function');
+describe('runtime import boundary', () => {
+  it('does not expose retained runtime compatibility facades', () => {
+    expect(existsSync(resolve('src/compat/retained-runtime.ts'))).toBe(false);
+    expect(existsSync(resolve('src/compat/retained-checkpoint-folders.ts'))).toBe(false);
 
-    const facade = readFileSync(resolve('src/compat/retained-runtime.ts'), 'utf8');
-    expect(facade).toContain('../runtime/runner.js');
-    expect(facade).toContain('./retained-checkpoint-folders.js');
-  });
+    const repoRoot = resolve('.');
+    const forbiddenImports = [
+      '../compat/retained-runtime.js',
+      '../compat/retained-checkpoint-folders.js',
+      './retained-runtime.js',
+      './retained-checkpoint-folders.js',
+    ];
+    const offenders = collectSourceFiles(resolve('src'))
+      .flatMap((file) => {
+        const text = readFileSync(file, 'utf8');
+        return forbiddenImports
+          .filter((importPath) => text.includes(importPath))
+          .map((importPath) => `${file.slice(repoRoot.length + 1)} imports ${importPath}`);
+      })
+      .sort();
 
-  it('exposes retained/v1 checkpoint folder operations through a smaller boundary', () => {
-    expect(typeof resumeRetainedCheckpoint).toBe('function');
-    expect(typeof deriveRetainedCheckpointSnapshot).toBe('function');
-    expect(typeof readRetainedCheckpointRunTrace).toBe('function');
-    expect(typeof reduceRetainedCheckpointRunTrace).toBe('function');
-
-    const checkpointFacade = readFileSync(
-      resolve('src/compat/retained-checkpoint-folders.ts'),
-      'utf8',
-    );
-    expect(checkpointFacade).toContain('../runtime/runner.js');
-    expect(checkpointFacade).toContain('../runtime/snapshot-writer.js');
-    expect(checkpointFacade).toContain('../runtime/trace-reader.js');
-    expect(checkpointFacade).toContain('../runtime/reducer.js');
+    expect(offenders).toEqual([]);
   });
 
   it('keeps old runtime router/compiler paths as compatibility re-exports', () => {
@@ -199,12 +167,8 @@ describe('retained runtime compatibility facade', () => {
     expect(existsSync(resolve('src/run-status/v1-run-folder.ts'))).toBe(false);
   });
 
-  it('keeps retained execution and saved-state implementation imports behind the facades in production code', () => {
+  it('keeps retained execution and saved-state implementation imports out of production code outside old runtime', () => {
     const repoRoot = resolve('.');
-    const facadePaths = new Set([
-      resolve('src/compat/retained-runtime.ts'),
-      resolve('src/compat/retained-checkpoint-folders.ts'),
-    ]);
     const forbiddenImports = [
       '../runtime/runner.js',
       '../runtime/append-and-derive.js',
@@ -228,7 +192,6 @@ describe('retained runtime compatibility facade', () => {
 
     const offenders = collectSourceFiles(resolve('src'))
       .filter((file) => !file.startsWith(resolve('src/runtime')))
-      .filter((file) => !facadePaths.has(file))
       .flatMap((file) => {
         const text = readFileSync(file, 'utf8');
         return forbiddenImports
