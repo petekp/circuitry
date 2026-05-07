@@ -4,13 +4,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import { validateCompiledFlowKindPolicy } from '../../src/shared/flow-kind-policy.js';
 
 // `explore` end-to-end fixture run.
@@ -20,7 +19,7 @@ import { validateCompiledFlowKindPolicy } from '../../src/shared/flow-kind-polic
 // real-subprocess end-to-end. Static tests bind the explore fixture
 // shape, the normalization rule used to hash the normalized result
 // report, and the `sha256Hex` helper format. The AGENT_SMOKE-checkd
-// branch runs the real explore fixture through `runCompiledFlow` with the
+// branch runs the real explore fixture through `runCompiledFlowV2` with the
 // default `relayClaudeCode` (spawns `claude -p`), asserts the five-trace_entry
 // relay transcript lands twice (synthesize + review), normalizes +
 // hashes `reports/explore-result.json` against the checked-in golden,
@@ -53,10 +52,9 @@ const AGENT_ADAPTER_SOURCE_PATHS = [
   'src/shared/connector-helpers.ts',
   'src/connectors/shared.ts',
   'src/connectors/relay-materializer.ts',
-  'src/runtime/connectors/claude-code.ts',
-  'src/runtime/connectors/shared.ts',
-  'src/runtime/connectors/relay-materializer.ts',
-  'src/runtime/runner.ts',
+  'src/core-v2/executors/relay.ts',
+  'src/core-v2/run/compiled-flow-runner.ts',
+  'src/core-v2/run/graph-runner.ts',
   'src/flows/registries/report-schemas.ts',
 ] as const;
 
@@ -124,17 +122,6 @@ function loadExploreFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(EXPLORE_FIXTURE_PATH);
   const raw: unknown = JSON.parse(bytes.toString('utf8'));
   return { flow: CompiledFlow.parse(raw), bytes };
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'explore flow lacks end-to-end real-connector proof of parity',
-    acceptance_evidence:
-      'runCompiledFlow closes the explore fixture under real relayClaudeCode with 2x five-trace_entry transcripts and a byte-shape golden on explore-result.json',
-    alternate_framing:
-      'defer end-to-end explore until P2.9 second-flow slice; rejected because CC#P2-1 + CC#P2-2 are Stage 2 close criteria that bind on one-flow-parity substrate, not two.',
-  };
 }
 
 function deterministicRelayer(): RelayFn {
@@ -283,21 +270,19 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
   });
 
   it('golden sha256 is self-consistent with the deterministic explore.result close writer', async () => {
-    const { flow, bytes } = loadExploreFixture();
+    const { bytes } = loadExploreFixture();
     const runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-explore-golden-'));
     try {
-      const outcome = await runCompiledFlow({
-        runFolder,
-        flow,
+      const outcome = await runCompiledFlowV2({
+        runDir: runFolder,
         flowBytes: bytes,
-        runId: RunId.parse('93000000-0000-0000-0000-000000000001'),
+        runId: '93000000-0000-0000-0000-000000000001',
         goal: 'explore: deterministic close-result parity run',
         depth: 'standard',
-        change_kind: change_kind(),
         now: () => new Date('2026-04-24T19:30:00.000Z'),
         relayer: deterministicRelayer(),
       });
-      expect(outcome.result.outcome).toBe('complete');
+      expect(outcome.outcome).toBe('complete');
       const normalized = normalizeExploreResult(
         readFileSync(join(runFolder, 'reports', 'explore-result.json'), 'utf8'),
       );
@@ -331,20 +316,18 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
   it(
     'closes the explore run end-to-end through the real relayClaudeCode + 2x five-trace_entry transcript + normalized golden parity',
     async () => {
-      const { flow, bytes } = loadExploreFixture();
+      const { bytes } = loadExploreFixture();
       const runFolder = join(runFolderBase, 'explore-e2e');
-      const outcome = await runCompiledFlow({
-        runFolder,
-        flow,
+      const outcome = await runCompiledFlowV2({
+        runDir: runFolder,
         flowBytes: bytes,
-        runId: RunId.parse('33333333-3333-3333-3333-333333333333'),
+        runId: '33333333-3333-3333-3333-333333333333',
         goal: 'explore: AGENT_SMOKE end-to-end parity run',
         depth: 'standard',
-        change_kind: change_kind(),
         now: () => new Date(),
       });
 
-      expect(outcome.result.outcome).toBe('complete');
+      expect(outcome.outcome).toBe('complete');
 
       // Close-step's explore-result.json landed at the expected path.
       const exploreResultPath = join(runFolder, 'reports', 'explore-result.json');
@@ -363,8 +346,9 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
       // Two relay transcripts landed; each carries the five-trace_entry
       // sequence on its own (step_id, attempt) pair.
       const relaySteps = ['synthesize-step', 'review-step'];
+      const traceEntries = await new TraceStore(runFolder).load();
       for (const stepId of relaySteps) {
-        const kindsForStep = outcome.trace_entries
+        const kindsForStep = traceEntries
           .filter((e) => 'step_id' in e && e.step_id === stepId)
           .map((e) => e.kind);
         expect(kindsForStep).toContain('relay.started');
@@ -383,22 +367,23 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
       // fixture is the one whose result_sha256 is recorded.
       if (UPDATE_AGENT_FINGERPRINT) {
         const commitSha = currentHeadSha();
-        // Bind cli_version to the actual subprocess init trace_entry via
-        // CompiledFlowRunResult.relayResults (populated by runCompiledFlow;
-        // sourced from each relayer's RelayResult.cli_version,
-        // which claude-code.ts reads from init.claude_code_version). The
+        // Bind cli_version to the actual subprocess init trace entry via
+        // core-v2 relay.receipt.data.cli_version, sourced from each
+        // relayer's RelayResult.cli_version, which claude-code.ts reads
+        // from init.claude_code_version. The
         // audit rejects fingerprints with empty/unknown cli_version
         // on v2, so this binding fails closed at promotion time.
-        const firstClaudeCodeRelay = outcome.relayResults.find(
-          (d) => d.connectorName === 'claude-code',
-        );
-        if (firstClaudeCodeRelay === undefined) {
+        const firstClaudeCodeReceipt = traceEntries.find((entry) => entry.kind === 'relay.receipt');
+        const cliVersion =
+          firstClaudeCodeReceipt?.kind === 'relay.receipt'
+            ? String(firstClaudeCodeReceipt.data?.cli_version ?? '')
+            : '';
+        if (cliVersion.length === 0) {
           throw new Error(
-            'AGENT_SMOKE fingerprint promotion: no claude-code relay result captured (CompiledFlowRunResult.relayResults empty for connector=claude-code)',
+            'AGENT_SMOKE fingerprint promotion: no claude-code relay receipt with cli_version captured',
           );
         }
-        const cliVersion = firstClaudeCodeRelay.cli_version;
-        if (cliVersion.length === 0 || /\(unknown\)/.test(cliVersion)) {
+        if (/\(unknown\)/.test(cliVersion)) {
           throw new Error(
             `AGENT_SMOKE fingerprint promotion: cli_version "${cliVersion}" is empty or sentinel; refusing to write a fingerprint that audit Check 30 will reject`,
           );
