@@ -1,4 +1,4 @@
-import type { BlockCatalog, Schematic, ValidationResult } from './types';
+import type { BlockCatalog, Schematic } from './types';
 
 export async function listFlows(): Promise<string[]> {
   const r = await fetch('/api/flows');
@@ -22,15 +22,6 @@ export async function saveSchematic(
 ): Promise<{ ok: boolean; errors?: unknown[] }> {
   const r = await fetch(`/api/flows/${id}/schematic`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(schematic),
-  });
-  return r.json();
-}
-
-export async function validateSchematic(schematic: Schematic): Promise<ValidationResult> {
-  const r = await fetch('/api/validate', {
-    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(schematic),
   });

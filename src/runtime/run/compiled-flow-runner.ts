@@ -106,7 +106,7 @@ export async function runCompiledFlowWithWaiting(
       ...(options.childCompiledFlowResolver === undefined
         ? {}
         : { childCompiledFlowResolver: options.childCompiledFlowResolver }),
-      childRunner: options.childRunner ?? runCompiledFlowChild,
+      childRunner: options.childRunner ?? runCompiledFlow,
       ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
       ...(options.evidencePolicy === undefined ? {} : { evidencePolicy: options.evidencePolicy }),
       ...(options.worktreeRunner === undefined ? {} : { worktreeRunner: options.worktreeRunner }),
@@ -129,10 +129,4 @@ export async function runCompiledFlow(options: CompiledFlowRunOptions): Promise<
     );
   }
   return result;
-}
-
-export async function runCompiledFlowChild(
-  options: CompiledFlowRunOptions,
-): Promise<GraphRunResult> {
-  return await runCompiledFlow(options);
 }

@@ -25,7 +25,7 @@ import type {
   CompiledFlowRunner,
   WorktreeRunner,
 } from './child-runner.js';
-import { runCompiledFlowChild } from './compiled-flow-runner.js';
+import { runCompiledFlow } from './compiled-flow-runner.js';
 import {
   type GraphRunResult,
   executeExecutableFlow,
@@ -372,7 +372,7 @@ export async function resumeCompiledFlow(
     ...(options.childCompiledFlowResolver === undefined
       ? {}
       : { childCompiledFlowResolver: options.childCompiledFlowResolver }),
-    childRunner: options.childRunner ?? runCompiledFlowChild,
+    childRunner: options.childRunner ?? runCompiledFlow,
     ...(requestContext.projectRoot === undefined
       ? {}
       : { projectRoot: requestContext.projectRoot }),

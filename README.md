@@ -331,6 +331,10 @@ folder and start the task again from scratch.
   repo.
 - **[`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md):** Canonical vocabulary
   for Circuit.
+- **[`docs/architecture/runtime.md`](docs/architecture/runtime.md):** Runtime
+  architecture and run-folder ownership.
+- **[`docs/positioning-and-strategy.md`](docs/positioning-and-strategy.md):**
+  Product positioning notes and current strategy context.
 - **[`docs/contracts/`](docs/contracts/):** Engine contracts (config,
   connector, run, step, flow, selection, continuity, skill, stage).
 - **[`docs/flows/`](docs/flows/):** Flow design notes and the block catalog.

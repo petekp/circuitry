@@ -1,14 +1,14 @@
 import { join as joinPath } from 'node:path';
+import { buildFanoutAggregate } from '../../shared/fanout-aggregate-report.js';
+import { evaluateFanoutJoinPolicy } from '../../shared/fanout-join-policy.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepOutcome } from '../domain/step.js';
-import { buildFanoutAggregate } from '../fanout/aggregate-report.js';
 import {
   branchNeedsWorktree,
   executeRelayFanoutBranch,
   executeSubRunFanoutBranch,
 } from '../fanout/branch-execution.js';
 import { expandFanoutBranches } from '../fanout/branch-expansion.js';
-import { evaluateFanoutJoinPolicy } from '../fanout/join-policy.js';
 import type { BranchOutcome, FanoutJoinPolicy } from '../fanout/types.js';
 import { gitWorktreeRunner } from '../fanout/worktree.js';
 import type { FanoutStep } from '../manifest/executable-flow.js';

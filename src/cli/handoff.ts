@@ -39,7 +39,7 @@ interface HandoffArgs {
   readonly json: boolean;
 }
 
-export interface HandoffMainOptions {
+interface HandoffMainOptions {
   readonly now?: () => Date;
 }
 
@@ -1251,13 +1251,3 @@ export async function runHandoffCommand(
     return 1;
   }
 }
-
-export const handoffPathsForTests = {
-  continuityRoot,
-  recordsRoot,
-  indexPath,
-  recordPath,
-  operatorSummaryPath,
-  activeRunPath,
-  handoffResultPath,
-};

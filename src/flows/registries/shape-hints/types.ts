@@ -19,7 +19,7 @@
 //
 // To add a new flow's relay shape hint, an author writes:
 //   1. The schema for the report body in src/flows/<wf>/reports.ts
-//   2. A ShapeHint export in src/flows/<wf>/relay-hints.ts
+//   2. A SchemaShapeHint or StructuralShapeHint export in src/flows/<wf>/relay-hints.ts
 //   3. Register it on the package's `relayReports[].relayHint`
 
 import type { CompiledFlow } from '../../../schemas/compiled-flow.js';
@@ -38,5 +38,3 @@ export interface StructuralShapeHint {
   match(step: RelayStep): boolean;
   readonly instruction: string;
 }
-
-export type ShapeHint = SchemaShapeHint | StructuralShapeHint;

@@ -46,7 +46,7 @@ interface FixturePolicyArgs {
   readonly flowRoot?: string;
 }
 
-export function pathIsInside(parent: string, child: string): boolean {
+function pathIsInside(parent: string, child: string): boolean {
   const rel = relative(parent, child);
   return rel.length === 0 || (!rel.startsWith('..') && !rel.startsWith('/'));
 }

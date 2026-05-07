@@ -9,7 +9,7 @@
 
 import type { Block, BlockCatalog, Schematic, SchematicStep } from './types';
 
-export type ExecutionKind = 'compose' | 'relay' | 'verification' | 'checkpoint' | 'sub-run';
+type ExecutionKind = 'compose' | 'relay' | 'verification' | 'checkpoint' | 'sub-run';
 
 export type StepRunner =
   | 'circuit'
@@ -26,7 +26,7 @@ export type DesignerEntryMode = {
   description: string;
 };
 
-export type DesignerStage = {
+type DesignerStage = {
   canonical: string;
   id: string;
   title: string;
@@ -36,7 +36,7 @@ export type DesignerStage = {
 // Plain-English description of a single route outcome on a single step,
 // resolved against the active mode (so a `lite` override shows the lite
 // target, not the default).
-export type DesignerRouteSummary = {
+type DesignerRouteSummary = {
   name: string;
   authoredTarget: string;
   effectiveTarget: string;
@@ -47,7 +47,7 @@ export type DesignerRouteSummary = {
   plainEnglish: string;
 };
 
-export type DesignerRouteOverrideSummary = {
+type DesignerRouteOverrideSummary = {
   routeName: string;
   modeName: string;
   target: string;
@@ -55,13 +55,13 @@ export type DesignerRouteOverrideSummary = {
   plainEnglish: string;
 };
 
-export type DesignerCheckpointChoice = {
+type DesignerCheckpointChoice = {
   id: string;
   label: string;
   description: string | null;
 };
 
-export type DesignerCheckpointSummary = {
+type DesignerCheckpointSummary = {
   prompt: string;
   choices: DesignerCheckpointChoice[];
   safeDefaultChoice: string | null;
@@ -71,7 +71,7 @@ export type DesignerCheckpointSummary = {
 // What the user sees for a step's prompt before any runtime templating
 // happens. We label this "AI instructions" rather than "prompt" — exact
 // run-time wording depends on context the designer does not have.
-export type DesignerPromptPreview = {
+type DesignerPromptPreview = {
   kind: 'relay' | 'checkpoint' | 'compose-or-verify' | 'sub-run';
   // Short title shown in the inspector header, e.g. "AI instructions" or
   // "Question for you".
@@ -84,7 +84,7 @@ export type DesignerPromptPreview = {
   responseShape: string | null;
 };
 
-export type DesignerSelectionSummary = {
+type DesignerSelectionSummary = {
   source: 'authored' | 'inherited';
   // Plain-English summary line shown by default, e.g.
   // "No AI settings on this step."
@@ -97,8 +97,8 @@ export type DesignerSelectionSummary = {
 // Grouped raw fields surfaced inside the Advanced view. We group them so
 // the inspector can render distinct cards (writes / check / protocol /
 // inputs / outputs) without each tab knowing the schema.
-export type DesignerAdvancedField = { label: string; value: string };
-export type DesignerAdvancedGroup = {
+type DesignerAdvancedField = { label: string; value: string };
+type DesignerAdvancedGroup = {
   id: 'inputs-outputs' | 'writes' | 'check' | 'protocol-execution';
   title: string;
   fields: DesignerAdvancedField[];

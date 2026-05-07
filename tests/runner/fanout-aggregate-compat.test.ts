@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildFanoutAggregate } from '../../src/runtime/fanout/aggregate-report.js';
 import type { FanoutAggregateBody } from '../../src/shared/fanout-aggregate-report.js';
+import { buildFanoutAggregate } from '../../src/shared/fanout-aggregate-report.js';
 
 describe('fanout aggregate report', () => {
   it('builds the durable aggregate report shape from branch outcomes', () => {
@@ -62,7 +62,7 @@ describe('fanout aggregate report', () => {
     } satisfies FanoutAggregateBody<'pick-winner'>);
   });
 
-  it('keeps runtime aggregate output identical to the shared helper', () => {
+  it('omits the winner branch when none is selected', () => {
     const outcomes = [
       {
         branch_id: 'a',
@@ -77,8 +77,8 @@ describe('fanout aggregate report', () => {
       },
     ];
 
-    expect(buildFanoutAggregate('aggregate-only', outcomes)).toEqual(
-      buildFanoutAggregate('aggregate-only', outcomes, undefined),
+    expect(buildFanoutAggregate('aggregate-only', outcomes, undefined)).not.toHaveProperty(
+      'winner_branch_id',
     );
   });
 });

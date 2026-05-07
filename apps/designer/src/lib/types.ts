@@ -2,7 +2,7 @@
 // The server is the source of truth; these types exist for editor convenience.
 // Unknown fields pass through opaquely on save so we never drop content.
 
-export type FlowSchematicStatus = 'candidate' | 'active' | 'deprecated';
+type FlowSchematicStatus = 'candidate' | 'active' | 'deprecated';
 
 export type SchematicStep = {
   id: string;
@@ -35,17 +35,6 @@ export type ValidationIssue = {
   code?: string;
   path?: (string | number)[];
   message: string;
-};
-
-export type CompatibilityIssue = {
-  item_id?: string;
-  message: string;
-};
-
-export type ValidationResult = {
-  ok: boolean;
-  schemaErrors: ValidationIssue[];
-  compatibilityIssues: CompatibilityIssue[];
 };
 
 export type Block = {

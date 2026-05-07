@@ -18,7 +18,7 @@ interface CreateArgs {
   readonly progress: boolean;
 }
 
-export interface CreateMainOptions {
+interface CreateMainOptions {
   readonly now?: () => Date;
 }
 
@@ -532,14 +532,3 @@ export async function runCreateCommand(
     return 1;
   }
 }
-
-export const createPathsForTests = {
-  customHome,
-  draftRoot,
-  publishedRoot,
-  flowRoot,
-  commandRoot,
-  manifestPath,
-  resultPath,
-  summaryPath,
-};
