@@ -1,24 +1,29 @@
 # V2 Public Runtime Import Path Policy
 
-Date: 2026-05-06
+Date: 2026-05-07
 
 Current status: superseded for cutover planning by
-`docs/architecture/v2-final-cutover-policy.md`. The release-note-only
-compatibility details below remain as the historical record of the last public
-import-path posture; do not extend this path by default.
+`docs/architecture/v2-final-cutover-policy.md`. The release-note-only wrapper
+deprecation below remains as the public import-path record. It should not be
+read as retained runtime compatibility.
 
 This note records the first approved old public import-path deprecation stage
-for the v2 migration.
+for the v2 migration. The public release-note document lives at
+`docs/release/deprecations/public-runtime-import-paths.md`.
 
 ## Policy
 
-Old `src/runtime/**` paths remain import-compatible. No wrapper is deletion-ready
-and no runtime/import-time warning is approved.
+The listed wrapper paths remain import-compatible. Removed old execution files
+do not get adapters, and retired runtime entrypoints fail closed instead of
+preserving old behavior. No wrapper deletion, package export change, or
+runtime/import-time warning is approved by this note.
 
-The first stage is a soft deprecation for the lowest-risk old helper and
-flow-authoring paths. Soft deprecation means:
+No wrapper is deletion-ready.
 
-- docs and release wording can tell callers to prefer the neutral owner path;
+The first public stage is a release-note-only soft deprecation for the
+lowest-risk old helper and flow-authoring paths. Soft deprecation means:
+
+- docs and release wording tell callers to prefer the neutral owner path;
 - the old path continues to work;
 - compatibility tests stay in place;
 - production import guards stay in place;
@@ -48,42 +53,37 @@ Prefer the replacement owner for new imports:
 | `src/runtime/compile-schematic-to-flow.ts` | `src/flows/compile-schematic-to-flow.ts` |
 | `src/runtime/router.ts` | `src/flows/router.ts` |
 
-## Release-Note Wording
+## Release Note
 
-Draft release note:
+The release-note deprecation document is
+`docs/release/deprecations/public-runtime-import-paths.md`. It is checked
+against `PUBLIC_RUNTIME_SOFT_DEPRECATED_PATHS` so the public deprecation list
+stays identical to the manifest.
 
-```text
-The old runtime helper import paths listed in the v2 public runtime import-path
-policy are now soft-deprecated. They continue to work during the compatibility
-window, but new code should import from the listed `src/shared/**` or
-`src/flows/**` owner paths. This release does not remove wrappers, change
-package exports, or emit import-time deprecation warnings.
-```
+## Not In This Soft-Deprecation List
 
-## Not Soft-Deprecated Yet
-
-These paths remain supported without soft deprecation:
+These categories are not part of the soft-deprecated wrapper table above:
 
 - connector wrappers under `src/runtime/connectors/**`;
 - catalog and registry wrappers under `src/runtime/catalog-derivations.ts` and
   `src/runtime/registries/**`;
-- `src/runtime/run-status-projection.ts`;
-- `src/runtime/result-writer.ts`;
-- `src/runtime/runner.ts` and `src/runtime/runner-types.ts`;
-- retained runner, handler, trace, checkpoint, reducer, snapshot, and progress
-  files.
+- the run-status wrapper at `src/runtime/run-status-projection.ts`;
+- the old result path helper at `src/runtime/result-writer.ts`;
+- the old public runner surface at `src/runtime/runner.ts` and
+  `src/runtime/runner-types.ts`;
+- retired fail-closed runtime surfaces such as checkpoint resume, checkpoint
+  handler, progress projection, and result writing.
 
 ## Review Boundaries
 
-Review is still required before:
+Use local adversarial review and manifest/test updates before:
 
 - deleting any old wrapper;
 - changing package exports;
 - adding import-time or runtime warnings;
-- soft-deprecating connector, registry, run-status, result-writer, public
-  runner, retained handler, retained trace, retained checkpoint, or saved-state
-  paths;
-- changing public compatibility behavior;
-- changing retained/v1 checkpoint folder behavior;
-- deleting retained runner/handler oracle tests;
-- starting old runtime deletion.
+- soft-deprecating connector, registry, run-status, result-writer, or public
+  runner paths;
+- changing the fail-closed retired-runtime behavior.
+
+Do not prepare an external review packet for those steps by default. Escalate
+only if a new ambiguity appears that local review and tests cannot resolve.

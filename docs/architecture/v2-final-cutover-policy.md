@@ -1,6 +1,6 @@
 # Core-v2 Final Cutover Policy
 
-Date: 2026-05-06
+Date: 2026-05-07
 
 ## Decision
 
@@ -20,11 +20,15 @@ packet path stops here unless a genuinely new ambiguity appears.
    This run folder was created by the retired runtime. Start a fresh run.
    ```
 
-3. Dead adapter cleanup. Done: the unused retained/v1 run-status projector is
-   deleted. Retained fresh-run internals stay in place until a separate runtime
-   removal batch.
+3. Dead adapter cleanup. Done: the retained/v1 run-status projector and retained
+   compatibility facades are deleted. The run-status dispatcher now fails closed
+   for unmarked retired run folders.
 4. Doc compression. Done: the tracked numbered checkpoint notes are compressed
    into `docs/architecture/v2-checkpoint-history.md`.
+5. Old runtime implementation removal. Done in focused batches: old handler,
+   trace, reducer, snapshot, and relay-selection implementation files are
+   removed. Old runner, checkpoint, progress, and result-writer entrypoints
+   remain only as fail-closed public stubs.
 
 ## Guardrails
 
@@ -37,6 +41,7 @@ packet path stops here unless a genuinely new ambiguity appears.
 
 ## Immediate Next Step
 
-Choose the next runtime-removal batch. The likely next move is to inventory the
-retained fresh-run fallback, retained direct tests, and old runtime wrappers now
-that old run folders fail closed.
+Choose the next wrapper-retirement or package-surface batch. The likely next
+move is to decide whether remaining old `src/runtime/**` compatibility wrappers
+should stay as source-only internal import bridges, be moved behind a dedicated
+compat package surface, or be removed with manifest/test updates.

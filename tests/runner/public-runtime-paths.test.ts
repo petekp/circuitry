@@ -23,6 +23,21 @@ function importPathFrom(oldPath: string, ownerPath: string): string {
   return rel.startsWith('.') ? rel : `./${rel}`;
 }
 
+function sectionBetween(source: string, heading: string): string {
+  const start = source.indexOf(heading);
+  expect(start, `${heading} exists`).toBeGreaterThanOrEqual(0);
+  const nextHeading = source.indexOf('\n## ', start + heading.length);
+  return nextHeading === -1 ? source.slice(start) : source.slice(start, nextHeading);
+}
+
+function runtimePathsIn(source: string): string[] {
+  return Array.from(source.matchAll(/`(src\/runtime\/[^`]+\.ts)`/g), (match) => {
+    const path = match[1];
+    if (path === undefined) throw new Error('runtime path capture missing');
+    return path;
+  }).sort();
+}
+
 describe('public runtime import-path manifest', () => {
   it('covers every source file under src/runtime', () => {
     const runtimeFiles = collectSourceFiles('src/runtime').sort();
@@ -198,7 +213,51 @@ describe('public runtime import-path manifest', () => {
       expect(policy, `${ownerPath} appears in the policy`).toContain(ownerPath);
     }
     expect(policy).toContain('no import-time warning is emitted');
-    expect(policy).toContain('This release does not remove wrappers');
+    expect(policy).toContain('No wrapper is deletion-ready');
+    expect(policy).toContain('docs/release/deprecations/public-runtime-import-paths.md');
+  });
+
+  it('keeps the release deprecation note aligned with the manifest', () => {
+    const releaseNotePath = 'docs/release/deprecations/public-runtime-import-paths.md';
+    expect(existsSync(releaseNotePath), `${releaseNotePath} exists`).toBe(true);
+
+    const releaseNote = readFileSync(releaseNotePath, 'utf8');
+    const deprecatedSection = sectionBetween(releaseNote, '## Deprecated For New Imports');
+    const softDeprecatedPaths = PUBLIC_RUNTIME_SOFT_DEPRECATED_PATHS.map(
+      (entry) => entry.oldPath,
+    ).sort();
+
+    expect(runtimePathsIn(deprecatedSection)).toEqual(softDeprecatedPaths);
+
+    for (const entry of PUBLIC_RUNTIME_SOFT_DEPRECATED_PATHS) {
+      expect(entry.currentOwnerPath, `${entry.oldPath} has a release-note replacement`).toEqual(
+        expect.any(String),
+      );
+      const ownerPath = entry.currentOwnerPath as string;
+      expect(deprecatedSection, `${entry.oldPath} appears in the release note`).toContain(
+        entry.oldPath,
+      );
+      expect(deprecatedSection, `${ownerPath} appears in the release note`).toContain(ownerPath);
+    }
+
+    for (const entry of PUBLIC_RUNTIME_PATHS.filter(
+      (candidate) => candidate.deprecationStage !== 'soft-deprecated',
+    )) {
+      expect(deprecatedSection, `${entry.oldPath} is not presented as deprecated`).not.toContain(
+        entry.oldPath,
+      );
+    }
+
+    expect(releaseNote).toContain('these listed wrapper paths continue to work');
+    expect(releaseNote).toContain('no import-time or runtime warning is emitted');
+    expect(releaseNote).toContain('does not delete wrappers');
+    expect(releaseNote).toContain('package exports do not change');
+    expect(releaseNote).toContain('connector wrappers');
+    expect(releaseNote).toContain('catalog and registry wrappers');
+    expect(releaseNote).toContain('run-status wrapper');
+    expect(releaseNote).toContain('old result path helper');
+    expect(releaseNote).toContain('old public runner surface');
+    expect(releaseNote).toContain('retired fail-closed runtime surfaces');
   });
 
   it('keeps build/package visibility assumptions explicit', () => {

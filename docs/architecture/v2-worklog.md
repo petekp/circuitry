@@ -7587,3 +7587,100 @@ Concerns:
 
 Next recommended action: run focused validation and full `npm run verify`, then
 continue only with behavior-preserving compatibility packaging or proof work.
+
+## 2026-05-06 - Phase 5.59 Public Import-Path Deprecation Artifact
+
+Goal: promote the existing low-risk old runtime path soft-deprecation list to a
+public release-note deprecation document without changing runtime behavior.
+
+Files inspected:
+
+- `src/compat/public-runtime-paths.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-checkpoint-5.58.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/release/**`
+- `HANDOFF.md`
+
+Files changed:
+
+- `docs/release/deprecations/public-runtime-import-paths.md`
+- `tests/runner/public-runtime-paths.test.ts`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-checkpoint-5.59.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts`: initially failed
+  on a checked wording mismatch, then passed after the release note used the
+  literal no-deletion promise.
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/shared-helper-compat.test.ts tests/runner/catalog-derivations.test.ts tests/runner/connector-shared-compat.test.ts tests/runner/run-status-facade.test.ts tests/runner/result-path-compat.test.ts tests/runner/fanout-aggregate-compat.test.ts tests/runner/json-report-compat.test.ts tests/runner/recovery-route-compat.test.ts tests/runner/terminal-verdict-helper.test.ts tests/properties/visible/fanout-join-policy.test.ts`:
+  passed.
+- `npm run check`: passed after tightening the markdown path parser type guard.
+- `npm run lint`: initially failed on formatting, then passed after formatting.
+- `npm run build`: passed.
+- `npx vitest run tests/contracts/terminology-active-surface.test.ts tests/runner/public-runtime-paths.test.ts`:
+  passed after replacing active test wording that used the blocked term
+  caught by the terminology guard.
+- `npm run verify`: initially failed on the blocked term and one unrelated
+  borderline CLI-router timeout, then passed on the clean rerun.
+- `git diff --check`: passed.
+
+Behavior changed? No. This is public release-note documentation and manifest
+proof only. Old paths still import, wrappers remain, package exports do not
+change, and no import-time/runtime warnings are emitted.
+
+Concerns:
+
+- This does not make any wrapper deletion-ready. Review is still required before
+  additional deprecation categories, warnings, package export changes, wrapper
+  deletion, old import-path retirement, or old runtime deletion.
+
+## 2026-05-07 - Final Cutover Doc Compression
+
+Goal: compress the historical checkpoint/review-packet posture into living docs
+after the final cutover removed or failed closed the old runtime surfaces.
+
+Files changed:
+
+- `docs/architecture/v2-final-cutover-policy.md`
+- `docs/architecture/v2-checkpoint-history.md`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/release/deprecations/public-runtime-import-paths.md`
+- `tests/runner/public-runtime-paths.test.ts`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+Cutover facts captured:
+
+- retained/v1 run folders fail closed with:
+  `This run folder was created by the retired runtime. Start a fresh run.`
+- old runner, checkpoint, progress, result-writer, and checkpoint-handler
+  public surfaces fail closed instead of adapting old runs;
+- retained handler, trace, reducer, snapshot, relay-selection, retained
+  compatibility facade, and v1 run-status projector implementation files are
+  removed;
+- the public import-path note is now scoped to listed wrapper paths, not retained
+  runtime compatibility.
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/run-status-projection.test.ts tests/runner/result-path-compat.test.ts tests/unit/runtime/progress-projector.test.ts tests/runner/runner-relay-provenance.test.ts tests/contracts/relay-transcript-schema.test.ts`: passed after restoring the checked policy sentence.
+- `npm run verify`: passed.
+
+Behavior changed? Documentation and release-note wording only in this group. It
+records the already-implemented final cutover and removes stale review-packet
+language from the active docs.
+
+Next recommended action: pick one remaining old `src/runtime/**` wrapper
+category and decide whether to keep, package, or remove it with manifest,
+release-note, and test updates. External review is not warranted unless a new
+package-surface ambiguity appears.

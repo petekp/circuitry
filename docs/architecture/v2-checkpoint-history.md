@@ -1,6 +1,6 @@
 # Core-v2 Checkpoint History
 
-Date: 2026-05-06
+Date: 2026-05-07
 
 ## Compression
 
@@ -35,8 +35,10 @@ ambiguity appears, write a short named decision note instead.
 - The later work moved shared helpers and flow-owned registries out from old
   runtime ownership while keeping compatibility wrappers where they were still
   needed.
-- The final cutover work reset policy, made retired run folders fail closed, and
-  removed the unused retained/v1 run-status projector.
+- The final cutover work reset policy, made retired run folders fail closed,
+  replaced old runner/checkpoint/progress/result entrypoints with fail-closed
+  stubs, and removed the retained handler, trace, reducer, snapshot, and relay
+  selection implementation code.
 
 ## Living Docs
 
