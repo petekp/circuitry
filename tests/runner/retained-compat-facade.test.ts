@@ -431,7 +431,6 @@ describe('retained runtime compatibility facade', () => {
       'tests/runner/build-checkpoint-exec.test.ts',
       'tests/runner/checkpoint-handler-direct.test.ts',
       'tests/runner/codex-relay-roundtrip.test.ts',
-      'tests/runner/fresh-run-root.test.ts',
       'tests/runner/run-status-projection.test.ts',
       'tests/unit/runtime/event-log-round-trip.test.ts',
       'tests/unit/runtime/progress-projector.test.ts',

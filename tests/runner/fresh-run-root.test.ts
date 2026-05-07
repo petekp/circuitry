@@ -11,28 +11,17 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  claimRetainedFreshRunFolder as claimFreshRunFolder,
-  releaseRetainedFreshRunFolderClaim as releaseFreshRunFolderClaim,
-  runRetainedCompiledFlow as runCompiledFlow,
-} from '../../src/compat/retained-runtime.js';
-import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
-import { snapshotPath } from '../../src/runtime/snapshot-writer.js';
-import { traceEntryLogPath } from '../../src/runtime/trace-writer.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
-import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
+import type { ExecutorRegistryV2 } from '../../src/core-v2/executors/index.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { manifestSnapshotPathV2 } from '../../src/core-v2/run/manifest-snapshot.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
-import { manifestSnapshotPath } from '../../src/shared/manifest-snapshot.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 
 const FIXTURE_PATH = resolve('generated/flows/runtime-proof/circuit.json');
 
-function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
-  const bytes = readFileSync(FIXTURE_PATH);
-  const raw: unknown = JSON.parse(bytes.toString('utf8'));
-  return { flow: CompiledFlow.parse(raw), bytes };
+function loadFixture(): { bytes: Buffer } {
+  return { bytes: readFileSync(FIXTURE_PATH) };
 }
 
 function deterministicNow(startMs: number): () => Date {
@@ -40,21 +29,10 @@ function deterministicNow(startMs: number): () => Date {
   return () => new Date(startMs + n++ * 1000);
 }
 
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'run-folder reuse can corrupt prior run evidence',
-    acceptance_evidence:
-      'fresh run-folder guard rejects reuse before trace_entries, manifest, state, or result bytes change',
-    alternate_framing:
-      'implement resume mode — rejected because this slice only adds a fresh-run guard',
-  };
-}
-
 function stubRelayer(): RelayFn {
   return {
     connectorName: 'claude-code',
-    relay: async (input: ClaudeCodeRelayInput): Promise<RelayResult> => ({
+    relay: async (input): Promise<RelayResult> => ({
       request_payload: input.prompt,
       receipt_id: 'stub-receipt-fresh-run-folder',
       result_body: '{"verdict":"ok"}',
@@ -64,34 +42,49 @@ function stubRelayer(): RelayFn {
   };
 }
 
+function composeExecutor(): Pick<ExecutorRegistryV2, 'compose'> {
+  return {
+    compose: async (step, context) => {
+      if (step.kind !== 'compose') throw new Error('expected compose step');
+      const report = step.writes?.report;
+      if (report !== undefined) {
+        const reportPath = context.files.resolve(report);
+        mkdirSync(dirname(reportPath), { recursive: true });
+        writeFileSync(reportPath, '{"summary":"fresh run guard fixture"}\n', 'utf8');
+      }
+      return { route: 'pass', details: { report: report?.path } };
+    },
+  };
+}
+
 async function closeFixtureRun(input: {
   runFolder: string;
   runId: string;
   goal: string;
   startMs: number;
 }): Promise<void> {
-  const { flow, bytes } = loadFixture();
-  await runCompiledFlow({
-    runFolder: input.runFolder,
-    flow,
+  const { bytes } = loadFixture();
+  await runCompiledFlowV2({
+    runDir: input.runFolder,
     flowBytes: bytes,
-    runId: RunId.parse(input.runId),
+    runId: input.runId,
     goal: input.goal,
     depth: 'standard',
-    change_kind: change_kind(),
     now: deterministicNow(input.startMs),
     relayer: stubRelayer(),
+    executors: composeExecutor(),
   });
+}
+
+function tracePath(runFolder: string): string {
+  return join(runFolder, 'trace.ndjson');
 }
 
 function persistentRunBytes(runFolder: string): ReadonlyMap<string, string> {
   return new Map(
-    [
-      traceEntryLogPath(runFolder),
-      manifestSnapshotPath(runFolder),
-      snapshotPath(runFolder),
-      resultPath(runFolder),
-    ].map((path) => [path, readFileSync(path, 'utf8')] as const),
+    [tracePath(runFolder), manifestSnapshotPathV2(runFolder), resultPath(runFolder)].map(
+      (path) => [path, readFileSync(path, 'utf8')] as const,
+    ),
   );
 }
 
@@ -105,28 +98,8 @@ afterEach(() => {
   rmSync(runFolderBase, { recursive: true, force: true });
 });
 
-describe('runtime-safety-floor fresh run-folder guard', () => {
-  it('claims an empty run-folder before the first persistent report is written', () => {
-    const runFolder = join(runFolderBase, 'claimed-before-first-write');
-    const claim = claimFreshRunFolder(runFolder);
-    try {
-      expect(existsSync(traceEntryLogPath(runFolder))).toBe(false);
-      expect(existsSync(manifestSnapshotPath(runFolder))).toBe(false);
-      expect(existsSync(snapshotPath(runFolder))).toBe(false);
-      expect(existsSync(resultPath(runFolder))).toBe(false);
-
-      expect(() => claimFreshRunFolder(runFolder)).toThrow(/run-folder reuse.*checkpoint resume/i);
-
-      expect(existsSync(traceEntryLogPath(runFolder))).toBe(false);
-      expect(existsSync(manifestSnapshotPath(runFolder))).toBe(false);
-      expect(existsSync(snapshotPath(runFolder))).toBe(false);
-      expect(existsSync(resultPath(runFolder))).toBe(false);
-    } finally {
-      releaseFreshRunFolderClaim(claim);
-    }
-  });
-
-  it('rejects run-folder reuse before trace_entries, manifest, state, or result bytes change', async () => {
+describe('core-v2 fresh run directory guard', () => {
+  it('rejects run-folder reuse before trace, manifest, or result bytes change', async () => {
     const runFolder = join(runFolderBase, 'reused-root');
     await closeFixtureRun({
       runFolder,
@@ -143,7 +116,7 @@ describe('runtime-safety-floor fresh run-folder guard', () => {
         goal: 'second run must not mutate this root',
         startMs: Date.UTC(2026, 3, 24, 15, 0, 0),
       }),
-    ).rejects.toThrow(/run-folder reuse.*checkpoint resume/i);
+    ).rejects.toThrow(/fresh run directory/i);
 
     for (const [path, contents] of before) {
       expect(readFileSync(path, 'utf8')).toBe(contents);
@@ -161,31 +134,43 @@ describe('runtime-safety-floor fresh run-folder guard', () => {
       startMs: Date.UTC(2026, 3, 24, 16, 0, 0),
     });
 
-    expect(existsSync(traceEntryLogPath(runFolder))).toBe(true);
-    expect(existsSync(manifestSnapshotPath(runFolder))).toBe(true);
-    expect(existsSync(snapshotPath(runFolder))).toBe(true);
+    expect(existsSync(tracePath(runFolder))).toBe(true);
+    expect(existsSync(manifestSnapshotPathV2(runFolder))).toBe(true);
     expect(existsSync(resultPath(runFolder))).toBe(true);
   });
 
-  it('rejects an existing file or symlink run-folder with the reuse/no-resume message', () => {
+  it('rejects an existing file or symlink run-folder before writing run files', async () => {
     const fileRoot = join(runFolderBase, 'file-root');
     writeFileSync(fileRoot, 'not a directory');
-    expect(() => claimFreshRunFolder(fileRoot)).toThrow(/run-folder reuse.*checkpoint resume/i);
+    await expect(
+      closeFixtureRun({
+        runFolder: fileRoot,
+        runId: '69000000-0000-0000-0000-000000000204',
+        goal: 'file root must not be reused',
+        startMs: Date.UTC(2026, 3, 24, 16, 30, 0),
+      }),
+    ).rejects.toThrow(/fresh run directory/i);
     expect(readFileSync(fileRoot, 'utf8')).toBe('not a directory');
 
     const symlinkTarget = join(runFolderBase, 'symlink-target');
     const symlinkRoot = join(runFolderBase, 'symlink-root');
     mkdirSync(symlinkTarget, { recursive: true });
     symlinkSync(symlinkTarget, symlinkRoot);
-    expect(() => claimFreshRunFolder(symlinkRoot)).toThrow(/run-folder reuse.*checkpoint resume/i);
-    expect(existsSync(traceEntryLogPath(symlinkTarget))).toBe(false);
+    await expect(
+      closeFixtureRun({
+        runFolder: symlinkRoot,
+        runId: '69000000-0000-0000-0000-000000000205',
+        goal: 'symlink root must not be followed',
+        startMs: Date.UTC(2026, 3, 24, 16, 45, 0),
+      }),
+    ).rejects.toThrow(/fresh run directory/i);
+    expect(existsSync(tracePath(symlinkTarget))).toBe(false);
   });
 
-  it('rejects each canonical run report marker before writing new bytes', async () => {
+  it('rejects each core-v2 run file marker before writing new bytes', async () => {
     const cases = [
-      ['trace_entries', traceEntryLogPath],
-      ['manifest', manifestSnapshotPath],
-      ['state', snapshotPath],
+      ['trace', tracePath],
+      ['manifest', manifestSnapshotPathV2],
       ['result', resultPath],
     ] as const;
 
@@ -202,7 +187,7 @@ describe('runtime-safety-floor fresh run-folder guard', () => {
           goal: `marker ${label} must reject reuse`,
           startMs: Date.UTC(2026, 3, 24, 17, 0, 0),
         }),
-      ).rejects.toThrow(/run-folder reuse.*checkpoint resume/i);
+      ).rejects.toThrow(/fresh run directory/i);
 
       expect(readFileSync(markerPath, 'utf8')).toBe(`sentinel-${label}`);
     }

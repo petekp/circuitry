@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir } from 'node:fs/promises';
+import { lstat, mkdir, readdir } from 'node:fs/promises';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
@@ -142,6 +142,22 @@ function completedStepCountsFromTrace(entries: readonly TraceEntryV2[]): Map<str
 }
 
 async function assertFreshRunDir(runDir: string): Promise<void> {
+  let stat: Awaited<ReturnType<typeof lstat>> | undefined;
+  try {
+    stat = await lstat(runDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    await mkdir(runDir, { recursive: true });
+    stat = await lstat(runDir);
+  }
+  if (stat.isSymbolicLink()) {
+    throw new Error('core-v2 baseline requires a fresh run directory; existing path is a symlink');
+  }
+  if (!stat.isDirectory()) {
+    throw new Error(
+      'core-v2 baseline requires a fresh run directory; existing path is not a directory',
+    );
+  }
   const entries = await readdir(runDir);
   if (entries.length > 0) {
     throw new Error(
@@ -201,10 +217,11 @@ export async function executeExecutableFlowV2WithWaiting(
   options: GraphRunnerOptionsV2,
 ): Promise<GraphExecutionResultV2> {
   assertExecutableFlowV2(flow);
-  await mkdir(options.runDir, { recursive: true });
   const isResume = options.resumeCheckpoint !== undefined;
   if (!isResume) {
     await assertFreshRunDir(options.runDir);
+  } else {
+    await mkdir(options.runDir, { recursive: true });
   }
 
   const runId = options.runId ?? randomUUID();
