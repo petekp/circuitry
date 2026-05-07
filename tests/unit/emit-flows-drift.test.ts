@@ -17,9 +17,11 @@ const projectRoot = resolve(__dirname, '../..');
 const emitScript = resolve(projectRoot, 'scripts/emit-flows.mjs');
 const buildSkillDir = resolve(projectRoot, 'generated/flows/build');
 const stalePath = resolve(buildSkillDir, 'never-a-mode.json');
+const claudeBuildSkillDir = resolve(projectRoot, 'plugins/claude/skills/build');
+const claudeStalePath = resolve(claudeBuildSkillDir, 'never-a-mode.json');
 const codexBuildSkillDir = resolve(projectRoot, 'plugins/circuit/flows/build');
 const codexStalePath = resolve(codexBuildSkillDir, 'never-a-mode.json');
-const runtimeProofClaudeDir = resolve(projectRoot, '.claude-plugin/skills/runtime-proof');
+const runtimeProofClaudeDir = resolve(projectRoot, 'plugins/claude/skills/runtime-proof');
 const runtimeProofCodexDir = resolve(projectRoot, 'plugins/circuit/flows/runtime-proof');
 
 function planted(path: string): boolean {
@@ -54,6 +56,7 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
 
   afterEach(() => {
     removeStaleSiblingIfPresent(stalePath);
+    removeStaleSiblingIfPresent(claudeStalePath);
     removeStaleSiblingIfPresent(codexStalePath);
     removeDirIfPresent(runtimeProofClaudeDir);
     removeDirIfPresent(runtimeProofCodexDir);
@@ -61,6 +64,7 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
 
   it('--check exits 1 and names the stale sibling when one exists', () => {
     plantStaleSibling(stalePath);
+    plantStaleSibling(claudeStalePath);
     plantStaleSibling(codexStalePath);
     const res = spawnSync('node', [emitScript, '--check'], {
       cwd: projectRoot,
@@ -69,14 +73,17 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
     expect(res.status).toBe(1);
     const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
     expect(combined).toContain('generated/flows/build/never-a-mode.json');
+    expect(combined).toContain('plugins/claude/skills/build/never-a-mode.json');
     expect(combined).toContain('plugins/circuit/flows/build/never-a-mode.json');
     expect(combined).toContain('not in the emit plan');
   });
 
   it('emit mode removes a stale sibling on the next run', () => {
     plantStaleSibling(stalePath);
+    plantStaleSibling(claudeStalePath);
     plantStaleSibling(codexStalePath);
     expect(planted(stalePath)).toBe(true);
+    expect(planted(claudeStalePath)).toBe(true);
     expect(planted(codexStalePath)).toBe(true);
     const res = spawnSync('node', [emitScript], {
       cwd: projectRoot,
@@ -84,8 +91,12 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
     });
     expect(res.status).toBe(0);
     expect(planted(stalePath)).toBe(false);
+    expect(planted(claudeStalePath)).toBe(false);
     expect(planted(codexStalePath)).toBe(false);
     expect(res.stdout ?? '').toContain('removed stale generated/flows/build/never-a-mode.json');
+    expect(res.stdout ?? '').toContain(
+      'removed stale plugins/claude/skills/build/never-a-mode.json',
+    );
     expect(res.stdout ?? '').toContain(
       'removed stale plugins/circuit/flows/build/never-a-mode.json',
     );
@@ -102,7 +113,7 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
 
     expect(res.status).toBe(1);
     const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
-    expect(combined).toContain('.claude-plugin/skills/runtime-proof');
+    expect(combined).toContain('plugins/claude/skills/runtime-proof');
     expect(combined).toContain('plugins/circuit/flows/runtime-proof');
     expect(combined).toContain('stale host mirror for internal flow');
   });
@@ -120,7 +131,7 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
     expect(planted(runtimeProofClaudeDir)).toBe(false);
     expect(planted(runtimeProofCodexDir)).toBe(false);
     expect(res.stdout ?? '').toContain(
-      'removed internal host mirror .claude-plugin/skills/runtime-proof',
+      'removed internal host mirror plugins/claude/skills/runtime-proof',
     );
     expect(res.stdout ?? '').toContain(
       'removed internal host mirror plugins/circuit/flows/runtime-proof',

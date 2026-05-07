@@ -1,8 +1,8 @@
 // Sweep flow package.
 //
 // Sweep is routable through /circuit:run and also exposed through a
-// root-authored direct command surface. It has no flow-owned command
-// source because commands/sweep.md is maintained at the root.
+// direct command surface. It has no flow-owned command source because
+// src/commands/sweep.md owns that host command source.
 
 import type { CompiledFlowPackage, CompiledFlowSignal } from '../types.js';
 import { validateSweepBatchAgainstQueue } from './cross-report-validators.js';

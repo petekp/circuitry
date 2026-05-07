@@ -17,7 +17,7 @@ import { reportPathForSchemaInCompiledFlow } from '../../../src/flows/registries
 import { runCrossReportValidator } from '../../../src/flows/registries/cross-report-validators.js';
 import { CompiledFlow } from '../../../src/schemas/compiled-flow.js';
 
-const SWEEP_FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'sweep', 'circuit.json');
+const SWEEP_FIXTURE_PATH = resolve('generated/flows/sweep/circuit.json');
 
 function loadSweepCompiledFlow(): CompiledFlow {
   const raw: unknown = JSON.parse(readFileSync(SWEEP_FIXTURE_PATH, 'utf8'));

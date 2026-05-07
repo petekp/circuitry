@@ -225,7 +225,8 @@ export const CurrentCapabilitySnapshot = z
     router_intents: z.array(RouterIntentRecord),
     commands: z
       .object({
-        root: z.array(z.string().min(1)),
+        source: z.array(z.string().min(1)),
+        claude_plugin: z.array(z.string().min(1)),
         codex_plugin: z.array(z.string().min(1)),
         claude_plugin_skills: z.array(z.string().min(1)),
       })

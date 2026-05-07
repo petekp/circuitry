@@ -29,7 +29,7 @@ import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-const FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'review', 'circuit.json');
+const FIXTURE_PATH = resolve('generated/flows/review/circuit.json');
 
 function loadFixture(): { bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);

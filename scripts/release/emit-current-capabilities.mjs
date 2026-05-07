@@ -229,16 +229,22 @@ function flowRecord(pkg) {
   };
 }
 
+function commandEvidence(id, host) {
+  if (host === 'claude-code') return [`plugins/claude/commands/${id}.md`];
+  if (host === 'codex-plugin') return [`plugins/circuit/commands/${id}.md`];
+  return [`src/commands/${id}.md`];
+}
+
 function commandCapability(id, host, present) {
   return {
-    id: host === 'root' ? `command:${id}` : `command:${host}:${id}`,
+    id: host === 'claude-code' ? `command:${id}` : `command:${host}:${id}`,
     kind: 'flow',
     title: `${host} command ${id}`,
     status: present ? 'implemented' : 'missing',
     summary: present
       ? `Command ${id} is present for ${host}.`
       : `Command ${id} is absent for ${host}.`,
-    evidence: present ? [`commands/${id}.md`] : [],
+    evidence: present ? commandEvidence(id, host) : [],
     readiness_refs: present ? [] : ['REL-004'],
   };
 }
@@ -561,9 +567,13 @@ function hostRecords() {
   return [
     {
       id: 'claude-code-command',
-      status: fileIsPresent('commands/run.md') ? 'partial' : 'missing',
-      summary: 'Claude Code command surface exists but remains model-mediated.',
-      evidence: ['commands/run.md'],
+      status: fileIsPresent('plugins/claude/commands/run.md') ? 'partial' : 'missing',
+      summary: 'Claude Code plugin command surface exists but remains model-mediated.',
+      evidence: [
+        'plugins/claude/.claude-plugin/plugin.json',
+        'plugins/claude/commands/run.md',
+        'plugins/claude/scripts/circuit-next.mjs',
+      ],
       readiness_refs: ['REL-014'],
     },
     {
@@ -623,8 +633,8 @@ function proofCompletionSummary(proofs) {
   };
 }
 
-function supportCapabilities(rootCommands, proofAxesByCapability, proofs, routerIntents) {
-  const commandSet = new Set(rootCommands);
+function supportCapabilities(hostCommands, proofAxesByCapability, proofs, routerIntents) {
+  const commandSet = new Set(hostCommands);
   const proofCompletion = proofCompletionSummary(proofs);
   const planExecutionRouterImplemented = routerIntents.some(
     (intent) => intent.id === 'plan-execution' && intent.status === 'implemented',
@@ -646,7 +656,7 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
       title: 'Review utility',
       status: commandSet.has('review') ? 'implemented' : 'missing',
       summary: 'Standalone Review is present as a flow command.',
-      evidence: ['commands/review.md', 'src/flows/review/schematic.json'],
+      evidence: ['plugins/claude/commands/review.md', 'src/flows/review/schematic.json'],
       axes: {
         outputs: ['review.md'],
         review:
@@ -663,7 +673,7 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
         ? 'Create drafts, validates, and publishes a user-global custom flow package after explicit confirmation.'
         : 'Create utility command is not fully proven in the current command surface.',
       evidence: createImplemented
-        ? ['commands/create.md', 'src/cli/create.ts', 'tests/runner/utility-cli.test.ts']
+        ? ['src/commands/create.md', 'src/cli/create.ts', 'tests/runner/utility-cli.test.ts']
         : [],
       readiness_refs: createImplemented ? [] : ['REL-013'],
       axes: {
@@ -687,7 +697,7 @@ function supportCapabilities(rootCommands, proofAxesByCapability, proofs, router
         ? 'Handoff saves, resumes, and clears explicit continuity records through the CLI.'
         : 'Handoff utility command is not fully proven in the current command surface.',
       evidence: handoffImplemented
-        ? ['commands/handoff.md', 'src/cli/handoff.ts', 'tests/runner/utility-cli.test.ts']
+        ? ['src/commands/handoff.md', 'src/cli/handoff.ts', 'tests/runner/utility-cli.test.ts']
         : [],
       readiness_refs: handoffImplemented ? [] : ['REL-014'],
       axes: {
@@ -845,11 +855,12 @@ async function main() {
   const intentHintsByFlow = implementedIntentHintsByFlow(routerIntents);
   const proofs = loadYamlWithSchema('docs/release/proofs/index.yaml', ProofScenarioIndex);
   const proofAxesByCapability = verifiedProofAxesByCapability(proofs);
-  const rootCommands = listMarkdownBasenames('commands');
+  const sourceCommands = listMarkdownBasenames('src/commands').filter((id) => id !== 'README');
+  const claudeCommands = listMarkdownBasenames('plugins/claude/commands');
   const codexCommands = listMarkdownBasenames('plugins/circuit/commands');
-  const claudeSkills = existsSync(resolve(projectRoot, '.claude-plugin/skills'))
-    ? readdirSync(resolve(projectRoot, '.claude-plugin/skills')).filter((entry) =>
-        statSync(resolve(projectRoot, '.claude-plugin/skills', entry)).isDirectory(),
+  const claudeSkills = existsSync(resolve(projectRoot, 'plugins/claude/skills'))
+    ? readdirSync(resolve(projectRoot, 'plugins/claude/skills')).filter((entry) =>
+        statSync(resolve(projectRoot, 'plugins/claude/skills', entry)).isDirectory(),
       )
     : [];
   const connectors = connectorRecords(connectorSchemas);
@@ -860,13 +871,13 @@ async function main() {
     ...flows.flatMap(modeCapabilities),
     ...flows.flatMap(routeCapabilities),
     ...routerCapabilities(routerIntents),
-    ...rootCommands.map((id) => commandCapability(id, 'root', true)),
+    ...claudeCommands.map((id) => commandCapability(id, 'claude-code', true)),
     ...['create', 'handoff', 'migrate', 'sweep']
-      .filter((id) => !rootCommands.includes(id))
-      .map((id) => commandCapability(id, 'root', false)),
+      .filter((id) => !claudeCommands.includes(id))
+      .map((id) => commandCapability(id, 'claude-code', false)),
     ...connectorCapabilities(connectors),
     ...hostCapabilities(hosts),
-    ...supportCapabilities(rootCommands, proofAxesByCapability, proofs, routerIntents),
+    ...supportCapabilities(claudeCommands, proofAxesByCapability, proofs, routerIntents),
   ].sort((a, b) => a.id.localeCompare(b.id));
 
   const snapshot = CurrentCapabilitySnapshot.parse({
@@ -875,7 +886,8 @@ async function main() {
     flows,
     router_intents: routerIntents,
     commands: {
-      root: rootCommands,
+      source: sourceCommands,
+      claude_plugin: claudeCommands,
       codex_plugin: codexCommands,
       claude_plugin_skills: claudeSkills.sort(),
     },

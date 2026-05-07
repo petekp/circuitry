@@ -1,8 +1,8 @@
 // Migrate flow package.
 //
-// Routable via /circuit:run and also exposed through a root-authored
-// direct command surface. It has no flow-owned command source because
-// commands/migrate.md is maintained at the root.
+// Routable via /circuit:run and also exposed through a direct command
+// surface. It has no flow-owned command source because
+// src/commands/migrate.md owns that host command source.
 
 import type { CompiledFlowPackage, CompiledFlowSignal } from '../types.js';
 import { migrateInventoryShapeHint } from './relay-hints.js';

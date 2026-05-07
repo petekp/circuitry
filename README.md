@@ -36,8 +36,12 @@ Then run a flow through the local launcher:
 ```
 
 The CLI router classifies your task and runs the right flow. To use the
-slash commands inside Claude Code, point your plugin loader at this checkout
-and reload — the generated `commands/` directory is the Claude Code surface.
+slash commands inside Claude Code, load the self-contained plugin package:
+
+```bash
+claude --plugin-dir ./plugins/claude
+```
+
 To use Circuit from Codex, install or refresh the Codex plugin package and ask
 Codex to use `@Circuit`. Codex can choose the best bundled Circuit flow
 skill from your natural-language request.

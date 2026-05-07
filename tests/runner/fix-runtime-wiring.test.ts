@@ -20,7 +20,7 @@ import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-const FIX_LITE_FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'fix', 'lite.json');
+const FIX_LITE_FIXTURE_PATH = resolve('generated/flows/fix/lite.json');
 
 function loadLiteFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIX_LITE_FIXTURE_PATH) };

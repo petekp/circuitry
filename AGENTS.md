@@ -4,7 +4,7 @@
 
 `circuit-next` is a Claude Code plugin that runs configurable developer
 flows. The product surface is `src/` (TypeScript), `tests/`, the
-generated `commands/` and `.claude-plugin/`, the flow packages
+generated host plugin packages under `plugins/`, the flow packages
 under `src/flows/`, the engine contracts under `docs/contracts/`,
 and the behavioral notes under `specs/behavioral/`.
 
@@ -58,15 +58,19 @@ npm run verify:fast  # check + lint + build + test:fast + drift (~40% faster)
 `verify` is the canonical check and what CI enforces. Use `verify:fast`
 during iterative loops; run full `verify` before claiming a change is
 done. Both must pass before commit on changes to `src/`, `tests/`, or
-`commands/`.
+generated host packages.
 
 ## Where things live
 
 | File or output | Path |
 |---|---|
-| Plugin manifest | `.claude-plugin/plugin.json` |
-| Slash commands | `commands/<id>.md` (flow-owned commands are generated from `src/flows/<id>/command.md`; root-authored router/direct commands live in `commands/`) |
-| Compiled plugin output (generated) | `.claude-plugin/skills/<id>/circuit.json` for public flows |
+| Claude Code plugin package | `plugins/claude/` |
+| Claude Code plugin manifest | `plugins/claude/.claude-plugin/plugin.json` |
+| Claude Code slash commands (generated) | `plugins/claude/commands/<id>.md` |
+| Claude Code compiled flow output (generated) | `plugins/claude/skills/<id>/circuit.json` for public flows |
+| Codex plugin package | `plugins/circuit/` |
+| Direct command sources | `src/commands/<id>.md` |
+| Flow-owned command sources | `src/flows/<id>/command.md` |
 | Generated surface source map | `docs/generated-surfaces.md` |
 | CLI entrypoint | `bin/circuit-next` |
 | Engine source | `src/runtime/`, `src/cli/`, `src/schemas/` |
@@ -75,6 +79,7 @@ done. Both must pass before commit on changes to `src/`, `tests/`, or
 | Tests | `tests/` |
 | Engine contracts | `docs/contracts/` |
 | Flow design notes | `docs/flows/` |
+| Release proof runs | `docs/release/proofs/runs/` |
 | Behavioral concerns | `specs/behavioral/` |
 | Ubiquitous language | `UBIQUITOUS_LANGUAGE.md` |
 | Block catalog | `docs/flows/block-catalog.json` |

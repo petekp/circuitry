@@ -3,13 +3,6 @@ description: Selects the best Circuit flow for a natural-language task and runs 
 argument-hint: <task>
 ---
 
-<!--
-  This file is HAND-AUTHORED. Unlike commands/<flow>.md (which are
-  generated from src/flows/<id>/command.md by scripts/emit-flows.mjs),
-  /circuit:run is the CLI router entry, not a flow, so its source of
-  truth lives directly here.
--->
-
 # /circuit:run — flow selector
 
 Selects the best Circuit flow for the user's natural-language task, then

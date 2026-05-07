@@ -25,7 +25,7 @@ import { describe, expect, it } from 'vitest';
 import { flowPackages } from '../../src/flows/catalog.js';
 
 const WORKFLOWS_ROOT = 'src/flows';
-const ROOT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'] as const;
+const DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'] as const;
 
 // Entries at the flows root that are NOT flow-package directories
 // (catalog, router/compiler, types, and shared flow infrastructure).
@@ -168,13 +168,13 @@ describe('flow catalog completeness', () => {
   it('command surface ownership is documented and matches emit-flows', () => {
     const generatedSurfaceMap = readFileSync('docs/generated-surfaces.md', 'utf8');
     const emitScript = readFileSync('scripts/emit-flows.mjs', 'utf8');
-    const routerMatch = /const CODEX_ROUTER_COMMANDS = \[([^\]]+)\]/.exec(emitScript);
+    const routerMatch = /const HOST_DIRECT_COMMANDS = \[([^\]]+)\]/.exec(emitScript);
     expect(
       routerMatch,
-      'emit-flows should declare CODEX_ROUTER_COMMANDS as a literal array',
+      'emit-flows should declare HOST_DIRECT_COMMANDS as a literal array',
     ).not.toBeNull();
     if (routerMatch === null || routerMatch[1] === undefined) {
-      throw new Error('emit-flows should declare CODEX_ROUTER_COMMANDS as a literal array');
+      throw new Error('emit-flows should declare HOST_DIRECT_COMMANDS as a literal array');
     }
     const routerCommands =
       routerMatch[1]
@@ -182,21 +182,23 @@ describe('flow catalog completeness', () => {
         ?.map((value) => value.slice(1, -1))
         .sort() ?? [];
 
-    expect(routerCommands).toEqual([...ROOT_COMMANDS].sort());
+    expect(routerCommands).toEqual([...DIRECT_COMMANDS].sort());
     expect(generatedSurfaceMap).toContain(
       '| Surface | Source of truth | Generator | Human-editable | Expected destinations | Validation / drift check | Notes |',
     );
     expect(generatedSurfaceMap).toContain(
-      '| Command README | none currently | none currently | not applicable | none currently | not applicable |',
+      '| Command ownership note | `src/commands/README.md` | none | yes | `src/commands/README.md` | normal docs review |',
     );
     expect(generatedSurfaceMap).toContain(
       'Generated headers are omitted to preserve host command and skill parsing.',
     );
 
-    for (const command of ROOT_COMMANDS) {
-      expect(isFile(`commands/${command}.md`), `root command ${command} must exist`).toBe(true);
+    for (const command of DIRECT_COMMANDS) {
+      expect(isFile(`src/commands/${command}.md`), `direct command ${command} must exist`).toBe(
+        true,
+      );
       expect(generatedSurfaceMap).toContain(
-        `| \`${command}\` | \`commands/${command}.md\` | \`plugins/circuit/commands/${command}.md\`<br>\`plugins/circuit/skills/${command}/SKILL.md\` |`,
+        `| \`${command}\` | \`src/commands/${command}.md\` | \`plugins/claude/commands/${command}.md\`<br>\`plugins/circuit/commands/${command}.md\`<br>\`plugins/circuit/skills/${command}/SKILL.md\` |`,
       );
     }
 

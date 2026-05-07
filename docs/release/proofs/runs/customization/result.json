@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "action": "create",
+  "status": "published",
+  "slug": "release-note-flow",
+  "draft_path": "<repo>/docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow",
+  "validation_path": "<repo>/docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/validation-result.json",
+  "published_path": "<repo>/docs/release/proofs/runs/customization/custom-home/skills/release-note-flow",
+  "flow_path": "<repo>/docs/release/proofs/runs/customization/custom-home/flows/release-note-flow/circuit.json",
+  "command_path": "<repo>/docs/release/proofs/runs/customization/custom-home/commands/release-note-flow.md",
+  "manifest_path": "<repo>/docs/release/proofs/runs/customization/custom-home/manifest.json",
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/customization/custom-home/reports/release-note-flow-operator-summary.md",
+  "result_path": "<repo>/docs/release/proofs/runs/customization/custom-home/reports/release-note-flow-create-result.json"
+}

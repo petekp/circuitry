@@ -93,7 +93,7 @@ export interface CompiledFlowReportSchema {
 export interface CompiledFlowPaths {
   // Schematic path is required — every flow has a schematic.
   readonly schematic: string;
-  // Optional: flow-owned command source copied to commands/<id>.md.
+  // Optional: flow-owned command source copied into host plugin command dirs.
   // Root-authored direct command surfaces can still exist without this
   // field; package command ownership only means the source lives next
   // to the flow.

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "action": "resume",
+  "status": "resumed",
+  "source": "pending_record",
+  "record_id": "continuity-44444444-4444-4444-8444-444444444411",
+  "continuity_path": "<repo>/docs/release/proofs/runs/handoff/control-plane/continuity/records/continuity-44444444-4444-4444-8444-444444444411.json",
+  "index_path": "<repo>/docs/release/proofs/runs/handoff/control-plane/continuity/index.json",
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/handoff/control-plane/continuity/reports/operator-summary.md",
+  "result_path": "<repo>/docs/release/proofs/runs/handoff/control-plane/continuity/reports/resume-result.json"
+}

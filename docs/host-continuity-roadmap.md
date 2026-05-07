@@ -103,8 +103,8 @@ Claude Code should restore the original Circuit experience with a plugin hook.
 
 Add generated or packaged hook files:
 
-- `hooks/hooks.json`
-- `hooks/session-start.sh`
+- `plugins/claude/hooks/hooks.json`
+- `plugins/claude/hooks/session-start.mjs`
 
 The hook registration should target:
 

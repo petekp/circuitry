@@ -3,8 +3,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-// These tests assert that the plugin command bodies under root
-// `commands/` are wired to the runtime rather than carrying placeholder
+// These tests assert that the Claude Code plugin command bodies under
+// `plugins/claude/commands/` are wired to the runtime rather than carrying placeholder
 // "Not implemented yet" text AND that the runtime binding is
 // demonstrated via an executable flow invocation in a fenced bash
 // block (not merely a prose mention). Structural plugin-manifest +
@@ -24,13 +24,15 @@ import { describe, expect, it } from 'vitest';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
 
-const EXPLORE_COMMAND_PATH = resolve(REPO_ROOT, 'commands/explore.md');
-const RUN_COMMAND_PATH = resolve(REPO_ROOT, 'commands/run.md');
-const REVIEW_COMMAND_PATH = resolve(REPO_ROOT, 'commands/review.md');
-const BUILD_COMMAND_PATH = resolve(REPO_ROOT, 'commands/build.md');
-const MIGRATE_COMMAND_PATH = resolve(REPO_ROOT, 'commands/migrate.md');
-const SWEEP_COMMAND_PATH = resolve(REPO_ROOT, 'commands/sweep.md');
-const MANIFEST_PATH = resolve(REPO_ROOT, '.claude-plugin/plugin.json');
+const CLAUDE_COMMAND_ROOT = resolve(REPO_ROOT, 'plugins/claude/commands');
+const EXPLORE_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'explore.md');
+const RUN_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'run.md');
+const REVIEW_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'review.md');
+const BUILD_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'build.md');
+const MIGRATE_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'migrate.md');
+const SWEEP_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'sweep.md');
+const MANIFEST_PATH = resolve(REPO_ROOT, 'plugins/claude/.claude-plugin/plugin.json');
+const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit-next\.mjs"`;
 
 // Extract fenced ```bash ... ``` blocks from a markdown body. Returns an
 // array of block contents (without the fence markers). Multiple blocks per
@@ -47,8 +49,8 @@ function extractBashBlocks(body: string): string[] {
 
 // Does ANY fenced bash block in the body contain an executable flow
 // invocation with the --goal flag? "Executable" means the flow appears
-// as the CLI positional token after `./bin/circuit-next run` or after
-// `node dist/cli/circuit.js`, AND the same line has `--goal `. Prose
+// as the CLI positional token after a supported Circuit launcher, AND the same line has
+// `--goal `. Prose
 // mentions, goal text, or negated ("do not run …") text DO NOT satisfy.
 function hasExecutableCompiledFlowInvocation(body: string, flow: string): boolean {
   const blocks = extractBashBlocks(body);
@@ -57,9 +59,13 @@ function hasExecutableCompiledFlowInvocation(body: string, flow: string): boolea
   const nodeInvocation = new RegExp(
     `^\\s*node dist\\/cli\\/circuit\\.js run ${flowPattern}(?:\\s|$)`,
   );
+  const claudePluginInvocation = new RegExp(
+    `^\\s*${CLAUDE_WRAPPER_PATTERN} run ${flowPattern}(?:\\s|$)`,
+  );
   for (const block of blocks) {
     for (const line of block.split('\n')) {
-      const hasCli = binInvocation.test(line) || nodeInvocation.test(line);
+      const hasCli =
+        binInvocation.test(line) || nodeInvocation.test(line) || claudePluginInvocation.test(line);
       const hasGoal = /--goal\s+/.test(line);
       if (hasCli && hasGoal) return true;
     }
@@ -91,9 +97,16 @@ function hasExecutableRouterInvocation(body: string): boolean {
   const blocks = extractBashBlocks(body);
   const binInvocation = /^\s*\.\/bin\/circuit-next run --goal(?:\s|$)/;
   const nodeInvocation = /^\s*node dist\/cli\/circuit\.js run --goal(?:\s|$)/;
+  const claudePluginInvocation = new RegExp(`^\\s*${CLAUDE_WRAPPER_PATTERN} run --goal(?:\\s|$)`);
   for (const block of blocks) {
     for (const line of block.split('\n')) {
-      if (binInvocation.test(line) || nodeInvocation.test(line)) return true;
+      if (
+        binInvocation.test(line) ||
+        nodeInvocation.test(line) ||
+        claudePluginInvocation.test(line)
+      ) {
+        return true;
+      }
     }
   }
   return false;
@@ -108,33 +121,34 @@ describe('plugin command invocation binding', () => {
     const migrateBody = readFileSync(MIGRATE_COMMAND_PATH, 'utf-8');
     const sweepBody = readFileSync(SWEEP_COMMAND_PATH, 'utf-8');
 
-    it('commands/explore.md has an executable explore invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/explore.md has an executable explore invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableExploreInvocation(exploreBody)).toBe(true);
     });
 
-    it('commands/run.md has an executable classifier invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/run.md has an executable classifier invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableRouterInvocation(runBody)).toBe(true);
     });
 
-    it('commands/review.md has an executable review invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/review.md has an executable review invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableReviewInvocation(reviewBody)).toBe(true);
     });
 
-    it('commands/build.md has an executable build invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/build.md has an executable build invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableBuildInvocation(buildBody)).toBe(true);
     });
 
-    it('commands/migrate.md has an executable migrate invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/migrate.md has an executable migrate invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableMigrateInvocation(migrateBody)).toBe(true);
     });
 
-    it('commands/sweep.md has an executable sweep invocation in a fenced bash block with --goal', () => {
+    it('plugins/claude/commands/sweep.md has an executable sweep invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableSweepInvocation(sweepBody)).toBe(true);
     });
 
-    it('command bodies use the direct Circuit launcher, not the npm-script bridge or unsupported runtime-proof path', () => {
+    it('command bodies use the installed Claude plugin wrapper, not the repo-local launcher', () => {
       for (const body of [exploreBody, runBody, reviewBody, buildBody, migrateBody, sweepBody]) {
-        expect(body).toMatch(/\.\/bin\/circuit-next/);
+        expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"');
+        expect(body).not.toMatch(/\.\/bin\/circuit-next/);
         expect(body).not.toMatch(/npm run circuit:run/);
         expect(body).not.toMatch(/dist\/cli\/runtime-proof\.js/);
       }
@@ -157,7 +171,7 @@ describe('plugin command invocation binding', () => {
       expect(buildBody).not.toMatch(/--goal "\$ARGUMENTS"/);
     });
 
-    it('all fenced bash invocation blocks in commands/explore.md use single-quoted --goal values', () => {
+    it('all fenced bash invocation blocks in plugins/claude/commands/explore.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(exploreBody).filter(
         (b) => /explore/.test(b) && /--goal/.test(b),
       );
@@ -170,9 +184,12 @@ describe('plugin command invocation binding', () => {
       }
     });
 
-    it('all fenced bash invocation blocks in commands/run.md use single-quoted --goal values', () => {
+    it('all fenced bash invocation blocks in plugins/claude/commands/run.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(runBody).filter(
-        (b) => /(?:\.\/bin\/circuit-next|node dist\/cli\/circuit\.js)/.test(b) && /--goal/.test(b),
+        (b) =>
+          /(?:\.\/bin\/circuit-next|node dist\/cli\/circuit\.js|node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs")/.test(
+            b,
+          ) && /--goal/.test(b),
       );
       expect(blocks.length).toBeGreaterThan(0);
       for (const block of blocks) {
@@ -181,7 +198,7 @@ describe('plugin command invocation binding', () => {
       }
     });
 
-    it('all fenced bash invocation blocks in commands/review.md use single-quoted --goal values', () => {
+    it('all fenced bash invocation blocks in plugins/claude/commands/review.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(reviewBody).filter(
         (b) => /review/.test(b) && /--goal/.test(b),
       );
@@ -192,7 +209,7 @@ describe('plugin command invocation binding', () => {
       }
     });
 
-    it('all fenced bash invocation blocks in commands/build.md use single-quoted --goal values', () => {
+    it('all fenced bash invocation blocks in plugins/claude/commands/build.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(buildBody).filter(
         (b) => /build/.test(b) && /--goal/.test(b),
       );

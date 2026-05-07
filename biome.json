@@ -8,7 +8,7 @@
       "bootstrap",
       ".circuit",
       ".circuit-next",
-      "examples/runs"
+      "docs/release/proofs/runs"
     ]
   },
   "organizeImports": {

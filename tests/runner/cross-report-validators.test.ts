@@ -14,7 +14,7 @@ import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 // triage queue and picked its own candidates) produces a schema-valid
 // sweep.batch that the runtime would otherwise admit.
 
-const SWEEP_FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'sweep', 'circuit.json');
+const SWEEP_FIXTURE_PATH = resolve('generated/flows/sweep/circuit.json');
 
 function loadSweepCompiledFlow(): CompiledFlow {
   const raw: unknown = JSON.parse(readFileSync(SWEEP_FIXTURE_PATH, 'utf8'));

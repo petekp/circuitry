@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444411",
+  "flow_id": "build",
+  "selected_flow": "build",
+  "routed_by": "explicit",
+  "router_reason": "explicit flow positional argument",
+  "outcome": "checkpoint_waiting",
+  "headline": "Circuit is waiting for a checkpoint choice.",
+  "details": [
+    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Run note: checkpoint 'frame-step' is waiting for an operator choice."
+  ],
+  "evidence_warnings": [],
+  "run_folder": "<repo>/docs/release/proofs/runs/handoff/run",
+  "report_paths": [
+    {
+      "label": "Checkpoint request",
+      "path": "<repo>/docs/release/proofs/runs/handoff/run/reports/checkpoints/frame-step-request.json"
+    }
+  ],
+  "checkpoint": {
+    "step_id": "frame-step",
+    "request_path": "<repo>/docs/release/proofs/runs/handoff/run/reports/checkpoints/frame-step-request.json",
+    "allowed_choices": [
+      "continue"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444407",
+  "flow_id": "fix",
+  "selected_flow": "fix",
+  "routed_by": "classifier",
+  "router_reason": "matched quick fix prefix; routed to Fix flow",
+  "outcome": "complete",
+  "headline": "Circuit finished Fix with outcome partial. Verification: passed. Review: skipped.",
+  "details": [
+    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Run note: Run closed with outcome complete via @complete.",
+    "Result: Fix 'quick fix: restore the failing login test': Added the fallback guard for the synthetic missing token path.",
+    "Verification: passed"
+  ],
+  "evidence_warnings": [],
+  "run_folder": "<repo>/docs/release/proofs/runs/fix/run",
+  "result_path": "<repo>/docs/release/proofs/runs/fix/run/reports/result.json",
+  "report_paths": [
+    {
+      "label": "Run result",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/result.json"
+    },
+    {
+      "label": "fix result",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix-result.json"
+    },
+    {
+      "label": "fix.brief",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix/brief.json",
+      "schema": "fix.brief@v1"
+    },
+    {
+      "label": "fix.context",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix/context.json",
+      "schema": "fix.context@v1"
+    },
+    {
+      "label": "fix.diagnosis",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix/diagnosis.json",
+      "schema": "fix.diagnosis@v1"
+    },
+    {
+      "label": "fix.change",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix/change.json",
+      "schema": "fix.change@v1"
+    },
+    {
+      "label": "fix.verification",
+      "path": "<repo>/docs/release/proofs/runs/fix/run/reports/fix/verification.json",
+      "schema": "fix.verification@v1"
+    }
+  ]
+}

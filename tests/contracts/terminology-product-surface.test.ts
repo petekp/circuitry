@@ -88,12 +88,12 @@ function listProductFacingFiles(): readonly string[] {
 
   files.push('README.md');
   files.push('AGENTS.md');
-  files.push('.claude-plugin/README.md');
+  files.push('plugins/claude/README.md');
 
-  // Slash commands: hand-authored run.md plus generated per-flow files.
-  for (const entry of readdirSync('commands')) {
+  // Direct command sources.
+  for (const entry of readdirSync('src/commands')) {
     if (entry.endsWith('.md')) {
-      files.push(join('commands', entry));
+      files.push(join('src/commands', entry));
     }
   }
 

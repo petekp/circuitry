@@ -61,14 +61,12 @@ describe('host experience docs', () => {
   });
 
   it('keeps /circuit:run host guidance aligned with model-mediated selection', () => {
-    const doc = readFileSync(resolve(REPO_ROOT, 'commands/run.md'), 'utf8');
+    const doc = readFileSync(resolve(REPO_ROOT, 'plugins/claude/commands/run.md'), 'utf8');
 
     expect(doc).toContain('/circuit:run — flow selector');
     expect(doc).toContain('Select the flow before invoking the CLI');
-    expect(doc).toContain("./bin/circuit-next run sweep --goal 'remove safe dead code'");
-    expect(doc).toContain(
-      "./bin/circuit-next run --goal 'choose the right Circuit flow for this task'",
-    );
+    expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal');
+    expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run --goal');
     expect(doc).not.toContain('Do not classify the task yourself');
     expect(doc).toContain('selected_flow === "sweep"');
     expect(doc).toContain('reports/sweep-result.json');

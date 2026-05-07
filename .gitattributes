@@ -1,13 +1,16 @@
-# Generated plugin surface — keep linguist out of the repo language stats
-# and signal "this is generated" to GitHub diff views. The source of
-# truth for these files lives under src/workflows/<id>/; the emit
-# script (`npm run emit-workflows`) writes the generated outputs.
+# Generated plugin surfaces — keep linguist out of the repo language stats
+# and signal "this is generated" to GitHub diff views. The source of truth
+# lives under src/flows/<id>/ and src/commands/. The emit script
+# (`npm run emit-flows`) writes the generated outputs.
 
-commands/build.md     linguist-generated=true
-commands/explore.md   linguist-generated=true
-commands/fix.md       linguist-generated=true
-commands/review.md    linguist-generated=true
+plugins/claude/commands/*.md linguist-generated=true
+plugins/claude/skills/**/*.json linguist-generated=true
 
-# commands/run.md is hand-authored (the CLI router entry).
+plugins/circuit/commands/*.md linguist-generated=true
+plugins/circuit/flows/**/*.json linguist-generated=true
+plugins/circuit/skills/**/SKILL.md linguist-generated=true
 
-.claude-plugin/skills/**/*.json linguist-generated=true
+generated/flows/**/*.json linguist-generated=true
+
+# Release proof fixtures captured by scripts/release/capture-*.mjs.
+docs/release/proofs/runs/** linguist-generated=true

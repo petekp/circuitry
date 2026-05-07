@@ -9,21 +9,21 @@ scenarios:
     summary_contract: Summary states selected work type, changes, verification, review, risk, and next action.
     redaction_policy: No secrets or untracked file contents in checked-in example.
     required_files:
-      - examples/runs/routed-build/progress.jsonl
-      - examples/runs/routed-build/operator-summary.md
-      - examples/runs/routed-build/result.json
+      - docs/release/proofs/runs/routed-build/progress.jsonl
+      - docs/release/proofs/runs/routed-build/operator-summary.md
+      - docs/release/proofs/runs/routed-build/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/routed-build/run/reports/build/brief.json
-      - examples/runs/routed-build/run/reports/build/plan.json
-      - examples/runs/routed-build/run/reports/build/implementation.json
-      - examples/runs/routed-build/run/reports/build/verification.json
-      - examples/runs/routed-build/run/reports/build/review.json
-      - examples/runs/routed-build/run/reports/build-result.json
-      - examples/runs/routed-build/run/reports/checkpoints/frame-step-request.json
-      - examples/runs/routed-build/run/reports/checkpoints/frame-step-response.json
-      - examples/runs/routed-build/run/reports/relay/build-act.receipt.txt
-      - examples/runs/routed-build/run/reports/relay/build-review.receipt.txt
+      - docs/release/proofs/runs/routed-build/run/reports/build/brief.json
+      - docs/release/proofs/runs/routed-build/run/reports/build/plan.json
+      - docs/release/proofs/runs/routed-build/run/reports/build/implementation.json
+      - docs/release/proofs/runs/routed-build/run/reports/build/verification.json
+      - docs/release/proofs/runs/routed-build/run/reports/build/review.json
+      - docs/release/proofs/runs/routed-build/run/reports/build-result.json
+      - docs/release/proofs/runs/routed-build/run/reports/checkpoints/frame-step-request.json
+      - docs/release/proofs/runs/routed-build/run/reports/checkpoints/frame-step-response.json
+      - docs/release/proofs/runs/routed-build/run/reports/relay/build-act.receipt.txt
+      - docs/release/proofs/runs/routed-build/run/reports/relay/build-review.receipt.txt
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:explicit-build
@@ -35,13 +35,13 @@ scenarios:
     summary_contract: Summary explains explicit Build selection, checkpoint/verification state, and next action.
     redaction_policy: No project-private content beyond the synthetic fixture repo.
     required_files:
-      - examples/runs/explicit-build/progress.jsonl
-      - examples/runs/explicit-build/operator-summary.md
-      - examples/runs/explicit-build/result.json
+      - docs/release/proofs/runs/explicit-build/progress.jsonl
+      - docs/release/proofs/runs/explicit-build/operator-summary.md
+      - docs/release/proofs/runs/explicit-build/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/explicit-build/run/reports/build/brief.json
-      - examples/runs/explicit-build/run/reports/checkpoints/frame-step-request.json
+      - docs/release/proofs/runs/explicit-build/run/reports/build/brief.json
+      - docs/release/proofs/runs/explicit-build/run/reports/checkpoints/frame-step-request.json
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:review
@@ -53,15 +53,15 @@ scenarios:
     summary_contract: Summary lists review verdict, findings, evidence policy, and next action.
     redaction_policy: Untracked contents are excluded unless an explicit opt-in example is used.
     required_files:
-      - examples/runs/review/progress.jsonl
-      - examples/runs/review/operator-summary.md
-      - examples/runs/review/result.json
+      - docs/release/proofs/runs/review/progress.jsonl
+      - docs/release/proofs/runs/review/operator-summary.md
+      - docs/release/proofs/runs/review/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/review/run/reports/review-intake.json
-      - examples/runs/review/run/reports/review-result.json
-      - examples/runs/review/run/reports/relay/review.receipt.txt
-      - examples/runs/review/run/reports/result.json
+      - docs/release/proofs/runs/review/run/reports/review-intake.json
+      - docs/release/proofs/runs/review/run/reports/review-result.json
+      - docs/release/proofs/runs/review/run/reports/relay/review.receipt.txt
+      - docs/release/proofs/runs/review/run/reports/result.json
     exception_ids: []
     readiness_refs: [REL-005, REL-011]
   - id: proof:checkpoint-resume
@@ -73,16 +73,16 @@ scenarios:
     summary_contract: Summary gives the checkpoint question, allowed choices, resume command, and final outcome.
     redaction_policy: Checkpoint files contain no private source snippets.
     required_files:
-      - examples/runs/checkpoint/progress.jsonl
-      - examples/runs/checkpoint/operator-summary.md
-      - examples/runs/checkpoint/result.json
+      - docs/release/proofs/runs/checkpoint/progress.jsonl
+      - docs/release/proofs/runs/checkpoint/operator-summary.md
+      - docs/release/proofs/runs/checkpoint/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/checkpoint/checkpoint-result.json
-      - examples/runs/checkpoint/run/reports/checkpoints/frame-step-request.json
-      - examples/runs/checkpoint/run/reports/checkpoints/frame-step-response.json
-      - examples/runs/checkpoint/run/reports/build-result.json
-      - examples/runs/checkpoint/run/reports/result.json
+      - docs/release/proofs/runs/checkpoint/checkpoint-result.json
+      - docs/release/proofs/runs/checkpoint/run/reports/checkpoints/frame-step-request.json
+      - docs/release/proofs/runs/checkpoint/run/reports/checkpoints/frame-step-response.json
+      - docs/release/proofs/runs/checkpoint/run/reports/build-result.json
+      - docs/release/proofs/runs/checkpoint/run/reports/result.json
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:abort-failure
@@ -94,15 +94,15 @@ scenarios:
     summary_contract: Summary explains what failed, whether any files may have changed, and the exact next action.
     redaction_policy: Failure output is truncated and scrubbed.
     required_files:
-      - examples/runs/abort/progress.jsonl
-      - examples/runs/abort/operator-summary.md
-      - examples/runs/abort/result.json
+      - docs/release/proofs/runs/abort/progress.jsonl
+      - docs/release/proofs/runs/abort/operator-summary.md
+      - docs/release/proofs/runs/abort/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/abort/run/reports/build/brief.json
-      - examples/runs/abort/run/reports/build/plan.json
-      - examples/runs/abort/run/reports/relay/build-act.request.json
-      - examples/runs/abort/run/reports/result.json
+      - docs/release/proofs/runs/abort/run/reports/build/brief.json
+      - docs/release/proofs/runs/abort/run/reports/build/plan.json
+      - docs/release/proofs/runs/abort/run/reports/relay/build-act.request.json
+      - docs/release/proofs/runs/abort/run/reports/result.json
     exception_ids: []
     readiness_refs: [REL-009, REL-011]
   - id: proof:fix
@@ -114,20 +114,20 @@ scenarios:
     summary_contract: Summary shows repro/diagnosis, fix, verification, review policy, and next action.
     redaction_policy: Uses a synthetic bug fixture with no private data.
     required_files:
-      - examples/runs/fix/progress.jsonl
-      - examples/runs/fix/operator-summary.md
-      - examples/runs/fix/result.json
+      - docs/release/proofs/runs/fix/progress.jsonl
+      - docs/release/proofs/runs/fix/operator-summary.md
+      - docs/release/proofs/runs/fix/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/fix/run/reports/fix/brief.json
-      - examples/runs/fix/run/reports/fix/context.json
-      - examples/runs/fix/run/reports/fix/diagnosis.json
-      - examples/runs/fix/run/reports/fix/change.json
-      - examples/runs/fix/run/reports/fix/verification.json
-      - examples/runs/fix/run/reports/fix-result.json
-      - examples/runs/fix/run/reports/relay/fix-gather-context.receipt.txt
-      - examples/runs/fix/run/reports/relay/fix-diagnose.receipt.txt
-      - examples/runs/fix/run/reports/relay/fix-act.receipt.txt
+      - docs/release/proofs/runs/fix/run/reports/fix/brief.json
+      - docs/release/proofs/runs/fix/run/reports/fix/context.json
+      - docs/release/proofs/runs/fix/run/reports/fix/diagnosis.json
+      - docs/release/proofs/runs/fix/run/reports/fix/change.json
+      - docs/release/proofs/runs/fix/run/reports/fix/verification.json
+      - docs/release/proofs/runs/fix/run/reports/fix-result.json
+      - docs/release/proofs/runs/fix/run/reports/relay/fix-gather-context.receipt.txt
+      - docs/release/proofs/runs/fix/run/reports/relay/fix-diagnose.receipt.txt
+      - docs/release/proofs/runs/fix/run/reports/relay/fix-act.receipt.txt
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:migrate
@@ -139,22 +139,22 @@ scenarios:
     summary_contract: Summary states inventory, coexistence plan, batch result, verification, review, and rollback risk.
     redaction_policy: Uses a synthetic migration fixture.
     required_files:
-      - examples/runs/migrate/progress.jsonl
-      - examples/runs/migrate/operator-summary.md
-      - examples/runs/migrate/result.json
+      - docs/release/proofs/runs/migrate/progress.jsonl
+      - docs/release/proofs/runs/migrate/operator-summary.md
+      - docs/release/proofs/runs/migrate/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/migrate/run/reports/migrate/brief.json
-      - examples/runs/migrate/run/reports/migrate/inventory.json
-      - examples/runs/migrate/run/reports/migrate/coexistence.json
-      - examples/runs/migrate/run/reports/migrate/batch-result.json
-      - examples/runs/migrate/run/reports/migrate/verification.json
-      - examples/runs/migrate/run/reports/migrate/review.json
-      - examples/runs/migrate/run/reports/migrate-result.json
-      - examples/runs/migrate/run/reports/checkpoints/migrate-coexistence-request.json
-      - examples/runs/migrate/run/reports/checkpoints/migrate-coexistence-response.json
-      - examples/runs/migrate/run/reports/relay/migrate-inventory.receipt.txt
-      - examples/runs/migrate/run/reports/relay/migrate-review.receipt.txt
+      - docs/release/proofs/runs/migrate/run/reports/migrate/brief.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate/inventory.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate/coexistence.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate/batch-result.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate/verification.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate/review.json
+      - docs/release/proofs/runs/migrate/run/reports/migrate-result.json
+      - docs/release/proofs/runs/migrate/run/reports/checkpoints/migrate-coexistence-request.json
+      - docs/release/proofs/runs/migrate/run/reports/checkpoints/migrate-coexistence-response.json
+      - docs/release/proofs/runs/migrate/run/reports/relay/migrate-inventory.receipt.txt
+      - docs/release/proofs/runs/migrate/run/reports/relay/migrate-review.receipt.txt
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:sweep
@@ -166,72 +166,72 @@ scenarios:
     summary_contract: Summary states queue, executed items, deferred items, verification, and next action.
     redaction_policy: Uses a synthetic cleanup fixture.
     required_files:
-      - examples/runs/sweep/progress.jsonl
-      - examples/runs/sweep/operator-summary.md
-      - examples/runs/sweep/result.json
+      - docs/release/proofs/runs/sweep/progress.jsonl
+      - docs/release/proofs/runs/sweep/operator-summary.md
+      - docs/release/proofs/runs/sweep/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/sweep/run/reports/sweep/brief.json
-      - examples/runs/sweep/run/reports/sweep/analysis.json
-      - examples/runs/sweep/run/reports/sweep/queue.json
-      - examples/runs/sweep/run/reports/sweep/batch.json
-      - examples/runs/sweep/run/reports/sweep/verification.json
-      - examples/runs/sweep/run/reports/sweep/review.json
-      - examples/runs/sweep/run/reports/sweep-result.json
-      - examples/runs/sweep/run/reports/checkpoints/sweep-triage-request.json
-      - examples/runs/sweep/run/reports/checkpoints/sweep-triage-response.json
-      - examples/runs/sweep/run/reports/relay/sweep-survey.receipt.txt
-      - examples/runs/sweep/run/reports/relay/sweep-execute.receipt.txt
-      - examples/runs/sweep/run/reports/relay/sweep-review.receipt.txt
+      - docs/release/proofs/runs/sweep/run/reports/sweep/brief.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep/analysis.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep/queue.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep/batch.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep/verification.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep/review.json
+      - docs/release/proofs/runs/sweep/run/reports/sweep-result.json
+      - docs/release/proofs/runs/sweep/run/reports/checkpoints/sweep-triage-request.json
+      - docs/release/proofs/runs/sweep/run/reports/checkpoints/sweep-triage-response.json
+      - docs/release/proofs/runs/sweep/run/reports/relay/sweep-survey.receipt.txt
+      - docs/release/proofs/runs/sweep/run/reports/relay/sweep-execute.receipt.txt
+      - docs/release/proofs/runs/sweep/run/reports/relay/sweep-review.receipt.txt
     exception_ids: []
     readiness_refs: [REL-011]
   - id: proof:explore-decision
     title: Explore Decision Or Tournament
     category: deciding
-    command: './bin/circuit-next run --goal "decide: React vs Vue" --run-folder examples/runs/explore-decision/run --progress jsonl; ./bin/circuit-next resume --run-folder examples/runs/explore-decision/run --checkpoint-choice option-2 --progress jsonl'
+    command: './bin/circuit-next run --goal "decide: React vs Vue" --run-folder docs/release/proofs/runs/explore-decision/run --progress jsonl; ./bin/circuit-next resume --run-folder docs/release/proofs/runs/explore-decision/run --checkpoint-choice option-2 --progress jsonl'
     expected_flow: explore
     expected_outcome: checkpoint_waiting, then complete after resume
     summary_contract: Summary states options, decision, evidence, tradeoff, risk, and next action.
     redaction_policy: Uses non-sensitive architecture fixture text.
     required_files:
-      - examples/runs/explore-decision/progress.jsonl
-      - examples/runs/explore-decision/operator-summary.md
-      - examples/runs/explore-decision/result.json
+      - docs/release/proofs/runs/explore-decision/progress.jsonl
+      - docs/release/proofs/runs/explore-decision/operator-summary.md
+      - docs/release/proofs/runs/explore-decision/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/explore-decision/checkpoint-result.json
-      - examples/runs/explore-decision/run/reports/brief.json
-      - examples/runs/explore-decision/run/reports/analysis.json
-      - examples/runs/explore-decision/run/reports/decision-options.json
-      - examples/runs/explore-decision/run/reports/tournament-aggregate.json
-      - examples/runs/explore-decision/run/reports/tournament-review.json
-      - examples/runs/explore-decision/run/reports/decision.json
-      - examples/runs/explore-decision/run/reports/explore-result.json
-      - examples/runs/explore-decision/run/reports/checkpoints/tradeoff-request.json
-      - examples/runs/explore-decision/run/reports/checkpoints/tradeoff-response.json
-      - examples/runs/explore-decision/run/reports/tournament-branches
+      - docs/release/proofs/runs/explore-decision/checkpoint-result.json
+      - docs/release/proofs/runs/explore-decision/run/reports/brief.json
+      - docs/release/proofs/runs/explore-decision/run/reports/analysis.json
+      - docs/release/proofs/runs/explore-decision/run/reports/decision-options.json
+      - docs/release/proofs/runs/explore-decision/run/reports/tournament-aggregate.json
+      - docs/release/proofs/runs/explore-decision/run/reports/tournament-review.json
+      - docs/release/proofs/runs/explore-decision/run/reports/decision.json
+      - docs/release/proofs/runs/explore-decision/run/reports/explore-result.json
+      - docs/release/proofs/runs/explore-decision/run/reports/checkpoints/tradeoff-request.json
+      - docs/release/proofs/runs/explore-decision/run/reports/checkpoints/tradeoff-response.json
+      - docs/release/proofs/runs/explore-decision/run/reports/tournament-branches
     exception_ids: []
     readiness_refs: [REL-004, REL-011, REL-023]
   - id: proof:handoff
     title: Handoff Continuity
     category: continuity
-    command: './bin/circuit-next handoff save --run-folder examples/runs/handoff/run --progress jsonl; ./bin/circuit-next handoff resume --progress jsonl'
+    command: './bin/circuit-next handoff save --run-folder docs/release/proofs/runs/handoff/run --progress jsonl; ./bin/circuit-next handoff resume --progress jsonl'
     expected_outcome: resumed
     summary_contract: Summary explains saved state, next work, blockers, and resume/clear command.
     redaction_policy: Continuity payload excludes secrets and irrelevant chat history.
     required_files:
-      - examples/runs/handoff/progress.jsonl
-      - examples/runs/handoff/operator-summary.md
-      - examples/runs/handoff/continuity.json
-      - examples/runs/handoff/result.json
+      - docs/release/proofs/runs/handoff/progress.jsonl
+      - docs/release/proofs/runs/handoff/operator-summary.md
+      - docs/release/proofs/runs/handoff/continuity.json
+      - docs/release/proofs/runs/handoff/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/handoff/control-plane/active-run.md
-      - examples/runs/handoff/control-plane/continuity/index.json
-      - examples/runs/handoff/control-plane/continuity/records/continuity-44444444-4444-4444-8444-444444444411.json
-      - examples/runs/handoff/run/manifest.snapshot.json
-      - examples/runs/handoff/run/trace.ndjson
-      - examples/runs/handoff/run/reports/checkpoints/frame-step-request.json
+      - docs/release/proofs/runs/handoff/control-plane/active-run.md
+      - docs/release/proofs/runs/handoff/control-plane/continuity/index.json
+      - docs/release/proofs/runs/handoff/control-plane/continuity/records/continuity-44444444-4444-4444-8444-444444444411.json
+      - docs/release/proofs/runs/handoff/run/manifest.snapshot.json
+      - docs/release/proofs/runs/handoff/run/trace.ndjson
+      - docs/release/proofs/runs/handoff/run/reports/checkpoints/frame-step-request.json
     exception_ids: []
     readiness_refs: [REL-011, REL-014]
   - id: proof:customization
@@ -242,20 +242,20 @@ scenarios:
     summary_contract: Summary states what was created, validation result, publish/usage command, and next action.
     redaction_policy: Example uses temporary user config and synthetic prompt data.
     required_files:
-      - examples/runs/customization/progress.jsonl
-      - examples/runs/customization/operator-summary.md
-      - examples/runs/customization/result.json
+      - docs/release/proofs/runs/customization/progress.jsonl
+      - docs/release/proofs/runs/customization/operator-summary.md
+      - docs/release/proofs/runs/customization/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/customization/custom-home/drafts/release-note-flow/SKILL.md
-      - examples/runs/customization/custom-home/drafts/release-note-flow/circuit.yaml
-      - examples/runs/customization/custom-home/drafts/release-note-flow/circuit.json
-      - examples/runs/customization/custom-home/drafts/release-note-flow/validation-result.json
-      - examples/runs/customization/custom-home/skills/release-note-flow/SKILL.md
-      - examples/runs/customization/custom-home/skills/release-note-flow/circuit.yaml
-      - examples/runs/customization/custom-home/flows/release-note-flow/circuit.json
-      - examples/runs/customization/custom-home/commands/release-note-flow.md
-      - examples/runs/customization/custom-home/manifest.json
+      - docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/SKILL.md
+      - docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/circuit.yaml
+      - docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/circuit.json
+      - docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/validation-result.json
+      - docs/release/proofs/runs/customization/custom-home/skills/release-note-flow/SKILL.md
+      - docs/release/proofs/runs/customization/custom-home/skills/release-note-flow/circuit.yaml
+      - docs/release/proofs/runs/customization/custom-home/flows/release-note-flow/circuit.json
+      - docs/release/proofs/runs/customization/custom-home/commands/release-note-flow.md
+      - docs/release/proofs/runs/customization/custom-home/manifest.json
     exception_ids: []
     readiness_refs: [REL-011, REL-013]
   - id: proof:doctor-first-run
@@ -266,10 +266,10 @@ scenarios:
     summary_contract: Doctor explains install health, missing dependencies, supported host path, and next command.
     redaction_policy: Does not include local secrets or full environment dumps.
     required_files:
-      - examples/runs/doctor/output.txt
+      - docs/release/proofs/runs/doctor/output.txt
     status: verified_current
     backing_paths:
-      - examples/runs/doctor/output.txt
+      - docs/release/proofs/runs/doctor/output.txt
     exception_ids: []
     readiness_refs: [REL-017]
   - id: proof:plan-execution
@@ -281,20 +281,20 @@ scenarios:
     summary_contract: Summary identifies plan execution, the selected flow, verification, review, risk, and next action.
     redaction_policy: Uses a scrubbed plan fixture if the live spec contains local details.
     required_files:
-      - examples/runs/plan-execution/progress.jsonl
-      - examples/runs/plan-execution/operator-summary.md
-      - examples/runs/plan-execution/result.json
+      - docs/release/proofs/runs/plan-execution/progress.jsonl
+      - docs/release/proofs/runs/plan-execution/operator-summary.md
+      - docs/release/proofs/runs/plan-execution/result.json
     status: verified_current
     backing_paths:
-      - examples/runs/plan-execution/run/reports/build/brief.json
-      - examples/runs/plan-execution/run/reports/build/plan.json
-      - examples/runs/plan-execution/run/reports/build/implementation.json
-      - examples/runs/plan-execution/run/reports/build/verification.json
-      - examples/runs/plan-execution/run/reports/build/review.json
-      - examples/runs/plan-execution/run/reports/build-result.json
-      - examples/runs/plan-execution/run/reports/checkpoints/frame-step-request.json
-      - examples/runs/plan-execution/run/reports/checkpoints/frame-step-response.json
-      - examples/runs/plan-execution/run/reports/relay/build-act.receipt.txt
-      - examples/runs/plan-execution/run/reports/relay/build-review.receipt.txt
+      - docs/release/proofs/runs/plan-execution/run/reports/build/brief.json
+      - docs/release/proofs/runs/plan-execution/run/reports/build/plan.json
+      - docs/release/proofs/runs/plan-execution/run/reports/build/implementation.json
+      - docs/release/proofs/runs/plan-execution/run/reports/build/verification.json
+      - docs/release/proofs/runs/plan-execution/run/reports/build/review.json
+      - docs/release/proofs/runs/plan-execution/run/reports/build-result.json
+      - docs/release/proofs/runs/plan-execution/run/reports/checkpoints/frame-step-request.json
+      - docs/release/proofs/runs/plan-execution/run/reports/checkpoints/frame-step-response.json
+      - docs/release/proofs/runs/plan-execution/run/reports/relay/build-act.receipt.txt
+      - docs/release/proofs/runs/plan-execution/run/reports/relay/build-review.receipt.txt
     exception_ids: []
     readiness_refs: [REL-011, REL-016]

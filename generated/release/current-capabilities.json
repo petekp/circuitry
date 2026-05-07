@@ -292,7 +292,18 @@
     }
   ],
   "commands": {
-    "root": ["build", "create", "explore", "fix", "handoff", "migrate", "review", "run", "sweep"],
+    "source": ["create", "handoff", "migrate", "run", "sweep"],
+    "claude_plugin": [
+      "build",
+      "create",
+      "explore",
+      "fix",
+      "handoff",
+      "migrate",
+      "review",
+      "run",
+      "sweep"
+    ],
     "codex_plugin": [
       "build",
       "create",
@@ -339,8 +350,12 @@
     {
       "id": "claude-code-command",
       "status": "partial",
-      "summary": "Claude Code command surface exists but remains model-mediated.",
-      "evidence": ["commands/run.md"],
+      "summary": "Claude Code plugin command surface exists but remains model-mediated.",
+      "evidence": [
+        "plugins/claude/.claude-plugin/plugin.json",
+        "plugins/claude/commands/run.md",
+        "plugins/claude/scripts/circuit-next.mjs"
+      ],
       "readiness_refs": ["REL-014"]
     },
     {
@@ -379,10 +394,10 @@
     {
       "id": "command:build",
       "kind": "flow",
-      "title": "root command build",
+      "title": "claude-code command build",
       "status": "implemented",
-      "summary": "Command build is present for root.",
-      "evidence": ["commands/build.md"],
+      "summary": "Command build is present for claude-code.",
+      "evidence": ["plugins/claude/commands/build.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -394,10 +409,10 @@
     {
       "id": "command:create",
       "kind": "flow",
-      "title": "root command create",
+      "title": "claude-code command create",
       "status": "implemented",
-      "summary": "Command create is present for root.",
-      "evidence": ["commands/create.md"],
+      "summary": "Command create is present for claude-code.",
+      "evidence": ["plugins/claude/commands/create.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -409,10 +424,10 @@
     {
       "id": "command:explore",
       "kind": "flow",
-      "title": "root command explore",
+      "title": "claude-code command explore",
       "status": "implemented",
-      "summary": "Command explore is present for root.",
-      "evidence": ["commands/explore.md"],
+      "summary": "Command explore is present for claude-code.",
+      "evidence": ["plugins/claude/commands/explore.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -424,10 +439,10 @@
     {
       "id": "command:fix",
       "kind": "flow",
-      "title": "root command fix",
+      "title": "claude-code command fix",
       "status": "implemented",
-      "summary": "Command fix is present for root.",
-      "evidence": ["commands/fix.md"],
+      "summary": "Command fix is present for claude-code.",
+      "evidence": ["plugins/claude/commands/fix.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -439,10 +454,10 @@
     {
       "id": "command:handoff",
       "kind": "flow",
-      "title": "root command handoff",
+      "title": "claude-code command handoff",
       "status": "implemented",
-      "summary": "Command handoff is present for root.",
-      "evidence": ["commands/handoff.md"],
+      "summary": "Command handoff is present for claude-code.",
+      "evidence": ["plugins/claude/commands/handoff.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -454,10 +469,10 @@
     {
       "id": "command:migrate",
       "kind": "flow",
-      "title": "root command migrate",
+      "title": "claude-code command migrate",
       "status": "implemented",
-      "summary": "Command migrate is present for root.",
-      "evidence": ["commands/migrate.md"],
+      "summary": "Command migrate is present for claude-code.",
+      "evidence": ["plugins/claude/commands/migrate.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -469,10 +484,10 @@
     {
       "id": "command:review",
       "kind": "flow",
-      "title": "root command review",
+      "title": "claude-code command review",
       "status": "implemented",
-      "summary": "Command review is present for root.",
-      "evidence": ["commands/review.md"],
+      "summary": "Command review is present for claude-code.",
+      "evidence": ["plugins/claude/commands/review.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -484,10 +499,10 @@
     {
       "id": "command:run",
       "kind": "flow",
-      "title": "root command run",
+      "title": "claude-code command run",
       "status": "implemented",
-      "summary": "Command run is present for root.",
-      "evidence": ["commands/run.md"],
+      "summary": "Command run is present for claude-code.",
+      "evidence": ["plugins/claude/commands/run.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -499,10 +514,10 @@
     {
       "id": "command:sweep",
       "kind": "flow",
-      "title": "root command sweep",
+      "title": "claude-code command sweep",
       "status": "implemented",
-      "summary": "Command sweep is present for root.",
-      "evidence": ["commands/sweep.md"],
+      "summary": "Command sweep is present for claude-code.",
+      "evidence": ["plugins/claude/commands/sweep.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -775,8 +790,12 @@
       "kind": "host",
       "title": "claude-code-command host",
       "status": "partial",
-      "summary": "Claude Code command surface exists but remains model-mediated.",
-      "evidence": ["commands/run.md"],
+      "summary": "Claude Code plugin command surface exists but remains model-mediated.",
+      "evidence": [
+        "plugins/claude/.claude-plugin/plugin.json",
+        "plugins/claude/commands/run.md",
+        "plugins/claude/scripts/circuit-next.mjs"
+      ],
       "readiness_refs": ["REL-014"],
       "axes": {
         "intent_hints": [],
@@ -1840,7 +1859,11 @@
       "title": "Create utility",
       "status": "implemented",
       "summary": "Create drafts, validates, and publishes a user-global custom flow package after explicit confirmation.",
-      "evidence": ["commands/create.md", "src/cli/create.ts", "tests/runner/utility-cli.test.ts"],
+      "evidence": [
+        "src/commands/create.md",
+        "src/cli/create.ts",
+        "tests/runner/utility-cli.test.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1859,7 +1882,11 @@
       "title": "Handoff utility",
       "status": "implemented",
       "summary": "Handoff saves, resumes, and clears explicit continuity records through the CLI.",
-      "evidence": ["commands/handoff.md", "src/cli/handoff.ts", "tests/runner/utility-cli.test.ts"],
+      "evidence": [
+        "src/commands/handoff.md",
+        "src/cli/handoff.ts",
+        "tests/runner/utility-cli.test.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1876,7 +1903,7 @@
       "title": "Review utility",
       "status": "implemented",
       "summary": "Standalone Review is present as a flow command.",
-      "evidence": ["commands/review.md", "src/flows/review/schematic.json"],
+      "evidence": ["plugins/claude/commands/review.md", "src/flows/review/schematic.json"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],

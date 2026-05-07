@@ -20,6 +20,12 @@ import type { RelayInput } from '../../src/shared/relay-runtime-types.js';
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/circuit');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
+const FLOW_COMMAND_SOURCES: Record<string, string> = {
+  build: 'src/flows/build/command.md',
+  explore: 'src/flows/explore/command.md',
+  fix: 'src/flows/fix/command.md',
+  review: 'src/flows/review/command.md',
+};
 const EXPECTED_CODEX_COMMANDS = [
   'build',
   'create',
@@ -67,6 +73,10 @@ function collectJsonFiles(root: string, prefix = ''): string[] {
     if (entry.isDirectory()) return collectJsonFiles(root, rel);
     return entry.isFile() && entry.name.endsWith('.json') ? [rel] : [];
   });
+}
+
+function sourceCommandPath(command: string): string {
+  return resolve(REPO_ROOT, FLOW_COMMAND_SOURCES[command] ?? `src/commands/${command}.md`);
 }
 
 describe('Codex host plugin package', () => {
@@ -545,12 +555,12 @@ describe('Codex host plugin package', () => {
       expect(codex, file).toEqual(canonical);
     }
     expect(existsSync(resolve(PLUGIN_ROOT, 'flows/runtime-proof'))).toBe(false);
-    expect(existsSync(resolve(REPO_ROOT, '.claude-plugin/skills/runtime-proof'))).toBe(false);
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/claude/skills/runtime-proof'))).toBe(false);
   });
 
   it('generates Codex host command files that invoke the installed plugin wrapper', () => {
     for (const command of EXPECTED_CODEX_COMMANDS) {
-      const source = readFileSync(resolve(REPO_ROOT, `commands/${command}.md`), 'utf8');
+      const source = readFileSync(sourceCommandPath(command), 'utf8');
       const codex = readFileSync(resolve(PLUGIN_ROOT, `commands/${command}.md`), 'utf8');
       expect(source).toContain('./bin/circuit-next');
       expect(source).toContain('--progress jsonl');

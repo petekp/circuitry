@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444404",
+  "flow_id": "review",
+  "selected_flow": "review",
+  "routed_by": "explicit",
+  "router_reason": "explicit flow positional argument",
+  "outcome": "complete",
+  "headline": "Circuit finished Review. Verdict: CLEAN. Findings: 0.",
+  "details": [
+    "Run note: Run closed with outcome complete via @complete.",
+    "Findings: 0",
+    "Untracked evidence: paths and sizes only for 20 files (71 untracked files found; additional untracked files were not sampled)."
+  ],
+  "evidence_warnings": [
+    {
+      "kind": "diff_truncated",
+      "message": "unstaged diff was truncated before relay"
+    },
+    {
+      "kind": "untracked_files_truncated",
+      "message": "untracked file evidence was limited to 20 files"
+    },
+    {
+      "kind": "untracked_file_content_omitted",
+      "message": "untracked file contents were not included; pass --include-untracked-content only when those files are safe to relay"
+    }
+  ],
+  "run_folder": "<repo>/docs/release/proofs/runs/review/run",
+  "result_path": "<repo>/docs/release/proofs/runs/review/run/reports/result.json",
+  "report_paths": [
+    {
+      "label": "Run result",
+      "path": "<repo>/docs/release/proofs/runs/review/run/reports/result.json"
+    },
+    {
+      "label": "review result",
+      "path": "<repo>/docs/release/proofs/runs/review/run/reports/review-result.json"
+    }
+  ]
+}

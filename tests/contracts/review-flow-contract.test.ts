@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { checkCompiledFlowKindCanonicalPolicy } from '../../scripts/policy/flow-kind-policy.mjs';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
-const REVIEW_FIXTURE_PATH = join('.claude-plugin', 'skills', 'review', 'circuit.json');
+const REVIEW_FIXTURE_PATH = join('generated', 'flows', 'review', 'circuit.json');
 const ARTIFACTS_PATH = join('specs', 'reports.json');
 
 function loadReviewFixture(): Record<string, unknown> {

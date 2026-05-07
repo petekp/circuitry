@@ -19,7 +19,7 @@ import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-const FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'build', 'circuit.json');
+const FIXTURE_PATH = resolve('generated/flows/build/circuit.json');
 
 function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);

@@ -32,7 +32,7 @@ const audits = [
   },
   {
     id: 'fix-terminology',
-    files: ['README.md', 'commands/run.md', 'docs/flows/authoring-model.md'],
+    files: ['README.md', 'plugins/claude/commands/run.md', 'docs/flows/authoring-model.md'],
     pattern: /\/circuit:repair|\brepair:\b|Repair-only|Fix\/Repair|Repair\/Fix/i,
   },
 ];

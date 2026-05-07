@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444405",
+  "flow_id": "build",
+  "selected_flow": "build",
+  "outcome": "complete",
+  "headline": "Circuit finished Build. The change was implemented, verification passed, and review accepted it.",
+  "details": [
+    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Run note: Run closed with outcome complete via @complete.",
+    "Result: Implemented the requested synthetic change.",
+    "Verification: passed",
+    "Review verdict: accept"
+  ],
+  "evidence_warnings": [],
+  "run_folder": "<repo>/docs/release/proofs/runs/checkpoint/run",
+  "result_path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/result.json",
+  "report_paths": [
+    {
+      "label": "Run result",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/result.json"
+    },
+    {
+      "label": "build result",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build-result.json"
+    },
+    {
+      "label": "build.brief",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build/brief.json",
+      "schema": "build.brief@v1"
+    },
+    {
+      "label": "build.plan",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build/plan.json",
+      "schema": "build.plan@v1"
+    },
+    {
+      "label": "build.implementation",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build/implementation.json",
+      "schema": "build.implementation@v1"
+    },
+    {
+      "label": "build.verification",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build/verification.json",
+      "schema": "build.verification@v1"
+    },
+    {
+      "label": "build.review",
+      "path": "<repo>/docs/release/proofs/runs/checkpoint/run/reports/build/review.json",
+      "schema": "build.review@v1"
+    }
+  ]
+}

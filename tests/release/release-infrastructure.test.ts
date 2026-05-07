@@ -35,6 +35,8 @@ import { RunResult } from '../../src/schemas/result.js';
 import { Snapshot } from '../../src/schemas/snapshot.js';
 
 const root = resolve(__dirname, '..', '..');
+const proofRunsRoot = 'docs/release/proofs/runs';
+const legacyProofRunsRoot = 'examples/runs';
 
 function yamlFile(path: string): unknown {
   return YAML.parse(readFileSync(resolve(root, path), 'utf8'));
@@ -263,7 +265,7 @@ describe('release truth infrastructure', () => {
       generated_by: 'test',
       flows: [],
       router_intents: [],
-      commands: { root: [], codex_plugin: [], claude_plugin_skills: [] },
+      commands: { source: [], claude_plugin: [], codex_plugin: [], claude_plugin_skills: [] },
       connectors: [],
       hosts: [],
       capabilities: [
@@ -313,7 +315,7 @@ describe('release truth infrastructure', () => {
       generated_by: 'test',
       flows: [],
       router_intents: [],
-      commands: { root: [], codex_plugin: [], claude_plugin_skills: [] },
+      commands: { source: [], claude_plugin: [], codex_plugin: [], claude_plugin_skills: [] },
       connectors: [],
       hosts: [],
       capabilities: [
@@ -439,6 +441,35 @@ describe('release truth infrastructure', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it('keeps proof run files in the release proof corpus', () => {
+    const proofs = ProofScenarioIndex.parse(yamlFile('docs/release/proofs/index.yaml'));
+    const claims = PublicClaimLedger.parse(yamlFile('docs/release/claims/public-claims.yaml'));
+    const indexedPaths = proofs.scenarios.flatMap((scenario) => [
+      ...scenario.required_files,
+      ...scenario.backing_paths,
+    ]);
+    const goldenProofClaim = claims.claims.find((claim) => claim.id === 'CLAIM-GOLDEN-PROOF');
+    const captureScripts = [
+      'scripts/release/capture-golden-run-proofs.mjs',
+      'scripts/release/capture-explore-decision-proof.mjs',
+    ];
+
+    expect(exists(legacyProofRunsRoot)).toBe(false);
+    expect(indexedPaths.length).toBeGreaterThan(0);
+    expect(goldenProofClaim?.surfaces).toContain(proofRunsRoot);
+
+    for (const path of indexedPaths) {
+      expect(path.startsWith(`${proofRunsRoot}/`), path).toBe(true);
+      expect(exists(path), path).toBe(true);
+    }
+
+    for (const script of captureScripts) {
+      const source = readFileSync(resolve(root, script), 'utf8');
+      expect(source).toContain(proofRunsRoot);
+      expect(source).not.toContain(legacyProofRunsRoot);
+    }
+  });
+
   it('captures the Explore decision proof as verified current evidence', () => {
     const proofs = ProofScenarioIndex.parse(yamlFile('docs/release/proofs/index.yaml'));
     const scenario = proofs.scenarios.find((item) => item.id === 'proof:explore-decision');
@@ -452,7 +483,7 @@ describe('release truth infrastructure', () => {
     }
 
     const progress = readFileSync(
-      resolve(root, 'examples/runs/explore-decision/progress.jsonl'),
+      resolve(root, 'docs/release/proofs/runs/explore-decision/progress.jsonl'),
       'utf8',
     )
       .trim()
@@ -467,35 +498,41 @@ describe('release truth infrastructure', () => {
     expect(progress.map((event) => event.type)).toContain('checkpoint.waiting');
     expect(progress.map((event) => event.type)).toContain('run.completed');
 
-    const cliResult = jsonFile('examples/runs/explore-decision/result.json') as {
+    const cliResult = jsonFile('docs/release/proofs/runs/explore-decision/result.json') as {
       readonly flow_id?: string;
       readonly outcome?: string;
     };
     expect(cliResult).toMatchObject({ flow_id: 'explore', outcome: 'complete' });
     expect(
-      RunResult.parse(jsonFile('examples/runs/explore-decision/run/reports/result.json')),
+      RunResult.parse(
+        jsonFile('docs/release/proofs/runs/explore-decision/run/reports/result.json'),
+      ),
     ).toMatchObject({ flow_id: 'explore', outcome: 'complete' });
-    const snapshot = Snapshot.parse(jsonFile('examples/runs/explore-decision/run/state.json'));
+    const snapshot = Snapshot.parse(
+      jsonFile('docs/release/proofs/runs/explore-decision/run/state.json'),
+    );
     expect(snapshot.status).toBe('complete');
     expect(snapshot.steps.filter((step) => step.status === 'in_progress')).toEqual([]);
     expect(
       ExploreDecisionOptions.parse(
-        jsonFile('examples/runs/explore-decision/run/reports/decision-options.json'),
+        jsonFile('docs/release/proofs/runs/explore-decision/run/reports/decision-options.json'),
       ).options.map((option) => option.label),
     ).toEqual(['React', 'Vue', 'Hybrid path', 'Defer pending evidence']);
     const aggregate = ExploreTournamentAggregate.parse(
-      jsonFile('examples/runs/explore-decision/run/reports/tournament-aggregate.json'),
+      jsonFile('docs/release/proofs/runs/explore-decision/run/reports/tournament-aggregate.json'),
     );
     for (const branch of aggregate.branches) {
       expect(branch.result_body?.option_id).toBe(branch.branch_id);
     }
     expect(
       ExploreTournamentReview.parse(
-        jsonFile('examples/runs/explore-decision/run/reports/tournament-review.json'),
+        jsonFile('docs/release/proofs/runs/explore-decision/run/reports/tournament-review.json'),
       ).verdict,
     ).toBe('recommend');
     expect(
-      ExploreDecision.parse(jsonFile('examples/runs/explore-decision/run/reports/decision.json')),
+      ExploreDecision.parse(
+        jsonFile('docs/release/proofs/runs/explore-decision/run/reports/decision.json'),
+      ),
     ).toMatchObject({
       selected_option_id: 'option-2',
       selected_option_label: 'Vue',
@@ -503,17 +540,17 @@ describe('release truth infrastructure', () => {
     });
     expect(
       ExploreResult.parse(
-        jsonFile('examples/runs/explore-decision/run/reports/explore-result.json'),
+        jsonFile('docs/release/proofs/runs/explore-decision/run/reports/explore-result.json'),
       ).verdict_snapshot,
     ).toMatchObject({ decision_verdict: 'decided', selected_option_id: 'option-2' });
     const summary = readFileSync(
-      resolve(root, 'examples/runs/explore-decision/operator-summary.md'),
+      resolve(root, 'docs/release/proofs/runs/explore-decision/operator-summary.md'),
       'utf8',
     );
     expect(summary).toContain('Selected: Vue');
     expect(summary).toContain('Residual risks:');
     expect(summary).toContain('Next action: Run a Build plan for a Vue prototype.');
-    for (const file of filesUnder('examples/runs/explore-decision')) {
+    for (const file of filesUnder('docs/release/proofs/runs/explore-decision')) {
       const text = readFileSync(file, 'utf8');
       expect(text).not.toMatch(/\/Users\/petepetrash|Code\/circuit-next|\/private|\/var\/folders/);
     }
@@ -573,13 +610,16 @@ describe('release truth infrastructure', () => {
       }
 
       if (proof.slug === 'doctor') {
-        const output = readFileSync(resolve(root, 'examples/runs/doctor/output.txt'), 'utf8');
+        const output = readFileSync(
+          resolve(root, 'docs/release/proofs/runs/doctor/output.txt'),
+          'utf8',
+        );
         expect(output).toContain('exit: 0');
         expect(output).toContain('"status": "ok"');
         continue;
       }
 
-      const topLevelResult = jsonFile(`examples/runs/${proof.slug}/result.json`) as {
+      const topLevelResult = jsonFile(`docs/release/proofs/runs/${proof.slug}/result.json`) as {
         readonly flow_id?: string;
         readonly selected_flow?: string;
         readonly outcome?: string;
@@ -588,11 +628,13 @@ describe('release truth infrastructure', () => {
       expect(topLevelResult.outcome, id).toBe(proof.outcome);
       if (proof.outcome !== 'checkpoint_waiting') {
         expect(
-          RunResult.parse(jsonFile(`examples/runs/${proof.slug}/run/reports/result.json`)),
+          RunResult.parse(
+            jsonFile(`docs/release/proofs/runs/${proof.slug}/run/reports/result.json`),
+          ),
         ).toMatchObject({ flow_id: proof.flow, outcome: proof.outcome });
       }
       const progress = readFileSync(
-        resolve(root, `examples/runs/${proof.slug}/progress.jsonl`),
+        resolve(root, `docs/release/proofs/runs/${proof.slug}/progress.jsonl`),
         'utf8',
       )
         .trim()
@@ -612,21 +654,25 @@ describe('release truth infrastructure', () => {
     }
 
     expect(
-      BuildResult.parse(jsonFile('examples/runs/routed-build/run/reports/build-result.json'))
-        .outcome,
+      BuildResult.parse(
+        jsonFile('docs/release/proofs/runs/routed-build/run/reports/build-result.json'),
+      ).outcome,
     ).toBe('complete');
     expect(
-      ReviewResult.parse(jsonFile('examples/runs/review/run/reports/review-result.json')).verdict,
+      ReviewResult.parse(jsonFile('docs/release/proofs/runs/review/run/reports/review-result.json'))
+        .verdict,
     ).toBe('CLEAN');
-    expect(FixResult.parse(jsonFile('examples/runs/fix/run/reports/fix-result.json')).outcome).toBe(
-      'partial',
-    );
     expect(
-      MigrateResult.parse(jsonFile('examples/runs/migrate/run/reports/migrate-result.json'))
-        .outcome,
+      FixResult.parse(jsonFile('docs/release/proofs/runs/fix/run/reports/fix-result.json')).outcome,
+    ).toBe('partial');
+    expect(
+      MigrateResult.parse(
+        jsonFile('docs/release/proofs/runs/migrate/run/reports/migrate-result.json'),
+      ).outcome,
     ).toBe('complete');
     expect(
-      SweepResult.parse(jsonFile('examples/runs/sweep/run/reports/sweep-result.json')).outcome,
+      SweepResult.parse(jsonFile('docs/release/proofs/runs/sweep/run/reports/sweep-result.json'))
+        .outcome,
     ).toBe('complete');
 
     const handoffScenario = proofs.scenarios.find((item) => item.id === 'proof:handoff');
@@ -637,18 +683,19 @@ describe('release truth infrastructure', () => {
     ]) {
       expect(exists(path), `proof:handoff ${path}`).toBe(true);
     }
-    expect(ContinuityRecord.parse(jsonFile('examples/runs/handoff/continuity.json'))).toMatchObject(
-      {
-        continuity_kind: 'run-backed',
-        narrative: { next: 'DO: resolve the Build checkpoint and continue.' },
-      },
-    );
     expect(
-      ContinuityIndex.parse(jsonFile('examples/runs/handoff/control-plane/continuity/index.json'))
-        .pending_record?.record_id,
+      ContinuityRecord.parse(jsonFile('docs/release/proofs/runs/handoff/continuity.json')),
+    ).toMatchObject({
+      continuity_kind: 'run-backed',
+      narrative: { next: 'DO: resolve the Build checkpoint and continue.' },
+    });
+    expect(
+      ContinuityIndex.parse(
+        jsonFile('docs/release/proofs/runs/handoff/control-plane/continuity/index.json'),
+      ).pending_record?.record_id,
     ).toBe('continuity-44444444-4444-4444-8444-444444444411');
     expect(
-      readFileSync(resolve(root, 'examples/runs/handoff/operator-summary.md'), 'utf8'),
+      readFileSync(resolve(root, 'docs/release/proofs/runs/handoff/operator-summary.md'), 'utf8'),
     ).toContain('DO: resolve the Build checkpoint and continue.');
 
     const customizationScenario = proofs.scenarios.find(
@@ -661,7 +708,7 @@ describe('release truth infrastructure', () => {
     ]) {
       expect(exists(path), `proof:customization ${path}`).toBe(true);
     }
-    const customizationResult = jsonFile('examples/runs/customization/result.json') as {
+    const customizationResult = jsonFile('docs/release/proofs/runs/customization/result.json') as {
       readonly status?: string;
       readonly slug?: string;
     };
@@ -671,11 +718,13 @@ describe('release truth infrastructure', () => {
     });
     expect(
       CompiledFlow.parse(
-        jsonFile('examples/runs/customization/custom-home/flows/release-note-flow/circuit.json'),
+        jsonFile(
+          'docs/release/proofs/runs/customization/custom-home/flows/release-note-flow/circuit.json',
+        ),
       ).id,
     ).toBe('release-note-flow');
 
-    for (const file of filesUnder('examples/runs')) {
+    for (const file of filesUnder('docs/release/proofs/runs')) {
       const text = readFileSync(file, 'utf8');
       expect(text).not.toMatch(
         /\/Users\/petepetrash|Code\/circuit-next|\/private|\/var\/folders|\/tmp\//,

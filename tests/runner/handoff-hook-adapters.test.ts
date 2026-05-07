@@ -83,7 +83,7 @@ function runHook(
 
 describe('handoff SessionStart hook adapters', () => {
   it.each([
-    ['claude', resolve('hooks/session-start.mjs')],
+    ['claude', resolve('plugins/claude/hooks/session-start.mjs')],
     ['codex', resolve('plugins/circuit/hooks/session-start.mjs')],
   ] as const)(
     '%s adapter injects the shared handoff context from hook cwd input',
@@ -123,7 +123,7 @@ describe('handoff SessionStart hook adapters', () => {
   );
 
   it.each([
-    ['claude', resolve('hooks/session-start.mjs')],
+    ['claude', resolve('plugins/claude/hooks/session-start.mjs')],
     ['codex', resolve('plugins/circuit/hooks/session-start.mjs')],
   ] as const)('%s adapter fails soft when the brief is empty or invalid', (_name, hookPath) => {
     const root = tempRoot('circuit-handoff-hook-soft-');
@@ -149,7 +149,7 @@ describe('handoff SessionStart hook adapters', () => {
   });
 
   it.each([
-    ['claude', resolve('hooks/session-start.mjs')],
+    ['claude', resolve('plugins/claude/hooks/session-start.mjs')],
     ['codex', resolve('plugins/circuit/hooks/session-start.mjs')],
   ] as const)(
     '%s adapter does not fall back to process cwd when hook cwd is missing',
@@ -170,7 +170,7 @@ describe('handoff SessionStart hook adapters', () => {
   );
 
   it.each([
-    ['claude', resolve('hooks/session-start.mjs')],
+    ['claude', resolve('plugins/claude/hooks/session-start.mjs')],
     ['codex', resolve('plugins/circuit/hooks/session-start.mjs')],
   ] as const)('%s adapter fails soft when the brief command hangs', (_name, hookPath) => {
     const root = tempRoot('circuit-handoff-hook-timeout-');

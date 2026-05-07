@@ -4,8 +4,8 @@
 // compiles each to a CompileResult via
 // src/flows/compile-schematic-to-flow.ts (consumed here through
 // dist/), then writes canonical JSON files under generated/flows/<id>/.
-// Public flows also mirror to Claude Code host output under
-// .claude-plugin/skills/<id>/ and Codex host output under
+// Public flows also mirror to the Claude Code package under
+// plugins/claude/skills/<id>/ and Codex host output under
 // plugins/circuit/flows/<id>/. Internal flows stay under generated/flows
 // and are not installed into host-visible plugin surfaces.
 //
@@ -72,10 +72,14 @@ async function loadSchematicsFromCatalog() {
 }
 
 const SCHEMATICS = await loadSchematicsFromCatalog();
+const CLAUDE_PLUGIN_ROOT_REL = 'plugins/claude';
 const CODEX_PLUGIN_ROOT_REL = 'plugins/circuit';
+const SOURCE_COMMAND_ROOT_REL = 'src/commands';
 const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
+const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"';
 const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit-next.mjs'";
-const CODEX_ROUTER_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'];
+const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'];
+const LEGACY_ROOT_HOST_SURFACES = ['.claude-plugin', 'commands', 'hooks'];
 const CODEX_SKILL_METADATA = {
   build: {
     title: 'Circuit Build',
@@ -124,13 +128,37 @@ const CODEX_SKILL_METADATA = {
   },
 };
 
-// Slash command source files live next to their flow under
-// src/flows/<id>/command.md. The plugin loader reads commands/<id>.md
-// at the repo root, so this script copies the source to the plugin
-// location. commands/run.md is owned by the CLI router (not a flow)
-// and is not generated.
+// Slash command source files either live next to their flow under
+// src/flows/<id>/command.md or, for direct/router commands, under
+// src/commands/<id>.md. Host packages receive generated command copies.
+function stripMarkdownComments(content) {
+  return content.replace(/<!--[\s\S]*?-->\s*/g, '');
+}
+
+function renderClaudeHostCommand(sourceContent) {
+  return stripMarkdownComments(sourceContent)
+    .replaceAll('./bin/circuit-next', CLAUDE_PLUGIN_WRAPPER_COMMAND)
+    .replace(
+      /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
+      [
+        '1. **Resolve plugin root.** Claude Code substitutes',
+        '   `${CLAUDE_PLUGIN_ROOT}` with the installed Circuit plugin directory.',
+        "   Do not use a path relative to the user's project.",
+        '2. **Construct the Bash invocation SAFELY.**',
+      ].join('\n'),
+    )
+    .replace(
+      /Use the Bash tool to execute the constructed command\. `node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs"`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
+      [
+        'Use the Bash tool to execute the constructed command. The wrapper',
+        '   lives in the installed Claude Code plugin directory, injects the',
+        "   plugin's packaged flow root, and then invokes `circuit-next`.",
+      ].join('\n'),
+    );
+}
+
 function renderCodexHostCommand(sourceContent) {
-  return sourceContent
+  return stripMarkdownComments(sourceContent)
     .replaceAll('./bin/circuit-next', CODEX_PLUGIN_WRAPPER_COMMAND)
     .replace(
       /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
@@ -292,8 +320,9 @@ function emitCommandFile(entry) {
   if (entry.commandSourcePath === undefined) return;
   copyMarkdownFile(
     entry.commandSourcePath,
-    `commands/${entry.id}.md`,
-    `from ${entry.commandSourcePath}`,
+    `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
+    `claude-code host command from ${entry.commandSourcePath}`,
+    renderClaudeHostCommand,
   );
   copyMarkdownFile(
     entry.commandSourcePath,
@@ -309,16 +338,22 @@ function emitCommandFile(entry) {
   );
 }
 
-function emitCodexRouterCommand() {
-  for (const command of CODEX_ROUTER_COMMANDS) {
+function emitHostDirectCommands() {
+  for (const command of HOST_DIRECT_COMMANDS) {
     copyMarkdownFile(
-      `commands/${command}.md`,
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
+      `claude-code host ${command} command`,
+      renderClaudeHostCommand,
+    );
+    copyMarkdownFile(
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
       `codex host ${command} command`,
       renderCodexHostCommand,
     );
     copyMarkdownFile(
-      `commands/${command}.md`,
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
       `codex host ${command} skill`,
       (content) => renderCodexHostSkill(command, content),
@@ -329,10 +364,11 @@ function emitCodexRouterCommand() {
 function checkCommandFile(entry) {
   if (entry.visibility !== 'public') return false;
   if (entry.commandSourcePath === undefined) return false;
-  const rootDrifted = checkMarkdownMirror(
+  const claudeDrifted = checkMarkdownMirror(
     entry.commandSourcePath,
-    `commands/${entry.id}.md`,
-    `${entry.id} root command`,
+    `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
+    `${entry.id} claude-code host command`,
+    renderClaudeHostCommand,
   );
   const codexDrifted = checkMarkdownMirror(
     entry.commandSourcePath,
@@ -346,24 +382,30 @@ function checkCommandFile(entry) {
     `${entry.id} codex host skill`,
     (content) => renderCodexHostSkill(entry.id, content),
   );
-  return rootDrifted || codexDrifted || codexSkillDrifted;
+  return claudeDrifted || codexDrifted || codexSkillDrifted;
 }
 
-function checkCodexRouterCommand() {
-  return CODEX_ROUTER_COMMANDS.some((command) => {
+function checkHostDirectCommands() {
+  return HOST_DIRECT_COMMANDS.some((command) => {
+    const claudeDrifted = checkMarkdownMirror(
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
+      `claude-code host ${command} command`,
+      renderClaudeHostCommand,
+    );
     const commandDrifted = checkMarkdownMirror(
-      `commands/${command}.md`,
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
       `codex host ${command} command`,
       renderCodexHostCommand,
     );
     const skillDrifted = checkMarkdownMirror(
-      `commands/${command}.md`,
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
       `codex host ${command} skill`,
       (content) => renderCodexHostSkill(command, content),
     );
-    return commandDrifted || skillDrifted;
+    return claudeDrifted || commandDrifted || skillDrifted;
   });
 }
 
@@ -383,16 +425,16 @@ function renderSurfaceInventory() {
       '`src/flows/<id>/command.md`',
       '`scripts/emit-flows.mjs`',
       'source yes; outputs no',
-      '`commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
+      '`plugins/claude/commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
       '`node scripts/emit-flows.mjs --check`',
       'Only public flows with `paths.command` emit these surfaces. Generated headers are omitted to preserve host command and skill parsing.',
     ],
     [
-      'Root/router commands',
-      '`commands/<id>.md`',
-      '`scripts/emit-flows.mjs` mirrors to Codex plugin surfaces',
-      'root source yes; mirrors no',
-      '`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
+      'Direct command sources',
+      '`src/commands/<id>.md`',
+      '`scripts/emit-flows.mjs` mirrors to host plugin surfaces',
+      'source yes; outputs no',
+      '`plugins/claude/commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
       '`node scripts/emit-flows.mjs --check`',
       'Covers router/direct commands such as run, create, handoff, migrate, and sweep.',
     ],
@@ -410,7 +452,7 @@ function renderSurfaceInventory() {
       '`generated/flows/<id>/*.json`',
       '`scripts/emit-flows.mjs`',
       'no',
-      '`.claude-plugin/skills/<id>/*.json`',
+      '`plugins/claude/skills/<id>/*.json`',
       '`node scripts/emit-flows.mjs --check`',
       'Public flows only. Internal flow mirrors are stale and fail drift checks.',
     ],
@@ -425,7 +467,7 @@ function renderSurfaceInventory() {
     ],
     [
       'Codex plugin command mirrors',
-      'flow-owned command sources or root command sources',
+      'flow-owned command sources or direct command sources',
       '`scripts/emit-flows.mjs`',
       'no',
       '`plugins/circuit/commands/<id>.md`',
@@ -434,7 +476,7 @@ function renderSurfaceInventory() {
     ],
     [
       'Codex plugin skill surfaces',
-      'flow-owned command sources or root command sources',
+      'flow-owned command sources or direct command sources',
       '`scripts/emit-flows.mjs`',
       'no',
       '`plugins/circuit/skills/<id>/SKILL.md`',
@@ -442,13 +484,13 @@ function renderSurfaceInventory() {
       'Skill metadata is generated from script-owned metadata plus command source body.',
     ],
     [
-      'Command README',
-      'none currently',
-      'none currently',
-      'not applicable',
-      'none currently',
-      'not applicable',
-      'There is no `commands/README.md` surface today; command ownership is mapped here instead.',
+      'Command ownership note',
+      '`src/commands/README.md`',
+      'none',
+      'yes',
+      '`src/commands/README.md`',
+      'normal docs review',
+      'Documents direct command source ownership; host command files are generated mirrors.',
     ],
   ];
   return [
@@ -473,14 +515,14 @@ function commandSurfacesForEntry(entry) {
   if (entry.visibility !== 'public') return [];
   if (entry.commandSourcePath !== undefined) {
     return [
-      `commands/${entry.id}.md`,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.id}/SKILL.md`,
     ];
   }
-  if (CODEX_ROUTER_COMMANDS.includes(entry.id)) {
+  if (HOST_DIRECT_COMMANDS.includes(entry.id)) {
     return [
-      `commands/${entry.id}.md`,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
       `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.id}/SKILL.md`,
     ];
@@ -491,7 +533,8 @@ function commandSurfacesForEntry(entry) {
 function commandSourceForEntry(entry) {
   if (entry.visibility !== 'public') return 'none';
   if (entry.commandSourcePath !== undefined) return `\`${entry.commandSourcePath}\``;
-  if (CODEX_ROUTER_COMMANDS.includes(entry.id)) return `\`commands/${entry.id}.md\``;
+  if (HOST_DIRECT_COMMANDS.includes(entry.id))
+    return `\`${SOURCE_COMMAND_ROOT_REL}/${entry.id}.md\``;
   return 'none';
 }
 
@@ -499,8 +542,8 @@ function editRuleForEntry(entry) {
   if (entry.commandSourcePath !== undefined) {
     return 'Edit the flow package source; run `npm run emit-flows`.';
   }
-  if (CODEX_ROUTER_COMMANDS.includes(entry.id)) {
-    return 'Edit the root command source; run `npm run emit-flows`.';
+  if (HOST_DIRECT_COMMANDS.includes(entry.id)) {
+    return 'Edit the direct command source; run `npm run emit-flows`.';
   }
   if (entry.visibility === 'internal') {
     return 'Edit the flow package; host mirrors must not exist.';
@@ -535,15 +578,16 @@ async function renderGeneratedSurfaceMap() {
     );
   }
 
-  const commandRows = CODEX_ROUTER_COMMANDS.map((command) =>
+  const commandRows = HOST_DIRECT_COMMANDS.map((command) =>
     markdownTableRow([
       `\`${command}\``,
-      `\`commands/${command}.md\``,
+      `\`${SOURCE_COMMAND_ROOT_REL}/${command}.md\``,
       markdownList([
+        `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
         `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
         `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
       ]),
-      'Edit the root command source; run `npm run emit-flows`.',
+      'Edit the direct command source; run `npm run emit-flows`.',
     ]),
   );
 
@@ -558,9 +602,9 @@ async function renderGeneratedSurfaceMap() {
     '',
     '- Flow package schematics are authored in `src/flows/<id>/schematic.json`.',
     '- Flow-owned commands are authored in `src/flows/<id>/command.md`.',
-    '- Root-authored commands are authored in `commands/<id>.md`.',
+    '- Direct commands are authored in `src/commands/<id>.md`.',
     '- Canonical compiled manifests under `generated/flows/**` are generated outputs.',
-    '- Host mirrors under `.claude-plugin/skills/**`, `plugins/circuit/flows/**`, `plugins/circuit/commands/**`, and `plugins/circuit/skills/**` are generated outputs.',
+    '- Host mirrors under `plugins/claude/skills/**`, `plugins/claude/commands/**`, `plugins/circuit/flows/**`, `plugins/circuit/commands/**`, and `plugins/circuit/skills/**` are generated outputs.',
     '- Internal flows emit only under `generated/flows/**`; host mirrors for internal flows are stale and fail the drift check.',
     '- After editing an authored source, run `npm run build && npm run emit-flows`, then verify.',
     '',
@@ -580,11 +624,11 @@ async function renderGeneratedSurfaceMap() {
     markdownTableRow(['---', '---', '---', '---', '---', '---', '---', '---']),
     ...flowRows,
     '',
-    '## Root Commands',
+    '## Direct Commands',
     '',
-    'Root commands are direct command surfaces owned by files in `commands/`. Some also correspond to routable flows that do not own `paths.command`.',
+    'Direct commands are source files under `src/commands/`. Some also correspond to routable flows that do not own `paths.command`.',
     '',
-    markdownTableRow(['Command', 'Command source', 'Codex host mirrors', 'Edit rule']),
+    markdownTableRow(['Command', 'Command source', 'Host mirrors', 'Edit rule']),
     markdownTableRow(['---', '---', '---', '---']),
     ...commandRows,
     '',
@@ -628,7 +672,7 @@ function expectedCodexSkillIds() {
     ...SCHEMATICS.filter(
       (entry) => entry.visibility === 'public' && entry.commandSourcePath !== undefined,
     ).map((entry) => entry.id),
-    ...CODEX_ROUTER_COMMANDS,
+    ...HOST_DIRECT_COMMANDS,
   ]);
 }
 
@@ -744,7 +788,7 @@ function planSchematicFiles(id, result) {
 }
 
 function claudeHostRel(canonicalRel) {
-  return canonicalRel.replace(/^generated\/flows\//, '.claude-plugin/skills/');
+  return canonicalRel.replace(/^generated\/flows\//, `${CLAUDE_PLUGIN_ROOT_REL}/skills/`);
 }
 
 function claudeHostPlan(plan) {
@@ -774,11 +818,18 @@ function findStaleSiblings(id, plan, rootRel) {
 
 function internalHostMirrorDirs(entry) {
   if (entry.visibility !== 'internal') return [];
-  return [`.claude-plugin/skills/${entry.id}`, `${CODEX_PLUGIN_ROOT_REL}/flows/${entry.id}`];
+  return [
+    `${CLAUDE_PLUGIN_ROOT_REL}/skills/${entry.id}`,
+    `${CODEX_PLUGIN_ROOT_REL}/flows/${entry.id}`,
+  ];
 }
 
 function findExistingInternalHostMirrorDirs(entry) {
   return internalHostMirrorDirs(entry).filter((rel) => existsSync(resolve(projectRoot, rel)));
+}
+
+function findLegacyRootHostSurfaces() {
+  return LEGACY_ROOT_HOST_SURFACES.filter((rel) => existsSync(resolve(projectRoot, rel)));
 }
 
 async function emitMode() {
@@ -811,7 +862,11 @@ async function emitMode() {
       ...findStaleSiblings(entry.id, plan, 'generated/flows'),
       ...(entry.visibility === 'public'
         ? [
-            ...findStaleSiblings(entry.id, claudeHostPlan(plan), '.claude-plugin/skills'),
+            ...findStaleSiblings(
+              entry.id,
+              claudeHostPlan(plan),
+              `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
+            ),
             ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`),
           ]
         : []),
@@ -825,11 +880,15 @@ async function emitMode() {
     }
     emitCommandFile(entry);
   }
-  emitCodexRouterCommand();
+  emitHostDirectCommands();
   await emitGeneratedSurfaceMap();
   for (const stale of findStaleCodexSkillDirs(expectedSkills)) {
     rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
     console.log(`removed stale ${stale}`);
+  }
+  for (const stale of findLegacyRootHostSurfaces()) {
+    rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
+    console.log(`removed legacy root host surface ${stale}`);
   }
 }
 
@@ -910,7 +969,11 @@ async function checkMode() {
         ...findStaleSiblings(entry.id, plan, 'generated/flows'),
         ...(entry.visibility === 'public'
           ? [
-              ...findStaleSiblings(entry.id, claudeHostPlan(plan), '.claude-plugin/skills'),
+              ...findStaleSiblings(
+                entry.id,
+                claudeHostPlan(plan),
+                `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
+              ),
               ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`),
             ]
           : []),
@@ -931,7 +994,7 @@ async function checkMode() {
         drifted = true;
       }
     }
-    if (checkCodexRouterCommand()) {
+    if (checkHostDirectCommands()) {
       drifted = true;
     }
     if (await checkGeneratedSurfaceMap()) {
@@ -940,6 +1003,12 @@ async function checkMode() {
     for (const stale of findStaleCodexSkillDirs(expectedSkills)) {
       console.error(
         `✗ ${stale} is not an expected Codex skill. Run \`npm run emit-flows\` to clean up stale skills, then commit the deletion.`,
+      );
+      drifted = true;
+    }
+    for (const stale of findLegacyRootHostSurfaces()) {
+      console.error(
+        `✗ ${stale} is a legacy root host surface. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
       );
       drifted = true;
     }

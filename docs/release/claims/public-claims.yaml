@@ -14,7 +14,7 @@ claims:
     claim: Fix is Circuit's public bug-fixing flow.
     type: flow
     status: verified_current
-    surfaces: [README.md, commands/run.md, docs/release/parity-matrix.generated.md]
+    surfaces: [README.md, plugins/claude/commands/run.md, docs/release/parity-matrix.generated.md]
     backing:
       capability_ids: [flow:fix]
       script_checks: [scripts/release/emit-current-capabilities.mjs --check]
@@ -62,7 +62,7 @@ claims:
     claim: Review sends untracked paths and sizes by default; untracked file contents require explicit opt-in and still apply skip/truncation safeguards.
     type: safety
     status: verified_current
-    surfaces: [README.md, commands/run.md, commands/review.md, docs/release/readiness-report.generated.md]
+    surfaces: [README.md, plugins/claude/commands/run.md, plugins/claude/commands/review.md, docs/release/readiness-report.generated.md]
     backing:
       capability_ids: [safety:review-untracked-evidence]
       test_paths:
@@ -74,7 +74,7 @@ claims:
     claim: Plan-execution requests must start the right work slice, ask one blocking question, or return one exact next command.
     type: plan-execution
     status: verified_current
-    surfaces: [commands/run.md, plugins/circuit/skills/run/SKILL.md, docs/release/readiness-report.generated.md]
+    surfaces: [plugins/claude/commands/run.md, plugins/circuit/skills/run/SKILL.md, docs/release/readiness-report.generated.md]
     backing:
       capability_ids: [feature:plan-execution]
       proof_ids: [proof:plan-execution]
@@ -101,7 +101,7 @@ claims:
     claim: Public proof must cover doing work, deciding, maintenance/migration, continuity, customization, failure, first-run, and plan execution.
     type: proof
     status: verified_current
-    surfaces: [README.md, docs/release/proofs/index.yaml, examples/runs]
+    surfaces: [README.md, docs/release/proofs/index.yaml, docs/release/proofs/runs]
     backing:
       proof_ids:
         - proof:routed-build

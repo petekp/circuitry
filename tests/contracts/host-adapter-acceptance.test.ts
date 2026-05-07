@@ -141,10 +141,13 @@ describe('host adapter acceptance contract', () => {
   it('keeps Claude Code and Codex hook registration claims aligned with packaged files', () => {
     const acceptance = readFileSync(ACCEPTANCE_PATH, 'utf8');
     const claudeManifest = JSON.parse(
-      readFileSync(resolve(REPO_ROOT, '.claude-plugin/plugin.json'), 'utf8'),
+      readFileSync(resolve(REPO_ROOT, 'plugins/claude/.claude-plugin/plugin.json'), 'utf8'),
     ) as { hooks?: string };
-    const claudeHooks = readFileSync(resolve(REPO_ROOT, 'hooks/hooks.json'), 'utf8');
-    const claudeHookScript = readFileSync(resolve(REPO_ROOT, 'hooks/session-start.mjs'), 'utf8');
+    const claudeHooks = readFileSync(resolve(REPO_ROOT, 'plugins/claude/hooks/hooks.json'), 'utf8');
+    const claudeHookScript = readFileSync(
+      resolve(REPO_ROOT, 'plugins/claude/hooks/session-start.mjs'),
+      'utf8',
+    );
     const codexManifest = JSON.parse(
       readFileSync(resolve(REPO_ROOT, 'plugins/circuit/.codex-plugin/plugin.json'), 'utf8'),
     ) as { hooks?: string };
@@ -157,7 +160,7 @@ describe('host adapter acceptance contract', () => {
     expect(claudeManifest.hooks).toBe('./hooks/hooks.json');
     expect(claudeHooks).toContain('SessionStart');
     expect(claudeHooks).toContain('${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs');
-    expect(claudeHookScript).toContain('bin/circuit-next');
+    expect(claudeHookScript).toContain('scripts/circuit-next.mjs');
 
     expect(codexManifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/hooks.json'))).toBe(false);

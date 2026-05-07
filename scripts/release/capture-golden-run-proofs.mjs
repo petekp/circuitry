@@ -18,6 +18,7 @@ import { executeComposeV2 } from '../../dist/runtime/executors/compose.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = resolve(__dirname, '../..');
+const proofRunsRootRel = 'docs/release/proofs/runs';
 const scrubbedProjectRoot = '<repo>';
 const homeDir = process.env.HOME;
 
@@ -496,9 +497,9 @@ function exploreDecisionRelayer() {
 }
 
 async function captureCliScenario(scenario) {
-  const proofDirRel = `examples/runs/${scenario.slug}`;
+  const proofDirRel = `${proofRunsRootRel}/${scenario.slug}`;
   const proofDir = resolve(projectRoot, proofDirRel);
-  const stagingProofDirRel = `examples/runs/.capture-${scenario.slug}`;
+  const stagingProofDirRel = `${proofRunsRootRel}/.capture-${scenario.slug}`;
   const stagingProofDir = resolve(projectRoot, stagingProofDirRel);
   const runFolderRel = `${stagingProofDirRel}/run`;
   const runFolder = resolve(projectRoot, runFolderRel);
@@ -560,7 +561,7 @@ async function captureCliScenario(scenario) {
 }
 
 function captureDoctor() {
-  const proofDirRel = 'examples/runs/doctor';
+  const proofDirRel = `${proofRunsRootRel}/doctor`;
   const proofDir = resolve(projectRoot, proofDirRel);
   rmSync(proofDir, { recursive: true, force: true });
   mkdirSync(proofDir, { recursive: true });
@@ -591,9 +592,9 @@ function captureDoctor() {
 }
 
 async function captureHandoff() {
-  const proofDirRel = 'examples/runs/handoff';
+  const proofDirRel = `${proofRunsRootRel}/handoff`;
   const proofDir = resolve(projectRoot, proofDirRel);
-  const stagingProofDirRel = 'examples/runs/.capture-handoff';
+  const stagingProofDirRel = `${proofRunsRootRel}/.capture-handoff`;
   const stagingProofDir = resolve(projectRoot, stagingProofDirRel);
   const runFolder = resolve(projectRoot, `${stagingProofDirRel}/run`);
   const controlPlane = resolve(projectRoot, `${stagingProofDirRel}/control-plane`);
@@ -682,9 +683,9 @@ async function captureHandoff() {
 }
 
 async function captureCustomization() {
-  const proofDirRel = 'examples/runs/customization';
+  const proofDirRel = `${proofRunsRootRel}/customization`;
   const proofDir = resolve(projectRoot, proofDirRel);
-  const stagingProofDirRel = 'examples/runs/.capture-customization';
+  const stagingProofDirRel = `${proofRunsRootRel}/.capture-customization`;
   const stagingProofDir = resolve(projectRoot, stagingProofDirRel);
   const home = resolve(projectRoot, `${stagingProofDirRel}/custom-home`);
   const pathAliases = [{ fromRel: stagingProofDirRel, toRel: proofDirRel }];

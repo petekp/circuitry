@@ -46,7 +46,7 @@ import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 //     batch (RunResult shape) + verification + review and produces a
 //     valid migrate.result@v1 with the canonical 6-pointer set.
 
-const FIXTURE_PATH = resolve('.claude-plugin', 'skills', 'migrate', 'circuit.json');
+const FIXTURE_PATH = resolve('generated/flows/migrate/circuit.json');
 
 function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);

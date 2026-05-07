@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444406",
+  "flow_id": "build",
+  "selected_flow": "build",
+  "routed_by": "explicit",
+  "router_reason": "explicit flow positional argument",
+  "outcome": "aborted",
+  "headline": "Circuit run aborted.",
+  "details": [
+    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Run note: Run closed with outcome aborted.",
+    "Abort reason: route 'retry' for step 'act-step' exhausted max_attempts=2"
+  ],
+  "evidence_warnings": [],
+  "run_folder": "<repo>/docs/release/proofs/runs/abort/run",
+  "result_path": "<repo>/docs/release/proofs/runs/abort/run/reports/result.json",
+  "report_paths": [
+    {
+      "label": "Run result",
+      "path": "<repo>/docs/release/proofs/runs/abort/run/reports/result.json"
+    }
+  ]
+}
