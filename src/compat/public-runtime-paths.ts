@@ -423,7 +423,7 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/fanout-handler-direct.test.ts'],
+    compatibilityTestPaths: ['tests/core-v2/fanout-v2.test.ts'],
     notes: 'Retained fanout handler.',
   },
   {
@@ -442,7 +442,7 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/fanout-handler-direct.test.ts'],
+    compatibilityTestPaths: ['tests/core-v2/fanout-v2.test.ts'],
     notes: 'Retained fanout branch expansion output shape.',
   },
   {
@@ -461,7 +461,7 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/fanout-handler-direct.test.ts'],
+    compatibilityTestPaths: ['tests/core-v2/fanout-v2.test.ts'],
     notes: 'Retained fanout handler types.',
   },
   {
@@ -508,7 +508,7 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/sub-run-handler-direct.test.ts'],
+    compatibilityTestPaths: ['tests/core-v2/sub-run-v2.test.ts'],
     notes: 'Retained sub-run handler.',
   },
   {
