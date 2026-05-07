@@ -1,5 +1,4 @@
 export type PublicRuntimePathCategory =
-  | 'connector-wrapper'
   | 'public-runner-surface'
   | 'retained-handler'
   | 'retained-implementation'
@@ -33,56 +32,6 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     requiresReviewBeforeDeletion: true,
     compatibilityTestPaths: ['tests/runner/retained-compat-facade.test.ts'],
     notes: 'Retired v1 checkpoint resume path; direct preparation fails closed.',
-  },
-  {
-    oldPath: 'src/runtime/connectors/claude-code.ts',
-    currentOwnerPath: 'src/connectors/claude-code.ts',
-    category: 'connector-wrapper',
-    currentDisposition: 'keep',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/connector-shared-compat.test.ts'],
-    notes: 'Old Claude Code connector import path.',
-  },
-  {
-    oldPath: 'src/runtime/connectors/codex.ts',
-    currentOwnerPath: 'src/connectors/codex.ts',
-    category: 'connector-wrapper',
-    currentDisposition: 'keep',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/connector-shared-compat.test.ts'],
-    notes: 'Old Codex connector import path.',
-  },
-  {
-    oldPath: 'src/runtime/connectors/custom.ts',
-    currentOwnerPath: 'src/connectors/custom.ts',
-    category: 'connector-wrapper',
-    currentDisposition: 'keep',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/connector-shared-compat.test.ts'],
-    notes: 'Old custom connector import path.',
-  },
-  {
-    oldPath: 'src/runtime/connectors/relay-materializer.ts',
-    currentOwnerPath: 'src/connectors/relay-materializer.ts',
-    category: 'connector-wrapper',
-    currentDisposition: 'keep',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/connector-shared-compat.test.ts'],
-    notes: 'Old relay materializer import path.',
-  },
-  {
-    oldPath: 'src/runtime/connectors/shared.ts',
-    currentOwnerPath: 'src/connectors/shared.ts',
-    category: 'connector-wrapper',
-    currentDisposition: 'keep',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/connector-shared-compat.test.ts'],
-    notes: 'Old connector shared helper import path.',
   },
   {
     oldPath: 'src/runtime/progress-projector.ts',

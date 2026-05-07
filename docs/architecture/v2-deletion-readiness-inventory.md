@@ -32,8 +32,8 @@ The Phase 5.5 result:
   make them intentional support surfaces;
 - several files should move to neutral ownership later, but only behind focused
   review. Phase 5.32 moved connector subprocesses and relay materialization to
-  `src/connectors/**`; the old runtime connector paths remain compatibility
-  wrappers. Phase 5.34 reviewed retained trace/status/progress/checkpoint-state
+  `src/connectors/**`; the old runtime connector paths are now retired.
+  Phase 5.34 reviewed retained trace/status/progress/checkpoint-state
   ownership and approved no implementation move; those files remain retained
   product behavior with stronger import guards.
 
@@ -81,11 +81,11 @@ final cutover product decision.
 | `src/runtime/checkpoint-resume.ts` | retained product behavior | Owns retained/v1 checkpoint resume preparation. Keep while old checkpoint folders remain supported. |
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
 | `src/runtime/config-loader.ts` | removed | Neutral config loading lives in `src/shared/config-loader.ts`; the old runtime wrapper is retired. |
-| `src/runtime/connectors/claude-code.ts` | compatibility wrapper | Neutral implementation moved to `src/connectors/claude-code.ts` in Phase 5.32. Keep old path for old imports and fingerprint compatibility. |
-| `src/runtime/connectors/codex.ts` | compatibility wrapper | Neutral implementation moved to `src/connectors/codex.ts` in Phase 5.32. Keep old path for old imports and fingerprint compatibility. |
-| `src/runtime/connectors/custom.ts` | compatibility wrapper | Neutral implementation moved to `src/connectors/custom.ts` in Phase 5.32. Keep old path for old imports and compatibility tests. |
-| `src/runtime/connectors/relay-materializer.ts` | compatibility wrapper | Neutral implementation moved to `src/connectors/relay-materializer.ts` in Phase 5.32. Keep old path for old imports and fingerprint compatibility. |
-| `src/runtime/connectors/shared.ts` | compatibility wrapper | Re-exports neutral connector helpers and relay types for old imports. |
+| `src/runtime/connectors/claude-code.ts` | removed | Neutral implementation lives in `src/connectors/claude-code.ts`; the old runtime wrapper is retired. |
+| `src/runtime/connectors/codex.ts` | removed | Neutral implementation lives in `src/connectors/codex.ts`; the old runtime wrapper is retired. |
+| `src/runtime/connectors/custom.ts` | removed | Neutral implementation lives in `src/connectors/custom.ts`; the old runtime wrapper is retired. |
+| `src/runtime/connectors/relay-materializer.ts` | removed | Neutral implementation lives in `src/connectors/relay-materializer.ts`; the old runtime wrapper is retired. |
+| `src/runtime/connectors/shared.ts` | removed | Neutral connector helper barrel lives in `src/connectors/shared.ts`; the old runtime wrapper is retired. |
 | `src/runtime/manifest-snapshot-writer.ts` | removed | Neutral byte-match helper lives in `src/shared/manifest-snapshot.ts`; the old runtime wrapper is retired. |
 | `src/runtime/operator-summary-writer.ts` | removed | Neutral operator summary writer lives in `src/shared/operator-summary-writer.ts`; the old runtime wrapper is retired. |
 | `src/runtime/policy/flow-kind-policy.ts` | removed | Neutral policy helper lives in `src/shared/flow-kind-policy.ts`; the old runtime wrapper is retired. |
@@ -161,7 +161,6 @@ Those counts are no longer current after final cutover.
 The retained runtime itself is no longer the blocker. The remaining blockers are
 wrapper/package-surface questions:
 
-- connector wrappers under `src/runtime/connectors/**`;
 - old public type/path surfaces such as `src/runtime/runner-types.ts` and
   `src/runtime/result-writer.ts`;
 - generated plugin and package export drift when old paths are removed.

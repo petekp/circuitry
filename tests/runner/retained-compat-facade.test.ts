@@ -226,7 +226,7 @@ describe('runtime import boundary', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps core-v2 and neutral connector code off runtime connector imports', () => {
+  it('keeps neutral connector code off runtime imports', () => {
     const repoRoot = resolve('.');
     const neutralConnectorOffenders = collectSourceFiles(resolve('src/connectors'))
       .flatMap((file) =>
@@ -235,14 +235,8 @@ describe('runtime import boundary', () => {
           : [],
       )
       .sort();
-    const productionOffenders = oldRuntimeWrapperImportOffenders({
-      categories: ['connector-wrapper'],
-      files: collectSourceFiles(resolve('src')),
-      reason: 'old connector wrapper',
-    });
 
     expect(neutralConnectorOffenders).toEqual([]);
-    expect(productionOffenders).toEqual([]);
   });
 
   it('keeps run-status implementation imports on the neutral dispatcher', () => {

@@ -3,15 +3,15 @@
 Phase 4.18 was the original planning checkpoint. Phase 5.32 moved connector
 subprocess modules and relay materialization to neutral ownership after focused
 review. This document now records the current boundary: implementations live in
-`src/connectors/**`, while old `src/runtime/connectors/**` paths remain
-compatibility re-exports.
+`src/connectors/**`. Final cutover has since retired the old
+`src/runtime/connectors/**` compatibility re-exports.
 
 The low-risk helper moves are complete:
 
 - relay data/hash lives in `src/shared/connector-relay.ts`;
 - connector parsing/model helpers live in `src/shared/connector-helpers.ts`;
 - `src/connectors/shared.ts` is the neutral connector helper barrel;
-- `src/runtime/connectors/shared.ts` remains a compatibility re-export surface.
+- old `src/runtime/connectors/**` wrapper paths are retired.
 
 The remaining connector files are production safety boundaries, not cheap
 namespace cleanup.
@@ -24,7 +24,6 @@ namespace cleanup.
 | `src/connectors/codex.ts` | core-v2 relay bridge, retained relay selection, Codex connector contract tests, Codex smoke tests | Owns Codex CLI argv, read-only sandbox policy, forbidden argv checks, version capture, JSONL parse discipline, timeout and process-group kill behavior, provider/model/effort compatibility | Produces the shared `RelayResult` shape; does not write relay transcript files directly | `tests/contracts/codex-connector-schema.test.ts`, `tests/runner/codex-connector-smoke.test.ts`, `tests/runner/codex-relay-roundtrip.test.ts`, full `npm run verify` | Neutral owner after Phase 5.32 |
 | `src/connectors/custom.ts` | core-v2 relay bridge, retained relay selection, custom connector tests | Owns configured command invocation, prompt-file transport, temp-dir lifecycle, timeout and process-group kill behavior, output-size caps, JSON extraction at connector edge | Produces the shared `RelayResult` shape; writes temporary prompt/output files only, then removes the temp directory | `tests/runner/custom-connector-runtime.test.ts`, CLI custom connector precedence tests, full `npm run verify` | Neutral owner after Phase 5.32 |
 | `src/connectors/relay-materializer.ts` | retained relay handler tests, relay provenance tests, run-relative path tests, live smoke roundtrip tests | Owns translation from validated connector result to trace entries and durable relay slots; cross-checks role/provenance consistency | Writes request, receipt, result, and optional report files; emits the durable relay transcript sequence | `tests/runner/agent-relay-roundtrip.test.ts`, `tests/runner/codex-relay-roundtrip.test.ts`, `tests/runner/runner-relay-provenance.test.ts`, `tests/runner/run-relative-path.test.ts`, `tests/runner/materializer-schema-parse.test.ts` | Neutral owner after Phase 5.32 |
-| `src/runtime/connectors/*.ts` | old imports and compatibility tests | No subprocess behavior; compatibility only | No direct writes or trace entries | `tests/runner/connector-shared-compat.test.ts`, full `npm run verify` | Keep as wrappers until old-path imports are migrated or intentionally retained |
 
 ## Source Fingerprint Coverage
 
@@ -38,9 +37,6 @@ Codex relay fingerprint coverage includes:
 - `src/shared/connector-helpers.ts`;
 - `src/connectors/shared.ts`;
 - `src/connectors/relay-materializer.ts`;
-- `src/runtime/connectors/codex.ts`;
-- `src/runtime/connectors/shared.ts`;
-- `src/runtime/connectors/relay-materializer.ts`;
 - `src/runtime/runner.ts`;
 - `src/flows/registries/report-schemas.ts`.
 
@@ -51,9 +47,6 @@ Claude/agent Explore smoke fingerprint coverage includes:
 - `src/shared/connector-helpers.ts`;
 - `src/connectors/shared.ts`;
 - `src/connectors/relay-materializer.ts`;
-- `src/runtime/connectors/claude-code.ts`;
-- `src/runtime/connectors/shared.ts`;
-- `src/runtime/connectors/relay-materializer.ts`;
 - `src/runtime/runner.ts`;
 - `src/flows/registries/report-schemas.ts`.
 
@@ -65,9 +58,9 @@ sync with any future connector or materializer move.
 
 Phase 5.32 moved the subprocess connectors and relay materializer to
 `src/connectors/**`, changed core-v2 and retained relay call sites to import the
-neutral paths, and left `src/runtime/connectors/**` as compatibility
-re-exports. The move keeps source fingerprint coverage bound to the real
-neutral implementation files and the old wrappers.
+neutral paths, and initially left `src/runtime/connectors/**` as compatibility
+re-exports. Final cutover later removed those old wrappers. The move keeps
+source fingerprint coverage bound to the real neutral implementation files.
 
 ## Why The Move Needed Review
 
@@ -99,7 +92,7 @@ shape. A move can affect:
 
 That is more than namespace cleanup. Phase 5.32 moved it only after preserving
 materializer tests, connector roundtrip fingerprints, run-relative path checks,
-and compatibility wrappers.
+and temporary compatibility wrappers.
 
 ## Recommended Position
 
@@ -107,7 +100,7 @@ Recommendation for this checkpoint:
 
 ```text
 A. Keep connector subprocess and relay materializer implementations in
-   src/connectors, with src/runtime/connectors as compatibility wrappers.
+   src/connectors.
 ```
 
 Do not start these adjacent moves in the same slice:
@@ -116,14 +109,14 @@ Do not start these adjacent moves in the same slice:
 B. Change connector subprocess behavior or permissions.
 C. Change relay transcript/materialization shape.
 D. Change router/compiler behavior.
-E. Delete old runtime connector wrappers.
+E. Recreate old runtime connector wrappers.
 ```
 
 ## Future Move Requirements
 
 Phase 5.33 moved router/compiler implementation ownership to `src/flows/**`.
-Before changing connector subprocess behavior, relay materialization shape, or
-old-path compatibility, require:
+Before changing connector subprocess behavior or relay materialization shape,
+require:
 
 - full import graph for connector and materializer references;
 - unchanged connector source fingerprint coverage;
@@ -137,4 +130,5 @@ old-path compatibility, require:
 - `npm run verify`;
 - `git diff --check`.
 
-Old runtime deletion is still not approved.
+Old runtime connector wrapper deletion is complete under the final cutover
+policy.

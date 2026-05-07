@@ -9,5 +9,4 @@ export {
 // The neutral relay data contract and hash helper live in
 // `src/shared/connector-relay.ts`; connector parsing/model helpers live in
 // `src/shared/connector-helpers.ts`. Subprocess connector modules and relay
-// materialization live in `src/connectors/`; old `src/runtime/connectors/`
-// paths re-export this surface for compatibility.
+// materialization live in `src/connectors/`.

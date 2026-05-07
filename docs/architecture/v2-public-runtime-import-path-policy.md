@@ -28,6 +28,7 @@ None.
 
 The old shared-helper wrapper paths that previously appeared here have been
 retired. New code should import their shared owners directly.
+
 ## Release Note
 
 The release-note deprecation document is
@@ -39,7 +40,6 @@ stays identical to the manifest.
 
 These categories are not soft-deprecated:
 
-- connector wrappers under `src/runtime/connectors/**`;
 - the run-status wrapper at `src/runtime/run-status-projection.ts`;
 - the old result path helper at `src/runtime/result-writer.ts`;
 - the old public runner surface at `src/runtime/runner.ts` and
@@ -58,6 +58,9 @@ The old catalog and registry wrappers at `src/runtime/catalog-derivations.ts`
 and `src/runtime/registries/**` were retired after tests and production code
 moved to the neutral `src/flows/**` owners.
 
+The old connector wrappers under `src/runtime/connectors/**` were retired after
+tests and production code moved to the neutral `src/connectors/**` owners.
+
 ## Review Boundaries
 
 Use local adversarial review and manifest/test updates before:
@@ -65,8 +68,7 @@ Use local adversarial review and manifest/test updates before:
 - deleting any old wrapper or fail-closed stub;
 - changing package exports;
 - adding import-time or runtime warnings;
-- soft-deprecating connector, registry, run-status, result-writer, public runner,
-  or type paths;
+- soft-deprecating run-status, result-writer, public runner, or type paths;
 - changing the fail-closed retired-runtime behavior.
 
 Do not prepare an external review packet for those steps by default. Escalate

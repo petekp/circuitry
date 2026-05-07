@@ -90,7 +90,6 @@ describe('public runtime import-path manifest', () => {
 
     expect(categories).toEqual(
       new Set([
-        'connector-wrapper',
         'public-runner-surface',
         'retained-handler',
         'retained-implementation',
@@ -129,7 +128,6 @@ describe('public runtime import-path manifest', () => {
 
   it('keeps sensitive old runtime categories out of soft deprecation', () => {
     const nonDeprecatedCategories = new Set([
-      'connector-wrapper',
       'public-runner-surface',
       'retained-handler',
       'retained-implementation',

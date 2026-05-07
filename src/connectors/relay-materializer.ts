@@ -30,8 +30,7 @@ import { type RelayResult, sha256Hex } from './shared.js';
 // to translate a relay result into the trace_entry schema. Keeping this
 // beside the subprocess connectors lets connector-source fingerprint and
 // import-boundary tests cover both raw relay execution and durable relay
-// transcript materialization, while old `src/runtime/connectors/**` paths
-// remain compatibility re-exports.
+// transcript materialization.
 
 export interface RelayMaterializeInput {
   readonly runId: RunId;

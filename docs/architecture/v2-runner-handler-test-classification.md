@@ -159,13 +159,13 @@ only where a test intentionally calls retained execution or old helper values.
 
 Phase 5.15 also moved casual `sha256Hex` helper imports to
 `src/shared/connector-relay.ts`, leaving
-`tests/runner/connector-shared-compat.test.ts` as the explicit old-path
-compatibility proof for `src/runtime/connectors/shared.ts`.
+`tests/runner/connector-shared-compat.test.ts` as the explicit neutral connector
+helper proof.
 
 Phase 5.32 moves connector subprocess modules and relay materialization to
 `src/connectors/**`. Tests now import real connector implementations from the
-neutral path, while `tests/runner/connector-shared-compat.test.ts` proves old
-`src/runtime/connectors/**` paths still re-export the same implementations.
+neutral path. Final cutover later removed the old `src/runtime/connectors/**`
+wrappers.
 
 Phase 5.19 moves retained execution calls behind the retained compatibility
 facade across the runner/contract test suite. Tests no longer import

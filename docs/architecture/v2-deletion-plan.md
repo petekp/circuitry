@@ -124,7 +124,7 @@ wrappers, public type/path surfaces, or fail-closed stubs.
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
 | `src/runtime/catalog-derivations.ts` | removed | Neutral implementation lives in `src/flows/catalog-derivations.ts`; the old runtime wrapper is retired. |
 | `src/runtime/registries/**` | removed | Neutral implementations live in `src/flows/registries/**`; the old runtime wrappers are retired. |
-| `src/runtime/connectors/**` | compatibility re-exports | Neutral connector subprocess and relay materializer implementations moved to `src/connectors/**` in Phase 5.32. Keep old runtime paths until compatibility imports and fingerprint wrappers are intentionally retired. |
+| `src/runtime/connectors/**` | removed | Neutral connector subprocess and relay materializer implementations live in `src/connectors/**`; the old runtime wrappers are retired. |
 | `src/runtime/relay-support.ts` | removed | Relay prompt and check helpers live in `src/shared/relay-support.ts`; the old runtime wrapper is retired. |
 | `src/runtime/config-loader.ts` | removed | Config discovery lives in `src/shared/config-loader.ts`; the old runtime wrapper is retired. |
 | `src/runtime/router.ts` | removed | Neutral router implementation lives in `src/flows/router.ts`; the old runtime wrapper is retired. |
@@ -174,7 +174,7 @@ Current import groups:
 | `runtime/runner-types` | old public type imports and tests | compatibility type surface | Keep until old type imports retire. |
 | `runtime/step-handlers` | wrapper compatibility tests and checkpoint fail-closed tests | mostly removed; remaining wrappers/stub only | Do not restore the old handler cluster. |
 | `runtime/registries` | none | removed wrappers | Neutral source ownership now lives in `src/flows/registries/**`. |
-| `runtime/connectors` | old imports, connector compatibility tests, smoke fingerprint wrappers | compatibility re-exports | Keep wrappers. Live connector infrastructure now lives in `src/connectors/**`; old runtime paths remain intentional compatibility surfaces. |
+| `runtime/connectors` | none | removed wrappers | Live connector infrastructure now lives in `src/connectors/**`. |
 | `runtime/relay-support` | old-path compatibility imports | compatibility re-export | Shared helper ownership lives in `src/shared/relay-support.ts`. |
 | `runtime/relay-selection` | none | removed bridge | Core-v2 and tests use shared relay-selection helpers and core-v2 connector resolver helpers directly. |
 | `runtime/selection-resolver` | old-path compatibility imports | compatibility re-export | Neutral ownership lives in `src/shared/selection-resolver.ts`; keep wrapper until old-path imports migrate. |

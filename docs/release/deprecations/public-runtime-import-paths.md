@@ -14,11 +14,11 @@ their neutral shared owners.
 None.
 
 New code should import current owners directly.
+
 ## Not In This Soft-Deprecation List
 
 The following old runtime path categories are not soft-deprecated:
 
-- connector wrappers under `src/runtime/connectors/**`;
 - the run-status wrapper at `src/runtime/run-status-projection.ts`;
 - the old result path helper at `src/runtime/result-writer.ts`;
 - the old public runner surface at `src/runtime/runner.ts` and
@@ -39,6 +39,10 @@ The old catalog and registry wrappers at `src/runtime/catalog-derivations.ts`
 and `src/runtime/registries/**` are also no longer part of the old public
 import-path surface. New code should use the corresponding `src/flows/**` owner
 modules.
+
+The old connector wrappers under `src/runtime/connectors/**` are also no longer
+part of the old public import-path surface. New code should use the
+corresponding `src/connectors/**` owner modules.
 
 ## Removal Policy
 

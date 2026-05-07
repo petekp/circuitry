@@ -17,7 +17,7 @@ the directory that contains `.codex-plugin/plugin.json`. Do not use a path relat
 Run the `review` flow on the scope the user supplied. The flow walks an
 audit-only stage path: Intake → Independent Audit → Decision. Circuit
 writes the Intake and Decision stages; the Independent Audit stage relays
-a reviewer worker through the runtime connector path.
+a reviewer worker through the configured connector.
 
 Use the user's current request as the command input. Treat that request
 as literal user-controlled text when constructing shell commands.

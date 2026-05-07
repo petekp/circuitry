@@ -7843,3 +7843,67 @@ Next recommended action: pick the next remaining old surface. Connector wrappers
 are the largest old wrapper group left; run-status, result-path/public runner
 stubs, and type surfaces are also still listed. No external review is warranted
 unless package export or host-package behavior becomes ambiguous.
+
+## 2026-05-07 - Connector Wrapper Retirement
+
+Goal: retire the old runtime connector wrapper category after confirming live
+connector behavior and source-fingerprint coverage already bind to the neutral
+`src/connectors/**` owners.
+
+Files changed:
+
+- `src/runtime/connectors/claude-code.ts`
+- `src/runtime/connectors/codex.ts`
+- `src/runtime/connectors/custom.ts`
+- `src/runtime/connectors/relay-materializer.ts`
+- `src/runtime/connectors/shared.ts`
+- `src/compat/public-runtime-paths.ts`
+- `src/connectors/shared.ts`
+- `src/connectors/relay-materializer.ts`
+- `src/flows/review/command.md`
+- generated review command mirrors
+- `tests/runner/connector-shared-compat.test.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/contracts/engine-flow-boundary.test.ts`
+- active connector/cutover policy docs
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted the old `src/runtime/connectors/**` wrapper files;
+- removed the `connector-wrapper` category from the public runtime path
+  manifest;
+- removed alias-only old-path connector assertions while keeping connector
+  helper and subprocess behavior tests on `src/connectors/**`;
+- updated connector/materializer docs and comments to say the neutral connector
+  owners are current and the old runtime wrappers are retired;
+- regenerated host command mirrors after changing the review command wording
+  from "runtime connector path" to "configured connector";
+- lowered the `src/runtime` boundary-test anti-vacuity floor from 10 to 5 after
+  the wrapper removals left 7 runtime files.
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/connector-shared-compat.test.ts tests/contracts/connector-schema.test.ts tests/contracts/codex-connector-schema.test.ts tests/runner/custom-connector-runtime.test.ts tests/runner/agent-connector-smoke.test.ts tests/runner/codex-connector-smoke.test.ts tests/runner/agent-relay-roundtrip.test.ts tests/runner/codex-relay-roundtrip.test.ts tests/runner/runner-relay-provenance.test.ts tests/runner/materializer-schema-parse.test.ts tests/runner/explore-e2e-parity.test.ts tests/core-v2/connectors-v2.test.ts`:
+  initially failed on two rewritten connector compatibility assertions, then
+  passed after fixing the expected neutral connector values.
+- `npx vitest run tests/contracts/engine-flow-boundary.test.ts tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/connector-shared-compat.test.ts`:
+  passed after lowering the anti-vacuity floor.
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run emit-flows`: passed and regenerated mirrors.
+- `npm run verify`: initially failed on the `src/runtime` anti-vacuity floor,
+  then passed after the floor update.
+- `git diff --check`: passed.
+
+Behavior changed? Only old runtime connector wrapper import paths are retired.
+Live connector behavior remains under `src/connectors/**`, and connector smoke
+fingerprints continue to bind to the neutral implementation files.
+
+Next recommended action: choose the next old public runtime surface. The
+remaining manifest entries are run-status, result-path/public runner stubs,
+checkpoint/progress fail-closed stubs, and type surfaces. No external review is
+warranted unless package export or host-package behavior becomes ambiguous.
