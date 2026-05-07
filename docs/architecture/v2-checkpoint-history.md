@@ -14,14 +14,14 @@ This compression covers the tracked numbered files matching:
 docs/architecture/v2-checkpoint-[0-9]*.md
 ```
 
-The named checkpoint-resume planning docs stay in place because they are still
-descriptive planning records, not numbered review packets.
+Named planning notes were compressed separately into
+`docs/architecture/v2-architecture-history.md`.
 
 ## Why
 
 The retained-runtime compatibility posture is superseded. There are zero
-external users. The project no longer needs a long chain of external review
-packets to preserve old runtime compatibility.
+external users. The project no longer needs a long chain of checkpoint packets
+or compatibility-preserving review notes.
 
 Do not recreate numbered checkpoint docs by default. If a genuinely new
 ambiguity appears, write a short named decision note instead.
@@ -29,29 +29,23 @@ ambiguity appears, write a short named decision note instead.
 ## Milestones
 
 - The early work defined v2 principles, a minimal core-v2 run substrate, and a
-  conversion path from current compiled flows.
-- The middle work proved parity across generated public flows, sub-runs, fanout,
-  connector safety, checkpoint pause/resume, status projection, and progress.
-- The later work moved shared helpers and flow-owned registries out from old
-  runtime ownership while keeping compatibility wrappers where they were still
-  needed.
-- The final cutover work reset policy, made retired run folders fail closed,
-  replaced old runner/checkpoint/progress/result entrypoints with fail-closed
-  stubs, and removed the retained handler, trace, reducer, snapshot, and relay
-  selection implementation code. The first wrapper-retirement batch removed the
-  old flow-authoring wrappers after the live owner moved to `src/flows/**`.
+  conversion path from compiled flows.
+- The middle work proved parity across generated public flows, sub-runs,
+  fanout, connector safety, checkpoint pause/resume, status projection, and
+  progress.
+- The later work moved shared helpers, connectors, and flow-owned registries to
+  neutral owners outside old runtime paths.
+- The final cutover reset policy, made retired run folders fail closed, removed
+  old runtime implementation files, and retired the remaining old public runtime
+  import paths.
 
 ## Living Docs
 
-Use these instead of the old numbered shards:
+Use these instead of the old checkpoint shards:
 
 - `docs/architecture/v2-final-cutover-policy.md`
-- `docs/architecture/v2-migration-plan.md`
-- `docs/architecture/v2-worklog.md`
 - `docs/architecture/v2-deletion-plan.md`
 - `docs/architecture/v2-deletion-readiness-inventory.md`
-- `docs/architecture/v2-runtime-import-inventory.md`
-- `docs/architecture/v2-runner-handler-test-classification.md`
-- `docs/architecture/v2-runner-handler-current-import-inventory.md`
-- `docs/architecture/v2-checkpoint-resume-ownership-plan.md`
-- `docs/architecture/v2-checkpoint-resume-parity-plan.md`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-architecture-history.md`
+- `docs/architecture/v2-worklog.md`

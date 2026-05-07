@@ -12,8 +12,7 @@ compatibility re-exports.
 
 The registry modules used to live under `src/runtime/`, but they were not old
 graph-runner debris. They are flow package and report infrastructure shared by
-the retained runtime, core-v2, generated-flow validation, tests, and release
-evidence.
+core-v2, generated-flow validation, tests, and release evidence.
 
 ## Current Source Of Truth
 

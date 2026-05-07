@@ -15,9 +15,8 @@ migration. The public release-note document lives at
 There are no remaining release-note-only soft-deprecated wrapper paths.
 
 Removed old execution files do not get adapters, and retired runtime entrypoints
-fail closed instead of preserving old behavior. The remaining old public runtime
-paths are fail-closed stubs or public type/path surfaces tracked in
-`src/compat/public-runtime-paths.ts`.
+fail closed instead of preserving old behavior. There are no remaining old
+public runtime paths tracked in `src/compat/public-runtime-paths.ts`.
 
 No package export change or runtime/import-time warning is approved by this
 note.

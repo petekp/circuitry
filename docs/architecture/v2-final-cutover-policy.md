@@ -5,55 +5,54 @@ Date: 2026-05-07
 ## Decision
 
 The retained-runtime compatibility posture is superseded. There are zero
-external users, so the product should move to a final cutover instead of
-preserving old runtime compatibility for outside callers.
+external users, so Circuit has moved to final cutover instead of preserving old
+runtime compatibility for outside callers.
 
 Do not prepare more external review packets by default. The Phase 5.60 review
 packet path stops here unless a genuinely new ambiguity appears.
 
-## Numbered Groups
+## Current Policy
 
-1. Policy reset only. Done.
-2. Code cutover. Done: retained and v1 run folders fail closed with exactly:
+- Supported fresh runs execute through core-v2.
+- Core-v2 marked checkpoint folders resume through core-v2.
+- Retained and v1 run folders fail closed with exactly:
 
-   ```text
-   This run folder was created by the retired runtime. Start a fresh run.
-   ```
+  ```text
+  This run folder was created by the retired runtime. Start a fresh run.
+  ```
 
-3. Dead adapter cleanup. Done: the retained/v1 run-status projector and retained
-   compatibility facades are deleted. The run-status dispatcher now fails closed
-   for unmarked retired run folders.
-4. Doc compression. Done: the tracked numbered checkpoint notes are compressed
-   into `docs/architecture/v2-checkpoint-history.md`.
-5. Old runtime implementation removal. Done in focused batches: old handler,
-   trace, reducer, snapshot, and relay-selection implementation files are
-   removed. Old runner, checkpoint, progress, and result-writer entrypoints
-   remain only as fail-closed public stubs.
-6. Shared-helper wrapper retirement. Done: the old `src/runtime/**` helper
-   wrappers for config loading, selection, relay support, manifest snapshots,
-   operator summaries, flow-kind policy, run-relative paths, disclosure,
-   terminal verdicts, recovery routes, JSON reports, and fanout helper logic are
-   removed. Current owners live under `src/shared/**`.
-7. Registry wrapper retirement. Done: the old `src/runtime/catalog-derivations.ts`
-   and `src/runtime/registries/**` wrappers are removed. Current owners live
-   under `src/flows/**`.
-8. Connector wrapper retirement. Done: the old `src/runtime/connectors/**`
-   wrappers are removed. Current owners live under `src/connectors/**`.
+- Do not add an adapter for v1 run folders.
+- Unsupported or unproven invocations fail closed until they are explicitly
+  proven through core-v2.
+- Rollback to the retired runtime is no longer a supported execution path.
+
+## Completed Groups
+
+1. Policy reset.
+2. Retained/v1 folder fail-closed cutover.
+3. Dead adapter cleanup.
+4. Numbered checkpoint note compression.
+5. Old runtime implementation removal.
+6. Flow-authoring wrapper retirement.
+7. Shared-helper wrapper retirement.
+8. Registry wrapper retirement.
+9. Connector wrapper retirement.
+10. Run-status, progress, result, checkpoint, and public runner surface
+    retirement.
+11. Final named-note doc compression.
 
 ## Guardrails
 
-- Do not add an adapter for v1 run folders.
-- Do not delete the 100+ checkpoint docs during the policy reset or code
-  cutover groups.
 - Batch work by numbered group, not tiny migration slices.
 - Use local adversarial self-review before each numbered group.
 - Preserve unrelated dirty work while cutting over.
+- Write a short named decision note only when a genuinely new ambiguity appears.
 
-## Immediate Next Step
+## Living Docs
 
-Choose the next wrapper-retirement or package-surface batch. The old
-flow-authoring, shared-helper, registry, and connector wrappers have been
-removed; the likely next move is to decide whether remaining old
-`src/runtime/**` run-status, result-path, runner, or type surfaces should stay
-as source-only internal import bridges, be packaged, or be removed with
-manifest/test updates.
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-checkpoint-history.md`
+- `docs/architecture/v2-architecture-history.md`
+- `docs/architecture/v2-worklog.md`

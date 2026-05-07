@@ -8144,3 +8144,44 @@ the retired-runtime message.
 
 Next recommended action: final doc compression. Keep historical checkpoint docs
 until that compression pass decides what to preserve, merge, or delete.
+
+## 2026-05-07 - Final Named-Note Doc Compression
+
+Goal: remove stale named architecture notes from the active docs after the code
+cutover completed and preserve the useful history in one short index.
+
+Files changed:
+
+- removed retained-runtime planning notes under `docs/architecture/v2-*.md`
+- `docs/architecture/v2-architecture-history.md`
+- `docs/architecture/v2-checkpoint-history.md`
+- `docs/architecture/v2-deletion-plan.md`
+- `docs/architecture/v2-deletion-readiness-inventory.md`
+- `docs/architecture/v2-final-cutover-policy.md`
+- `docs/architecture/v2-migration-plan.md`
+- `docs/architecture/v2-public-runtime-import-path-policy.md`
+- `docs/architecture/v2-registry-ownership-plan.md`
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted named planning notes that still framed retained-runtime compatibility
+  as a live concern;
+- added a compact architecture history index that lists the removed notes and
+  points to git history plus the worklog;
+- rewrote the living cutover/deletion docs around the final state: no old
+  `src/runtime/**` public paths remain, retained/v1 folders fail closed, and no
+  v1 adapter should be recreated;
+- kept the detailed chronological record in `docs/architecture/v2-worklog.md`.
+
+Tests run:
+
+- active-doc reference scan for deleted named notes: passed.
+- stale retained-runtime phrase scan outside the worklog/history index: passed.
+- `git diff --check`: passed.
+- `npm run verify`: passed.
+
+Behavior changed? No runtime behavior changed. This is documentation-only.
+
+Next recommended action: none pending from the v2 final cutover.
