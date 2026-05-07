@@ -4,11 +4,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  type ComposeWriterFn,
-  runRetainedCompiledFlow as runCompiledFlow,
-  writeRetainedComposeReport as writeComposeReport,
-} from '../../src/compat/retained-runtime.js';
+import { executeComposeV2 } from '../../src/core-v2/executors/compose.js';
+import type { ExecutorRegistryV2 } from '../../src/core-v2/executors/index.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
 import {
   BuildBrief,
   BuildImplementation,
@@ -17,24 +15,11 @@ import {
   BuildReview,
   BuildVerification,
 } from '../../src/flows/build/reports.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'Build reports have schemas but registered report writers are not exercised',
-    acceptance_evidence:
-      'default runCompiledFlow path writes build.plan@v1 and build.result@v1 reports that parse through their schemas',
-    alternate_framing:
-      'add the full Build fixture now — rejected because verification execution and checkpoint execution are not landed yet',
-  };
 }
 
 function writeJson(root: string, rel: string, body: unknown): void {
@@ -48,7 +33,6 @@ function readJson(root: string, rel: string): unknown {
 }
 
 function planCompiledFlow(options: { omitBriefRead?: boolean } = {}): {
-  flow: CompiledFlow;
   bytes: Buffer;
 } {
   const raw = {
@@ -112,7 +96,8 @@ function planCompiledFlow(options: { omitBriefRead?: boolean } = {}): {
     ],
   };
   const bytes = Buffer.from(JSON.stringify(raw));
-  return { flow: CompiledFlow.parse(raw), bytes };
+  CompiledFlow.parse(raw);
+  return { bytes };
 }
 
 function closeCompiledFlow(
@@ -120,7 +105,7 @@ function closeCompiledFlow(
     reads?: string[];
     omitProducerSchema?: string;
   } = {},
-): { flow: CompiledFlow; bytes: Buffer } {
+): { bytes: Buffer } {
   const seedSteps = [
     {
       id: 'seed-brief-step',
@@ -260,7 +245,8 @@ function closeCompiledFlow(
     ],
   };
   const bytes = Buffer.from(JSON.stringify(raw));
-  return { flow: CompiledFlow.parse(raw), bytes };
+  CompiledFlow.parse(raw);
+  return { bytes };
 }
 
 function buildRoleReportPaths(): string[] {
@@ -376,26 +362,41 @@ function seedBuildRoleReport(runFolder: string, schema: string): void {
 
 function seedThenDefaultWriter(
   options: { removeVerification?: boolean; corruptBrief?: boolean; corruptPlan?: boolean } = {},
-): ComposeWriterFn {
-  return (input) => {
-    if (input.step.id.startsWith('seed-')) {
-      seedBuildRoleReport(input.runFolder, input.step.writes.report.schema);
+): Pick<ExecutorRegistryV2, 'compose'> {
+  return {
+    compose: async (step, context) => {
+      if (step.kind !== 'compose') throw new Error('expected compose step');
+      if (!step.id.startsWith('seed-')) {
+        return await executeComposeV2(step, context);
+      }
+      const report = step.writes?.report;
+      if (report?.schema === undefined) {
+        throw new Error(`seed step '${step.id}' must write a schema-bearing report`);
+      }
+      seedBuildRoleReport(context.runDir, report.schema);
       if (options.removeVerification === true) {
-        rmSync(join(input.runFolder, 'reports/build/verification.json'));
+        rmSync(join(context.runDir, 'reports/build/verification.json'));
       }
       if (options.corruptBrief === true) {
-        writeJson(input.runFolder, 'reports/build/brief.json', {
+        writeJson(context.runDir, 'reports/build/brief.json', {
           objective: 'missing required fields',
         });
       }
       if (options.corruptPlan === true) {
-        writeJson(input.runFolder, 'reports/build/plan.json', {
+        writeJson(context.runDir, 'reports/build/plan.json', {
           objective: 'missing required fields',
         });
       }
-      return;
-    }
-    writeComposeReport(input);
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'step.report_written',
+        step_id: step.id,
+        ...(context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt }),
+        report_path: report.path,
+        report_schema: report.schema,
+      });
+      return { route: 'pass', details: { report: report.path } };
+    },
   };
 }
 
@@ -412,22 +413,20 @@ afterEach(() => {
 
 describe('Build compose writers', () => {
   it('writes schema-valid build.plan with typed verification commands', async () => {
-    const { flow, bytes } = planCompiledFlow();
+    const { bytes } = planCompiledFlow();
     const runFolder = join(runFolderBase, 'plan');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000000'),
+      runId: 'b1000000-0000-0000-0000-000000000000',
       goal: 'Add a Build plan writer',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 0, 0)),
-      composeWriter: seedThenDefaultWriter(),
+      executors: seedThenDefaultWriter(),
     });
 
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     const plan = BuildPlan.parse(readJson(runFolder, 'reports/build/plan.json'));
     expect(plan.verification.commands).toEqual([
       {
@@ -444,64 +443,58 @@ describe('Build compose writers', () => {
   });
 
   it('aborts Build plan when the brief is not an explicit read', async () => {
-    const { flow, bytes } = planCompiledFlow({ omitBriefRead: true });
+    const { bytes } = planCompiledFlow({ omitBriefRead: true });
     const runFolder = join(runFolderBase, 'plan-missing-brief-read');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000006'),
+      runId: 'b1000000-0000-0000-0000-000000000006',
       goal: 'Reject ungrounded Build plan',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 1, 0)),
-      composeWriter: seedThenDefaultWriter(),
+      executors: seedThenDefaultWriter(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build/plan.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/build\.brief@v1|brief\.json/);
+    expect(outcome.reason).toMatch(/build\.brief@v1|brief\.json/);
   });
 
   it('aborts Build plan when the brief is malformed', async () => {
-    const { flow, bytes } = planCompiledFlow();
+    const { bytes } = planCompiledFlow();
     const runFolder = join(runFolderBase, 'plan-malformed-brief');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000007'),
+      runId: 'b1000000-0000-0000-0000-000000000007',
       goal: 'Reject malformed Build brief',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 2, 0)),
-      composeWriter: seedThenDefaultWriter({ corruptBrief: true }),
+      executors: seedThenDefaultWriter({ corruptBrief: true }),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build/plan.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/verification_command_candidates|scope/);
+    expect(outcome.reason).toMatch(/verification_command_candidates|scope/);
   });
 
   it('writes schema-valid build.result at build-result.json while result.json remains universal', async () => {
-    const { flow, bytes } = closeCompiledFlow();
+    const { bytes } = closeCompiledFlow();
     const runFolder = join(runFolderBase, 'close');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000001'),
+      runId: 'b1000000-0000-0000-0000-000000000001',
       goal: 'Close a Build run',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 5, 0)),
-      composeWriter: seedThenDefaultWriter(),
+      executors: seedThenDefaultWriter(),
     });
 
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
     const buildResult = BuildResult.parse(readJson(runFolder, 'reports/build-result.json'));
     expect(buildResult.evidence_links.map((pointer) => pointer.path)).toEqual(
       buildRoleReportPaths(),
@@ -517,86 +510,78 @@ describe('Build compose writers', () => {
   });
 
   it('aborts Build close instead of writing placeholder success when a prior report is missing', async () => {
-    const { flow, bytes } = closeCompiledFlow();
+    const { bytes } = closeCompiledFlow();
     const runFolder = join(runFolderBase, 'missing-prior');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000002'),
+      runId: 'b1000000-0000-0000-0000-000000000002',
       goal: 'Reject missing verification',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 10, 0)),
-      composeWriter: seedThenDefaultWriter({ removeVerification: true }),
+      executors: seedThenDefaultWriter({ removeVerification: true }),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build-result.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/build\.result@v1|verification\.json/);
+    expect(outcome.reason).toMatch(/build\.result@v1|verification\.json/);
   });
 
   it('aborts Build close when build.brief is malformed', async () => {
-    const { flow, bytes } = closeCompiledFlow();
+    const { bytes } = closeCompiledFlow();
     const runFolder = join(runFolderBase, 'malformed-brief-close');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000003'),
+      runId: 'b1000000-0000-0000-0000-000000000003',
       goal: 'Reject malformed brief at close',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 15, 0)),
-      composeWriter: seedThenDefaultWriter({ corruptBrief: true }),
+      executors: seedThenDefaultWriter({ corruptBrief: true }),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build-result.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/verification_command_candidates|scope/);
+    expect(outcome.reason).toMatch(/verification_command_candidates|scope/);
   });
 
   it('aborts Build close when build.plan is malformed', async () => {
-    const { flow, bytes } = closeCompiledFlow();
+    const { bytes } = closeCompiledFlow();
     const runFolder = join(runFolderBase, 'malformed-plan-close');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000004'),
+      runId: 'b1000000-0000-0000-0000-000000000004',
       goal: 'Reject malformed plan at close',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 20, 0)),
-      composeWriter: seedThenDefaultWriter({ corruptPlan: true }),
+      executors: seedThenDefaultWriter({ corruptPlan: true }),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build-result.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/verification|approach|slices/);
+    expect(outcome.reason).toMatch(/verification|approach|slices/);
   });
 
   it('aborts Build close when a required producer step is absent', async () => {
-    const { flow, bytes } = closeCompiledFlow({ omitProducerSchema: 'build.plan@v1' });
+    const { bytes } = closeCompiledFlow({ omitProducerSchema: 'build.plan@v1' });
     const runFolder = join(runFolderBase, 'missing-plan-producer');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('b1000000-0000-0000-0000-000000000005'),
+      runId: 'b1000000-0000-0000-0000-000000000005',
       goal: 'Reject missing Build producer',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 25, 1, 25, 0)),
-      composeWriter: seedThenDefaultWriter(),
+      executors: seedThenDefaultWriter(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.outcome).toBe('aborted');
     expect(existsSync(join(runFolder, 'reports/build-result.json'))).toBe(false);
-    expect(outcome.result.reason).toMatch(/build\.plan@v1|exactly one flow step/);
+    expect(outcome.reason).toMatch(/build\.plan@v1|exactly one flow step/);
   });
 });
