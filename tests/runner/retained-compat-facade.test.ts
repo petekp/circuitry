@@ -26,6 +26,15 @@ import {
   deriveRoutingForTesting as runtimeDeriveRoutingForTesting,
   ROUTABLE_WORKFLOWS as runtimeRoutableWorkflows,
 } from '../../src/runtime/router.js';
+import {
+  resumeCompiledFlowCheckpoint,
+  runCompiledFlow,
+  writeComposeReport,
+} from '../../src/runtime/runner.js';
+import {
+  RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
+  RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+} from '../../src/shared/retired-runtime-policy.js';
 
 function collectSourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -129,6 +138,16 @@ describe('runtime import boundary', () => {
       .sort();
 
     expect(offenders).toEqual([]);
+  });
+
+  it('fails closed for accidental direct old-runner API calls', async () => {
+    await expect(runCompiledFlow({} as never)).rejects.toThrow(
+      RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
+    );
+    await expect(resumeCompiledFlowCheckpoint({} as never)).rejects.toThrow(
+      RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
+    );
+    expect(() => writeComposeReport({} as never)).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
   });
 
   it('keeps old runtime router/compiler paths as compatibility re-exports', () => {
@@ -347,6 +366,7 @@ describe('runtime import boundary', () => {
       /import\s+\{[^}]*\b(?:runCompiledFlow|resumeCompiledFlowCheckpoint)\b[^}]*\}\s+from\s+['"][^'"]*src\/runtime\/runner\.js['"]/m;
 
     const offenders = collectSourceFiles(resolve('tests'))
+      .filter((file) => file !== resolve('tests/runner/retained-compat-facade.test.ts'))
       .flatMap((file) =>
         directRunnerExecutionImport.test(readFileSync(file, 'utf8'))
           ? [file.slice(repoRoot.length + 1)]
