@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import {
   SweepAnalysis,
   SweepBatch,
@@ -14,9 +15,7 @@ import {
   SweepReview,
   SweepVerification,
 } from '../../src/flows/sweep/reports.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
@@ -32,18 +31,6 @@ function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'Sweep had typed reports but no live fixture proving the seven-canonical-stage stage path through the runtime',
-    acceptance_evidence:
-      'sweep-runtime-wiring runs the live Sweep fixture with stubbed worker relay and parses all six typed reports plus the close result',
-    alternate_framing:
-      'extend the build wiring test to cover Sweep — rejected because the substrate-proof claim is that Sweep stands on its own per-flow modules',
-  };
 }
 
 const DEFAULT_ANALYSIS_BODY = JSON.stringify({
@@ -135,6 +122,10 @@ function traceEntryLabel(trace_entry: { kind: string; step_id?: unknown }): stri
     : trace_entry.kind;
 }
 
+async function readTraceEntries(runFolder: string) {
+  return await new TraceStore(runFolder).load();
+}
+
 let runFolderBase: string;
 
 beforeEach(() => {
@@ -183,24 +174,22 @@ describe('Sweep runtime wiring', () => {
   });
 
   it('runs the live Sweep fixture through compose, relay, verification, and close — proving the substrate composes a second flow with no runner.ts edits', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'complete');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('57000000-0000-0000-0000-000000000000'),
+      runId: '57000000-0000-0000-0000-000000000000',
       goal: 'Sweep dead code from src/example',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 26, 9, 0, 0)),
       relayer: relayerWith(),
       projectRoot: REPO_ROOT,
     });
 
-    expect(outcome.result.outcome).toBe('complete');
-    const labels = outcome.trace_entries.map(traceEntryLabel);
+    expect(outcome.outcome).toBe('complete');
+    const labels = (await readTraceEntries(runFolder)).map(traceEntryLabel);
     expect(labels).toContain('relay.completed:survey-step');
     expect(labels).toContain('checkpoint.resolved:triage-checkpoint-step');
     expect(labels).toContain('relay.completed:execute-step');
@@ -258,7 +247,7 @@ describe('Sweep runtime wiring', () => {
   });
 
   it('defers low-confidence high-risk candidates and surfaces deferred_count in the close result', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'deferred');
 
     const analysisWithDeferred = JSON.stringify({
@@ -297,14 +286,12 @@ describe('Sweep runtime wiring', () => {
       ],
     });
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('57000000-0000-0000-0000-000000000001'),
+      runId: '57000000-0000-0000-0000-000000000001',
       goal: 'Sweep with deferred items',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 26, 10, 0, 0)),
       relayer: relayerWith({
         analysisBody: analysisWithDeferred,
@@ -313,7 +300,7 @@ describe('Sweep runtime wiring', () => {
       projectRoot: REPO_ROOT,
     });
 
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
 
     const queue = SweepQueue.parse(
       JSON.parse(readFileSync(join(runFolder, 'reports/sweep/queue.json'), 'utf8')),
@@ -328,17 +315,15 @@ describe('Sweep runtime wiring', () => {
   });
 
   it('aborts when survey relay passes the verdict check but fails sweep.analysis@v1 parsing', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'bad-analysis');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('57000000-0000-0000-0000-000000000002'),
+      runId: '57000000-0000-0000-0000-000000000002',
       goal: 'Reject malformed analysis report',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 26, 11, 0, 0)),
       relayer: relayerWith({
         analysisBody: JSON.stringify({
@@ -349,24 +334,22 @@ describe('Sweep runtime wiring', () => {
       projectRoot: REPO_ROOT,
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toMatch(/sweep\.analysis@v1/);
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/sweep\.analysis@v1/);
     expect(existsSync(join(runFolder, 'reports/sweep/analysis.json'))).toBe(false);
     expect(existsSync(join(runFolder, 'reports/relay/sweep-survey.result.json'))).toBe(true);
   });
 
   it('aborts on critical-injections review verdict before writing the canonical Sweep review report', async () => {
-    const { flow, bytes } = loadFixture();
+    const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-critical');
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('57000000-0000-0000-0000-000000000003'),
+      runId: '57000000-0000-0000-0000-000000000003',
       goal: 'Reject a Sweep with critical injections',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 26, 12, 0, 0)),
       relayer: relayerWith({
         reviewBody: JSON.stringify({
@@ -384,8 +367,8 @@ describe('Sweep runtime wiring', () => {
       projectRoot: REPO_ROOT,
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toMatch(/critical-injections/);
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/critical-injections/);
     expect(existsSync(join(runFolder, 'reports/sweep/review.json'))).toBe(false);
     expect(existsSync(join(runFolder, 'reports/relay/sweep-review.result.json'))).toBe(true);
   });

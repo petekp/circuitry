@@ -325,6 +325,7 @@ export async function executeExecutableFlowV2WithWaiting(
 
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken: string | undefined;
+  let activeRecoveryReason: string | undefined;
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
     if (step === undefined) {
@@ -345,10 +346,12 @@ export async function executeExecutableFlowV2WithWaiting(
       completedCount > 0 &&
       (!isRecoveryRoute(incomingRouteTaken) || completedCount >= maxAttempts)
     ) {
+      const recoverySuffix =
+        activeRecoveryReason === undefined ? '' : `; last recovery reason: ${activeRecoveryReason}`;
       const reason =
         incomingRouteTaken === undefined
           ? `route cycle detected at step '${step.id}'; aborting before re-entering an already completed step`
-          : `route '${incomingRouteTaken}' for step '${step.id}' exhausted max_attempts=${maxAttempts}`;
+          : `route '${incomingRouteTaken}' for step '${step.id}' exhausted max_attempts=${maxAttempts}${recoverySuffix}`;
       await trace.append({
         run_id: runId,
         kind: 'step.aborted',
@@ -388,6 +391,10 @@ export async function executeExecutableFlowV2WithWaiting(
       }
       route = outcome.route;
       details = outcome.details ?? {};
+      const recoveryReason = details.reason;
+      if (isRecoveryRoute(route) && typeof recoveryReason === 'string') {
+        activeRecoveryReason = recoveryReason;
+      }
     } catch (error) {
       const message = (error as Error).message;
       await trace.append({
@@ -445,9 +452,13 @@ export async function executeExecutableFlowV2WithWaiting(
         targetCompletedCount > 0 &&
         (!isRecoveryRoute(route) || targetCompletedCount >= targetMaxAttempts)
       ) {
+        const recoverySuffix =
+          activeRecoveryReason === undefined
+            ? ''
+            : `; last recovery reason: ${activeRecoveryReason}`;
         const reason = isRecoveryRoute(route)
-          ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}`
-          : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'`;
+          ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}`
+          : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
         await trace.append({
           run_id: runId,
           kind: 'step.aborted',
