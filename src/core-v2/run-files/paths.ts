@@ -1,4 +1,10 @@
-import { isAbsolute, resolve, sep } from 'node:path';
+import { existsSync, lstatSync, realpathSync } from 'node:fs';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
+
+function isInsideOrSame(root: string, target: string): boolean {
+  const fromRoot = relative(root, target);
+  return fromRoot === '' || (!fromRoot.startsWith('..') && !isAbsolute(fromRoot));
+}
 
 export function validateRunFilePath(runRelativePath: string): readonly string[] {
   const issues: string[] = [];
@@ -43,6 +49,23 @@ export function resolveRunFilePath(runDir: string, runRelativePath: string): str
   const validation = validateRunFilePath(runRelativePath);
   if (validation.length > 0) {
     throw new Error(`run file path ${validation[0]}: ${runRelativePath}`);
+  }
+  if (existsSync(root)) {
+    if (lstatSync(root).isSymbolicLink()) {
+      throw new Error(`run file path crosses symlink: ${runRelativePath}`);
+    }
+    const rootReal = realpathSync.native(root);
+    let cursor = root;
+    for (const segment of runRelativePath.split('/')) {
+      cursor = resolve(cursor, segment);
+      if (!existsSync(cursor)) break;
+      if (lstatSync(cursor).isSymbolicLink()) {
+        throw new Error(`run file path crosses symlink: ${runRelativePath}`);
+      }
+      if (!isInsideOrSame(rootReal, realpathSync.native(cursor))) {
+        throw new Error(`run file path escapes run directory through symlink: ${runRelativePath}`);
+      }
+    }
   }
 
   return fullPath;
