@@ -50,9 +50,7 @@ The final cutover changed this inventory's conclusions:
 - old retained handler implementations, old trace reader/writer, reducer,
   snapshot writer, append-and-derive, and relay-selection implementation code
   are gone;
-- `src/runtime/runner.ts`, `src/runtime/checkpoint-resume.ts`, and
-  `src/runtime/step-handlers/checkpoint.ts` remain only as fail-closed public
-  stubs or helper re-exports;
+- `src/runtime/runner.ts` remains only as a fail-closed public stub;
 - remaining wrapper imports are governed by
   `src/compat/public-runtime-paths.ts`.
 
@@ -77,7 +75,7 @@ final cutover product decision.
 |---|---|---|
 | `src/runtime/append-and-derive.ts` | retained product behavior | Appends retained trace entries and derives retained snapshots. Keep while retained trace/state is live. |
 | `src/runtime/catalog-derivations.ts` | removed | Neutral implementation lives in `src/flows/catalog-derivations.ts`; the old runtime wrapper is retired. |
-| `src/runtime/checkpoint-resume.ts` | retained product behavior | Owns retained/v1 checkpoint resume preparation. Keep while old checkpoint folders remain supported. |
+| `src/runtime/checkpoint-resume.ts` | removed | Retained and v1 checkpoint resume folders fail closed through policy instead of a direct adapter. |
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
 | `src/runtime/config-loader.ts` | removed | Neutral config loading lives in `src/shared/config-loader.ts`; the old runtime wrapper is retired. |
 | `src/runtime/connectors/claude-code.ts` | removed | Neutral implementation lives in `src/connectors/claude-code.ts`; the old runtime wrapper is retired. |
@@ -113,7 +111,7 @@ final cutover product decision.
 | `src/runtime/runner.ts` | retained fallback | Owns fallback execution, rollback execution, arbitrary fixtures, `composeWriter`, and public retained resume wrapper. |
 | `src/runtime/selection-resolver.ts` | removed | Neutral resolver lives in `src/shared/selection-resolver.ts`; the old runtime wrapper is retired. |
 | `src/runtime/snapshot-writer.ts` | retained product behavior | Retained snapshot derivation is live for retained runs, handoff, and old checkpoint folders. |
-| `src/runtime/step-handlers/checkpoint.ts` | retained product behavior | Retained checkpoint waiting/resume behavior remains supported for retained/v1 folders and unproven modes. |
+| `src/runtime/step-handlers/checkpoint.ts` | removed | Checkpoint request writing and choice helpers live under core-v2 and flow registries; the old handler stub is retired. |
 | `src/runtime/step-handlers/compose.ts` | retained fallback | Keeps retained compose behavior and the public `composeWriter` hook. |
 | `src/runtime/step-handlers/fanout.ts` | retained fallback | Retained fanout execution remains fallback/oracle coverage for unretired paths. |
 | `src/runtime/step-handlers/fanout/aggregate.ts` | removed | Neutral fanout aggregate report helper lives in `src/shared/fanout-aggregate-report.ts`; the old runtime wrapper is retired. |

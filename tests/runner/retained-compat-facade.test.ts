@@ -1,13 +1,11 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { prepareCheckpointResume } from '../../src/runtime/checkpoint-resume.js';
 import {
   resumeCompiledFlowCheckpoint,
   runCompiledFlow,
   writeComposeReport,
 } from '../../src/runtime/runner.js';
-import { runCheckpointStep } from '../../src/runtime/step-handlers/checkpoint.js';
 import {
   RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
   RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
@@ -62,9 +60,9 @@ describe('runtime import boundary', () => {
     await expect(resumeCompiledFlowCheckpoint({} as never)).rejects.toThrow(
       RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
     );
-    expect(() => prepareCheckpointResume()).toThrow(RETIRED_RUNTIME_RUN_FOLDER_MESSAGE);
     expect(() => writeComposeReport({} as never)).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
-    expect(() => runCheckpointStep()).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
+    expect(existsSync(resolve('src/runtime/checkpoint-resume.ts'))).toBe(false);
+    expect(existsSync(resolve('src/runtime/step-handlers/checkpoint.ts'))).toBe(false);
   });
 
   it('does not expose old runtime router/compiler wrappers', () => {

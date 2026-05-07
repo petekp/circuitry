@@ -42,8 +42,7 @@ These categories are not soft-deprecated:
 
 - the old public runner surface at `src/runtime/runner.ts` and
   `src/runtime/runner-types.ts`;
-- retired fail-closed runtime surfaces such as checkpoint resume, checkpoint
-  handler, and runner entrypoints.
+- retired fail-closed runtime surfaces such as runner entrypoints.
 
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` were retired after production and tooling imports
@@ -71,6 +70,11 @@ adapted.
 The old result writer wrapper at `src/runtime/result-writer.ts` was retired
 after live result path ownership moved to `src/shared/result-path.ts` and old
 result writing stopped being adapted.
+
+The old checkpoint resume and checkpoint handler stubs at
+`src/runtime/checkpoint-resume.ts` and `src/runtime/step-handlers/checkpoint.ts`
+were retired after retained and v1 checkpoint folders moved to fail-closed
+policy without adapters.
 
 ## Review Boundaries
 

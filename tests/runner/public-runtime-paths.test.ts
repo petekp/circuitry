@@ -76,20 +76,14 @@ describe('public runtime import-path manifest', () => {
     }
 
     expect(PUBLIC_RUNTIME_RETAINED_PATHS.map((entry) => entry.oldPath)).toEqual(
-      expect.arrayContaining([
-        'src/runtime/runner.ts',
-        'src/runtime/checkpoint-resume.ts',
-        'src/runtime/step-handlers/checkpoint.ts',
-      ]),
+      expect.arrayContaining(['src/runtime/runner.ts', 'src/runtime/runner-types.ts']),
     );
   });
 
   it('keeps wrapper categories explicit for later staged retirement decisions', () => {
     const categories = new Set(PUBLIC_RUNTIME_PATHS.map((entry) => entry.category));
 
-    expect(categories).toEqual(
-      new Set(['public-runner-surface', 'retained-handler', 'retained-saved-state']),
-    );
+    expect(categories).toEqual(new Set(['public-runner-surface']));
 
     expect(
       PUBLIC_RUNTIME_WRAPPER_PATHS.filter(
@@ -120,11 +114,7 @@ describe('public runtime import-path manifest', () => {
   });
 
   it('keeps sensitive old runtime categories out of soft deprecation', () => {
-    const nonDeprecatedCategories = new Set([
-      'public-runner-surface',
-      'retained-handler',
-      'retained-saved-state',
-    ]);
+    const nonDeprecatedCategories = new Set(['public-runner-surface']);
     const incorrectlyDeprecated = PUBLIC_RUNTIME_PATHS.filter(
       (entry) =>
         nonDeprecatedCategories.has(entry.category) && entry.deprecationStage === 'soft-deprecated',
@@ -133,6 +123,9 @@ describe('public runtime import-path manifest', () => {
     expect(incorrectlyDeprecated).toEqual([]);
     expect(
       PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/result-writer.ts'),
+    ).toBeUndefined();
+    expect(
+      PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/checkpoint-resume.ts'),
     ).toBeUndefined();
   });
 

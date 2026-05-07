@@ -31,9 +31,10 @@ Phase 4.42 through Phase 5.59 record the compatibility-preserving path. The
 final cutover supersedes that path: `src/compat/retained-runtime.ts`,
 `src/compat/retained-checkpoint-folders.ts`, `src/run-status/v1-run-folder.ts`,
 old handler implementations, old trace/reducer/snapshot implementation files,
-the old relay-selection bridge, the old run-status wrapper, and the old progress
-projection wrapper, and old result writer wrapper have been removed. Old runner
-and checkpoint entrypoints remain only as fail-closed public stubs.
+the old relay-selection bridge, the old run-status wrapper, the old progress
+projection wrapper, the old result writer wrapper, the old checkpoint resume
+stub, and the old checkpoint handler stub have been removed. Old runner
+entrypoints remain only as fail-closed public stubs.
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` have also been removed.
 
@@ -91,8 +92,6 @@ and path surfaces.
 | Path | Current owner | Why retain |
 |---|---|---|
 | `src/runtime/runner.ts` | fail-closed public stub | Direct `runCompiledFlow(...)` calls fail with the retired fresh-run message. Direct checkpoint resume calls fail with the retired run-folder message. |
-| `src/runtime/checkpoint-resume.ts` | fail-closed public stub | `prepareCheckpointResume(...)` fails with the retired run-folder message. |
-| `src/runtime/step-handlers/checkpoint.ts` | fail-closed checkpoint handler stub | The public checkpoint helper types remain; `runCheckpointStep(...)` fails closed. |
 | `src/runtime/runner-types.ts` | compatibility type surface | Kept for old public type imports while implementation entrypoints are retired. |
 | Old shared-helper wrappers under `src/runtime/**` | removed | Neutral owners live under `src/shared/**`; the old runtime wrapper files are retired. |
 
@@ -121,6 +120,7 @@ wrappers, public type/path surfaces, or fail-closed stubs.
 | Path | Classification | Why retain or move |
 |---|---|---|
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
+| `src/runtime/checkpoint-resume.ts` | removed | Retained and v1 checkpoint resume folders fail closed through policy instead of a direct adapter. |
 | `src/runtime/catalog-derivations.ts` | removed | Neutral implementation lives in `src/flows/catalog-derivations.ts`; the old runtime wrapper is retired. |
 | `src/runtime/registries/**` | removed | Neutral implementations live in `src/flows/registries/**`; the old runtime wrappers are retired. |
 | `src/runtime/connectors/**` | removed | Neutral connector subprocess and relay materializer implementations live in `src/connectors/**`; the old runtime wrappers are retired. |
@@ -132,6 +132,7 @@ wrappers, public type/path surfaces, or fail-closed stubs.
 | `src/runtime/result-writer.ts` | removed | Shared result path ownership lives in `src/shared/result-path.ts`; old result writing is retired instead of adapted. |
 | `src/runtime/manifest-snapshot-writer.ts` | removed | Manifest snapshot byte-match helper lives in `src/shared/manifest-snapshot.ts`; the old runtime wrapper is retired. |
 | `src/runtime/snapshot-writer.ts` | removed | Retained state snapshot implementation was removed in the final cutover. Handoff and status paths no longer adapt retained/v1 folders. |
+| `src/runtime/step-handlers/checkpoint.ts` | removed | Checkpoint request writing and choice helpers live under core-v2 and flow registries; the old handler stub is retired. |
 | `src/runtime/operator-summary-writer.ts` | removed | Operator summary writing lives in `src/shared/operator-summary-writer.ts`; the old runtime wrapper is retired. |
 | `src/runtime/run-status-projection.ts` | removed | The status dispatcher implementation lives in `src/run-status/project-run-folder.ts`; the old runtime wrapper is retired. |
 | `src/runtime/progress-projector.ts` | removed | Shared progress output helpers live in `src/shared/progress-output.ts`; old v1 trace projection is retired instead of adapted. |
@@ -169,11 +170,12 @@ Current import groups:
 |---|---|---|---|
 | `compat/retained-runtime` | none | removed facade | Do not recreate it. CLI, handoff, and run-status use the retired runtime policy directly. |
 | `runtime/runner` | direct compatibility tests and old public imports | fail-closed public stub | Keep only while the public old runner surface remains listed. Fresh retired invocations fail closed. |
-| `runtime/checkpoint-resume` | direct compatibility tests | fail-closed public stub | Keep only while the old checkpoint-resume import surface remains listed. Retired run folders fail closed. |
+| `runtime/checkpoint-resume` | none | removed stub | Retained run folders fail closed through policy, not a direct adapter. |
 | `runtime/runner-types` | old public type imports and tests | compatibility type surface | Keep until old type imports retire. |
 | `runtime/run-status-projection` | none | removed wrapper | Run-status ownership lives in `src/run-status/project-run-folder.ts`. |
 | `runtime/progress-projector` | none | removed wrapper | Shared progress output ownership lives in `src/shared/progress-output.ts`. |
 | `runtime/result-writer` | none | removed wrapper | Shared result path ownership lives in `src/shared/result-path.ts`. |
+| `runtime/step-handlers/checkpoint` | none | removed stub | Checkpoint behavior is owned by core-v2 executors and flow registry helpers. |
 | `runtime/step-handlers` | wrapper compatibility tests and checkpoint fail-closed tests | mostly removed; remaining wrappers/stub only | Do not restore the old handler cluster. |
 | `runtime/registries` | none | removed wrappers | Neutral source ownership now lives in `src/flows/registries/**`. |
 | `runtime/connectors` | none | removed wrappers | Live connector infrastructure now lives in `src/connectors/**`. |

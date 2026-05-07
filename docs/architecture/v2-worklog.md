@@ -8056,3 +8056,47 @@ helper remains in `src/shared/result-path.ts`.
 Next recommended action: choose the checkpoint fail-closed stubs next, or leave
 them until the final public runner/type surface group if you want the last
 public API removals batched together.
+
+## 2026-05-07 - Checkpoint Stub Retirement
+
+Goal: retire the old direct checkpoint resume and checkpoint handler stubs after
+confirming retained/v1 checkpoint folders fail closed through policy and current
+checkpoint behavior is owned by core-v2 executors plus flow registry helpers.
+
+Files changed:
+
+- `src/runtime/checkpoint-resume.ts`
+- `src/runtime/step-handlers/checkpoint.ts`
+- `src/compat/public-runtime-paths.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/contracts/engine-flow-boundary.test.ts`
+- active checkpoint/public-runtime policy docs
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted the old checkpoint resume and checkpoint handler stubs;
+- removed their manifest entries and the now-empty retained handler/saved-state
+  categories;
+- updated direct old-runtime API tests to assert those files are gone while
+  keeping old runner entrypoints fail-closed;
+- lowered the `src/runtime` boundary-test anti-vacuity floor from 4 to 2 after
+  the stub removal.
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/contracts/engine-flow-boundary.test.ts tests/runner/build-checkpoint-exec.test.ts tests/core-v2/checkpoint-resume-v2.test.ts tests/runner/cli-v2-runtime.test.ts`:
+  passed.
+- `npm run check`: passed.
+- `npm run lint`: passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+
+Behavior changed? Only the old direct checkpoint stub import paths are retired.
+Retained and v1 run folders still fail closed with the retired-runtime message,
+and current checkpoint execution remains under core-v2.
+
+Next recommended action: final old runtime public surface group:
+`src/runtime/runner.ts` and `src/runtime/runner-types.ts`.
