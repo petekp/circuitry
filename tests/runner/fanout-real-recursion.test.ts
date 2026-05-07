@@ -9,8 +9,8 @@
 // What's specific to fanout: each branch produces its own child run
 // with its own run-folder, run_id, and trace. The handler also
 // drives a worktreeRunner per branch. When `childRunner` is undefined
-// on the CompiledFlowInvocation, the runner defaults to `runCompiledFlow`
-// itself (per src/runtime/runner.ts:633), so each branch recurses
+// on the core-v2 invocation, the runner defaults to `runCompiledFlowV2`
+// itself, so each branch recurses
 // through the real runner end-to-end.
 //
 // Hermetic, fast (~50ms): a stub worktreeRunner creates the branch
@@ -21,32 +21,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type {
-  ChildCompiledFlowResolver,
-  WorktreeRunner,
-} from '../../src/compat/retained-runtime.js';
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import type {
+  ChildCompiledFlowResolverV2,
+  WorktreeRunnerV2,
+} from '../../src/core-v2/run/child-runner.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { type CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-const PARENT_WORKFLOW_ID = 'parent-fanout-recursion-test' as unknown as CompiledFlowId;
-const CHILD_WORKFLOW_ID = 'child-fanout-recursion-test' as unknown as CompiledFlowId;
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode:
-      'fanout handler skips real branch execution or shares the runner instance with the parent',
-    acceptance_evidence:
-      'each branch recurses through real runCompiledFlow with a fresh RunId and a sibling run-folder, each child emits its own trace, parent admits via aggregate-only join',
-    alternate_framing:
-      'integration test of fanout + real recursive runCompiledFlow rather than handler-isolation unit test',
-  };
-}
+const PARENT_WORKFLOW_ID = 'parent-fanout-recursion-test';
+const CHILD_WORKFLOW_ID = 'child-fanout-recursion-test';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
@@ -72,7 +59,7 @@ function acceptingRelayer(): RelayFn {
 // runner creates real git worktrees; for hermetic recursion it's
 // enough to mkdir the path so the child run-folder nests beneath it
 // correctly.
-function stubWorktreeRunner(): WorktreeRunner {
+function stubWorktreeRunner(): WorktreeRunnerV2 {
   return {
     add: ({ worktreePath }) => {
       mkdirSync(worktreePath, { recursive: true });
@@ -138,7 +125,7 @@ function buildParentCompiledFlow(): CompiledFlow {
     id: PARENT_WORKFLOW_ID as unknown as string,
     version: '0.1.0',
     purpose:
-      'real-recursion fanout test parent — two branches, each recurses into the child via real runCompiledFlow.',
+      'real-recursion fanout test parent — two branches, each recurses into the child via real runCompiledFlowV2.',
     entry: { signals: { include: ['fanout'], exclude: [] }, intent_prefixes: ['fanout'] },
     entry_modes: [
       {
@@ -217,31 +204,30 @@ afterEach(() => {
   rmSync(projectRoot, { recursive: true, force: true });
 });
 
+async function readTraceEntries(runFolder: string) {
+  return await new TraceStore(runFolder).load();
+}
+
 describe('fanout real recursion', () => {
-  it('runs each branch via real runCompiledFlow (no childRunner stub) and admits via aggregate-only', async () => {
+  it('runs each branch via real runCompiledFlowV2 (no childRunner stub) and admits via aggregate-only', async () => {
     const parentCompiledFlow = buildParentCompiledFlow();
     const parentBytes = Buffer.from(JSON.stringify(parentCompiledFlow));
     const childCompiledFlow = buildChildCompiledFlow();
     const childBytes = Buffer.from(JSON.stringify(childCompiledFlow));
 
-    const childResolver: ChildCompiledFlowResolver = () => ({
-      flow: childCompiledFlow,
-      bytes: childBytes,
-    });
+    const childResolver: ChildCompiledFlowResolverV2 = () => ({ flowBytes: childBytes });
 
-    const parentRunId = RunId.parse('33333333-3333-3333-3333-333333333333');
-    const parentRunFolder = join(runFolderBase, parentRunId as unknown as string);
+    const parentRunId = '33333333-3333-3333-3333-333333333333';
+    const parentRunFolder = join(runFolderBase, parentRunId);
 
-    // KEY: NO `childRunner` field — runner defaults to `runCompiledFlow`
+    // KEY: NO `childRunner` field — runner defaults to `runCompiledFlowV2`
     // itself, so each branch recurses through the real runner.
-    const outcome = await runCompiledFlow({
-      runFolder: parentRunFolder,
-      flow: parentCompiledFlow,
+    const outcome = await runCompiledFlowV2({
+      runDir: parentRunFolder,
       flowBytes: parentBytes,
       runId: parentRunId,
       goal: 'parent run goal — exercise fanout real recursion',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 27, 0, 0, 0)),
       relayer: acceptingRelayer(),
       projectRoot,
@@ -249,24 +235,20 @@ describe('fanout real recursion', () => {
       worktreeRunner: stubWorktreeRunner(),
     });
 
-    if (outcome.result.outcome === 'checkpoint_waiting') {
-      throw new Error('parent unexpectedly waited at a checkpoint');
-    }
-    expect(outcome.result.outcome).toBe('complete');
+    expect(outcome.outcome).toBe('complete');
 
     // Fanout audit linkage on the parent's trace.
-    const fanoutStarted = outcome.trace_entries.find((e) => e.kind === 'fanout.started');
+    const parentTraceEntries = await readTraceEntries(parentRunFolder);
+    const fanoutStarted = parentTraceEntries.find((e) => e.kind === 'fanout.started');
     if (fanoutStarted?.kind !== 'fanout.started') throw new Error('expected fanout.started');
     expect(fanoutStarted.branch_ids).toEqual(['a', 'b']);
 
-    const branchStarted = outcome.trace_entries.filter((e) => e.kind === 'fanout.branch_started');
-    const branchCompleted = outcome.trace_entries.filter(
-      (e) => e.kind === 'fanout.branch_completed',
-    );
+    const branchStarted = parentTraceEntries.filter((e) => e.kind === 'fanout.branch_started');
+    const branchCompleted = parentTraceEntries.filter((e) => e.kind === 'fanout.branch_completed');
     expect(branchStarted).toHaveLength(2);
     expect(branchCompleted).toHaveLength(2);
 
-    const fanoutJoined = outcome.trace_entries.find((e) => e.kind === 'fanout.joined');
+    const fanoutJoined = parentTraceEntries.find((e) => e.kind === 'fanout.joined');
     if (fanoutJoined?.kind !== 'fanout.joined') throw new Error('expected fanout.joined');
     expect(fanoutJoined.policy).toBe('aggregate-only');
     expect(fanoutJoined.branches_completed).toBe(2);
@@ -276,12 +258,13 @@ describe('fanout real recursion', () => {
     const branchChildRunIds: string[] = [];
     for (const ev of branchCompleted) {
       if (ev.kind !== 'fanout.branch_completed') continue;
-      branchChildRunIds.push(ev.child_run_id as unknown as string);
+      if (ev.child_run_id === undefined) throw new Error('expected branch child run id');
+      branchChildRunIds.push(ev.child_run_id);
     }
     expect(branchChildRunIds).toHaveLength(2);
     expect(new Set(branchChildRunIds).size).toBe(2); // distinct
     for (const id of branchChildRunIds) {
-      expect(id).not.toBe(parentRunId as unknown as string);
+      expect(id).not.toBe(parentRunId);
     }
 
     // Each branch child has its own trace, with every trace_entry
@@ -296,7 +279,7 @@ describe('fanout real recursion', () => {
       for (const line of traceEntryLines) {
         const parsed = JSON.parse(line) as { run_id: string; kind: string };
         expect(parsed.run_id).toBe(branchChildRunId);
-        expect(parsed.run_id).not.toBe(parentRunId as unknown as string);
+        expect(parsed.run_id).not.toBe(parentRunId);
         kinds.add(parsed.kind);
       }
       expect(kinds.has('relay.started')).toBe(true);

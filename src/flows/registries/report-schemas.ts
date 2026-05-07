@@ -32,6 +32,28 @@ const StrictPayloadShape = z
   })
   .strict();
 
+const FanoutAggregateFixtureBranchShape = z
+  .object({
+    branch_id: z.string().min(1),
+    child_run_id: z.string().min(1),
+    child_outcome: z.string().min(1),
+    verdict: z.string().min(1),
+    admitted: z.boolean(),
+    result_path: z.string().min(1),
+    duration_ms: z.number().nonnegative(),
+  })
+  .passthrough();
+
+const FanoutAggregateFixtureShape = z
+  .object({
+    schema_version: z.literal(1),
+    join_policy: z.enum(['pick-winner', 'disjoint-merge', 'aggregate-only']),
+    branch_count: z.number().int().nonnegative(),
+    winner_branch_id: z.string().min(1).optional(),
+    branches: z.array(FanoutAggregateFixtureBranchShape),
+  })
+  .passthrough();
+
 // Test-only fixtures live inline because they are not part of any
 // real flow. `runtime-proof-canonical@v1` is the minimal-shape positive
 // case; `runtime-proof-strict@v1` is used by tests/runner/materializer-
@@ -39,6 +61,7 @@ const StrictPayloadShape = z
 const TEST_FIXTURE_SCHEMAS: Readonly<Record<string, z.ZodType<unknown>>> = Object.freeze({
   'runtime-proof-canonical@v1': MinimalVerdictShape,
   'runtime-proof-strict@v1': StrictPayloadShape,
+  'fanout-aggregate@v1': FanoutAggregateFixtureShape,
 });
 
 const REGISTRY = buildReportSchemaRegistry(flowPackages, TEST_FIXTURE_SCHEMAS);
