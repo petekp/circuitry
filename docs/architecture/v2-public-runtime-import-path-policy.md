@@ -2,6 +2,11 @@
 
 Date: 2026-05-06
 
+Current status: superseded for cutover planning by
+`docs/architecture/v2-final-cutover-policy.md`. The release-note-only
+compatibility details below remain as the historical record of the last public
+import-path posture; do not extend this path by default.
+
 This note records the first approved old public import-path deprecation stage
 for the v2 migration.
 

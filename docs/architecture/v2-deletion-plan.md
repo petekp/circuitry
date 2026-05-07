@@ -1,5 +1,24 @@
 # Circuit v2 Retained Runtime Plan
 
+## Current Cutover Direction
+
+The retained-runtime compatibility posture is superseded by
+`docs/architecture/v2-final-cutover-policy.md`.
+
+There are zero external users. The desired direction is final cutover, not more
+external review packets or a longer compatibility window. Historical details
+below are preserved until the final doc compression group, but they should not
+be read as current product policy.
+
+The next implementation group should make retained and v1 run folders fail
+closed with exactly:
+
+```text
+This run folder was created by the retired runtime. Start a fresh run.
+```
+
+Do not add a v1 run-folder adapter.
+
 This is the post-default-selector deletion-readiness plan.
 
 The default selector now routes matrix-supported fresh runs through core-v2.

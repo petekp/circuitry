@@ -2,6 +2,11 @@
 
 Date: 2026-05-05
 
+Current status: superseded for cutover planning by
+`docs/architecture/v2-final-cutover-policy.md`. This inventory remains useful
+for finding old runtime files and tests, but its compatibility-preserving
+recommendations are historical now.
+
 ## Summary
 
 Phase 5.5 is an inventory pass only.
