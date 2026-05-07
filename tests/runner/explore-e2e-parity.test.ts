@@ -22,52 +22,13 @@ import { validateCompiledFlowKindPolicy } from '../../src/shared/flow-kind-polic
 // branch runs the real explore fixture through `runCompiledFlow` with the
 // default `relayClaudeCode` (spawns `claude -p`), asserts the five-trace_entry
 // relay transcript lands twice (synthesize + review), normalizes +
-// hashes `reports/explore-result.json` against the checked-in golden,
-// and writes the `tests/fixtures/agent-smoke/last-run.json` fingerprint
-// that audit Check 30 verifies at every run.
+// hashes `reports/explore-result.json` against the checked-in golden.
 
 const EXPLORE_FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');
 const GOLDEN_RESULT_SHA256_PATH = resolve('tests/fixtures/golden/explore/result.sha256');
-const LAST_RUN_FINGERPRINT_PATH = resolve('tests/fixtures/agent-smoke/last-run.json');
 
 const AGENT_SMOKE = process.env.AGENT_SMOKE === '1';
 const UPDATE_GOLDEN = process.env.UPDATE_GOLDEN === '1';
-// Fingerprint promotion is checkd separately from the AGENT_SMOKE
-// invocation, mirroring UPDATE_CODEX_FINGERPRINT. A bare AGENT_SMOKE=1
-// run exercises the connector end-to-end without mutating
-// tests/fixtures/agent-smoke/last-run.json; explicit
-// UPDATE_AGENT_FINGERPRINT=1 opt-in is required to refresh the
-// recorded fingerprint that audit Check 30 binds against.
-const UPDATE_AGENT_FINGERPRINT = process.env.UPDATE_AGENT_FINGERPRINT === '1';
-
-// Connector source paths the fingerprint binds against. Inlined here
-// (rather than importing from scripts/audit.mjs) to keep the test
-// stdlib-only and consistent with the codex-relay-roundtrip
-// inlining; if the test's list ever drifts from the audit's list the
-// drift detection itself surfaces the mismatch as yellow on first
-// repromotion.
-const AGENT_ADAPTER_SOURCE_PATHS = [
-  'src/connectors/claude-code.ts',
-  'src/shared/connector-relay.ts',
-  'src/shared/connector-helpers.ts',
-  'src/connectors/shared.ts',
-  'src/connectors/relay-materializer.ts',
-  'src/runtime/executors/relay.ts',
-  'src/runtime/run/compiled-flow-runner.ts',
-  'src/runtime/run/graph-runner.ts',
-  'src/flows/registries/report-schemas.ts',
-] as const;
-
-function connectorSourceSha256(): string {
-  const h = createHash('sha256');
-  for (const p of AGENT_ADAPTER_SOURCE_PATHS) {
-    const abs = resolve(p);
-    h.update(`${abs}\n`);
-    h.update(readFileSync(abs));
-    h.update('\n');
-  }
-  return h.digest('hex');
-}
 
 function sha256Hex(payload: string): string {
   return createHash('sha256').update(payload, 'utf8').digest('hex');
@@ -298,10 +259,7 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
 // AGENT_SMOKE-checkd real-subprocess end-to-end. Runs ONLY when the
 // operator explicitly opts in via AGENT_SMOKE=1 so CI (and developer-
 // local runs without auth) stay green. Test body is written so a rerun
-// against the golden locks normalized result-shape parity; write-side
-// effects update `tests/fixtures/agent-smoke/last-run.json` so the
-// commit-ancestor audit (Check 30) can bind the fingerprint to the
-// committing slice.
+// against the golden locks normalized result-shape parity.
 (AGENT_SMOKE ? describe : describe.skip)('explore fixture AGENT_SMOKE end-to-end', () => {
   let runFolderBase: string;
 
@@ -357,57 +315,7 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
         expect(kindsForStep).toContain('relay.result');
         expect(kindsForStep).toContain('relay.completed');
       }
-
-      // Fingerprint promotion is checkd on UPDATE_AGENT_FINGERPRINT=1
-      // and writes the schema_version 2 shape with
-      // connector_source_sha256 + cli_version, mirroring the
-      // codex-relay-roundtrip promotion path. A bare AGENT_SMOKE=1
-      // run exercises the connector end-to-end without mutating
-      // tracked state. The first-run relay result on the explore
-      // fixture is the one whose result_sha256 is recorded.
-      if (UPDATE_AGENT_FINGERPRINT) {
-        const commitSha = currentHeadSha();
-        // Bind cli_version to the actual subprocess init trace entry via
-        // runtime relay.receipt.cli_version, sourced from each relayer's
-        // RelayResult.cli_version, which claude-code.ts reads from
-        // init.claude_code_version. The
-        // audit rejects fingerprints with empty/unknown cli_version
-        // on runtime, so this binding fails closed at promotion time.
-        const firstClaudeCodeReceipt = traceEntries.find((entry) => entry.kind === 'relay.receipt');
-        const cliVersion =
-          firstClaudeCodeReceipt?.kind === 'relay.receipt'
-            ? String(firstClaudeCodeReceipt.cli_version ?? '')
-            : '';
-        if (cliVersion.length === 0) {
-          throw new Error(
-            'AGENT_SMOKE fingerprint promotion: no claude-code relay receipt with cli_version captured',
-          );
-        }
-        if (/\(unknown\)/.test(cliVersion)) {
-          throw new Error(
-            `AGENT_SMOKE fingerprint promotion: cli_version "${cliVersion}" is empty or sentinel; refusing to write a fingerprint that audit Check 30 will reject`,
-          );
-        }
-        const fingerprint = {
-          schema_version: 2,
-          commit_sha: commitSha,
-          result_sha256: digest,
-          connector_source_sha256: connectorSourceSha256(),
-          cli_version: cliVersion,
-          recorded_at: new Date().toISOString(),
-        };
-        mkdirSync(dirname(LAST_RUN_FINGERPRINT_PATH), { recursive: true });
-        writeFileSync(LAST_RUN_FINGERPRINT_PATH, `${JSON.stringify(fingerprint, null, 2)}\n`);
-      }
     },
     5 * 60 * 1000,
   );
 });
-
-function currentHeadSha(): string {
-  // Shelling to git keeps the test stdlib-only w.r.t. npm deps; the
-  // fingerprint writer runs only under AGENT_SMOKE=1 so the child-process
-  // dep is checkd behind the opt-in.
-  const { execSync } = require('node:child_process') as typeof import('node:child_process');
-  return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-}

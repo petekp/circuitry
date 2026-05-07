@@ -236,7 +236,7 @@ property-test harness + reducer exist in Stage 2.
 - `run.prop.deterministic_replay` — For any valid `RunTrace` plus its
   corresponding `CompiledFlow` manifest, two independent reducer runs produce
   bit-identical `Snapshot`s. This is the load-bearing property of the
-  trace_entry-sourced architecture (`specs/evidence.md` hard invariant 1).
+  trace_entry-sourced architecture.
 
 - `run.prop.attempt_monotonicity_per_step` — For every step_id that appears
   in the log, the sequence of `attempt` values observed on that step_id's
@@ -349,7 +349,7 @@ property-test harness + reducer exist in Stage 2.
 - `carry-forward:trace_entry-log-insufficient-to-replay` — Existing Circuit's
   `RunBootstrappedTraceEntry` was missing change_kind; `Snapshot` did not carry
   `manifest_hash`; richer `step.completed`/`step.aborted` trace_entries were
-  missing (adversarial-review HIGH #3 — `specs/evidence.md` §Adversarial).
+  missing.
   **Closed in Tier 0 skeleton** (`change_kind` + `manifest_hash` on both;
   `step.*_completed`/`step.aborted` added). Re-ratified here: `RunTrace`
   enforces the log-level invariants those changes were meant to support.
@@ -400,9 +400,7 @@ property-test harness + reducer exist in Stage 2.
   field comparator rather than `JSON.stringify` to stay robust under
   future key-order changes.
 
-  Codex adversarial property-auditor pass completed (2026-04-18); full
-  record at `specs/reviews/run-md-v0.1-codex.md`. Verdict chain:
-  `NEEDS ADJUSTMENT → incorporated → ACCEPT (after fold-in)`. 2 HIGH
+  Codex adversarial property-auditor pass completed (2026-04-18). 2 HIGH
   (#1 nested surplus, #2 prefix-snapshot) incorporated; 5 MED (#3
   prototype identity, #4 timestamp scope, #5 close semantic, #6
   compile-time mapping, #7 test breadth) incorporated or honestly scoped
@@ -423,9 +421,8 @@ property-test harness + reducer exist in Stage 2.
   pairing invariant `run.prop.relay_trace_entry_pairing` widened (not
   renamed) to govern ordering when transcript/failure trace_entries are present;
   full five-trace_entry success ordering is obligated at the connector level
-  (CC#P2-2), not the contract level. Closes composition-review §HIGH 2
-  (`specs/reviews/p2-foundation-composition-review.md`). Authorized by
-  ADR-0007 §Amendment (Slice 37).
+  (CC#P2-2), not the contract level. Authorized by ADR-0007 §Amendment
+  (Slice 37).
 
 - **v0.2 (Stage 1)** — Absorb Codex adversarial property-auditor pass
   findings. Ratify `property_ids` above by landing the corresponding

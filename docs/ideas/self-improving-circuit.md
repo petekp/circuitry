@@ -25,7 +25,7 @@ especially as Circuit heads toward marketplace publishing.
 
 Better shape for Circuit: at the end of a workflow, evaluate whether
 anything we learned should update an existing doc the operator already
-maintains (AGENTS.md, files under `specs/`, repo guides, auto-memory).
+maintains (AGENTS.md, repo guides, auto-memory).
 The operator declares which docs are "learning targets"; Circuit
 proposes diffs. Existing curation stays intact. Docs get sharper over
 time instead of rotting.

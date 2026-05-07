@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { findCloseBuilder } from '../../src/flows/registries/close-writers/registry.js';
@@ -7,9 +7,7 @@ import { findComposeBuilder } from '../../src/flows/registries/compose-writers/r
 import { parseReport } from '../../src/flows/registries/report-schemas.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
-const REPO_ROOT = resolve('.');
-const EXPLORE_FIXTURE_PATH = join(REPO_ROOT, 'generated/flows/explore/circuit.json');
-const ARTIFACTS_PATH = join(REPO_ROOT, 'specs/reports.json');
+const EXPLORE_FIXTURE_PATH = join('generated', 'flows', 'explore', 'circuit.json');
 
 // Schemas whose runtime writer is a ComposeBuilder (rather than a
 // CloseBuilder or an inline runner branch). After the catalog refactor
@@ -21,17 +19,6 @@ const SCHEMAS_IN_SYNTHESIS_REGISTRY: readonly string[] = [
 ];
 const SCHEMAS_IN_CLOSE_REGISTRY: readonly string[] = ['explore.result@v1'];
 
-type ReportRow = {
-  id: string;
-  description: string;
-  schema_file: string;
-  schema_exports: string[];
-};
-
-type ReportsFile = {
-  reports: ReportRow[];
-};
-
 type StepWithReport = CompiledFlow['steps'][number] & {
   writes: { report: { path: string; schema: string } };
   check: { required?: string[]; pass?: string[] };
@@ -39,24 +26,18 @@ type StepWithReport = CompiledFlow['steps'][number] & {
 
 const LANDED_ARTIFACTS = [
   {
-    reportId: 'explore.brief',
     stepId: 'frame-step',
     schemaName: 'explore.brief@v1',
-    schemaExports: ['ExploreBrief'],
     requiredFields: ['subject', 'success_condition'],
   },
   {
-    reportId: 'explore.analysis',
     stepId: 'analyze-step',
     schemaName: 'explore.analysis@v1',
-    schemaExports: ['ExploreAnalysis', 'ExploreAspect', 'ExploreEvidenceCitation'],
     requiredFields: ['aspects'],
   },
   {
-    reportId: 'explore.compose',
     stepId: 'synthesize-step',
     schemaName: 'explore.compose@v1',
-    schemaExports: ['ExploreCompose', 'ExploreComposeAspect'],
     passVerdicts: ['accept'],
     validBody: {
       verdict: 'accept',
@@ -66,17 +47,15 @@ const LANDED_ARTIFACTS = [
       supporting_aspects: [
         {
           aspect: 'schema-binding',
-          contribution: 'The fixture, report ledger, and registry agree',
+          contribution: 'The generated flow and registry agree',
           evidence_refs: ['reports/analysis.json'],
         },
       ],
     },
   },
   {
-    reportId: 'explore.review-verdict',
     stepId: 'review-step',
     schemaName: 'explore.review-verdict@v1',
-    schemaExports: ['ExploreReviewVerdict', 'ExploreReviewVerdictValue'],
     passVerdicts: ['accept', 'accept-with-fold-ins'],
     validBody: {
       verdict: 'accept-with-fold-ins',
@@ -86,28 +65,11 @@ const LANDED_ARTIFACTS = [
     },
   },
   {
-    reportId: 'explore.result',
     stepId: 'close-step',
     schemaName: 'explore.result@v1',
-    schemaExports: [
-      'ExploreResult',
-      'ExploreResultReportId',
-      'ExploreResultReportPointer',
-      'ExploreResultVerdictSnapshot',
-    ],
     requiredFields: ['summary', 'verdict_snapshot'],
   },
 ] as const;
-
-function loadReports(): ReportRow[] {
-  return (JSON.parse(readFileSync(ARTIFACTS_PATH, 'utf8')) as ReportsFile).reports;
-}
-
-function reportById(rows: ReportRow[], id: string): ReportRow {
-  const report = rows.find((row) => row.id === id);
-  if (report === undefined) throw new Error(`report row not found: ${id}`);
-  return report;
-}
 
 function loadExploreCompiledFlow(): CompiledFlow {
   return CompiledFlow.parse(JSON.parse(readFileSync(EXPLORE_FIXTURE_PATH, 'utf8')));
@@ -120,15 +82,10 @@ function stepById(flow: CompiledFlow, stepId: string): StepWithReport {
 }
 
 describe('report-schema composition seam', () => {
-  it('binds landed explore report schemas across fixture, ledger, and runtime validation', () => {
-    const reports = loadReports();
+  it('binds landed explore report schemas across generated flow and runtime validation', () => {
     const flow = loadExploreCompiledFlow();
 
     for (const spec of LANDED_ARTIFACTS) {
-      const row = reportById(reports, spec.reportId);
-      expect(row.schema_file).toBe('src/flows/explore/reports.ts');
-      expect(row.schema_exports).toEqual([...spec.schemaExports]);
-
       const step = stepById(flow, spec.stepId);
       expect(step.writes.report.schema).toBe(spec.schemaName);
 

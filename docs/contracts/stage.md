@@ -77,10 +77,8 @@ in `tests/contracts/schema-parity.test.ts`.
 
   The 20-character rationale requirement is a structural *minimum* (a
   non-empty human-readable note), not a Goodhart-proof discipline check
-  (`aaaaaaaaaaaaaaaaaaaa` satisfies it). Rationale quality is audited
-  out of band (`npm run audit` + Stage 1 reviewer-human pairing); v0.2
-  may upgrade `rationale` to a structured record with
-  `accepted_risk_ref` pointing into `specs/risks.md`.
+  (`aaaaaaaaaaaaaaaaaaaa` satisfies it). A future version may upgrade
+  `rationale` to a structured record if real flows justify the cost.
 
   Enforced in `src/schemas/compiled-flow.ts` `superRefine` + `src/schemas/stage.ts`
   (SpinePolicy discriminated union); negative coverage in
@@ -209,9 +207,7 @@ exist in Stage 2:
   required canonical labels were present. A malformed flow could
   silently skip `review`, short-circuiting the cross-model-challenger
   check. `docs/contracts/compiled-flow.md` v0.1 flagged this as
-  `carry-forward:stage path-policy-too-loose`, and `specs/evidence.md`
-  §Adversarial MED #11 lists it among the open Tier 0 ratchets. Closed
-  by stage-I4.
+  `carry-forward:stage path-policy-too-loose`. Closed by stage-I4.
 
 - `carry-forward:surplus-key-silent-strip` — Prior to this contract,
   `Stage` was not `.strict()`, so a typo like `conanical` (three-char
@@ -230,13 +226,11 @@ exist in Stage 2:
   (closes Codex MED #6). HIGH semantic/reachability/coverage objections
   from the Codex adversarial pass are honestly scoped as property_ids
   for Stage 2 (see "Reserved for Stage 2" section above); stage-I4
-  prose was tightened to stop over-claiming closure. Full adversarial-
-  review record at `specs/reviews/stage-md-v0.1-codex.md`.
+  prose was tightened to stop over-claiming closure.
 
 - **v0.2 (Stage 1)** — Ratify `property_ids` above by landing the
   corresponding property-test harness. Upgrade `SpinePolicy.rationale`
-  from a min(20) string to a structured record (`accepted_risk_ref`
-  into `specs/risks.md`, `substitute_stage_id?`) if evidence from real
+  from a min(20) string to a structured record if evidence from real
   flows justifies the cost. Author `selection.md` and decide whether
   `Stage.selection: SelectionOverride` lands on Stage or derives from
   `CompiledFlow.default_selection` conditioned on `canonical` (closes Codex

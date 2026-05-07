@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,9 +14,10 @@ import {
   FixVerification,
   FixVerificationCommand,
 } from '../../src/flows/fix/reports.js';
+import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
-const REPO_ROOT = resolve('.');
-const ARTIFACTS_PATH = join(REPO_ROOT, 'specs', 'reports.json');
+const FIX_FLOW_PATH = join('generated', 'flows', 'fix', 'circuit.json');
+const FIX_LITE_FLOW_PATH = join('generated', 'flows', 'fix', 'lite.json');
 
 const FIX_ARTIFACT_IDS = [
   'fix.brief',
@@ -29,15 +30,14 @@ const FIX_ARTIFACT_IDS = [
   'fix.result',
 ] as const;
 
-const EXPECTED_BACKING_PATHS = {
-  'fix.brief': '<run-folder>/reports/fix/brief.json',
-  'fix.context': '<run-folder>/reports/fix/context.json',
-  'fix.diagnosis': '<run-folder>/reports/fix/diagnosis.json',
-  'fix.no-repro-decision': '<run-folder>/reports/fix/no-repro-decision.json',
-  'fix.change': '<run-folder>/reports/fix/change.json',
-  'fix.verification': '<run-folder>/reports/fix/verification.json',
-  'fix.review': '<run-folder>/reports/fix/review.json',
-  'fix.result': '<run-folder>/reports/fix-result.json',
+const EXPECTED_REPORT_WRITES = {
+  'fix.brief': { path: 'reports/fix/brief.json', schema: 'fix.brief@v1' },
+  'fix.context': { path: 'reports/fix/context.json', schema: 'fix.context@v1' },
+  'fix.diagnosis': { path: 'reports/fix/diagnosis.json', schema: 'fix.diagnosis@v1' },
+  'fix.change': { path: 'reports/fix/change.json', schema: 'fix.change@v1' },
+  'fix.verification': { path: 'reports/fix/verification.json', schema: 'fix.verification@v1' },
+  'fix.review': { path: 'reports/fix/review.json', schema: 'fix.review@v1' },
+  'fix.result': { path: 'reports/fix-result.json', schema: 'fix.result@v1' },
 } as const;
 
 function verificationCommand(overrides: Record<string, unknown> = {}) {
@@ -110,19 +110,20 @@ function resultPointers(
   return pointers;
 }
 
-function loadReports() {
-  return JSON.parse(readFileSync(ARTIFACTS_PATH, 'utf-8')) as {
-    reports: Array<{
-      id: string;
-      contract?: string;
-      schema_file?: string;
-      schema_exports?: string[];
-      writers?: string[];
-      readers?: string[];
-      backing_paths?: string[];
-      reference_evidence?: string[];
-    }>;
-  };
+function loadFlow(path: string): CompiledFlow {
+  return CompiledFlow.parse(JSON.parse(readFileSync(path, 'utf-8')));
+}
+
+function reportWritesBySchema(flow: CompiledFlow): Map<string, string> {
+  const writes = new Map<string, string>();
+  for (const step of flow.steps) {
+    const writesSlot = 'writes' in step ? step.writes : undefined;
+    if (writesSlot !== undefined && 'report' in writesSlot && writesSlot.report !== undefined) {
+      const report = writesSlot.report;
+      writes.set(report.schema, report.path);
+    }
+  }
+  return writes;
 }
 
 describe('Fix report schemas', () => {
@@ -398,42 +399,33 @@ describe('Fix report schemas', () => {
   });
 });
 
-describe('Fix report authority rows', () => {
-  const reports = loadReports();
-  const byId = new Map(reports.reports.map((report) => [report.id, report]));
+describe('Fix generated flow report bindings', () => {
+  const writes = reportWritesBySchema(loadFlow(FIX_FLOW_PATH));
+  const liteWrites = reportWritesBySchema(loadFlow(FIX_LITE_FLOW_PATH));
 
-  it('registers all eight Fix reports with schemas, paths, readers, writers, and reference evidence', () => {
-    for (const id of FIX_ARTIFACT_IDS) {
-      const report = byId.get(id);
-      expect(report, `${id} row`).toBeDefined();
-      expect(report?.contract).toBe('src/flows/fix/contract.md');
-      expect(report?.schema_file).toBe('src/flows/fix/reports.ts');
-      expect(report?.schema_exports?.length, `${id}.schema_exports`).toBeGreaterThan(0);
-      expect(report?.writers?.length, `${id}.writers`).toBeGreaterThan(0);
-      expect(report?.readers?.length, `${id}.readers`).toBeGreaterThan(0);
-      expect(report?.reference_evidence).toEqual([
-        'specs/reference/legacy-circuit/repair-characterization.md',
-      ]);
-      expect(report?.backing_paths).toEqual([EXPECTED_BACKING_PATHS[id]]);
+  it('binds default Fix reports to generated flow paths and schemas', () => {
+    for (const id of FIX_ARTIFACT_IDS.filter((reportId) => reportId !== 'fix.no-repro-decision')) {
+      const expected = EXPECTED_REPORT_WRITES[id];
+      expect(writes.get(expected.schema), `${id} generated report write`).toBe(expected.path);
     }
   });
 
   it('keeps fix.result path-distinct from the universal run result and other flow results', () => {
-    expect(byId.get('fix.result')?.backing_paths).toEqual(['<run-folder>/reports/fix-result.json']);
-    expect(byId.get('run.result')?.backing_paths).toEqual([
-      '<circuit-next-run-folder>/reports/result.json',
-    ]);
-    expect(byId.get('build.result')?.backing_paths).toEqual([
-      '<run-folder>/reports/build-result.json',
-    ]);
-    expect(byId.get('explore.result')?.backing_paths).toEqual([
-      '<run-folder>/reports/explore-result.json',
-    ]);
+    expect(writes.get('fix.result@v1')).toBe('reports/fix-result.json');
+    expect(writes.get('fix.result@v1')).not.toBe('reports/result.json');
+    expect(writes.get('fix.result@v1')).not.toBe('reports/build-result.json');
+    expect(writes.get('fix.result@v1')).not.toBe('reports/explore-result.json');
   });
 
   it('keeps Fix role reports under reports/fix', () => {
     for (const id of FIX_ARTIFACT_IDS.filter((reportId) => reportId !== 'fix.result')) {
-      expect(EXPECTED_BACKING_PATHS[id]).toMatch(/^<run-folder>\/reports\/fix\/.+\.json$/);
+      if (id === 'fix.no-repro-decision') continue;
+      const expected = EXPECTED_REPORT_WRITES[id];
+      expect(writes.get(expected.schema)).toMatch(/^reports\/fix\/.+\.json$/);
     }
+  });
+
+  it('keeps lite Fix close output aligned with the default Fix result path', () => {
+    expect(liteWrites.get('fix.result@v1')).toBe(writes.get('fix.result@v1'));
   });
 });

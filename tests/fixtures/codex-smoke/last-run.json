@@ -1,8 +1,0 @@
-{
-  "schema_version": 2,
-  "commit_sha": "4dea8cc381a353f0e9e8cfb364433e42169965db",
-  "result_sha256": "22655acc6c5508dc185b492655bc695af0445c3e374e1d75244c7fa348e5b9b2",
-  "connector_source_sha256": "8313e46940eb6250f8d4d68aa4aca836c16d1df390445903e7e1f18c5aab47a1",
-  "cli_version": "codex-cli 0.123.0",
-  "recorded_at": "2026-04-24T20:16:18.734Z"
-}

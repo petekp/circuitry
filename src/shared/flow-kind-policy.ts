@@ -1,12 +1,12 @@
+import { CompiledFlow } from '../schemas/compiled-flow.js';
 import {
   type CompiledFlowKindPolicyCheckResult,
   EXEMPT_FLOW_IDS,
   FLOW_KIND_CANONICAL_SETS,
   checkCompiledFlowKindCanonicalPolicy,
-} from '../../scripts/policy/flow-kind-policy.mjs';
-import { CompiledFlow } from '../schemas/compiled-flow.js';
+} from './flow-kind-policy-core.js';
 
-// Wraps the canonical-set check from scripts/policy/flow-kind-policy.mjs
+// Wraps the canonical-set check from src/shared/flow-kind-policy-core.ts
 // with a Zod CompiledFlow.safeParse pre-check, so CLI fixture loading
 // rejects structurally-invalid or policy-invalid fixtures with a single call.
 

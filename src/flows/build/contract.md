@@ -3,7 +3,6 @@ contract: build
 status: draft
 version: 0.1
 schema_source: src/flows/build/reports.ts
-reference_evidence: specs/reference/legacy-circuit/build-characterization.md
 last_updated: 2026-04-28
 depends_on: [flow, stage, step, connector]
 report_ids:
@@ -22,6 +21,12 @@ property_ids: []
 The **Build** flow is circuit-next's standard implementation flow:
 frame, plan, act, verify, review, close. It produces a typed,
 structured JSON report and an evidence chain at every step.
+
+## Canonical stage policy
+
+Build uses the canonical set `{frame, plan, act, verify, review, close}` and
+omits `{analyze}`. This is enforced by `src/shared/flow-kind-policy-core.ts`
+against the generated flow at `generated/flows/build/circuit.json`.
 
 This contract starts as the typed-output home for the six Build reports:
 

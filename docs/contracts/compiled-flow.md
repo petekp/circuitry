@@ -144,9 +144,8 @@ Property-based tests will cover:
   verdict conditionals. circuit-next's Step discriminated union constrains
   verdicts per step kind, not per protocol.
 - `carry-forward:prose-schema-drift` — Existing Circuit's SKILL.md can
-  silently disagree with `circuit.yaml`. A Stage 1 contract test
-  (prose-yaml-parity, see `specs/behavioral/prose-yaml-parity.md` — future)
-  must prevent this for circuit-next.
+  silently disagree with `circuit.yaml`. circuit-next prevents this by
+  generating host-facing flow surfaces from flow package sources.
 - `carry-forward:stage path-policy-too-loose` — **Closed in stage.md v0.1.**
   `CompiledFlow.stage_path_policy` is a required discriminated union with two
   modes: `strict` (all seven canonical stages required) and `partial`
@@ -169,9 +168,7 @@ STEP-I4.
 ## Evolution
 
 - **v0.1 (skeleton)**: initial contract with graph-closure invariants
-  WF-I1..I7. Grandfathered via `bootstrap/adversarial-review-codex.md`
-  (6 HIGH + 3 MED incorporated at tier-0) before the
-  `specs/reviews/` convention existed.
+  WF-I1..I7.
 - **v0.2 (Stage 1, Slice 27)**: narrowed to what
   `runtime-proof` (Stage 1.5 Alpha Proof) structurally needs beyond the
   skeleton. Adds **WF-I8** (terminal reachability) and **WF-I9** (no
@@ -184,9 +181,7 @@ STEP-I4.
   cannot pass WF-I8 and then stall at runtime. Rationale for promoting
   graph semantics to parse-time invariants rather than property tests:
   preferring types over tests where the type can express the invariant
-  (CLAUDE.md §Architecture-First types). Exits the skeleton grandfather
-  and binds to a proper review record at
-  `specs/reviews/flow-md-v0.2-codex.md`.
+  (CLAUDE.md §Architecture-First types).
 - **v0.3 (Runtime Safety Floor Slice 4, this version)**: adds
   **WF-I11** (pass-route terminal reachability) after runtime evidence
   showed WF-I8's broad
@@ -194,10 +189,7 @@ STEP-I4.
   routing `fail` to `@complete` while `pass` loops forever; because the
   current runner follows `routes.pass` after successful checks, WF-I11
   follows only pass edges and rejects self-cycles and multi-step
-  pass-cycles at parse time. Binds to the canonical contract review at
-  `specs/reviews/flow-md-v0.3-codex.md` and the runtime-safety floor
-  Slice 72 challenger review at `specs/reviews/arc-slice-72-codex.md`.
-  Check source tightening
+  pass-cycles at parse time. Check source tightening
   (v0.1 adversarial MED #7) **closed in step.md v0.1** — see the "Check
   source tightening" section above. stage path policy (v0.1 adversarial
   MED #11) **closed in stage.md v0.1** — `CompiledFlow.stage_path_policy` is a

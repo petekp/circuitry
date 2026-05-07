@@ -7,7 +7,6 @@ last_updated: 2026-04-19
 depends_on: [ids, scalars, snapshot]
 compatibility_policy: clean-break
 legacy_parse_policy: reject
-reference_evidence: specs/reference/legacy-circuit/continuity-characterization.md
 report_ids:
   - continuity.record
   - continuity.index
@@ -22,13 +21,10 @@ later session pick up where an earlier one left off. A **continuity index**
 is the resolver that determines which record (if any) is authoritative for
 the next resume and which run (if any) is currently attached.
 
-Continuity is classified **`successor-to-live` / `clean-break`** in the
-authority graph (`specs/reports.json`). Live reference surface is
-characterized at
-`specs/reference/legacy-circuit/continuity-characterization.md`. circuit-next
-will NOT parse legacy Circuit records through normal runtime paths
-(`legacy_parse_policy: reject`). If import is ever required, it is a
-separate migration-source contract; the runtime schema stays strict.
+Continuity is **clean-break**. circuit-next will NOT parse legacy Circuit
+records through normal runtime paths (`legacy_parse_policy: reject`). If import
+is ever required, it is a separate migration-source contract; the runtime
+schema stays strict.
 
 ## Ubiquitous language
 
@@ -210,9 +206,7 @@ After a `ContinuityIndex` is accepted:
 - Both pointers are either `null` or schema-valid; no partial pointer
   can be stored (CONT-I9..I11).
 - Dangling-reference (stem valid but file absent) is NOT rejected at
-  parse time; it is a runtime adjudication at resume, per the
-  `dangling_reference_policy` on `continuity.index` in
-  `specs/reports.json`.
+  parse time; it is a runtime adjudication at resume.
 
 ## Dangling reference policy
 
@@ -226,14 +220,8 @@ time (zod schemas are pure). At resume time, the resolver:
    attempts to read `<control-plane>/continuity/records/
    ${pending_record.record_id}.json`.
 3. If the record file is absent, surfaces the mismatch as an error;
-   does NOT silently drop the pointer. Policy matches legacy Circuit's
-   observed behavior (see
-   `specs/reference/legacy-circuit/continuity-characterization.md`
-   §Observed resolver / index discriminants).
-
-The policy value on the `continuity.index` report row in
-`specs/reports.json` is `dangling_reference_policy: "error-at-resolve"`.
-The audit validates the enum.
+   does NOT silently drop the pointer. The runtime policy is
+   `error-at-resolve`.
 
 ## Resolver precedence (pending_record vs current_run)
 
@@ -361,21 +349,15 @@ the **resolver** adjudicates conflicts. Two cases are material:
   defense (RUN MED #3). Closes Codex v0.1 HIGH #1.
 
 - **carry-forward:authority-graph-nested-path** — **Closed in v0.1 via
-  `continuity.index.path_derived_fields: ["pending_record.record_id"]`
-  (dotted notation) + `specs/reports.md` relaxation of the
-  "path_derived_fields ⊆ identity_fields" rule.** Singleton reports
-  with no in-body identity use `identity_fields: []` and may declare
-  nested `path_derived_fields` for cross-report path references.
-  Closes Codex v0.1 HIGH #2.
+  `pending_record.record_id` as an explicit nested pointer.** Closes
+  Codex v0.1 HIGH #2.
 
 ## Codex adversarial review (v0.1)
 
 A narrow cross-model challenger pass (Codex via `/codex`) produced 2
 HIGH + 3 MED + 1 LOW objections against this contract + schema. All
 HIGHs and MED #5 + LOW #6 are folded into v0.1. MED #3 and MED #4 are
-scoped to v0.2 with rationale in the §Resolver precedence section
-above. Full record at
-`specs/reviews/continuity-md-v0.1-codex.md`.
+scoped to v0.2 with rationale in the §Resolver precedence section above.
 
 ## Evolution
 

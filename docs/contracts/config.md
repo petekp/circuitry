@@ -328,16 +328,9 @@ After a `CircuitOverride` is accepted:
 
 - `carry-forward:config-surface-shadow` — Prior to this slice, the
   config surface (`Config`, `ConfigLayer`, `LayeredConfig`,
-  `CircuitOverride`) had no contract and no `config.*` report row
-  in `specs/reports.json`. The `connector.registry` report
-  shadowed it by claiming broad schema exports including
-  `Config`/`ConfigLayer`/`LayeredConfig`, which let authority-graph
-  audit pass green even though the config surface was un-contracted.
-  Closed by this slice via (a) authoring this contract, (b) adding
-  `config.root` / `config.layered` / `config.circuit-override` rows
-  to `specs/reports.json`, and (c) narrowing `connector.registry`'s
-  `schema_exports` to connector-relay scalars only. Root-cause
-  ancestor: `specs/reviews/arc-stage-1-close-codex.md#HIGH-3`.
+  `CircuitOverride`) had no contract and connector ownership was too
+  broad. Closed by authoring this contract and keeping config schema
+  ownership in `src/schemas/config.ts`.
 
 - `carry-forward:surplus-key-silent-strip-config` — Prior to this
   slice, neither `Config` nor `LayeredConfig` was `.strict()`. An
@@ -363,16 +356,9 @@ After a `CircuitOverride` is accepted:
 ## Evolution
 
 - **v0.1 (this slice)** — CONFIG-I1..CONFIG-I8 enforced at the schema
-  layer. Closes `specs/reviews/arc-stage-1-close-codex.md#HIGH-3`
-  (config surface shadow). Closes `FUP-2` (Config and LayeredConfig
-  missing `.strict()` at `src/schemas/config.ts:115` and `:135`) per
-  `specs/plans/stage-1-close-revised.md` §Slice 26. **Codex
-  adversarial property-auditor pass 2026-04-20** produced opening
-  verdict REJECT on the contract-review linkage check with 1 HIGH +
-  4 MED + 1 LOW. All six objections folded in directly before commit
-  (no deferrals to v0.2). Full fold-in record at
-  `specs/reviews/config-md-v0.1-codex.md`. Final verdict chain:
-  `REJECT → incorporated → ACCEPT (after fold-in)`.
+  layer. Closes the config surface shadow and `FUP-2` (Config and
+  LayeredConfig missing `.strict()` at `src/schemas/config.ts:115` and
+  `:135`).
 
   Schema-level landings for this slice:
   - `.strict()` added to the top-level `Config` `z.object` (CONFIG-I1).
@@ -385,10 +371,8 @@ After a `CircuitOverride` is accepted:
   - CONFIG-I8 added (Codex MED #5 fold-in) — `Config.circuits` key
     shape enforced at parse time via `z.record(CompiledFlowId, ...)`;
     positive + negative schema-parity tests pin the guarantee.
-  - `connector.registry` `schema_exports` in `specs/reports.json`
-    narrowed to `["RelayConfig", "ConnectorReference"]`; the other
-    four prior entries (`Config`, `ConfigLayer`, `LayeredConfig`,
-    `CircuitOverride`) rehome to the new `config.*` rows.
+  - Connector schema ownership narrowed to relay-specific config; the
+    config types stay owned by `src/schemas/config.ts`.
   - `pending_rehome` block removed from `connector.registry`.
 
   Prose tightenings (Codex fold-ins):

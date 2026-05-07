@@ -5,10 +5,10 @@ import { z } from 'zod';
  * folders, continuity records, similar). Used for any field whose value
  * is joined into a filesystem path at parse time, not at the call site.
  *
- * Any field listed in `reports.json` under `path_derived_fields` must
- * use this (or a conservatively-equivalent scalar) so path-traversal,
- * Windows reserved names, and case-folding hazards are rejected up
- * front rather than at the eventual `path.join` call.
+ * Any field that is later used as a path stem should use this (or a
+ * conservatively-equivalent scalar) so path-traversal, Windows reserved
+ * names, and case-folding hazards are rejected up front rather than at the
+ * eventual `path.join` call.
  */
 export const ControlPlaneFileStem = z
   .string()

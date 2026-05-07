@@ -97,7 +97,7 @@ instructions.
 ## Deprecated Or Methodology Terms
 
 Avoid these in user-facing product prose and command help. They may still appear
-inside historical specs, tests, migrations, or compatibility shims when the
+inside historical docs, tests, migrations, or compatibility shims when the
 context is explicit.
 
 | Term | Replacement | Notes |

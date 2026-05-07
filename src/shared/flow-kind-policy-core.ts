@@ -1,33 +1,52 @@
 // Single source of truth for flow-kind canonical stage-set policy.
 //
-// Consumed by src/shared/flow-kind-policy.ts, which wraps these
-// checks with Zod-driven CompiledFlow.safeParse so the CLI fixture
-// loader can reject structurally- or policy-invalid fixtures with one
-// call.
-//
-// Why this is .mjs (not .ts): historically a JS-only audit script also
-// consumed the canonical-set table, so the table was defined here. The
-// audit script is gone, but keeping the table in one place prevents
-// drift if a second consumer reappears.
+// Consumed by src/shared/flow-kind-policy.ts, which wraps these checks with
+// Zod-driven CompiledFlow.safeParse so the CLI fixture loader can reject
+// structurally- or policy-invalid fixtures with one call.
 
-/**
- * @typedef {Object} CompiledFlowKindPolicyEntry
- * @property {string[]} canonicals
- * @property {string[]} omits
- * @property {string[]} optional_canonicals
- *   Canonicals that may be either declared or omitted by per-mode variants.
- *   When declared, they must NOT appear in stage_path_policy.omits. When absent
- *   from declared stages, they MUST appear in stage_path_policy.omits.
- *   Empty array for flow ids whose every canonical is mandatory.
- * @property {{ canonicals: string[], omits: string[], title: string }[]} variants
- *   Complete alternate canonical policies for per-mode fixtures whose graph is
- *   intentionally not the default graph.
- * @property {string} title
- * @property {string} authority
- */
+interface FlowKindPolicyVariant {
+  readonly canonicals: readonly string[];
+  readonly omits: readonly string[];
+  readonly title: string;
+}
 
-/** @type {Record<string, CompiledFlowKindPolicyEntry>} */
-export const FLOW_KIND_CANONICAL_SETS = {
+export interface CompiledFlowKindPolicyEntry {
+  readonly canonicals: readonly string[];
+  readonly omits: readonly string[];
+  /**
+   * Canonicals that may be either declared or omitted by per-mode variants.
+   * When declared, they must NOT appear in stage_path_policy.omits. When absent
+   * from declared stages, they MUST appear in stage_path_policy.omits.
+   */
+  readonly optional_canonicals: readonly string[];
+  /**
+   * Complete alternate canonical policies for per-mode fixtures whose graph is
+   * intentionally not the default graph.
+   */
+  readonly variants: readonly FlowKindPolicyVariant[];
+  readonly title: string;
+  readonly authority: string;
+}
+
+type RecordLike = Record<string, unknown>;
+
+type PolicyVariantCheckResult =
+  | { readonly ok: true; readonly detail: string }
+  | { readonly ok: false; readonly detail: string };
+
+type IndexedStep = { readonly step: RecordLike; readonly index: number };
+
+export type ReviewIdentitySeparationPolicyResult =
+  | { readonly ok: true; readonly detail: string }
+  | { readonly ok: false; readonly detail: string };
+
+export type CompiledFlowKindPolicyCheckResult =
+  | { readonly kind: 'green'; readonly detail: string }
+  | { readonly kind: 'exempt'; readonly detail: string }
+  | { readonly kind: 'pass_through'; readonly detail: string }
+  | { readonly kind: 'red'; readonly detail: string };
+
+export const FLOW_KIND_CANONICAL_SETS: Readonly<Record<string, CompiledFlowKindPolicyEntry>> = {
   explore: {
     canonicals: ['frame', 'analyze', 'plan', 'close'],
     omits: ['act', 'verify', 'review'],
@@ -42,7 +61,7 @@ export const FLOW_KIND_CANONICAL_SETS = {
     optional_canonicals: [],
     variants: [],
     title: 'Intake → Independent Audit → Verdict',
-    authority: 'specs/plans/p2-9-second-flow.md §3',
+    authority: 'src/flows/review/contract.md §Canonical stage policy',
   },
   build: {
     canonicals: ['frame', 'plan', 'act', 'verify', 'review', 'close'],
@@ -50,7 +69,7 @@ export const FLOW_KIND_CANONICAL_SETS = {
     optional_canonicals: [],
     variants: [],
     title: 'Frame → Plan → Act → Verify → Review → Close',
-    authority: 'specs/plans/build-flow-parity.md §9 Work item 1',
+    authority: 'src/flows/build/contract.md §Build Flow Contract',
   },
   fix: {
     canonicals: ['frame', 'analyze', 'act', 'verify', 'review', 'close'],
@@ -62,22 +81,14 @@ export const FLOW_KIND_CANONICAL_SETS = {
   },
 };
 
-/**
- * CompiledFlow IDs exempt from kind-canonical enforcement. `runtime-proof`
- * is the partial-stage-path fixture used by the runtime test harness;
- * its `stage_path_policy.omits` intentionally covers 5 of 7 canonicals.
- * @type {Set<string>}
- */
-export const EXEMPT_FLOW_IDS = new Set(['runtime-proof']);
+export const EXEMPT_FLOW_IDS: ReadonlySet<string> = new Set(['runtime-proof']);
 
-function objectRecord(value) {
-  return value !== null && typeof value === 'object'
-    ? /** @type {Record<string, unknown>} */ (value)
-    : undefined;
+function objectRecord(value: unknown): RecordLike | undefined {
+  return value !== null && typeof value === 'object' ? (value as RecordLike) : undefined;
 }
 
-function stringStepIdsForCanonical(stages, canonical) {
-  const ids = [];
+function stringStepIdsForCanonical(stages: readonly unknown[], canonical: string): string[] {
+  const ids: string[] = [];
   for (const stage of stages) {
     const p = objectRecord(stage);
     if (p === undefined || p.canonical !== canonical || !Array.isArray(p.steps)) continue;
@@ -88,7 +99,7 @@ function stringStepIdsForCanonical(stages, canonical) {
   return ids;
 }
 
-function isReviewResultReportWriter(step) {
+function isReviewResultReportWriter(step: unknown): boolean {
   const s = objectRecord(step);
   if (s === undefined || s.kind !== 'compose') return false;
   const writes = objectRecord(s.writes);
@@ -96,23 +107,30 @@ function isReviewResultReportWriter(step) {
   return report?.schema === 'review.result@v1';
 }
 
-function isReviewerRelay(step) {
+function isReviewerRelay(step: unknown): boolean {
   const s = objectRecord(step);
   return s !== undefined && s.kind === 'relay' && s.role === 'reviewer';
 }
 
-function declaredCanonicalsFor(fixture) {
-  const declared = new Set();
+function declaredCanonicalsFor(fixture: RecordLike): Set<string> {
+  const declared = new Set<string>();
   const stages = Array.isArray(fixture.stages) ? fixture.stages : [];
   for (const stage of stages) {
-    if (stage !== null && typeof stage === 'object' && typeof stage.canonical === 'string') {
-      declared.add(stage.canonical);
+    const stageRecord = objectRecord(stage);
+    if (typeof stageRecord?.canonical === 'string') {
+      declared.add(stageRecord.canonical);
     }
   }
   return declared;
 }
 
-function checkCanonicalStagePolicyVariant(id, fixture, variant, optionalCanonicals, authority) {
+function checkCanonicalStagePolicyVariant(
+  id: string,
+  fixture: RecordLike,
+  variant: FlowKindPolicyVariant,
+  optionalCanonicals: readonly string[],
+  authority: string,
+): PolicyVariantCheckResult {
   const declared = declaredCanonicalsFor(fixture);
   const optional = new Set(optionalCanonicals);
   const required = new Set(variant.canonicals.filter((c) => !optional.has(c)));
@@ -120,7 +138,7 @@ function checkCanonicalStagePolicyVariant(id, fixture, variant, optionalCanonica
   const missing = [...required].filter((c) => !declared.has(c));
   const extra = [...declared].filter((c) => !acceptedDeclared.has(c));
   if (missing.length > 0 || extra.length > 0) {
-    const parts = [];
+    const parts: string[] = [];
     if (missing.length > 0) parts.push(`missing canonical(s): ${missing.join(', ')}`);
     if (extra.length > 0) parts.push(`unexpected canonical(s): ${extra.join(', ')}`);
     return {
@@ -129,27 +147,28 @@ function checkCanonicalStagePolicyVariant(id, fixture, variant, optionalCanonica
     };
   }
 
-  const sp = fixture.stage_path_policy;
-  if (sp === null || typeof sp !== 'object') {
+  const sp = objectRecord(fixture.stage_path_policy);
+  if (sp === undefined) {
     return {
       ok: false,
       detail: `${id}: stage_path_policy missing or not an object`,
     };
   }
-  const spObj = /** @type {Record<string, unknown>} */ (sp);
-  if (spObj.mode !== 'partial') {
+  if (sp.mode !== 'partial') {
     return {
       ok: false,
-      detail: `${id}: stage_path_policy.mode must be 'partial' for kind-canonical enforcement; got '${String(spObj.mode)}'`,
+      detail: `${id}: stage_path_policy.mode must be 'partial' for kind-canonical enforcement; got '${String(sp.mode)}'`,
     };
   }
-  const omits = Array.isArray(spObj.omits) ? spObj.omits.filter((s) => typeof s === 'string') : [];
+  const omits = Array.isArray(sp.omits)
+    ? sp.omits.filter((s): s is string => typeof s === 'string')
+    : [];
   const optionalOmitted = [...optional].filter((c) => !declared.has(c));
   const expectedOmits = new Set([...variant.omits, ...optionalOmitted]);
   const missingOmits = [...expectedOmits].filter((o) => !omits.includes(o));
   const extraOmits = omits.filter((o) => !expectedOmits.has(o));
   if (missingOmits.length > 0 || extraOmits.length > 0) {
-    const parts = [];
+    const parts: string[] = [];
     if (missingOmits.length > 0) parts.push(`missing omit(s): ${missingOmits.join(', ')}`);
     if (extraOmits.length > 0) parts.push(`unexpected omit(s): ${extraOmits.join(', ')}`);
     return {
@@ -164,16 +183,9 @@ function checkCanonicalStagePolicyVariant(id, fixture, variant, optionalCanonica
   };
 }
 
-/**
- * Structural ordering check for review flows: the close-stage `review.result`
- * report writer must be preceded in steps[] by an analyze-stage relay step
- * with role=reviewer. Enforces reviewer/result separation: the writer
- * cannot run without a prior reviewer relay producing the verdict.
- *
- * @param {unknown} fixture
- * @returns {{ ok: true, detail: string } | { ok: false, detail: string }}
- */
-export function checkReviewIdentitySeparationPolicy(fixture) {
+export function checkReviewIdentitySeparationPolicy(
+  fixture: unknown,
+): ReviewIdentitySeparationPolicyResult {
   const f = objectRecord(fixture);
   if (f === undefined) {
     return { ok: false, detail: 'fixture is not an object' };
@@ -183,7 +195,7 @@ export function checkReviewIdentitySeparationPolicy(fixture) {
   const analyzeStepIds = stringStepIdsForCanonical(stages, 'analyze');
   const closeStepIds = stringStepIdsForCanonical(stages, 'close');
 
-  const stepsById = new Map();
+  const stepsById = new Map<string, IndexedStep>();
   for (let index = 0; index < steps.length; index++) {
     const step = objectRecord(steps[index]);
     if (typeof step?.id === 'string') stepsById.set(step.id, { step, index });
@@ -191,7 +203,7 @@ export function checkReviewIdentitySeparationPolicy(fixture) {
 
   const reviewerRelayIndices = analyzeStepIds
     .map((id) => stepsById.get(id))
-    .filter((entry) => entry !== undefined && isReviewerRelay(entry.step))
+    .filter((entry): entry is IndexedStep => entry !== undefined && isReviewerRelay(entry.step))
     .map((entry) => entry.index);
   if (reviewerRelayIndices.length === 0) {
     return {
@@ -203,7 +215,10 @@ export function checkReviewIdentitySeparationPolicy(fixture) {
 
   const closeWriterIndices = closeStepIds
     .map((id) => stepsById.get(id))
-    .filter((entry) => entry !== undefined && isReviewResultReportWriter(entry.step))
+    .filter(
+      (entry): entry is IndexedStep =>
+        entry !== undefined && isReviewResultReportWriter(entry.step),
+    )
     .map((entry) => entry.index);
   if (closeWriterIndices.length === 0) {
     return {
@@ -230,31 +245,16 @@ export function checkReviewIdentitySeparationPolicy(fixture) {
   };
 }
 
-/**
- * Canonical-stage-set check. Input is a raw fixture object (already
- * JSON-parsed). Does not run CompiledFlow.safeParse — that wrapper lives
- * in src/shared/flow-kind-policy.ts so this stays Zod-free and
- * callable from non-TS contexts.
- *
- * Returns a discriminated result:
- *   - 'green' — fixture passes canonical-stage-set policy.
- *   - 'exempt' — fixture id is in EXEMPT_FLOW_IDS.
- *   - 'pass_through' — fixture id has no canonical-set entry (unknown
- *     flow kinds pass through rather than fail; new kinds author their
- *     own entry).
- *   - 'red' — fixture violates canonical-stage-set policy for a known kind.
- *
- * @param {unknown} fixture
- * @returns {{ kind: 'green' | 'exempt' | 'pass_through' | 'red', detail: string }}
- */
-export function checkCompiledFlowKindCanonicalPolicy(fixture) {
-  if (fixture === null || typeof fixture !== 'object') {
+export function checkCompiledFlowKindCanonicalPolicy(
+  fixture: unknown,
+): CompiledFlowKindPolicyCheckResult {
+  const f = objectRecord(fixture);
+  if (f === undefined) {
     return {
       kind: 'red',
       detail: 'fixture is not an object',
     };
   }
-  const f = /** @type {Record<string, unknown>} */ (fixture);
   const id = f.id;
   if (typeof id !== 'string') {
     return {

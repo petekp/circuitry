@@ -5,13 +5,13 @@ import {
   EXEMPT_FLOW_IDS,
   FLOW_KIND_CANONICAL_SETS,
   checkCompiledFlowKindCanonicalPolicy,
-} from '../../scripts/policy/flow-kind-policy.mjs';
+} from '../../src/shared/flow-kind-policy-core.js';
 import {
   type ValidateCompiledFlowKindPolicyResult,
   validateCompiledFlowKindPolicy,
 } from '../../src/shared/flow-kind-policy.js';
 
-// validateCompiledFlowKindPolicy helper unit tests cover the shared JS
+// validateCompiledFlowKindPolicy helper unit tests cover the shared
 // canonical-set check AND the TS wrapper that adds CompiledFlow.safeParse.
 
 function validExploreSteps(): ReadonlyArray<Record<string, unknown>> {
@@ -516,7 +516,7 @@ describe('checkCompiledFlowKindCanonicalPolicy (audit-level, no Zod)', () => {
     expect(review.omits).toEqual(['plan', 'act', 'verify', 'review']);
     expect(review.optional_canonicals).toEqual([]);
     expect(review.title).toBe('Intake → Independent Audit → Verdict');
-    expect(review.authority).toBe('specs/plans/p2-9-second-flow.md §3');
+    expect(review.authority).toBe('src/flows/review/contract.md §Canonical stage policy');
     const build = FLOW_KIND_CANONICAL_SETS.build;
     expect(build).toBeDefined();
     if (build === undefined) throw new Error('unreachable');
@@ -524,7 +524,7 @@ describe('checkCompiledFlowKindCanonicalPolicy (audit-level, no Zod)', () => {
     expect(build.omits).toEqual(['analyze']);
     expect(build.optional_canonicals).toEqual([]);
     expect(build.title).toBe('Frame → Plan → Act → Verify → Review → Close');
-    expect(build.authority).toBe('specs/plans/build-flow-parity.md §9 Work item 1');
+    expect(build.authority).toBe('src/flows/build/contract.md §Build Flow Contract');
     const fix = FLOW_KIND_CANONICAL_SETS.fix;
     expect(fix).toBeDefined();
     if (fix === undefined) throw new Error('unreachable');

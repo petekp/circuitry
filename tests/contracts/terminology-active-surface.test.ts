@@ -7,7 +7,6 @@ const ROOTS = [
   'tests',
   'scripts',
   'docs',
-  'specs',
   'plugins',
   'generated',
   'examples',
@@ -17,20 +16,13 @@ const ROOTS = [
   'package.json',
 ] as const;
 
-const EXEMPT_PATH_PREFIXES = [
-  'specs/reference/legacy-circuit/',
-  'tests/fixtures/reference/legacy-circuit/',
-] as const;
-
 const OLD_TERM_EXEMPT_PATH_PREFIXES = [
-  ...EXEMPT_PATH_PREFIXES,
   'docs/release/parity/',
   'docs/ideas/',
   'docs/learnings/',
 ] as const;
 
 const EXEMPT_FILES = new Set([
-  'HANDOFF.md',
   'UBIQUITOUS_LANGUAGE.md',
   'docs/release/parity-matrix.generated.md',
   'tests/contracts/terminology-active-surface.test.ts',
@@ -95,7 +87,7 @@ const RUNTIME_FOUNDATION_RESIDUE: ReadonlyArray<{
 const REVIEW_PACKET_FILE = /^circuit-v2-.*review.*\.(?:zip|md)$/i;
 
 function isExempt(path: string): boolean {
-  return EXEMPT_FILES.has(path) || EXEMPT_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return EXEMPT_FILES.has(path);
 }
 
 function isOldTermExempt(path: string): boolean {

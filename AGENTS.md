@@ -6,7 +6,7 @@
 flows. The product surface is `src/` (TypeScript), `tests/`, the
 generated host plugin packages under `plugins/`, the flow packages
 under `src/flows/`, the engine contracts under `docs/contracts/`,
-and the behavioral notes under `specs/behavioral/`.
+and the flow design notes under `docs/flows/`.
 
 This file is the agent-facing operating doc. Keep it short. If something
 isn't here, it isn't a rule.
@@ -28,17 +28,13 @@ evidence). Use that vocabulary in product-facing prose.
    task tools.
 5. **Root-cause discipline.** Enumerate two or three hypotheses before
    acting on one.
-6. **Cross-session handoffs.** When approaching ~200k tokens or wrapping
-   for the day, write or update `HANDOFF.md` at the repo root: where we
-   are, what's blocked, what's next, in plain English. Two short
-   paragraphs. The next session reads it as the first action.
-7. **Codex for impactful, hard-to-revert decisions.** Default off. Pull
+6. **Codex for impactful, hard-to-revert decisions.** Default off. Pull
    Codex in when a choice is hard to re-work later (architecture,
    contracts, migration paths), I'm stuck after a couple of real
    attempts, or you ask. Use `/codex` explicitly so the handoff is
    visible. Don't use Codex for cleanup, mechanical refactors, or
    anything `npm run verify` proves. No challenger passes on plans.
-8. **Host hooks use hook input for identity.** Hook scripts must read the
+7. **Host hooks use hook input for identity.** Hook scripts must read the
    host's stdin JSON for workspace identity and pass explicit project roots.
    Do not treat `process.cwd()` as the project authority inside hooks.
 
@@ -80,10 +76,8 @@ generated host packages.
 | Engine contracts | `docs/contracts/` |
 | Flow design notes | `docs/flows/` |
 | Release proof runs | `docs/release/proofs/runs/` |
-| Behavioral concerns | `specs/behavioral/` |
 | Ubiquitous language | `UBIQUITOUS_LANGUAGE.md` |
 | Block catalog | `docs/flows/block-catalog.json` |
-| Cross-session handoff | `HANDOFF.md` (repo root) |
 
 Internal file names such as `relay-hints.ts` are intentional runtime names.
 Do not rename them while adding a flow unless there is an explicit

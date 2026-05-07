@@ -342,8 +342,6 @@ folder and start the task again from scratch.
 - **[`docs/contracts/`](docs/contracts/):** Engine contracts (config,
   connector, run, step, flow, selection, continuity, skill, stage).
 - **[`docs/flows/`](docs/flows/):** Flow design notes and the block catalog.
-- **[`HANDOFF.md`](HANDOFF.md):** Cross-session handoff — where we are and
-  what's next.
 
 ## License
 

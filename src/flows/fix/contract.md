@@ -3,7 +3,6 @@ contract: fix
 status: draft
 version: 0.1
 schema_source: src/flows/fix/reports.ts
-reference_evidence: specs/reference/legacy-circuit/repair-characterization.md
 last_updated: 2026-04-28
 depends_on: [flow, flow-blocks, flow-schematic, step, connector]
 report_ids:

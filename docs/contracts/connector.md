@@ -569,9 +569,7 @@ After a `RelayStartedTraceEntry` is accepted:
   conflated CLI flag, role, circuit, and default into a single
   imperative resolver function with no structured precedence record.
   Closed by connector-I7: precedence is documented, total, and the
-  winning category is recorded per-relay. `specs/evidence.md`
-  hard invariant covering relay (seam "Connector/Relay") is the
-  authoritative ancestor.
+  winning category is recorded per-relay.
 
 - `carry-forward:connector-name-shadowing` — A custom connector named
   `codex` in the operator's user-global config file silently shadows
@@ -629,8 +627,6 @@ After a `RelayStartedTraceEntry` is accepted:
   3 MED + the 1 LOW folded in directly before commit (no deferrals to
   v0.2 except where the deferral itself is named as the resolution —
   MED #6 default-layer provenance and connector-I3's cwd/env semantics).
-  Full fold-in record at `specs/reviews/connector-md-v0.1-codex.md`.
-  Final verdict chain: `REJECT → incorporated → ACCEPT (after fold-in)`.
 
   Schema-level landings for this slice:
   - `ConnectorName` regex already in place; no change.

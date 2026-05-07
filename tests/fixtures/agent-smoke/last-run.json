@@ -1,8 +1,0 @@
-{
-  "schema_version": 2,
-  "commit_sha": "4dea8cc381a353f0e9e8cfb364433e42169965db",
-  "result_sha256": "8931d20e22e0769a68f354362d99c7368c8b4786d48405a0bbcb2dbfbc707e4f",
-  "connector_source_sha256": "c7b483476627a5aa7b804d855e15446bc881b31c3f70a6992fd84f5c3ae5afcd",
-  "cli_version": "2.1.119",
-  "recorded_at": "2026-04-24T20:16:32.297Z"
-}

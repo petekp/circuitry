@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { checkCompiledFlowKindCanonicalPolicy } from '../../scripts/policy/flow-kind-policy.mjs';
+import { reviewCompiledFlowPackage } from '../../src/flows/review/index.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
+import { checkCompiledFlowKindCanonicalPolicy } from '../../src/shared/flow-kind-policy-core.js';
 
 const REVIEW_FIXTURE_PATH = join('generated', 'flows', 'review', 'circuit.json');
-const ARTIFACTS_PATH = join('specs', 'reports.json');
 
 function loadReviewFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(REVIEW_FIXTURE_PATH, 'utf-8')) as Record<string, unknown>;
@@ -57,13 +57,12 @@ describe('review flow contract fixture', () => {
     expect(writes?.report?.schema).toBe('review.result@v1');
   });
 
-  it('homes review.result on src/flows/review/contract.md in the authority graph', () => {
-    const graph = JSON.parse(readFileSync(ARTIFACTS_PATH, 'utf-8')) as {
-      reports: Array<{ id: string; contract?: string; pending_rehome?: unknown }>;
-    };
-    const row = graph.reports.find((report) => report.id === 'review.result');
-    expect(row, 'review.result report row must exist').toBeDefined();
-    expect(row?.contract).toBe('src/flows/review/contract.md');
-    expect(row?.pending_rehome).toBeUndefined();
+  it('homes review.result in the Review flow package next to its contract', () => {
+    expect(reviewCompiledFlowPackage.paths.contract).toBe('src/flows/review/contract.md');
+    expect(
+      reviewCompiledFlowPackage.reportSchemas?.some(
+        (report) => report.schemaName === 'review.result@v1',
+      ),
+    ).toBe(true);
   });
 });

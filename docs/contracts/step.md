@@ -239,9 +239,7 @@ Property-based tests will cover:
   (prototype-chain `in` attack), HIGH #2 (cross-slot drift), HIGH #3
   (optional undefined slot), MED #4 (strict-mode prose), LOW #7 (TS
   exactness prose) all incorporated.
-- **v0.2 (Slice 69, this version)** — exits the old grandfathered
-  contract-review path by linking
-  `specs/reviews/step-md-v0.2-codex.md`; adds STEP-I8 so
+- **v0.2 (Slice 69, this version)** — adds STEP-I8 so
   flow-controlled Step paths are `RunRelativePath` values and runtime
   call sites resolve them through a containment-checked helper.
 - **v0.3 (Stage 2)** — ratify `property_ids` above by landing the

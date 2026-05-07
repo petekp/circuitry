@@ -449,10 +449,7 @@ describe('release truth infrastructure', () => {
       ...scenario.backing_paths,
     ]);
     const goldenProofClaim = claims.claims.find((claim) => claim.id === 'CLAIM-GOLDEN-PROOF');
-    const captureScripts = [
-      'scripts/release/capture-golden-run-proofs.mjs',
-      'scripts/release/capture-explore-decision-proof.mjs',
-    ];
+    const captureScripts = ['scripts/release/capture-golden-run-proofs.mjs'];
 
     expect(exists(legacyProofRunsRoot)).toBe(false);
     expect(indexedPaths.length).toBeGreaterThan(0);

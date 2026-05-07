@@ -24,7 +24,6 @@
     "emit-flows": "npm run build && node scripts/emit-flows.mjs",
     "check-flow-drift": "npm run build && node scripts/emit-flows.mjs --check",
     "emit-release": "npm run build && node scripts/release/emit-current-capabilities.mjs && node scripts/release/render-parity-matrix.mjs && node scripts/release/render-readiness-report.mjs",
-    "capture-proof:explore-decision": "npm run build && node scripts/release/capture-explore-decision-proof.mjs",
     "capture-proofs:golden-runs": "npm run build && node scripts/release/capture-golden-run-proofs.mjs",
     "check-release-infra": "npm run build && node scripts/release/emit-current-capabilities.mjs --check && node scripts/release/check-parity.mjs && node scripts/release/check-public-claims.mjs && node scripts/release/check-proof-coverage.mjs && node scripts/release/render-parity-matrix.mjs --check && node scripts/release/render-readiness-report.mjs --check && node scripts/release/audit-public-docs.mjs",
     "check-release-ready": "npm run check-release-infra && node scripts/release/check-release-ready.mjs",

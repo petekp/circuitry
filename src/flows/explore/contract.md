@@ -3,7 +3,6 @@ contract: explore
 status: draft
 version: 0.7
 schema_source: generated/flows/explore/circuit.json (compiled flow) + src/flows/explore/reports.ts (explore.brief / explore.analysis / explore.compose / explore.review-verdict / explore.result)
-reference_evidence: specs/reference/legacy-circuit/explore-characterization.md
 last_updated: 2026-04-28
 depends_on: [flow, stage, step, selection, depth, change_kind, skill, connector]
 report_ids:
@@ -43,11 +42,10 @@ report ids the flow's stages emit, plus four property ids for deferred
 semantic guarantees.
 
 The base `CompiledFlow` schema has no `kind` field today. Until it does,
-`checkSpineCoverage` hardcodes the `{id → canonical set}` map at
-`scripts/audit.mjs` `FLOW_KIND_CANONICAL_SETS`. Reopen triggers for this
-seam: duplicate `id` across skill directories; an `explore-mini` or
-`research` flow with no `kind` binding to this contract; or landing of the
-`CompiledFlow.kind` field.
+`src/shared/flow-kind-policy-core.ts` carries the `{id → canonical set}` map
+used by contract tests and generated flow loading. Reopen triggers for this seam:
+duplicate `id` across flow packages; an `explore-mini` or `research` flow with
+no explicit policy entry; or landing of the `CompiledFlow.kind` field.
 
 ## Result-path split
 
@@ -184,8 +182,8 @@ Other semantic guarantees are recorded as deferred properties (see below).
   2. Declare `stage_path_policy.mode = 'partial'` with an `omits` set matching
      the selected variant.
 
-  **Scope of EXPLORE-I1 enforcement.** `checkSpineCoverage` enforces (1)
-  and (2). It does not currently enforce:
+  **Scope of EXPLORE-I1 enforcement.** `checkCompiledFlowKindCanonicalPolicy`
+  enforces (1) and (2). It does not currently enforce:
   - Rationale length or rationale-content (a base-schema check).
   - The `id`-vs-directory-name convention.
   - Full `CompiledFlow.safeParse` validation (Check 24 hand-parses the
@@ -199,20 +197,13 @@ Other semantic guarantees are recorded as deferred properties (see below).
   `check: ResultVerdictCheck`). Failures hit the base schema before
   Check 24 runs.
 
-  **Connector-binding coverage is enforced by Check 27.** Any compiled
-  flow whose `id` is in `FLOW_KIND_CANONICAL_SETS` (today: `explore`)
-  must exercise at least one `kind: "relay"` step. A flow with zero
-  relay steps is red.
-
-  Enforced by `checkSpineCoverage`, `checkConnectorBindingCoverage`, and
-  `tests/contracts/stage path-coverage.test.ts` +
-  `tests/contracts/connector-binding-coverage.test.ts`.
+  Enforced by `src/shared/flow-kind-policy-core.ts` and
+  `tests/contracts/flow-kind-policy.test.ts`.
 
 ## Deferred properties
 
 These describe semantic guarantees the contract intends the `explore` flow
-to satisfy but that are not runtime-enforced today. Each is recorded in
-`specs/invariants.json` with a concrete reopen condition.
+to satisfy but that are not runtime-enforced today.
 
 - **`explore.prop.canonical_stage_set_is_correct`** — test-enforced via
   `tests/contracts/stage path-coverage.test.ts`.
@@ -233,8 +224,8 @@ to satisfy but that are not runtime-enforced today. Each is recorded in
 - The compiled flow at `generated/flows/explore/circuit.json` parses
   under the base `CompiledFlow.safeParse`.
 - The flow's top-level `id` equals the string literal `'explore'`.
-- All five report ids under `report_ids` are registered in
-  `specs/reports.json` with appropriate writers and readers.
+- All five report ids under `report_ids` are registered by the Explore flow
+  package and declared by generated steps through `writes.report`.
 
 ## Post-conditions
 
@@ -251,9 +242,8 @@ After an `explore` compiled flow is accepted:
 ## Report reader/writer graph
 
 The following table is the authoritative reader/writer graph.
-`specs/reports.json` writers/readers lists and
-`generated/flows/explore/circuit.json` step `reads` arrays MUST match
-this table exactly.
+`generated/flows/explore/circuit.json` step `reads` arrays MUST match this
+table exactly.
 
 | Report                   | Writer (stage/step) | Readers (stage/step)                                                                 |
 |--------------------------|---------------------|--------------------------------------------------------------------------------------|
@@ -409,13 +399,11 @@ remains a lightweight top-level section verification, while the registered
 composer writers construct and parse the full strict report bodies before
 writing them. `tests/contracts/explore-report-composition.test.ts` is
 the cross-surface ratchet: compiled-flow schema names, check `required`
-arrays, `specs/reports.json` `schema_exports`, and runtime
-writer/registry behavior must stay aligned.
+arrays, and runtime writer/registry behavior must stay aligned.
 
 ## Property ids
 
-Registered in `specs/invariants.json`. See Deferred properties above for
-semantics.
+See Deferred properties above for semantics.
 
 - `explore.prop.canonical_stage_set_is_correct` — test-enforced via
   `tests/contracts/stage path-coverage.test.ts` describe title.
@@ -444,13 +432,12 @@ This contract is reopened if any of:
 5. **Deferred properties land enforcement** (Codex flag). If the
    deferred property promotion lands, reopen this contract to amend the
    Deferred properties subsection.
-6. **Report reader/writer graph drift.** If the Report reader/writer
-   graph table diverges from `specs/reports.json` or the compiled flow,
-   reopen to resolve the divergence — the contract table is authoritative.
+6. **Report reader/writer graph drift.** If the report reader/writer graph
+   table diverges from the compiled flow, reopen to resolve the divergence —
+   the contract table is authoritative.
 7. **Check/schema reconciliation skipped.** If a future change lands
    without reconciling the compiled flow's `schema_sections` `required`
-   arrays with concrete report schemas and `specs/reports.json`
-   `schema_exports`, reopen.
+   arrays with concrete report schemas, reopen.
 8. **`explore.result` consumer-shape drift.** If downstream consumers
    need fields beyond the current `summary` + `verdict_snapshot` +
    `evidence_links` shape, reopen to amend the result schema and the
@@ -464,9 +451,6 @@ This contract is reopened if any of:
 
 ## Authority
 
-- `specs/adrs/` (operator-level decisions on canonical stage set,
-  stage-path policy, relay granularity)
-- `specs/plans/` (planning notes for stages of this contract's
-  development)
+- `src/shared/flow-kind-policy-core.ts` (canonical stage policy)
 - `src/flows/explore/reports.ts` (report schemas)
 - `generated/flows/explore/circuit.json` (compiled flow)

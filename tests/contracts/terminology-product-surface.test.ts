@@ -205,19 +205,29 @@ describe('terminology — product-facing prose', () => {
     expect(offenders, 'Banned terminology found in schematic purpose text.').toEqual([]);
   });
 
-  it('report ledger points at renamed schematic and block files', () => {
-    const raw = readFileSync('specs/reports.json', 'utf8');
+  it('flow source files use schematic and block names', () => {
+    for (const path of [
+      'src/schemas/flow-blocks.ts',
+      'src/schemas/flow-schematic.ts',
+      'docs/flows/block-catalog.json',
+      'src/flows/compile-schematic-to-flow.ts',
+    ]) {
+      expect(statSync(path).isFile(), `${path} should exist`).toBe(true);
+    }
 
-    expect(raw).not.toMatch(/\bsrc\/schemas\/flow-scalars\.ts\b/);
-    expect(raw).not.toMatch(/\bsrc\/schemas\/flow-recipe\.ts\b/);
-    expect(raw).not.toMatch(/\bdocs\/flows\/scalar-catalog\.json\b/);
-    expect(raw).not.toMatch(/\bsrc\/runtime\/compile-recipe-to-flow\.ts\b/);
-    expect(raw).not.toMatch(/\bsrc\/flows\/[^"\s]+\/recipe\.json\b/);
-    expect(raw).toMatch(/\bsrc\/schemas\/flow-blocks\.ts\b/);
-    expect(raw).toMatch(/\bsrc\/schemas\/flow-schematic\.ts\b/);
-    expect(raw).toMatch(/\bdocs\/flows\/block-catalog\.json\b/);
-    expect(raw).toMatch(/\bsrc\/flows\/compile-schematic-to-flow\.ts\b/);
-    expect(raw).toMatch(/\bsrc\/flows\/\*\/schematic\.json\b/);
+    for (const path of [
+      'src/schemas/flow-scalars.ts',
+      'src/schemas/flow-recipe.ts',
+      'docs/flows/scalar-catalog.json',
+      'src/runtime/compile-recipe-to-flow.ts',
+    ]) {
+      expect(() => statSync(path), `${path} should not exist`).toThrow();
+    }
+
+    for (const id of PUBLIC_FLOW_IDS) {
+      expect(statSync(join('src/flows', id, 'schematic.json')).isFile()).toBe(true);
+      expect(() => statSync(join('src/flows', id, 'recipe.json'))).toThrow();
+    }
   });
 
   it('ubiquitous language is based on flows, schematics, blocks, and relays', () => {

@@ -1,5 +1,3 @@
-import { execSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -20,9 +18,7 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 // exec` and requires local auth.
 
 const CODEX_SMOKE = process.env.CODEX_SMOKE === '1';
-const UPDATE_CODEX_FINGERPRINT = process.env.UPDATE_CODEX_FINGERPRINT === '1';
 const FIXTURE_PATH = resolve('generated/flows/runtime-proof/circuit.json');
-const LAST_RUN_FINGERPRINT_PATH = resolve('tests/fixtures/codex-smoke/last-run.json');
 
 const CODEX_SMOKE_SELECTION = {
   model: { provider: 'openai', model: 'gpt-5.4' },
@@ -30,28 +26,6 @@ const CODEX_SMOKE_SELECTION = {
   skills: [],
   invocation_options: {},
 } satisfies ResolvedSelection;
-
-const ADAPTER_SOURCE_PATHS = [
-  'src/connectors/codex.ts',
-  'src/shared/connector-relay.ts',
-  'src/shared/connector-helpers.ts',
-  'src/connectors/shared.ts',
-  'src/runtime/executors/relay.ts',
-  'src/runtime/run/compiled-flow-runner.ts',
-  'src/runtime/run/graph-runner.ts',
-  'src/flows/registries/report-schemas.ts',
-] as const;
-
-function connectorSourceSha256(): string {
-  const h = createHash('sha256');
-  for (const p of ADAPTER_SOURCE_PATHS) {
-    const abs = resolve(p);
-    h.update(`${abs}\n`);
-    h.update(readFileSync(abs));
-    h.update('\n');
-  }
-  return h.digest('hex');
-}
 
 function loadCodexRuntimeProofBytes(): Buffer {
   const raw = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')) as {
@@ -124,10 +98,6 @@ function relayEntry(trace: readonly TraceEntry[], kind: TraceEntry['kind']): Tra
   const entry = trace.find((candidate) => candidate.kind === kind);
   if (entry === undefined) throw new Error(`expected ${kind} trace entry`);
   return entry;
-}
-
-function currentHeadSha(): string {
-  return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
 }
 
 let runFolderBase: string;
@@ -215,24 +185,6 @@ describe('codex relay round-trip (second-connector evidence)', () => {
       expect(completed.verdict).toBe('ok');
       expect(completed.result_path).toBe('reports/relay.result.json');
       expect(existsSync(join(runFolder, 'reports', 'result.json'))).toBe(true);
-
-      if (UPDATE_CODEX_FINGERPRINT) {
-        if (cliVersion.length === 0 || /\(unknown\)/.test(cliVersion)) {
-          throw new Error(
-            `CODEX_SMOKE fingerprint promotion: cli_version "${cliVersion}" is empty or sentinel`,
-          );
-        }
-        const fingerprint = {
-          schema_version: 2,
-          commit_sha: currentHeadSha(),
-          result_sha256: sha256Hex(resultBody),
-          connector_source_sha256: connectorSourceSha256(),
-          cli_version: cliVersion,
-          recorded_at: new Date().toISOString(),
-        };
-        mkdirSync(dirname(LAST_RUN_FINGERPRINT_PATH), { recursive: true });
-        writeFileSync(LAST_RUN_FINGERPRINT_PATH, `${JSON.stringify(fingerprint, null, 2)}\n`);
-      }
     },
     180_000,
   );

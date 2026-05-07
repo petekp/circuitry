@@ -29,11 +29,9 @@ uses `id`/`title`/`description`/`trigger` plus `capabilities` and
 is a catalog-compiler concern, not a schema concern; when that compiler
 lands it will cite this contract as its output target.
 
-`skill.descriptor` is therefore classified `greenfield` in the authority
-graph (`specs/reports.json`): the descriptor shape is invented by
-circuit-next. The upstream SKILL.md frontmatter (external-protocol) will
-become a separate report id if/when the compiler lands and the
-mapping needs its own contract.
+`skill.descriptor` is therefore greenfield: the descriptor shape is invented
+by circuit-next. The upstream SKILL.md frontmatter (external-protocol) can get
+its own contract if/when the compiler lands and the mapping needs one.
 
 ## Ubiquitous language
 
@@ -220,7 +218,7 @@ After a `SkillDescriptor` is accepted:
 
 A narrow cross-model challenger pass (Codex via `/codex`) produced 1
 HIGH + 5 MED + 2 LOW objections. All 8 are folded into v0.1; no items
-deferred. Full record at `specs/reviews/skill-md-v0.1-codex.md`.
+deferred.
 
 ## Evolution
 

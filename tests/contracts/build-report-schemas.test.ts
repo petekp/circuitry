@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -12,9 +12,9 @@ import {
   BuildVerification,
   BuildVerificationCommand,
 } from '../../src/flows/build/reports.js';
+import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
-const REPO_ROOT = resolve('.');
-const ARTIFACTS_PATH = join(REPO_ROOT, 'specs', 'reports.json');
+const BUILD_FLOW_PATH = join('generated', 'flows', 'build', 'circuit.json');
 
 const BUILD_ARTIFACT_IDS = [
   'build.brief',
@@ -25,13 +25,19 @@ const BUILD_ARTIFACT_IDS = [
   'build.result',
 ] as const;
 
-const EXPECTED_BACKING_PATHS = {
-  'build.brief': '<run-folder>/reports/build/brief.json',
-  'build.plan': '<run-folder>/reports/build/plan.json',
-  'build.implementation': '<run-folder>/reports/build/implementation.json',
-  'build.verification': '<run-folder>/reports/build/verification.json',
-  'build.review': '<run-folder>/reports/build/review.json',
-  'build.result': '<run-folder>/reports/build-result.json',
+const EXPECTED_REPORT_WRITES = {
+  'build.brief': { path: 'reports/build/brief.json', schema: 'build.brief@v1' },
+  'build.plan': { path: 'reports/build/plan.json', schema: 'build.plan@v1' },
+  'build.implementation': {
+    path: 'reports/build/implementation.json',
+    schema: 'build.implementation@v1',
+  },
+  'build.verification': {
+    path: 'reports/build/verification.json',
+    schema: 'build.verification@v1',
+  },
+  'build.review': { path: 'reports/build/review.json', schema: 'build.review@v1' },
+  'build.result': { path: 'reports/build-result.json', schema: 'build.result@v1' },
 } as const;
 
 function verificationCommand(overrides: Record<string, unknown> = {}) {
@@ -76,19 +82,20 @@ function resultPointers() {
   ];
 }
 
-function loadReports() {
-  return JSON.parse(readFileSync(ARTIFACTS_PATH, 'utf-8')) as {
-    reports: Array<{
-      id: string;
-      contract?: string;
-      schema_file?: string;
-      schema_exports?: string[];
-      writers?: string[];
-      readers?: string[];
-      backing_paths?: string[];
-      reference_evidence?: string[];
-    }>;
-  };
+function loadBuildFlow(): CompiledFlow {
+  return CompiledFlow.parse(JSON.parse(readFileSync(BUILD_FLOW_PATH, 'utf-8')));
+}
+
+function reportWritesBySchema(flow: CompiledFlow): Map<string, string> {
+  const writes = new Map<string, string>();
+  for (const step of flow.steps) {
+    const writesSlot = 'writes' in step ? step.writes : undefined;
+    if (writesSlot !== undefined && 'report' in writesSlot && writesSlot.report !== undefined) {
+      const report = writesSlot.report;
+      writes.set(report.schema, report.path);
+    }
+  }
+  return writes;
 }
 
 describe('Build report schemas', () => {
@@ -394,59 +401,37 @@ describe('Build report schemas', () => {
   });
 });
 
-describe('Build report authority rows', () => {
-  const reports = loadReports();
-  const byId = new Map(reports.reports.map((report) => [report.id, report]));
+describe('Build generated flow report bindings', () => {
+  const writes = reportWritesBySchema(loadBuildFlow());
 
-  it('registers all six Build reports with schemas, paths, readers, writers, and reference evidence', () => {
+  it('binds all six Build reports to generated flow paths and schemas', () => {
     for (const id of BUILD_ARTIFACT_IDS) {
-      const report = byId.get(id);
-      expect(report, `${id} row`).toBeDefined();
-      expect(report?.contract).toBe('src/flows/build/contract.md');
-      expect(report?.schema_file).toBe('src/flows/build/reports.ts');
-      expect(report?.schema_exports?.length, `${id}.schema_exports`).toBeGreaterThan(0);
-      expect(report?.writers?.length, `${id}.writers`).toBeGreaterThan(0);
-      expect(report?.readers?.length, `${id}.readers`).toBeGreaterThan(0);
-      expect(report?.reference_evidence).toEqual([
-        'specs/reference/legacy-circuit/build-characterization.md',
-      ]);
-      expect(report?.backing_paths).toEqual([EXPECTED_BACKING_PATHS[id]]);
+      const expected = EXPECTED_REPORT_WRITES[id];
+      expect(writes.get(expected.schema), `${id} generated report write`).toBe(expected.path);
     }
   });
 
   it('keeps build.result path-distinct from the universal run result', () => {
-    expect(byId.get('build.result')?.backing_paths).toEqual([
-      '<run-folder>/reports/build-result.json',
-    ]);
-    expect(byId.get('run.result')?.backing_paths).toEqual([
-      '<circuit-next-run-folder>/reports/result.json',
-    ]);
+    expect(writes.get('build.result@v1')).toBe('reports/build-result.json');
+    expect(writes.get('build.result@v1')).not.toBe('reports/result.json');
   });
 
   it('keeps Build role reports under reports/build and path-distinct from Explore and Review', () => {
-    const occupied = new Map<string, string>();
-    for (const report of reports.reports) {
-      for (const backingPath of report.backing_paths ?? []) {
-        occupied.set(backingPath, report.id);
-      }
-    }
-
     for (const id of BUILD_ARTIFACT_IDS.filter((reportId) => reportId !== 'build.result')) {
-      const path = EXPECTED_BACKING_PATHS[id];
-      expect(path).toMatch(/^<run-folder>\/reports\/build\/.+\.json$/);
-      expect(occupied.get(path)).toBe(id);
+      const expected = EXPECTED_REPORT_WRITES[id];
+      expect(writes.get(expected.schema)).toMatch(/^reports\/build\/.+\.json$/);
     }
 
     const nonBuildCompiledFlowPaths = [
-      '<run-folder>/reports/brief.json',
-      '<run-folder>/reports/analysis.json',
-      '<run-folder>/reports/compose.json',
-      '<run-folder>/reports/review-verdict.json',
-      '<run-folder>/reports/explore-result.json',
-      '<run-folder>/reports/review-result.json',
+      'reports/brief.json',
+      'reports/analysis.json',
+      'reports/compose.json',
+      'reports/review-verdict.json',
+      'reports/explore-result.json',
+      'reports/review-result.json',
     ];
     for (const path of nonBuildCompiledFlowPaths) {
-      expect(BUILD_ARTIFACT_IDS.some((id) => EXPECTED_BACKING_PATHS[id] === path)).toBe(false);
+      expect([...writes.values()]).not.toContain(path);
     }
   });
 });

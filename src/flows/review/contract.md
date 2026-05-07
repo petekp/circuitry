@@ -67,7 +67,7 @@ authority-graph reports.
   canonical stage `analyze`.
 
   Enforced today by the review-specific policy check in
-  `scripts/policy/flow-kind-policy.mjs` and by
+  `src/shared/flow-kind-policy-core.ts` and by
   `tests/properties/visible/review-i1.test.ts`. The compiled flow satisfies
   this with `audit-step` before `verdict-step`.
 
@@ -145,8 +145,6 @@ This contract reopens if any of:
 
 ## Authority
 
-- `specs/plans/p2-9-second-flow.md §3` (canonical stage set)
-- `specs/plans/p2-9-second-flow.md §4` (REVIEW-I1 / REVIEW-I2)
-- `specs/plans/p2-9-second-flow.md §5` (report model and relay shape)
+- `src/shared/flow-kind-policy-core.ts` (canonical stage policy)
 - `src/flows/review/reports.ts` (report schemas)
 - `generated/flows/review/circuit.json` (compiled flow)

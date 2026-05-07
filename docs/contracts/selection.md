@@ -135,8 +135,8 @@ Closes Codex LOW #12 (enforcement-location claim drift).
   model to Codex's `-m`. Provider mismatches fail before subprocess
   spawn. **Effort** is the closed 6-tier enum `none | minimal | low |
   medium | high | xhigh` (OpenAI vocabulary, chosen for cross-provider
-  portability per `specs/evidence.md`). The current built-ins honor
-  `low | medium | high | xhigh`; `none` and `minimal` fail before
+  portability). The current built-ins honor `low | medium | high | xhigh`;
+  `none` and `minimal` fail before
   subprocess spawn until an connector has explicit support for those
   values. Enforced at `src/schemas/selection-policy.ts` for shape and
   `src/connectors/*.ts` for connector-specific honoring.
@@ -426,8 +426,6 @@ Stage 2 harness task where noted below.
   with flow/stage/step-authored defaults. Precedence was folklore,
   not a typed constant. Closed by SEL-I1: the 7-tuple is compile-time
   pinned, and every `applied` record asserts ordering by construction.
-  `specs/evidence.md` hard invariant 8 ("Selection precedence is
-  explicit") is the authoritative ancestor.
 
 - `carry-forward:skill-override-ambiguity` — Prior Circuit used empty
   array to mean "inherit", ambiguous with "replace-with-nothing". A
@@ -435,8 +433,6 @@ Stage 2 harness task where noted below.
   choice to clear the set were indistinguishable. Closed by SEL-I3: the
   four modes make every operation typed; empty arrays under non-
   `inherit` modes are legal but mean what they say.
-  `specs/evidence.md` hard invariant 9 ("Skill overrides are typed
-  operations, not empty-array ambiguity") is the ancestor.
 
 - `carry-forward:marketing-name-enum-drift` — Prior Circuit enumerated
   model names like `claude-opus-4.1`, `gpt-5`, `gpt-5.4`, which rot as
@@ -492,9 +488,7 @@ Stage 2 harness task where noted below.
   **Codex adversarial property-auditor pass 2026-04-19** produced
   opening verdict REJECT with 6 HIGH + 5 MED + 1 LOW. All 6 HIGH and
   4 of 5 MED folded in directly before commit; MED #9 (scalar
-  tombstone semantics) scoped to v0.2 with rationale. Full fold-in
-  record at `specs/reviews/selection-md-v0.1-codex.md`. Final verdict
-  chain: `REJECT → incorporated → ACCEPT (after fold-in)`.
+  tombstone semantics) scoped to v0.2 with rationale.
 
   Schema-level landings: `SELECTION_PRECEDENCE` 7-tuple + compile-time
   enum parity (`as const satisfies`); `SelectionOverride.strict()`
