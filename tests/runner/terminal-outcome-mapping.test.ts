@@ -1,20 +1,13 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { readRetainedRunTrace as readRunTrace } from '../../src/compat/retained-checkpoint-folders.js';
-import {
-  runRetainedCompiledFlow as runCompiledFlow,
-  writeRetainedPrototypeComposeReport as writePrototypeComposeReport,
-} from '../../src/compat/retained-runtime.js';
-import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import type { ExecutorRegistryV2 } from '../../src/core-v2/executors/index.js';
+import { runCompiledFlowV2 } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 import { RunResult } from '../../src/schemas/result.js';
-import { RunProjection } from '../../src/schemas/run.js';
-import { Snapshot } from '../../src/schemas/snapshot.js';
 import type { RunClosedOutcome } from '../../src/schemas/trace-entry.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
@@ -26,7 +19,6 @@ const CASES: Array<{
   route: TerminalRoute;
   outcome: RunClosedOutcome;
   runId: string;
-  reason?: string;
 }> = [
   {
     route: '@complete',
@@ -37,23 +29,20 @@ const CASES: Array<{
     route: '@stop',
     outcome: 'stopped',
     runId: '73000000-0000-0000-0000-000000000002',
-    reason: 'terminal route @stop',
   },
   {
     route: '@escalate',
     outcome: 'escalated',
     runId: '73000000-0000-0000-0000-000000000003',
-    reason: 'terminal route @escalate',
   },
   {
     route: '@handoff',
     outcome: 'handoff',
     runId: '73000000-0000-0000-0000-000000000004',
-    reason: 'terminal route @handoff',
   },
 ];
 
-function terminalCompiledFlow(route: TerminalRoute): { flow: CompiledFlow; bytes: Buffer } {
+function terminalCompiledFlow(route: TerminalRoute): { bytes: Buffer } {
   const raw = {
     schema_version: '2',
     id: 'terminal-outcome-flow',
@@ -108,10 +97,10 @@ function terminalCompiledFlow(route: TerminalRoute): { flow: CompiledFlow; bytes
     },
   };
   const flow = CompiledFlow.parse(raw);
-  return { flow, bytes: Buffer.from(JSON.stringify(flow)) };
+  return { bytes: Buffer.from(JSON.stringify(flow)) };
 }
 
-function richCheckpointRouteCompiledFlow(route: RichRoute): { flow: CompiledFlow; bytes: Buffer } {
+function richCheckpointRouteCompiledFlow(route: RichRoute): { bytes: Buffer } {
   const targetByRoute: Record<RichRoute, string> = {
     ask: 'ask-step',
     retry: 'retry-step',
@@ -214,10 +203,10 @@ function richCheckpointRouteCompiledFlow(route: RichRoute): { flow: CompiledFlow
     },
   };
   const flow = CompiledFlow.parse(raw);
-  return { flow, bytes: Buffer.from(JSON.stringify(flow)) };
+  return { bytes: Buffer.from(JSON.stringify(flow)) };
 }
 
-function retryLoopCompiledFlow(): { flow: CompiledFlow; bytes: Buffer } {
+function retryLoopCompiledFlow(): { bytes: Buffer } {
   const raw = {
     schema_version: '2',
     id: 'retry-loop-flow',
@@ -277,10 +266,10 @@ function retryLoopCompiledFlow(): { flow: CompiledFlow; bytes: Buffer } {
     },
   };
   const flow = CompiledFlow.parse(raw);
-  return { flow, bytes: Buffer.from(JSON.stringify(flow)) };
+  return { bytes: Buffer.from(JSON.stringify(flow)) };
 }
 
-function relayFailureRecoveryCompiledFlow(): { flow: CompiledFlow; bytes: Buffer } {
+function relayFailureRecoveryCompiledFlow(): { bytes: Buffer } {
   const raw = {
     schema_version: '2',
     id: 'relay-failure-recovery-flow',
@@ -355,7 +344,7 @@ function relayFailureRecoveryCompiledFlow(): { flow: CompiledFlow; bytes: Buffer
     },
   };
   const flow = CompiledFlow.parse(raw);
-  return { flow, bytes: Buffer.from(JSON.stringify(flow)) };
+  return { bytes: Buffer.from(JSON.stringify(flow)) };
 }
 
 function deterministicNow(startMs: number): () => Date {
@@ -363,21 +352,10 @@ function deterministicNow(startMs: number): () => Date {
   return () => new Date(startMs + n++ * 1000);
 }
 
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'non-complete terminal routes closed as complete',
-    acceptance_evidence:
-      'terminal route labels map to matching run.closed outcome, state.json status, and result.json outcome',
-    alternate_framing:
-      'schema-only coverage — rejected because the bug lived in runner outcome selection after valid route parsing',
-  };
-}
-
 function unusedRelayer(): RelayFn {
   return {
     connectorName: 'claude-code',
-    relay: async (_input: ClaudeCodeRelayInput): Promise<RelayResult> => ({
+    relay: async (): Promise<RelayResult> => ({
       request_payload: 'unused',
       receipt_id: 'unused',
       result_body: '{"verdict":"ok"}',
@@ -385,6 +363,43 @@ function unusedRelayer(): RelayFn {
       cli_version: '0.0.0-unused',
     }),
   };
+}
+
+function composeExecutor(): Pick<ExecutorRegistryV2, 'compose'> {
+  return {
+    compose: async (step, context) => {
+      if (step.kind !== 'compose') throw new Error('expected compose step');
+      const attempt =
+        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const report = step.writes?.report;
+      if (report !== undefined) {
+        const reportPath = context.files.resolve(report);
+        mkdirSync(dirname(reportPath), { recursive: true });
+        writeFileSync(reportPath, '{"summary":"terminal outcome fixture"}\n', 'utf8');
+        await context.trace.append({
+          run_id: context.runId,
+          kind: 'step.report_written',
+          step_id: step.id,
+          ...attempt,
+          report_path: report.path,
+          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+        });
+      }
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'check.evaluated',
+        step_id: step.id,
+        ...attempt,
+        check_kind: 'schema_sections',
+        outcome: 'pass',
+      });
+      return { route: 'pass', details: { report: report?.path } };
+    },
+  };
+}
+
+async function readTrace(runFolder: string) {
+  return await new TraceStore(runFolder).load();
 }
 
 let runFolderBase: string;
@@ -399,29 +414,27 @@ afterEach(() => {
 
 describe('RUN-I7 terminal route outcome mapping', () => {
   for (const c of CASES) {
-    it(`${c.route} closes with outcome=${c.outcome} across run.closed, state.json, RunProjection, and result.json`, async () => {
-      const { flow, bytes } = terminalCompiledFlow(c.route);
+    it(`${c.route} closes with outcome=${c.outcome} across run.closed and result.json`, async () => {
+      const { bytes } = terminalCompiledFlow(c.route);
       const runFolder = join(runFolderBase, c.outcome);
-      const outcome = await runCompiledFlow({
-        runFolder,
-        flow,
+      const outcome = await runCompiledFlowV2({
+        runDir: runFolder,
         flowBytes: bytes,
-        runId: RunId.parse(c.runId),
+        runId: c.runId,
         goal: `terminal route ${c.route} maps honestly`,
         depth: 'standard',
-        change_kind: change_kind(),
         now: deterministicNow(Date.UTC(2026, 3, 24, 20, 0, 0)),
         relayer: unusedRelayer(),
-        composeWriter: writePrototypeComposeReport,
+        executors: composeExecutor(),
       });
 
-      expect(outcome.result.outcome).toBe(c.outcome);
-      expect(outcome.snapshot.status).toBe(c.outcome);
+      expect(outcome.outcome).toBe(c.outcome);
       expect(existsSync(join(runFolder, 'trace.ndjson'))).toBe(true);
-      expect(existsSync(join(runFolder, 'state.json'))).toBe(true);
+      expect(existsSync(join(runFolder, 'manifest.snapshot.json'))).toBe(true);
       expect(existsSync(join(runFolder, 'reports', 'result.json'))).toBe(true);
 
-      expect(outcome.trace_entries.map((trace_entry) => trace_entry.kind)).toEqual([
+      const trace = await readTrace(runFolder);
+      expect(trace.map((trace_entry) => trace_entry.kind)).toEqual([
         'run.bootstrapped',
         'step.entered',
         'step.report_written',
@@ -429,48 +442,25 @@ describe('RUN-I7 terminal route outcome mapping', () => {
         'step.completed',
         'run.closed',
       ]);
-      expect(
-        outcome.trace_entries.find((trace_entry) => trace_entry.kind === 'relay.started'),
-      ).toBeUndefined();
+      expect(trace.find((trace_entry) => trace_entry.kind === 'relay.started')).toBeUndefined();
 
-      const completed = outcome.trace_entries.find(
-        (trace_entry) => trace_entry.kind === 'step.completed',
-      );
+      const completed = trace.find((trace_entry) => trace_entry.kind === 'step.completed');
       if (completed?.kind !== 'step.completed') throw new Error('expected step.completed');
       expect(completed.route_taken).toBe('pass');
 
-      const closed = outcome.trace_entries[outcome.trace_entries.length - 1];
+      const closed = trace[trace.length - 1];
       if (closed?.kind !== 'run.closed') throw new Error('expected run.closed last');
       expect(closed.outcome).toBe(c.outcome);
-      if (c.reason === undefined) {
-        expect(closed.reason).toBeUndefined();
-      } else {
-        expect(closed.reason).toBe(c.reason);
-        expect(closed.reason).not.toMatch(/treating as complete/i);
-      }
-
-      const snapshot = Snapshot.parse(
-        JSON.parse(readFileSync(join(runFolder, 'state.json'), 'utf8')),
-      );
-      expect(snapshot.status).toBe(c.outcome);
-      expect(snapshot.trace_entries_consumed).toBe(outcome.trace_entries.length);
-      const projectedStep = snapshot.steps.find((step) => step.step_id === 'terminal-step');
-      expect(projectedStep?.status).toBe('complete');
-      expect(projectedStep?.last_route_taken).toBe('pass');
-
-      const log = readRunTrace(runFolder);
-      expect(log).toHaveLength(outcome.trace_entries.length);
-      expect(RunProjection.safeParse({ log, snapshot }).success).toBe(true);
+      expect(closed.reason).toBeUndefined();
+      expect(closed.data).toMatchObject({ outcome: c.outcome, terminal_target: c.route });
 
       const result = RunResult.parse(
         JSON.parse(readFileSync(join(runFolder, 'reports', 'result.json'), 'utf8')),
       );
       expect(result.outcome).toBe(c.outcome);
-      expect(result.trace_entries_observed).toBe(log.length);
-      expect(result.reason).toBe(c.reason);
-      if (result.reason !== undefined) {
-        expect(result.reason).not.toMatch(/treating as complete/i);
-      }
+      expect(result.summary).toBe(`Run closed with outcome ${c.outcome} via ${c.route}.`);
+      expect(result.trace_entries_observed).toBe(trace.length);
+      expect(result.reason).toBeUndefined();
     });
   }
 });
@@ -484,75 +474,86 @@ describe('REL-003 rich route execution', () => {
 
   for (const route of ['ask', 'retry', 'revise', 'stop', 'handoff', 'escalate'] as const) {
     it(`executes checkpoint route '${route}' instead of collapsing it to pass`, async () => {
-      const { flow, bytes } = richCheckpointRouteCompiledFlow(route);
+      const { bytes } = richCheckpointRouteCompiledFlow(route);
       const runFolder = join(runFolderBase, `rich-${route}`);
-      const outcome = await runCompiledFlow({
-        runFolder,
-        flow,
+      const outcome = await runCompiledFlowV2({
+        runDir: runFolder,
         flowBytes: bytes,
-        runId: RunId.parse(`74000000-0000-0000-0000-00000000000${route.length}`),
+        runId: `74000000-0000-0000-0000-00000000000${route.length}`,
         goal: `rich route ${route} maps honestly`,
         depth: 'standard',
-        change_kind: change_kind(),
         now: deterministicNow(Date.UTC(2026, 3, 24, 21, 0, 0)),
         relayer: unusedRelayer(),
-        composeWriter: writePrototypeComposeReport,
+        executors: composeExecutor(),
       });
 
-      expect(outcome.result.outcome).toBe(expectedTerminal[route] ?? 'complete');
-      const completed = outcome.trace_entries.find(
+      expect(outcome.outcome).toBe(expectedTerminal[route] ?? 'complete');
+      const trace = await readTrace(runFolder);
+      const completed = trace.find(
         (trace_entry) =>
           trace_entry.kind === 'step.completed' && trace_entry.step_id === 'checkpoint-step',
       );
       if (completed?.kind !== 'step.completed') throw new Error('expected checkpoint completion');
       expect(completed.route_taken).toBe(route);
-      const snapshot = Snapshot.parse(
-        JSON.parse(readFileSync(join(runFolder, 'state.json'), 'utf8')),
+      expect(trace).toContainEqual(
+        expect.objectContaining({
+          kind: 'checkpoint.resolved',
+          step_id: 'checkpoint-step',
+          selection: route,
+          resolution_source: 'safe-default',
+        }),
       );
-      expect(snapshot.status).toBe(expectedTerminal[route] ?? 'complete');
-      expect(RunProjection.safeParse({ log: readRunTrace(runFolder), snapshot }).success).toBe(
-        true,
+      expect(trace).toContainEqual(
+        expect.objectContaining({
+          kind: 'run.closed',
+          outcome: expectedTerminal[route] ?? 'complete',
+        }),
       );
+      const result = RunResult.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports', 'result.json'), 'utf8')),
+      );
+      expect(result.outcome).toBe(expectedTerminal[route] ?? 'complete');
     });
   }
 
   it('bounds retry loops by max_attempts instead of spinning forever', async () => {
-    const { flow, bytes } = retryLoopCompiledFlow();
+    const { bytes } = retryLoopCompiledFlow();
     const runFolder = join(runFolderBase, 'retry-loop');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('74000000-0000-0000-0000-000000000099'),
+      runId: '74000000-0000-0000-0000-000000000099',
       goal: 'retry route stops after bounded attempts',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 24, 22, 0, 0)),
       relayer: unusedRelayer(),
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    expect(outcome.result.reason).toContain("route 'retry'");
-    expect(outcome.result.reason).toContain('max_attempts=2');
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toContain("route 'retry'");
+    expect(outcome.reason).toContain('max_attempts=2');
+    const trace = await readTrace(runFolder);
     expect(
-      outcome.trace_entries.filter(
+      trace.filter(
         (trace_entry) =>
           trace_entry.kind === 'step.completed' && trace_entry.route_taken === 'retry',
       ),
     ).toHaveLength(2);
+    const result = RunResult.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'result.json'), 'utf8')),
+    );
+    expect(result.reason).toBe(outcome.reason);
   });
 
   it('routes a failed relay check through retry when the step declares recovery', async () => {
-    const { flow, bytes } = relayFailureRecoveryCompiledFlow();
+    const { bytes } = relayFailureRecoveryCompiledFlow();
     const runFolder = join(runFolderBase, 'relay-recovery');
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('74000000-0000-0000-0000-000000000100'),
+      runId: '74000000-0000-0000-0000-000000000100',
       goal: 'relay check failure uses recovery route',
       depth: 'standard',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
       relayer: {
         connectorName: 'claude-code',
@@ -564,25 +565,26 @@ describe('REL-003 rich route execution', () => {
           cli_version: '0.0.0-test',
         }),
       },
-      composeWriter: writePrototypeComposeReport,
+      executors: composeExecutor(),
     });
 
-    expect(outcome.result.outcome).toBe('complete');
-    expect(outcome.trace_entries).toContainEqual(
+    expect(outcome.outcome).toBe('complete');
+    const trace = await readTrace(runFolder);
+    expect(trace).toContainEqual(
       expect.objectContaining({
         kind: 'check.evaluated',
         step_id: 'relay-step',
         outcome: 'fail',
       }),
     );
-    expect(outcome.trace_entries).toContainEqual(
+    expect(trace).toContainEqual(
       expect.objectContaining({
         kind: 'step.completed',
         step_id: 'relay-step',
         route_taken: 'retry',
       }),
     );
-    expect(outcome.trace_entries).toContainEqual(
+    expect(trace).toContainEqual(
       expect.objectContaining({
         kind: 'step.completed',
         step_id: 'fallback-step',
