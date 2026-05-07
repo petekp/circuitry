@@ -44,8 +44,8 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/build-checkpoint-exec.test.ts'],
-    notes: 'Retained/v1 checkpoint resume preparation and validation.',
+    compatibilityTestPaths: ['tests/runner/retained-compat-facade.test.ts'],
+    notes: 'Retired v1 checkpoint resume path; direct preparation fails closed.',
   },
   {
     oldPath: 'src/runtime/compile-schematic-to-flow.ts',
@@ -402,11 +402,8 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     currentDisposition: 'retained-owned',
     deprecationStage: 'none',
     requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: [
-      'tests/core-v2/checkpoint-resume-v2.test.ts',
-      'tests/core-v2/control-loop-v2.test.ts',
-    ],
-    notes: 'Retained checkpoint handler.',
+    compatibilityTestPaths: ['tests/runner/retained-compat-facade.test.ts'],
+    notes: 'Retired checkpoint handler path; direct execution fails closed.',
   },
   {
     oldPath: 'src/runtime/step-handlers/fanout/aggregate.ts',
@@ -447,15 +444,6 @@ export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
     requiresReviewBeforeDeletion: true,
     compatibilityTestPaths: ['tests/runner/json-report-compat.test.ts'],
     notes: 'Old retained handler JSON report helper path.',
-  },
-  {
-    oldPath: 'src/runtime/step-handlers/types.ts',
-    category: 'retained-handler',
-    currentDisposition: 'retained-owned',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/public-runtime-paths.test.ts'],
-    notes: 'Retained handler context/result types.',
   },
   {
     oldPath: 'src/runtime/terminal-verdict.ts',

@@ -14,8 +14,8 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import type { StepHandlerResult } from '../../src/runtime/step-handlers/types.js';
 import {
+  type StepHandlerResult,
   expectSchemaAccepts,
   expectSchemaRejects,
   expectStepAborted,

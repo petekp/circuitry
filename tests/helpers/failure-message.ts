@@ -17,7 +17,17 @@
 import { expect } from 'vitest';
 import type { ZodType } from 'zod';
 
-import type { StepHandlerResult } from '../../src/runtime/step-handlers/types.js';
+export type StepHandlerResult =
+  | { readonly kind: 'advance'; readonly route?: string; readonly recovery_reason?: string }
+  | { readonly kind: 'aborted'; readonly reason: string }
+  | {
+      readonly kind: 'waiting_checkpoint';
+      readonly checkpoint: {
+        readonly stepId: string;
+        readonly requestPath: string;
+        readonly allowedChoices: readonly string[];
+      };
+    };
 
 export function invariantMessage(rule: string, detail?: string): string {
   return detail === undefined ? rule : `${rule} — ${detail}`;

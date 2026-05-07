@@ -16,6 +16,7 @@ import {
   deriveRoutingForTesting as neutralDeriveRoutingForTesting,
   ROUTABLE_WORKFLOWS as neutralRoutableWorkflows,
 } from '../../src/flows/router.js';
+import { prepareCheckpointResume } from '../../src/runtime/checkpoint-resume.js';
 import {
   compileSchematicToCompiledFlow as runtimeCompileSchematicToCompiledFlow,
   FlowSchematicCompileError as runtimeFlowSchematicCompileError,
@@ -31,6 +32,7 @@ import {
   runCompiledFlow,
   writeComposeReport,
 } from '../../src/runtime/runner.js';
+import { runCheckpointStep } from '../../src/runtime/step-handlers/checkpoint.js';
 import {
   RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
   RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
@@ -147,7 +149,9 @@ describe('runtime import boundary', () => {
     await expect(resumeCompiledFlowCheckpoint({} as never)).rejects.toThrow(
       RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
     );
+    expect(() => prepareCheckpointResume()).toThrow(RETIRED_RUNTIME_RUN_FOLDER_MESSAGE);
     expect(() => writeComposeReport({} as never)).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
+    expect(() => runCheckpointStep()).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
   });
 
   it('keeps old runtime router/compiler paths as compatibility re-exports', () => {
@@ -400,6 +404,7 @@ describe('runtime import boundary', () => {
       /import\s+\{[^}]+\}\s+from\s+['"][^'"]*src\/runtime\/(?:trace-reader|trace-writer|reducer|snapshot-writer|progress-projector|checkpoint-resume|append-and-derive|step-handlers\/checkpoint)\.js['"]/m;
 
     const imports = collectSourceFiles(resolve('tests'))
+      .filter((file) => file !== resolve('tests/runner/retained-compat-facade.test.ts'))
       .flatMap((file) =>
         retainedSavedStateImport.test(readFileSync(file, 'utf8'))
           ? [file.slice(repoRoot.length + 1)]
