@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { resumeRetainedCompiledFlowCheckpoint as resumeCompiledFlowCheckpoint } from '../../src/compat/retained-checkpoint-folders.js';
-import { runRetainedCompiledFlow as runCompiledFlow } from '../../src/compat/retained-runtime.js';
-import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
+import { resumeCompiledFlowV2 } from '../../src/core-v2/run/checkpoint-resume.js';
+import { runCompiledFlowV2WithWaiting } from '../../src/core-v2/run/compiled-flow-runner.js';
+import { isGraphCheckpointWaitingResultV2 } from '../../src/core-v2/run/graph-runner.js';
+import { TraceStore } from '../../src/core-v2/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { RunId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
@@ -26,16 +26,6 @@ function readJson(runFolder: string, path: string): unknown {
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
-}
-
-function change_kind(): ChangeKindDeclaration {
-  return {
-    change_kind: 'ratchet-advance',
-    failure_mode: 'Explore tournament is documented but not executable',
-    acceptance_evidence:
-      'tournament fixture reaches a real checkpoint, resumes through a bounded option choice, and closes with branch receipts plus aggregate provenance',
-    alternate_framing: 'document-only tournament plan',
-  };
 }
 
 function tournamentRelayer(): RelayFn {
@@ -163,29 +153,27 @@ describe('explore tournament runtime', () => {
   });
 
   it('fans out option proposals, pauses for a bounded choice, then resumes to a final decision', async () => {
-    const { flow, bytes } = loadTournamentFixture();
+    const { bytes } = loadTournamentFixture();
     const runFolder = join(runFolderBase, 'tournament-run');
 
-    const waiting = await runCompiledFlow({
-      runFolder,
-      flow,
+    const waiting = await runCompiledFlowV2WithWaiting({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('33333333-3333-3333-3333-333333333331'),
+      runId: '33333333-3333-3333-3333-333333333331',
       goal: 'decide: React vs Vue',
       depth: 'tournament',
       entryModeName: 'tournament',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 29, 16, 30, 0)),
       relayer: tournamentRelayer(),
     });
 
-    expect(waiting.result.outcome).toBe('checkpoint_waiting');
-    if (waiting.result.outcome !== 'checkpoint_waiting') {
+    expect(waiting.outcome).toBe('checkpoint_waiting');
+    if (!isGraphCheckpointWaitingResultV2(waiting)) {
       throw new Error('expected checkpoint_waiting');
     }
-    expect(waiting.result.checkpoint).toMatchObject({
-      step_id: 'tradeoff-checkpoint-step',
-      allowed_choices: ['option-1', 'option-2', 'option-3', 'option-4'],
+    expect(waiting.checkpoint).toMatchObject({
+      stepId: 'tradeoff-checkpoint-step',
+      allowedChoices: ['option-1', 'option-2', 'option-3', 'option-4'],
     });
     expect(existsSync(join(runFolder, 'reports/checkpoints/tradeoff-response.json'))).toBe(false);
 
@@ -220,13 +208,14 @@ describe('explore tournament runtime', () => {
       expect(branch.result_body?.option_id).toBe(branch.branch_id);
     }
 
-    const resumed = await resumeCompiledFlowCheckpoint({
-      runFolder,
+    const resumed = await resumeCompiledFlowV2({
+      runDir: runFolder,
       selection: 'option-2',
       now: deterministicNow(Date.UTC(2026, 3, 29, 16, 40, 0)),
+      relayer: tournamentRelayer(),
     });
 
-    expect(resumed.result.outcome).toBe('complete');
+    expect(resumed.outcome).toBe('complete');
     const decision = readJson(runFolder, 'reports/decision.json') as {
       selected_option_id: string;
       selected_option_label: string;
@@ -251,19 +240,17 @@ describe('explore tournament runtime', () => {
   });
 
   it('rejects a proposal branch whose report option_id does not match the branch id', async () => {
-    const { flow, bytes } = loadTournamentFixture();
+    const { bytes } = loadTournamentFixture();
     const runFolder = join(runFolderBase, 'mismatched-proposal-run');
     const relayer = tournamentRelayer();
 
-    const outcome = await runCompiledFlow({
-      runFolder,
-      flow,
+    const outcome = await runCompiledFlowV2WithWaiting({
+      runDir: runFolder,
       flowBytes: bytes,
-      runId: RunId.parse('33333333-3333-3333-3333-333333333332'),
+      runId: '33333333-3333-3333-3333-333333333332',
       goal: 'decide: React vs Vue',
       depth: 'tournament',
       entryModeName: 'tournament',
-      change_kind: change_kind(),
       now: deterministicNow(Date.UTC(2026, 3, 29, 16, 50, 0)),
       relayer: {
         connectorName: relayer.connectorName,
@@ -283,14 +270,13 @@ describe('explore tournament runtime', () => {
       },
     });
 
-    expect(outcome.result.outcome).toBe('aborted');
-    if (outcome.result.outcome !== 'aborted') {
+    expect(outcome.outcome).toBe('aborted');
+    if (isGraphCheckpointWaitingResultV2(outcome) || outcome.outcome !== 'aborted') {
       throw new Error('expected aborted');
     }
-    expect(outcome.result.reason).toContain(
-      "report field 'option_id' must equal branch_id 'option-1'",
-    );
-    const failedCheck = outcome.trace_entries.find(
+    expect(outcome.reason).toContain("report field 'option_id' must equal branch_id 'option-1'");
+    const traceEntries = await new TraceStore(runFolder).load();
+    const failedCheck = traceEntries.find(
       (entry) =>
         entry.kind === 'check.evaluated' &&
         entry.step_id === 'proposal-fanout-step-option-1' &&
