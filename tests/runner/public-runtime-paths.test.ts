@@ -9,6 +9,7 @@ import {
 } from '../../src/compat/public-runtime-paths.js';
 
 function collectSourceFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
   const repoRoot = `${resolve('.')}${sep}`;
   return readdirSync(dir).flatMap((entry) => {
     const path = resolve(dir, entry);
@@ -75,15 +76,13 @@ describe('public runtime import-path manifest', () => {
       expect(entry.currentDisposition, `${entry.oldPath} is retained-owned`).toBe('retained-owned');
     }
 
-    expect(PUBLIC_RUNTIME_RETAINED_PATHS.map((entry) => entry.oldPath)).toEqual(
-      expect.arrayContaining(['src/runtime/runner.ts', 'src/runtime/runner-types.ts']),
-    );
+    expect(PUBLIC_RUNTIME_RETAINED_PATHS).toEqual([]);
   });
 
   it('keeps wrapper categories explicit for later staged retirement decisions', () => {
     const categories = new Set(PUBLIC_RUNTIME_PATHS.map((entry) => entry.category));
 
-    expect(categories).toEqual(new Set(['public-runner-surface']));
+    expect(categories).toEqual(new Set());
 
     expect(
       PUBLIC_RUNTIME_WRAPPER_PATHS.filter(
@@ -114,7 +113,7 @@ describe('public runtime import-path manifest', () => {
   });
 
   it('keeps sensitive old runtime categories out of soft deprecation', () => {
-    const nonDeprecatedCategories = new Set(['public-runner-surface']);
+    const nonDeprecatedCategories = new Set();
     const incorrectlyDeprecated = PUBLIC_RUNTIME_PATHS.filter(
       (entry) =>
         nonDeprecatedCategories.has(entry.category) && entry.deprecationStage === 'soft-deprecated',
@@ -126,6 +125,9 @@ describe('public runtime import-path manifest', () => {
     ).toBeUndefined();
     expect(
       PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/checkpoint-resume.ts'),
+    ).toBeUndefined();
+    expect(
+      PUBLIC_RUNTIME_PATHS.find((entry) => entry.oldPath === 'src/runtime/runner.ts'),
     ).toBeUndefined();
   });
 
@@ -173,7 +175,7 @@ describe('public runtime import-path manifest', () => {
     expect(releaseNote).toContain('src/run-status/project-run-folder.ts');
     expect(releaseNote).toContain('result writer wrapper');
     expect(releaseNote).toContain('old public runner surface');
-    expect(releaseNote).toContain('retired fail-closed runtime surfaces');
+    expect(releaseNote).toContain('no longer part of the old public import-path surface');
   });
 
   it('keeps build/package visibility assumptions explicit', () => {

@@ -88,9 +88,7 @@ export interface RelayMaterializeOutput {
 // the verdict check AND the schema parse pass, the runtime materializes
 // the report at `writes.report.path` from the `result` payload.
 // Verdict-check
-// evaluation and schema-parse both live in the runner (see
-// `src/runtime/runner.ts::evaluateRelayCheck` + the `parseReport`
-// call around the materializer call site); by the time `writes.report`
+// evaluation and schema-parse both live in the core-v2 runner; by the time `writes.report`
 // reaches this function the caller has already decided that the
 // report is safe to write. Schema parsing uses the report schema
 // registry at `src/flows/registries/report-schemas.ts`; unknown schema names

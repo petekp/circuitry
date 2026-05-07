@@ -50,7 +50,7 @@ The final cutover changed this inventory's conclusions:
 - old retained handler implementations, old trace reader/writer, reducer,
   snapshot writer, append-and-derive, and relay-selection implementation code
   are gone;
-- `src/runtime/runner.ts` remains only as a fail-closed public stub;
+- no `src/runtime/**` public import paths remain;
 - remaining wrapper imports are governed by
   `src/compat/public-runtime-paths.ts`.
 
@@ -107,8 +107,8 @@ final cutover product decision.
 | `src/runtime/router.ts` | removed | Neutral router implementation lives in `src/flows/router.ts`; the old runtime wrapper is retired. |
 | `src/runtime/run-relative-path.ts` | removed | Neutral helper lives in `src/shared/run-relative-path.ts`; the old runtime wrapper is retired. |
 | `src/runtime/run-status-projection.ts` | removed | Neutral dispatcher lives in `src/run-status/project-run-folder.ts`; the old runtime wrapper is retired. |
-| `src/runtime/runner-types.ts` | compatibility wrapper | Shared relay/progress types moved to `src/shared/relay-runtime-types.ts`, but retained invocation/result types still live here. |
-| `src/runtime/runner.ts` | retained fallback | Owns fallback execution, rollback execution, arbitrary fixtures, `composeWriter`, and public retained resume wrapper. |
+| `src/runtime/runner-types.ts` | removed | Shared relay/progress types live in `src/shared/relay-runtime-types.ts`; core-v2 owns current runner types. |
+| `src/runtime/runner.ts` | removed | Fresh runs use core-v2. Retired/v1 folders fail closed through policy instead of direct old-runner APIs. |
 | `src/runtime/selection-resolver.ts` | removed | Neutral resolver lives in `src/shared/selection-resolver.ts`; the old runtime wrapper is retired. |
 | `src/runtime/snapshot-writer.ts` | retained product behavior | Retained snapshot derivation is live for retained runs, handoff, and old checkpoint folders. |
 | `src/runtime/step-handlers/checkpoint.ts` | removed | Checkpoint request writing and choice helpers live under core-v2 and flow registries; the old handler stub is retired. |
@@ -155,12 +155,8 @@ Those counts are no longer current after final cutover.
 
 ## Current Blockers
 
-The retained runtime itself is no longer the blocker. The remaining blockers are
-wrapper/package-surface questions:
+The retained runtime itself is no longer the blocker. No old `src/runtime/**`
+public import paths remain. The remaining blocker is final documentation
+compression.
 
-- old public type/path surfaces such as `src/runtime/runner-types.ts`;
-- generated plugin and package export drift when old paths are removed.
-
-The next useful slice is to pick one wrapper category, update
-`src/compat/public-runtime-paths.ts`, update the release note and tests, then run
-full verification. Do not recreate retained/v1 run-folder adapters.
+Do not recreate retained/v1 run-folder adapters.

@@ -40,9 +40,7 @@ stays identical to the manifest.
 
 These categories are not soft-deprecated:
 
-- the old public runner surface at `src/runtime/runner.ts` and
-  `src/runtime/runner-types.ts`;
-- retired fail-closed runtime surfaces such as runner entrypoints.
+None remain.
 
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` were retired after production and tooling imports
@@ -76,11 +74,15 @@ The old checkpoint resume and checkpoint handler stubs at
 were retired after retained and v1 checkpoint folders moved to fail-closed
 policy without adapters.
 
+The old public runner surface at `src/runtime/runner.ts` and
+`src/runtime/runner-types.ts` was retired after the final cutover removed the
+last direct old-runtime API import paths.
+
 ## Review Boundaries
 
 Use local adversarial review and manifest/test updates before:
 
-- deleting any old wrapper or fail-closed stub;
+- recreating any old wrapper or fail-closed stub;
 - changing package exports;
 - adding import-time or runtime warnings;
 - soft-deprecating public runner or type paths;

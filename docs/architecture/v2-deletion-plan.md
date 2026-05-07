@@ -33,8 +33,8 @@ final cutover supersedes that path: `src/compat/retained-runtime.ts`,
 old handler implementations, old trace/reducer/snapshot implementation files,
 the old relay-selection bridge, the old run-status wrapper, the old progress
 projection wrapper, the old result writer wrapper, the old checkpoint resume
-stub, and the old checkpoint handler stub have been removed. Old runner
-entrypoints remain only as fail-closed public stubs.
+stub, the old checkpoint handler stub, and the old public runner surface have
+been removed.
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` have also been removed.
 
@@ -86,13 +86,12 @@ alias should be removed later only through an explicit operator-facing slice.
 
 ## 2. Current Old Runtime Disposition
 
-The remaining old runtime paths are fail-closed public stubs or old public type
-and path surfaces.
+No old `src/runtime/**` public import paths remain.
 
 | Path | Current owner | Why retain |
 |---|---|---|
-| `src/runtime/runner.ts` | fail-closed public stub | Direct `runCompiledFlow(...)` calls fail with the retired fresh-run message. Direct checkpoint resume calls fail with the retired run-folder message. |
-| `src/runtime/runner-types.ts` | compatibility type surface | Kept for old public type imports while implementation entrypoints are retired. |
+| `src/runtime/runner.ts` | removed | Fresh runs use core-v2. Retired/v1 folders fail closed through policy instead of direct old-runner APIs. |
+| `src/runtime/runner-types.ts` | removed | Shared relay/progress types live in `src/shared/relay-runtime-types.ts`; core-v2 owns its runner invocation types. |
 | Old shared-helper wrappers under `src/runtime/**` | removed | Neutral owners live under `src/shared/**`; the old runtime wrapper files are retired. |
 
 The next deletion slice should focus on wrappers and package surface only. It
@@ -169,9 +168,9 @@ Current import groups:
 | Reference group | Current consumers | Classification | Next action |
 |---|---|---|---|
 | `compat/retained-runtime` | none | removed facade | Do not recreate it. CLI, handoff, and run-status use the retired runtime policy directly. |
-| `runtime/runner` | direct compatibility tests and old public imports | fail-closed public stub | Keep only while the public old runner surface remains listed. Fresh retired invocations fail closed. |
+| `runtime/runner` | none | removed public surface | Fresh runs use core-v2; retired/v1 folders fail closed through policy. |
 | `runtime/checkpoint-resume` | none | removed stub | Retained run folders fail closed through policy, not a direct adapter. |
-| `runtime/runner-types` | old public type imports and tests | compatibility type surface | Keep until old type imports retire. |
+| `runtime/runner-types` | none | removed public type surface | Shared relay/progress types live in `src/shared/relay-runtime-types.ts`; core-v2 owns current runner types. |
 | `runtime/run-status-projection` | none | removed wrapper | Run-status ownership lives in `src/run-status/project-run-folder.ts`. |
 | `runtime/progress-projector` | none | removed wrapper | Shared progress output ownership lives in `src/shared/progress-output.ts`. |
 | `runtime/result-writer` | none | removed wrapper | Shared result path ownership lives in `src/shared/result-path.ts`. |

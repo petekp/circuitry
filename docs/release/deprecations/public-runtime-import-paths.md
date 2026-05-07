@@ -19,9 +19,7 @@ New code should import current owners directly.
 
 The following old runtime path categories are not soft-deprecated:
 
-- the old public runner surface at `src/runtime/runner.ts` and
-  `src/runtime/runner-types.ts`;
-- retired fail-closed runtime surfaces such as runner entrypoints.
+None remain.
 
 The old flow-authoring wrappers at `src/runtime/compile-schematic-to-flow.ts`
 and `src/runtime/router.ts` are no longer part of the old public import-path
@@ -57,6 +55,11 @@ The old checkpoint resume and checkpoint handler stubs at
 `src/runtime/checkpoint-resume.ts` and `src/runtime/step-handlers/checkpoint.ts`
 are also no longer part of the old public import-path surface. Retained and v1
 run folders fail closed instead of using checkpoint adapters.
+
+The old public runner surface at `src/runtime/runner.ts` and
+`src/runtime/runner-types.ts` is also no longer part of the old public
+import-path surface. New code should use the core-v2 runner and shared relay
+types.
 
 ## Removal Policy
 

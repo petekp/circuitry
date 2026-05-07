@@ -8100,3 +8100,47 @@ and current checkpoint execution remains under core-v2.
 
 Next recommended action: final old runtime public surface group:
 `src/runtime/runner.ts` and `src/runtime/runner-types.ts`.
+
+## 2026-05-07 - Public Runner Surface Retirement
+
+Goal: retire the last old direct public runner surface after the connector,
+status, progress, result, and checkpoint compatibility groups were already
+closed.
+
+Files changed:
+
+- `src/runtime/runner.ts`
+- `src/runtime/runner-types.ts`
+- `src/compat/public-runtime-paths.ts`
+- `src/connectors/relay-materializer.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- `tests/contracts/engine-flow-boundary.test.ts`
+- active public-runtime policy and deletion-readiness docs
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted the old public runner and runner type files;
+- reduced the public runtime import path registry to an empty manifest;
+- updated runtime-boundary tests to expect no old `src/runtime` source files;
+- updated retained-compat tests to assert the old public runner files are gone;
+- refreshed active policy docs to describe final cutover instead of retained
+  runtime compatibility.
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/contracts/engine-flow-boundary.test.ts tests/release/release-infrastructure.test.ts`:
+  passed.
+- `npm run check`: passed.
+- `npm run lint`: initially failed on empty-array formatting, then passed.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+
+Behavior changed? Only direct old public runner/type import paths are retired.
+Fresh runs remain on core-v2. Retained and v1 run folders still fail closed with
+the retired-runtime message.
+
+Next recommended action: final doc compression. Keep historical checkpoint docs
+until that compression pass decides what to preserve, merge, or delete.

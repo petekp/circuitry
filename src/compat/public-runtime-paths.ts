@@ -1,4 +1,4 @@
-export type PublicRuntimePathCategory = 'public-runner-surface';
+export type PublicRuntimePathCategory = never;
 
 export type PublicRuntimePathDisposition =
   | 'future-deprecation-candidate'
@@ -18,26 +18,7 @@ export interface PublicRuntimePathEntry {
   readonly notes: string;
 }
 
-export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [
-  {
-    oldPath: 'src/runtime/runner-types.ts',
-    category: 'public-runner-surface',
-    currentDisposition: 'retained-owned',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/public-runtime-paths.test.ts'],
-    notes: 'Retained invocation/result types and old runner type surface.',
-  },
-  {
-    oldPath: 'src/runtime/runner.ts',
-    category: 'public-runner-surface',
-    currentDisposition: 'retained-owned',
-    deprecationStage: 'none',
-    requiresReviewBeforeDeletion: true,
-    compatibilityTestPaths: ['tests/runner/retained-compat-facade.test.ts'],
-    notes: 'Retained execution fallback plus old public writeComposeReport path.',
-  },
-];
+export const PUBLIC_RUNTIME_PATHS: readonly PublicRuntimePathEntry[] = [];
 
 export const PUBLIC_RUNTIME_WRAPPER_PATHS = PUBLIC_RUNTIME_PATHS.filter(
   (entry) => entry.currentOwnerPath !== undefined,

@@ -1,17 +1,9 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  resumeCompiledFlowCheckpoint,
-  runCompiledFlow,
-  writeComposeReport,
-} from '../../src/runtime/runner.js';
-import {
-  RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
-  RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
-} from '../../src/shared/retired-runtime-policy.js';
 
 function collectSourceFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((entry) => {
     const path = resolve(dir, entry);
     const stat = statSync(path);
@@ -53,14 +45,9 @@ describe('runtime import boundary', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('fails closed for accidental direct old-runner API calls', async () => {
-    await expect(runCompiledFlow({} as never)).rejects.toThrow(
-      RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE,
-    );
-    await expect(resumeCompiledFlowCheckpoint({} as never)).rejects.toThrow(
-      RETIRED_RUNTIME_RUN_FOLDER_MESSAGE,
-    );
-    expect(() => writeComposeReport({} as never)).toThrow(RETIRED_RUNTIME_FRESH_INVOCATION_MESSAGE);
+  it('does not expose direct old-runner API files', () => {
+    expect(existsSync(resolve('src/runtime/runner.ts'))).toBe(false);
+    expect(existsSync(resolve('src/runtime/runner-types.ts'))).toBe(false);
     expect(existsSync(resolve('src/runtime/checkpoint-resume.ts'))).toBe(false);
     expect(existsSync(resolve('src/runtime/step-handlers/checkpoint.ts'))).toBe(false);
   });
