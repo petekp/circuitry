@@ -390,9 +390,9 @@ the step is aborted. Fail-closed is mandatory.
 minimal-shape `{ verdict: z.string().min(1) }.passthrough()` schema for
 `runtime-proof-canonical@v1`, and a test-only strict `runtime-proof-strict@v1` schema
 used by `tests/runner/materializer-schema-parse.test.ts`. The
-`explore.compose@v1` and `explore.review-verdict@v1` prompts in
-`src/runtime/runner.ts` name the exact JSON shapes the connectors must
-return.
+`explore.compose@v1` and `explore.review-verdict@v1` relay hints in
+`src/flows/explore/relay-hints.ts` name the exact JSON shapes the
+connectors must return.
 
 **`relay.completed.verdict` on schema-fail.** When the check admits the
 verdict but the report body fails schema parse, `relay.completed.verdict`

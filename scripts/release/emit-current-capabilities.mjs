@@ -541,7 +541,11 @@ function connectorCapabilities(records) {
     title: `${record.id} connector`,
     status: record.status,
     summary: record.summary,
-    evidence: ['src/schemas/connector.ts', 'src/runtime/relay-selection.ts'],
+    evidence: [
+      'src/schemas/connector.ts',
+      'src/core-v2/executors/relay.ts',
+      'src/shared/relay-selection.ts',
+    ],
     readiness_refs: record.readiness_refs,
     axes: {
       worker_handoff:

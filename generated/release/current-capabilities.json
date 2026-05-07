@@ -517,7 +517,11 @@
       "title": "claude-code connector",
       "status": "implemented",
       "summary": "claude-code is a built-in connector.",
-      "evidence": ["src/schemas/connector.ts", "src/runtime/relay-selection.ts"],
+      "evidence": [
+        "src/schemas/connector.ts",
+        "src/core-v2/executors/relay.ts",
+        "src/shared/relay-selection.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -533,7 +537,11 @@
       "title": "codex connector",
       "status": "implemented",
       "summary": "codex is a built-in connector.",
-      "evidence": ["src/schemas/connector.ts", "src/runtime/relay-selection.ts"],
+      "evidence": [
+        "src/schemas/connector.ts",
+        "src/core-v2/executors/relay.ts",
+        "src/shared/relay-selection.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -549,7 +557,11 @@
       "title": "custom connector",
       "status": "implemented",
       "summary": "Custom connectors receive prompt and output file paths and return a JSON response through the output file.",
-      "evidence": ["src/schemas/connector.ts", "src/runtime/relay-selection.ts"],
+      "evidence": [
+        "src/schemas/connector.ts",
+        "src/core-v2/executors/relay.ts",
+        "src/shared/relay-selection.ts"
+      ],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
