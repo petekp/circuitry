@@ -1,3 +1,8 @@
+// Custom connector subprocess adapter.
+//
+// Custom connectors receive the prompt as a temp file and must write a JSON
+// object to the configured output file. Stdout and stderr are diagnostic only;
+// do not treat them as the durable relay result.
 import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

@@ -589,9 +589,9 @@ export const FlowSchematic = z
           });
         }
       }
-      // The reverse — stages entries that no item references — is allowed
-      // for now; the compiler may still want to declare empty stages for
-      // stage path completeness. stage_path_policy carries the omit story.
+      // The reverse is valid: a schematic may declare canonical stage
+      // metadata even when a mode leaves that stage empty. The compiler
+      // records the omission reason in stage_path_policy.
     }
 
     if (

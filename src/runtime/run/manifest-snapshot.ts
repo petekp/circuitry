@@ -1,3 +1,10 @@
+// Runtime manifest snapshot persistence.
+//
+// A run stores the exact compiled-flow bytes it started with so resume and
+// status projection use the same flow even if generated files change later.
+// This file owns the hash-bound snapshot read/write path; graph execution only
+// passes the bytes through.
+
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {

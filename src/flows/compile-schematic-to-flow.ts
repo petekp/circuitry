@@ -649,9 +649,9 @@ export function compileSchematicToCompiledFlow(schematic: FlowSchematic): Compil
   const entryModes = requireSchematicField(schematic.entry_modes, 'entry_modes', frame.schematicId);
 
   if (!schematicHasOverrides(schematic)) {
-    // No mode-specific topology. Compile once for the first mode, then
-    // expand entry_modes to the full schematic list. This preserves the
-    // historical single-circuit.json shape for build/explore/review.
+    // No mode-specific topology. Compile one graph and attach every entry mode
+    // to it; only route_overrides that change reachability need per-mode JSON
+    // siblings for the CLI loader.
     const firstMode = entryModes[0];
     if (firstMode === undefined) {
       fail(`schematic '${frame.schematicId}' has empty entry_modes`);

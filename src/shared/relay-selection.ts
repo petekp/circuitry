@@ -1,3 +1,8 @@
+// Relay selection derivation.
+//
+// Most flows resolve relay model and effort from config and step metadata only.
+// A flow must opt into `bindsExecutionDepthToRelaySelection` before the run
+// depth is layered into relay selection.
 import { findCompiledFlowPackageById } from '../flows/catalog.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { LayeredConfig, type LayeredConfig as LayeredConfigValue } from '../schemas/config.js';

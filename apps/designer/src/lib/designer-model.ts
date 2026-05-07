@@ -534,7 +534,6 @@ function derivePrompt(
     ].filter((line): line is string => typeof line === 'string');
     return { kind: 'sub-run', label: 'Nested circuit', oneLine, body, responseShape: null };
   }
-  // compose | verification
   const oneLine = 'Circuit takes care of this for you.';
   const body = [
     block?.purpose ?? 'Circuit takes care of this for you.',

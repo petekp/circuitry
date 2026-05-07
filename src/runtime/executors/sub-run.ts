@@ -1,3 +1,9 @@
+// Sub-run executor.
+//
+// A sub-run is admitted back into the parent only through the child RunResult.
+// The parent copies that result file, checks its verdict against the parent
+// step policy, and records parent trace events without interpreting child trace
+// internals.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

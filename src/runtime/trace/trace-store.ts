@@ -1,3 +1,10 @@
+// Append-only trace.ndjson store.
+//
+// This is the sequence authority for runtime events. Callers provide event
+// bodies; TraceStore assigns contiguous sequence numbers, persists one JSON
+// object per line, rejects writes after run.closed, and lets projection hooks
+// fail without corrupting the trace.
+
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { TraceEntry, TraceEntryInput } from '../domain/trace.js';

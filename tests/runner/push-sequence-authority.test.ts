@@ -9,9 +9,9 @@ import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
-// Adversarial-review fix #3 + #12: TraceStore is the single sequence
-// assignment authority in runtime. Every appended trace entry gets the next
-// zero-based sequence number, including relay transcript entries.
+// TraceStore is the single sequence assignment authority in runtime.
+// Every appended trace entry gets the next zero-based sequence number,
+// including relay transcript entries.
 
 const FIXTURE_PATH = resolve('generated/flows/runtime-proof/circuit.json');
 

@@ -1,10 +1,9 @@
 /**
- * Type declarations for scripts/policy/flow-kind-policy.mjs — the
- * shared JS module that holds the single source of truth for flow-
- * kind canonical stage-set policy. Consumed by:
- *   - scripts/audit.mjs Check 24 (checkSpineCoverage) — audit-level.
- *   - src/shared/flow-kind-policy.ts — runtime-level
- *     (adds CompiledFlow.safeParse wrapper on top of this module's exports).
+ * Type declarations for scripts/policy/flow-kind-policy.mjs.
+ *
+ * The JS module is the shared source of truth for flow-kind canonical
+ * stage-set policy. src/shared/flow-kind-policy.ts imports it and adds the
+ * CompiledFlow.safeParse wrapper used by runtime fixture loading.
  */
 
 export type CompiledFlowKindPolicyEntry = {

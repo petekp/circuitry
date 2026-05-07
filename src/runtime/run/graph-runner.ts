@@ -1,3 +1,10 @@
+// Runtime graph execution loop.
+//
+// Owns step advancement for one run folder: bootstrap trace, step attempts,
+// recovery routes, checkpoint waiting, terminal closure, and result.json.
+// Keep flow-specific behavior in executors and flow registries; this file
+// should only interpret the executable graph and append durable trace entries.
+
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';

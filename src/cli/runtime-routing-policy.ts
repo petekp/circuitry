@@ -1,3 +1,9 @@
+// CLI runtime routing policy.
+//
+// The CLI uses the runtime by default only when the requested inputs are trusted
+// runtime surfaces: generated flows, generated mirrors, or published custom
+// flows. External fixtures and programmatic composeWriter injection fail closed
+// here so one-off test hooks cannot silently become production behavior.
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 

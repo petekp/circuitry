@@ -1,3 +1,9 @@
+// Fanout branch execution.
+//
+// This file owns the per-branch runtime work after fanout branches have been
+// expanded. Keep production relay attempts, injected connector compatibility,
+// and sub-run worktree execution distinct so trace and report outputs stay
+// comparable across branch kinds.
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -207,6 +213,10 @@ export async function executeRelayFanoutBranch(
 
   try {
     if (relayConnector === undefined && context.compiledFlow !== undefined) {
+      // Production relay branches reuse the normal relay attempt path so request,
+      // receipt, result, report, trace, and validation behavior match top-level
+      // relay steps. Injected connectors below remain a compatibility path for
+      // tests and hosts that provide their own branch-local relay implementation.
       const relayStep = syntheticRelayStep(step, branch, branchDirRel);
       const relayAttempt = await executeProductionRelayAttempt({
         step: relayStep,

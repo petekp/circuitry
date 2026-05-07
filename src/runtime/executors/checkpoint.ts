@@ -1,3 +1,9 @@
+// Checkpoint executor.
+//
+// This file owns the runtime side of checkpoint requests: writing the request,
+// emitting trace evidence, deciding whether depth waits or auto-resolves, and
+// applying an operator resume selection. Resume validation lives in the run
+// resume path, not here.
 import { readFileSync } from 'node:fs';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { sha256Hex } from '../../shared/connector-relay.js';

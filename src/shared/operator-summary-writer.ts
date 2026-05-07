@@ -1,3 +1,8 @@
+// Operator summary projection.
+//
+// This file turns run outputs into a concise human-facing summary. Treat it
+// as a lossy projection over result reports and traces, not as an authority for
+// runtime state or report schemas.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {

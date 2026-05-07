@@ -1,3 +1,8 @@
+// Run file path authority.
+//
+// Runtime files are addressed as POSIX paths relative to a run folder.
+// This module rejects absolute, parent, drive-letter, and symlink-escaping
+// forms before any executor reads or writes run-owned files.
 import { existsSync, lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 

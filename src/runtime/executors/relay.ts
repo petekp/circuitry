@@ -467,6 +467,10 @@ export async function executeRelay(
   context: RunContext,
   connector?: RelayConnector,
 ): Promise<StepOutcome> {
+  // Production runs carry `compiledFlow`, so they use the full relay path:
+  // prompt composition, connector resolution, durable relay trace entries,
+  // and report materialization. The injected-connector path below is for
+  // focused tests that exercise executor wiring without production relay IO.
   if (connector === undefined && context.compiledFlow !== undefined) {
     return executeProductionRelay(step, context);
   }

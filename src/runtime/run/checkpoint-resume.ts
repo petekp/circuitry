@@ -1,3 +1,11 @@
+// Checkpoint resume path for runtime run folders.
+//
+// Resume follows the saved run folder, not current generated files: it reloads
+// the manifest snapshot, validates the unresolved checkpoint request and its
+// hash, then re-enters graph-runner.ts with a single operator selection. Keep
+// resume validation here so normal graph execution does not learn about host
+// CLI state.
+
 import { readFileSync } from 'node:fs';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';

@@ -1,3 +1,10 @@
+// Runtime entry adapter for compiled-flow bytes.
+//
+// This file parses the saved or generated manifest bytes, chooses the
+// requested entry mode and depth, then hands the normalized executable graph
+// to graph-runner.ts. Keep manifest parsing and entry-mode selection here so
+// graph-runner.ts can stay focused on step advancement and trace writes.
+
 import {
   type CompiledFlow,
   CompiledFlow as CompiledFlowSchema,

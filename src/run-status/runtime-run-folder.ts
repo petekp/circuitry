@@ -1,3 +1,9 @@
+// Runtime run-folder projection.
+//
+// `circuit-next runs show --json` reads saved run folders through this tolerant
+// projection. Return a structured invalid status for damaged runtime state when
+// possible, while reserving thrown folder errors for unreadable or missing
+// directories.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tournamentCheckpointPresentation } from '../runtime/projections/tournament-checkpoint-context.js';

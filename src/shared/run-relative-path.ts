@@ -1,3 +1,8 @@
+// Run-relative projection path helper.
+//
+// Operator-facing projections read files by paths stored in run outputs. This
+// helper keeps those reads inside the run folder, including when existing path
+// segments are symlinks.
 import { existsSync, lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { RunRelativePath } from '../schemas/scalars.js';

@@ -1,3 +1,8 @@
+// Relay connector resolution.
+//
+// Relay connector choice is layered: explicit invocation, role config, flow
+// config, default config, then the auto fallback. Keep capability and provider
+// checks here so executors can assume the selected connector can run the role.
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import type { ConnectorReference } from '../../schemas/config.js';
 import type {

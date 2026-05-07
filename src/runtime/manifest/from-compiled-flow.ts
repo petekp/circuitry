@@ -1,3 +1,9 @@
+// Compiled-flow to executable-flow adapter.
+//
+// Public compiled flows keep serialized schema names, string routes, and
+// host-facing field names. The runtime converts them here into its executable
+// graph shape, then validates the result. Do not add flow-specific execution
+// behavior to this translation layer.
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { SelectionOverride } from '../../schemas/selection-policy.js';
 import type { ReportRef } from '../../schemas/step.js';
