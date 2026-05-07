@@ -40,8 +40,6 @@ stays identical to the manifest.
 These categories are not soft-deprecated:
 
 - connector wrappers under `src/runtime/connectors/**`;
-- catalog and registry wrappers under `src/runtime/catalog-derivations.ts` and
-  `src/runtime/registries/**`;
 - the run-status wrapper at `src/runtime/run-status-projection.ts`;
 - the old result path helper at `src/runtime/result-writer.ts`;
 - the old public runner surface at `src/runtime/runner.ts` and
@@ -55,6 +53,10 @@ moved to `src/flows/**`.
 
 The old shared-helper wrappers under `src/runtime/**` were retired after tests,
 production code, and docs moved to the neutral `src/shared/**` owners.
+
+The old catalog and registry wrappers at `src/runtime/catalog-derivations.ts`
+and `src/runtime/registries/**` were retired after tests and production code
+moved to the neutral `src/flows/**` owners.
 
 ## Review Boundaries
 

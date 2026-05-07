@@ -122,8 +122,8 @@ wrappers, public type/path surfaces, or fail-closed stubs.
 | Path | Classification | Why retain or move |
 |---|---|---|
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
-| `src/runtime/catalog-derivations.ts` | compatibility re-export | Neutral implementation moved to `src/flows/catalog-derivations.ts` in Phase 5.13. Keep old path until compatibility imports retire. |
-| `src/runtime/registries/**` | compatibility re-exports | Neutral implementations moved to `src/flows/registries/**` in Phase 5.13. Keep old paths until compatibility imports retire. |
+| `src/runtime/catalog-derivations.ts` | removed | Neutral implementation lives in `src/flows/catalog-derivations.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/**` | removed | Neutral implementations live in `src/flows/registries/**`; the old runtime wrappers are retired. |
 | `src/runtime/connectors/**` | compatibility re-exports | Neutral connector subprocess and relay materializer implementations moved to `src/connectors/**` in Phase 5.32. Keep old runtime paths until compatibility imports and fingerprint wrappers are intentionally retired. |
 | `src/runtime/relay-support.ts` | removed | Relay prompt and check helpers live in `src/shared/relay-support.ts`; the old runtime wrapper is retired. |
 | `src/runtime/config-loader.ts` | removed | Config discovery lives in `src/shared/config-loader.ts`; the old runtime wrapper is retired. |
@@ -173,13 +173,13 @@ Current import groups:
 | `runtime/checkpoint-resume` | direct compatibility tests | fail-closed public stub | Keep only while the old checkpoint-resume import surface remains listed. Retired run folders fail closed. |
 | `runtime/runner-types` | old public type imports and tests | compatibility type surface | Keep until old type imports retire. |
 | `runtime/step-handlers` | wrapper compatibility tests and checkpoint fail-closed tests | mostly removed; remaining wrappers/stub only | Do not restore the old handler cluster. |
-| `runtime/registries` | old-path compatibility tests | compatibility re-exports | Neutral source ownership now lives in `src/flows/registries/**`. Keep wrappers until old imports retire. |
+| `runtime/registries` | none | removed wrappers | Neutral source ownership now lives in `src/flows/registries/**`. |
 | `runtime/connectors` | old imports, connector compatibility tests, smoke fingerprint wrappers | compatibility re-exports | Keep wrappers. Live connector infrastructure now lives in `src/connectors/**`; old runtime paths remain intentional compatibility surfaces. |
 | `runtime/relay-support` | old-path compatibility imports | compatibility re-export | Shared helper ownership lives in `src/shared/relay-support.ts`. |
 | `runtime/relay-selection` | none | removed bridge | Core-v2 and tests use shared relay-selection helpers and core-v2 connector resolver helpers directly. |
 | `runtime/selection-resolver` | old-path compatibility imports | compatibility re-export | Neutral ownership lives in `src/shared/selection-resolver.ts`; keep wrapper until old-path imports migrate. |
 | old trace/status/progress helpers | run-status dispatcher, CLI progress, direct compatibility tests | v2 status plus fail-closed old projection | `src/run-status/project-run-folder.ts` owns the public run-folder dispatcher. `src/run-status/v2-run-folder.ts` owns marked core-v2 run-folder projection. Unmarked retired folders fail closed. |
-| compiler/catalog modules | generator, router, catalog tests | authoring infrastructure | Keep. These are not old execution files. |
+| compiler/catalog modules | generator, router, catalog tests | authoring infrastructure under `src/flows/**` | Keep the neutral owners. The old runtime wrappers are retired. |
 
 ## 5. Replacement v2 Surfaces
 

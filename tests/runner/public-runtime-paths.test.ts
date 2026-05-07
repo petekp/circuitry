@@ -92,7 +92,6 @@ describe('public runtime import-path manifest', () => {
       new Set([
         'connector-wrapper',
         'public-runner-surface',
-        'registry-wrapper',
         'retained-handler',
         'retained-implementation',
         'retained-saved-state',
@@ -132,7 +131,6 @@ describe('public runtime import-path manifest', () => {
     const nonDeprecatedCategories = new Set([
       'connector-wrapper',
       'public-runner-surface',
-      'registry-wrapper',
       'retained-handler',
       'retained-implementation',
       'retained-saved-state',
@@ -189,7 +187,6 @@ describe('public runtime import-path manifest', () => {
       'There are no remaining release-note-only soft-deprecated wrapper paths.',
     );
     expect(releaseNote).toContain('connector wrappers');
-    expect(releaseNote).toContain('catalog and registry wrappers');
     expect(releaseNote).toContain('run-status wrapper');
     expect(releaseNote).toContain('old result path helper');
     expect(releaseNote).toContain('old public runner surface');

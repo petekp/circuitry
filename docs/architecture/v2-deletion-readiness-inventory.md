@@ -77,7 +77,7 @@ final cutover product decision.
 | Path | Classification | Why |
 |---|---|---|
 | `src/runtime/append-and-derive.ts` | retained product behavior | Appends retained trace entries and derives retained snapshots. Keep while retained trace/state is live. |
-| `src/runtime/catalog-derivations.ts` | compatibility wrapper | Neutral implementation moved to `src/flows/catalog-derivations.ts` in Phase 5.13. Keep old path for tests and external compatibility. |
+| `src/runtime/catalog-derivations.ts` | removed | Neutral implementation lives in `src/flows/catalog-derivations.ts`; the old runtime wrapper is retired. |
 | `src/runtime/checkpoint-resume.ts` | retained product behavior | Owns retained/v1 checkpoint resume preparation. Keep while old checkpoint folders remain supported. |
 | `src/runtime/compile-schematic-to-flow.ts` | removed | Neutral compiler implementation lives in `src/flows/compile-schematic-to-flow.ts`; the old runtime wrapper is retired. |
 | `src/runtime/config-loader.ts` | removed | Neutral config loading lives in `src/shared/config-loader.ts`; the old runtime wrapper is retired. |
@@ -91,19 +91,19 @@ final cutover product decision.
 | `src/runtime/policy/flow-kind-policy.ts` | removed | Neutral policy helper lives in `src/shared/flow-kind-policy.ts`; the old runtime wrapper is retired. |
 | `src/runtime/progress-projector.ts` | retained product behavior | Retained trace-to-progress projection is still needed for retained runs and old folders. |
 | `src/runtime/reducer.ts` | retained product behavior | Retained trace reduction remains the state authority for retained/v1 runs. |
-| `src/runtime/registries/checkpoint-writers/registry.ts` | compatibility wrapper | Neutral checkpoint writer lookup moved to `src/flows/registries/checkpoint-writers/registry.ts` in Phase 5.13. |
-| `src/runtime/registries/checkpoint-writers/types.ts` | compatibility wrapper | Neutral checkpoint writer types moved to `src/flows/registries/checkpoint-writers/types.ts` in Phase 5.13. |
-| `src/runtime/registries/close-writers/registry.ts` | compatibility wrapper | Neutral close writer lookup moved to `src/flows/registries/close-writers/registry.ts` in Phase 5.13. |
-| `src/runtime/registries/close-writers/shared.ts` | compatibility wrapper | Neutral report-path helper moved to `src/flows/registries/close-writers/shared.ts` in Phase 5.13. |
-| `src/runtime/registries/close-writers/types.ts` | compatibility wrapper | Neutral close writer types moved to `src/flows/registries/close-writers/types.ts` in Phase 5.13. |
-| `src/runtime/registries/compose-writers/registry.ts` | compatibility wrapper | Neutral compose writer lookup moved to `src/flows/registries/compose-writers/registry.ts` in Phase 5.13. |
-| `src/runtime/registries/compose-writers/types.ts` | compatibility wrapper | Neutral compose writer types moved to `src/flows/registries/compose-writers/types.ts` in Phase 5.13. |
-| `src/runtime/registries/cross-report-validators.ts` | compatibility wrapper | Neutral cross-report validator registry moved to `src/flows/registries/cross-report-validators.ts` in Phase 5.13. |
-| `src/runtime/registries/report-schemas.ts` | compatibility wrapper | Neutral report parsing registry moved to `src/flows/registries/report-schemas.ts` in Phase 5.13. |
-| `src/runtime/registries/shape-hints/registry.ts` | compatibility wrapper | Neutral relay shape-hint lookup moved to `src/flows/registries/shape-hints/registry.ts` in Phase 5.13. |
-| `src/runtime/registries/shape-hints/types.ts` | compatibility wrapper | Neutral shape-hint types moved to `src/flows/registries/shape-hints/types.ts` in Phase 5.13. |
-| `src/runtime/registries/verification-writers/registry.ts` | compatibility wrapper | Neutral verification writer lookup moved to `src/flows/registries/verification-writers/registry.ts` in Phase 5.13. |
-| `src/runtime/registries/verification-writers/types.ts` | compatibility wrapper | Neutral verification writer types moved to `src/flows/registries/verification-writers/types.ts` in Phase 5.13. |
+| `src/runtime/registries/checkpoint-writers/registry.ts` | removed | Neutral checkpoint writer lookup lives in `src/flows/registries/checkpoint-writers/registry.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/checkpoint-writers/types.ts` | removed | Neutral checkpoint writer types live in `src/flows/registries/checkpoint-writers/types.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/close-writers/registry.ts` | removed | Neutral close writer lookup lives in `src/flows/registries/close-writers/registry.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/close-writers/shared.ts` | removed | Neutral report-path helper lives in `src/flows/registries/close-writers/shared.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/close-writers/types.ts` | removed | Neutral close writer types live in `src/flows/registries/close-writers/types.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/compose-writers/registry.ts` | removed | Neutral compose writer lookup lives in `src/flows/registries/compose-writers/registry.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/compose-writers/types.ts` | removed | Neutral compose writer types live in `src/flows/registries/compose-writers/types.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/cross-report-validators.ts` | removed | Neutral cross-report validator registry lives in `src/flows/registries/cross-report-validators.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/report-schemas.ts` | removed | Neutral report parsing registry lives in `src/flows/registries/report-schemas.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/shape-hints/registry.ts` | removed | Neutral relay shape-hint lookup lives in `src/flows/registries/shape-hints/registry.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/shape-hints/types.ts` | removed | Neutral shape-hint types live in `src/flows/registries/shape-hints/types.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/verification-writers/registry.ts` | removed | Neutral verification writer lookup lives in `src/flows/registries/verification-writers/registry.ts`; the old runtime wrapper is retired. |
+| `src/runtime/registries/verification-writers/types.ts` | removed | Neutral verification writer types live in `src/flows/registries/verification-writers/types.ts`; the old runtime wrapper is retired. |
 | `src/runtime/relay-selection.ts` | retained fallback | Retained relay decision bridge and connector resolution remain live for fallback paths. |
 | `src/runtime/relay-support.ts` | removed | Neutral relay support lives in `src/shared/relay-support.ts`; the old runtime wrapper is retired. |
 | `src/runtime/result-writer.ts` | retained product behavior | Retained result writer is still used by old runner for retained close/finalization. The shared result path helper lives in `src/shared/result-path.ts`; keep the old `resultPath(...)` export for compatibility. |
@@ -162,9 +162,6 @@ The retained runtime itself is no longer the blocker. The remaining blockers are
 wrapper/package-surface questions:
 
 - connector wrappers under `src/runtime/connectors/**`;
-- catalog and registry wrappers under `src/runtime/catalog-derivations.ts` and
-  `src/runtime/registries/**`;
-- shared-helper wrappers that are still public old import paths;
 - old public type/path surfaces such as `src/runtime/runner-types.ts` and
   `src/runtime/result-writer.ts`;
 - generated plugin and package export drift when old paths are removed.

@@ -7795,3 +7795,51 @@ Next recommended action: start the next numbered wrapper-retirement group. The
 remaining choices are connector wrappers, registry wrappers, the run-status
 wrapper, result-path/public runner stubs, and type surfaces. No external review
 is warranted unless a package-surface or host-package ambiguity appears.
+
+## 2026-05-07 - Registry Wrapper Retirement
+
+Goal: retire the old runtime catalog and registry wrapper category after
+confirming production imports and behavior tests already use the neutral
+`src/flows/**` owners.
+
+Files changed:
+
+- `src/runtime/catalog-derivations.ts`
+- `src/runtime/registries/**`
+- `src/compat/public-runtime-paths.ts`
+- `tests/runner/catalog-derivations.test.ts`
+- `tests/runner/public-runtime-paths.test.ts`
+- `tests/runner/retained-compat-facade.test.ts`
+- active policy, registry ownership, release-note, and cutover docs
+- `docs/architecture/v2-worklog.md`
+- `HANDOFF.md`
+
+What changed:
+
+- deleted the old `src/runtime/catalog-derivations.ts` wrapper;
+- deleted old `src/runtime/registries/**` wrapper files;
+- removed the `registry-wrapper` category from the public runtime path
+  manifest;
+- removed alias-only registry compatibility assertions while keeping behavior
+  tests on `src/flows/catalog-derivations.ts` and `src/flows/registries/**`;
+- updated active docs to say the runtime registry wrappers are retired and the
+  neutral owners live under `src/flows/**`.
+
+Tests run:
+
+- `npx vitest run tests/runner/public-runtime-paths.test.ts tests/runner/retained-compat-facade.test.ts tests/runner/catalog-derivations.test.ts tests/contracts/catalog-completeness.test.ts tests/runner/compose-builder-registry.test.ts tests/runner/close-builder-registry.test.ts tests/runner/relay-shape-hint-registry.test.ts tests/runner/cross-report-validators.test.ts tests/properties/visible/cross-report-validator.test.ts tests/contracts/explore-report-composition.test.ts tests/contracts/engine-flow-boundary.test.ts`:
+  passed.
+- `npm run check`: passed.
+- `npm run lint`: initially failed on formatting, then passed after removing the
+  extra blank line left by the alias-test deletion.
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `git diff --check`: passed.
+
+Behavior changed? Only old runtime catalog/registry wrapper import paths are
+retired. The live registry behavior stays under `src/flows/**`.
+
+Next recommended action: pick the next remaining old surface. Connector wrappers
+are the largest old wrapper group left; run-status, result-path/public runner
+stubs, and type surfaces are also still listed. No external review is warranted
+unless package export or host-package behavior becomes ambiguous.

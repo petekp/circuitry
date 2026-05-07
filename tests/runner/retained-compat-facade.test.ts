@@ -245,22 +245,6 @@ describe('runtime import boundary', () => {
     expect(productionOffenders).toEqual([]);
   });
 
-  it('keeps registry and catalog derivation imports on neutral flow ownership', () => {
-    const productionSourceOffenders = oldRuntimeWrapperImportOffenders({
-      categories: ['registry-wrapper'],
-      files: collectSourceFiles(resolve('src')),
-      reason: 'old registry/catalog wrapper',
-    });
-    const scriptOffenders = oldRuntimeWrapperImportOffenders({
-      categories: ['registry-wrapper'],
-      files: collectFiles(resolve('scripts'), ['.mjs', '.js', '.ts']),
-      reason: 'old registry/catalog wrapper',
-    });
-
-    expect(productionSourceOffenders).toEqual([]);
-    expect(scriptOffenders).toEqual([]);
-  });
-
   it('keeps run-status implementation imports on the neutral dispatcher', () => {
     const productionSourceOffenders = oldRuntimeWrapperImportOffenders({
       categories: ['run-status-wrapper'],

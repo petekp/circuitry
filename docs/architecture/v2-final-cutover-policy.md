@@ -34,6 +34,9 @@ packet path stops here unless a genuinely new ambiguity appears.
    operator summaries, flow-kind policy, run-relative paths, disclosure,
    terminal verdicts, recovery routes, JSON reports, and fanout helper logic are
    removed. Current owners live under `src/shared/**`.
+7. Registry wrapper retirement. Done: the old `src/runtime/catalog-derivations.ts`
+   and `src/runtime/registries/**` wrappers are removed. Current owners live
+   under `src/flows/**`.
 
 ## Guardrails
 
@@ -47,7 +50,7 @@ packet path stops here unless a genuinely new ambiguity appears.
 ## Immediate Next Step
 
 Choose the next wrapper-retirement or package-surface batch. The old
-flow-authoring and shared-helper wrappers have been removed; the likely next
-move is to decide whether remaining old `src/runtime/**` registry, connector,
+flow-authoring, shared-helper, and registry wrappers have been removed; the
+likely next move is to decide whether remaining old `src/runtime/**` connector,
 run-status, result-path, runner, or type surfaces should stay as source-only
 internal import bridges, be packaged, or be removed with manifest/test updates.
