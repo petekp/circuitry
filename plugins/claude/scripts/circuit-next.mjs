@@ -214,8 +214,66 @@ function shouldRenderDisplay(event) {
   return importance === 'major' || tone === 'warning' || tone === 'error' || tone === 'checkpoint';
 }
 
+function createStatusBlockState() {
+  return {
+    openedBlockIds: new Set(),
+    renderedAnyBlock: false,
+    lastBlockId: undefined,
+  };
+}
+
 function renderLine(text = '') {
   process.stdout.write(`${text}\n`);
+}
+
+function stripCircuitPrefix(text) {
+  return text.replace(/^Circuit:\s*/i, '').trim();
+}
+
+function renderStatusText(state, blockId, statusText) {
+  const id = blockId ?? state.lastBlockId ?? 'circuit';
+  if (!state.openedBlockIds.has(id)) {
+    if (state.renderedAnyBlock) renderLine('');
+    renderLine('Circuit');
+    state.openedBlockIds.add(id);
+    state.renderedAnyBlock = true;
+  }
+  state.lastBlockId = id;
+  renderLine(`⎿ ${statusText}`);
+}
+
+function renderPresentationEvent(state, event) {
+  const presentation = isRecord(event) ? event.presentation : undefined;
+  if (!isRecord(presentation)) return { handled: false, rendered: false };
+  const lineMode = stringField(presentation, 'line_mode');
+  if (lineMode === 'suppress') return { handled: true, rendered: false };
+  if (lineMode !== 'append' && lineMode !== 'replace_slot') {
+    return { handled: false, rendered: false };
+  }
+  const statusText = stringField(presentation, 'status_text');
+  if (statusText === undefined) return { handled: false, rendered: false };
+  renderStatusText(
+    state,
+    stringField(presentation, 'block_id') ?? stringField(event, 'run_id'),
+    statusText,
+  );
+  return { handled: true, rendered: true };
+}
+
+function summaryStatusTextFromResult(result) {
+  const direct = stringField(result, 'operator_summary_status_text');
+  if (direct !== undefined) return direct;
+  const summaryPath = stringField(result, 'operator_summary_path');
+  if (summaryPath === undefined || !existsSync(summaryPath)) return undefined;
+  try {
+    const summary = readJson(summaryPath);
+    return (
+      stringField(summary, 'status_text') ??
+      stripCircuitPrefix(stringField(summary, 'headline') ?? '')
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 function renderUserInputEvent(event) {
@@ -293,7 +351,7 @@ function tryOpenInBrowser(path) {
   }
 }
 
-function renderFinalResult(stdoutText, checkpointWasRendered) {
+function renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks) {
   let result;
   try {
     result = JSON.parse(stdoutText.trim());
@@ -310,6 +368,15 @@ function renderFinalResult(stdoutText, checkpointWasRendered) {
 
   const outcome = stringField(result, 'outcome');
   if (outcome === 'complete') {
+    if (statusBlocks.renderedAnyBlock) {
+      const statusText = summaryStatusTextFromResult(result);
+      if (statusText !== undefined && statusText.length > 0) {
+        renderStatusText(statusBlocks, stringField(result, 'run_id'), statusText);
+      }
+      const htmlPath = stringField(result, 'operator_summary_html_path');
+      if (htmlPath !== undefined && existsSync(htmlPath)) tryOpenInBrowser(htmlPath);
+      return 0;
+    }
     const summaryPath = stringField(result, 'operator_summary_markdown_path');
     if (summaryPath !== undefined && existsSync(summaryPath)) {
       const markdown = readFileSync(summaryPath, 'utf8');
@@ -341,6 +408,10 @@ function renderFinalResult(stdoutText, checkpointWasRendered) {
 
   if (outcome === 'aborted') {
     const reason = stringField(result, 'reason') ?? 'Circuit aborted before completing.';
+    if (statusBlocks.renderedAnyBlock) {
+      renderStatusText(statusBlocks, stringField(result, 'run_id'), `Run aborted: ${reason}`);
+      return 0;
+    }
     renderLine(`Circuit aborted: ${reason}`);
     const runFolder = stringField(result, 'run_folder');
     if (runFolder !== undefined) renderLine(`Run folder: ${runFolder}`);
@@ -650,6 +721,7 @@ if (rawArgs[0] === 'present') {
   let stderrRemainder = '';
   const diagnosticLines = [];
   let checkpointWasRendered = false;
+  const statusBlocks = createStatusBlockState();
 
   child.stdout.setEncoding('utf8');
   child.stdout.on('data', (chunk) => {
@@ -666,12 +738,17 @@ if (rawArgs[0] === 'present') {
       return;
     }
     if (!isRecord(parsed)) return;
-    if (parsed.type === 'route.selected') return;
+    const presentation = renderPresentationEvent(statusBlocks, parsed);
+    if (parsed.type === 'route.selected') {
+      if (presentation.handled) return;
+      return;
+    }
     if (parsed.type === 'user_input.requested') {
       renderUserInputEvent(parsed);
       checkpointWasRendered = true;
       return;
     }
+    if (presentation.handled) return;
     if (!shouldRenderDisplay(parsed)) return;
     const text = stringField(parsed.display, 'text');
     if (text !== undefined) renderLine(text);
@@ -702,7 +779,7 @@ if (rawArgs[0] === 'present') {
       }
       process.exit(exitStatus);
     }
-    process.exit(renderFinalResult(stdoutText, checkpointWasRendered));
+    process.exit(renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks));
   });
 } else {
   const { forwardedArgs, childEnv } = forwardedInvocation(rawArgs);

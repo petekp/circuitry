@@ -235,7 +235,8 @@ describe('Codex host plugin package', () => {
     expect(contract).toContain('final user-facing answer');
     expect(contract).toContain('report paths, trace ids');
     expect(rendering).toContain('contract: host-rendering');
-    expect(rendering).toContain('render `display.text` exactly');
+    expect(rendering).toContain('Prefer `presentation` when present');
+    expect(rendering).toContain('operator_summary_status_text');
     expect(rendering).toContain('operator_summary_markdown_path');
   });
 
@@ -769,6 +770,7 @@ describe('Codex host plugin package', () => {
       const codex = readFileSync(resolve(PLUGIN_ROOT, `commands/${command}.md`), 'utf8');
       expect(source).toContain('./bin/circuit-next');
       expect(source).toContain('--progress jsonl');
+      expect(source).toContain('presentation');
       expect(source).toContain('display.text');
       expect(source).toContain('task_list.updated');
       expect(source).toContain('user_input.requested');
@@ -776,6 +778,7 @@ describe('Codex host plugin package', () => {
       expect(source).not.toContain("node '<plugin root>/scripts/circuit-next.mjs'");
       expect(codex).toContain("node '<plugin root>/scripts/circuit-next.mjs'");
       expect(codex).toContain('--progress jsonl');
+      expect(codex).toContain('presentation');
       expect(codex).toContain('display.text');
       expect(codex).toContain('task_list.updated');
       expect(codex).toContain('user_input.requested');
@@ -799,6 +802,7 @@ describe('Codex host plugin package', () => {
       );
       expect(skill).toContain("node '<plugin root>/scripts/circuit-next.mjs'");
       expect(skill).toContain('--progress jsonl');
+      expect(skill).toContain('presentation');
       expect(skill).toContain('display.text');
       expect(skill).toContain('task_list.updated');
       expect(skill).toContain('user_input.requested');

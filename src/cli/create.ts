@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
+import { progressPresentation } from '../shared/progress-output.js';
 import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from './runtime-routing-policy.js';
 import { utilityProgress } from './utility-progress.js';
 
@@ -444,19 +445,22 @@ export async function runCreateCommand(
   }
   const now = options.now ?? (() => new Date());
   const progress = utilityProgress({ enabled: args.progress, flowId: 'create', now });
-  progress?.emit({
-    type: 'route.selected',
-    recorded_at: now().toISOString(),
-    label: 'Selected Create',
-    display: {
-      text: 'Circuit selected create.',
-      importance: 'major',
-      tone: 'info',
-    },
-    selected_flow: 'create' as never,
-    routed_by: 'explicit',
-    router_reason: 'explicit create utility command',
-  });
+  if (progress !== undefined) {
+    progress.emit({
+      type: 'route.selected',
+      recorded_at: now().toISOString(),
+      label: 'Selected Create',
+      display: {
+        text: 'Circuit selected create.',
+        importance: 'major',
+        tone: 'info',
+      },
+      presentation: progressPresentation({ blockId: progress.runId, statusText: 'Chose create.' }),
+      selected_flow: 'create' as never,
+      routed_by: 'explicit',
+      router_reason: 'explicit create utility command',
+    });
+  }
 
   try {
     if (args.description === undefined || args.description.length === 0) {
@@ -513,18 +517,24 @@ export async function runCreateCommand(
     const outPath = resultPath(home, slug);
     writeJson(outPath, result);
     const finalResult = { ...result, result_path: outPath };
-    progress?.emit({
-      type: 'run.completed',
-      recorded_at: now().toISOString(),
-      label: 'Create completed',
-      display: {
-        text: `Circuit create ${status === 'published' ? 'published' : 'drafted'} ${slug}.`,
-        importance: 'major',
-        tone: 'success',
-      },
-      outcome: 'complete',
-      result_path: outPath,
-    });
+    if (progress !== undefined) {
+      progress.emit({
+        type: 'run.completed',
+        recorded_at: now().toISOString(),
+        label: 'Create completed',
+        display: {
+          text: `Circuit create ${status === 'published' ? 'published' : 'drafted'} ${slug}.`,
+          importance: 'major',
+          tone: 'success',
+        },
+        presentation: progressPresentation({
+          blockId: progress.runId,
+          statusText: `Create ${status === 'published' ? 'published' : 'drafted'} ${slug}.`,
+        }),
+        outcome: 'complete',
+        result_path: outPath,
+      });
+    }
     process.stdout.write(`${JSON.stringify(finalResult, null, 2)}\n`);
     return 0;
   } catch (err) {

@@ -73,6 +73,7 @@ describe('operator summary writer', () => {
     expect(existsSync(written.markdownPath)).toBe(true);
     const summary = OperatorSummary.parse(JSON.parse(readFileSync(written.jsonPath, 'utf8')));
     expect(summary.headline).toBe('Circuit: Review complete. Verdict: CLEAN. Findings: 0.');
+    expect(summary.status_text).toBe('Review complete. Verdict: CLEAN. Findings: 0.');
     expect(summary.details).toContain(
       'Untracked evidence: contents included for 1 file (1 untracked file found).',
     );
@@ -84,7 +85,7 @@ describe('operator summary writer', () => {
       'review result',
     ]);
     const markdown = readFileSync(written.markdownPath, 'utf8');
-    expect(markdown).toContain('Circuit: Review complete. Verdict: CLEAN. Findings: 0.');
+    expect(markdown).toContain('Circuit\n⎿ Review complete. Verdict: CLEAN. Findings: 0.');
     expect(markdown).toContain('Untracked evidence: contents included for 1 file');
     expect(markdown).toContain('diff_truncated');
     expect(markdown).not.toContain('write-capable Claude Code worker');
@@ -229,7 +230,7 @@ describe('operator summary writer', () => {
       'Follow-up: Check the operator summary markdown, not only the JSON report.',
     ]);
     const markdown = readFileSync(written.markdownPath, 'utf8');
-    expect(markdown).toContain('Circuit: Recommendation ready. The direction is useful');
+    expect(markdown).toContain('Circuit\n⎿ Recommendation ready. The direction is useful');
     expect(markdown).toContain(
       'Recommendation: Build a private eval suite around product-specific failure modes',
     );

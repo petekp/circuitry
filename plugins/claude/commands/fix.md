@@ -80,8 +80,9 @@ metacharacters:
    the Fix schematic emits a Lite-only compiled flow that skips the review
    relay. Other modes (default/deep/autonomous) load `circuit.json`.
 5. **Let the presentation wrapper render output.** `present` streams
-   approved progress text, renders checkpoint questions, and prints Circuit's
-   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Circuit status blocks, renders checkpoint questions, and prints the
+   final Circuit summary without exposing raw JSON. Do not parse raw JSON
+   or JSONL after Bash.
    Use non-`present` wrapper mode only for debug, tests, or explicit raw
    machine-readable output.
 ## Authority

@@ -19876,6 +19876,7 @@ import { join as join8 } from "node:path";
 
 // dist/shared/progress-output.js
 var MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
+var MAX_PROGRESS_STATUS_TEXT_CHARS = 180;
 function reportProgress(progress, event) {
   if (progress === void 0)
     return;
@@ -19891,6 +19892,22 @@ function progressDisplay(text, importance, tone) {
     text: `${text.slice(0, MAX_PROGRESS_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
     importance,
     tone
+  };
+}
+function normalizeStatusText(text) {
+  const withoutChrome = text.replace(/^Circuit:\s*/i, "").replace(/^⎿\s*/, "").trim();
+  if (withoutChrome.length <= MAX_PROGRESS_STATUS_TEXT_CHARS)
+    return withoutChrome;
+  return `${withoutChrome.slice(0, MAX_PROGRESS_STATUS_TEXT_CHARS - 14)} [truncated]`;
+}
+function progressPresentation(input) {
+  const lineMode = input.lineMode ?? "append";
+  return {
+    block_id: input.blockId,
+    line_mode: lineMode,
+    ...input.slotId === void 0 ? {} : { slot_id: input.slotId },
+    ...input.statusText === void 0 ? {} : { status_text: normalizeStatusText(input.statusText) },
+    ...input.depth === void 0 ? {} : { depth: input.depth }
   };
 }
 
@@ -20056,17 +20073,38 @@ function operatorStepAction(flowId, title) {
   }
   return `Working on ${operatorStepTitle(flowId, title).toLowerCase()}`;
 }
-function relayStartedText(flowId, role) {
+function relayStartedStatusText(flowId, role) {
   if (role === "reviewer") {
-    return flowId === "explore" ? "Circuit: Asking the reviewer to check the recommendation..." : "Circuit: Asking the reviewer to check the result...";
+    return flowId === "explore" ? "Asking the reviewer to check the recommendation..." : "Asking the reviewer to check the result...";
   }
-  return flowId === "explore" ? "Circuit: Asking the specialist to draft the recommendation..." : "Circuit: Asking the specialist to make the change...";
+  return flowId === "explore" ? "Asking the specialist to draft the recommendation..." : "Asking the specialist to make the change...";
 }
-function relayCompletedText(flowId, role) {
+function relayCompletedStatusText(flowId, role) {
   if (role === "reviewer") {
-    return flowId === "explore" ? "Circuit: Finished checking the recommendation." : "Circuit: Finished checking the result.";
+    return flowId === "explore" ? "Finished checking the recommendation." : "Finished checking the result.";
   }
-  return flowId === "explore" ? "Circuit: Finished drafting the recommendation." : "Circuit: Finished the specialist pass.";
+  return flowId === "explore" ? "Finished drafting the recommendation." : "Finished the specialist pass.";
+}
+function relayRoleFromStepTitle(title) {
+  const lead = stepLead(title);
+  return lead.startsWith("review") || lead.startsWith("independent") || lead.startsWith("release") ? "reviewer" : "implementer";
+}
+function circuitDisplayText(statusText) {
+  return `Circuit: ${statusText}`;
+}
+function appendStatus(blockId, statusText) {
+  return progressPresentation({ blockId, lineMode: "append", statusText });
+}
+function replaceStatus(blockId, slotId, statusText) {
+  return progressPresentation({
+    blockId,
+    lineMode: "replace_slot",
+    slotId,
+    statusText
+  });
+}
+function suppressStatus(blockId) {
+  return progressPresentation({ blockId, lineMode: "suppress" });
 }
 function progressTasks(flow, statuses) {
   return flow.steps.map((step) => ({
@@ -20084,6 +20122,7 @@ function reportTaskListProgress(input) {
     recorded_at: input.recordedAt,
     label: input.label,
     display: progressDisplay(input.displayText, "detail", input.tone ?? "info"),
+    presentation: suppressStatus(input.runId),
     tasks: progressTasks(input.flow, input.statuses)
   });
 }
@@ -20136,6 +20175,7 @@ function reportEvidenceProgress(input) {
     recorded_at: input.recordedAt,
     label: warnings.length > 0 ? "Collected evidence with warnings" : "Collected evidence",
     display: progressDisplay(warnings.length > 0 ? `Circuit: Collected evidence with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}.` : "Circuit: Collected evidence.", "major", warnings.length > 0 ? "warning" : "info"),
+    presentation: warnings.length > 0 ? appendStatus(input.runId, `Collected evidence with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}.`) : suppressStatus(input.runId),
     step_id: input.traceEntry.step_id,
     report_path: input.traceEntry.report_path,
     report_schema: input.traceEntry.report_schema,
@@ -20150,6 +20190,7 @@ function reportEvidenceProgress(input) {
       recorded_at: input.recordedAt,
       label: "Evidence warning",
       display: progressDisplay(`Circuit: Evidence warning: ${warning.message}`, "major", "warning"),
+      presentation: appendStatus(input.runId, `Evidence warning: ${warning.message}`),
       step_id: input.traceEntry.step_id,
       report_path: input.traceEntry.report_path,
       warning_kind: warning.kind,
@@ -20234,6 +20275,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: "Started Circuit run",
           display: progressDisplay(shouldWarn ? `${startedText} ${WRITE_CAPABLE_WORKER_DISCLOSURE}` : startedText, "major", shouldWarn ? "warning" : "info"),
+          presentation: shouldWarn ? appendStatus(runId, WRITE_CAPABLE_WORKER_DISCLOSURE) : suppressStatus(runId),
           run_folder: input.runDir
         });
         reportTaskListProgress({
@@ -20263,6 +20305,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: title,
           display: progressDisplay(`Circuit: ${operatorStepAction(input.flow.id, title)}...`, "major", "info"),
+          presentation: appendStatus(runId, `${operatorStepAction(input.flow.id, title)}...`),
           step_id: stepId,
           step_title: title,
           attempt: entry.attempt
@@ -20289,6 +20332,7 @@ function createProgressProjector(input) {
           break;
         const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
         const capability = connectorFilesystemCapability(connector);
+        const statusText = relayStartedStatusText(input.flow.id, role);
         reportProgress(input.progress, {
           schema_version: 1,
           type: "relay.started",
@@ -20296,7 +20340,8 @@ function createProgressProjector(input) {
           flow_id: flowId,
           recorded_at: recordedAt,
           label: `Running ${role} relay with ${connector.name}`,
-          display: progressDisplay(relayStartedText(input.flow.id, role), "major", "info"),
+          display: progressDisplay(circuitDisplayText(statusText), "major", "info"),
+          presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
           step_id: stepId,
           step_title: title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
@@ -20313,7 +20358,8 @@ function createProgressProjector(input) {
           break;
         }
         const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
-        const role = relayRoleFromTrace(entry) ?? (stepLead(title).startsWith("review") ? "reviewer" : "implementer");
+        const role = relayRoleFromTrace(entry) ?? relayRoleFromStepTitle(title);
+        const statusText = relayCompletedStatusText(input.flow.id, role);
         reportProgress(input.progress, {
           schema_version: 1,
           type: "relay.completed",
@@ -20321,7 +20367,8 @@ function createProgressProjector(input) {
           flow_id: flowId,
           recorded_at: recordedAt,
           label: `Relay completed with ${entry.verdict}`,
-          display: progressDisplay(relayCompletedText(input.flow.id, role), "major", "success"),
+          display: progressDisplay(circuitDisplayText(statusText), "major", "success"),
+          presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
           step_id: stepId,
           step_title: title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
@@ -20355,6 +20402,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Started ${title} fanout`,
           display: progressDisplay(`Circuit: Comparing ${branchIds.length} option${branchIds.length === 1 ? "" : "s"}...`, "major", "info"),
+          presentation: replaceStatus(runId, `${stepId}:fanout`, `Comparing ${branchIds.length} option${branchIds.length === 1 ? "" : "s"}...`),
           step_id: stepId,
           step_title: title,
           branch_count: branchIds.length,
@@ -20377,6 +20425,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Started branch ${entry.branch_id}`,
           display: progressDisplay(`Circuit: Started branch ${entry.branch_id}.`, "detail", "info"),
+          presentation: suppressStatus(runId),
           step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
@@ -20402,6 +20451,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Branch ${entry.branch_id} ${childOutcome}`,
           display: progressDisplay(`Circuit: Branch ${entry.branch_id} ${childOutcome}.`, "detail", childOutcome === "complete" ? "success" : "error"),
+          presentation: suppressStatus(runId),
           step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
@@ -20428,6 +20478,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Joined ${title}`,
           display: progressDisplay("Circuit: Finished comparing the options.", "major", "success"),
+          presentation: replaceStatus(runId, `${stepId}:fanout`, "Finished comparing the options."),
           step_id: stepId,
           step_title: title,
           policy: policy2,
@@ -20466,6 +20517,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Waiting for checkpoint ${stepId}`,
           display: progressDisplay(`Circuit: Waiting for a checkpoint choice: ${presentation.choices.map((choice) => choice.label).join(", ")}...`, "major", "checkpoint"),
+          presentation: appendStatus(runId, "Waiting for your choice..."),
           step_id: stepId,
           request_path: requestPath,
           allowed_choices: allowedChoices
@@ -20478,6 +20530,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: "Checkpoint choice requested",
           display: progressDisplay(presentation.prompt, "major", "checkpoint"),
+          presentation: suppressStatus(runId),
           checkpoint: {
             step_id: stepId,
             request_path: requestPath,
@@ -20530,6 +20583,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Completed ${title}`,
           display: progressDisplay(`Finished ${operatorStepAction(input.flow.id, title).toLowerCase()}.`, "detail", "success"),
+          presentation: suppressStatus(runId),
           step_id: stepId,
           step_title: title,
           attempt: entry.attempt,
@@ -20563,6 +20617,7 @@ function createProgressProjector(input) {
           recorded_at: recordedAt,
           label: `Aborted ${title}`,
           display: progressDisplay(`Circuit: Aborted ${title}: ${entry.reason}`, "major", "error"),
+          presentation: appendStatus(runId, `Marked ${operatorStepTitle(input.flow.id, title)} as failed.`),
           step_id: stepId,
           step_title: title,
           attempt: entry.attempt,
@@ -20593,6 +20648,7 @@ function createProgressProjector(input) {
             recorded_at: recordedAt,
             label: "Circuit run aborted",
             display: progressDisplay(reason === void 0 ? "Circuit: Run aborted." : `Circuit: Run aborted: ${reason}`, "major", "error"),
+            presentation: appendStatus(runId, reason === void 0 ? "Run aborted." : `Run aborted: ${reason}`),
             outcome,
             result_path: runResultPath(input.runDir),
             ...reason === void 0 ? {} : { reason }
@@ -20606,6 +20662,7 @@ function createProgressProjector(input) {
             recorded_at: recordedAt,
             label: `Circuit run ${outcome}`,
             display: progressDisplay(`Circuit: Finished ${flowLabel(input.flow.id)}.`, "major", "success"),
+            presentation: appendStatus(runId, `Finished ${flowLabel(input.flow.id)}.`),
             outcome,
             result_path: runResultPath(input.runDir)
           });
@@ -21440,6 +21497,29 @@ var ProgressDisplay = external_exports.object({
   importance: external_exports.enum(["major", "detail"]),
   tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
 }).strict();
+var ProgressPresentationLineMode = external_exports.enum(["append", "replace_slot", "suppress"]);
+var ProgressPresentation = external_exports.object({
+  block_id: external_exports.string().min(1).max(120),
+  line_mode: ProgressPresentationLineMode,
+  slot_id: external_exports.string().min(1).max(120).optional(),
+  status_text: external_exports.string().min(1).max(180).optional(),
+  depth: external_exports.number().int().min(0).max(8).optional()
+}).strict().superRefine((presentation, ctx) => {
+  if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["slot_id"],
+      message: "slot_id is required when line_mode is replace_slot"
+    });
+  }
+  if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["status_text"],
+      message: "status_text is required unless line_mode is suppress"
+    });
+  }
+});
 var ProgressTaskStatus = external_exports.enum(["pending", "in_progress", "completed", "failed"]);
 var ProgressTask = external_exports.object({
   id: external_exports.string().min(1).max(96),
@@ -21453,7 +21533,8 @@ var ProgressEventBase = external_exports.object({
   flow_id: CompiledFlowId,
   recorded_at: external_exports.string().datetime(),
   label: external_exports.string().min(1),
-  display: ProgressDisplay
+  display: ProgressDisplay,
+  presentation: ProgressPresentation.optional()
 }).strict();
 var RunStartedProgressEvent = ProgressEventBase.extend({
   type: external_exports.literal("run.started"),
@@ -22116,6 +22197,7 @@ var OperatorSummary = external_exports.object({
   router_reason: external_exports.string().min(1).optional(),
   outcome: external_exports.union([RunClosedOutcome, external_exports.literal("checkpoint_waiting")]),
   headline: external_exports.string().min(1),
+  status_text: external_exports.string().min(1).max(180).optional(),
   brief_slots: OperatorBriefSlots.optional(),
   details: external_exports.array(external_exports.string().min(1)),
   evidence_warnings: external_exports.array(OperatorSummaryWarning),
@@ -22282,6 +22364,7 @@ var FLOW_RESULT_PATHS = {
   review: "reports/review-result.json",
   sweep: "reports/sweep-result.json"
 };
+var MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS = 180;
 function jsonPath(runFolder) {
   return join11(runFolder, "reports", "operator-summary.json");
 }
@@ -22342,6 +22425,12 @@ function friendlyResultSummary(summary) {
 function sentence(value) {
   return /[.!?]$/.test(value) ? value : `${value}.`;
 }
+function statusTextFromHeadline(headline) {
+  const statusText = sentence(headline.replace(/^Circuit:\s*/i, "").trim());
+  if (statusText.length <= MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS)
+    return statusText;
+  return `${statusText.slice(0, MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS - 14)} [truncated]`;
+}
 function withoutFinalPunctuation(value) {
   return value.replace(/[.!?]\s*$/, "");
 }
@@ -22365,7 +22454,7 @@ function compactExploreRecommendation(summary) {
   const labels = numberedRecommendationLabels(text);
   if (labels.length > 0) {
     const concretelySplit = text.split(/\s+Concretely:\s+/);
-    const intro = concretelySplit.length > 1 ? concretelySplit[0] : firstNumberedItemPrefix(text) ?? text;
+    const intro = concretelySplit.length > 1 ? concretelySplit[0] ?? text : firstNumberedItemPrefix(text) ?? text;
     return `Recommendation: ${withoutFinalPunctuation(intro.trim())}: ${labels.join("; ")}.`;
   }
   const [firstSentence = text] = text.split(/(?<=[.!?])\s+/);
@@ -22640,7 +22729,7 @@ function flowDetails(input) {
   return details;
 }
 function renderMarkdown(summary) {
-  const lines = [summary.headline];
+  const lines = ["Circuit", `\u23BF ${summary.status_text ?? statusTextFromHeadline(summary.headline)}`];
   if (summary.checkpoint !== void 0) {
     lines.push("", "## Checkpoint", "");
     lines.push(`- Step: \`${summary.checkpoint.step_id}\``);
@@ -22706,6 +22795,12 @@ function writeOperatorSummary(input) {
   if (input.runResult.outcome === "aborted" && input.runResult.reason !== void 0) {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
+  const headline = input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : flowHeadline({
+    runFolder: input.runFolder,
+    flowId,
+    flowReport,
+    resultSummary: input.runResult.summary
+  });
   const candidate = OperatorSummary.parse({
     schema_version: 1,
     run_id: input.runResult.run_id,
@@ -22714,12 +22809,8 @@ function writeOperatorSummary(input) {
     ...input.route.routedBy === void 0 ? {} : { routed_by: input.route.routedBy },
     ...input.route.routerReason === void 0 ? {} : { router_reason: input.route.routerReason },
     outcome: input.runResult.outcome,
-    headline: input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : flowHeadline({
-      runFolder: input.runFolder,
-      flowId,
-      flowReport,
-      resultSummary: input.runResult.summary
-    }),
+    headline,
+    status_text: statusTextFromHeadline(headline),
     details,
     evidence_warnings: warningRecords(flowReport),
     run_folder: input.runFolder,
@@ -23206,19 +23297,22 @@ async function runCreateCommand(argv, options = {}) {
   }
   const now = options.now ?? (() => /* @__PURE__ */ new Date());
   const progress = utilityProgress({ enabled: args.progress, flowId: "create", now });
-  progress?.emit({
-    type: "route.selected",
-    recorded_at: now().toISOString(),
-    label: "Selected Create",
-    display: {
-      text: "Circuit selected create.",
-      importance: "major",
-      tone: "info"
-    },
-    selected_flow: "create",
-    routed_by: "explicit",
-    router_reason: "explicit create utility command"
-  });
+  if (progress !== void 0) {
+    progress.emit({
+      type: "route.selected",
+      recorded_at: now().toISOString(),
+      label: "Selected Create",
+      display: {
+        text: "Circuit selected create.",
+        importance: "major",
+        tone: "info"
+      },
+      presentation: progressPresentation({ blockId: progress.runId, statusText: "Chose create." }),
+      selected_flow: "create",
+      routed_by: "explicit",
+      router_reason: "explicit create utility command"
+    });
+  }
   try {
     if (args.description === void 0 || args.description.length === 0) {
       throw new Error("--description is required");
@@ -23269,18 +23363,24 @@ async function runCreateCommand(argv, options = {}) {
     const outPath = resultPath(home, slug);
     writeJson(outPath, result);
     const finalResult = { ...result, result_path: outPath };
-    progress?.emit({
-      type: "run.completed",
-      recorded_at: now().toISOString(),
-      label: "Create completed",
-      display: {
-        text: `Circuit create ${status === "published" ? "published" : "drafted"} ${slug}.`,
-        importance: "major",
-        tone: "success"
-      },
-      outcome: "complete",
-      result_path: outPath
-    });
+    if (progress !== void 0) {
+      progress.emit({
+        type: "run.completed",
+        recorded_at: now().toISOString(),
+        label: "Create completed",
+        display: {
+          text: `Circuit create ${status === "published" ? "published" : "drafted"} ${slug}.`,
+          importance: "major",
+          tone: "success"
+        },
+        presentation: progressPresentation({
+          blockId: progress.runId,
+          statusText: `Create ${status === "published" ? "published" : "drafted"} ${slug}.`
+        }),
+        outcome: "complete",
+        result_path: outPath
+      });
+    }
     process.stdout.write(`${JSON.stringify(finalResult, null, 2)}
 `);
     return 0;
@@ -25120,33 +25220,46 @@ async function runHandoffCommand(argv, options = {}) {
     flowId: "handoff",
     now
   });
-  progress?.emit({
-    type: "route.selected",
-    recorded_at: now().toISOString(),
-    label: "Selected Handoff",
-    display: {
-      text: `Circuit selected handoff ${args.action}.`,
-      importance: "major",
-      tone: "info"
-    },
-    selected_flow: "handoff",
-    routed_by: "explicit",
-    router_reason: "explicit handoff utility command"
-  });
+  if (progress !== void 0) {
+    progress.emit({
+      type: "route.selected",
+      recorded_at: now().toISOString(),
+      label: "Selected Handoff",
+      display: {
+        text: `Circuit selected handoff ${args.action}.`,
+        importance: "major",
+        tone: "info"
+      },
+      presentation: progressPresentation({
+        blockId: progress.runId,
+        statusText: `Chose handoff ${args.action}.`
+      }),
+      selected_flow: "handoff",
+      routed_by: "explicit",
+      router_reason: "explicit handoff utility command"
+    });
+  }
   try {
     const result = args.action === "save" ? saveContinuity(args, now) : args.action === "resume" ? resumeContinuity(args) : clearContinuity(args, now);
-    progress?.emit({
-      type: "run.completed",
-      recorded_at: now().toISOString(),
-      label: "Handoff completed",
-      display: {
-        text: args.action === "resume" && result.status === "not_found" ? "No saved Circuit handoff was found." : `Circuit handoff ${args.action} completed.`,
-        importance: "major",
-        tone: result.status === "not_found" ? "warning" : "success"
-      },
-      outcome: "complete",
-      result_path: result.result_path
-    });
+    if (progress !== void 0) {
+      const statusText = args.action === "resume" && result.status === "not_found" ? "No saved Circuit handoff was found." : `Handoff ${args.action} completed.`;
+      progress.emit({
+        type: "run.completed",
+        recorded_at: now().toISOString(),
+        label: "Handoff completed",
+        display: {
+          text: args.action === "resume" && result.status === "not_found" ? "No saved Circuit handoff was found." : `Circuit handoff ${args.action} completed.`,
+          importance: "major",
+          tone: result.status === "not_found" ? "warning" : "success"
+        },
+        presentation: progressPresentation({
+          blockId: progress.runId,
+          statusText
+        }),
+        outcome: "complete",
+        result_path: result.result_path
+      });
+    }
     process.stdout.write(`${JSON.stringify(result, null, 2)}
 `);
     return 0;
@@ -25556,6 +25669,9 @@ function progressDisplay2(text, importance, tone) {
     tone
   };
 }
+function routeSelectedStatusText(flowId, entryModeName) {
+  return entryModeName === void 0 ? `Chose ${flowId}.` : `Chose ${flowId} with ${entryModeName} thoroughness.`;
+}
 function resolveCompiledFlowRoute(args) {
   if (args.flowName !== void 0) {
     return {
@@ -25771,6 +25887,7 @@ async function main(argv, options = {}) {
         ...resumeRuntimeFields,
         operator_summary_path: operatorSummary.jsonPath,
         operator_summary_markdown_path: operatorSummary.markdownPath,
+        ...operatorSummary.summary.status_text === void 0 ? {} : { operator_summary_status_text: operatorSummary.summary.status_text },
         ...operatorSummary.htmlPath === void 0 ? {} : { operator_summary_html_path: operatorSummary.htmlPath }
       }, null, 2)}
 `);
@@ -25790,6 +25907,7 @@ async function main(argv, options = {}) {
   const runId = RunId.parse(options.runId ?? randomUUID7());
   const now = options.now ?? (() => /* @__PURE__ */ new Date());
   const progress = progressReporter(args.progress === "jsonl");
+  const selectedStatusText = routeSelectedStatusText(flow.id, entryModeSelection.entryModeName);
   progress?.({
     schema_version: 1,
     type: "route.selected",
@@ -25797,7 +25915,8 @@ async function main(argv, options = {}) {
     flow_id: flow.id,
     recorded_at: now().toISOString(),
     label: `Selected ${route.flowName}`,
-    display: progressDisplay2(entryModeSelection.entryModeName === void 0 ? `Circuit: Chose ${flow.id}.` : `Circuit: Chose ${flow.id} with ${entryModeSelection.entryModeName} thoroughness.`, "major", "info"),
+    display: progressDisplay2(`Circuit: ${selectedStatusText}`, "major", "info"),
+    presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
     selected_flow: flow.id,
     routed_by: route.source,
     router_reason: route.reason,
@@ -25879,6 +25998,7 @@ async function main(argv, options = {}) {
         }),
         operator_summary_path: operatorSummary2.jsonPath,
         operator_summary_markdown_path: operatorSummary2.markdownPath,
+        ...operatorSummary2.summary.status_text === void 0 ? {} : { operator_summary_status_text: operatorSummary2.summary.status_text },
         ...operatorSummary2.htmlPath === void 0 ? {} : { operator_summary_html_path: operatorSummary2.htmlPath },
         checkpoint: waitingResult.checkpoint
       }, null, 2)}
@@ -25915,6 +26035,7 @@ async function main(argv, options = {}) {
       }),
       operator_summary_path: operatorSummary.jsonPath,
       operator_summary_markdown_path: operatorSummary.markdownPath,
+      ...operatorSummary.summary.status_text === void 0 ? {} : { operator_summary_status_text: operatorSummary.summary.status_text },
       ...operatorSummary.htmlPath === void 0 ? {} : { operator_summary_html_path: operatorSummary.htmlPath }
     }, null, 2)}
 `);

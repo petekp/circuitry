@@ -44,10 +44,14 @@ as literal user-controlled text when constructing shell commands.
    ```
 
 3. **Render progress while active.** For progress JSONL, render
-   `display.text` exactly for major, warning, error, checkpoint, or success
-   events. When `task_list.updated` arrives, update the host task surface when
-   available. When `user_input.requested` arrives, use the native user-input
-   surface when available.
+   `presentation` first: open one `Circuit` block per
+   `presentation.block_id`, render visible status lines as
+   `⎿ ${presentation.status_text}`, suppress `line_mode: "suppress"`, and
+   append `replace_slot` lines unless the host can update a live slot. If
+   `presentation` is absent, render `display.text` for major, warning, error,
+   checkpoint, or success events. When `task_list.updated` arrives, update the
+   host task surface when available. When `user_input.requested` arrives, use
+   the native user-input surface when available.
 4. **Render the final summary.** Parse stdout and read
    `operator_summary_markdown_path`. Render that Markdown verbatim. If the
    summary is missing, read `result_path` and the run-folder-relative

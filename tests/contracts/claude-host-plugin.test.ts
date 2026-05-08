@@ -439,6 +439,97 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
+  it('present mode renders presentation status blocks and a summary continuation', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-status-block-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const summaryPath = join(tempDir, 'operator-summary.md');
+      const summaryJsonPath = join(tempDir, 'operator-summary.json');
+      const fakeBin = join(binDir, 'circuit-next');
+      const runId = '87000000-0000-0000-0000-000000000001';
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(
+        summaryJsonPath,
+        JSON.stringify({
+          schema_version: 1,
+          run_id: runId,
+          flow_id: 'review',
+          selected_flow: 'review',
+          outcome: 'complete',
+          headline: 'Circuit: Review complete. Verdict: CLEAN. Findings: 0.',
+          status_text: 'Review complete. Verdict: CLEAN. Findings: 0.',
+          details: [],
+          evidence_warnings: [],
+          run_folder: tempDir,
+          report_paths: [],
+        }),
+      );
+      writeFileSync(
+        summaryPath,
+        'Circuit\n⎿ Review complete. Verdict: CLEAN. Findings: 0.\n\n- Full Markdown detail.\n',
+      );
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `const runId = ${JSON.stringify(runId)};`,
+          'const route = { schema_version: 1, type: "route.selected", run_id: runId, flow_id: "review", recorded_at: "2026-05-07T12:00:00.000Z", label: "Selected review", display: { text: "Circuit: Chose review.", importance: "major", tone: "info" }, presentation: { block_id: runId, line_mode: "append", status_text: "Chose review." }, selected_flow: "review", routed_by: "explicit", router_reason: "explicit flow positional argument" };',
+          'const relay = { schema_version: 1, type: "relay.started", run_id: runId, flow_id: "review", recorded_at: "2026-05-07T12:00:01.000Z", label: "Running review", display: { text: "Circuit: Asking the reviewer to check the result...", importance: "major", tone: "info" }, presentation: { block_id: runId, line_mode: "replace_slot", slot_id: "review-relay", status_text: "Reviewing the result..." }, step_id: "review-step", step_title: "Review", attempt: 1, role: "reviewer", connector_name: "claude-code", connector_kind: "builtin", filesystem_capability: "trusted-write" };',
+          'const done = { schema_version: 1, type: "run.completed", run_id: runId, flow_id: "review", recorded_at: "2026-05-07T12:00:02.000Z", label: "Complete", display: { text: "Circuit: Finished Review.", importance: "major", tone: "success" }, presentation: { block_id: runId, line_mode: "append", status_text: "Finished Review." }, outcome: "complete", result_path: "reports/result.json" };',
+          'process.stderr.write(`${JSON.stringify(route)}\\n${JSON.stringify(relay)}\\n${JSON.stringify(done)}\\n`);',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              run_id: runId,
+              outcome: 'complete',
+              run_folder: tempDir,
+              operator_summary_path: summaryJsonPath,
+              operator_summary_markdown_path: summaryPath,
+              operator_summary_status_text: 'Review complete. Verdict: CLEAN. Findings: 0.',
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'review',
+          '--goal',
+          'render status block',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: envWithOverride(fakeBin),
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toBe(
+        [
+          'Circuit',
+          '⎿ Chose review.',
+          '⎿ Reviewing the result...',
+          '⎿ Finished Review.',
+          '⎿ Review complete. Verdict: CLEAN. Findings: 0.',
+          '',
+        ].join('\n'),
+      );
+      expect(result.stdout.match(/^Circuit$/gm)).toHaveLength(1);
+      expect(result.stdout).not.toContain('Full Markdown detail');
+      expect(result.stdout).not.toContain('schema_version');
+      expect(result.stdout).not.toContain('{"');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('present mode prints only summary Markdown on success when no progress is emitted', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-success-'));
     try {

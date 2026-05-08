@@ -66,6 +66,7 @@ const FLOW_RESULT_PATHS: Record<string, string> = {
   review: 'reports/review-result.json',
   sweep: 'reports/sweep-result.json',
 };
+const MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS = 180;
 
 function jsonPath(runFolder: string): string {
   return join(runFolder, 'reports', 'operator-summary.json');
@@ -142,6 +143,12 @@ function sentence(value: string): string {
   return /[.!?]$/.test(value) ? value : `${value}.`;
 }
 
+function statusTextFromHeadline(headline: string): string {
+  const statusText = sentence(headline.replace(/^Circuit:\s*/i, '').trim());
+  if (statusText.length <= MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS) return statusText;
+  return `${statusText.slice(0, MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS - 14)} [truncated]`;
+}
+
 function withoutFinalPunctuation(value: string): string {
   return value.replace(/[.!?]\s*$/, '');
 }
@@ -190,8 +197,8 @@ function compactExploreRecommendation(summary: string): string | undefined {
     const concretelySplit = text.split(/\s+Concretely:\s+/);
     const intro =
       concretelySplit.length > 1
-        ? concretelySplit[0]!
-        : firstNumberedItemPrefix(text) ?? text;
+        ? (concretelySplit[0] ?? text)
+        : (firstNumberedItemPrefix(text) ?? text);
     return `Recommendation: ${withoutFinalPunctuation(intro.trim())}: ${labels.join('; ')}.`;
   }
   const [firstSentence = text] = text.split(/(?<=[.!?])\s+/);
@@ -520,7 +527,7 @@ function flowDetails(input: {
 }
 
 function renderMarkdown(summary: OperatorSummary): string {
-  const lines = [summary.headline];
+  const lines = ['Circuit', `⎿ ${summary.status_text ?? statusTextFromHeadline(summary.headline)}`];
 
   if (summary.checkpoint !== undefined) {
     lines.push('', '## Checkpoint', '');
@@ -610,6 +617,18 @@ export function writeOperatorSummary(input: {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
 
+  const headline =
+    input.runResult.outcome === 'checkpoint_waiting'
+      ? 'Circuit: Waiting for a checkpoint choice.'
+      : input.runResult.outcome === 'aborted'
+        ? 'Circuit: Run aborted.'
+        : flowHeadline({
+            runFolder: input.runFolder,
+            flowId,
+            flowReport,
+            resultSummary: input.runResult.summary,
+          });
+
   const candidate = OperatorSummary.parse({
     schema_version: 1,
     run_id: input.runResult.run_id,
@@ -618,17 +637,8 @@ export function writeOperatorSummary(input: {
     ...(input.route.routedBy === undefined ? {} : { routed_by: input.route.routedBy }),
     ...(input.route.routerReason === undefined ? {} : { router_reason: input.route.routerReason }),
     outcome: input.runResult.outcome,
-    headline:
-      input.runResult.outcome === 'checkpoint_waiting'
-        ? 'Circuit: Waiting for a checkpoint choice.'
-        : input.runResult.outcome === 'aborted'
-          ? 'Circuit: Run aborted.'
-          : flowHeadline({
-              runFolder: input.runFolder,
-              flowId,
-              flowReport,
-              resultSummary: input.runResult.summary,
-            }),
+    headline,
+    status_text: statusTextFromHeadline(headline),
     details,
     evidence_warnings: warningRecords(flowReport),
     run_folder: input.runFolder,

@@ -36,9 +36,14 @@ text:
    ```
 
 6. **Render progress while active.** For progress JSONL, render
-   `display.text` exactly for major, warning, error, checkpoint, or success
-   events. If `task_list.updated` or `user_input.requested` appears in a future
-   utility version, use the host task or user-input surface.
+   `presentation` first: open one `Circuit` block per
+   `presentation.block_id`, render visible status lines as
+   `⎿ ${presentation.status_text}`, suppress `line_mode: "suppress"`, and
+   append `replace_slot` lines unless the host can update a live slot. If
+   `presentation` is absent, render `display.text` for major, warning, error,
+   checkpoint, or success events. If `task_list.updated` or
+   `user_input.requested` appears in a future utility version, use the host
+   task or user-input surface.
 7. **Render the final summary.** Parse stdout and read
    `operator_summary_markdown_path`. Render that Markdown verbatim. Surface
    `status`, `slug`, `draft_path`, `published_path`, `flow_path`, and

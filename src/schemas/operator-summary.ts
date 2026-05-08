@@ -47,6 +47,7 @@ export const OperatorSummary = z
     router_reason: z.string().min(1).optional(),
     outcome: z.union([RunClosedOutcome, z.literal('checkpoint_waiting')]),
     headline: z.string().min(1),
+    status_text: z.string().min(1).max(180).optional(),
     brief_slots: OperatorBriefSlots.optional(),
     details: z.array(z.string().min(1)),
     evidence_warnings: z.array(OperatorSummaryWarning),

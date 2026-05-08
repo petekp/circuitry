@@ -76,9 +76,10 @@ saved run manifest.
 Hosts SHOULD pass `--progress jsonl` for `run` and `resume`. Circuit writes one
 progress event per stderr line and keeps the final result JSON on stdout.
 
-Hosts should render Circuit-authored `display.text` exactly for major progress
-updates, warnings, errors, checkpoints, and completion. Detailed rendering rules
-live in `docs/contracts/host-rendering.md`.
+Hosts should prefer Circuit-authored `presentation` status blocks for major
+progress updates, warnings, errors, checkpoints, and completion. `display.text`
+remains the fallback for older events. Detailed rendering rules live in
+`docs/contracts/host-rendering.md`.
 
 Hosts should map `task_list.updated` into a native task or plan surface when one
 exists. Hosts should map `user_input.requested` into a native user-question

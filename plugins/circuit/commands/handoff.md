@@ -62,9 +62,14 @@ text:
    Render the JSON result. Hook setup is host configuration, not a resume
    request.
 8. **Render progress while active.** For progress JSONL, render
-   `display.text` exactly for major, warning, error, checkpoint, or success
-   events. If `task_list.updated` or `user_input.requested` appears in a future
-   utility version, use the host task or user-input surface.
+   `presentation` first: open one `Circuit` block per
+   `presentation.block_id`, render visible status lines as
+   `⎿ ${presentation.status_text}`, suppress `line_mode: "suppress"`, and
+   append `replace_slot` lines unless the host can update a live slot. If
+   `presentation` is absent, render `display.text` for major, warning, error,
+   checkpoint, or success events. If `task_list.updated` or
+   `user_input.requested` appears in a future utility version, use the host
+   task or user-input surface.
 9. **Render the final summary.** In brief mode, parse stdout as the
    `handoff-brief-v1` JSON. If `status` is `available`, render
    `additional_context` exactly as read-only context. If `status` is `empty`,

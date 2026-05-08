@@ -26,8 +26,7 @@ export const DEFECT_DESCRIPTIONS: Record<DefectId, string> = {
     'Replace one evidence_ref in supporting_aspects with a fabricated path that does not exist.',
   'stripped-success-condition-alignment':
     'Replace success_condition_alignment with a vacuous one-liner that does not justify alignment.',
-  'wrong-subject':
-    'Append an unrelated topic to the subject so it no longer matches the brief.',
+  'wrong-subject': 'Append an unrelated topic to the subject so it no longer matches the brief.',
   'added-false-certainty':
     'Append a confident overclaim sentence ("no remaining risks…requires no further validation") that the cited evidence does not support.',
   'internal-contradiction':
@@ -52,7 +51,10 @@ function plantFabricatedEvidenceRef(compose: ComposeJsonShape): DefectPlantResul
   if (targetAspect === undefined) {
     throw new Error('cannot plant fabricated-evidence-ref: no aspect has evidence_refs');
   }
-  const originalRef = targetAspect.evidence_refs[0]!;
+  const [originalRef] = targetAspect.evidence_refs;
+  if (originalRef === undefined) {
+    throw new Error('cannot plant fabricated-evidence-ref: no evidence ref found');
+  }
   targetAspect.evidence_refs[0] = FABRICATED_REF;
   return {
     id: 'fabricated-evidence-ref',
@@ -82,7 +84,8 @@ function plantWrongSubject(compose: ComposeJsonShape): DefectPlantResult {
     id: 'wrong-subject',
     description: DEFECT_DESCRIPTIONS['wrong-subject'],
     mutated,
-    mutation_summary: 'appended unrelated quantum-cryptography retail-banking subject to original subject',
+    mutation_summary:
+      'appended unrelated quantum-cryptography retail-banking subject to original subject',
   };
 }
 

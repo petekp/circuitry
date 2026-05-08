@@ -7,8 +7,8 @@ presentation path.
 
 Claude host commands must use a presentation wrapper for user-facing run,
 resume, create, and handoff commands. The wrapper streams approved progress
-text, suppresses raw progress lines, handles checkpoint choices, and prints the
-final Markdown summary.
+status blocks, suppresses raw progress lines, handles checkpoint choices, and
+prints a final summary line or standalone Markdown summary as appropriate.
 
 Raw stdout JSON and progress JSONL stay available through the non-presentation
 wrapper path for automation, tests, and explicit debug use.

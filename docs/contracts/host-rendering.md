@@ -27,9 +27,22 @@ stdout.
 
 For each progress event:
 
-- Render `display.text` exactly when `display.importance === "major"`.
-- Always render `display.text` exactly when `display.tone` is `warning`,
-  `error`, or `checkpoint`.
+- Prefer `presentation` when present.
+- Render one status block header, `Circuit`, for each
+  `presentation.block_id`.
+- Render visible status lines as `⎿ ${presentation.status_text}`.
+- Treat `presentation.line_mode === "append"` as an append-only transcript
+  line.
+- Treat `presentation.line_mode === "replace_slot"` as append-only in
+  transcript hosts. Native live hosts MAY replace the rendered line with the
+  same `presentation.slot_id`.
+- Do not render `presentation.line_mode === "suppress"` as prose.
+- Use `presentation.depth` only as metadata in v1. Do not invent nested
+  transcript rendering.
+- If `presentation` is absent, render `display.text` exactly when
+  `display.importance === "major"`.
+- If `presentation` is absent, always render `display.text` exactly when
+  `display.tone` is `warning`, `error`, or `checkpoint`.
 - When `type === "task_list.updated"`, update the host task or plan surface
   from `tasks` when one is available. Do not print the full task list as a
   separate message by default.
@@ -44,6 +57,10 @@ The existing machine fields remain available for tooling and debug views:
 `type`, `label`, `step_id`, `connector_name`, `report_path`, `tasks`,
 `questions`, `resume`, and related fields.
 
+`display.text` remains available for older hosts and debug views. New host
+surfaces should use `presentation` so replacement-capable hosts do not need to
+guess which prose lines belong together.
+
 ## Final Rendering
 
 After stdout JSON is parsed, hosts MUST read
@@ -52,6 +69,12 @@ verbatim as the final user-facing answer. That Markdown is the operator brief:
 it should provide the result, the important guidance, and any next step without
 printing run folders, report paths, trace ids, or debug-only evidence links by
 default.
+
+Transcript wrappers that have already rendered a status block MAY instead
+render `operator_summary_status_text`, or `status_text` from
+`operator_summary_path`, as one final `⎿` continuation line. They should keep
+`operator_summary_markdown_path` as the standalone fallback rather than
+rewriting that Markdown.
 
 Hosts MUST NOT invent a separate final summary when
 `operator_summary_markdown_path` is present. If that file is missing or cannot
@@ -69,6 +92,8 @@ The final stdout JSON includes:
 
 - `operator_summary_path`
 - `operator_summary_markdown_path`
+- `operator_summary_status_text` when a concise status-block continuation is
+  available
 
 Checkpoint results include these paths even when `result_path` is absent.
 

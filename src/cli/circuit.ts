@@ -23,6 +23,7 @@ import { classifyCompiledFlowTask } from '../flows/router.js';
 import { discoverConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { writeOperatorSummary } from '../shared/operator-summary-writer.js';
+import { progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
@@ -417,6 +418,12 @@ function progressDisplay(
   };
 }
 
+function routeSelectedStatusText(flowId: string, entryModeName: string | undefined): string {
+  return entryModeName === undefined
+    ? `Chose ${flowId}.`
+    : `Chose ${flowId} with ${entryModeName} thoroughness.`;
+}
+
 function resolveCompiledFlowRoute(args: ParsedArgs): ResolvedCompiledFlowRoute {
   if (args.flowName !== undefined) {
     return {
@@ -687,6 +694,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             ...resumeRuntimeFields,
             operator_summary_path: operatorSummary.jsonPath,
             operator_summary_markdown_path: operatorSummary.markdownPath,
+            ...(operatorSummary.summary.status_text === undefined
+              ? {}
+              : { operator_summary_status_text: operatorSummary.summary.status_text }),
             ...(operatorSummary.htmlPath === undefined
               ? {}
               : { operator_summary_html_path: operatorSummary.htmlPath }),
@@ -718,6 +728,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
   const runId = RunId.parse(options.runId ?? randomUUID());
   const now = options.now ?? (() => new Date());
   const progress = progressReporter(args.progress === 'jsonl');
+  const selectedStatusText = routeSelectedStatusText(flow.id, entryModeSelection.entryModeName);
   progress?.({
     schema_version: 1,
     type: 'route.selected',
@@ -725,13 +736,8 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     flow_id: flow.id,
     recorded_at: now().toISOString(),
     label: `Selected ${route.flowName}`,
-    display: progressDisplay(
-      entryModeSelection.entryModeName === undefined
-        ? `Circuit: Chose ${flow.id}.`
-        : `Circuit: Chose ${flow.id} with ${entryModeSelection.entryModeName} thoroughness.`,
-      'major',
-      'info',
-    ),
+    display: progressDisplay(`Circuit: ${selectedStatusText}`, 'major', 'info'),
+    presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
     selected_flow: flow.id,
     routed_by: route.source,
     router_reason: route.reason,
@@ -833,6 +839,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             }),
             operator_summary_path: operatorSummary.jsonPath,
             operator_summary_markdown_path: operatorSummary.markdownPath,
+            ...(operatorSummary.summary.status_text === undefined
+              ? {}
+              : { operator_summary_status_text: operatorSummary.summary.status_text }),
             ...(operatorSummary.htmlPath === undefined
               ? {}
               : { operator_summary_html_path: operatorSummary.htmlPath }),
@@ -880,6 +889,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
           }),
           operator_summary_path: operatorSummary.jsonPath,
           operator_summary_markdown_path: operatorSummary.markdownPath,
+          ...(operatorSummary.summary.status_text === undefined
+            ? {}
+            : { operator_summary_status_text: operatorSummary.summary.status_text }),
           ...(operatorSummary.htmlPath === undefined
             ? {}
             : { operator_summary_html_path: operatorSummary.htmlPath }),

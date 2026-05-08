@@ -76,18 +76,22 @@ function summarize(results: readonly EvalCaseResult[]): EvalSummary {
   }
 
   durations.sort((a, b) => a - b);
+  const middle = Math.floor(durations.length / 2);
+  const upperMiddle = durations[middle];
+  const lowerMiddle = durations[middle - 1];
   const median =
-    durations.length === 0
+    durations.length === 0 || upperMiddle === undefined
       ? 0
       : durations.length % 2 === 1
-        ? durations[(durations.length - 1) / 2]!
-        : (durations[durations.length / 2 - 1]! + durations[durations.length / 2]!) / 2;
+        ? upperMiddle
+        : ((lowerMiddle ?? upperMiddle) + upperMiddle) / 2;
   const total = durations.reduce((a, b) => a + b, 0);
   const totalScored = catches + misses;
 
   return {
     started_at: new Date().toISOString(),
     finished_at: new Date().toISOString(),
+    judge: 'codex',
     wallclock_ms: 0,
     per_defect: perDefect,
     controls,

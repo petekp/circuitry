@@ -8,11 +8,11 @@
 //      schema, and score whether the planted defect surfaced.
 
 import { readFileSync } from 'node:fs';
-import { extractJsonObject } from '../../dist/connectors/shared.js';
-import { relayCodex } from '../../dist/connectors/codex.js';
 import { relayClaudeCode } from '../../dist/connectors/claude-code.js';
+import { relayCodex } from '../../dist/connectors/codex.js';
+import { extractJsonObject } from '../../dist/connectors/shared.js';
 import { ExploreReviewVerdict } from '../../dist/flows/explore/reports.js';
-import { DEFECT_PLANTERS, DEFECT_IDS, DEFECT_DESCRIPTIONS } from './defect-taxonomy.ts';
+import { DEFECT_DESCRIPTIONS, DEFECT_IDS, DEFECT_PLANTERS } from './defect-taxonomy.ts';
 import { parseRequest, rebuildRequest, upgradeShapeHintInstruction } from './prompt-mutation.ts';
 import { scoreDefect } from './scorer.ts';
 import type { DefectId, EvalCase, EvalCaseResult, JudgeId } from './types.ts';
@@ -105,7 +105,10 @@ export interface RunOptions {
   ) => void;
 }
 
-export async function runCase(caseDef: EvalCase, options: RunOptions = {}): Promise<EvalCaseResult> {
+export async function runCase(
+  caseDef: EvalCase,
+  options: RunOptions = {},
+): Promise<EvalCaseResult> {
   if (caseDef.mutation_summary.startsWith('SKIPPED')) {
     return {
       case: caseDef,
@@ -160,9 +163,7 @@ export async function runCase(caseDef: EvalCase, options: RunOptions = {}): Prom
       case: caseDef,
       outcome: {
         kind: 'schema_error',
-        message: validation.error.issues
-          .map((i) => `${i.path.join('.')}: ${i.message}`)
-          .join('; '),
+        message: validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
         raw_response: raw.result_body,
       },
       score: { kind: 'skipped', reason: 'schema_error' },
@@ -208,7 +209,8 @@ export async function runEval(
 ): Promise<EvalCaseResult[]> {
   const results: EvalCaseResult[] = [];
   for (let i = 0; i < cases.length; i += 1) {
-    const caseDef = cases[i]!;
+    const caseDef = cases[i];
+    if (caseDef === undefined) continue;
     const result = await runCase(caseDef, options);
     results.push(result);
     options.onProgress?.(i, cases.length, caseDef, result);

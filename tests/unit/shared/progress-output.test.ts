@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { ProgressEvent } from '../../../src/schemas/progress-event.js';
-import { progressDisplay, reportProgress } from '../../../src/shared/progress-output.js';
+import {
+  progressDisplay,
+  progressPresentation,
+  reportProgress,
+} from '../../../src/shared/progress-output.js';
 
 describe('shared progress output helpers', () => {
   it('swallows host progress renderer failures', () => {
@@ -30,5 +34,19 @@ describe('shared progress output helpers', () => {
     expect(display.text.endsWith(' [truncated]')).toBe(true);
     expect(display.importance).toBe('detail');
     expect(display.tone).toBe('warning');
+  });
+
+  it('normalizes status text for presentation metadata', () => {
+    const presentation = progressPresentation({
+      blockId: '11111111-1111-4111-8111-111111111111',
+      lineMode: 'append',
+      statusText: 'Circuit: Framing the work...',
+    });
+
+    expect(presentation).toEqual({
+      block_id: '11111111-1111-4111-8111-111111111111',
+      line_mode: 'append',
+      status_text: 'Framing the work...',
+    });
   });
 });

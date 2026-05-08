@@ -7,8 +7,16 @@ import {
   type ResolvedConnector,
 } from '../../schemas/connector.js';
 import type { CompiledFlowId, RunId as ProgressRunId, StepId } from '../../schemas/ids.js';
-import type { ProgressTask, ProgressTaskStatus } from '../../schemas/progress-event.js';
-import { progressDisplay, reportProgress } from '../../shared/progress-output.js';
+import type {
+  ProgressPresentation,
+  ProgressTask,
+  ProgressTaskStatus,
+} from '../../schemas/progress-event.js';
+import {
+  progressDisplay,
+  progressPresentation,
+  reportProgress,
+} from '../../shared/progress-output.js';
 import type { ProgressReporter } from '../../shared/relay-runtime-types.js';
 import { runResultPath } from '../../shared/result-path.js';
 import {
@@ -114,26 +122,58 @@ function operatorStepAction(flowId: string, title: string): string {
   return `Working on ${operatorStepTitle(flowId, title).toLowerCase()}`;
 }
 
-function relayStartedText(flowId: string, role: 'reviewer' | 'implementer'): string {
+function relayStartedStatusText(flowId: string, role: 'reviewer' | 'implementer'): string {
   if (role === 'reviewer') {
     return flowId === 'explore'
-      ? 'Circuit: Asking the reviewer to check the recommendation...'
-      : 'Circuit: Asking the reviewer to check the result...';
+      ? 'Asking the reviewer to check the recommendation...'
+      : 'Asking the reviewer to check the result...';
   }
   return flowId === 'explore'
-    ? 'Circuit: Asking the specialist to draft the recommendation...'
-    : 'Circuit: Asking the specialist to make the change...';
+    ? 'Asking the specialist to draft the recommendation...'
+    : 'Asking the specialist to make the change...';
 }
 
-function relayCompletedText(flowId: string, role: 'reviewer' | 'implementer'): string {
+function relayCompletedStatusText(flowId: string, role: 'reviewer' | 'implementer'): string {
   if (role === 'reviewer') {
     return flowId === 'explore'
-      ? 'Circuit: Finished checking the recommendation.'
-      : 'Circuit: Finished checking the result.';
+      ? 'Finished checking the recommendation.'
+      : 'Finished checking the result.';
   }
   return flowId === 'explore'
-    ? 'Circuit: Finished drafting the recommendation.'
-    : 'Circuit: Finished the specialist pass.';
+    ? 'Finished drafting the recommendation.'
+    : 'Finished the specialist pass.';
+}
+
+function relayRoleFromStepTitle(title: string): 'reviewer' | 'implementer' {
+  const lead = stepLead(title);
+  return lead.startsWith('review') || lead.startsWith('independent') || lead.startsWith('release')
+    ? 'reviewer'
+    : 'implementer';
+}
+
+function circuitDisplayText(statusText: string): string {
+  return `Circuit: ${statusText}`;
+}
+
+function appendStatus(blockId: ProgressRunId, statusText: string): ProgressPresentation {
+  return progressPresentation({ blockId, lineMode: 'append', statusText });
+}
+
+function replaceStatus(
+  blockId: ProgressRunId,
+  slotId: string,
+  statusText: string,
+): ProgressPresentation {
+  return progressPresentation({
+    blockId,
+    lineMode: 'replace_slot',
+    slotId,
+    statusText,
+  });
+}
+
+function suppressStatus(blockId: ProgressRunId): ProgressPresentation {
+  return progressPresentation({ blockId, lineMode: 'suppress' });
 }
 
 function progressTasks(
@@ -166,6 +206,7 @@ function reportTaskListProgress(input: {
     recorded_at: input.recordedAt,
     label: input.label,
     display: progressDisplay(input.displayText, 'detail', input.tone ?? 'info'),
+    presentation: suppressStatus(input.runId),
     tasks: progressTasks(input.flow, input.statuses),
   });
 }
@@ -237,6 +278,13 @@ function reportEvidenceProgress(input: {
       'major',
       warnings.length > 0 ? 'warning' : 'info',
     ),
+    presentation:
+      warnings.length > 0
+        ? appendStatus(
+            input.runId,
+            `Collected evidence with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}.`,
+          )
+        : suppressStatus(input.runId),
     step_id: input.traceEntry.step_id as StepId,
     report_path: input.traceEntry.report_path,
     report_schema: input.traceEntry.report_schema,
@@ -251,6 +299,7 @@ function reportEvidenceProgress(input: {
       recorded_at: input.recordedAt,
       label: 'Evidence warning',
       display: progressDisplay(`Circuit: Evidence warning: ${warning.message}`, 'major', 'warning'),
+      presentation: appendStatus(input.runId, `Evidence warning: ${warning.message}`),
       step_id: input.traceEntry.step_id as StepId,
       report_path: input.traceEntry.report_path,
       warning_kind: warning.kind,
@@ -384,6 +433,9 @@ export function createProgressProjector(input: {
             'major',
             shouldWarn ? 'warning' : 'info',
           ),
+          presentation: shouldWarn
+            ? appendStatus(runId, WRITE_CAPABLE_WORKER_DISCLOSURE)
+            : suppressStatus(runId),
           run_folder: input.runDir,
         });
         reportTaskListProgress({
@@ -416,6 +468,7 @@ export function createProgressProjector(input: {
             'major',
             'info',
           ),
+          presentation: appendStatus(runId, `${operatorStepAction(input.flow.id, title)}...`),
           step_id: stepId as StepId,
           step_title: title,
           attempt: entry.attempt,
@@ -440,6 +493,7 @@ export function createProgressProjector(input: {
         if (connector === undefined || role === undefined) break;
         const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
         const capability = connectorFilesystemCapability(connector);
+        const statusText = relayStartedStatusText(input.flow.id, role);
         reportProgress(input.progress, {
           schema_version: 1,
           type: 'relay.started',
@@ -447,7 +501,8 @@ export function createProgressProjector(input: {
           flow_id: flowId,
           recorded_at: recordedAt,
           label: `Running ${role} relay with ${connector.name}`,
-          display: progressDisplay(relayStartedText(input.flow.id, role), 'major', 'info'),
+          display: progressDisplay(circuitDisplayText(statusText), 'major', 'info'),
+          presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
           step_id: stepId as StepId,
           step_title: title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
@@ -468,9 +523,8 @@ export function createProgressProjector(input: {
           break;
         }
         const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
-        const role =
-          relayRoleFromTrace(entry) ??
-          (stepLead(title).startsWith('review') ? 'reviewer' : 'implementer');
+        const role = relayRoleFromTrace(entry) ?? relayRoleFromStepTitle(title);
+        const statusText = relayCompletedStatusText(input.flow.id, role);
         reportProgress(input.progress, {
           schema_version: 1,
           type: 'relay.completed',
@@ -478,7 +532,8 @@ export function createProgressProjector(input: {
           flow_id: flowId,
           recorded_at: recordedAt,
           label: `Relay completed with ${entry.verdict}`,
-          display: progressDisplay(relayCompletedText(input.flow.id, role), 'major', 'success'),
+          display: progressDisplay(circuitDisplayText(statusText), 'major', 'success'),
+          presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
           step_id: stepId as StepId,
           step_title: title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
@@ -515,6 +570,11 @@ export function createProgressProjector(input: {
             'major',
             'info',
           ),
+          presentation: replaceStatus(
+            runId,
+            `${stepId}:fanout`,
+            `Comparing ${branchIds.length} option${branchIds.length === 1 ? '' : 's'}...`,
+          ),
           step_id: stepId as StepId,
           step_title: title,
           branch_count: branchIds.length,
@@ -537,6 +597,7 @@ export function createProgressProjector(input: {
           recorded_at: recordedAt,
           label: `Started branch ${entry.branch_id}`,
           display: progressDisplay(`Circuit: Started branch ${entry.branch_id}.`, 'detail', 'info'),
+          presentation: suppressStatus(runId),
           step_id: stepId as StepId,
           step_title: title,
           branch_id: entry.branch_id,
@@ -575,6 +636,7 @@ export function createProgressProjector(input: {
             'detail',
             childOutcome === 'complete' ? 'success' : 'error',
           ),
+          presentation: suppressStatus(runId),
           step_id: stepId as StepId,
           step_title: title,
           branch_id: entry.branch_id,
@@ -609,6 +671,7 @@ export function createProgressProjector(input: {
           recorded_at: recordedAt,
           label: `Joined ${title}`,
           display: progressDisplay('Circuit: Finished comparing the options.', 'major', 'success'),
+          presentation: replaceStatus(runId, `${stepId}:fanout`, 'Finished comparing the options.'),
           step_id: stepId as StepId,
           step_title: title,
           policy,
@@ -659,6 +722,7 @@ export function createProgressProjector(input: {
             'major',
             'checkpoint',
           ),
+          presentation: appendStatus(runId, 'Waiting for your choice...'),
           step_id: stepId as StepId,
           request_path: requestPath,
           allowed_choices: allowedChoices,
@@ -671,6 +735,7 @@ export function createProgressProjector(input: {
           recorded_at: recordedAt,
           label: 'Checkpoint choice requested',
           display: progressDisplay(presentation.prompt, 'major', 'checkpoint'),
+          presentation: suppressStatus(runId),
           checkpoint: {
             step_id: stepId as StepId,
             request_path: requestPath,
@@ -731,6 +796,7 @@ export function createProgressProjector(input: {
             'detail',
             'success',
           ),
+          presentation: suppressStatus(runId),
           step_id: stepId as StepId,
           step_title: title,
           attempt: entry.attempt,
@@ -764,6 +830,10 @@ export function createProgressProjector(input: {
           recorded_at: recordedAt,
           label: `Aborted ${title}`,
           display: progressDisplay(`Circuit: Aborted ${title}: ${entry.reason}`, 'major', 'error'),
+          presentation: appendStatus(
+            runId,
+            `Marked ${operatorStepTitle(input.flow.id, title)} as failed.`,
+          ),
           step_id: stepId as StepId,
           step_title: title,
           attempt: entry.attempt,
@@ -798,6 +868,10 @@ export function createProgressProjector(input: {
               'major',
               'error',
             ),
+            presentation: appendStatus(
+              runId,
+              reason === undefined ? 'Run aborted.' : `Run aborted: ${reason}`,
+            ),
             outcome,
             result_path: runResultPath(input.runDir),
             ...(reason === undefined ? {} : { reason }),
@@ -815,6 +889,7 @@ export function createProgressProjector(input: {
               'major',
               'success',
             ),
+            presentation: appendStatus(runId, `Finished ${flowLabel(input.flow.id)}.`),
             outcome,
             result_path: runResultPath(input.runDir),
           });

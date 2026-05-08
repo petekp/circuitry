@@ -519,8 +519,16 @@ describe('CLI router', () => {
     expect(progress.find((event) => event.type === 'route.selected')?.display.text).toContain(
       'Circuit: Chose review',
     );
+    expect(progress.find((event) => event.type === 'route.selected')?.presentation).toMatchObject({
+      block_id: output.run_id,
+      line_mode: 'append',
+      status_text: 'Chose review.',
+    });
     const taskListEvents = progress.filter((event) => event.type === 'task_list.updated');
     expect(taskListEvents.length).toBeGreaterThan(1);
+    expect(taskListEvents.every((event) => event.presentation?.line_mode === 'suppress')).toBe(
+      true,
+    );
     expect(taskListEvents[0]?.tasks.every((task) => task.status === 'pending')).toBe(true);
     expect(
       taskListEvents.some((event) => event.tasks.some((task) => task.status === 'in_progress')),
@@ -540,6 +548,16 @@ describe('CLI router', () => {
     expect(progress.find((event) => event.type === 'relay.started')?.display.text).toBe(
       'Circuit: Asking the reviewer to check the result...',
     );
+    expect(progress.find((event) => event.type === 'relay.started')?.presentation).toMatchObject({
+      line_mode: 'replace_slot',
+      slot_id: 'audit-step:relay',
+      status_text: 'Asking the reviewer to check the result...',
+    });
+    expect(progress.find((event) => event.type === 'relay.completed')?.presentation).toMatchObject({
+      line_mode: 'replace_slot',
+      slot_id: 'audit-step:relay',
+      status_text: 'Finished checking the result.',
+    });
     expect(progress.find((event) => event.type === 'relay.started')?.display.text).not.toContain(
       'trusted-write',
     );
@@ -551,6 +569,10 @@ describe('CLI router', () => {
     expect(progress.find((event) => event.type === 'step.started')?.display.text).toBe(
       'Circuit: Framing the work...',
     );
+    expect(progress.find((event) => event.type === 'step.started')?.presentation).toMatchObject({
+      line_mode: 'append',
+      status_text: 'Framing the work...',
+    });
   });
 
   it('keeps Explore progress display focused on the operator, not internal report names', async () => {
@@ -651,6 +673,22 @@ describe('CLI router', () => {
     );
 
     expect(output.outcome).toBe('checkpoint_waiting');
+    expect(progress.find((event) => event.type === 'fanout.started')?.presentation).toMatchObject({
+      line_mode: 'replace_slot',
+      status_text: 'Comparing 4 options...',
+    });
+    expect(
+      progress
+        .filter(
+          (event) =>
+            event.type === 'fanout.branch_started' || event.type === 'fanout.branch_completed',
+        )
+        .every((event) => event.presentation?.line_mode === 'suppress'),
+    ).toBe(true);
+    expect(progress.find((event) => event.type === 'fanout.joined')?.presentation).toMatchObject({
+      line_mode: 'replace_slot',
+      status_text: 'Finished comparing the options.',
+    });
     const waiting = progress.find((event) => event.type === 'checkpoint.waiting');
     expect(waiting?.display.text).toContain('React, Vue');
     const userInput = progress.find((event) => event.type === 'user_input.requested');
@@ -754,6 +792,10 @@ describe('CLI router', () => {
     expect(typeof output.operator_summary_markdown_path).toBe('string');
     expect(progress.map((event) => event.type)).toContain('run.aborted');
     expect(progress.find((event) => event.type === 'run.aborted')?.display.tone).toBe('error');
+    expect(progress.find((event) => event.type === 'run.aborted')?.presentation).toMatchObject({
+      line_mode: 'append',
+      status_text: expect.stringContaining('Run aborted:'),
+    });
     const lastTaskList = progress.filter((event) => event.type === 'task_list.updated').at(-1);
     expect(lastTaskList?.tasks.some((task) => task.status === 'failed')).toBe(true);
   });
@@ -848,6 +890,10 @@ describe('CLI router', () => {
         step_id: 'frame-step',
         allowed_choices: ['continue'],
         display: expect.objectContaining({ tone: 'checkpoint' }),
+        presentation: expect.objectContaining({
+          line_mode: 'append',
+          status_text: 'Waiting for your choice...',
+        }),
       }),
     );
     expect(progress).toContainEqual(
@@ -876,6 +922,7 @@ describe('CLI router', () => {
           checkpoint_choice_arg: '<choice>',
         }),
         display: expect.objectContaining({ tone: 'checkpoint' }),
+        presentation: expect.objectContaining({ line_mode: 'suppress' }),
       }),
     );
   });

@@ -7,12 +7,7 @@ import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { DEFECT_IDS } from './defect-taxonomy.ts';
 import { buildCases, runCase } from './runner.ts';
-import type {
-  DefectId,
-  EvalCaseResult,
-  EvalSummary,
-  JudgeId,
-} from './types.ts';
+import type { DefectId, EvalCaseResult, EvalSummary, JudgeId } from './types.ts';
 
 const SUPPORTED_JUDGES: readonly JudgeId[] = ['codex', 'claude-code'];
 
@@ -37,7 +32,8 @@ function parseArgs(argv: readonly string[]): CliArgs {
   let dryRun = false;
   let judge: JudgeId = 'codex';
   for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i]!;
+    const arg = argv[i];
+    if (arg === undefined) continue;
     if (arg === '--max-composes') {
       const next = argv[i + 1];
       if (!next) throw new Error('--max-composes requires a number');
@@ -61,9 +57,7 @@ function parseArgs(argv: readonly string[]): CliArgs {
       const next = argv[i + 1];
       if (!next) throw new Error('--judge requires a connector name');
       if (!(SUPPORTED_JUDGES as readonly string[]).includes(next)) {
-        throw new Error(
-          `unknown judge '${next}'; supported: ${SUPPORTED_JUDGES.join(', ')}`,
-        );
+        throw new Error(`unknown judge '${next}'; supported: ${SUPPORTED_JUDGES.join(', ')}`);
       }
       judge = next as JudgeId;
       i += 1;
@@ -121,10 +115,7 @@ function summarize(
   judge: JudgeId,
 ): EvalSummary {
   const perDefect = Object.fromEntries(
-    DEFECT_IDS.map((id) => [
-      id,
-      { catches: 0, misses: 0, errors: 0, cases: 0 },
-    ]),
+    DEFECT_IDS.map((id) => [id, { catches: 0, misses: 0, errors: 0, cases: 0 }]),
   ) as EvalSummary['per_defect'];
   const controls = { passes: 0, fails: 0, errors: 0, cases: 0 };
   let successfulCalls = 0;
@@ -165,12 +156,15 @@ function summarize(
   }
 
   durations.sort((a, b) => a - b);
+  const middle = Math.floor(durations.length / 2);
+  const upperMiddle = durations[middle];
+  const lowerMiddle = durations[middle - 1];
   const median =
-    durations.length === 0
+    durations.length === 0 || upperMiddle === undefined
       ? 0
       : durations.length % 2 === 1
-        ? durations[(durations.length - 1) / 2]!
-        : (durations[durations.length / 2 - 1]! + durations[durations.length / 2]!) / 2;
+        ? upperMiddle
+        : ((lowerMiddle ?? upperMiddle) + upperMiddle) / 2;
   const totalDuration = durations.reduce((acc, d) => acc + d, 0);
   const totalScored = catches + misses;
 
@@ -194,10 +188,7 @@ function summarize(
   };
 }
 
-function renderMarkdownReport(
-  results: readonly EvalCaseResult[],
-  summary: EvalSummary,
-): string {
+function renderMarkdownReport(results: readonly EvalCaseResult[], summary: EvalSummary): string {
   const lines: string[] = [];
   lines.push('# Verdict-Correctness Eval — Results');
   lines.push('');
@@ -219,9 +210,7 @@ function renderMarkdownReport(
   lines.push(
     `- Median per-call duration: ${(summary.overall.median_duration_ms / 1000).toFixed(1)}s`,
   );
-  lines.push(
-    `- Total compute time: ${(summary.overall.total_duration_ms / 1000).toFixed(1)}s`,
-  );
+  lines.push(`- Total compute time: ${(summary.overall.total_duration_ms / 1000).toFixed(1)}s`);
   lines.push('');
   lines.push('## Per-Defect Catch Rate');
   lines.push('');
@@ -263,7 +252,10 @@ function renderMarkdownReport(
   lines.push('## Errors');
   lines.push('');
   const errors = results.filter(
-    (r) => r.outcome.kind === 'connector_error' || r.outcome.kind === 'parse_error' || r.outcome.kind === 'schema_error',
+    (r) =>
+      r.outcome.kind === 'connector_error' ||
+      r.outcome.kind === 'parse_error' ||
+      r.outcome.kind === 'schema_error',
   );
   if (errors.length === 0) {
     lines.push('_None._');
@@ -305,7 +297,8 @@ async function main(): Promise<void> {
   const start = performance.now();
   const results: EvalCaseResult[] = [];
   for (let i = 0; i < cases.length; i += 1) {
-    const caseDef = cases[i]!;
+    const caseDef = cases[i];
+    if (caseDef === undefined) continue;
     const startCase = performance.now();
     const result = await runCase(caseDef, { judge: args.judge });
     const ms = performance.now() - startCase;
@@ -329,19 +322,15 @@ async function main(): Promise<void> {
   const wallclockMs = performance.now() - start;
   const summary = summarize(results, wallclockMs, args.judge);
   writeFileSync(resolve(args.resultsDir, 'summary.json'), JSON.stringify(summary, null, 2));
-  writeFileSync(
-    resolve(args.resultsDir, 'results.json'),
-    JSON.stringify(results, null, 2),
-  );
-  writeFileSync(
-    resolve(args.resultsDir, 'report.md'),
-    renderMarkdownReport(results, summary),
-  );
+  writeFileSync(resolve(args.resultsDir, 'results.json'), JSON.stringify(results, null, 2));
+  writeFileSync(resolve(args.resultsDir, 'report.md'), renderMarkdownReport(results, summary));
   console.error('');
   console.error('=== SUMMARY ===');
   console.error(`Judge: ${summary.judge}`);
   console.error(`Cases: ${summary.overall.cases}`);
-  console.error(`Catches: ${summary.overall.catches} / ${summary.overall.catches + summary.overall.misses}`);
+  console.error(
+    `Catches: ${summary.overall.catches} / ${summary.overall.catches + summary.overall.misses}`,
+  );
   console.error(`Catch rate: ${(summary.overall.catch_rate * 100).toFixed(1)}%`);
   console.error(`Errors: ${summary.overall.errors}`);
   console.error(`Wallclock: ${(wallclockMs / 1000).toFixed(1)}s`);

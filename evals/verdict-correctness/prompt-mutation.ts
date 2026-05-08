@@ -83,15 +83,16 @@ export function upgradeShapeHintInstruction(text: string): string {
 function findMatchingClosingBrace(text: string, start: number): number {
   let depth = 0;
   let inString = false;
-  let escape = false;
+  let escaped = false;
   for (let i = start; i < text.length; i += 1) {
-    const ch = text[i]!;
-    if (escape) {
-      escape = false;
+    const ch = text[i];
+    if (ch === undefined) break;
+    if (escaped) {
+      escaped = false;
       continue;
     }
     if (ch === '\\' && inString) {
-      escape = true;
+      escaped = true;
       continue;
     }
     if (ch === '"') {

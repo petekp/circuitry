@@ -14,6 +14,7 @@ import {
 import type { ControlPlaneFileStem } from '../schemas/scalars.js';
 import type { Snapshot, SnapshotStatus } from '../schemas/snapshot.js';
 import { readManifestSnapshot } from '../shared/manifest-snapshot.js';
+import { progressPresentation } from '../shared/progress-output.js';
 import { utilityProgress } from './utility-progress.js';
 
 type HandoffAction = 'save' | 'resume' | 'done' | 'brief' | 'hook' | 'hooks';
@@ -1207,19 +1208,25 @@ export async function runHandoffCommand(
     flowId: 'handoff',
     now,
   });
-  progress?.emit({
-    type: 'route.selected',
-    recorded_at: now().toISOString(),
-    label: 'Selected Handoff',
-    display: {
-      text: `Circuit selected handoff ${args.action}.`,
-      importance: 'major',
-      tone: 'info',
-    },
-    selected_flow: 'handoff' as never,
-    routed_by: 'explicit',
-    router_reason: 'explicit handoff utility command',
-  });
+  if (progress !== undefined) {
+    progress.emit({
+      type: 'route.selected',
+      recorded_at: now().toISOString(),
+      label: 'Selected Handoff',
+      display: {
+        text: `Circuit selected handoff ${args.action}.`,
+        importance: 'major',
+        tone: 'info',
+      },
+      presentation: progressPresentation({
+        blockId: progress.runId,
+        statusText: `Chose handoff ${args.action}.`,
+      }),
+      selected_flow: 'handoff' as never,
+      routed_by: 'explicit',
+      router_reason: 'explicit handoff utility command',
+    });
+  }
 
   try {
     const result =
@@ -1228,21 +1235,31 @@ export async function runHandoffCommand(
         : args.action === 'resume'
           ? resumeContinuity(args)
           : clearContinuity(args, now);
-    progress?.emit({
-      type: 'run.completed',
-      recorded_at: now().toISOString(),
-      label: 'Handoff completed',
-      display: {
-        text:
-          args.action === 'resume' && result.status === 'not_found'
-            ? 'No saved Circuit handoff was found.'
-            : `Circuit handoff ${args.action} completed.`,
-        importance: 'major',
-        tone: result.status === 'not_found' ? 'warning' : 'success',
-      },
-      outcome: 'complete',
-      result_path: result.result_path,
-    });
+    if (progress !== undefined) {
+      const statusText =
+        args.action === 'resume' && result.status === 'not_found'
+          ? 'No saved Circuit handoff was found.'
+          : `Handoff ${args.action} completed.`;
+      progress.emit({
+        type: 'run.completed',
+        recorded_at: now().toISOString(),
+        label: 'Handoff completed',
+        display: {
+          text:
+            args.action === 'resume' && result.status === 'not_found'
+              ? 'No saved Circuit handoff was found.'
+              : `Circuit handoff ${args.action} completed.`,
+          importance: 'major',
+          tone: result.status === 'not_found' ? 'warning' : 'success',
+        },
+        presentation: progressPresentation({
+          blockId: progress.runId,
+          statusText,
+        }),
+        outcome: 'complete',
+        result_path: result.result_path,
+      });
+    }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return 0;
   } catch (err) {

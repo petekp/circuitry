@@ -22,6 +22,11 @@ describe('progress event schema', () => {
       {
         ...BASE,
         type: 'route.selected',
+        presentation: {
+          block_id: BASE.run_id,
+          line_mode: 'append',
+          status_text: 'Chose review.',
+        },
         selected_flow: 'review',
         routed_by: 'classifier',
         router_reason: 'matched review',
@@ -295,6 +300,57 @@ describe('progress event schema', () => {
           checkpoint_choice_arg: '<choice>',
           command:
             "circuit-next resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts old progress events without presentation metadata', () => {
+    expect(
+      ProgressEvent.safeParse({
+        ...BASE,
+        type: 'run.started',
+        run_folder: '/tmp/run',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates status block presentation metadata', () => {
+    expect(
+      ProgressEvent.safeParse({
+        ...BASE,
+        type: 'run.started',
+        run_folder: '/tmp/run',
+        presentation: {
+          block_id: BASE.run_id,
+          line_mode: 'append',
+          status_text: 'Framing the work...',
+        },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      ProgressEvent.safeParse({
+        ...BASE,
+        type: 'run.started',
+        run_folder: '/tmp/run',
+        presentation: {
+          block_id: BASE.run_id,
+          line_mode: 'replace_slot',
+          status_text: 'Review completed.',
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      ProgressEvent.safeParse({
+        ...BASE,
+        type: 'run.started',
+        run_folder: '/tmp/run',
+        presentation: {
+          block_id: BASE.run_id,
+          line_mode: 'append',
+          status_text: 'x'.repeat(181),
         },
       }).success,
     ).toBe(false);

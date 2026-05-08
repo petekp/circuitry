@@ -44,7 +44,7 @@ export const fixReviewShapeHint: SchemaShapeHint = {
   instruction: [
     'Respond with a single raw JSON object whose top-level shape is exactly:',
     '{ "verdict": "<accept|accept-with-fixes|reject>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] }',
-    'Review the change against the diagnosed cause and the brief\'s success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.',
+    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
     'Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
     'The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against fix.review@v1 before writing reports/fix/review.json.',
   ].join(' '),

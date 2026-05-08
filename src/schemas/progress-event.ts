@@ -12,6 +12,36 @@ export const ProgressDisplay = z
   .strict();
 export type ProgressDisplay = z.infer<typeof ProgressDisplay>;
 
+export const ProgressPresentationLineMode = z.enum(['append', 'replace_slot', 'suppress']);
+export type ProgressPresentationLineMode = z.infer<typeof ProgressPresentationLineMode>;
+
+export const ProgressPresentation = z
+  .object({
+    block_id: z.string().min(1).max(120),
+    line_mode: ProgressPresentationLineMode,
+    slot_id: z.string().min(1).max(120).optional(),
+    status_text: z.string().min(1).max(180).optional(),
+    depth: z.number().int().min(0).max(8).optional(),
+  })
+  .strict()
+  .superRefine((presentation, ctx) => {
+    if (presentation.line_mode === 'replace_slot' && presentation.slot_id === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['slot_id'],
+        message: 'slot_id is required when line_mode is replace_slot',
+      });
+    }
+    if (presentation.line_mode !== 'suppress' && presentation.status_text === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status_text'],
+        message: 'status_text is required unless line_mode is suppress',
+      });
+    }
+  });
+export type ProgressPresentation = z.infer<typeof ProgressPresentation>;
+
 export const ProgressTaskStatus = z.enum(['pending', 'in_progress', 'completed', 'failed']);
 export type ProgressTaskStatus = z.infer<typeof ProgressTaskStatus>;
 
@@ -33,6 +63,7 @@ const ProgressEventBase = z
     recorded_at: z.string().datetime(),
     label: z.string().min(1),
     display: ProgressDisplay,
+    presentation: ProgressPresentation.optional(),
   })
   .strict();
 

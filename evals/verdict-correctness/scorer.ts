@@ -132,11 +132,7 @@ export interface ScoreSignal {
 }
 
 function flattenVerdictText(verdict: ExploreReviewVerdict): string {
-  return [
-    verdict.overall_assessment,
-    ...verdict.objections,
-    ...verdict.missed_angles,
-  ].join('\n');
+  return [verdict.overall_assessment, ...verdict.objections, ...verdict.missed_angles].join('\n');
 }
 
 export function scoreDefect(defectId: DefectId, verdict: ExploreReviewVerdict): ScoreSignal {
