@@ -465,11 +465,11 @@ export function resolveRunFilePath(runDir: string, runRelativePath: string): str
 
 A run folder is "current" only if it contains a valid manifest snapshot
 *and* a `run.bootstrapped` trace entry whose `manifest_hash` matches that
-snapshot. This is the check every entry point uses before treating a
+snapshot. This is the gate every entry point checks before treating a
 folder as resumable. Status projection, checkpoint resume (§17), and
 handoff continuity all read this same contract.
 
-This is more than tidiness. It means every output a run can produce —
+This is more than tidiness. It means every artifact a run can produce —
 the model's response body, the verification's exit code, the operator's
 checkpoint choice — is *content-addressed by location*. Days later, an
 audit can read a folder and reconstruct the run; nothing important lives
@@ -908,7 +908,7 @@ considered first because its signals — "review", "audit" — are
 unambiguous. Build is considered last because its signals
 ("build", "implement") collide with planning-report phrasing
 ("write a plan"). When a signal matches but the request also mentions a
-planning report ("write a build plan"), the `skipOnPlanningReport`
+planning artifact ("write a build plan"), the `skipOnPlanningReport`
 guard suppresses the match and lets routing fall through to the
 default flow.
 
@@ -975,7 +975,7 @@ export const flowPackages: readonly CompiledFlowPackage[] = [
 ];
 ```
 
-Adding a flow is therefore a four-step process: create the folder,
+Adding a flow is therefore a four-step recipe: create the folder,
 export a package, append it to the catalog, run `npm run build && node
 scripts/emit-flows.ts` to regenerate the compiled JSON and host plugin
 mirrors. No engine edit. The repository's `AGENTS.md` says the rule
@@ -1018,7 +1018,7 @@ class of avoidable failures.
 
 ## §20. The operator summary — talking to humans
 
-A `result.json` is the machine-facing output of a run. An operator
+A `result.json` is the machine-facing artifact of a run. An operator
 summary is the human-facing one. It is a deliberately *lossy*
 projection: it skips evidence the operator does not need to see and
 foregrounds the verdict, the residual risks, and the next step.
@@ -1087,7 +1087,7 @@ flows into one operator's preferences. Slots make the joint visible.
 ## §22. Plugins — how Circuit reaches the host
 
 `plugins/claude/` and `plugins/circuit/` are self-contained host
-adapters. They are generated outputs, but they are committed to the
+adapters. They are generated artifacts, but they are committed to the
 repository because hosts install them as packages, not as build
 products.
 
