@@ -461,6 +461,9 @@ describe('operator summary writer', () => {
     expect(html).toContain('Vue &lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('high confidence');
+
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
   });
 
   it('does not emit HTML for Explore default (compose) path', () => {
@@ -487,6 +490,8 @@ describe('operator summary writer', () => {
     expect(written.summary.report_paths.map((report) => report.label)).not.toContain(
       'Operator summary (HTML)',
     );
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).not.toContain('Rich summary:');
   });
 
   it('includes abort reasons in aborted summaries', () => {

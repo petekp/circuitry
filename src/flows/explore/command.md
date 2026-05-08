@@ -74,7 +74,10 @@ metacharacters:
 4. **Parse the final JSON output.** On success the CLI prints a JSON object
    with these fields on stdout: `run_id`, `run_folder`, `outcome`
    (`complete` | `aborted`), `trace_entries_observed`, `result_path`,
-   `operator_summary_path`, and `operator_summary_markdown_path`.
+   `operator_summary_path`, and `operator_summary_markdown_path`. For
+   tournament-path runs, the envelope also includes
+   `operator_summary_html_path` — a rich, browser-viewable summary of the
+   option grid and selected verdict.
 5. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
    and render that Markdown verbatim as the final user-facing answer. Do not
    invent a separate summary. If the operator summary is missing, fall back to
@@ -95,7 +98,14 @@ metacharacters:
    `src/flows/explore/contract.md §Relay check-evaluation semantics` and
    the `RunResult.reason` schema field.
 
-6. **Do not modify the CLI output before surfacing.** The run folder + report
+6. **Auto-open the rich summary when present.** If the parsed JSON includes
+   `operator_summary_html_path`, invoke `open <path>` via Bash so the rich
+   comparison view surfaces in the operator's browser alongside the in-chat
+   markdown summary. This is best-effort: if the command fails (non-macOS
+   host, no default browser, sandboxed environment), do not retry — the
+   path is already present in the rendered markdown above as
+   "Rich summary: ...", so the operator can open it manually.
+7. **Do not modify the CLI output before surfacing.** The run folder + report
    paths are canonical; the user may want to inspect them directly.
 
 ## Depth

@@ -269,6 +269,30 @@ function debugPathFromResult(result) {
   );
 }
 
+function tryOpenInBrowser(path) {
+  if (process.env.CIRCUIT_NO_AUTO_OPEN === '1') return;
+  let command;
+  let args;
+  if (process.platform === 'darwin') {
+    command = 'open';
+    args = [path];
+  } else if (process.platform === 'linux') {
+    command = 'xdg-open';
+    args = [path];
+  } else if (process.platform === 'win32') {
+    command = 'cmd';
+    args = ['/c', 'start', '""', path];
+  } else {
+    return;
+  }
+  try {
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+    child.unref();
+  } catch {
+    // Best-effort. The path is also surfaced inline in the markdown summary.
+  }
+}
+
 function renderFinalResult(stdoutText, checkpointWasRendered) {
   let result;
   try {
@@ -290,6 +314,8 @@ function renderFinalResult(stdoutText, checkpointWasRendered) {
     if (summaryPath !== undefined && existsSync(summaryPath)) {
       const markdown = readFileSync(summaryPath, 'utf8');
       process.stdout.write(markdown.endsWith('\n') ? markdown : `${markdown}\n`);
+      const htmlPath = stringField(result, 'operator_summary_html_path');
+      if (htmlPath !== undefined && existsSync(htmlPath)) tryOpenInBrowser(htmlPath);
       return 0;
     }
     renderLine('Circuit completed, but the summary Markdown was not available.');

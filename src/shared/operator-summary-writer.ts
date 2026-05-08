@@ -543,6 +543,13 @@ function renderMarkdown(summary: OperatorSummary): string {
     }
   }
 
+  const htmlLink = summary.report_paths.find(
+    (report) => report.label === 'Operator summary (HTML)',
+  );
+  if (htmlLink !== undefined) {
+    lines.push('', `Rich summary: ${htmlLink.path}`);
+  }
+
   return `${lines.join('\n')}\n`;
 }
 
