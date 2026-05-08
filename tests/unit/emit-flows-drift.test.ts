@@ -9,7 +9,7 @@
 // schematic-controlled skill dir; `emit` mode must remove it.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -23,6 +23,8 @@ const codexBuildSkillDir = resolve(projectRoot, 'plugins/circuit/flows/build');
 const codexStalePath = resolve(codexBuildSkillDir, 'never-a-mode.json');
 const runtimeProofClaudeDir = resolve(projectRoot, 'plugins/claude/skills/runtime-proof');
 const runtimeProofCodexDir = resolve(projectRoot, 'plugins/circuit/flows/runtime-proof');
+const rootClaudeMarketplacePath = resolve(projectRoot, '.claude-plugin/marketplace.json');
+const rootClaudeLegacyManifestPath = resolve(projectRoot, '.claude-plugin/plugin.json');
 
 function planted(path: string): boolean {
   return existsSync(path);
@@ -60,6 +62,7 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
     removeStaleSiblingIfPresent(codexStalePath);
     removeDirIfPresent(runtimeProofClaudeDir);
     removeDirIfPresent(runtimeProofCodexDir);
+    removeStaleSiblingIfPresent(rootClaudeLegacyManifestPath);
   });
 
   it('--check exits 1 and names the stale sibling when one exists', () => {
@@ -135,6 +138,23 @@ describe('emit-flows.mjs — stale per-mode sibling guard', () => {
     );
     expect(res.stdout ?? '').toContain(
       'removed internal host mirror plugins/circuit/flows/runtime-proof',
+    );
+  });
+
+  it('emit mode preserves the root Claude marketplace while removing legacy root plugin files', () => {
+    const marketplaceBefore = readFileSync(rootClaudeMarketplacePath, 'utf8');
+    plantStaleSibling(rootClaudeLegacyManifestPath);
+
+    const res = spawnSync('node', [emitScript], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+    });
+
+    expect(res.status).toBe(0);
+    expect(planted(rootClaudeLegacyManifestPath)).toBe(false);
+    expect(readFileSync(rootClaudeMarketplacePath, 'utf8')).toBe(marketplaceBefore);
+    expect(res.stdout ?? '').toContain(
+      'removed legacy root host surface .claude-plugin/plugin.json',
     );
   });
 });

@@ -79,7 +79,8 @@ const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
 const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"';
 const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit-next.mjs'";
 const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'];
-const LEGACY_ROOT_HOST_SURFACES = ['.claude-plugin', 'commands', 'hooks'];
+const ROOT_CLAUDE_MARKETPLACE_REL = '.claude-plugin/marketplace.json';
+const LEGACY_ROOT_HOST_SURFACES = ['commands', 'hooks'];
 const CODEX_SKILL_METADATA = {
   build: {
     title: 'Circuit Build',
@@ -829,7 +830,18 @@ function findExistingInternalHostMirrorDirs(entry) {
 }
 
 function findLegacyRootHostSurfaces() {
-  return LEGACY_ROOT_HOST_SURFACES.filter((rel) => existsSync(resolve(projectRoot, rel)));
+  const surfaces = LEGACY_ROOT_HOST_SURFACES.filter((rel) => existsSync(resolve(projectRoot, rel)));
+  const rootClaudePluginRel = '.claude-plugin';
+  const rootClaudePluginAbs = resolve(projectRoot, rootClaudePluginRel);
+  if (!existsSync(rootClaudePluginAbs)) return surfaces;
+
+  for (const entry of readdirSync(rootClaudePluginAbs)) {
+    const rel = `${rootClaudePluginRel}/${entry}`;
+    if (rel !== ROOT_CLAUDE_MARKETPLACE_REL) {
+      surfaces.push(rel);
+    }
+  }
+  return surfaces;
 }
 
 async function emitMode() {

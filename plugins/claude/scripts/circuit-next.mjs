@@ -69,7 +69,7 @@ function runDoctor() {
   checks.push(
     check(
       'plugin_manifest_shape',
-      manifest?.name === 'circuit' && manifest?.hooks === './hooks/hooks.json',
+      manifest?.name === 'circuit' && !('hooks' in (manifest ?? {})),
       manifestPath,
     ),
   );

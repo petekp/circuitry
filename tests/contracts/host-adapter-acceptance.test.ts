@@ -157,7 +157,7 @@ describe('host adapter acceptance contract', () => {
       '| user-level SessionStart registration | not-applicable | supported |',
     );
 
-    expect(claudeManifest.hooks).toBe('./hooks/hooks.json');
+    expect(claudeManifest).not.toHaveProperty('hooks');
     expect(claudeHooks).toContain('SessionStart');
     expect(claudeHooks).toContain('${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs');
     expect(claudeHookScript).toContain('scripts/circuit-next.mjs');

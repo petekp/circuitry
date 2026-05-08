@@ -31,6 +31,11 @@
     "smoke:host:claude": "node scripts/host-smoke/claude-handoff.mjs",
     "sync:codex-plugin-cache": "node scripts/sync-codex-plugin-cache.mjs",
     "check:codex-plugin-cache": "node scripts/sync-codex-plugin-cache.mjs --check",
+    "publish:plugins": "node scripts/publish-plugins.mjs check",
+    "publish:plugins:bump": "node scripts/publish-plugins.mjs bump",
+    "publish:plugins:check": "node scripts/publish-plugins.mjs check",
+    "publish:plugins:local": "node scripts/publish-plugins.mjs local",
+    "publish:plugins:release": "node scripts/publish-plugins.mjs release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
     "verify": "npm run check && npm run lint && npm run build && npm run test && node scripts/emit-flows.mjs --check && npm run check-release-infra",
     "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && node scripts/emit-flows.mjs --check",
     "circuit:run": "./bin/circuit-next"

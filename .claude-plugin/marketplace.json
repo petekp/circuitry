@@ -1,0 +1,15 @@
+{
+  "name": "circuit-next",
+  "description": "Public marketplace entry for Circuit's Claude Code plugin.",
+  "owner": {
+    "name": "Pete Petrash"
+  },
+  "plugins": [
+    {
+      "name": "circuit",
+      "version": "0.1.0-alpha.3",
+      "description": "Structured, resumable developer flows for Claude Code.",
+      "source": "./plugins/claude"
+    }
+  ]
+}

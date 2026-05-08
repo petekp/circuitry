@@ -54,6 +54,8 @@ const PluginManifest = z
     name: z.literal('circuit'),
     version: z.string().min(1),
     description: z.string().min(1),
+    homepage: z.literal('https://github.com/petekp/circuit-next'),
+    repository: z.literal('https://github.com/petekp/circuit-next'),
     skills: z.literal('./skills/'),
     interface: z.object({
       displayName: z.literal('Circuit'),
@@ -65,6 +67,8 @@ const PluginManifest = z
     }),
   })
   .passthrough();
+
+const VersionManifest = z.object({ version: z.string().min(1) });
 
 function collectJsonFiles(root: string, prefix = ''): string[] {
   const entries = readdirSync(resolve(root, prefix), { withFileTypes: true });
@@ -83,7 +87,13 @@ describe('Codex host plugin package', () => {
   it('declares an installable Codex plugin manifest', () => {
     const manifestPath = resolve(PLUGIN_ROOT, '.codex-plugin/plugin.json');
     const manifest = PluginManifest.parse(JSON.parse(readFileSync(manifestPath, 'utf8')));
+    const versionManifest = VersionManifest.parse(
+      JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
+    );
 
+    expect(manifest.version).toBe(versionManifest.version);
+    expect(manifest.homepage).toBe('https://github.com/petekp/circuit-next');
+    expect(manifest.repository).toBe('https://github.com/petekp/circuit-next');
     expect(manifest.interface.capabilities).toContain('Interactive');
     expect(manifest.interface.capabilities).toContain('Write');
     expect(manifest.description).toContain('right Circuit flow');
@@ -99,10 +109,12 @@ describe('Codex host plugin package', () => {
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(false);
   });
 
-  it('ships a repo-local marketplace entry for Codex plugin discovery', () => {
+  it('ships a public marketplace entry for Codex plugin discovery', () => {
     const marketplace = JSON.parse(
       readFileSync(resolve(REPO_ROOT, '.agents/plugins/marketplace.json'), 'utf8'),
     ) as {
+      name: string;
+      interface: { displayName: string };
       plugins: Array<{
         name: string;
         source: { source: string; path: string };
@@ -111,6 +123,8 @@ describe('Codex host plugin package', () => {
       }>;
     };
 
+    expect(marketplace.name).toBe('circuit-next');
+    expect(marketplace.interface.displayName).toBe('Circuit Next');
     expect(marketplace.plugins).toContainEqual({
       name: 'circuit',
       source: { source: 'local', path: './plugins/circuit' },
@@ -121,8 +135,14 @@ describe('Codex host plugin package', () => {
 
   it('syncs and checks the local Codex plugin cache package', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-cache-'));
+    const versionManifest = VersionManifest.parse(
+      JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
+    );
     try {
-      const cachePath = join(tempDir, 'plugins/cache/circuit-next-local/circuit/0.1.0');
+      const cachePath = join(
+        tempDir,
+        `plugins/cache/circuit-next-local/circuit/${versionManifest.version}`,
+      );
       const syncResult = spawnSync(
         process.execPath,
         [resolve(REPO_ROOT, 'scripts/sync-codex-plugin-cache.mjs'), '--cache-path', cachePath],

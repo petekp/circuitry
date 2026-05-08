@@ -35,9 +35,21 @@ const PluginManifest = z
     name: z.literal('circuit'),
     version: z.string().min(1),
     description: z.string().min(1),
-    hooks: z.literal('./hooks/hooks.json'),
   })
   .passthrough();
+
+const VersionManifest = z.object({ version: z.string().min(1) });
+const MarketplaceManifest = z.object({
+  name: z.literal('circuit-next'),
+  owner: z.object({ name: z.literal('Pete Petrash') }),
+  plugins: z.array(
+    z.object({
+      name: z.literal('circuit'),
+      version: z.string().min(1),
+      source: z.literal('./plugins/claude'),
+    }),
+  ),
+});
 
 function collectJsonFiles(root: string, prefix = ''): string[] {
   const entries = readdirSync(resolve(root, prefix), { withFileTypes: true });
@@ -54,12 +66,32 @@ describe('Claude Code host plugin package', () => {
     const manifest = PluginManifest.parse(JSON.parse(readFileSync(manifestPath, 'utf8')));
 
     expect(manifest.description).toContain('/circuit:run');
+    expect(manifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(true);
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.mjs'))).toBe(true);
     expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'))).toBe(true);
-    expect(existsSync(resolve(REPO_ROOT, '.claude-plugin'))).toBe(false);
     expect(existsSync(resolve(REPO_ROOT, 'hooks'))).toBe(false);
     expect(existsSync(resolve(REPO_ROOT, 'commands'))).toBe(false);
+  });
+
+  it('ships a root Claude marketplace entry that matches the plugin version', () => {
+    const versionManifest = VersionManifest.parse(
+      JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
+    );
+    const pluginManifest = PluginManifest.parse(
+      JSON.parse(readFileSync(resolve(PLUGIN_ROOT, '.claude-plugin/plugin.json'), 'utf8')),
+    );
+    const marketplace = MarketplaceManifest.parse(
+      JSON.parse(readFileSync(resolve(REPO_ROOT, '.claude-plugin/marketplace.json'), 'utf8')),
+    );
+
+    expect(pluginManifest.version).toBe(versionManifest.version);
+    expect(marketplace.plugins).toContainEqual({
+      name: 'circuit',
+      version: versionManifest.version,
+      source: './plugins/claude',
+    });
+    expect(marketplace.owner.name).toBe('Pete Petrash');
   });
 
   it('exposes Claude Code command files that invoke the installed plugin wrapper', () => {

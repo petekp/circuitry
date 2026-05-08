@@ -17,7 +17,8 @@ claude --plugin-dir ./plugins/claude
   flow that registers a slash command. Each folder contains
   `circuit.json` (the default mode) and any per-mode variants
   (e.g. `lite.json`).
-- `hooks/` — Claude Code SessionStart hook registration and hook script.
+- `hooks/` — Claude Code auto-loaded SessionStart hook registration and hook
+  script.
 - `scripts/circuit-next.mjs` — plugin-local wrapper that injects this
   package's generated flow root before invoking `circuit-next`.
 

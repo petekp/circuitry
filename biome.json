@@ -8,6 +8,7 @@
       "bootstrap",
       ".circuit",
       ".circuit-next",
+      ".claude",
       "docs/release/proofs/runs"
     ]
   },

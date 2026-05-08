@@ -1,12 +1,12 @@
 {
   "name": "circuit",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.3",
   "description": "Choose and run the right Circuit flow from Codex.",
   "author": {
     "name": "Circuit"
   },
-  "homepage": "https://github.com/petepetrash/circuit-next",
-  "repository": "https://github.com/petepetrash/circuit-next",
+  "homepage": "https://github.com/petekp/circuit-next",
+  "repository": "https://github.com/petekp/circuit-next",
   "license": "UNLICENSED",
   "keywords": ["circuit", "developer-flows", "codex", "automation"],
   "skills": "./skills/",
@@ -17,7 +17,7 @@
     "developerName": "Circuit",
     "category": "Coding",
     "capabilities": ["Interactive", "Write"],
-    "websiteURL": "https://github.com/petepetrash/circuit-next",
+    "websiteURL": "https://github.com/petekp/circuit-next",
     "defaultPrompt": [
       "Use Circuit on this task",
       "Use Circuit to fix this bug",
