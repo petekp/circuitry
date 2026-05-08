@@ -34,13 +34,13 @@ metacharacters:
    Example:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run review --goal 'review the latest change' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'review the latest change'
    ```
 
    Example with an apostrophe:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run review --goal 'can'\''t regress runtime safety' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'can'\''t regress runtime safety'
    ```
 
 3. **Handle untracked file contents deliberately.** Review collects untracked
@@ -48,46 +48,11 @@ metacharacters:
    explicitly asks to include untracked file contents and those files are safe
    to relay to the configured worker, add `--include-untracked-content`.
    Otherwise omit the flag.
-4. **Render progress while the run is active.** `--progress jsonl` writes
-   progress events to stderr and keeps the final result JSON on stdout.
-   For every event whose `display.importance === "major"` or whose
-   `display.tone` is `warning`, `error`, or `checkpoint`, render
-   `display.text` exactly. Suppress `detail` events unless the user asks for
-   debug detail. Do not show raw JSON, raw step IDs, or trace internals by
-   default. When `task_list.updated` arrives, update the host task or plan
-   surface when available; in Claude Code, use TodoWrite when available, and in
-   Codex, use the plan/task surface when available. When `user_input.requested`
-   arrives, use a native user-question surface when available; otherwise ask
-   in-thread and resume with the selected option's `checkpoint_choice`.
-5. **Parse the final JSON output.** On success the CLI prints a JSON object
-   with these fields on stdout: `run_id`, `run_folder`, `outcome`
-   (`complete` | `aborted`), `trace_entries_observed`, `result_path`,
-   `operator_summary_path`, and `operator_summary_markdown_path`.
-6. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
-   and render that Markdown verbatim as the final user-facing answer. Do not
-   invent a separate summary. If the operator summary is missing, fall back to
-   the Review reports and include:
-   - `outcome` (e.g., "Run completed" / "Run aborted")
-   - `run_folder` — the absolute path of the run folder where evidence lives
-   - `result_path` — the run summary `reports/result.json`
-   - if `outcome === 'complete'`,
-     `${run_folder}/reports/review-result.json` — the review flow's
-     typed review-result report
-   - any `evidence_warnings` from the intake or review-result report
-   - `trace_entries_observed` count + a pointer to `trace.ndjson` under the run
-     folder for the full trace
-
-   The default CLI path now writes a schema-valid
-   `${run_folder}/reports/review-result.json` for the audit-only review
-   flow when the run completes. Surface that path as the typed review
-   result report only for completed runs.
-
-   If `outcome === 'aborted'`, read `reports/result.json` at `result_path`
-   to surface the abort `reason`; do not claim that
-   `reports/review-result.json` exists on aborted runs.
-7. **Do not modify the CLI output before surfacing.** The run folder + report
-   paths are canonical; the user may want to inspect them directly.
-
+4. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Depth
 
 This command runs at `standard` depth by default. The CLI accepts

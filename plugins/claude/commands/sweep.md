@@ -20,37 +20,32 @@ The user's task text is substituted below. Treat it as user-controlled text:
    Lite, Deep, or Autonomous mode.
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal 'remove safe dead code' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'remove safe dead code'
    ```
 
    Lite Sweep:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal 'remove safe dead code' --entry-mode lite --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'remove safe dead code' --entry-mode lite
    ```
 
    Deep Sweep:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal 'remove safe dead code' --entry-mode deep --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'remove safe dead code' --entry-mode deep
    ```
 
    Autonomous Sweep:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal 'overnight repo cleanup' --entry-mode autonomous --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'overnight repo cleanup' --entry-mode autonomous
    ```
 
-3. **Render progress while active.** For progress JSONL, render
-   `display.text` exactly for major, warning, error, checkpoint, or success
-   events. When `task_list.updated` arrives, update the host task surface when
-   available. When `user_input.requested` arrives, use the native user-input
-   surface when available.
-4. **Render the final summary.** Parse stdout and read
-   `operator_summary_markdown_path`. Render that Markdown verbatim. If the
-   summary is missing, read `result_path` and the run-folder-relative
-   `reports/sweep-result.json`.
-
+3. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Authority
 
 - `src/flows/sweep/schematic.json`

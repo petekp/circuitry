@@ -60,7 +60,7 @@ function hasExecutableCompiledFlowInvocation(body: string, flow: string): boolea
     `^\\s*node dist\\/cli\\/circuit\\.js run ${flowPattern}(?:\\s|$)`,
   );
   const claudePluginInvocation = new RegExp(
-    `^\\s*${CLAUDE_WRAPPER_PATTERN} run ${flowPattern}(?:\\s|$)`,
+    `^\\s*${CLAUDE_WRAPPER_PATTERN} present run ${flowPattern}(?:\\s|$)`,
   );
   for (const block of blocks) {
     for (const line of block.split('\n')) {
@@ -97,7 +97,9 @@ function hasExecutableRouterInvocation(body: string): boolean {
   const blocks = extractBashBlocks(body);
   const binInvocation = /^\s*\.\/bin\/circuit-next run --goal(?:\s|$)/;
   const nodeInvocation = /^\s*node dist\/cli\/circuit\.js run --goal(?:\s|$)/;
-  const claudePluginInvocation = new RegExp(`^\\s*${CLAUDE_WRAPPER_PATTERN} run --goal(?:\\s|$)`);
+  const claudePluginInvocation = new RegExp(
+    `^\\s*${CLAUDE_WRAPPER_PATTERN} present run --goal(?:\\s|$)`,
+  );
   for (const block of blocks) {
     for (const line of block.split('\n')) {
       if (

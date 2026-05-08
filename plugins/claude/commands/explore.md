@@ -45,57 +45,24 @@ metacharacters:
    and the full Bash command becomes:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run explore --goal 'can'\''t go' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'can'\''t go'
    ```
 
    For a goal with no special characters (e.g., `find deprecated APIs`),
    the straightforward single-quoted form is sufficient:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run explore --goal 'find deprecated APIs' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'find deprecated APIs'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Claude Code plugin directory, injects the
    plugin's packaged flow root, and then invokes `circuit-next`.
-3. **Render progress while the run is active.** `--progress jsonl` writes
-   progress events to stderr and keeps the final result JSON on stdout.
-   For every event whose `display.importance === "major"` or whose
-   `display.tone` is `warning`, `error`, or `checkpoint`, render
-   `display.text` exactly. Suppress `detail` events unless the user asks for
-   debug detail. Do not show raw JSON, raw step IDs, or trace internals by
-   default. When `task_list.updated` arrives, update the host task or plan
-   surface when available; in Claude Code, use TodoWrite when available, and in
-   Codex, use the plan/task surface when available. When `user_input.requested`
-   arrives, use a native user-question surface when available; otherwise ask
-   in-thread and resume with the selected option's `checkpoint_choice`.
-4. **Parse the final JSON output.** On success the CLI prints a JSON object
-   with these fields on stdout: `run_id`, `run_folder`, `outcome`
-   (`complete` | `aborted`), `trace_entries_observed`, `result_path`,
-   `operator_summary_path`, and `operator_summary_markdown_path`.
-5. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
-   and render that Markdown verbatim as the final user-facing answer. Do not
-   invent a separate summary. If the operator summary is missing, fall back to
-   the Explore reports and include:
-   - `outcome` (e.g., "Run completed" / "Run aborted")
-   - `run_folder` — the absolute path of the run folder where evidence lives
-   - `result_path` — the run summary `reports/result.json` (not the
-     close-step report)
-   - `${run_folder}/reports/explore-result.json` — the close-step report
-     (the actual flow product). Surface the path so the user can inspect
-     the typed report when needed.
-   - `trace_entries_observed` count + a pointer to `trace.ndjson` under the run
-     folder for the full trace.
-
-   If `outcome === 'aborted'`, read `reports/result.json` at `result_path`
-   to surface the abort `reason` — the runtime mirrors that reason
-   byte-for-byte from the check-evaluation layer per
-   `src/flows/explore/contract.md §Relay check-evaluation semantics` and
-   the `RunResult.reason` schema field.
-
-6. **Do not modify the CLI output before surfacing.** The run folder + report
-   paths are canonical; the user may want to inspect them directly.
-
+3. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Depth
 
 This command runs at `standard` depth by default. The CLI accepts

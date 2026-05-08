@@ -38,31 +38,31 @@ metacharacters:
    Default Fix (standard depth, full review pass):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'fix the foo bug' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the foo bug'
    ```
 
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'fix the missing-token edge case' --entry-mode lite --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --entry-mode lite
    ```
 
    Deep Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'fix the failing pipeline' --entry-mode deep --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the failing pipeline' --entry-mode deep
    ```
 
    Autonomous Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'diagnose and patch the crash' --entry-mode autonomous --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'diagnose and patch the crash' --entry-mode autonomous
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'can'\''t reproduce' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'can'\''t reproduce'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -79,41 +79,11 @@ metacharacters:
    prefers `generated/flows/fix/lite.json` over `circuit.json` because
    the Fix schematic emits a Lite-only compiled flow that skips the review
    relay. Other modes (default/deep/autonomous) load `circuit.json`.
-5. **Render progress while the run is active.** `--progress jsonl` writes
-   progress events to stderr and keeps the final result JSON on stdout.
-   For every event whose `display.importance === "major"` or whose
-   `display.tone` is `warning`, `error`, or `checkpoint`, render
-   `display.text` exactly. Suppress `detail` events unless the user asks for
-   debug detail. Do not show raw JSON, raw step IDs, or trace internals by
-   default. When `task_list.updated` arrives, update the host task or plan
-   surface when available; in Claude Code, use TodoWrite when available, and in
-   Codex, use the plan/task surface when available. When `user_input.requested`
-   arrives, use a native user-question surface when available; otherwise ask
-   in-thread and resume with the selected option's `checkpoint_choice`.
-6. **Parse the CLI's final JSON output.** Always surface `flow_id`, `outcome`,
-   `run_folder`, `trace_entries_observed`, `operator_summary_path`, and
-   `operator_summary_markdown_path`.
-7. **If `outcome === "checkpoint_waiting"`, do not read or claim
-   `result_path`.** Instead surface the waiting checkpoint details:
-   `checkpoint.step_id`, `checkpoint.request_path`,
-   `checkpoint.allowed_choices`, the `user_input.requested` question/options,
-   and the exact resume command:
-
-   ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
-   ```
-
-8. **If `outcome === "complete"`, render Circuit's final summary.** Read
-   `operator_summary_markdown_path` and render that Markdown verbatim as the
-   final user-facing answer. Do not invent a separate summary. If the operator
-   summary is missing, surface `result_path`, then read the run-folder-relative
-   `reports/fix-result.json` report. Surface its review result fields;
-   to summarize the change and verification evidence, follow its
-   `evidence_links` entries (in prose: evidence links — for example
-   `fix.change` and the verification report) and read those reports.
-9. **If `outcome === "aborted"`, read `reports/result.json` at
-   `result_path` and surface the abort reason.**
-
+5. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Authority
 
 - `src/flows/fix/contract.md` (Fix report contract)

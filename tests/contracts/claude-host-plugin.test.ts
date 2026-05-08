@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
@@ -29,6 +29,8 @@ const EXPECTED_CLAUDE_COMMANDS = [
   'run',
   'sweep',
 ];
+const RAW_PROGRESS_INVOCATION =
+  /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs" (?!present\b)[^\n]*--progress jsonl/;
 
 const PluginManifest = z
   .object({
@@ -101,7 +103,10 @@ describe('Claude Code host plugin package', () => {
       const commandMarkdown = readFileSync(commandPath, 'utf8');
 
       expect(commandMarkdown).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"');
-      expect(commandMarkdown).toContain('--progress jsonl');
+      expect(commandMarkdown).toContain(' present ');
+      expect(commandMarkdown).not.toMatch(RAW_PROGRESS_INVOCATION);
+      expect(commandMarkdown).not.toContain('Parse the final JSON');
+      expect(commandMarkdown).not.toContain("Parse the CLI's final JSON");
       expect(commandMarkdown).not.toContain('./bin/circuit-next');
       expect(commandMarkdown).not.toContain('repo-local launcher');
     }
@@ -221,6 +226,260 @@ describe('Claude Code host plugin package', () => {
       expect(result.status).toBe(7);
       expect(result.stdout).toBe('{"outcome":"complete","result_path":"reports/result.json"}\n');
       expect(result.stderr).toBe('{"type":"progress","step":"frame"}\n');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode streams clean progress before the child exits', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-stream-'));
+    let child: ReturnType<typeof spawn> | undefined;
+    try {
+      const binDir = join(tempDir, 'bin');
+      const summaryPath = join(tempDir, 'summary.md');
+      const fakeBin = join(binDir, 'circuit-next');
+      const finalJson = JSON.stringify({
+        schema_version: 1,
+        outcome: 'complete',
+        run_folder: tempDir,
+        operator_summary_markdown_path: summaryPath,
+      });
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(summaryPath, '# Clean Summary\n\n- Done.\n');
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          'const progress = { schema_version: 1, type: "run.started", run_id: "87000000-0000-0000-0000-000000000001", flow_id: "explore", recorded_at: "2026-05-07T12:00:00.000Z", label: "Started", display: { text: "Circuit started explore.", importance: "major", tone: "info" }, run_folder: process.cwd() };',
+          'process.stderr.write(`${JSON.stringify(progress)}\\n`);',
+          'setTimeout(() => {',
+          `  process.stdout.write(${JSON.stringify(`${finalJson}\n`)});`,
+          '}, 900);',
+          'setTimeout(() => process.exit(0), 950);',
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      child = spawn(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'stream handling',
+        ],
+        {
+          cwd: tempDir,
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        },
+      );
+      const childProcess = child;
+      const stdoutPipe = childProcess.stdout;
+      if (stdoutPipe === null) throw new Error('expected child stdout pipe');
+
+      let stdout = '';
+      let closed = false;
+      const closePromise = new Promise<number | null>((resolveClose) => {
+        childProcess.on('close', (status) => {
+          closed = true;
+          resolveClose(status);
+        });
+      });
+      const progressBeforeExit = await new Promise<boolean>((resolveProgress) => {
+        const timer = setTimeout(() => resolveProgress(false), 700);
+        stdoutPipe.on('data', (chunk: Buffer) => {
+          stdout += chunk.toString('utf8');
+          if (stdout.includes('Circuit started explore.')) {
+            clearTimeout(timer);
+            resolveProgress(!closed);
+          }
+        });
+      });
+
+      expect(progressBeforeExit).toBe(true);
+      const status = await closePromise;
+      expect(status).toBe(0);
+      expect(stdout).toContain('# Clean Summary');
+      expect(stdout).not.toContain('schema_version');
+      expect(stdout).not.toContain('{"');
+    } finally {
+      child?.kill();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode prints only summary Markdown on success when no progress is emitted', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-success-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const summaryPath = join(tempDir, 'summary.md');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(summaryPath, '# Clean Summary\n\n- Recommendation: keep it short.\n');
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'complete',
+              run_folder: tempDir,
+              operator_summary_markdown_path: summaryPath,
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'clean success',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toBe('# Clean Summary\n\n- Recommendation: keep it short.\n');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode renders checkpoint choices and a resume command without raw JSON', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-checkpoint-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const runFolder = join(tempDir, 'run');
+      const requestPath = join(runFolder, 'reports/checkpoints/tradeoff-request.json');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      mkdirSync(join(requestPath, '..'), { recursive: true });
+      writeFileSync(requestPath, JSON.stringify({ prompt: 'Choose the best tradeoff.' }));
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'checkpoint_waiting',
+              run_folder: runFolder,
+              checkpoint: {
+                step_id: 'tradeoff-checkpoint-step',
+                request_path: requestPath,
+                allowed_choices: ['option-1', 'option-2'],
+              },
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'needs checkpoint',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('Choose the best tradeoff.');
+      expect(result.stdout).toContain('Option 1');
+      expect(result.stdout).toContain('Option 2');
+      expect(result.stdout).toContain(
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+      );
+      expect(result.stdout).not.toContain('checkpoint_waiting');
+      expect(result.stdout).not.toContain('{"');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode suppresses progress JSONL and prints only a short stderr diagnostic on failure', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-failure-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          'const selected = { schema_version: 1, type: "route.selected", run_id: "87000000-0000-0000-0000-000000000001", flow_id: "explore", recorded_at: "2026-05-07T12:00:00.000Z", label: "Selected explore", display: { text: "Circuit selected explore: explicit flow positional argument", importance: "major", tone: "info" }, selected_flow: "explore", routed_by: "explicit", router_reason: "explicit flow positional argument" };',
+          'const started = { schema_version: 1, type: "run.started", run_id: "87000000-0000-0000-0000-000000000001", flow_id: "explore", recorded_at: "2026-05-07T12:00:01.000Z", label: "Started", display: { text: "Circuit started explore.", importance: "major", tone: "info" }, run_folder: process.cwd() };',
+          'process.stderr.write(`${JSON.stringify(selected)}\\n`);',
+          'process.stderr.write(`${JSON.stringify(started)}\\n`);',
+          'process.stderr.write("relay crashed loudly\\nmore diagnostic detail\\n");',
+          'process.exit(3);',
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'fails cleanly',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        },
+      );
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toContain('Circuit started explore.');
+      expect(result.stderr).toContain('Circuit run failed');
+      expect(result.stderr).toContain('relay crashed loudly');
+      expect(result.stdout).not.toContain('Circuit selected explore');
+      expect(result.stdout).not.toContain('schema_version');
+      expect(result.stderr).not.toContain('schema_version');
+      expect(result.stderr).not.toContain('{"');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

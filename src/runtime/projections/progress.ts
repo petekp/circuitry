@@ -64,6 +64,21 @@ function stepTitle(input: {
   );
 }
 
+function completedDisplayText(input: {
+  readonly flowId: string;
+  readonly stepId: string;
+  readonly title: string;
+}): string {
+  if (input.flowId === 'explore') {
+    if (input.stepId === 'synthesize-step') return 'Finished drafting the recommendation.';
+    if (input.stepId === 'review-step') return 'Finished checking the recommendation.';
+    if (input.stepId === 'close-step' || input.stepId === 'close-tournament-step') {
+      return 'Finished wrapping up.';
+    }
+  }
+  return `Circuit completed ${input.title}.`;
+}
+
 function progressTasks(
   flow: ExecutableFlow,
   statuses: ReadonlyMap<string, ProgressTaskStatus>,
@@ -648,6 +663,7 @@ export function createProgressProjector(input: {
         }
         taskStatuses.set(stepId, 'completed');
         const title = stepTitle({ flow: input.flow, compiledFlow: input.compiledFlow, stepId });
+        const displayText = completedDisplayText({ flowId: input.flow.id, stepId, title });
         reportProgress(input.progress, {
           schema_version: 1,
           type: 'step.completed',
@@ -655,7 +671,7 @@ export function createProgressProjector(input: {
           flow_id: flowId,
           recorded_at: recordedAt,
           label: `Completed ${title}`,
-          display: progressDisplay(`Circuit completed ${title}.`, 'detail', 'success'),
+          display: progressDisplay(displayText, 'detail', 'success'),
           step_id: stepId as StepId,
           step_title: title,
           attempt: entry.attempt,
@@ -669,7 +685,7 @@ export function createProgressProjector(input: {
           recordedAt,
           statuses: taskStatuses,
           label: `${title} completed`,
-          displayText: `Circuit finished ${title}.`,
+          displayText,
           tone: 'success',
         });
         break;

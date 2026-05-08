@@ -150,25 +150,71 @@ function stripMarkdownComments(content: string): string {
 }
 
 function renderClaudeHostCommand(sourceContent: string): string {
-  return stripMarkdownComments(sourceContent)
-    .replaceAll('./bin/circuit-next', CLAUDE_PLUGIN_WRAPPER_COMMAND)
-    .replace(
-      /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
-      [
-        '1. **Resolve plugin root.** Claude Code substitutes',
-        '   `${CLAUDE_PLUGIN_ROOT}` with the installed Circuit plugin directory.',
-        "   Do not use a path relative to the user's project.",
-        '2. **Construct the Bash invocation SAFELY.**',
-      ].join('\n'),
+  return renderClaudePresentationInstructions(
+    renderClaudePresentationInvocations(
+      stripMarkdownComments(sourceContent)
+        .replaceAll('./bin/circuit-next', CLAUDE_PLUGIN_WRAPPER_COMMAND)
+        .replace(
+          /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
+          [
+            '1. **Resolve plugin root.** Claude Code substitutes',
+            '   `${CLAUDE_PLUGIN_ROOT}` with the installed Circuit plugin directory.',
+            "   Do not use a path relative to the user's project.",
+            '2. **Construct the Bash invocation SAFELY.**',
+          ].join('\n'),
+        )
+        .replace(
+          /Use the Bash tool to execute the constructed command\. `node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs"`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
+          [
+            'Use the Bash tool to execute the constructed command. The wrapper',
+            '   lives in the installed Claude Code plugin directory, injects the',
+            "   plugin's packaged flow root, and then invokes `circuit-next`.",
+          ].join('\n'),
+        ),
+    ),
+  );
+}
+
+function renderClaudePresentationInvocations(content: string): string {
+  return content
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} handoff save`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present handoff save`,
     )
-    .replace(
-      /Use the Bash tool to execute the constructed command\. `node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs"`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
-      [
-        'Use the Bash tool to execute the constructed command. The wrapper',
-        '   lives in the installed Claude Code plugin directory, injects the',
-        "   plugin's packaged flow root, and then invokes `circuit-next`.",
-      ].join('\n'),
-    );
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} handoff resume`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present handoff resume`,
+    )
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} handoff done`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present handoff done`,
+    )
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} run`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present run`,
+    )
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} resume`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present resume`,
+    )
+    .replaceAll(
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} create`,
+      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present create`,
+    )
+    .replaceAll(' --progress jsonl', '');
+}
+
+function renderClaudePresentationInstructions(content: string): string {
+  return content.replace(/\n(\d+)\. \*\*Render progress[\s\S]*?(?=\n## )/g, (_match, n) =>
+    [
+      '',
+      `${n}. **Let the presentation wrapper render output.** \`present\` streams`,
+      "   approved progress text, renders checkpoint questions, and prints Circuit's",
+      '   final Markdown summary. Do not parse raw JSON or JSONL after Bash.',
+      '   Use non-`present` wrapper mode only for debug, tests, or explicit raw',
+      '   machine-readable output.',
+    ].join('\n'),
+  );
 }
 
 function renderCodexHostCommand(sourceContent: string): string {

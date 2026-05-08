@@ -24,7 +24,7 @@ text:
 3. **Draft and validate first.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" create --name '<slug>' --description '<flow idea>' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present create --name '<slug>' --description '<flow idea>'
    ```
 
 4. **Wait for publish confirmation.** Present the generated summary. Publish
@@ -32,18 +32,14 @@ text:
 5. **Publish after confirmation.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" create --name '<slug>' --description '<flow idea>' --publish --yes --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present create --name '<slug>' --description '<flow idea>' --publish --yes
    ```
 
-6. **Render progress while active.** For progress JSONL, render
-   `display.text` exactly for major, warning, error, checkpoint, or success
-   events. If `task_list.updated` or `user_input.requested` appears in a future
-   utility version, use the host task or user-input surface.
-7. **Render the final summary.** Parse stdout and read
-   `operator_summary_markdown_path`. Render that Markdown verbatim. Surface
-   `status`, `slug`, `draft_path`, `published_path`, `flow_path`, and
-   `result_path` when present.
-
+6. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Authority
 
 - `src/cli/create.ts`

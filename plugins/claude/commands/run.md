@@ -42,7 +42,7 @@ metacharacters:
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
    Build, or Migrate vs Build.
 
-   Use the deterministic CLI router (`node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run --goal ...`) only
+   Use the deterministic CLI router (`node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
@@ -64,62 +64,62 @@ metacharacters:
    Example for a Fix task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'the checkout total is wrong when discounts and tax both apply' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'the checkout total is wrong when discounts and tax both apply'
    ```
 
    Example for a Review task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run review --goal 'review the current diff for safety problems' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'review the current diff for safety problems'
    ```
 
    Example for a Build task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'add a focused feature' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'add a focused feature'
    ```
 
    Example for an Explore task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run explore --goal 'compare auth provider migration options' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'compare auth provider migration options'
    ```
 
    Example for a Migrate task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run migrate --goal 'move the old SDK to the new SDK' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run migrate --goal 'move the old SDK to the new SDK'
    ```
 
    Example for a Sweep task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal 'remove safe dead code' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'remove safe dead code'
    ```
 
    Example for the deterministic fallback router:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run --goal 'choose the right Circuit flow for this task' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal 'choose the right Circuit flow for this task'
    ```
 
    Example for a Build task using both an entry mode and an explicit
    `--depth` flag:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'make the focused change' --entry-mode deep --depth standard --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --entry-mode deep --depth standard
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run fix --goal 'fix the missing-token edge case' --entry-mode lite --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --entry-mode lite
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'can'\''t ship' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'can'\''t ship'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -130,61 +130,11 @@ metacharacters:
    `--include-untracked-content` only when those files are safe to relay to the
    configured worker. Otherwise omit the flag; Review still sends untracked
    paths and sizes.
-4. **Render progress while the run is active.** `--progress jsonl` writes
-   machine-readable progress events to stderr and keeps the final result JSON
-   on stdout. For every event whose `display.importance === "major"` or whose
-   `display.tone` is `warning`, `error`, or `checkpoint`, render
-   `display.text` exactly. Suppress `detail` events unless the user asks for
-   debug detail. Do not show raw JSON, raw step IDs, or trace internals by
-   default. When `task_list.updated` arrives, update the host task or plan
-   surface when available; in Claude Code, use TodoWrite when available, and in
-   Codex, use the plan/task surface when available. When `user_input.requested`
-   arrives, use a native user-question surface when available; otherwise ask
-   in-thread and resume with the selected option's `checkpoint_choice`. Keep
-   host/orchestrator and worker connector distinct in prose.
-5. **Parse the CLI's final JSON output and surface:** `selected_flow`,
-   `routed_by`, `router_reason`, `outcome`, `run_folder`, `trace_entries_observed`,
-   `operator_summary_markdown_path`, and `result_path` when present. If
-   present, also surface `router_signal`.
-6. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
-   and render that Markdown verbatim as the final user-facing answer. Do not
-   invent a separate summary. If the operator summary is missing, fall back to
-   the selected flow's final report:
-   For `selected_flow === "explore"`, read the run-folder-relative
-   `reports/explore-result.json` close-step report. For
-   `selected_flow === "review"` and `outcome === "complete"`, read
-   `reports/review-result.json` and surface its review result. For
-   `selected_flow === "build"` and `outcome === "complete"`, read
-   `reports/build-result.json` and surface its review result fields; to
-   summarize changed files and evidence, follow its `evidence_links`
-   entry (the JSON field is named `evidence_links`; in prose call them
-   evidence links) for `build.implementation` and read that report. For
-   `selected_flow === "migrate"` and `outcome === "complete"`, read
-   `reports/migrate-result.json` and surface its result fields; to summarize
-   the migration evidence, follow its `evidence_links` entries. For
-   `selected_flow === "sweep"` and `outcome === "complete"`, read
-   `reports/sweep-result.json` and surface its result fields; to summarize
-   the cleanup evidence, follow its `evidence_links` entries. For
-   `selected_flow === "fix"` and `outcome === "complete"`, read
-   `reports/fix-result.json` and surface its review result fields; to
-   summarize the change and verification evidence, follow its
-   `evidence_links` entries (for example `fix.change` and the
-   verification report) and read those reports.
-7. **If `outcome === "checkpoint_waiting"`, do not read or claim
-   `result_path`.** Surface the routed metadata (`selected_flow`,
-   `routed_by`, `router_reason`, and optional `router_signal`), then surface
-   the waiting checkpoint details from `checkpoint.waiting` and
-   `user_input.requested`: `checkpoint.step_id`, `checkpoint.request_path`,
-   `checkpoint.allowed_choices`, the question/options, and the exact resume
-   command:
-
-   ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
-   ```
-
-8. **If `outcome === "aborted"`, read `reports/result.json` at
-   `result_path` to surface the abort `reason`.**
-
+4. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Direct Flow Bypass
 
 Use `/circuit:explore`, `/circuit:review`, `/circuit:migrate`, `/circuit:fix`,

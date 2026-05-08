@@ -38,6 +38,13 @@ function baseResult(flowId: string): RunResult {
   });
 }
 
+function markdownBullets(markdown: string): string[] {
+  return markdown
+    .split('\n')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2));
+}
+
 describe('operator summary writer', () => {
   it('writes Review summary files with verdict, finding count, warnings, and report paths', () => {
     writeReport('reports/review-result.json', {
@@ -192,21 +199,64 @@ describe('operator summary writer', () => {
     }
   });
 
-  it('summarizes Explore recommendation snapshots', () => {
+  it('renders Explore summaries from structured brief slots and keeps deeper notes in JSON', () => {
+    writeReport('reports/compose.json', {
+      verdict: 'accept',
+      subject: 'Explore integration',
+      recommendation: 'Keep hardening host rendering with a presentation wrapper.',
+      success_condition_alignment: 'The recommendation keeps the CLI contract machine-readable.',
+      supporting_aspects: [
+        {
+          aspect: 'host output',
+          contribution:
+            'A presentation wrapper solves the visible transcript problem at the host edge.',
+          evidence_refs: ['reports/analysis.json'],
+        },
+      ],
+    });
+    writeReport('reports/review-verdict.json', {
+      verdict: 'accept-with-fold-ins',
+      overall_assessment: 'Good enough to use, but it needs one proof callout.',
+      objections: [
+        'Clarify whether host output was inspected directly.',
+        'Confirm the generated command is updated, not only the checked-in mirror.',
+      ],
+      missed_angles: [
+        'Check the operator summary markdown, not only the JSON report.',
+        'Keep debug paths out of the visible host transcript.',
+      ],
+    });
     writeReport('reports/explore-result.json', {
       summary: 'Explore integration: keep hardening host rendering',
       verdict_snapshot: {
         compose_verdict: 'accept',
         review_verdict: 'accept-with-fold-ins',
-        objection_count: 1,
-        missed_angle_count: 1,
+        objection_count: 2,
+        missed_angle_count: 2,
       },
       review_fold_ins: {
         overall_assessment: 'Good enough to use, but it needs one proof callout.',
-        objections: ['Clarify whether host output was inspected directly.'],
-        missed_angles: ['Check the operator summary markdown, not only the JSON report.'],
+        objections: [
+          'Clarify whether host output was inspected directly.',
+          'Confirm the generated command is updated, not only the checked-in mirror.',
+        ],
+        missed_angles: [
+          'Check the operator summary markdown, not only the JSON report.',
+          'Keep debug paths out of the visible host transcript.',
+        ],
       },
-      evidence_links: [],
+      evidence_links: [
+        {
+          report_id: 'explore.compose',
+          path: 'reports/compose.json',
+          schema: 'explore.compose@v1',
+        },
+        {
+          report_id: 'explore.review-verdict',
+          path: 'reports/review-verdict.json',
+          schema: 'explore.review-verdict@v1',
+        },
+      ],
     });
 
     const written = writeOperatorSummary({
@@ -215,21 +265,39 @@ describe('operator summary writer', () => {
       route: { selectedFlow: 'explore' },
     });
 
-    expect(written.summary.headline).toBe(
-      'Circuit finished Explore. Review: accept-with-fold-ins. Explore integration: keep hardening host rendering',
-    );
+    expect(written.summary.headline).toBe('Circuit finished Explore.');
+    expect(written.summary.brief_slots).toMatchObject({
+      primary: {
+        label: 'Recommendation',
+        text: 'Keep hardening host rendering with a presentation wrapper.',
+      },
+      why: 'A presentation wrapper solves the visible transcript problem at the host edge.',
+      cautions: [
+        'Clarify whether host output was inspected directly.',
+        'Confirm the generated command is updated, not only the checked-in mirror.',
+        'Check the operator summary markdown, not only the JSON report.',
+      ],
+    });
     expect(written.summary.details).toContain(
       'Review assessment: Good enough to use, but it needs one proof callout.',
     );
     expect(written.summary.details).toContain(
-      'Review objections: Clarify whether host output was inspected directly.',
+      'Review objections: Clarify whether host output was inspected directly.; Confirm the generated command is updated, not only the checked-in mirror.',
     );
     expect(written.summary.details).toContain(
-      'Review missed angles: Check the operator summary markdown, not only the JSON report.',
+      'Review missed angles: Check the operator summary markdown, not only the JSON report.; Keep debug paths out of the visible host transcript.',
     );
+    expect(written.summary.report_paths.map((report) => report.label)).toContain('explore.compose');
     const markdown = readFileSync(written.markdownPath, 'utf8');
-    expect(markdown).toContain('accept-with-fold-ins');
+    const bullets = markdownBullets(markdown);
+    expect(bullets).toHaveLength(5);
+    expect(markdown).toContain('Recommendation: Keep hardening host rendering');
     expect(markdown).toContain('Check the operator summary markdown, not only the JSON report.');
+    expect(markdown).not.toContain('Keep debug paths out of the visible host transcript.');
+    expect(markdown).not.toContain(runFolder);
+    expect(markdown).not.toContain('reports/compose.json');
+    expect(markdown).not.toContain('## Run Files');
+    expect(markdown).not.toContain('## Reports');
   });
 
   it('summarizes Explore tournament decisions with selected option, rationale, risks, and next action', () => {
@@ -297,9 +365,16 @@ describe('operator summary writer', () => {
       route: { selectedFlow: 'explore' },
     });
 
-    expect(written.summary.headline).toBe(
-      'Circuit finished Explore decision. Selected: Vue. Choose Vue for a smaller surface and faster product iteration.',
-    );
+    expect(written.summary.headline).toBe('Circuit finished Explore decision. Selected: Vue.');
+    expect(written.summary.brief_slots).toMatchObject({
+      primary: {
+        label: 'Decision',
+        text: 'Choose Vue for a smaller surface and faster product iteration.',
+      },
+      why: 'Vue gives this team the fastest path to a polished prototype.',
+      cautions: ['Hiring familiarity may be thinner.'],
+      nextStep: 'Run a Build plan for a Vue prototype.',
+    });
     expect(written.summary.details).toContain(
       'Decision question: Which frontend framework should the project use?',
     );
@@ -308,6 +383,85 @@ describe('operator summary writer', () => {
     );
     expect(written.summary.details).toContain('Residual risks: Hiring familiarity may be thinner.');
     expect(written.summary.details).toContain('Next action: Run a Build plan for a Vue prototype.');
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdownBullets(markdown)).toHaveLength(4);
+    expect(markdown).not.toContain(runFolder);
+    expect(markdown).not.toContain('reports/decision.json');
+  });
+
+  it('caps long Explore visible text without expanding freeform numbered lists', () => {
+    const longRecommendation = [
+      '1. First, replace the raw Claude transcript with a presentation wrapper that hides progress JSONL and final stdout JSON from the visible answer.',
+      '2. Second, rewrite every generated command mirror so the raw invocation cannot come back during regeneration.',
+      '3. Third, keep the machine-readable CLI output available for automation and debug use.',
+    ].join(' ');
+    writeReport('reports/compose.json', {
+      verdict: 'accept',
+      subject: 'Claude transcript cleanup',
+      recommendation: longRecommendation,
+      success_condition_alignment: 'The recommendation protects the host transcript.',
+      supporting_aspects: [
+        {
+          aspect: 'wrapper',
+          contribution:
+            'The wrapper can stream clean progress while leaving raw machine output intact.',
+          evidence_refs: ['reports/analysis.json'],
+        },
+      ],
+    });
+    writeReport('reports/review-verdict.json', {
+      verdict: 'accept-with-fold-ins',
+      overall_assessment: 'Usable with capped cautions.',
+      objections: ['Objection one.', 'Objection two.', 'Objection three.'],
+      missed_angles: ['Missed angle four.', 'Missed angle five.'],
+    });
+    writeReport('reports/explore-result.json', {
+      summary: `Explore transcript cleanup: ${longRecommendation}`,
+      verdict_snapshot: {
+        compose_verdict: 'accept',
+        review_verdict: 'accept-with-fold-ins',
+        objection_count: 3,
+        missed_angle_count: 2,
+      },
+      review_fold_ins: {
+        overall_assessment: 'Usable with capped cautions.',
+        objections: ['Objection one.', 'Objection two.', 'Objection three.'],
+        missed_angles: ['Missed angle four.', 'Missed angle five.'],
+      },
+      evidence_links: [
+        {
+          report_id: 'explore.compose',
+          path: 'reports/compose.json',
+          schema: 'explore.compose@v1',
+        },
+        {
+          report_id: 'explore.review-verdict',
+          path: 'reports/review-verdict.json',
+          schema: 'explore.review-verdict@v1',
+        },
+      ],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: baseResult('explore'),
+      route: { selectedFlow: 'explore' },
+    });
+
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    const bullets = markdownBullets(markdown);
+    expect(bullets).toHaveLength(5);
+    expect(bullets.filter((bullet) => bullet.startsWith('Caution:'))).toHaveLength(3);
+    expect(markdown).toContain('Objection one.');
+    expect(markdown).toContain('Objection three.');
+    expect(markdown).not.toContain('Missed angle four.');
+    expect(markdown).not.toContain('## Run Files');
+    expect(markdown).not.toContain('## Reports');
+    expect(markdown).not.toContain('{"');
+    expect(written.summary.brief_slots?.primary.text.length).toBeLessThan(
+      longRecommendation.length,
+    );
+    expect(written.summary.details.join('\n')).toContain('Missed angle four.');
   });
 
   it('includes abort reasons in aborted summaries', () => {

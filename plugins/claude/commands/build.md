@@ -37,31 +37,31 @@ metacharacters:
    Default Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'add a focused feature' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'add a focused feature'
    ```
 
    Lite Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'make a small change' --entry-mode lite --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make a small change' --entry-mode lite
    ```
 
    Deep Build with explicit standard depth in the same invocation:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'make the focused change' --entry-mode deep --depth standard --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --entry-mode deep --depth standard
    ```
 
    Autonomous Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'ship the requested fix' --entry-mode autonomous --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'ship the requested fix' --entry-mode autonomous
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run build --goal 'can'\''t ship' --progress jsonl
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'can'\''t ship'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -74,41 +74,11 @@ metacharacters:
 3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
    an explicit depth level, pass it with `--depth`. A single command may carry
    both flags, as shown above.
-4. **Render progress while the run is active.** `--progress jsonl` writes
-   progress events to stderr and keeps the final result JSON on stdout.
-   For every event whose `display.importance === "major"` or whose
-   `display.tone` is `warning`, `error`, or `checkpoint`, render
-   `display.text` exactly. Suppress `detail` events unless the user asks for
-   debug detail. Do not show raw JSON, raw step IDs, or trace internals by
-   default. When `task_list.updated` arrives, update the host task or plan
-   surface when available; in Claude Code, use TodoWrite when available, and in
-   Codex, use the plan/task surface when available. When `user_input.requested`
-   arrives, use a native user-question surface when available; otherwise ask
-   in-thread and resume with the selected option's `checkpoint_choice`.
-5. **Parse the CLI's final JSON output.** Always surface `flow_id`, `outcome`,
-   `run_folder`, `trace_entries_observed`, `operator_summary_path`, and
-   `operator_summary_markdown_path`.
-6. **If `outcome === "checkpoint_waiting"`, do not read or claim
-   `result_path`.** Instead surface the waiting checkpoint details:
-   `checkpoint.step_id`, `checkpoint.request_path`,
-   `checkpoint.allowed_choices`, the `user_input.requested` question/options,
-   and the exact resume command:
-
-   ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
-   ```
-
-7. **If `outcome === "complete"`, render Circuit's final summary.** Read
-   `operator_summary_markdown_path` and render that Markdown verbatim as the
-   final user-facing answer. Do not invent a separate summary. If the operator
-   summary is missing, surface `result_path`, then read the run-folder-relative
-   `reports/build-result.json` report. Surface its review result fields;
-   to summarize changed files and evidence, follow its `evidence_links`
-   entry (in prose: evidence links) for `build.implementation` and read that
-   report.
-8. **If `outcome === "aborted"`, read `reports/result.json` at
-   `result_path` and surface the abort reason.**
-
+4. **Let the presentation wrapper render output.** `present` streams
+   approved progress text, renders checkpoint questions, and prints Circuit's
+   final Markdown summary. Do not parse raw JSON or JSONL after Bash.
+   Use non-`present` wrapper mode only for debug, tests, or explicit raw
+   machine-readable output.
 ## Authority
 
 - `docs/contracts/compiled-flow.md` (compiled flow shape)

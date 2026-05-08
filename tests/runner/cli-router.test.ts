@@ -544,6 +544,35 @@ describe('CLI router', () => {
     });
   });
 
+  it('keeps explicit route selection machine-readable while Explore completion copy stays concise', async () => {
+    const runFolder = join(runFolderBase, 'explore-progress-copy');
+    const { output, progress } = await runMainJsonWithProgress(
+      [
+        'run',
+        'explore',
+        '--goal',
+        'compare host rendering options',
+        '--progress',
+        'jsonl',
+        '--run-folder',
+        runFolder,
+      ],
+      '{"verdict":"accept"}',
+    );
+
+    expect(output.flow_id).toBe('explore');
+    expect(progress.find((event) => event.type === 'route.selected')).toMatchObject({
+      selected_flow: 'explore',
+      routed_by: 'explicit',
+    });
+    const completedTexts = progress
+      .filter((event) => event.type === 'step.completed' || event.type === 'task_list.updated')
+      .map((event) => event.display.text);
+    expect(completedTexts).toContain('Finished drafting the recommendation.');
+    expect(completedTexts).toContain('Finished checking the recommendation.');
+    expect(completedTexts).toContain('Finished wrapping up.');
+  });
+
   it('routes decide: through the public CLI to the Explore tournament fixture', async () => {
     const runFolder = join(runFolderBase, 'explore-tournament-cli');
     const output = await runMainJsonWithRelayer(

@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
+  type OperatorBriefSlots,
   OperatorSummary,
   type OperatorSummaryReportLink,
   type OperatorSummaryWarning,
@@ -59,6 +60,7 @@ const FLOW_RESULT_PATHS: Record<string, string> = {
   review: 'reports/review-result.json',
   sweep: 'reports/sweep-result.json',
 };
+const VISIBLE_SLOT_TEXT_LIMIT = 220;
 
 function jsonPath(runFolder: string): string {
   return join(runFolder, 'reports', 'operator-summary.json');
@@ -127,6 +129,18 @@ function friendlyResultSummary(summary: string): string {
 
 function sentence(value: string): string {
   return /[.!?]$/.test(value) ? value : `${value}.`;
+}
+
+function compactText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function capVisibleText(value: string): string {
+  const text = compactText(value);
+  if (text.length <= VISIBLE_SLOT_TEXT_LIMIT) return text;
+  const clipped = text.slice(0, VISIBLE_SLOT_TEXT_LIMIT - 3);
+  const wordBoundary = clipped.replace(/\s+\S*$/, '').trim();
+  return `${wordBoundary.length > 0 ? wordBoundary : clipped.trim()}...`;
 }
 
 function reportLink(
@@ -209,6 +223,77 @@ function exploreReviewFoldInDetails(flowReport: JsonObject | undefined): string[
   if (objections.length > 0) details.push(`Review objections: ${objections.join('; ')}`);
   if (missedAngles.length > 0) details.push(`Review missed angles: ${missedAngles.join('; ')}`);
   return details;
+}
+
+function firstSupportingAspectContribution(
+  composeReport: JsonObject | undefined,
+): string | undefined {
+  for (const item of arrayField(composeReport, 'supporting_aspects')) {
+    if (!isObject(item)) continue;
+    const contribution = stringField(item, 'contribution');
+    if (contribution !== undefined) return contribution;
+  }
+  return undefined;
+}
+
+function exploreCautions(input: {
+  readonly reviewReport: JsonObject | undefined;
+  readonly flowReport: JsonObject | undefined;
+}): string[] {
+  const foldIns = objectField(input.flowReport, 'review_fold_ins');
+  const objections = stringArrayField(input.reviewReport, 'objections');
+  const missedAngles = stringArrayField(input.reviewReport, 'missed_angles');
+  const fallbackObjections = stringArrayField(foldIns, 'objections');
+  const fallbackMissedAngles = stringArrayField(foldIns, 'missed_angles');
+  return [
+    ...(objections.length > 0 ? objections : fallbackObjections),
+    ...(missedAngles.length > 0 ? missedAngles : fallbackMissedAngles),
+  ]
+    .slice(0, 3)
+    .map(capVisibleText);
+}
+
+function exploreBriefSlots(input: {
+  readonly runFolder: string;
+  readonly flowReport: JsonObject | undefined;
+  readonly resultSummary: string;
+}): OperatorBriefSlots | undefined {
+  const { flowReport, resultSummary, runFolder } = input;
+  if (exploreTournamentSnapshot(flowReport) !== undefined) {
+    const decisionReport = exploreDecisionReport(runFolder, flowReport);
+    const selected = stringField(decisionReport, 'selected_option_label');
+    const decision = stringField(decisionReport, 'decision');
+    if (decision !== undefined) {
+      const rationale = stringField(decisionReport, 'rationale');
+      const nextAction = stringField(decisionReport, 'next_action');
+      return {
+        headline:
+          selected === undefined
+            ? 'Circuit finished Explore decision.'
+            : `Circuit finished Explore decision. Selected: ${selected}.`,
+        primary: { label: 'Decision', text: capVisibleText(decision) },
+        ...(rationale === undefined ? {} : { why: capVisibleText(rationale) }),
+        cautions: stringArrayField(decisionReport, 'residual_risks')
+          .slice(0, 3)
+          .map(capVisibleText),
+        ...(nextAction === undefined ? {} : { nextStep: capVisibleText(nextAction) }),
+      };
+    }
+  }
+
+  const composeReport = evidenceReportById(runFolder, flowReport, 'explore.compose');
+  const reviewReport = evidenceReportById(runFolder, flowReport, 'explore.review-verdict');
+  const recommendation =
+    stringField(composeReport, 'recommendation') ??
+    stringField(flowReport, 'summary') ??
+    resultSummary;
+  const why = firstSupportingAspectContribution(composeReport);
+  return {
+    headline: 'Circuit finished Explore.',
+    primary: { label: 'Recommendation', text: capVisibleText(recommendation) },
+    ...(why === undefined ? {} : { why: capVisibleText(why) }),
+    cautions: exploreCautions({ reviewReport, flowReport }),
+  };
 }
 
 function checkpointOptionDetails(runFolder: string, allowedChoices: readonly string[]): string[] {
@@ -362,6 +447,14 @@ function flowDetails(input: {
 }
 
 function renderMarkdown(summary: OperatorSummary): string {
+  if (
+    summary.flow_id === 'explore' &&
+    summary.outcome === 'complete' &&
+    summary.brief_slots !== undefined
+  ) {
+    return renderExploreMarkdown(summary.brief_slots);
+  }
+
   const lines = [
     '# Circuit Summary',
     '',
@@ -407,6 +500,20 @@ function renderMarkdown(summary: OperatorSummary): string {
     lines.push(`- ${report.label}: ${report.path}${schema}`);
   }
 
+  return `${lines.join('\n')}\n`;
+}
+
+function renderExploreMarkdown(slots: OperatorBriefSlots): string {
+  const lines = ['# Circuit Summary', '', slots.headline, ''];
+  lines.push(`- ${slots.primary.label}: ${slots.primary.text}`);
+  const support = slots.startWith ?? slots.why;
+  if (support !== undefined) {
+    lines.push(`${slots.startWith === undefined ? '- Why' : '- Start with'}: ${support}`);
+  }
+  for (const caution of slots.cautions.slice(0, 3)) {
+    lines.push(`- Caution: ${caution}`);
+  }
+  if (slots.nextStep !== undefined) lines.push(`- Next step: ${slots.nextStep}`);
   return `${lines.join('\n')}\n`;
 }
 
@@ -457,6 +564,14 @@ export function writeOperatorSummary(input: {
   if (input.runResult.outcome === 'aborted' && input.runResult.reason !== undefined) {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
+  const briefSlots =
+    flowId === 'explore' && input.runResult.outcome === 'complete'
+      ? exploreBriefSlots({
+          runFolder: input.runFolder,
+          flowReport,
+          resultSummary: input.runResult.summary,
+        })
+      : undefined;
 
   const candidate = OperatorSummary.parse({
     schema_version: 1,
@@ -471,12 +586,14 @@ export function writeOperatorSummary(input: {
         ? 'Circuit is waiting for a checkpoint choice.'
         : input.runResult.outcome === 'aborted'
           ? 'Circuit run aborted.'
-          : flowHeadline({
+          : (briefSlots?.headline ??
+            flowHeadline({
               runFolder: input.runFolder,
               flowId,
               flowReport,
               resultSummary: input.runResult.summary,
-            }),
+            })),
+    ...(briefSlots === undefined ? {} : { brief_slots: briefSlots }),
     details,
     evidence_warnings: warningRecords(flowReport),
     run_folder: input.runFolder,

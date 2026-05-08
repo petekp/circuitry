@@ -45,6 +45,23 @@ describe('host experience docs', () => {
     expect(doc).toContain('does not implement either native bridge');
   });
 
+  it('documents the Claude presentation wrapper and Explore visible budget', () => {
+    const doc = readFileSync(
+      resolve(REPO_ROOT, 'docs/specs/narration-display-profiles.md'),
+      'utf8',
+    );
+
+    expect(doc).toContain('Claude host commands must use a presentation wrapper');
+    expect(doc).toContain('Flow profiles provide semantic atoms');
+    expect(doc).toContain('structured slots');
+    expect(doc).toContain('no raw JSONL');
+    expect(doc).toContain('no final stdout JSON');
+    expect(doc).toContain('no report section by default');
+    expect(doc).toContain('max 4-6 visible final bullets');
+    expect(doc).toContain('max 3 visible reviewer cautions');
+    expect(doc).toContain('explicit `/circuit:explore`');
+  });
+
   it('keeps a repeatable Codex and Claude Code host trial checklist', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'docs/host-trial-checklist.md'), 'utf8');
 
@@ -65,11 +82,16 @@ describe('host experience docs', () => {
 
     expect(doc).toContain('/circuit:run — flow selector');
     expect(doc).toContain('Select the flow before invoking the CLI');
-    expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run sweep --goal');
-    expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" run --goal');
+    expect(doc).toContain(
+      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal',
+    );
+    expect(doc).toContain(
+      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal',
+    );
     expect(doc).not.toContain('Do not classify the task yourself');
-    expect(doc).toContain('selected_flow === "sweep"');
-    expect(doc).toContain('reports/sweep-result.json');
+    expect(doc).toContain('Let the presentation wrapper render output');
+    expect(doc).not.toContain('selected_flow === "sweep"');
+    expect(doc).not.toContain('reports/sweep-result.json');
   });
 
   it('teaches one natural-language front door per host in the README', () => {
