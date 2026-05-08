@@ -2,6 +2,12 @@
 
 import type { CompiledFlowPackage, CompiledFlowSignal } from '../types.js';
 import {
+  fixChangeShapeHint,
+  fixContextShapeHint,
+  fixDiagnosisShapeHint,
+  fixReviewShapeHint,
+} from './relay-hints.js';
+import {
   FixBrief,
   FixChange,
   FixContext,
@@ -46,14 +52,27 @@ export const fixCompiledFlowPackage: CompiledFlowPackage = {
       return `matched ${signal.label}; routed to Fix flow`;
     },
   },
-  // Fix relay workers currently rely on the generic shape
-  // instruction (no per-schema relayHint). Preserved here so
-  // refactoring this is an explicit decision later.
   relayReports: [
-    { schemaName: 'fix.context@v1', schema: FixContext },
-    { schemaName: 'fix.diagnosis@v1', schema: FixDiagnosis },
-    { schemaName: 'fix.change@v1', schema: FixChange },
-    { schemaName: 'fix.review@v1', schema: FixReview },
+    {
+      schemaName: 'fix.context@v1',
+      schema: FixContext,
+      relayHint: fixContextShapeHint.instruction,
+    },
+    {
+      schemaName: 'fix.diagnosis@v1',
+      schema: FixDiagnosis,
+      relayHint: fixDiagnosisShapeHint.instruction,
+    },
+    {
+      schemaName: 'fix.change@v1',
+      schema: FixChange,
+      relayHint: fixChangeShapeHint.instruction,
+    },
+    {
+      schemaName: 'fix.review@v1',
+      schema: FixReview,
+      relayHint: fixReviewShapeHint.instruction,
+    },
   ],
   reportSchemas: [
     { schemaName: 'fix.brief@v1', schema: FixBrief },

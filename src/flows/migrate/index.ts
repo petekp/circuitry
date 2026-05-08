@@ -5,7 +5,7 @@
 // src/commands/migrate.md owns that host command source.
 
 import type { CompiledFlowPackage, CompiledFlowSignal } from '../types.js';
-import { migrateInventoryShapeHint } from './relay-hints.js';
+import { migrateInventoryShapeHint, migrateReviewShapeHint } from './relay-hints.js';
 import {
   MigrateBatch,
   MigrateBrief,
@@ -53,7 +53,11 @@ export const migrateCompiledFlowPackage: CompiledFlowPackage = {
       schema: MigrateInventory,
       relayHint: migrateInventoryShapeHint.instruction,
     },
-    { schemaName: 'migrate.review@v1', schema: MigrateReview },
+    {
+      schemaName: 'migrate.review@v1',
+      schema: MigrateReview,
+      relayHint: migrateReviewShapeHint.instruction,
+    },
   ],
   reportSchemas: [
     { schemaName: 'migrate.brief@v1', schema: MigrateBrief },
