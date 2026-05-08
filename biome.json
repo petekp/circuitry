@@ -6,6 +6,8 @@
       "dist",
       "coverage",
       "bootstrap",
+      "plugins/claude/runtime",
+      "plugins/circuit/runtime",
       ".circuit",
       ".circuit-next",
       ".claude",

@@ -72,7 +72,7 @@ as literal user-controlled text when constructing shell commands.
 
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Circuit plugin directory and injects the plugin's
-   packaged flow root before it invokes `circuit-next`.
+   packaged flow root before it launches Circuit's bundled runtime.
 2. **Only add `--entry-mode` when the operator explicitly asks for a Fix
    mode.** Map Lite Fix to `--entry-mode lite`, Deep Fix to
    `--entry-mode deep`, and Autonomous Fix to `--entry-mode autonomous`.

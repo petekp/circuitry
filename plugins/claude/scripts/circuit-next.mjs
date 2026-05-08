@@ -1,13 +1,28 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { delimiter, dirname, resolve } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'skills');
+const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit-next.js');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
+const RUNTIME_SOURCE_ENV = 'CIRCUIT_RUNTIME_SOURCE';
+const RUNTIME_PATH_ENV = 'CIRCUIT_RUNTIME_PATH';
+const PLUGIN_ROOT_ENV = 'CIRCUIT_PLUGIN_ROOT';
+const MIN_NODE_VERSION = '22.18.0';
+const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 
 function projectRoot() {
   return process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
@@ -19,21 +34,109 @@ function findLocalLauncher() {
   return undefined;
 }
 
-function hasPathCommand(command) {
+function findPathCommand(command) {
   const pathValue = process.env.PATH ?? '';
   for (const segment of pathValue.split(delimiter)) {
     if (segment.length === 0) continue;
-    if (existsSync(resolve(segment, command))) return true;
+    const candidate = resolve(segment, command);
+    if (existsSync(candidate)) return candidate;
   }
-  return false;
+  return undefined;
 }
 
-const localLauncher = findLocalLauncher();
-const command = localLauncher ?? 'circuit-next';
 const rawArgs = process.argv.slice(2);
 
-function commandExists() {
-  return localLauncher !== undefined || hasPathCommand(command);
+function numericVersionParts(version) {
+  return version.split('.').map((part) => Number.parseInt(part, 10));
+}
+
+function versionAtLeast(current, minimum) {
+  const currentParts = numericVersionParts(current);
+  const minimumParts = numericVersionParts(minimum);
+  for (let index = 0; index < Math.max(currentParts.length, minimumParts.length); index += 1) {
+    const currentPart = currentParts[index] ?? 0;
+    const minimumPart = minimumParts[index] ?? 0;
+    if (currentPart > minimumPart) return true;
+    if (currentPart < minimumPart) return false;
+  }
+  return true;
+}
+
+function nodeVersionSupported() {
+  return versionAtLeast(process.versions.node, MIN_NODE_VERSION);
+}
+
+function runtimeResolutionError(message) {
+  return { ok: false, message };
+}
+
+function runtimeResolution(runtime) {
+  return { ok: true, runtime };
+}
+
+function resolveRuntimeCommand() {
+  const override = process.env.CIRCUIT_NEXT_CLI;
+  if (override !== undefined && override.length > 0) {
+    if (!isAbsolute(override)) {
+      return runtimeResolutionError('CIRCUIT_NEXT_CLI must be an absolute path');
+    }
+    if (!existsSync(override)) {
+      return runtimeResolutionError(`CIRCUIT_NEXT_CLI does not exist: ${override}`);
+    }
+    return runtimeResolution({
+      source: 'override',
+      command: override,
+      path: override,
+      argsPrefix: [],
+    });
+  }
+
+  if (existsSync(bundledRuntimePath)) {
+    return runtimeResolution({
+      source: 'bundled',
+      command: process.execPath,
+      path: bundledRuntimePath,
+      argsPrefix: [bundledRuntimePath],
+    });
+  }
+
+  if (process.env.CIRCUIT_NEXT_DEV === '1') {
+    const localLauncher = findLocalLauncher();
+    if (localLauncher !== undefined) {
+      return runtimeResolution({
+        source: 'dev-fallback',
+        command: localLauncher,
+        path: localLauncher,
+        argsPrefix: [],
+      });
+    }
+    const pathLauncher = findPathCommand('circuit-next');
+    if (pathLauncher !== undefined) {
+      return runtimeResolution({
+        source: 'dev-fallback',
+        command: pathLauncher,
+        path: pathLauncher,
+        argsPrefix: [],
+      });
+    }
+  }
+
+  return runtimeResolutionError(
+    `Circuit plugin packaging error: bundled runtime is missing at ${bundledRuntimePath}. Reinstall or upgrade the Circuit plugin.`,
+  );
+}
+
+function runtimeArgs(runtime, args) {
+  return [...runtime.argsPrefix, ...args];
+}
+
+function runtimeEnv(runtime, baseEnv) {
+  return {
+    ...baseEnv,
+    [RUNTIME_SOURCE_ENV]: runtime.source,
+    [RUNTIME_PATH_ENV]: runtime.path,
+    [PLUGIN_ROOT_ENV]: pluginRoot,
+  };
 }
 
 function check(name, ok, detail) {
@@ -42,6 +145,15 @@ function check(name, ok, detail) {
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+function parseProgressEvents(stderr) {
+  const events = [];
+  for (const line of stderr.split(/\r?\n/)) {
+    if (line.trim().length === 0) continue;
+    events.push(JSON.parse(line));
+  }
+  return events;
 }
 
 function listMarkdownFiles(root) {
@@ -282,7 +394,152 @@ function runDoctor() {
     const flowPath = resolve(packagedFlowRoot, flow, 'circuit.json');
     checks.push(check(`packaged_flow_${flow}`, existsSync(flowPath), flowPath));
   }
-  checks.push(check('circuit_next_binary_available', commandExists(), command));
+
+  checks.push(
+    check(
+      'node_version_supported',
+      nodeVersionSupported(),
+      `node=${process.versions.node} required>=${MIN_NODE_VERSION}`,
+    ),
+  );
+  checks.push(check('bundled_runtime_exists', existsSync(bundledRuntimePath), bundledRuntimePath));
+
+  const resolved = resolveRuntimeCommand();
+  checks.push(
+    check(
+      'runtime_resolved',
+      resolved.ok,
+      resolved.ok ? `${resolved.runtime.source}:${resolved.runtime.path}` : resolved.message,
+    ),
+  );
+
+  let runtimeVersion;
+  if (resolved.ok) {
+    const versionResult = spawnSync(
+      resolved.runtime.command,
+      runtimeArgs(resolved.runtime, ['version', '--json']),
+      {
+        cwd: projectRoot(),
+        encoding: 'utf8',
+        env: runtimeEnv(resolved.runtime, process.env),
+        timeout: 10_000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    try {
+      runtimeVersion =
+        versionResult.stdout.length > 0 ? JSON.parse(versionResult.stdout) : undefined;
+    } catch {
+      runtimeVersion = undefined;
+    }
+    checks.push(
+      check(
+        'runtime_version_executes',
+        versionResult.status === 0 &&
+          versionResult.error === undefined &&
+          runtimeVersion?.runtime_source === resolved.runtime.source,
+        `status=${versionResult.status ?? 'unknown'} source=${runtimeVersion?.runtime_source ?? 'missing'} stderr=${versionResult.stderr.slice(0, 500)}`,
+      ),
+    );
+
+    const smokeRoot = mkdtempSync(join(tmpdir(), 'circuit-claude-doctor-'));
+    try {
+      const configDir = resolve(smokeRoot, '.circuit');
+      const runFolder = resolve(smokeRoot, 'run');
+      mkdirSync(configDir, { recursive: true });
+      writeFileSync(
+        resolve(configDir, 'config.yaml'),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            host: { kind: 'claude-code' },
+            relay: {
+              roles: {
+                reviewer: { kind: 'named', name: 'doctor-reviewer' },
+              },
+              connectors: {
+                'doctor-reviewer': {
+                  kind: 'custom',
+                  name: 'doctor-reviewer',
+                  command: [
+                    process.execPath,
+                    '-e',
+                    "require('node:fs').writeFileSync(process.argv[2], JSON.stringify({verdict:'NO_ISSUES_FOUND',findings:[]}))",
+                  ],
+                  prompt_transport: 'prompt-file',
+                  output: { kind: 'output-file' },
+                  capabilities: { filesystem: 'read-only', structured_output: 'json' },
+                },
+              },
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      const result = spawnSync(
+        resolved.runtime.command,
+        runtimeArgs(resolved.runtime, [
+          'run',
+          '--goal',
+          'review this patch',
+          '--flow-root',
+          packagedFlowRoot,
+          '--run-folder',
+          runFolder,
+          '--progress',
+          'jsonl',
+        ]),
+        {
+          cwd: smokeRoot,
+          encoding: 'utf8',
+          env: runtimeEnv(resolved.runtime, {
+            ...process.env,
+            [GENERATED_FLOW_MIRROR_ROOT_ENV]: packagedFlowRoot,
+          }),
+          timeout: DOCTOR_SMOKE_TIMEOUT_MS,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      );
+      let output;
+      try {
+        output = result.stdout.length > 0 ? JSON.parse(result.stdout) : undefined;
+      } catch {
+        output = undefined;
+      }
+      let progressEvents = [];
+      try {
+        progressEvents = parseProgressEvents(result.stderr);
+      } catch {
+        progressEvents = [];
+      }
+      const progressTypes = progressEvents
+        .map((event) => event.type)
+        .filter((type) => typeof type === 'string');
+      checks.push(
+        check(
+          'temp_repo_review_smoke',
+          result.status === 0 &&
+            result.error === undefined &&
+            output?.selected_flow === 'review' &&
+            output?.outcome === 'complete' &&
+            existsSync(resolve(runFolder, 'reports', 'review-result.json')),
+          `status=${result.status ?? 'unknown'} error=${result.error?.message ?? 'none'} stderr=${result.stderr.slice(0, 500)}`,
+        ),
+      );
+      checks.push(
+        check(
+          'temp_repo_review_progress',
+          progressTypes.includes('route.selected') && progressTypes.includes('run.completed'),
+          progressTypes.length > 0
+            ? `events=${progressTypes.join(',')}`
+            : `stderr=${result.stderr.slice(0, 500)}`,
+        ),
+      );
+    } finally {
+      rmSync(smokeRoot, { recursive: true, force: true });
+    }
+  }
 
   const ok = checks.every((item) => item.ok);
   process.stdout.write(
@@ -293,7 +550,9 @@ function runDoctor() {
         status: ok ? 'ok' : 'fail',
         plugin_root: pluginRoot,
         flow_root: packagedFlowRoot,
-        command,
+        runtime_source: resolved.ok ? resolved.runtime.source : 'unresolved',
+        runtime_path: resolved.ok ? resolved.runtime.path : undefined,
+        runtime_version: runtimeVersion?.version,
         checks,
       },
       null,
@@ -337,23 +596,28 @@ function forwardedInvocation(args) {
   return { forwardedArgs, childEnv };
 }
 
-if (!commandExists()) {
+const resolvedRuntime = resolveRuntimeCommand();
+
+if (!nodeVersionSupported()) {
   process.stderr.write(
-    [
-      'error: could not find circuit-next.',
-      'Run this from a circuit-next checkout, or install a package that provides the circuit-next binary.',
-      '',
-    ].join('\n'),
+    `error: Circuit requires Node.js ${MIN_NODE_VERSION} or newer. Current Node.js is ${process.versions.node}.\n`,
   );
   process.exit(1);
 }
 
+if (!resolvedRuntime.ok) {
+  process.stderr.write(`error: ${resolvedRuntime.message}\n`);
+  process.exit(1);
+}
+
+const runtime = resolvedRuntime.runtime;
+
 if (rawArgs[0] === 'present') {
   const presentArgs = withProgressJsonl(rawArgs.slice(1));
   const { forwardedArgs, childEnv } = forwardedInvocation(presentArgs);
-  const child = spawn(command, forwardedArgs, {
+  const child = spawn(runtime.command, runtimeArgs(runtime, forwardedArgs), {
     cwd: projectRoot(),
-    env: childEnv,
+    env: runtimeEnv(runtime, childEnv),
     stdio: ['inherit', 'pipe', 'pipe'],
   });
   let stdoutText = '';
@@ -417,9 +681,9 @@ if (rawArgs[0] === 'present') {
 } else {
   const { forwardedArgs, childEnv } = forwardedInvocation(rawArgs);
 
-  const result = spawnSync(command, forwardedArgs, {
+  const result = spawnSync(runtime.command, runtimeArgs(runtime, forwardedArgs), {
     cwd: projectRoot(),
-    env: childEnv,
+    env: runtimeEnv(runtime, childEnv),
     stdio: ['inherit', 'pipe', 'pipe'],
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,

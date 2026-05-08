@@ -168,7 +168,7 @@ function renderClaudeHostCommand(sourceContent: string): string {
           [
             'Use the Bash tool to execute the constructed command. The wrapper',
             '   lives in the installed Claude Code plugin directory, injects the',
-            "   plugin's packaged flow root, and then invokes `circuit-next`.",
+            "   plugin's packaged flow root, and launches Circuit's bundled runtime.",
           ].join('\n'),
         ),
     ),
@@ -235,7 +235,7 @@ function renderCodexHostCommand(sourceContent: string): string {
       [
         'Use the Bash tool to execute the constructed command. The wrapper',
         "   lives in the installed Circuit plugin directory and injects the plugin's",
-        '   packaged flow root before it invokes `circuit-next`.',
+        "   packaged flow root before it launches Circuit's bundled runtime.",
       ].join('\n'),
     );
 }

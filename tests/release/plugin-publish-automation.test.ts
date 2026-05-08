@@ -114,6 +114,18 @@ function createRunner(git: GitFixture = {}) {
           return { exitCode: 0, stdout: `${head}\n`, stderr: '' };
         case 'git_origin_head':
           return { exitCode: 0, stdout: `${originHead}\n`, stderr: '' };
+        case 'claude_doctor':
+        case 'codex_doctor':
+        case 'claude_install_smoke_doctor':
+          return {
+            exitCode: 0,
+            stdout: `${JSON.stringify({
+              status: 'ok',
+              runtime_source: 'bundled',
+              runtime_path: '/tmp/plugin/runtime/circuit-next.js',
+            })}\n`,
+            stderr: '',
+          };
         default:
           return { exitCode: 0, stdout: '', stderr: '' };
       }
@@ -379,6 +391,38 @@ describe('plugin publish automation', () => {
       expect(smokeAdd?.cwd).toContain('circuit-claude-install-');
       expect(smokeAdd?.env?.HOME).toContain('circuit-claude-home-');
       expect(smokeAdd?.env?.HOME).not.toBe(process.env.HOME);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails validation when a plugin doctor does not use the bundled runtime', () => {
+    const root = createFixture();
+    const { calls, runner: baseRunner } = createRunner();
+    const runner = (invocation: CommandInvocation) => {
+      if (invocation.id === 'codex_doctor') {
+        calls.push(invocation);
+        return {
+          exitCode: 0,
+          stdout: `${JSON.stringify({
+            status: 'ok',
+            runtime_source: 'dev-fallback',
+            runtime_path: '/tmp/bin/circuit-next',
+          })}\n`,
+          stderr: '',
+        };
+      }
+      return baseRunner(invocation);
+    };
+    try {
+      const report = runPublish(['check'], { repoRoot: root, runner });
+
+      expect(report.status).toBe('failed');
+      expect(report.errors.join('\n')).toContain('must use bundled runtime');
+      const doctor = calls.find((call) => call.id === 'codex_doctor');
+      expect(doctor?.env?.PATH).not.toContain('.local/bin');
+      expect(doctor?.env?.CIRCUIT_NEXT_CLI).toBeUndefined();
+      expect(doctor?.env?.CIRCUIT_NEXT_DEV).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

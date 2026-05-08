@@ -57,7 +57,7 @@ metacharacters:
 
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Claude Code plugin directory, injects the
-   plugin's packaged flow root, and then invokes `circuit-next`.
+   plugin's packaged flow root, and launches Circuit's bundled runtime.
 3. **Let the presentation wrapper render output.** `present` streams
    approved progress text, renders checkpoint questions, and prints Circuit's
    final Markdown summary. Do not parse raw JSON or JSONL after Bash.

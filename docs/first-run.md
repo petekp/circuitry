@@ -7,8 +7,9 @@ node plugins/circuit/scripts/circuit-next.mjs doctor
 ```
 
 Doctor checks the packaged plugin files, command wrapper, generated flows, and
-basic Review/checkpoint behavior. A passing doctor means the supported host path
-is installed well enough to try a real flow.
+basic Review/checkpoint behavior. A passing doctor should report
+`runtime_source: bundled`, which means the installed plugin is using its
+packaged runtime and not a local `PATH` binary.
 
 For the safest first real run, use Review. Review is read-only:
 

@@ -19,8 +19,13 @@ claude --plugin-dir ./plugins/claude
   (e.g. `lite.json`).
 - `hooks/` — Claude Code auto-loaded SessionStart hook registration and hook
   script.
+- `runtime/circuit-next.js` — **generated** bundled Circuit runtime. Normal
+  installs use this file; no separate `circuit-next` binary is required.
 - `scripts/circuit-next.mjs` — plugin-local wrapper that injects this
-  package's generated flow root before invoking `circuit-next`.
+  package's generated flow root before launching the bundled runtime. For
+  development only, `CIRCUIT_NEXT_CLI=/absolute/path/to/bin/circuit-next`
+  overrides the bundle and `CIRCUIT_NEXT_DEV=1` allows repo-local or `PATH`
+  fallback.
 
 ## Editing rules
 
@@ -30,8 +35,10 @@ claude --plugin-dir ./plugins/claude
   `src/flows/<id>/command.md` for flow-owned commands.
 - `skills/<flow>/*.json` — **do not edit by hand**. Edit the flow's schematic
   (`src/flows/<id>/schematic.json`).
+- `runtime/circuit-next.js` — **do not edit by hand**. Run
+  `npm run build-plugin-runtime`.
 - After editing an authored source, run `npm run emit-flows`. The drift check
-  (`npm run emit-flows -- --check`) fails CI if generated files diverge.
+  (`npm run check-flow-drift`) fails CI if generated files diverge.
 
 ## Why generated
 

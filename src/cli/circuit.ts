@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { ExecutorRegistry } from '../runtime/executors/index.js';
 import { isRuntimeRunFolder, resumeCompiledFlow } from '../runtime/run/checkpoint-resume.js';
@@ -54,6 +55,7 @@ import {
 
 const DEFAULT_RUNS_BASE = '.circuit-next/runs';
 const MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
+const DEFAULT_DEV_VERSION = '0.0.0-dev';
 
 interface RuntimeSupportRow {
   readonly entryModeName: string;
@@ -141,6 +143,7 @@ export function usage(): string {
     '       circuit-next runs show --run-folder <path> --json',
     '       circuit-next handoff [save|resume|done] [options]',
     '       circuit-next create --description "<flow idea>" [--name <slug>] [--publish --yes]',
+    '       circuit-next version [--json]',
     '',
     '`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.',
     '',
@@ -154,6 +157,52 @@ export function usage(): string {
     '',
     'Review evidence: untracked file contents are omitted by default. Add `--include-untracked-content` only when those files are safe to relay to the configured worker.',
   ].join('\n');
+}
+
+function readSourceVersion(): string {
+  if (process.env.CIRCUIT_NEXT_VERSION !== undefined) return process.env.CIRCUIT_NEXT_VERSION;
+  const candidates = [
+    resolve(dirname(fileURLToPath(import.meta.url)), '../../plugins/version.json'),
+    resolve(process.cwd(), 'plugins/version.json'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const raw = JSON.parse(readFileSync(candidate, 'utf8')) as { version?: unknown };
+      if (typeof raw.version === 'string' && raw.version.length > 0) return raw.version;
+    } catch {
+      // Keep version reporting useful when the repo manifest is unavailable.
+    }
+  }
+  return DEFAULT_DEV_VERSION;
+}
+
+function versionInfo(): Record<string, unknown> {
+  return {
+    schema_version: 1,
+    name: 'circuit-next',
+    version: readSourceVersion(),
+    node_version: process.versions.node,
+    runtime_source: process.env.CIRCUIT_RUNTIME_SOURCE ?? 'direct',
+    ...(process.env.CIRCUIT_RUNTIME_PATH === undefined
+      ? {}
+      : { runtime_path: process.env.CIRCUIT_RUNTIME_PATH }),
+    ...(process.env.CIRCUIT_PLUGIN_ROOT === undefined
+      ? {}
+      : { plugin_root: process.env.CIRCUIT_PLUGIN_ROOT }),
+  };
+}
+
+function runVersionCommand(argv: readonly string[]): number {
+  if (argv.length === 0) {
+    process.stdout.write(`${readSourceVersion()}\n`);
+    return 0;
+  }
+  if (argv.length === 1 && argv[0] === '--json') {
+    process.stdout.write(`${JSON.stringify(versionInfo(), null, 2)}\n`);
+    return 0;
+  }
+  process.stderr.write('error: usage: circuit-next version [--json]\n');
+  return 2;
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -570,6 +619,9 @@ function classifyRuntimeSupport(input: {
 }
 
 export async function main(argv: readonly string[], options: CliMainOptions = {}): Promise<number> {
+  if (argv[0] === 'version') {
+    return runVersionCommand(argv.slice(1));
+  }
   if (argv[0] === 'handoff') {
     return runHandoffCommand(argv.slice(1), {
       ...(options.now === undefined ? {} : { now: options.now }),

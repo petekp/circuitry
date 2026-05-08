@@ -64,7 +64,7 @@ as literal user-controlled text when constructing shell commands.
 
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Circuit plugin directory and injects the plugin's
-   packaged flow root before it invokes `circuit-next`.
+   packaged flow root before it launches Circuit's bundled runtime.
 3. **Render progress while the run is active.** `--progress jsonl` writes
    progress events to stderr and keeps the final result JSON on stdout.
    For every event whose `display.importance === "major"` or whose

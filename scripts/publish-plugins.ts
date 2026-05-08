@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type PublishTarget = 'check' | 'local' | 'release' | 'bump';
@@ -12,7 +12,7 @@ export type CommandInvocation = {
   id: string;
   argv: string[];
   cwd?: string;
-  env?: Record<string, string>;
+  env?: NodeJS.ProcessEnv;
 };
 
 export type CommandResult = {
@@ -71,7 +71,7 @@ type CommandRunner = (invocation: CommandInvocation) => CommandResult;
 
 type CommandOptions = {
   cwd?: string;
-  env?: Record<string, string>;
+  env?: NodeJS.ProcessEnv;
   effect?: boolean;
 };
 
@@ -81,6 +81,11 @@ type ClaudeMarketplace = { plugins?: ClaudeMarketplacePlugin[] };
 type CodexMarketplacePluginSource = { source?: string; path?: string };
 type CodexMarketplacePlugin = { source?: CodexMarketplacePluginSource };
 type CodexMarketplace = { name: string; plugins?: CodexMarketplacePlugin[] };
+type DoctorOutput = {
+  status?: string;
+  runtime_source?: string;
+  runtime_path?: string;
+};
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -111,6 +116,20 @@ function splitLines(value: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function noAmbientCliPath(): string {
+  const systemSegments = process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
+  return [dirname(process.execPath), ...systemSegments].join(delimiter);
+}
+
+function noAmbientCliEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  return {
+    PATH: noAmbientCliPath(),
+    CIRCUIT_NEXT_CLI: undefined,
+    CIRCUIT_NEXT_DEV: undefined,
+    ...extra,
+  };
 }
 
 function findClaudeMarketplacePlugin(
@@ -293,6 +312,23 @@ export function runPublish(
     return result;
   }
 
+  function assertBundledDoctor(id: string, result: CommandResult): void {
+    let output: DoctorOutput;
+    try {
+      output = JSON.parse(result.stdout) as DoctorOutput;
+    } catch {
+      fail(`${id} did not return parseable doctor JSON`);
+    }
+    if (output.status !== 'ok') {
+      fail(`${id} did not report ok status`);
+    }
+    if (output.runtime_source !== 'bundled') {
+      fail(
+        `${id} must use bundled runtime; got ${output.runtime_source ?? '<missing>'} (${output.runtime_path ?? 'no path'})`,
+      );
+    }
+  }
+
   function inspectMetadata(): void {
     const sourceVersion = readJson<{ version: string }>(resolve(repoRoot, 'plugins/version.json'));
     const claudeManifest = readJson<PluginManifest>(
@@ -439,16 +475,18 @@ export function runPublish(
       runCommand('check_release_ready', ['npm', 'run', 'check-release-ready']);
       runCommand('claude_validate_root', ['claude', 'plugin', 'validate', '.']);
       runCommand('claude_validate_plugin', ['claude', 'plugin', 'validate', 'plugins/claude']);
-      runCommand('claude_doctor', [
-        process.execPath,
-        'plugins/claude/scripts/circuit-next.mjs',
-        'doctor',
-      ]);
-      runCommand('codex_doctor', [
-        process.execPath,
-        'plugins/circuit/scripts/circuit-next.mjs',
-        'doctor',
-      ]);
+      const claudeDoctor = runCommand(
+        'claude_doctor',
+        [process.execPath, 'plugins/claude/scripts/circuit-next.mjs', 'doctor'],
+        { env: noAmbientCliEnv() },
+      );
+      assertBundledDoctor('claude_doctor', claudeDoctor);
+      const codexDoctor = runCommand(
+        'codex_doctor',
+        [process.execPath, 'plugins/circuit/scripts/circuit-next.mjs', 'doctor'],
+        { env: noAmbientCliEnv() },
+      );
+      assertBundledDoctor('codex_doctor', codexDoctor);
       runClaudeInstallSmoke();
     }
   }
@@ -475,6 +513,23 @@ export function runPublish(
     if (/Failed to load hooks|Duplicate hooks file detected/i.test(listOutput)) {
       fail('Claude install smoke reported duplicate or failed hook loading');
     }
+    const installedPluginRoot = resolve(
+      claudeSmokeHome,
+      '.claude/plugins/cache/circuit-next/circuit',
+      report.versions.source,
+    );
+    const installedDoctor = runCommand(
+      'claude_install_smoke_doctor',
+      [process.execPath, resolve(installedPluginRoot, 'scripts/circuit-next.mjs'), 'doctor'],
+      {
+        cwd: claudeSmokeProject,
+        env: noAmbientCliEnv({
+          HOME: claudeSmokeHome,
+          CLAUDE_PROJECT_DIR: claudeSmokeProject,
+        }),
+      },
+    );
+    assertBundledDoctor('claude_install_smoke_doctor', installedDoctor);
     report.outputs.claude_install_smoke_status = 'ok';
   }
 

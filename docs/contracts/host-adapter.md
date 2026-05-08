@@ -203,7 +203,8 @@ The doctor returns JSON on stdout and checks:
 - Codex hook feature flag visibility is reported as a warning
 - Codex user-level handoff hook install state is reported as a warning
 - installed Codex user-level hook launcher existence is validated when present
-- a `circuit-next` binary is available
+- the bundled runtime exists, executes `version --json`, and reports
+  `runtime_source: bundled`
 - a temp-repo routed Review smoke run succeeds with a read-only custom reviewer
 - the temp-repo smoke run emits parseable progress events
 - a checkpoint smoke run emits `user_input.requested`

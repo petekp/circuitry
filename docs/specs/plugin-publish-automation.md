@@ -207,9 +207,14 @@ npm run verify
 npm run check-release-ready
 claude plugin validate .
 claude plugin validate plugins/claude
-node plugins/claude/scripts/circuit-next.mjs doctor
-node plugins/circuit/scripts/circuit-next.mjs doctor
+node plugins/claude/scripts/circuit-next.mjs doctor # with PATH scrubbed of circuit-next
+node plugins/circuit/scripts/circuit-next.mjs doctor # with PATH scrubbed of circuit-next
 ```
+
+Both doctors must report `runtime_source: bundled`. Validation fails if either
+wrapper uses `CIRCUIT_NEXT_CLI`, a repo-local launcher, or a `PATH` fallback.
+The Claude install smoke also runs the installed cache copy's doctor with the
+same no-ambient-CLI environment.
 
 For `local`, also run:
 

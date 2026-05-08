@@ -124,7 +124,7 @@ metacharacters:
 
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Claude Code plugin directory, injects the
-   plugin's packaged flow root, and then invokes `circuit-next`.
+   plugin's packaged flow root, and launches Circuit's bundled runtime.
 3. **Handle untracked Review contents deliberately.** If the task explicitly
    asks Circuit to include untracked file contents for review, add
    `--include-untracked-content` only when those files are safe to relay to the

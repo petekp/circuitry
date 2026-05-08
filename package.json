@@ -21,8 +21,10 @@
     "soak:runtime": "vitest run tests/soak && npm run verify && npm run check-flow-drift",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "emit-flows": "npm run build && node scripts/emit-flows.ts",
-    "check-flow-drift": "npm run build && node scripts/emit-flows.ts --check",
+    "build-plugin-runtime": "node scripts/build-plugin-runtime.ts",
+    "check-plugin-runtime": "node scripts/build-plugin-runtime.ts --check",
+    "emit-flows": "npm run build && node scripts/emit-flows.ts && npm run build-plugin-runtime",
+    "check-flow-drift": "npm run build && node scripts/emit-flows.ts --check && npm run check-plugin-runtime",
     "emit-release": "npm run build && node scripts/release/emit-current-capabilities.ts && node scripts/release/render-parity-matrix.mjs && node scripts/release/render-readiness-report.mjs",
     "capture-proofs:golden-runs": "npm run build && node scripts/release/capture-golden-run-proofs.ts",
     "check-release-infra": "npm run build && node scripts/release/emit-current-capabilities.ts --check && node scripts/release/check-parity.mjs && node scripts/release/check-public-claims.mjs && node scripts/release/check-proof-coverage.mjs && node scripts/release/render-parity-matrix.mjs --check && node scripts/release/render-readiness-report.mjs --check && node scripts/release/audit-public-docs.mjs",
@@ -36,8 +38,8 @@
     "publish:plugins:check": "node scripts/publish-plugins.ts check",
     "publish:plugins:local": "node scripts/publish-plugins.ts local",
     "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
-    "verify": "npm run check && npm run lint && npm run build && npm run test && node scripts/emit-flows.ts --check && npm run check-release-infra",
-    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && node scripts/emit-flows.ts --check",
+    "verify": "npm run check && npm run lint && npm run build && npm run test && node scripts/emit-flows.ts --check && npm run check-plugin-runtime && npm run check-release-infra",
+    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && node scripts/emit-flows.ts --check && npm run check-plugin-runtime",
     "circuit:run": "./bin/circuit-next"
   },
   "dependencies": {
@@ -48,6 +50,7 @@
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.9.0",
     "@vitest/coverage-v8": "^2.1.4",
+    "esbuild": "^0.25.0",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },

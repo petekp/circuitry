@@ -20,26 +20,33 @@ host and checks each step's output against a contract before moving on.
 
 ## Get Started
 
-Circuit is currently a pre-release alpha. Install it directly from a checkout:
+Circuit is currently a pre-release alpha. For Claude Code, install the plugin
+from the marketplace:
+
+```bash
+/plugin marketplace add petekp/circuit-next
+/plugin install circuit@circuit-next
+/reload-plugins
+```
+
+Then ask Circuit to choose a flow:
+
+```text
+/circuit:run <your task>
+```
+
+The installed plugin is self-contained. Normal users do not need to clone this
+repo, run `npm install`, install a `circuit-next` binary, or create a symlink.
+The plugin wrapper launches the bundled runtime that ships with the plugin.
+
+For local development from this checkout:
 
 ```bash
 git clone https://github.com/petekp/circuit-next.git
 cd circuit-next
 npm install
 npm run build
-```
-
-Then run a flow through the local launcher:
-
-```bash
 ./bin/circuit-next run --goal '<your task>'
-```
-
-The CLI router classifies your task and runs the right flow. To use the
-slash commands inside Claude Code, load the self-contained plugin package:
-
-```bash
-claude --plugin-dir ./plugins/claude
 ```
 
 To use Circuit from Codex, install or refresh the Codex plugin package and ask
@@ -310,7 +317,7 @@ contract.
 ## Prerequisites
 
 - **Claude Code**
-- **Node.js 20+**
+- **Node.js 22.18.0+**
 
 ## Troubleshooting
 
@@ -332,6 +339,21 @@ npm run emit-flows
 
 Verify there is no drift with `npm run check-flow-drift`. CI runs the same
 check on every push.
+
+**Verify a plugin install.** Run the plugin doctor. The JSON should include
+`"runtime_source": "bundled"`:
+
+```bash
+node '<plugin root>/scripts/circuit-next.mjs' doctor
+```
+
+**Develop against a local CLI.** The plugin ignores ambient `PATH` binaries by
+default. Use `CIRCUIT_NEXT_CLI=/absolute/path/to/bin/circuit-next` for an
+explicit override, or set `CIRCUIT_NEXT_DEV=1` to allow repo-local and `PATH`
+fallbacks during development only.
+
+**Node version failure.** The bundled runtime requires Node.js 22.18.0 or
+newer. Upgrade Node if the wrapper reports an older version.
 
 **"codex not found" warning.** Codex CLI is optional. The `claude-code`
 connector works without Codex. Install Codex only if you want a separate

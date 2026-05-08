@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
@@ -62,6 +62,23 @@ function collectJsonFiles(root: string, prefix = ''): string[] {
   });
 }
 
+function noAmbientCliPath(): string {
+  const systemSegments = process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
+  return [dirname(process.execPath), ...systemSegments].join(delimiter);
+}
+
+function cleanPluginEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  env.CIRCUIT_NEXT_CLI = undefined;
+  env.CIRCUIT_NEXT_DEV = undefined;
+  env.PATH = noAmbientCliPath();
+  return { ...env, ...extra };
+}
+
+function envWithOverride(fakeBin: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  return cleanPluginEnv({ ...extra, CIRCUIT_NEXT_CLI: fakeBin });
+}
+
 describe('Claude Code host plugin package', () => {
   it('declares a self-contained Claude Code plugin package', () => {
     const manifestPath = resolve(PLUGIN_ROOT, '.claude-plugin/plugin.json');
@@ -109,6 +126,7 @@ describe('Claude Code host plugin package', () => {
       expect(commandMarkdown).not.toContain("Parse the CLI's final JSON");
       expect(commandMarkdown).not.toContain('./bin/circuit-next');
       expect(commandMarkdown).not.toContain('repo-local launcher');
+      expect(commandMarkdown).not.toContain('invokes `circuit-next`');
     }
   });
 
@@ -128,6 +146,121 @@ describe('Claude Code host plugin package', () => {
       expect(claude, file).toEqual(canonical);
     }
     expect(existsSync(resolve(PLUGIN_ROOT, 'skills/runtime-proof'))).toBe(false);
+  });
+
+  it('wrapper uses the bundled runtime when PATH has no circuit-next binary', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-bundled-'));
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: cleanPluginEnv(),
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      const output = JSON.parse(result.stdout) as {
+        runtime_source: string;
+        runtime_path: string;
+        version: string;
+      };
+      expect(output.runtime_source).toBe('bundled');
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
+      expect(output.version).toBe(
+        VersionManifest.parse(
+          JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
+        ).version,
+      );
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('wrapper reports CIRCUIT_NEXT_CLI as an explicit override', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-override-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          'process.stdout.write(JSON.stringify({ runtime_source: process.env.CIRCUIT_RUNTIME_SOURCE, argv: process.argv.slice(2) }) + "\\n");',
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: envWithOverride(fakeBin),
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({
+        runtime_source: 'override',
+        argv: ['version', '--json'],
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('wrapper refuses PATH fallback unless CIRCUIT_NEXT_DEV is set', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-path-fallback-'));
+    try {
+      const tempPluginRoot = join(tempDir, 'plugin');
+      const scriptsDir = join(tempPluginRoot, 'scripts');
+      const binDir = join(tempDir, 'bin');
+      const wrapperPath = join(scriptsDir, 'circuit-next.mjs');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(scriptsDir, { recursive: true });
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs')));
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          'process.stdout.write(JSON.stringify({ runtime_source: process.env.CIRCUIT_RUNTIME_SOURCE, argv: process.argv.slice(2) }) + "\\n");',
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const noDev = spawnSync(process.execPath, [wrapperPath, 'version', '--json'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+        env: cleanPluginEnv({ PATH: `${binDir}${delimiter}${noAmbientCliPath()}` }),
+      });
+      expect(noDev.status).toBe(1);
+      expect(noDev.stderr).toContain('bundled runtime is missing');
+      expect(noDev.stderr).not.toContain('install a package');
+
+      const withDev = spawnSync(process.execPath, [wrapperPath, 'version', '--json'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+        env: cleanPluginEnv({
+          PATH: `${binDir}${delimiter}${noAmbientCliPath()}`,
+          CIRCUIT_NEXT_DEV: '1',
+        }),
+      });
+      expect(withDev.status, withDev.stderr).toBe(0);
+      expect(JSON.parse(withDev.stdout)).toEqual({
+        runtime_source: 'dev-fallback',
+        argv: ['version', '--json'],
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('wrapper runs from a target repo and injects the packaged Claude flow root', () => {
@@ -157,11 +290,9 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          env: envWithOverride(fakeBin, {
             [GENERATED_FLOW_MIRROR_ROOT_ENV]: 'stale-parent-marker',
-          },
+          }),
         },
       );
 
@@ -216,10 +347,7 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: envWithOverride(fakeBin),
         },
       );
 
@@ -273,10 +401,7 @@ describe('Claude Code host plugin package', () => {
         ],
         {
           cwd: tempDir,
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: envWithOverride(fakeBin),
         },
       );
       const childProcess = child;
@@ -352,10 +477,7 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: envWithOverride(fakeBin),
         },
       );
 
@@ -410,10 +532,7 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: envWithOverride(fakeBin),
         },
       );
 
@@ -465,10 +584,7 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: envWithOverride(fakeBin),
         },
       );
 
@@ -514,11 +630,9 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          env: envWithOverride(fakeBin, {
             [GENERATED_FLOW_MIRROR_ROOT_ENV]: 'stale-parent-marker',
-          },
+          }),
         },
       );
 
@@ -552,19 +666,20 @@ describe('Claude Code host plugin package', () => {
         {
           cwd: tempDir,
           encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${resolve(REPO_ROOT, 'bin')}${delimiter}${process.env.PATH ?? ''}`,
-          },
+          env: cleanPluginEnv(),
         },
       );
 
       expect(result.status, result.stderr).toBe(0);
       const output = JSON.parse(result.stdout) as {
         status: string;
+        runtime_source: string;
+        runtime_path: string;
         checks: Array<{ name: string; ok: boolean }>;
       };
       expect(output.status).toBe('ok');
+      expect(output.runtime_source).toBe('bundled');
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
       expect(output.checks).toContainEqual(
         expect.objectContaining({ name: 'plugin_manifest_shape', ok: true }),
       );
@@ -573,6 +688,12 @@ describe('Claude Code host plugin package', () => {
       );
       expect(output.checks).toContainEqual(
         expect.objectContaining({ name: 'packaged_flow_review', ok: true }),
+      );
+      expect(output.checks).toContainEqual(
+        expect.objectContaining({ name: 'runtime_version_executes', ok: true }),
+      );
+      expect(output.checks).toContainEqual(
+        expect.objectContaining({ name: 'temp_repo_review_smoke', ok: true }),
       );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
