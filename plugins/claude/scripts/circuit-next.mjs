@@ -177,8 +177,17 @@ if (!commandExists()) {
 const result = spawnSync(command, forwardedArgs, {
   cwd: projectRoot(),
   env: childEnv,
-  stdio: 'inherit',
+  stdio: ['inherit', 'pipe', 'pipe'],
+  encoding: 'utf8',
+  maxBuffer: 64 * 1024 * 1024,
 });
+
+if (typeof result.stdout === 'string' && result.stdout.length > 0) {
+  process.stdout.write(result.stdout);
+}
+if (typeof result.stderr === 'string' && result.stderr.length > 0) {
+  process.stderr.write(result.stderr);
+}
 
 if (result.error) {
   process.stderr.write(`error: failed to start circuit-next: ${result.error.message}\n`);

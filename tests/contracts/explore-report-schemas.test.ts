@@ -8,11 +8,13 @@ import {
   ExploreBrief,
   ExploreCompose,
   ExploreComposeAspect,
+  ExploreDefaultResult,
   ExploreEvidenceCitation,
   ExploreResult,
   ExploreResultReportPointer,
   ExploreReviewVerdict,
   ExploreReviewVerdictValue,
+  ExploreTournamentResult,
 } from '../../src/flows/explore/reports.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
@@ -20,6 +22,66 @@ const EXPLORE_FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');
 
 function loadExploreCompiledFlow(): CompiledFlow {
   return CompiledFlow.parse(JSON.parse(readFileSync(EXPLORE_FIXTURE_PATH, 'utf8')));
+}
+
+function defaultResultPointers(): ExploreResultReportPointer[] {
+  return [
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.brief',
+      path: 'reports/brief.json',
+      schema: 'explore.brief@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.analysis',
+      path: 'reports/analysis.json',
+      schema: 'explore.analysis@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.compose',
+      path: 'reports/compose.json',
+      schema: 'explore.compose@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.review-verdict',
+      path: 'reports/review-verdict.json',
+      schema: 'explore.review-verdict@v1',
+    }),
+  ];
+}
+
+function tournamentResultPointers(): ExploreResultReportPointer[] {
+  return [
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.brief',
+      path: 'reports/brief.json',
+      schema: 'explore.brief@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.analysis',
+      path: 'reports/analysis.json',
+      schema: 'explore.analysis@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.decision-options',
+      path: 'reports/decision-options.json',
+      schema: 'explore.decision-options@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.tournament-aggregate',
+      path: 'reports/tournament-aggregate.json',
+      schema: 'explore.tournament-aggregate@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.tournament-review',
+      path: 'reports/tournament-review.json',
+      schema: 'explore.tournament-review@v1',
+    }),
+    ExploreResultReportPointer.parse({
+      report_id: 'explore.decision',
+      path: 'reports/decision.json',
+      schema: 'explore.decision@v1',
+    }),
+  ];
 }
 
 describe('explore report schemas', () => {
@@ -228,50 +290,130 @@ describe('explore report schemas', () => {
   });
 
   it('accepts the typed explore.result aggregate shape', () => {
-    const pointers = [
-      ExploreResultReportPointer.parse({
-        report_id: 'explore.brief',
-        path: 'reports/brief.json',
-        schema: 'explore.brief@v1',
-      }),
-      ExploreResultReportPointer.parse({
-        report_id: 'explore.analysis',
-        path: 'reports/analysis.json',
-        schema: 'explore.analysis@v1',
-      }),
-      ExploreResultReportPointer.parse({
-        report_id: 'explore.compose',
-        path: 'reports/compose.json',
-        schema: 'explore.compose@v1',
-      }),
-      ExploreResultReportPointer.parse({
-        report_id: 'explore.review-verdict',
-        path: 'reports/review-verdict.json',
-        schema: 'explore.review-verdict@v1',
-      }),
-    ];
-
-    expect(
-      ExploreResult.parse({
-        summary: 'Explore recommendation: keep the aggregate deterministic',
-        verdict_snapshot: {
-          compose_verdict: 'accept',
-          review_verdict: 'accept-with-fold-ins',
-          objection_count: 1,
-          missed_angle_count: 0,
-        },
-        evidence_links: pointers,
-      }),
-    ).toEqual({
+    const pointers = defaultResultPointers();
+    const body = {
       summary: 'Explore recommendation: keep the aggregate deterministic',
       verdict_snapshot: {
         compose_verdict: 'accept',
         review_verdict: 'accept-with-fold-ins',
         objection_count: 1,
-        missed_angle_count: 0,
+        missed_angle_count: 1,
+      },
+      review_fold_ins: {
+        overall_assessment: 'The compose is usable with a follow-up',
+        objections: ['Clarify the downstream consumer'],
+        missed_angles: ['Check the host summary output'],
+      },
+      evidence_links: pointers,
+    };
+
+    expect(ExploreDefaultResult.parse(body)).toEqual({
+      summary: 'Explore recommendation: keep the aggregate deterministic',
+      verdict_snapshot: {
+        compose_verdict: 'accept',
+        review_verdict: 'accept-with-fold-ins',
+        objection_count: 1,
+        missed_angle_count: 1,
+      },
+      review_fold_ins: {
+        overall_assessment: 'The compose is usable with a follow-up',
+        objections: ['Clarify the downstream consumer'],
+        missed_angles: ['Check the host summary output'],
       },
       evidence_links: pointers,
     });
+    expect(ExploreResult.parse(body)).toEqual(ExploreDefaultResult.parse(body));
+  });
+
+  it('accepts the typed tournament explore.result branch without review fold-ins', () => {
+    const pointers = tournamentResultPointers();
+    const body = {
+      summary: "Explore 'decide: React vs Vue': Choose Vue.",
+      verdict_snapshot: {
+        decision_verdict: 'decided',
+        tournament_review_verdict: 'recommend',
+        selected_option_id: 'option-2',
+        objection_count: 1,
+        missing_evidence_count: 0,
+      },
+      evidence_links: pointers,
+    };
+
+    expect(ExploreTournamentResult.parse(body)).toEqual(body);
+    expect(ExploreResult.parse(body)).toEqual(body);
+  });
+
+  it('rejects default explore.result when fold-ins are signaled but missing', () => {
+    const pointers = defaultResultPointers();
+
+    expect(
+      ExploreResult.safeParse({
+        summary: 'Missing fold-ins for a fold-in verdict',
+        verdict_snapshot: {
+          compose_verdict: 'accept',
+          review_verdict: 'accept-with-fold-ins',
+          objection_count: 0,
+          missed_angle_count: 0,
+        },
+        evidence_links: pointers,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      ExploreResult.safeParse({
+        summary: 'Missing fold-ins for nonzero counts',
+        verdict_snapshot: {
+          compose_verdict: 'accept',
+          review_verdict: 'accept',
+          objection_count: 1,
+          missed_angle_count: 0,
+        },
+        evidence_links: pointers,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects default explore.result when fold-in counts do not match the arrays', () => {
+    const pointers = defaultResultPointers();
+
+    expect(
+      ExploreResult.safeParse({
+        summary: 'Mismatched fold-in counts',
+        verdict_snapshot: {
+          compose_verdict: 'accept',
+          review_verdict: 'accept-with-fold-ins',
+          objection_count: 2,
+          missed_angle_count: 1,
+        },
+        review_fold_ins: {
+          overall_assessment: 'The compose is usable with follow-ups',
+          objections: ['Only one objection is present'],
+          missed_angles: [],
+        },
+        evidence_links: pointers,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects review fold-ins on tournament explore.result', () => {
+    expect(
+      ExploreResult.safeParse({
+        summary: "Explore 'decide: React vs Vue': Choose Vue.",
+        verdict_snapshot: {
+          decision_verdict: 'decided',
+          tournament_review_verdict: 'recommend',
+          selected_option_id: 'option-2',
+          objection_count: 1,
+          missing_evidence_count: 0,
+        },
+        review_fold_ins: {
+          overall_assessment: 'Tournament branches use their own decision structure',
+          objections: [],
+          missed_angles: [],
+        },
+        evidence_links: tournamentResultPointers(),
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects explore.result with missing pointers, invalid review verdict, or surplus keys', () => {

@@ -181,6 +181,51 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
+  it('wrapper preserves child stdout, stderr, and exit status separately', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-streams-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          'process.stderr.write(\'{"type":"progress","step":"frame"}\\n\');',
+          'process.stdout.write(\'{"outcome":"complete","result_path":"reports/result.json"}\\n\');',
+          'process.exit(7);',
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'run',
+          'explore',
+          '--goal',
+          'stream handling',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        },
+      );
+
+      expect(result.status).toBe(7);
+      expect(result.stdout).toBe('{"outcome":"complete","result_path":"reports/result.json"}\n');
+      expect(result.stderr).toBe('{"type":"progress","step":"frame"}\n');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('doctor verifies the installed Claude Code host package from a target repo', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-doctor-'));
     try {

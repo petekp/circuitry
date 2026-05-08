@@ -199,7 +199,12 @@ describe('operator summary writer', () => {
         compose_verdict: 'accept',
         review_verdict: 'accept-with-fold-ins',
         objection_count: 1,
-        missed_angle_count: 0,
+        missed_angle_count: 1,
+      },
+      review_fold_ins: {
+        overall_assessment: 'Good enough to use, but it needs one proof callout.',
+        objections: ['Clarify whether host output was inspected directly.'],
+        missed_angles: ['Check the operator summary markdown, not only the JSON report.'],
       },
       evidence_links: [],
     });
@@ -213,7 +218,18 @@ describe('operator summary writer', () => {
     expect(written.summary.headline).toBe(
       'Circuit finished Explore. Review: accept-with-fold-ins. Explore integration: keep hardening host rendering',
     );
-    expect(readFileSync(written.markdownPath, 'utf8')).toContain('accept-with-fold-ins');
+    expect(written.summary.details).toContain(
+      'Review assessment: Good enough to use, but it needs one proof callout.',
+    );
+    expect(written.summary.details).toContain(
+      'Review objections: Clarify whether host output was inspected directly.',
+    );
+    expect(written.summary.details).toContain(
+      'Review missed angles: Check the operator summary markdown, not only the JSON report.',
+    );
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain('accept-with-fold-ins');
+    expect(markdown).toContain('Check the operator summary markdown, not only the JSON report.');
   });
 
   it('summarizes Explore tournament decisions with selected option, rationale, risks, and next action', () => {

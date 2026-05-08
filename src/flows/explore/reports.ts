@@ -94,6 +94,15 @@ export const ExploreReviewVerdict = z
   .strict();
 export type ExploreReviewVerdict = z.infer<typeof ExploreReviewVerdict>;
 
+export const ExploreReviewFoldIns = z
+  .object({
+    overall_assessment: z.string().min(1),
+    objections: z.array(z.string().min(1)),
+    missed_angles: z.array(z.string().min(1)),
+  })
+  .strict();
+export type ExploreReviewFoldIns = z.infer<typeof ExploreReviewFoldIns>;
+
 export const ExploreDecisionOptionId = z
   .string()
   .regex(/^option-[1-4]$/, { message: 'option id must be option-1 through option-4' });
@@ -308,36 +317,90 @@ export const ExploreResultVerdictSnapshot = z.union([
 ]);
 export type ExploreResultVerdictSnapshot = z.infer<typeof ExploreResultVerdictSnapshot>;
 
-export const ExploreResult = z
+function refineExploreEvidenceLinks(
+  result: { readonly evidence_links: readonly ExploreResultReportPointer[] },
+  ctx: z.RefinementCtx,
+  expectedReportIds: readonly ExploreResultReportId[],
+): void {
+  const seen = new Set<ExploreResultReportId>();
+  for (const [index, pointer] of result.evidence_links.entries()) {
+    if (seen.has(pointer.report_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['evidence_links', index, 'report_id'],
+        message: `duplicate report_id '${pointer.report_id}'`,
+      });
+    }
+    seen.add(pointer.report_id);
+  }
+  const matchesSet =
+    result.evidence_links.length === expectedReportIds.length &&
+    expectedReportIds.every((reportId) => seen.has(reportId));
+  if (!matchesSet) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['evidence_links'],
+      message: `evidence_links must contain exactly: ${expectedReportIds.join(', ')}`,
+    });
+  }
+}
+
+export const ExploreDefaultResult = z
   .object({
     summary: z.string().min(1),
-    verdict_snapshot: ExploreResultVerdictSnapshot,
+    verdict_snapshot: ExploreDefaultResultVerdictSnapshot,
+    review_fold_ins: ExploreReviewFoldIns.optional(),
     evidence_links: z.array(ExploreResultReportPointer).min(1),
   })
   .strict()
   .superRefine((result, ctx) => {
-    const seen = new Set<ExploreResultReportId>();
-    for (const [index, pointer] of result.evidence_links.entries()) {
-      if (seen.has(pointer.report_id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['evidence_links', index, 'report_id'],
-          message: `duplicate report_id '${pointer.report_id}'`,
-        });
-      }
-      seen.add(pointer.report_id);
-    }
-    const ids = result.evidence_links.map((pointer) => pointer.report_id);
-    const matchesSet = (expected: readonly string[]) =>
-      ids.length === expected.length &&
-      expected.every((reportId) => seen.has(reportId as ExploreResultReportId));
-    if (!matchesSet(DEFAULT_RESULT_REPORT_IDS) && !matchesSet(TOURNAMENT_RESULT_REPORT_IDS)) {
+    refineExploreEvidenceLinks(result, ctx, DEFAULT_RESULT_REPORT_IDS);
+
+    const snapshot = result.verdict_snapshot;
+    const requiresFoldIns =
+      snapshot.review_verdict === 'accept-with-fold-ins' ||
+      snapshot.objection_count > 0 ||
+      snapshot.missed_angle_count > 0;
+    if (requiresFoldIns && result.review_fold_ins === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['evidence_links'],
+        path: ['review_fold_ins'],
         message:
-          'evidence_links must contain exactly the default Explore report set or exactly the tournament Explore report set',
+          'review_fold_ins is required when the default Explore review verdict or counts report fold-ins',
+      });
+    }
+
+    const foldIns = result.review_fold_ins;
+    if (foldIns === undefined) return;
+    if (foldIns.objections.length !== snapshot.objection_count) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['review_fold_ins', 'objections'],
+        message: 'review_fold_ins.objections length must match verdict_snapshot.objection_count',
+      });
+    }
+    if (foldIns.missed_angles.length !== snapshot.missed_angle_count) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['review_fold_ins', 'missed_angles'],
+        message:
+          'review_fold_ins.missed_angles length must match verdict_snapshot.missed_angle_count',
       });
     }
   });
+export type ExploreDefaultResult = z.infer<typeof ExploreDefaultResult>;
+
+export const ExploreTournamentResult = z
+  .object({
+    summary: z.string().min(1),
+    verdict_snapshot: ExploreTournamentResultVerdictSnapshot,
+    evidence_links: z.array(ExploreResultReportPointer).min(1),
+  })
+  .strict()
+  .superRefine((result, ctx) => {
+    refineExploreEvidenceLinks(result, ctx, TOURNAMENT_RESULT_REPORT_IDS);
+  });
+export type ExploreTournamentResult = z.infer<typeof ExploreTournamentResult>;
+
+export const ExploreResult = z.union([ExploreDefaultResult, ExploreTournamentResult]);
 export type ExploreResult = z.infer<typeof ExploreResult>;

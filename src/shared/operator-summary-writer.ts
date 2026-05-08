@@ -98,6 +98,11 @@ function stringArrayField(report: JsonObject | undefined, key: string): string[]
   return arrayField(report, key).filter((item): item is string => typeof item === 'string');
 }
 
+function objectField(report: JsonObject | undefined, key: string): JsonObject | undefined {
+  const value = report?.[key];
+  return isObject(value) ? value : undefined;
+}
+
 function plural(count: number, singular: string, pluralText = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : pluralText}`;
 }
@@ -190,6 +195,20 @@ function exploreTournamentSnapshot(flowReport: JsonObject | undefined): JsonObje
   const snapshot = isObject(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : undefined;
   if (stringField(snapshot, 'decision_verdict') === 'decided') return snapshot;
   return stringField(snapshot, 'selected_option_id') === undefined ? undefined : snapshot;
+}
+
+function exploreReviewFoldInDetails(flowReport: JsonObject | undefined): string[] {
+  const foldIns = objectField(flowReport, 'review_fold_ins');
+  if (foldIns === undefined) return [];
+
+  const details: string[] = [];
+  const assessment = stringField(foldIns, 'overall_assessment');
+  const objections = stringArrayField(foldIns, 'objections');
+  const missedAngles = stringArrayField(foldIns, 'missed_angles');
+  if (assessment !== undefined) details.push(`Review assessment: ${assessment}`);
+  if (objections.length > 0) details.push(`Review objections: ${objections.join('; ')}`);
+  if (missedAngles.length > 0) details.push(`Review missed angles: ${missedAngles.join('; ')}`);
+  return details;
 }
 
 function checkpointOptionDetails(runFolder: string, allowedChoices: readonly string[]): string[] {
@@ -324,6 +343,9 @@ function flowDetails(input: {
     const review = stringField(flowReport, 'review_verdict');
     if (verification !== undefined) details.push(`Verification: ${verification}`);
     if (review !== undefined) details.push(`Review verdict: ${review}`);
+  }
+  if (flowId === 'explore') {
+    details.push(...exploreReviewFoldInDetails(flowReport));
   }
   if (flowId === 'explore' && exploreTournamentSnapshot(flowReport) !== undefined) {
     const decisionReport = exploreDecisionReport(runFolder, flowReport);

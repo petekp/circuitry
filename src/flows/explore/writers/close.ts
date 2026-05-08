@@ -17,6 +17,7 @@ import {
   ExploreDecisionOptions,
   ExploreResult,
   ExploreReviewVerdict,
+  type ExploreReviewVerdict as ExploreReviewVerdictReport,
   ExploreTournamentAggregate,
   ExploreTournamentReview,
 } from '../reports.js';
@@ -51,6 +52,14 @@ function requiredInput(context: CloseBuildContext, name: string, schema: string)
   const path = reportPathForSchemaInCompiledFlow(context.flow, schema);
   throw new Error(
     `explore.result@v1 requires close step '${context.closeStep.id}' to read ${path}`,
+  );
+}
+
+function reviewHasFoldIns(review: ExploreReviewVerdictReport): boolean {
+  return (
+    review.verdict === 'accept-with-fold-ins' ||
+    review.objections.length > 0 ||
+    review.missed_angles.length > 0
   );
 }
 
@@ -105,6 +114,15 @@ export const exploreCloseBuilder: CloseBuilder = {
         objection_count: review.objections.length,
         missed_angle_count: review.missed_angles.length,
       },
+      ...(reviewHasFoldIns(review)
+        ? {
+            review_fold_ins: {
+              overall_assessment: review.overall_assessment,
+              objections: review.objections,
+              missed_angles: review.missed_angles,
+            },
+          }
+        : {}),
       evidence_links: POINTERS.map((p) => ({
         ...p,
         path: reportPathForSchemaInCompiledFlow(context.flow, p.schema),

@@ -1,6 +1,6 @@
 // Explore analysis compose writer.
 //
-// Reads the explore brief and emits a minimal initial-framing analysis.
+// Reads the explore brief and emits deterministic initial analysis cues.
 // The analysis is the input to the synthesize-step's worker relay;
 // real runs would have a worker fill out aspects/evidence in detail.
 
@@ -28,11 +28,35 @@ export const exploreAnalysisComposeBuilder: ComposeBuilder = {
       aspects: [
         {
           name: 'task-framing',
-          summary: `Initial analysis for: ${brief.task}`,
+          summary: `Frame the concrete question, decision shape, and useful answer boundary for: ${brief.task}`,
           evidence: [
             {
               source: briefPath as unknown as string,
               summary: brief.success_condition,
+            },
+          ],
+        },
+        {
+          name: 'evidence-targets',
+          summary:
+            'Identify the repo files, reports, commands, or run evidence that would prove the answer, and call out any evidence still missing.',
+          evidence: [
+            {
+              source: briefPath as unknown as string,
+              summary:
+                'Evidence target: cite inspected files, reports, commands, or run evidence before treating claims as confirmed.',
+            },
+          ],
+        },
+        {
+          name: 'risk-and-constraints',
+          summary:
+            'Separate confirmed facts from assumptions, then name likely risk areas, constraints, and follow-up proof needed before execution.',
+          evidence: [
+            {
+              source: briefPath as unknown as string,
+              summary:
+                'Constraint target: preserve uncertainty when direct proof is unavailable, stale, or outside the current run evidence.',
             },
           ],
         },

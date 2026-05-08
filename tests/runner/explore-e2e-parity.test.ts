@@ -114,9 +114,9 @@ function deterministicRelayer(): RelayFn {
         request_payload: input.prompt,
         receipt_id: 'golden-review',
         result_body: JSON.stringify({
-          verdict: 'accept-with-fold-ins',
-          overall_assessment: 'The compose is usable with one follow-up',
-          objections: ['Clarify downstream consumer needs'],
+          verdict: 'accept',
+          overall_assessment: 'The compose is usable',
+          objections: [],
           missed_angles: [],
         }),
         duration_ms: 1,

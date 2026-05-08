@@ -11,13 +11,20 @@ import type {
 } from '../../registries/compose-writers/types.js';
 import { ExploreBrief } from '../reports.js';
 
+function successCondition(goal: string): string {
+  return [
+    `Answer the Explore goal with evidence-backed findings: ${goal}`,
+    'Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy.',
+  ].join(' ');
+}
+
 export const exploreBriefComposeBuilder: ComposeBuilder = {
   resultSchemaName: 'explore.brief@v1',
   build(context: ComposeBuildContext): unknown {
     return ExploreBrief.parse({
       subject: context.goal,
       task: context.goal,
-      success_condition: `Produce a useful explore result for: ${context.goal}`,
+      success_condition: successCondition(context.goal),
     });
   },
 };

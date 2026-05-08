@@ -37,6 +37,10 @@ evidence). Use that vocabulary in product-facing prose.
 7. **Host hooks use hook input for identity.** Hook scripts must read the
    host's stdin JSON for workspace identity and pass explicit project roots.
    Do not treat `process.cwd()` as the project authority inside hooks.
+8. **File-set audits need probes.** Before a rename, conversion, or migration
+   batch, state the partition criterion and run the grep or script that proves
+   it. If the plan depends on a runtime contract, run a small probe before
+   locking the plan.
 
 ## Verification
 

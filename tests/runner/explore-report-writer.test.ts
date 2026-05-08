@@ -81,7 +81,7 @@ function stubRelayer(): RelayFn {
             verdict: 'accept-with-fold-ins',
             overall_assessment: 'The compose is usable with one follow-up note',
             objections: ['Clarify the next report boundary'],
-            missed_angles: [],
+            missed_angles: ['Name the evidence target for the follow-up'],
           }),
           duration_ms: 1,
           cli_version: '0.0.0-stub',
@@ -272,12 +272,16 @@ describe('default explore report writer', () => {
     expect(brief.subject).toBe(goal);
     expect(brief.task).toBe(goal);
     expect(brief.success_condition).toContain(goal);
+    expect(brief.success_condition).not.toContain('Produce a useful explore result');
+    expect(brief.success_condition).toContain('evidence-backed findings');
 
     const analysis = ExploreAnalysis.parse(
       JSON.parse(readFileSync(join(runFolder, 'reports', 'analysis.json'), 'utf8')),
     );
     expect(analysis.subject).toBe(goal);
-    expect(analysis.aspects).toHaveLength(1);
+    expect(analysis.aspects.length).toBeGreaterThan(1);
+    expect(analysis.aspects.map((aspect) => aspect.name)).toContain('evidence-targets');
+    expect(JSON.stringify(analysis.aspects)).toContain('Evidence target');
     expect(analysis.aspects[0]?.evidence[0]?.source).toBe('reports/brief.json');
 
     const compose = ExploreCompose.parse(
@@ -291,6 +295,7 @@ describe('default explore report writer', () => {
     );
     expect(reviewVerdict.verdict).toBe('accept-with-fold-ins');
     expect(reviewVerdict.objections).toHaveLength(1);
+    expect(reviewVerdict.missed_angles).toContain('Name the evidence target for the follow-up');
 
     const exploreResult = ExploreResult.parse(
       JSON.parse(readFileSync(join(runFolder, 'reports', 'explore-result.json'), 'utf8')),
@@ -300,7 +305,15 @@ describe('default explore report writer', () => {
       compose_verdict: 'accept',
       review_verdict: 'accept-with-fold-ins',
       objection_count: 1,
-      missed_angle_count: 0,
+      missed_angle_count: 1,
+    });
+    if (!('review_fold_ins' in exploreResult)) {
+      throw new Error('expected default Explore result to carry review fold-ins');
+    }
+    expect(exploreResult.review_fold_ins).toEqual({
+      overall_assessment: 'The compose is usable with one follow-up note',
+      objections: ['Clarify the next report boundary'],
+      missed_angles: ['Name the evidence target for the follow-up'],
     });
     expect(exploreResult.evidence_links.map((pointer) => pointer.path)).toEqual([
       'reports/brief.json',
