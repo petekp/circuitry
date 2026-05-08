@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SkillId } from './ids.js';
+import { SkillId, SkillSlotId } from './ids.js';
 
 /**
  * SkillDescriptor — see docs/contracts/skill.md.
@@ -50,3 +50,43 @@ const SkillDescriptorBody = z
 
 export const SkillDescriptor = descriptorOwnPropertyGuard.pipe(SkillDescriptorBody);
 export type SkillDescriptor = z.infer<typeof SkillDescriptor>;
+
+const HEX64 = /^[0-9a-f]{64}$/;
+
+export const UserSkillEntry = z
+  .object({
+    id: SkillId,
+    name: z.string().min(1).optional(),
+    description: z.string().min(1).optional(),
+    trigger: z.string().min(1).optional(),
+    root: z.string().min(1),
+    path: z.string().min(1),
+    sha256: z.string().regex(HEX64),
+    bytes: z.number().int().nonnegative(),
+  })
+  .strict();
+export type UserSkillEntry = z.infer<typeof UserSkillEntry>;
+
+export const SkillSlot = z
+  .object({
+    id: SkillSlotId,
+    description: z.string().min(1),
+  })
+  .strict();
+export type SkillSlot = z.infer<typeof SkillSlot>;
+
+export const SkillSlotArray = z.array(SkillSlot).superRefine((slots, ctx) => {
+  const seen = new Set<string>();
+  for (const [index, slot] of slots.entries()) {
+    const key = slot.id as unknown as string;
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [index, 'id'],
+        message: `duplicate skill slot '${key}'`,
+      });
+    }
+    seen.add(key);
+  }
+});
+export type SkillSlotArray = z.infer<typeof SkillSlotArray>;

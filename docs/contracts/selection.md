@@ -1,10 +1,10 @@
 ---
 contract: selection
 status: ratified-v0.1
-version: 0.1
+version: 0.3
 schema_source: src/schemas/selection-policy.ts
-last_updated: 2026-04-24
-depends_on: [ids, depth, skill, stage]
+last_updated: 2026-05-08
+depends_on: [ids, depth, skill, stage, config, run]
 closes: [stage-md-v0.1-med-7-stage-level-selection]
 report_ids:
   - selection.override
@@ -160,6 +160,14 @@ Closes Codex LOW #12 (enforcement-location claim drift).
   `selection.prop.resolved_matches_applied_composition`. Enforced at
   `src/schemas/selection-policy.ts`.
 
+  **Skill loading scope caveat.** `ResolvedSelection.skills` carries
+  concrete local `SkillId`s selected through the normal selection
+  layers. It does not carry built-in flow skill slots, bound slot names,
+  loaded skill paths, hashes, or instruction bodies. Slot resolution and
+  loaded-skill evidence are sibling relay-time products, recorded through
+  `skills.loaded` trace entries rather than by widening
+  `ResolvedSelection`.
+
 - **SEL-I6 — `SelectionResolution.applied` is strictly ordered by
   `SELECTION_PRECEDENCE` at the *category* level.** Entries appear in
   the order their source categories appear in `SELECTION_PRECEDENCE`
@@ -237,9 +245,11 @@ Closes Codex LOW #12 (enforcement-location claim drift).
 - A `SelectionResolution` is produced by pairing a `ResolvedSelection`
   with the ordered `applied` trace the resolver emitted during folding.
 - Every `SkillId` in a `SkillOverride.skills[]` array or a
-  `ResolvedSelection.skills[]` array must exist in the running plugin's
-  skill registry at load time (validated by the runtime, not the Zod
-  schema).
+  `ResolvedSelection.skills[]` array is an explicit concrete local skill
+  selection. It must resolve in the user skill registry before the relay
+  connector is invoked for the selected step. Slot-bound skills are also
+  explicit user config and must resolve when the matching slot is bound.
+  Unbound slots are ignored.
 
 ## Post-conditions
 
@@ -261,6 +271,9 @@ After a `SelectionResolution` is accepted:
 - Every `applied[i].override` contributes something (SEL-I7 ghost-
   provenance rule).
 - `resolved.skills` is a unique flat `SkillId[]` (SEL-I3 / SEL-I5).
+- Skill slots and loaded-skill evidence are not part of
+  `resolved.skills`; they are resolved at relay time from
+  `Step.skill_slots` plus config bindings.
 - `resolved.invocation_options` is a JSON-safe merged object.
 - **No post-condition binds `resolved` to `applied` at v0.1.** The
   claim that `resolved`'s fields derive from `applied` is a Stage 2
@@ -391,8 +404,11 @@ Stage 2 harness task where noted below.
   removed (it accepted arbitrary non-`SkillId` strings); per-circuit
   skill contribution flows through `CircuitOverride.selection.skills`
   via typed `SkillOverride`. Config reorganization is out of scope for
-  this contract; see `docs/contracts/config.md` (pending Stage 1 close Slice 26) for layer
-  materialization.
+  this contract; see `docs/contracts/config.md` for layer materialization.
+  `Config.skills.bindings` and `CircuitOverride.skill_bindings` are
+  separate from `SelectionOverride.skills`: they bind optional flow
+  slots to concrete local skills without adding slot ids to
+  `ResolvedSelection.skills`.
 
 - **trace_entry** (`src/schemas/trace-entry.ts`) — `RelayStartedTraceEntry`
   carries `resolved_selection: ResolvedSelection`, which is the
@@ -405,11 +421,16 @@ Stage 2 harness task where noted below.
   Slice 85's resolver feeds the trace_entry with the `resolved` projection.
   Promoting the trace_entry to carry the full `SelectionResolution` remains a
   v0.2 consideration driven by real audit needs.
+  Loaded local skill evidence is recorded in sibling `skills.loaded`
+  trace entries carrying `{id, slot?, path, sha256, bytes}` per loaded
+  skill; `ResolvedSelection` stays focused on the effective selection
+  cache.
 
 - **skill** (`src/schemas/skill.ts`) — `SkillId` is the id space for
-  `SkillOverride.skills[]` and `ResolvedSelection.skills[]`. Skill
-  existence closure (every emitted `SkillId` is registered) is a
-  runtime concern, not a schema concern.
+  `SkillOverride.skills[]` and `ResolvedSelection.skills[]`.
+  `SkillSlotId` is a separate id space for optional built-in flow slot
+  bindings. Skill existence closure is a runtime concern, not a schema
+  concern.
 
 - **depth** (`src/schemas/depth.ts`) — `SelectionOverride.depth` and
   `ResolvedSelection.depth` use the `Depth` enum (`lite`, `standard`,
@@ -466,6 +487,12 @@ Stage 2 harness task where noted below.
   `default_selection.skills = {mode: 'replace', skills: [...]}`;
   per-circuit skills flow through `CircuitOverride.selection.skills`.
 
+- `carry-forward:skill-slot-selection-confusion` — Slot ids are not
+  concrete local `SkillId`s. Closed by keeping slots out of
+  `ResolvedSelection.skills`: concrete direct selection stays in
+  `SelectionOverride.skills`, while slot binding is resolved beside the
+  selection cache at relay time.
+
 - `carry-forward:invocation-options-non-json` — `z.record(z.unknown())`
   admitted functions, Dates, `undefined`, `NaN`, and `Infinity` — all
   non-JSON-serializable values that would break trace_entry-log replay and
@@ -484,7 +511,7 @@ Stage 2 harness task where noted below.
 
 ## Evolution
 
-- **v0.1 (this draft)** — SEL-I1..I9 enforced at the schema layer.
+- **v0.1** — SEL-I1..I9 enforced at the schema layer.
   **Codex adversarial property-auditor pass 2026-04-19** produced
   opening verdict REJECT with 6 HIGH + 5 MED + 1 LOW. All 6 HIGH and
   4 of 5 MED folded in directly before commit; MED #9 (scalar
@@ -530,6 +557,13 @@ Stage 2 harness task where noted below.
   SelectionOverride>` is warranted (the derive-from-canonical
   alternative weighed against in SEL-I9); only adopt if real flows
   demonstrate the pattern.
+
+- **v0.3 (user skill loading slice)** — clarifies that
+  `ResolvedSelection.skills` contains only concrete local `SkillId`s
+  selected through selection layers. Optional skill slots are resolved
+  from step schema plus config bindings, and loaded-skill evidence is
+  emitted as `skills.loaded` trace entries instead of widening
+  `ResolvedSelection`.
 
 - **v1.0 (Stage 2)** — Ratified invariants + property tests + resolver
   implementation with `selection.prop.*` as acceptance check +

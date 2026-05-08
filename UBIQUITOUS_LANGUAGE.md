@@ -90,6 +90,7 @@ instructions.
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
 | **Skill** | A discoverable capability with trigger metadata and optional supporting files. | Tool, command |
+| **Skill slot** | An optional flow-authored placeholder that an operator may bind to one of their local skills. | Required skill, built-in skill |
 | **Plugin** | The host-installable surface Circuit ships into Claude Code or Codex. | Package |
 | **Catalog compiler** | The build-time tool that regenerates command and skill outputs from source-of-truth files. | Generator, sync script |
 | **Generated surface** | A committed output regenerated from source files by an emit script. | Hand-authored doc |

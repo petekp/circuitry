@@ -143,6 +143,36 @@ describe('compileSchematicToCompiledFlow — failure modes', () => {
     expect(schematicOutcomeToRuntimeRoute('retry')).toBeUndefined();
   });
 
+  it('passes optional step skill slots through to the compiled flow', () => {
+    const schematic = loadBuildSchematic();
+    const mutated = {
+      ...schematic,
+      items: schematic.items.map((item) =>
+        item.id === ('act-step' as unknown as typeof item.id)
+          ? {
+              ...item,
+              skill_slots: [
+                {
+                  id: 'test-discipline',
+                  description: 'Optional local skill for implementation discipline.',
+                },
+              ],
+            }
+          : item,
+      ),
+    };
+    const compiled = compileSchematicToCompiledFlow(FlowSchematic.parse(mutated));
+    expect(compiled.kind).toBe('single');
+    if (compiled.kind !== 'single') return;
+    const actStep = compiled.flow.steps.find((step) => step.id === 'act-step');
+    expect(actStep?.skill_slots).toEqual([
+      {
+        id: 'test-discipline',
+        description: 'Optional local skill for implementation discipline.',
+      },
+    ]);
+  });
+
   it('throws if a step has no continue/complete route mapping to pass', () => {
     const schematic = loadBuildSchematic();
     const itemsCopy = schematic.items.map((item) =>

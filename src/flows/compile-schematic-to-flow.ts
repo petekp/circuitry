@@ -251,6 +251,7 @@ function compileItem(
     reads: [...reads],
     routes,
     ...(item.selection !== undefined ? { selection: item.selection } : {}),
+    ...(item.skill_slots.length === 0 ? {} : { skill_slots: item.skill_slots }),
   } as const;
 
   switch (item.execution.kind) {

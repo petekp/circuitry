@@ -87,6 +87,60 @@ describe('Step discriminated union', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('accepts relay skill slots with kebab-case ids', () => {
+    const ok = Step.safeParse({
+      ...baseCompose,
+      executor: 'worker',
+      kind: 'relay',
+      role: 'reviewer',
+      skill_slots: [
+        {
+          id: 'review-assistant',
+          description: 'Optional local skill for reviewing relay output.',
+        },
+      ],
+      writes: {
+        request: 'r.json',
+        receipt: 'c.json',
+        result: 's.json',
+      },
+      check: {
+        kind: 'result_verdict',
+        source: { kind: 'relay_result', ref: 'result' },
+        pass: ['ok'],
+      },
+    });
+
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects relay skill slots with underscore ids', () => {
+    const bad = Step.safeParse({
+      ...baseCompose,
+      executor: 'worker',
+      kind: 'relay',
+      role: 'reviewer',
+      skill_slots: [
+        {
+          id: 'review_assistant',
+          description: 'Optional local skill for reviewing relay output.',
+        },
+      ],
+      writes: {
+        request: 'r.json',
+        receipt: 'c.json',
+        result: 's.json',
+      },
+      check: {
+        kind: 'result_verdict',
+        source: { kind: 'relay_result', ref: 'result' },
+        pass: ['ok'],
+      },
+    });
+
+    expect(bad.success).toBe(false);
+  });
+
   it('STEP-I1 — rejects orchestrator + relay kind/check/writes mismatch', () => {
     expectSchemaRejects(
       Step,

@@ -11,8 +11,8 @@ local CLI, `circuit-next run --goal` keeps the deterministic router path.
 Once a flow is selected, Circuit runs the same headless engine in every
 host and checks each step's output against a contract before moving on.
 
-- **Configurable per step.** Pick the model, reasoning effort, and skills for
-  each step in a flow.
+- **Configurable relay steps.** Pick the model, reasoning effort, connector,
+  and optional local skills through flow and config selection layers.
 - **Resumable.** If a session dies mid-run, you can pick up where it left off.
 - **Adjustable autonomy.** Steer at checkpoints or run unattended.
 - **Mode-driven depth.** Use the default mode, or pick Lite for a faster pass
@@ -48,7 +48,7 @@ skill from your natural-language request.
 
 Optional but recommended: drop a personal config at
 `~/.config/circuit-next/config.yaml` to set defaults (model, reasoning effort,
-skills, connector routing) across every project. A repo-local
+local skills, connector routing) across every project. A repo-local
 `./.circuit/config.yaml` overrides those defaults per project. See
 [User-Space Configuration](#user-space-configuration) for details.
 
@@ -167,9 +167,10 @@ flow's final report links the reports the run produced — the implementation,
 the verification result, the review verdict — so you can audit a run end to
 end without re-reading the trace.
 
-**Per-step configuration.** Pick the model, reasoning effort, and skills for
-each step. Configuration layers from defaults to user-global to project to
-invocation, and the resolver enforces a single ordering at run time.
+**Relay configuration.** Pick the model, reasoning effort, connector, and
+optional local skills for relay steps. Configuration layers from defaults to
+user-global to project to invocation, and the resolver enforces a single
+ordering at run time.
 
 **Schematic-driven flows.** Each flow is one folder under `src/flows/<id>/`:
 schematic, report schemas, command, contract, writers, relay hints. The
@@ -180,22 +181,42 @@ not require editing the engine.
 report, evidence, and a checkpoint inbox. Resuming, debugging, and audits
 all read from the same place.
 
-## Recommended Skills
+## Local Skills
 
-Circuit composes well with Claude Code skills. Map any installed skill to a
-specific step or stage of a flow through configuration; Circuit will inject
-it at the right point.
+Circuit can load your own local `SKILL.md` files into relay prompts. It scans
+the host-native skill folders, in this order:
 
-| Skill | Used For |
-|-------|----------|
-| `tdd` | Test-first discipline in Fix and Build implementation |
-| `clean-architecture` | Architecture decisions and quality passes |
-| `deep-research` | Evidence gathering during Explore |
-| `dead-code-sweep` | Sweep surveys |
-| `architecture-exploration` | Evaluating competing design options |
+1. `~/.agents/skills/<skill-id>/SKILL.md`
+2. `~/.claude/skills/<skill-id>/SKILL.md`
 
-Install whichever skills are relevant to your stack. Circuit runs without any
-of them; each one adds depth to the steps where it applies.
+`~/.agents/skills` wins when both roots contain the same skill id. Built-in
+flows do not require any local skills, and they do not name concrete local
+skill ids. A built-in flow may expose an optional skill slot, and you can bind
+that slot to one of your own skills in config.
+
+```yaml
+schema_version: 1
+
+skills:
+  bindings:
+    review-assistant: react-change-review
+
+circuits:
+  review:
+    skill_bindings:
+      review-assistant: my-review-skill
+    selection:
+      skills:
+        mode: append
+        skills:
+          - tdd
+```
+
+`selection.skills` names concrete local skill ids and must resolve before the
+worker starts. `skills.bindings` and `circuits.<flow>.skill_bindings` bind
+optional flow slots to concrete local skills. Missing unbound slots are ignored.
+When a skill is loaded, the run trace records its id, optional slot, path,
+SHA-256, and byte count.
 
 ## User-Space Configuration
 
@@ -213,7 +234,7 @@ Configuration controls:
 
 - Per-step **model** (which Claude model to use)
 - Per-step **reasoning effort**
-- Per-step **skills** to inject
+- Local **skills** selected through `selection.skills` or optional slot bindings
 - Per-step **connector** (which backend executes a relayed step)
 - Per-flow overrides under `circuits.<flow_id>`
 

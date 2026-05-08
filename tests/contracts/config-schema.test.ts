@@ -9,6 +9,7 @@ describe('Config strict surface (CONFIG-I1)', () => {
     expect(ok.success).toBe(true);
     if (ok.success) {
       expect(ok.data.relay.default).toBe('auto');
+      expect(ok.data.skills).toEqual({ bindings: {} });
       expect(ok.data.circuits).toEqual({});
       expect(ok.data.defaults).toEqual({});
     }
@@ -72,6 +73,44 @@ describe('Config.defaults nested strict surface (CONFIG-I4)', () => {
   });
 });
 
+describe('Config.skills bindings', () => {
+  it('accepts top-level skill slot bindings', () => {
+    const ok = Config.safeParse({
+      schema_version: 1,
+      skills: {
+        bindings: {
+          'review-assistant': 'react-change-review',
+          'test-discipline': 'tdd',
+        },
+      },
+    });
+
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects invalid top-level skill binding values', () => {
+    const bad = Config.safeParse({
+      schema_version: 1,
+      skills: {
+        bindings: {
+          'review-assistant': 'ReactDoctor',
+        },
+      },
+    });
+
+    expect(bad.success).toBe(false);
+  });
+
+  it('rejects the old top-level `skills: string[]` shortcut', () => {
+    const bad = Config.safeParse({
+      schema_version: 1,
+      skills: ['tdd'],
+    });
+
+    expect(bad.success).toBe(false);
+  });
+});
+
 describe('CircuitOverride strict surface (CONFIG-I3)', () => {
   it('accepts empty circuit override', () => {
     const ok = CircuitOverride.safeParse({});
@@ -83,8 +122,22 @@ describe('CircuitOverride strict surface (CONFIG-I3)', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('accepts circuit skill bindings', () => {
+    const ok = CircuitOverride.safeParse({
+      skill_bindings: { 'review-assistant': 'react-change-review' },
+    });
+    expect(ok.success).toBe(true);
+  });
+
   it('rejects circuit override with `skills: string[]` v0.0 shortcut (CONFIG-I3)', () => {
     const bad = CircuitOverride.safeParse({ skills: ['runtime-proof'] });
+    expect(bad.success).toBe(false);
+  });
+
+  it('rejects invalid circuit skill binding keys', () => {
+    const bad = CircuitOverride.safeParse({
+      skill_bindings: { review_assistant: 'react-change-review' },
+    });
     expect(bad.success).toBe(false);
   });
 

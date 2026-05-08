@@ -20,6 +20,7 @@ import {
 import { CompiledFlowId, ProtocolId, StageId, StepId } from './ids.js';
 import { RunRelativePath } from './scalars.js';
 import { SelectionOverride } from './selection-policy.js';
+import { SkillSlotArray } from './skill.js';
 import {
   CanonicalStage,
   type CanonicalStage as CanonicalStageValue,
@@ -176,6 +177,7 @@ export const SchematicStep = z
     evidence_requirements: SchematicEvidenceRequirements,
     execution: StepExecution,
     selection: SelectionOverride.optional(),
+    skill_slots: SkillSlotArray.default([]),
     routes: z.record(z.string(), StepRouteTarget).refine((routes) => {
       return Object.keys(routes).length > 0;
     }, 'schematic item must declare at least one route'),

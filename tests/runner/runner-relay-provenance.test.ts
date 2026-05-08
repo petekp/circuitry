@@ -123,12 +123,31 @@ function relayStartedData(trace: Awaited<ReturnType<typeof readTrace>>): Record<
 }
 
 let runFolderBase: string;
+let homeDir: string;
+let originalHome: string | undefined;
+
+function writeSkill(id: string): void {
+  const dir = join(homeDir, '.agents', 'skills', id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`, 'utf8');
+}
 
 beforeEach(() => {
   runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-relay-provenance-'));
+  homeDir = join(runFolderBase, 'home');
+  originalHome = process.env.HOME;
+  process.env.HOME = homeDir;
+  for (const skill of ['tdd', 'react-doctor']) {
+    writeSkill(skill);
+  }
 });
 
 afterEach(() => {
+  if (originalHome === undefined) {
+    Reflect.deleteProperty(process.env, 'HOME');
+  } else {
+    process.env.HOME = originalHome;
+  }
   rmSync(runFolderBase, { recursive: true, force: true });
 });
 
@@ -173,6 +192,7 @@ describe('relay connector resolution precedence', () => {
               circuits: { [flow.id]: { kind: 'builtin', name: 'claude-code' } },
               connectors: {},
             },
+            skills: { bindings: {} },
             circuits: {},
             defaults: {},
           },
@@ -203,6 +223,7 @@ describe('relay connector resolution precedence', () => {
               circuits: { [flow.id]: { kind: 'builtin', name: 'codex' } },
               connectors: {},
             },
+            skills: { bindings: {} },
             circuits: {},
             defaults: {},
           },
@@ -274,6 +295,7 @@ describe('relay connector resolution precedence', () => {
                 circuits: {},
                 connectors: {},
               },
+              skills: { bindings: {} },
               circuits: {},
               defaults: {},
             },
@@ -303,6 +325,7 @@ describe('relay connector resolution precedence', () => {
                 circuits: {},
                 connectors: {},
               },
+              skills: { bindings: {} },
               circuits: {},
               defaults: {},
             },
@@ -348,6 +371,7 @@ describe('relay connector resolution precedence', () => {
                   },
                 },
               },
+              skills: { bindings: {} },
               circuits: {},
               defaults: {},
             },

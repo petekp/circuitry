@@ -1,7 +1,7 @@
 // SkillDescriptor schema contract — see docs/contracts/skill.md.
 
 import { describe, expect, it } from 'vitest';
-import { SkillDescriptor } from '../../src/index.js';
+import { SkillDescriptor, SkillSlot, UserSkillEntry } from '../../src/index.js';
 
 describe('SkillDescriptor — SKILL-I1..I6 from docs/contracts/skill.md v0.1', () => {
   const base = {
@@ -119,5 +119,54 @@ describe('SkillDescriptor — SKILL-I1..I6 from docs/contracts/skill.md v0.1', (
     const smuggled = Object.create({ trigger });
     Object.assign(smuggled, rest);
     expect(SkillDescriptor.safeParse(smuggled).success).toBe(false);
+  });
+});
+
+describe('UserSkillEntry — local SKILL.md projection', () => {
+  it('accepts local skill metadata without widening SkillDescriptor', () => {
+    const parsed = UserSkillEntry.safeParse({
+      id: 'react-doctor',
+      name: 'React Doctor',
+      description: 'Review React changes.',
+      trigger: 'when reviewing React code',
+      root: '/Users/example/.agents/skills',
+      path: '/Users/example/.agents/skills/react-doctor/SKILL.md',
+      sha256: 'a'.repeat(64),
+      bytes: 120,
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects invalid local skill ids', () => {
+    const parsed = UserSkillEntry.safeParse({
+      id: 'react_doctor',
+      root: '/Users/example/.agents/skills',
+      path: '/Users/example/.agents/skills/react_doctor/SKILL.md',
+      sha256: 'a'.repeat(64),
+      bytes: 120,
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe('SkillSlot — built-in flow indirection', () => {
+  it('accepts kebab-case slot ids', () => {
+    expect(
+      SkillSlot.safeParse({
+        id: 'review-assistant',
+        description: 'Optional local skill for reviewing relay output.',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects underscore slot ids', () => {
+    expect(
+      SkillSlot.safeParse({
+        id: 'review_assistant',
+        description: 'Optional local skill for reviewing relay output.',
+      }).success,
+    ).toBe(false);
   });
 });

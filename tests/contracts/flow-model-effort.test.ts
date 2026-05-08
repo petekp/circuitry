@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -148,12 +148,31 @@ const EXPECTED_SYNTHESIZE_SELECTION: ResolvedSelection = {
 };
 
 let runFolderBase: string;
+let homeDir: string;
+let originalHome: string | undefined;
+
+function writeSkill(id: string): void {
+  const dir = join(homeDir, '.agents', 'skills', id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`);
+}
 
 beforeEach(() => {
   runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-model-effort-'));
+  homeDir = join(runFolderBase, 'home');
+  originalHome = process.env.HOME;
+  process.env.HOME = homeDir;
+  for (const skill of ['tdd', 'react-doctor', 'typography']) {
+    writeSkill(skill);
+  }
 });
 
 afterEach(() => {
+  if (originalHome === undefined) {
+    Reflect.deleteProperty(process.env, 'HOME');
+  } else {
+    process.env.HOME = originalHome;
+  }
   rmSync(runFolderBase, { recursive: true, force: true });
 });
 

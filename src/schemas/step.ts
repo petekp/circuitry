@@ -10,6 +10,7 @@ import { CompiledFlowId, ProtocolId, StepId } from './ids.js';
 import { JsonObject } from './json.js';
 import { RunRelativePath } from './scalars.js';
 import { SelectionOverride } from './selection-policy.js';
+import { SkillSlotArray } from './skill.js';
 
 export const RelayRole = z.enum(['researcher', 'implementer', 'reviewer']);
 export type RelayRole = z.infer<typeof RelayRole>;
@@ -29,6 +30,7 @@ const StepBase = z.object({
     message: 'Step must declare at least one route (including `@complete`).',
   }),
   selection: SelectionOverride.optional(),
+  skill_slots: SkillSlotArray.optional(),
   budgets: z
     .object({
       max_attempts: z.number().int().positive().max(10),

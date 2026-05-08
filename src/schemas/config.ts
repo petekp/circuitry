@@ -6,7 +6,7 @@ import {
   RESERVED_ADAPTER_NAMES,
 } from './connector.js';
 import { HostConfig } from './host.js';
-import { CompiledFlowId } from './ids.js';
+import { CompiledFlowId, SkillId, SkillSlotId } from './ids.js';
 import { SelectionOverride } from './selection-policy.js';
 import { RelayRole } from './step.js';
 
@@ -112,12 +112,23 @@ export const RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
 });
 export type RelayConfig = z.infer<typeof RelayConfig>;
 
+export const SkillBindings = z.record(SkillSlotId, SkillId);
+export type SkillBindings = z.infer<typeof SkillBindings>;
+
+export const SkillsConfig = z
+  .object({
+    bindings: SkillBindings.default({}),
+  })
+  .strict();
+export type SkillsConfig = z.infer<typeof SkillsConfig>;
+
 // Per-circuit skill contribution flows through `selection.skills` via
 // typed `SkillOverride` operations. (Earlier shapes accepted an untyped
 // `skills: string[]` channel that bypassed validation.)
 export const CircuitOverride = z
   .object({
     selection: SelectionOverride.optional(),
+    skill_bindings: SkillBindings.default({}),
   })
   .strict();
 export type CircuitOverride = z.infer<typeof CircuitOverride>;
@@ -138,6 +149,7 @@ export const Config = z
       circuits: {},
       connectors: {},
     }),
+    skills: SkillsConfig.default({}),
     circuits: z.record(CompiledFlowId, CircuitOverride).default({}),
     defaults: z
       .object({

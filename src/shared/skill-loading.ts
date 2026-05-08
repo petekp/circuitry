@@ -1,0 +1,89 @@
+import type { LayeredConfig } from '../schemas/config.js';
+import type { CompiledFlowId, SkillId, SkillSlotId } from '../schemas/ids.js';
+import type { ResolvedSelection } from '../schemas/selection-policy.js';
+import type { SkillSlot } from '../schemas/skill.js';
+import type { LoadedSkillEvidence } from '../schemas/trace-entry.js';
+import { type UserSkillRegistry, createUserSkillRegistry } from './user-skill-registry.js';
+
+export interface LoadedRelaySkill extends LoadedSkillEvidence {
+  readonly body: string;
+}
+
+interface ResolveLoadedRelaySkillsInput {
+  readonly flowId: CompiledFlowId;
+  readonly stepId: string;
+  readonly skillSlots: readonly SkillSlot[];
+  readonly resolvedSelection: ResolvedSelection;
+  readonly configLayers?: readonly LayeredConfig[];
+  readonly registry?: UserSkillRegistry;
+}
+
+export function resolveSkillBindingsForFlow(
+  flowId: CompiledFlowId,
+  configLayers: readonly LayeredConfig[] = [],
+): ReadonlyMap<string, SkillId> {
+  const globalBindings = new Map<string, SkillId>();
+  const flowBindings = new Map<string, SkillId>();
+  const flowKey = flowId as unknown as string;
+
+  for (const layer of configLayers) {
+    for (const [slot, skill] of Object.entries(layer.config.skills.bindings)) {
+      if (skill === undefined) continue;
+      globalBindings.set(slot, skill);
+    }
+
+    const circuit = layer.config.circuits[flowKey as CompiledFlowId];
+    if (circuit === undefined) continue;
+    for (const [slot, skill] of Object.entries(circuit.skill_bindings)) {
+      if (skill === undefined) continue;
+      flowBindings.set(slot, skill);
+    }
+  }
+
+  return new Map([...globalBindings, ...flowBindings]);
+}
+
+export function resolveLoadedRelaySkills(
+  input: ResolveLoadedRelaySkillsInput,
+): readonly LoadedRelaySkill[] {
+  const registry = input.registry ?? createUserSkillRegistry();
+  const bindings = resolveSkillBindingsForFlow(input.flowId, input.configLayers);
+  const loaded: LoadedRelaySkill[] = [];
+  const seen = new Set<string>();
+
+  const addSkill = (id: SkillId, slot?: SkillSlotId) => {
+    const key = id as unknown as string;
+    if (seen.has(key)) return;
+    let resolved: ReturnType<UserSkillRegistry['resolve']>;
+    try {
+      resolved = registry.resolve(id);
+    } catch (err) {
+      const slotText = slot === undefined ? '' : ` for slot '${slot as unknown as string}'`;
+      throw new Error(
+        `relay step '${input.stepId}' selected skill '${key}'${slotText} could not be resolved:\n${(err as Error).message}`,
+      );
+    }
+
+    seen.add(key);
+    loaded.push({
+      id: resolved.entry.id,
+      ...(slot === undefined ? {} : { slot }),
+      path: resolved.entry.path,
+      sha256: resolved.entry.sha256,
+      bytes: resolved.entry.bytes,
+      body: resolved.body,
+    });
+  };
+
+  for (const id of input.resolvedSelection.skills) {
+    addSkill(id);
+  }
+
+  for (const slot of input.skillSlots) {
+    const skill = bindings.get(slot.id as unknown as string);
+    if (skill === undefined) continue;
+    addSkill(skill, slot.id);
+  }
+
+  return loaded;
+}

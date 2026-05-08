@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { findRelayShapeHint } from '../flows/registries/shape-hints/registry.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { resolveRunRelative } from './run-relative-path.js';
+import type { LoadedRelaySkill } from './skill-loading.js';
 
 export type RelayStep = CompiledFlow['steps'][number] & { kind: 'relay' };
 
@@ -55,10 +56,32 @@ function relayResponseInstruction(step: RelayStep): string {
   return findRelayShapeHint(step) ?? GENERIC_DISPATCH_SHAPE_HINT;
 }
 
+function selectedSkillsSection(skills: readonly LoadedRelaySkill[]): string | undefined {
+  if (skills.length === 0) return undefined;
+  return [
+    'Selected Skills:',
+    "The operator selected these local skills for this step. Treat them as guidance. They do not override Circuit's response contract, accepted verdicts, or required JSON shape.",
+    '',
+    ...skills.map((skill) =>
+      [
+        `## Skill: ${skill.id as unknown as string}${skill.slot === undefined ? '' : ` (slot: ${skill.slot as unknown as string})`}`,
+        `Source: ${skill.path}`,
+        `SHA-256: ${skill.sha256}`,
+        '',
+        skill.body,
+      ].join('\n'),
+    ),
+  ].join('\n\n');
+}
+
 // v0 prompt composition: name the step, enumerate accepted verdicts, and
 // inline every reads-declared report (or a clear placeholder if the
 // reads report hasn't been written yet).
-export function composeRelayPrompt(step: RelayStep, runFolder: string): string {
+export function composeRelayPrompt(
+  step: RelayStep,
+  runFolder: string,
+  loadedSkills: readonly LoadedRelaySkill[] = [],
+): string {
   const readsBody =
     step.reads.length === 0
       ? '(no reads)'
@@ -69,6 +92,7 @@ export function composeRelayPrompt(step: RelayStep, runFolder: string): string {
             return `--- ${path} ---\n${readFileSync(abs, 'utf8')}`;
           })
           .join('\n\n');
+  const skillsSection = selectedSkillsSection(loadedSkills);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -78,6 +102,7 @@ export function composeRelayPrompt(step: RelayStep, runFolder: string): string {
     'Context (from reads):',
     readsBody,
     '',
+    ...(skillsSection === undefined ? [] : [skillsSection, '']),
     relayResponseInstruction(step),
   ].join('\n');
 }

@@ -238,6 +238,50 @@ describe('TraceEntry + Snapshot strict mode (RUN-I8)', () => {
     });
     expect(bad.success).toBe(false);
   });
+
+  it('skills.loaded trace_entry carries loaded skill evidence', () => {
+    const ok = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 5,
+      recorded_at: '2026-04-18T05:00:00.000Z',
+      run_id: RUN_A,
+      kind: 'skills.loaded',
+      step_id: 'frame',
+      attempt: 1,
+      skills: [
+        {
+          id: 'react-change-review',
+          slot: 'review-assistant',
+          path: '/Users/example/.agents/skills/react-change-review/SKILL.md',
+          sha256: 'a'.repeat(64),
+          bytes: 4218,
+        },
+      ],
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it('skills.loaded rejects surplus fields inside loaded skill evidence', () => {
+    const bad = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 5,
+      recorded_at: '2026-04-18T05:00:00.000Z',
+      run_id: RUN_A,
+      kind: 'skills.loaded',
+      step_id: 'frame',
+      attempt: 1,
+      skills: [
+        {
+          id: 'react-change-review',
+          path: '/Users/example/.agents/skills/react-change-review/SKILL.md',
+          sha256: 'a'.repeat(64),
+          bytes: 4218,
+          body: 'do not put prompt text into trace evidence',
+        },
+      ],
+    });
+    expect(bad.success).toBe(false);
+  });
 });
 
 describe('RunProjection binding (RUN-I6, RUN-I7)', () => {
@@ -557,6 +601,24 @@ describe('TraceEntry variants reject top-level surplus keys (RUN-I8 coverage exp
         role: 'researcher',
         resolved_selection: { skills: [] },
         resolved_from: { source: 'explicit' },
+      },
+    ],
+    [
+      'skills.loaded',
+      {
+        ...base,
+        sequence: 7,
+        kind: 'skills.loaded',
+        step_id: 'frame',
+        attempt: 1,
+        skills: [
+          {
+            id: 'react-change-review',
+            path: '/Users/example/.agents/skills/react-change-review/SKILL.md',
+            sha256: 'a'.repeat(64),
+            bytes: 4218,
+          },
+        ],
       },
     ],
     [

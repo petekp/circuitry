@@ -1,10 +1,10 @@
 ---
 contract: run
 status: ratified-v0.1
-version: 0.1
+version: 0.2
 schema_source: src/schemas/run.ts
-last_updated: 2026-04-24
-depends_on: [trace_entry, snapshot, ids, change_kind, depth, flow]
+last_updated: 2026-05-08
+depends_on: [trace_entry, snapshot, ids, change_kind, depth, flow, skill]
 closes: []
 report_ids:
   - run.trace
@@ -271,19 +271,24 @@ property-test harness + reducer exist in Stage 2.
   payload bytes, field `request_payload_hash`), `relay.receipt`
   (connector-returned receipt id, field `receipt_id`), and
   `relay.result` (SHA-256 of the result report bytes, field
-  `result_report_hash`). The canonical success sequence on a `(step_id,
-  attempt)` pair is:
+  `result_report_hash`). The union also carries `skills.loaded`, emitted
+  only when at least one local skill was materialized for the relay
+  attempt. The canonical success sequence on a `(step_id, attempt)` pair
+  with loaded skills is:
 
   ```
-  relay.started → relay.request → relay.receipt →
+  relay.started → skills.loaded → relay.request → relay.receipt →
   relay.result → relay.completed
   ```
+
+  If no skills are loaded, `skills.loaded` is absent and
+  `relay.request` follows `relay.started` directly.
 
   Runtime-safety-floor Slice 3 adds the connector-invocation failure
   sequence for failures that happen before an connector receipt/result exists:
 
   ```
-  relay.started → relay.request → relay.failed
+  relay.started → [skills.loaded] → relay.request → relay.failed
   ```
 
   `relay.failed` repeats the `relay.started` provenance surface
@@ -293,17 +298,18 @@ property-test harness + reducer exist in Stage 2.
   preserving the existing relay audit trail.
 
   Log-level pairing invariant (this property's scope): whenever any of
-  the three transcript trace_entries appears on a pair, each must appear at
+  the transcript trace_entries appears on a pair, each must appear at
   most once and MUST appear strictly between `relay.started` and
   the terminal relay trace_entry on that pair (i.e. after started, before
-  completed/failed, and in the order request → receipt → result if more
-  than one returned-result transcript trace_entry is present). Zero transcript
-  trace_entries is legal (dry-run connector path; transcript only required for
-  non-dry-run connectors per CC#P2-2 Enforcement binding). An out-of-order
-  transcript trace_entry (e.g. `relay.receipt` preceding `relay.request`
-  on the same pair, or any transcript trace_entry on a pair with no matching
-  `relay.started`, or a transcript trace_entry appearing after
-  `relay.completed` / `relay.failed`) is a reducer inconsistency.
+  completed/failed, and in the order `[skills.loaded] → request → receipt
+  → result` if more than one returned-result transcript trace_entry is
+  present). Zero transcript trace_entries is legal (dry-run connector path;
+  transcript only required for non-dry-run connectors per CC#P2-2
+  Enforcement binding). An out-of-order transcript trace_entry (e.g.
+  `relay.receipt` preceding `relay.request` on the same pair, or any
+  transcript trace_entry on a pair with no matching `relay.started`, or a
+  transcript trace_entry appearing after `relay.completed` /
+  `relay.failed`) is a reducer inconsistency.
   The tighter requirement that all three returned-result
   transcript trace_entries MUST appear for a non-dry-run connector lives at the
   connector-level close criterion (ADR-0007 CC#P2-2 Enforcement binding,
@@ -337,6 +343,10 @@ property-test harness + reducer exist in Stage 2.
   must refer to a known `CompiledFlow.id` at the given `manifest_hash`. Not
   enforced at the schema layer; enforced at runtime by the flow
   catalog.
+- **skill** (`src/schemas/skill.ts`) — `skills.loaded` trace entries
+  record the local skill ids, optional slot ids, paths, hashes, and byte
+  counts that were loaded for a relay attempt. Skill bodies are not
+  stored in trace evidence.
 - **change_kind** (`src/schemas/change-kind.ts`) — `RunBootstrappedTraceEntry.change_kind` is a
   required `ChangeKindDeclaration`. RUN-I6 binds it into the Snapshot; evidence
   invariant 3 (every Run carries change_kind) is load-bearing.
@@ -384,7 +394,7 @@ property-test harness + reducer exist in Stage 2.
 
 ## Evolution
 
-- **v0.1 (this draft)** — RUN-I1..I8 enforced at the schema layer:
+- **v0.1** — RUN-I1..I8 enforced at the schema layer:
   `RunTrace` aggregate with bootstrap/first-trace_entry, sequence monotonicity,
   run_id consistency, bootstrap singleton, closure singleton with
   no-post-closure-trace_entries. `RunProjection` aggregate binding log and
@@ -424,7 +434,13 @@ property-test harness + reducer exist in Stage 2.
   (CC#P2-2), not the contract level. Authorized by ADR-0007 §Amendment
   (Slice 37).
 
-- **v0.2 (Stage 1)** — Absorb Codex adversarial property-auditor pass
+- **v0.2 (user skill loading slice, this version)** — TraceEntry
+  discriminated union widened with `skills.loaded`, emitted before
+  `relay.request` when local skill instructions are loaded for a relay
+  attempt. The event records `{id, slot?, path, sha256, bytes}` and
+  deliberately omits the instruction body.
+
+- **v0.3 (Stage 1)** — Absorb Codex adversarial property-auditor pass
   findings. Ratify `property_ids` above by landing the corresponding
   property-test harness. Consider whether a typed `ReducerOutput` (log,
   snapshot, derived diagnostics) adds enough value over `RunProjection` to

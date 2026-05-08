@@ -5,7 +5,11 @@
 // depth is layered into relay selection.
 import { findCompiledFlowPackageById } from '../flows/catalog.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
-import { LayeredConfig, type LayeredConfig as LayeredConfigValue } from '../schemas/config.js';
+import {
+  Config,
+  LayeredConfig,
+  type LayeredConfig as LayeredConfigValue,
+} from '../schemas/config.js';
 import type { Depth } from '../schemas/depth.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import type { RelayFn } from './relay-runtime-types.js';
@@ -30,21 +34,10 @@ export function selectionConfigLayersWithExecutionDepth(
   const flowId = flow.id;
   const existingIndex = layers.findIndex((layer) => layer.layer === 'invocation');
   const existing = existingIndex === -1 ? undefined : layers[existingIndex];
-  const baseConfig = existing?.config ?? {
-    schema_version: 1,
-    host: { kind: 'generic-shell' },
-    relay: {
-      default: 'auto',
-      roles: {},
-      circuits: {},
-      connectors: {},
-    },
-    circuits: {},
-    defaults: {},
-  };
-  const existingCircuit = baseConfig.circuits[flowId] ?? {};
+  const baseConfig = existing?.config ?? Config.parse({ schema_version: 1 });
+  const existingCircuit = baseConfig.circuits[flowId];
   const selection = {
-    ...(existingCircuit.selection ?? {}),
+    ...(existingCircuit?.selection ?? {}),
     depth,
   };
   const invocationLayer = LayeredConfig.parse({
@@ -55,7 +48,7 @@ export function selectionConfigLayersWithExecutionDepth(
       circuits: {
         ...baseConfig.circuits,
         [flowId]: {
-          ...existingCircuit,
+          ...(existingCircuit ?? {}),
           selection,
         },
       },

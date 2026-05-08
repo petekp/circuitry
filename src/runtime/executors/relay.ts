@@ -19,6 +19,7 @@ import {
   composeRelayPrompt,
   evaluateRelayCheck,
 } from '../../shared/relay-support.js';
+import { resolveLoadedRelaySkills } from '../../shared/skill-loading.js';
 import {
   assertConnectorSelectionCompatible,
   resolveConnectorForRelay,
@@ -298,7 +299,6 @@ export async function executeProductionRelayAttempt(input: {
 }): Promise<ProductionRelayAttemptResult> {
   const { step, compiledStep, context } = input;
   const compiledFlow = requireCompiledFlow(context, step);
-  const prompt = composeRelayPrompt(compiledStep, context.runDir);
   const suppliedConnector = suppliedConnectorFromRelayer(context);
   const relayExecution = resolveRelayExecution({
     flowId: context.flow.id,
@@ -322,6 +322,16 @@ export async function executeProductionRelayAttempt(input: {
     Depth.parse(context.depth ?? 'standard'),
   );
   assertConnectorSelectionCompatible(relayExecution.connectorName, resolvedSelection);
+  const loadedSkills = resolveLoadedRelaySkills({
+    flowId: compiledFlow.id,
+    stepId: step.id,
+    skillSlots: compiledStep.skill_slots ?? [],
+    resolvedSelection,
+    ...(context.selectionConfigLayers === undefined
+      ? {}
+      : { configLayers: context.selectionConfigLayers }),
+  });
+  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills);
 
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
@@ -347,6 +357,15 @@ export async function executeProductionRelayAttempt(input: {
     resolved_selection: resolvedSelection,
     resolved_from: relayExecution.resolvedFrom,
   });
+  if (loadedSkills.length > 0) {
+    await context.trace.append({
+      run_id: context.runId,
+      kind: 'skills.loaded',
+      step_id: step.id,
+      attempt,
+      skills: loadedSkills.map(({ body: _body, ...skill }) => skill),
+    });
+  }
   await context.trace.append({
     run_id: context.runId,
     kind: 'relay.request',

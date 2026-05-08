@@ -1,24 +1,35 @@
 ---
 contract: skill
 status: ratified-v0.1
-version: 0.1
+version: 0.2
 schema_source: src/schemas/skill.ts
-last_updated: 2026-04-19
-depends_on: [ids]
+last_updated: 2026-05-08
+depends_on: [ids, selection-policy, config, run]
 compatibility_policy: n/a
 legacy_parse_policy: n/a
 report_ids:
   - skill.descriptor
-invariant_ids: [SKILL-I1, SKILL-I2, SKILL-I3, SKILL-I4, SKILL-I5, SKILL-I6]
+  - skill.user-entry
+  - skill.slot
+invariant_ids: [SKILL-I1, SKILL-I2, SKILL-I3, SKILL-I4, SKILL-I5, SKILL-I6, SKILL-I7, SKILL-I8, SKILL-I9]
 property_ids: [skill.prop.descriptor_round_trips_through_json, skill.prop.id_closure_under_selection, skill.prop.id_is_unique_within_catalog, skill.prop.trigger_is_advisory_not_grammar]
 ---
 
 # Skill Contract
 
-A **Skill** in circuit-next is a discoverable capability the plugin
-surface offers. A **Skill descriptor** is the compiled catalog entry
-for that skill — the part a selection resolver can bind by `SkillId`
-and a catalog compiler can enumerate.
+A **Skill** in circuit-next is a discoverable capability with a local
+`SKILL.md` instruction file. Circuit deals with two related but separate
+projections:
+
+1. **`SkillDescriptor`** — the compiled plugin catalog entry. This is the
+   build-time projection a catalog compiler can enumerate.
+2. **`UserSkillEntry`** — the relay-time projection of a user's local
+   `SKILL.md` file discovered under a host-native skill root.
+
+A **Skill slot** is an optional flow-authored placeholder such as
+`review-assistant`. Users bind slots to their own concrete local skills in
+config. Slot ids are not `SkillId`s and do not appear in
+`ResolvedSelection.skills`.
 
 The descriptor is NOT the Claude Code `SKILL.md` YAML frontmatter. CC's
 frontmatter (`name`, `description`, `trigger`) is an external-protocol
@@ -30,8 +41,10 @@ is a catalog-compiler concern, not a schema concern; when that compiler
 lands it will cite this contract as its output target.
 
 `skill.descriptor` is therefore greenfield: the descriptor shape is invented
-by circuit-next. The upstream SKILL.md frontmatter (external-protocol) can get
-its own contract if/when the compiler lands and the mapping needs one.
+by circuit-next. `skill.user-entry` is the minimal local-skill projection used
+by the runtime loader. It accepts optional `SKILL.md` frontmatter fields
+(`name`, `description`, `trigger`) but derives `id` from the directory name,
+not from frontmatter.
 
 ## Ubiquitous language
 
@@ -124,17 +137,47 @@ invariants are enforced via `src/schemas/skill.ts` and tested in
   Mirrors continuity.ts CONT-I12 and run.ts RUN MED #3. Added post-
   Codex v0.1 review (MED #6).
 
+- **SKILL-I7 — `UserSkillEntry` is a sibling schema, not a
+  `SkillDescriptor` extension.** Local user-authored skills are
+  projected as `{id, name?, description?, trigger?, root, path, sha256,
+  bytes}`. The runtime derives `id` from the containing directory name
+  and validates it as `SkillId`; it does not trust frontmatter to name
+  the skill. `root` and `path` record where the chosen file came from.
+  `sha256` and `bytes` are evidence fields for traceability. Surplus
+  keys are rejected on the projected entry.
+
+- **SKILL-I8 — User skill discovery is deterministic and host-native.**
+  The registry scans only immediate child directories under
+  `~/.agents/skills` and `~/.claude/skills`, in that order. Missing roots
+  are ignored. When both roots contain the same `SkillId`,
+  `~/.agents/skills` wins. Generated Circuit plugin skills under
+  `plugins/` are not user skill roots and must not be scanned by this
+  registry.
+
+- **SKILL-I9 — `SkillSlot` is optional built-in-flow indirection.**
+  A skill slot carries `{id, description}` where `id` is a kebab-case
+  `SkillSlotId`. Slot ids are config binding keys, not `SkillId`s.
+  Public built-in flows may expose optional slots, but they must not
+  require slots or name operator-local concrete skill ids. Unbound slots
+  are ignored at relay time.
+
 ## Pre-conditions
 
 - The catalog compiler produces a JSON blob per skill that conforms to
   `SkillDescriptor.safeParse`.
 - The catalog compiler closes `SkillId` references across the catalog:
-  every `SkillId` named by a `SelectionOverride.skills[]`, a
-  `CompiledFlow.default_skills` (if the schema ever reintroduces it), or a
-  plugin's `.claude-plugin/plugin.json` skills list MUST resolve to an
+  every `SkillId` named by generated plugin metadata MUST resolve to an
   existing `skill.descriptor` row in the compiled catalog. Schema-level
   enforcement is infeasible (cross-report closure); this is catalog-
   compiler work.
+- The user skill registry resolves relay-time local skills from
+  `~/.agents/skills/<skill-id>/SKILL.md` and
+  `~/.claude/skills/<skill-id>/SKILL.md`. Concrete
+  `ResolvedSelection.skills[]` ids and slot-bound skills are explicit
+  operator choices and must resolve before connector invocation.
+- `SKILL.md` frontmatter is optional. When present, only `name`,
+  `description`, and `trigger` are read by the local projection; extra
+  frontmatter fields are ignored by the loader.
 
 ## Post-conditions
 
@@ -152,6 +195,22 @@ After a `SkillDescriptor` is accepted:
   strings; consumers can iterate without a zero-length-guard.
 - No undocumented keys are accepted; consumers that want new fields
   must land a v0.2 schema change first.
+
+After a `UserSkillEntry` is accepted:
+
+- `id` is a concrete `SkillId` derived from the local skill directory.
+- `root` and `path` are non-empty strings naming the selected root and
+  `SKILL.md` path.
+- `sha256` is a 64-character lowercase hex digest of the full file text.
+- `bytes` is a non-negative integer byte count.
+- `name`, `description`, and `trigger` are optional non-empty strings.
+
+After a `SkillSlot` is accepted:
+
+- `id` is a kebab-case `SkillSlotId`.
+- `description` is non-empty operator-facing prose.
+- The slot remains optional until config binds it to a concrete
+  `SkillId`; no accepted slot by itself causes a skill to load.
 
 ## Property ids (reserved for Stage 2 testing)
 
@@ -177,10 +236,15 @@ After a `SkillDescriptor` is accepted:
 - **ids**: `SkillId` — descriptor identity.
 - **selection-policy**: `SkillOverride.skills` (see
   `docs/contracts/selection.md` SEL-I3) references `SkillId` values
-  that MUST resolve to a descriptor in the compiled catalog. The
-  resolver is catalog-compiler work; the contract-level guarantee is
-  that `SkillOverride` and `SkillDescriptor` agree on the id shape
-  (both use `SkillId`).
+  that must resolve in the user skill registry when selected for relay.
+  The contract-level guarantee is that `SkillOverride`,
+  `SkillDescriptor`, and `UserSkillEntry` agree on the concrete id shape
+  (all use `SkillId`).
+- **config**: `skills.bindings` and `circuits.<flow>.skill_bindings`
+  map `SkillSlotId` keys to concrete `SkillId` values.
+- **run**: `skills.loaded` trace entries record the `UserSkillEntry`
+  evidence fields actually loaded for a relay attempt, without storing
+  the skill body.
 
 ## Failure modes addressed
 
@@ -209,10 +273,18 @@ After a `SkillDescriptor` is accepted:
 
 - **carry-forward:external-protocol-greenfield-confusion** — **Closed
   in v0.1 by reframing.** `skill.descriptor` governs the compiled
-  catalog entry (greenfield); the upstream CC `SKILL.md` frontmatter
-  (external-protocol) is a separate concern for a future
-  `skill.frontmatter` report. `backing_paths` updated accordingly.
+  catalog entry (greenfield). v0.2's `UserSkillEntry` reads the small
+  local-loader subset of `SKILL.md` frontmatter (`name`, `description`,
+  `trigger`) but does not ratify the full host protocol. A richer
+  compiler-facing frontmatter contract remains a future concern.
   Codex v0.1 HIGH #1.
+
+- **carry-forward:portable-built-ins-vs-local-skills** — **Closed in
+  v0.2 by slot indirection.** Built-in public flows do not name
+  operator-local `SkillId`s. They may expose optional `SkillSlot`s,
+  and the operator binds those slots to their own local skills in
+  config. This keeps public flows portable while still allowing
+  project- or user-specific skill loading.
 
 ## Codex adversarial review (v0.1)
 
@@ -222,7 +294,7 @@ deferred.
 
 ## Evolution
 
-- **v0.1 (this draft)** — initial contract with SKILL-I1..I6 (SKILL-I6
+- **v0.1** — initial contract with SKILL-I1..I6 (SKILL-I6
   added post-Codex for prototype-chain defense). Four Stage 2 property
   ids reserved. Closes the selection / connector / skill relay-time
   triplet on the authoring side. All 8 Codex objections folded in
@@ -230,7 +302,13 @@ deferred.
   MED #3 trigger scope caveat, MED #4 capabilities prose tightened,
   MED #5 brand scope caveat, MED #6 SKILL-I6 added, LOW #7 comment
   fix, LOW #8 reopen conditions expanded).
-- **v0.2** — candidate scope items if evidence supports:
+- **v0.2 (user skill loading slice)** — adds `UserSkillEntry`,
+  `SkillSlot`, and deterministic local registry semantics over
+  `~/.agents/skills` and `~/.claude/skills`. `SkillDescriptor` stays the
+  plugin-distributed catalog projection. Local `SKILL.md` instructions
+  are loaded at relay time only when explicitly selected by
+  `selection.skills` or through an operator-bound optional slot.
+- **v0.3** — candidate scope items if evidence supports:
   - **Typed extension slots.** If plugin authors need structured
     extension fields (e.g. `mcp_integrations`, `tags`, `dependencies`),
     introduce a typed closed set rather than opening `.strict()` to
@@ -247,12 +325,11 @@ deferred.
     `SkillDescriptor[]` to the reachable `SelectionOverride.skills`
     references. Reopen condition: selection resolver ships and
     operators hit unresolved-skill-id bugs in practice.
-  - **Upstream SKILL.md mapping contract.** Introduce a separate
-    report id (likely `skill.frontmatter`, `external-protocol`) to
-    govern the Claude Code `SKILL.md` YAML shape that the catalog
-    compiler consumes as input. Reopen condition: catalog compiler
-    lands, OR host CC frontmatter changes in a way that breaks the
-    current mapping.
+  - **Full upstream SKILL.md mapping contract.** Introduce a separate
+    report id for the complete host frontmatter protocol if a catalog
+    compiler needs more than the local-loader subset. Reopen condition:
+    catalog compiler lands, OR host frontmatter changes in a way that
+    breaks the current mapping.
   - **`capabilities` as resolver/filter input.** If any selection
     resolver treats `capabilities` as deterministic policy (filter,
     routing, eligibility), reopen to promote it from operator-facing

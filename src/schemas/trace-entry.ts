@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ChangeKindDeclaration } from './change-kind.js';
 import { RelayResolutionSource, ResolvedConnector } from './connector.js';
 import { Depth } from './depth.js';
-import { CompiledFlowId, InvocationId, RunId, StepId } from './ids.js';
+import { CompiledFlowId, InvocationId, RunId, SkillId, SkillSlotId, StepId } from './ids.js';
 import { ResolvedSelection } from './selection-policy.js';
 import { FanoutFailurePolicy, RelayRole } from './step.js';
 
@@ -110,6 +110,25 @@ export const RelayStartedTraceEntry = TraceEntryBase.extend({
   resolved_from: RelayResolutionSource,
 }).strict();
 export type RelayStartedTraceEntry = z.infer<typeof RelayStartedTraceEntry>;
+
+export const LoadedSkillEvidence = z
+  .object({
+    id: SkillId,
+    slot: SkillSlotId.optional(),
+    path: z.string().min(1),
+    sha256: ContentHash,
+    bytes: z.number().int().nonnegative(),
+  })
+  .strict();
+export type LoadedSkillEvidence = z.infer<typeof LoadedSkillEvidence>;
+
+export const SkillsLoadedTraceEntry = TraceEntryBase.extend({
+  kind: z.literal('skills.loaded'),
+  step_id: StepId,
+  attempt: z.number().int().positive(),
+  skills: z.array(LoadedSkillEvidence).min(1),
+}).strict();
+export type SkillsLoadedTraceEntry = z.infer<typeof SkillsLoadedTraceEntry>;
 
 export const RelayCompletedTraceEntry = TraceEntryBase.extend({
   kind: z.literal('relay.completed'),
@@ -341,6 +360,7 @@ export const TraceEntry = z
     CheckpointRequestedTraceEntry,
     CheckpointResolvedTraceEntry,
     RelayStartedTraceEntry,
+    SkillsLoadedTraceEntry,
     RelayRequestTraceEntry,
     RelayFailedTraceEntry,
     RelayReceiptTraceEntry,

@@ -471,6 +471,52 @@ describe('flow schematic compiler-required metadata', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts relay skill slots with kebab-case ids', () => {
+    const schematic = baseSchematic([
+      actItemWithExtras({
+        protocol: 'demo-act@v1',
+        skill_slots: [
+          {
+            id: 'review-assistant',
+            description: 'Optional local skill for reviewing this step.',
+          },
+        ],
+        writes: {
+          report_path: 'reports/change.json',
+          request_path: 'reports/relay/act.request.json',
+          receipt_path: 'reports/relay/act.receipt.txt',
+          result_path: 'reports/relay/act.result.json',
+        },
+        check: { pass: ['accept'] },
+      }),
+    ]);
+    const result = FlowSchematic.safeParse(schematic);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects relay skill slots with underscore ids', () => {
+    const schematic = baseSchematic([
+      actItemWithExtras({
+        protocol: 'demo-act@v1',
+        skill_slots: [
+          {
+            id: 'review_assistant',
+            description: 'Optional local skill for reviewing this step.',
+          },
+        ],
+        writes: {
+          report_path: 'reports/change.json',
+          request_path: 'reports/relay/act.request.json',
+          receipt_path: 'reports/relay/act.receipt.txt',
+          result_path: 'reports/relay/act.result.json',
+        },
+        check: { pass: ['accept'] },
+      }),
+    ]);
+    const result = FlowSchematic.safeParse(schematic);
+    expect(result.success).toBe(false);
+  });
+
   it('rejects relay item missing receipt_path', () => {
     const schematic = baseSchematic([
       actItemWithExtras({

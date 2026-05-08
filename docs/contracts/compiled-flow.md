@@ -1,15 +1,15 @@
 ---
 contract: flow
 status: draft
-version: 0.3
+version: 0.4
 schema_source: src/schemas/compiled-flow.ts
-last_updated: 2026-04-24
-depends_on: [step, stage, depth, change_kind, selection-policy]
+last_updated: 2026-05-08
+depends_on: [step, stage, depth, change_kind, selection-policy, skill]
 report_ids:
   - flow.definition
   - flow.scalar_catalog
   - flow.schematic_definition
-invariant_ids: [WF-I1, WF-I2, WF-I3, WF-I4, WF-I5, WF-I6, WF-I7, WF-I8, WF-I9, WF-I10, WF-I11]
+invariant_ids: [WF-I1, WF-I2, WF-I3, WF-I4, WF-I5, WF-I6, WF-I7, WF-I8, WF-I9, WF-I10, WF-I11, WF-I12]
 property_ids: [flow.prop.entry_mode_reachability, flow.prop.no_dead_steps, flow.prop.stage_step_closure, flow.prop.route_target_closure, flow.prop.terminal_target_coverage]
 ---
 
@@ -83,12 +83,21 @@ inside `CompiledFlow.superRefine` — and tested in
   pass, so a flow where `routes.pass` cycles while `routes.fail`
   points to `@complete` is rejected at parse time instead of hanging a
   run.
+- **WF-I12 — Public built-in flows do not name concrete local skills.**
+  Built-in public flow schematics must not ship concrete operator-local
+  skill ids in `default_selection.skills` or step `selection.skills`.
+  If a built-in wants to invite local skill use, it exposes optional
+  step-level `skill_slots`; users bind those slots in config. User-authored
+  flows may still use concrete `selection.skills` ids because they are
+  not portable public defaults.
 
 ## Pre-conditions
 
 - CompiledFlow YAML (or equivalent JSON) must parse under `CompiledFlow.safeParse`.
-- The CompiledFlow's declared `default_skills` must exist in the skill
-  registry at load time (validated by the runtime, not the schema).
+- Any concrete `SkillId` in `default_selection.skills` or step
+  `selection.skills` resolves at relay time against the user skill
+  registry when that relay executes. Built-in public flows must not use
+  concrete local skill ids; they use optional step `skill_slots` instead.
 
 ## Post-conditions
 
@@ -98,6 +107,8 @@ After a CompiledFlow is accepted:
 - The CompiledFlow's `version` is monotonically increasing within its `id`
   (enforced by catalog compiler, not by schema).
 - The CompiledFlow's step graph is closed under `WF-I1..4`.
+- Any step-level `skill_slots` are typed `SkillSlot`s and remain optional
+  until config binds them.
 - The CompiledFlow is referentially serializable to `circuit.manifest.yaml`.
 
 ## Property ids (reserved for Stage 2 testing)
@@ -137,6 +148,9 @@ Property-based tests will cover:
 - **selection-policy**: `CompiledFlow.default_selection` is a
   `SelectionOverride` and obeys selection precedence (see
   `docs/contracts/selection.md`).
+- **skill**: `Step.skill_slots` uses `SkillSlot[]`. Concrete
+  `SelectionOverride.skills` ids are runtime-resolved local skills;
+  optional slots are config-bound local skills.
 
 ## Failure modes (carried from evidence)
 
@@ -153,6 +167,9 @@ Property-based tests will cover:
   `verify` is now rejected at parse time. See
   `docs/contracts/stage.md` stage-I4. Adversarial-review MED #11 is
   closed.
+- `carry-forward:built-in-local-skill-coupling` — **Closed in v0.4 by
+  WF-I12.** Public built-in flows remain portable by exposing optional
+  step `skill_slots` instead of shipping concrete local skill ids.
 
 ## Check source tightening
 
@@ -182,7 +199,7 @@ STEP-I4.
   graph semantics to parse-time invariants rather than property tests:
   preferring types over tests where the type can express the invariant
   (CLAUDE.md §Architecture-First types).
-- **v0.3 (Runtime Safety Floor Slice 4, this version)**: adds
+- **v0.3 (Runtime Safety Floor Slice 4)**: adds
   **WF-I11** (pass-route terminal reachability) after runtime evidence
   showed WF-I8's broad
   graph rule was not enough for liveness. A flow can satisfy WF-I8 by
@@ -205,5 +222,10 @@ STEP-I4.
   stage" is left for Stage 2 per `docs/contracts/stage.md` §Evolution
   and will be revisited when manifest compilation starts consuming
   `Stage.steps` as an ordered execution plan).
+- **v0.4 (user skill loading slice, this version)**: adds **WF-I12** and
+  step-level `skill_slots` pass-through from schematic to compiled flow.
+  Public built-ins must not name concrete local skills in
+  `default_selection.skills` or step `selection.skills`; user-authored
+  flows may still select concrete skills directly.
 - **v1.0 (Stage 2)**: ratified invariants + property tests + operator
   documentation.

@@ -469,13 +469,30 @@ function checkpointToVerificationCompiledFlow(commandCwd = '.'): {
 }
 
 let runFolderBase: string;
+let homeDir: string;
+let originalHome: string | undefined;
+
+function writeSkill(id: string): void {
+  const dir = join(homeDir, '.agents', 'skills', id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`, 'utf8');
+}
 
 beforeEach(() => {
   runFolderBase = join(tmpdir(), `circuit-next-build-checkpoint-${randomUUID()}`);
+  homeDir = join(runFolderBase, 'home');
+  originalHome = process.env.HOME;
+  process.env.HOME = homeDir;
   mkdirSync(runFolderBase, { recursive: true });
+  writeSkill('tdd');
 });
 
 afterEach(() => {
+  if (originalHome === undefined) {
+    Reflect.deleteProperty(process.env, 'HOME');
+  } else {
+    process.env.HOME = originalHome;
+  }
   rmSync(runFolderBase, { recursive: true, force: true });
 });
 
@@ -1049,6 +1066,7 @@ describe('Build checkpoint execution substrate', () => {
             schema_version: 1,
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
+            skills: { bindings: {} },
             circuits: {},
             defaults: {
               selection: {
@@ -1076,6 +1094,7 @@ describe('Build checkpoint execution substrate', () => {
             schema_version: 1,
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
+            skills: { bindings: {} },
             circuits: {},
             defaults: {
               selection: {
@@ -1142,6 +1161,7 @@ describe('Build checkpoint execution substrate', () => {
             schema_version: 1,
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
+            skills: { bindings: {} },
             circuits: {},
             defaults: {
               selection: {

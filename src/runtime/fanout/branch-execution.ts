@@ -126,6 +126,7 @@ function syntheticCompiledRelayStepV1(
     reads: relayBranchReads(step) as never,
     routes: { pass: '@complete' },
     ...(branch.selection === undefined ? {} : { selection: branch.selection as never }),
+    skill_slots: [],
     executor: 'worker',
     kind: 'relay',
     role: branch.role as never,

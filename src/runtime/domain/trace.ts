@@ -18,6 +18,7 @@ export type TraceEntryType =
   | 'checkpoint.requested'
   | 'checkpoint.resolved'
   | 'relay.started'
+  | 'skills.loaded'
   | 'relay.request'
   | 'relay.receipt'
   | 'relay.result'
@@ -84,6 +85,7 @@ export interface TraceEntryInput {
   readonly branches_failed?: number;
   readonly policy?: string;
   readonly selected_branch_id?: string;
+  readonly skills?: readonly unknown[];
 }
 
 export interface TraceEntry extends TraceEntryInput {

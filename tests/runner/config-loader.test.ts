@@ -32,6 +32,12 @@ function writeProjectConfig(text: string): void {
   writeFileSync(path, text);
 }
 
+function writeSkill(id: string): void {
+  const dir = join(homeDir, '.agents', 'skills', id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`);
+}
+
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
@@ -175,16 +181,21 @@ circuits:
     };
     const runFolder = join(root, 'run');
     const stdout = captureStdout();
+    const originalHome = process.env.HOME;
     const originalStrictRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     const originalShowRuntimeDecision = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     const originalCandidateRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     const originalDisableRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+    process.env.HOME = homeDir;
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
     process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+    for (const skill of ['tdd', 'api-design-patterns', 'react-doctor']) {
+      writeSkill(skill);
+    }
     try {
       const exit = await main(
         ['review', '--goal', 'prove config reaches selection evidence', '--run-folder', runFolder],
@@ -199,6 +210,11 @@ circuits:
       expect(exit).toBe(0);
     } finally {
       stdout.restore();
+      if (originalHome === undefined) {
+        Reflect.deleteProperty(process.env, 'HOME');
+      } else {
+        process.env.HOME = originalHome;
+      }
       process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalStrictRuntime;
       process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalShowRuntimeDecision;
       process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalCandidateRuntime;

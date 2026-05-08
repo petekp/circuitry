@@ -1,14 +1,14 @@
 ---
 contract: step
 status: draft
-version: 0.2
+version: 0.3
 schema_source: src/schemas/step.ts
-last_updated: 2026-04-25
-depends_on: [ids, check, selection-policy, scalars]
+last_updated: 2026-05-08
+depends_on: [ids, check, selection-policy, scalars, skill]
 report_ids:
   - step.definition
-invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9]
-property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant]
+invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9, STEP-I10]
+property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant, step.prop.skill_slots_unique]
 ---
 
 # Step Contract
@@ -124,6 +124,13 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
   one of those declared choices. This prevents the request report, response
   check, and auto-resolution policy from drifting apart.
 
+- **STEP-I10 — Skill slots are typed optional placeholders.** Every Step
+  may carry `skill_slots: SkillSlot[]`; absence means no slots. Slot ids are
+  kebab-case `SkillSlotId`s and must be unique within the step. A slot
+  does not load a skill by itself; relay-time loading happens only when
+  config binds the slot to a concrete local `SkillId`. v1 slots are
+  optional only.
+
 - **STEP-I7 — Protocol required.** Every Step carries a `ProtocolId`
   (`protocol:` field) — no default, no optional. Enforced by `StepBase`
   in `src/schemas/step.ts`. The `ProtocolId` brand is defined in
@@ -168,6 +175,7 @@ After a Step is accepted:
 - The Step's flow-authored file paths are safe to resolve within a
   run folder. Runtime writers still call the run-relative resolver as
   defense-in-depth when typed data is bypassed.
+- `skill_slots`, when present, is an array of typed optional slots.
 
 ## Property ids (reserved for Stage 2 testing)
 
@@ -190,6 +198,8 @@ Property-based tests will cover:
   `RunRelativePath` and resolves inside the run folder.
 - `step.prop.budget_bounds` — For any valid `Step` with `budgets`
   present, `max_attempts ∈ [1, 10]`.
+- `step.prop.skill_slots_unique` — For any valid `Step`,
+  `skill_slots[].id` values are unique and parse as `SkillSlotId`.
 
 ## Cross-contract dependencies
 
@@ -199,6 +209,9 @@ Property-based tests will cover:
 - **selection-policy** (`src/schemas/selection-policy.ts`) — Step's
   optional `selection: SelectionOverride` participates in the selection
   layer stack defined in `UBIQUITOUS_LANGUAGE.md#configuration-language`.
+- **skill** (`src/schemas/skill.ts`) — Step's `skill_slots` field uses
+  `SkillSlot[]`. Slot binding and local skill resolution are relay-time
+  concerns owned by config and the user skill registry.
 - **flow** (`src/schemas/compiled-flow.ts`) — CompiledFlow-level invariants
   (WF-I1 unique step ids, WF-I4 closed route targets) reference Step
   identity; they are not repeated here.
@@ -239,10 +252,12 @@ Property-based tests will cover:
   (prototype-chain `in` attack), HIGH #2 (cross-slot drift), HIGH #3
   (optional undefined slot), MED #4 (strict-mode prose), LOW #7 (TS
   exactness prose) all incorporated.
-- **v0.2 (Slice 69, this version)** — adds STEP-I8 so
+- **v0.2 (Slice 69)** — adds STEP-I8 so
   flow-controlled Step paths are `RunRelativePath` values and runtime
   call sites resolve them through a containment-checked helper.
-- **v0.3 (Stage 2)** — ratify `property_ids` above by landing the
+- **v0.3 (user skill loading slice, this version)** — adds STEP-I10 and
+  the typed `skill_slots` field.
+- **v0.4 (Stage 2)** — ratify `property_ids` above by landing the
   corresponding property-test harness; introduce a disambiguator only
   if a new relay step emerges that writes multiple result-like
   slots (current `relay_result.ref = 'result'` is the v0.1 answer);

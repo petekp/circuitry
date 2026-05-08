@@ -23,6 +23,9 @@ export type InvocationId = z.infer<typeof InvocationId>;
 export const SkillId = z.string().regex(slugPattern).brand<'SkillId'>();
 export type SkillId = z.infer<typeof SkillId>;
 
+export const SkillSlotId = z.string().regex(slugPattern).brand<'SkillSlotId'>();
+export type SkillSlotId = z.infer<typeof SkillSlotId>;
+
 export const ProtocolId = z
   .string()
   .regex(/^[a-z][a-z0-9-]*@v\d+$/)
