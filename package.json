@@ -14,7 +14,7 @@
     "check": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
-    "test:fast": "vitest run --exclude 'tests/runner/**'",
+    "test:fast": "vitest run --exclude 'tests/runner/cli-router.test.ts'",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "soak:runtime:fast": "vitest run tests/soak tests/runner/cli-runtime.test.ts tests/runtime tests/parity",

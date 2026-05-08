@@ -48,7 +48,7 @@ evidence). Use that vocabulary in product-facing prose.
 npm run check        # tsc --noEmit
 npm run lint         # biome check
 npm run test         # vitest (full suite)
-npm run test:fast    # vitest excluding tests/runner/** (subprocess-heavy)
+npm run test:fast    # vitest excluding tests/runner/cli-router.test.ts (only true outlier; ~10s of subprocess-driven CLI integration)
 npm run test:coverage # vitest run --coverage (info, no thresholds)
 npm run build        # tsc -p tsconfig.build.json
 npm run verify       # full canonical check; CI runs this
