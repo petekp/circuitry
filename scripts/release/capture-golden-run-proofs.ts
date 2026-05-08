@@ -13,7 +13,16 @@ import {
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { executeComposeV2 } from '../../dist/runtime/executors/compose.js';
+import type * as CliCircuitModule from '../../src/cli/circuit.js';
+import type * as ComposeModule from '../../src/runtime/executors/compose.js';
+
+type CliMain = (typeof CliCircuitModule)['main'];
+type CliMainOptions = Parameters<CliMain>[1];
+type Relayer = NonNullable<NonNullable<CliMainOptions>['relayer']>;
+type RelayInput = Parameters<Relayer['relay']>[0];
+type RelayOutcome = Awaited<ReturnType<Relayer['relay']>>;
+type RuntimeExecutorsOption = NonNullable<NonNullable<CliMainOptions>['runtimeExecutors']>;
+type StepExecutor = NonNullable<RuntimeExecutorsOption[keyof RuntimeExecutorsOption]>;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,21 +31,32 @@ const proofRunsRootRel = 'docs/release/proofs/runs';
 const scrubbedProjectRoot = '<repo>';
 const homeDir = process.env.HOME;
 
-function deterministicNow(startMs) {
+const composeRuntime = (await import(
+  resolve(projectRoot, 'dist/runtime/executors/compose.js')
+)) as typeof ComposeModule;
+const { executeCompose } = composeRuntime;
+
+function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
 }
 
-function captureStream(streamName) {
+type StreamName = 'stdout' | 'stderr';
+
+function captureStream(streamName: StreamName): { text: () => string; restore: () => void } {
   const stream = process[streamName];
   const originalWrite = stream.write.bind(stream);
   let captured = '';
-  stream.write = (chunk, encoding, callback) => {
+  stream.write = ((
+    chunk: string | Uint8Array,
+    encoding?: BufferEncoding | ((err?: Error | null) => void),
+    callback?: (err?: Error | null) => void,
+  ): boolean => {
     captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
     if (typeof encoding === 'function') encoding();
     if (typeof callback === 'function') callback();
     return true;
-  };
+  }) as typeof stream.write;
   return {
     text: () => captured,
     restore: () => {
@@ -45,12 +65,17 @@ function captureStream(streamName) {
   };
 }
 
-async function runCli(argv, options) {
+async function runCli(
+  argv: readonly string[],
+  options: CliMainOptions,
+): Promise<{ stdout: string; stderr: string }> {
   const stdout = captureStream('stdout');
   const stderr = captureStream('stderr');
   try {
-    const { main } = await import(resolve(projectRoot, 'dist/cli/circuit.js'));
-    const code = await main(argv, options);
+    const cliModule = (await import(
+      resolve(projectRoot, 'dist/cli/circuit.js')
+    )) as typeof CliCircuitModule;
+    const code = await cliModule.main(argv, options);
     if (code !== 0) throw new Error(`circuit CLI exited ${code}`);
     return { stdout: stdout.text(), stderr: stderr.text() };
   } finally {
@@ -59,7 +84,9 @@ async function runCli(argv, options) {
   }
 }
 
-function scrubText(text, pathAliases = []) {
+type PathAlias = { fromRel: string; toRel: string };
+
+function scrubText(text: string, pathAliases: PathAlias[] = []): string {
   let scrubbed = text
     .replaceAll(projectRoot, scrubbedProjectRoot)
     .replaceAll(homeDir === undefined || homeDir.length === 0 ? '\0' : homeDir, '<home>')
@@ -76,13 +103,13 @@ function scrubText(text, pathAliases = []) {
   return scrubbed;
 }
 
-function writeScrubbed(relPath, content, pathAliases = []) {
+function writeScrubbed(relPath: string, content: string, pathAliases: PathAlias[] = []): void {
   const abs = resolve(projectRoot, relPath);
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, scrubText(content, pathAliases));
 }
 
-function filesUnder(absDir) {
+function filesUnder(absDir: string): string[] {
   return readdirSync(absDir).flatMap((entry) => {
     const abs = join(absDir, entry);
     const stat = statSync(abs);
@@ -91,7 +118,7 @@ function filesUnder(absDir) {
   });
 }
 
-function scrubProofTree(proofDir, pathAliases = []) {
+function scrubProofTree(proofDir: string, pathAliases: PathAlias[] = []): void {
   for (const abs of filesUnder(proofDir)) {
     const rel = relative(projectRoot, abs);
     if (!/\.(json|jsonl|md|ndjson|txt|yaml|yml)$/.test(rel)) continue;
@@ -99,10 +126,10 @@ function scrubProofTree(proofDir, pathAliases = []) {
   }
 }
 
-function buildRelayer() {
+function buildRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: act-step')) {
         return {
           request_payload: input.prompt,
@@ -135,10 +162,10 @@ function buildRelayer() {
   };
 }
 
-function buildAbortRelayer() {
+function buildAbortRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: act-step')) {
         throw new Error('proof connector failure while implementing the synthetic Build change');
       }
@@ -147,10 +174,10 @@ function buildAbortRelayer() {
   };
 }
 
-function reviewRelayer() {
+function reviewRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => ({
+    relay: async (input: RelayInput): Promise<RelayOutcome> => ({
       request_payload: input.prompt,
       receipt_id: 'proof-review',
       result_body: JSON.stringify({
@@ -163,10 +190,10 @@ function reviewRelayer() {
   };
 }
 
-function fixRelayer() {
+function fixRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: fix-gather-context')) {
         return {
           request_payload: input.prompt,
@@ -219,9 +246,9 @@ function fixRelayer() {
   };
 }
 
-async function fixProofComposeExecutor(step, context) {
+const fixProofComposeExecutor: StepExecutor = async (step, context) => {
   if (step.kind !== 'compose' || step.id !== 'fix-frame') {
-    return await executeComposeV2(step, context);
+    return await executeCompose(step as Parameters<typeof executeCompose>[0], context);
   }
   const report = step.writes?.report;
   if (report?.schema === undefined) {
@@ -266,17 +293,17 @@ async function fixProofComposeExecutor(step, context) {
     report_schema: report.schema,
   });
   return { route: 'pass', details: { writer: step.writer, proof: 'release-fix-brief' } };
-}
+};
 
-function fixProofExecutors() {
+function fixProofExecutors(): RuntimeExecutorsOption {
   return { compose: fixProofComposeExecutor };
 }
 
-function migrateRelayer() {
+function migrateRelayer(): Relayer {
   const build = buildRelayer();
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: inventory-step')) {
         return {
           request_payload: input.prompt,
@@ -326,10 +353,10 @@ function migrateRelayer() {
   };
 }
 
-function sweepRelayer() {
+function sweepRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: survey-step')) {
         return {
           request_payload: input.prompt,
@@ -398,10 +425,10 @@ function sweepRelayer() {
   };
 }
 
-function exploreDecisionRelayer() {
+function exploreDecisionRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
-    relay: async (input) => {
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
       if (input.prompt.includes('Step: proposal-fanout-step-option-1')) {
         return {
           request_payload: input.prompt,
@@ -496,7 +523,17 @@ function exploreDecisionRelayer() {
   };
 }
 
-async function captureCliScenario(scenario) {
+type Scenario = {
+  slug: string;
+  argv: readonly string[];
+  relayer: Relayer;
+  runId: string;
+  startMs: number;
+  resumeChoice?: string;
+  runtimeExecutors?: RuntimeExecutorsOption;
+};
+
+async function captureCliScenario(scenario: Scenario): Promise<void> {
   const proofDirRel = `${proofRunsRootRel}/${scenario.slug}`;
   const proofDir = resolve(projectRoot, proofDirRel);
   const stagingProofDirRel = `${proofRunsRootRel}/.capture-${scenario.slug}`;
@@ -560,7 +597,7 @@ async function captureCliScenario(scenario) {
   }
 }
 
-function captureDoctor() {
+function captureDoctor(): void {
   const proofDirRel = `${proofRunsRootRel}/doctor`;
   const proofDir = resolve(projectRoot, proofDirRel);
   rmSync(proofDir, { recursive: true, force: true });
@@ -591,7 +628,7 @@ function captureDoctor() {
   console.log(`captured ${proofDirRel}`);
 }
 
-async function captureHandoff() {
+async function captureHandoff(): Promise<void> {
   const proofDirRel = `${proofRunsRootRel}/handoff`;
   const proofDir = resolve(projectRoot, proofDirRel);
   const stagingProofDirRel = `${proofRunsRootRel}/.capture-handoff`;
@@ -682,7 +719,7 @@ async function captureHandoff() {
   }
 }
 
-async function captureCustomization() {
+async function captureCustomization(): Promise<void> {
   const proofDirRel = `${proofRunsRootRel}/customization`;
   const proofDir = resolve(projectRoot, proofDirRel);
   const stagingProofDirRel = `${proofRunsRootRel}/.capture-customization`;
@@ -732,7 +769,7 @@ async function captureCustomization() {
   }
 }
 
-const scenarios = [
+const scenarios: Scenario[] = [
   {
     slug: 'routed-build',
     argv: ['run', '--goal', 'develop: add a small safe change'],

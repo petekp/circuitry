@@ -2,20 +2,92 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+import type * as CatalogModule from '../../src/flows/catalog.js';
+import type * as RouterModule from '../../src/flows/router.js';
+import type * as ReleaseSchemasModule from '../../src/release/schemas.js';
+import type * as ConnectorSchemasModule from '../../src/schemas/connector.js';
+
 import {
   fileIsPresent,
   formatWithBiome,
   listMarkdownBasenames,
-  loadConnectorSchemas,
-  loadCurrentCatalog,
-  loadReleaseSchemas,
-  loadRouter,
   loadYamlWithSchema,
   projectRoot,
   readJson,
   stableJson,
   writeOrCheck,
 } from './lib.mjs';
+
+type FlowPackage = CatalogModule.CompiledFlowPackage;
+type RouterClassify = (typeof RouterModule)['classifyCompiledFlowTask'];
+type ProofScenarios = ReturnType<(typeof ReleaseSchemasModule)['ProofScenarioIndex']['parse']>;
+type ConnectorSchemas = typeof ConnectorSchemasModule;
+type ConnectorRecord = {
+  id: string;
+  status: 'implemented' | 'missing';
+  filesystem: string;
+  structured_output: string;
+  protocol: string;
+  summary: string;
+  readiness_refs: string[];
+};
+type HostRecord = {
+  id: string;
+  status: string;
+  summary: string;
+  evidence: string[];
+  readiness_refs: string[];
+};
+type FlowGeneratedFile = {
+  rel: string;
+  json: {
+    entry_modes?: Array<{ name: string }>;
+    stages?: Array<{ id?: string; canonical?: string; title?: string }>;
+    steps?: Array<{
+      kind?: string;
+      role?: string;
+      writes?: {
+        report?: { schema?: string };
+        aggregate?: { schema?: string };
+      };
+    }>;
+  };
+};
+type FlowRecord = {
+  id: string;
+  source: string;
+  command_path?: string;
+  contract_path?: string;
+  routing: {
+    routable: boolean;
+    is_default: boolean;
+    order?: number;
+    signal_labels: string[];
+    default_reason?: string;
+  };
+  entry_modes: string[];
+  stages: string[];
+  reports: string[];
+  writers: {
+    compose: number;
+    close: number;
+    verification: number;
+    checkpoint: number;
+  };
+  route_outcomes: string[];
+  unsupported_route_outcomes: string[];
+};
+type RouterIntent = {
+  id: string;
+  input: string;
+  expected_flow: string;
+  actual_flow: string;
+  expected_entry_mode?: string;
+  actual_entry_mode?: string;
+  status: 'implemented' | 'partial';
+  readiness_refs: string[];
+};
 
 const check = process.argv.includes('--check');
 const OUT_REL = 'generated/release/current-capabilities.json';
@@ -32,11 +104,11 @@ const EXECUTABLE_SCHEMATIC_ROUTES = new Set([
 ]);
 const CANONICAL_STAGE_ORDER = ['frame', 'analyze', 'plan', 'act', 'verify', 'review', 'close'];
 
-function flowDir(id) {
+function flowDir(id: string): string {
   return resolve(projectRoot, 'generated/flows', id);
 }
 
-function readGeneratedFlowFiles(id) {
+function readGeneratedFlowFiles(id: string): FlowGeneratedFile[] {
   const dir = flowDir(id);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
@@ -44,12 +116,12 @@ function readGeneratedFlowFiles(id) {
     .sort()
     .map((entry) => ({
       rel: `generated/flows/${id}/${entry}`,
-      json: readJson(`generated/flows/${id}/${entry}`),
+      json: readJson<FlowGeneratedFile['json']>(`generated/flows/${id}/${entry}`),
     }));
 }
 
-function entryModesFor(id) {
-  const modes = new Map();
+function entryModesFor(id: string): string[] {
+  const modes = new Map<string, { name: string }>();
   for (const file of readGeneratedFlowFiles(id)) {
     for (const mode of file.json.entry_modes ?? []) {
       modes.set(mode.name, mode);
@@ -58,7 +130,10 @@ function entryModesFor(id) {
   return [...modes.keys()].sort();
 }
 
-function stageAxisLabel(flowId, stage) {
+function stageAxisLabel(
+  flowId: string,
+  stage: { id?: string; canonical?: string; title?: string },
+): string | undefined {
   const canonical = stage.canonical ?? stage.id;
   if (canonical === 'plan' && /decision/i.test(stage.title ?? '')) return 'Plan or Decision';
   if (flowId === 'fix' && canonical === 'act') return 'Fix';
@@ -69,13 +144,13 @@ function stageAxisLabel(flowId, stage) {
   return canonical;
 }
 
-function stagesFor(id) {
-  const stages = new Map();
+function stagesFor(id: string): string[] {
+  const stages = new Map<string, { label: string; order: number }>();
   for (const file of readGeneratedFlowFiles(id)) {
     for (const stage of file.json.stages ?? []) {
       const label = stageAxisLabel(id, stage);
       if (typeof label !== 'string') continue;
-      const canonical = stage.canonical ?? stage.id;
+      const canonical = stage.canonical ?? stage.id ?? '';
       const order = CANONICAL_STAGE_ORDER.indexOf(canonical);
       stages.set(label, {
         label,
@@ -88,8 +163,8 @@ function stagesFor(id) {
     .map((stage) => stage.label);
 }
 
-function reportsFor(pkg) {
-  const reports = new Set(pkg.relayReports.map((report) => report.schemaName));
+function reportsFor(pkg: FlowPackage): string[] {
+  const reports = new Set<string>(pkg.relayReports.map((report) => report.schemaName));
   for (const file of readGeneratedFlowFiles(pkg.id)) {
     for (const step of file.json.steps ?? []) {
       const writes = step.writes ?? {};
@@ -131,8 +206,8 @@ const SEMANTIC_OUTPUTS_BY_REPORT = new Map(
   }),
 );
 
-function semanticOutputsFor(record) {
-  const outputs = new Set();
+function semanticOutputsFor(record: FlowRecord): string[] {
+  const outputs = new Set<string>();
   for (const report of record.reports) {
     for (const output of SEMANTIC_OUTPUTS_BY_REPORT.get(report) ?? []) {
       outputs.add(output);
@@ -141,14 +216,22 @@ function semanticOutputsFor(record) {
   return [...outputs].sort();
 }
 
-function readSchematic(pkg) {
+type SchematicRouteItem = {
+  routes?: Record<string, unknown>;
+  route_overrides?: Record<string, unknown>;
+};
+
+function readSchematic(pkg: FlowPackage): { items?: SchematicRouteItem[] } {
   return JSON.parse(readFileSync(resolve(projectRoot, pkg.paths.schematic), 'utf8'));
 }
 
-function routeOutcomesFor(pkg) {
+function routeOutcomesFor(pkg: FlowPackage): {
+  route_outcomes: string[];
+  unsupported_route_outcomes: string[];
+} {
   const schematic = readSchematic(pkg);
-  const outcomes = new Set();
-  const unsupported = new Set();
+  const outcomes = new Set<string>();
+  const unsupported = new Set<string>();
   for (const item of schematic.items ?? []) {
     for (const outcome of Object.keys(item.routes ?? {})) {
       outcomes.add(outcome);
@@ -165,13 +248,13 @@ function routeOutcomesFor(pkg) {
   };
 }
 
-function generatedStepsFor(id) {
+function generatedStepsFor(id: string): NonNullable<FlowGeneratedFile['json']['steps']> {
   return readGeneratedFlowFiles(id).flatMap((file) => file.json.steps ?? []);
 }
 
-function flowBehaviorAxes(pkg) {
+function flowBehaviorAxes(pkg: FlowRecord): Record<string, string> {
   const steps = generatedStepsFor(pkg.id);
-  const axes = {};
+  const axes: Record<string, string> = {};
   if (steps.some((step) => step.kind === 'checkpoint')) {
     axes.checkpoint =
       'Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.';
@@ -190,7 +273,11 @@ function flowBehaviorAxes(pkg) {
     axes.verification =
       'Explore deep mode records seam proof through analysis and embedded critique rather than command verification.';
   }
-  if (steps.some((step) => ['relay', 'sub-run', 'fanout'].includes(step.kind))) {
+  if (
+    steps.some(
+      (step) => step.kind !== undefined && ['relay', 'sub-run', 'fanout'].includes(step.kind),
+    )
+  ) {
     axes.worker_handoff =
       'Compiled worker handoffs write request, receipt, result, and report evidence where applicable.';
   }
@@ -201,7 +288,7 @@ function flowBehaviorAxes(pkg) {
   return axes;
 }
 
-function flowRecord(pkg) {
+function flowRecord(pkg: FlowPackage): FlowRecord {
   const routing = pkg.routing;
   const routeOutcomes = routeOutcomesFor(pkg);
   return {
@@ -229,13 +316,13 @@ function flowRecord(pkg) {
   };
 }
 
-function commandEvidence(id, host) {
+function commandEvidence(id: string, host: string): string[] {
   if (host === 'claude-code') return [`plugins/claude/commands/${id}.md`];
   if (host === 'codex-plugin') return [`plugins/circuit/commands/${id}.md`];
   return [`src/commands/${id}.md`];
 }
 
-function commandCapability(id, host, present) {
+function commandCapability(id: string, host: string, present: boolean) {
   return {
     id: host === 'claude-code' ? `command:${id}` : `command:${host}:${id}`,
     kind: 'flow',
@@ -249,8 +336,8 @@ function commandCapability(id, host, present) {
   };
 }
 
-function implementedIntentHintsByFlow(routerIntents) {
-  const byFlow = new Map();
+function implementedIntentHintsByFlow(routerIntents: RouterIntent[]): Map<string, string[]> {
+  const byFlow = new Map<string, string[]>();
   for (const intent of routerIntents) {
     if (intent.status !== 'implemented') continue;
     if (intent.id === 'plan-execution') continue;
@@ -341,8 +428,8 @@ const PROOF_AXIS_BY_SCENARIO = new Map([
   ],
 ]);
 
-function verifiedProofAxesByCapability(proofs) {
-  const byCapability = new Map();
+function verifiedProofAxesByCapability(proofs: ProofScenarios): Map<string, { proof: string }> {
+  const byCapability = new Map<string, string[]>();
   for (const scenario of proofs.scenarios) {
     if (scenario.status !== 'verified_current') continue;
     const proofAxis = PROOF_AXIS_BY_SCENARIO.get(scenario.id);
@@ -364,7 +451,11 @@ function verifiedProofAxesByCapability(proofs) {
   );
 }
 
-function capabilityFromFlow(record, intentHintsByFlow, proofAxesByCapability) {
+function capabilityFromFlow(
+  record: FlowRecord,
+  intentHintsByFlow: Map<string, string[]>,
+  proofAxesByCapability: Map<string, { proof: string }>,
+) {
   const isRuntimeOnly = record.id === 'runtime-proof';
   const intentHints = intentHintsByFlow.get(record.id)?.sort() ?? [];
   const proofAxes = proofAxesByCapability.get(`flow:${record.id}`) ?? {};
@@ -390,7 +481,7 @@ function capabilityFromFlow(record, intentHintsByFlow, proofAxesByCapability) {
   };
 }
 
-function modeCapabilities(record) {
+function modeCapabilities(record: FlowRecord) {
   return record.entry_modes.map((mode) => ({
     id: `mode:${record.id}:${mode}`,
     kind: 'mode',
@@ -401,7 +492,7 @@ function modeCapabilities(record) {
   }));
 }
 
-function routeCapabilities(record) {
+function routeCapabilities(record: FlowRecord) {
   return record.route_outcomes.map((outcome) => {
     const supported = !record.unsupported_route_outcomes.includes(outcome);
     return {
@@ -418,8 +509,14 @@ function routeCapabilities(record) {
   });
 }
 
-function routerIntentCases(classifyCompiledFlowTask) {
-  const cases = [
+function routerIntentCases(classifyCompiledFlowTask: RouterClassify): RouterIntent[] {
+  const cases: Array<{
+    id: string;
+    input: string;
+    expected_flow: string;
+    expected_entry_mode?: string;
+    readiness_refs: string[];
+  }> = [
     {
       id: 'fix',
       input: 'fix: handle the missing token edge case',
@@ -492,7 +589,7 @@ function routerIntentCases(classifyCompiledFlowTask) {
   });
 }
 
-function routerCapabilities(routerIntents) {
+function routerCapabilities(routerIntents: RouterIntent[]) {
   return routerIntents.map((intent) => ({
     id: `router:intent:${intent.id}`,
     kind: intent.id === 'plan-execution' ? 'plan_execution' : 'router_intent',
@@ -511,20 +608,17 @@ function routerCapabilities(routerIntents) {
   }));
 }
 
-function connectorRecords(connectorSchemas) {
-  const records = connectorSchemas.EnabledConnector.options.map((name) => {
+function connectorRecords(connectorSchemas: ConnectorSchemas): ConnectorRecord[] {
+  const records: ConnectorRecord[] = connectorSchemas.EnabledConnector.options.map((name) => {
     const caps = connectorSchemas.BUILTIN_CONNECTOR_CAPABILITIES[name];
-    const implemented = name !== 'codex-isolated';
     return {
       id: name,
-      status: implemented ? 'implemented' : 'missing',
+      status: 'implemented',
       filesystem: caps.filesystem,
       structured_output: caps.structured_output,
       protocol: 'builtin-json',
-      summary: implemented
-        ? `${name} is a built-in connector.`
-        : `${name} is declared but not implemented by relay selection.`,
-      readiness_refs: implemented ? [] : ['REL-002'],
+      summary: `${name} is a built-in connector.`,
+      readiness_refs: [],
     };
   });
   records.push({
@@ -540,7 +634,7 @@ function connectorRecords(connectorSchemas) {
   return records;
 }
 
-function connectorCapabilities(records) {
+function connectorCapabilities(records: ConnectorRecord[]) {
   return records.map((record) => ({
     id: `connector:${record.id}`,
     kind: 'connector',
@@ -563,7 +657,7 @@ function connectorCapabilities(records) {
   }));
 }
 
-function hostRecords() {
+function hostRecords(): HostRecord[] {
   return [
     {
       id: 'claude-code-command',
@@ -611,7 +705,7 @@ function hostRecords() {
   ];
 }
 
-function hostCapabilities(records) {
+function hostCapabilities(records: HostRecord[]) {
   return records.map((record) => ({
     id: `host:${record.id}`,
     kind: 'host',
@@ -623,7 +717,11 @@ function hostCapabilities(records) {
   }));
 }
 
-function proofCompletionSummary(proofs) {
+function proofCompletionSummary(proofs: ProofScenarios): {
+  captured_count: number;
+  remaining_count: number;
+  remaining_ids: string[];
+} {
   const captured = proofs.scenarios.filter((scenario) => scenario.status === 'verified_current');
   const remaining = proofs.scenarios.filter((scenario) => scenario.status !== 'verified_current');
   return {
@@ -633,22 +731,28 @@ function proofCompletionSummary(proofs) {
   };
 }
 
-function supportCapabilities(hostCommands, proofAxesByCapability, proofs, routerIntents) {
+function supportCapabilities(
+  hostCommands: string[],
+  proofAxesByCapability: Map<string, { proof: string }>,
+  proofs: ProofScenarios,
+  routerIntents: RouterIntent[],
+) {
   const commandSet = new Set(hostCommands);
   const proofCompletion = proofCompletionSummary(proofs);
   const planExecutionRouterImplemented = routerIntents.some(
     (intent) => intent.id === 'plan-execution' && intent.status === 'implemented',
   );
-  const planExecutionProofAxes = proofAxesByCapability.get('feature:plan-execution') ?? {};
+  const planExecutionProofAxes = proofAxesByCapability.get('feature:plan-execution');
   const planExecutionImplemented =
-    planExecutionRouterImplemented && typeof planExecutionProofAxes.proof === 'string';
-  const createProofAxes = proofAxesByCapability.get('utility:create') ?? {};
-  const createImplemented = commandSet.has('create') && typeof createProofAxes.proof === 'string';
-  const handoffProofAxes = proofAxesByCapability.get('utility:handoff') ?? {};
+    planExecutionRouterImplemented && typeof planExecutionProofAxes?.proof === 'string';
+  const createProofAxes = proofAxesByCapability.get('utility:create');
+  const createImplemented = commandSet.has('create') && typeof createProofAxes?.proof === 'string';
+  const handoffProofAxes = proofAxesByCapability.get('utility:handoff');
   const handoffImplemented =
-    commandSet.has('handoff') && typeof handoffProofAxes.proof === 'string';
-  const continuityProofAxes = proofAxesByCapability.get('feature:continuity') ?? {};
-  const continuityImplemented = handoffImplemented && typeof continuityProofAxes.proof === 'string';
+    commandSet.has('handoff') && typeof handoffProofAxes?.proof === 'string';
+  const continuityProofAxes = proofAxesByCapability.get('feature:continuity');
+  const continuityImplemented =
+    handoffImplemented && typeof continuityProofAxes?.proof === 'string';
   return [
     {
       id: 'utility:review',
@@ -836,18 +940,17 @@ function supportCapabilities(hostCommands, proofAxesByCapability, proofs, router
   ];
 }
 
-async function main() {
-  const [
-    { CurrentCapabilitySnapshot, ProofScenarioIndex },
-    { flowPackages },
-    router,
-    connectorSchemas,
-  ] = await Promise.all([
-    loadReleaseSchemas(),
-    loadCurrentCatalog(),
-    loadRouter(),
-    loadConnectorSchemas(),
+async function main(): Promise<void> {
+  const [releaseSchemas, catalog, router, connectorSchemas] = await Promise.all([
+    import(resolve(projectRoot, 'dist/release/schemas.js')) as Promise<typeof ReleaseSchemasModule>,
+    import(resolve(projectRoot, 'dist/flows/catalog.js')) as Promise<typeof CatalogModule>,
+    import(resolve(projectRoot, 'dist/flows/router.js')) as Promise<typeof RouterModule>,
+    import(resolve(projectRoot, 'dist/schemas/connector.js')) as Promise<
+      typeof ConnectorSchemasModule
+    >,
   ]);
+  const { CurrentCapabilitySnapshot, ProofScenarioIndex } = releaseSchemas;
+  const { flowPackages } = catalog;
 
   const publicFlowPackages = flowPackages.filter((pkg) => pkg.visibility !== 'internal');
   const flows = publicFlowPackages.map(flowRecord);
@@ -882,7 +985,7 @@ async function main() {
 
   const snapshot = CurrentCapabilitySnapshot.parse({
     schema_version: 1,
-    generated_by: 'scripts/release/emit-current-capabilities.mjs',
+    generated_by: 'scripts/release/emit-current-capabilities.ts',
     flows,
     router_intents: routerIntents,
     commands: {

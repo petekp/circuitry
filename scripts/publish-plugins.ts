@@ -6,22 +6,98 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export type PublishTarget = 'check' | 'local' | 'release' | 'bump';
+
+export type CommandInvocation = {
+  id: string;
+  argv: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+};
+
+export type CommandResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+
+export type PublishReport = {
+  schema_version: number;
+  target: PublishTarget;
+  dry_run: boolean;
+  status: 'passed' | 'published' | 'failed';
+  repo_root: string;
+  git: {
+    branch: string;
+    upstream: string;
+    head: string;
+    origin_main: string;
+    dirty_files: string[];
+  };
+  versions: {
+    source: string;
+    claude: string;
+    codex: string;
+    claude_marketplace?: string;
+    expected?: string;
+  };
+  commands: Array<{
+    id: string;
+    argv: string[];
+    skipped?: boolean;
+    exit_code?: number;
+  }>;
+  outputs: Record<string, unknown>;
+  warnings: string[];
+  errors: string[];
+};
+
+export type PublishArgs = {
+  target: PublishTarget;
+  yes: boolean;
+  dryRun: boolean;
+  json: boolean;
+  skipVerify: boolean;
+  allowDirty: boolean;
+  allowUnsafe: boolean;
+  writeGenerated: boolean;
+  version?: string;
+  codexSource?: string;
+  codexMarketplace?: string;
+  help?: boolean;
+};
+
+type CommandRunner = (invocation: CommandInvocation) => CommandResult;
+
+type CommandOptions = {
+  cwd?: string;
+  env?: Record<string, string>;
+  effect?: boolean;
+};
+
+type PluginManifest = { name?: string; version?: string };
+type ClaudeMarketplacePlugin = { name?: string; version?: string };
+type ClaudeMarketplace = { plugins?: ClaudeMarketplacePlugin[] };
+type CodexMarketplacePluginSource = { source?: string; path?: string };
+type CodexMarketplacePlugin = { source?: CodexMarketplacePluginSource };
+type CodexMarketplace = { name: string; plugins?: CodexMarketplacePlugin[] };
+
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
 const DEFAULT_REPO_ROOT = resolve(SCRIPT_DIR, '..');
-const TARGETS = new Set(['check', 'local', 'release', 'bump']);
+const TARGETS = new Set<PublishTarget>(['check', 'local', 'release', 'bump']);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
-function readJson(path) {
-  return JSON.parse(readFileSync(path, 'utf8'));
+function readJson<T = unknown>(path: string): T {
+  return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
-function writeJson(path, value) {
+function writeJson(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function isRemoteCodexSource(source) {
+export function isRemoteCodexSource(source: string | undefined): boolean {
   if (source === undefined || source.trim() === '') return false;
   if (source === '.' || source === './' || source === '..' || source === '../') return false;
   if (source.startsWith('./') || source.startsWith('../')) return false;
@@ -30,18 +106,25 @@ function isRemoteCodexSource(source) {
   return true;
 }
 
-function splitLines(value) {
+function splitLines(value: string): string[] {
   return value
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
 }
 
-function findClaudeMarketplacePlugin(marketplace) {
+function findClaudeMarketplacePlugin(
+  marketplace: ClaudeMarketplace,
+): ClaudeMarketplacePlugin | undefined {
   return marketplace.plugins?.find((plugin) => plugin?.name === 'circuit');
 }
 
-function versionFiles(repoRoot) {
+function versionFiles(repoRoot: string): {
+  source: string;
+  claude: string;
+  codex: string;
+  claudeMarketplace: string;
+} {
   return {
     source: resolve(repoRoot, 'plugins/version.json'),
     claude: resolve(repoRoot, 'plugins/claude/.claude-plugin/plugin.json'),
@@ -50,8 +133,8 @@ function versionFiles(repoRoot) {
   };
 }
 
-function parseArgs(argv) {
-  const args = {
+export function parseArgs(argv: string[]): PublishArgs {
+  const args: PublishArgs = {
     target: 'check',
     yes: false,
     dryRun: false,
@@ -60,12 +143,9 @@ function parseArgs(argv) {
     allowDirty: false,
     allowUnsafe: false,
     writeGenerated: false,
-    version: undefined,
-    codexSource: undefined,
-    codexMarketplace: undefined,
   };
 
-  function requireValue(input, index, flag) {
+  function requireValue(input: string[], index: number, flag: string): string {
     const value = input[index + 1];
     if (value === undefined || value.startsWith('-')) {
       throw new Error(`${flag} requires a value`);
@@ -74,10 +154,11 @@ function parseArgs(argv) {
   }
 
   const input = [...argv];
-  if (input[0] !== undefined && TARGETS.has(input[0])) {
-    args.target = input.shift();
-  } else if (input[0] !== undefined && !input[0].startsWith('-')) {
-    throw new Error(`unknown publish target: ${input[0]}`);
+  const first = input[0];
+  if (first !== undefined && TARGETS.has(first as PublishTarget)) {
+    args.target = input.shift() as PublishTarget;
+  } else if (first !== undefined && !first.startsWith('-')) {
+    throw new Error(`unknown publish target: ${first}`);
   }
 
   for (let i = 0; i < input.length; i += 1) {
@@ -116,8 +197,11 @@ function parseArgs(argv) {
   return args;
 }
 
-function defaultRunner(invocation) {
+export function defaultRunner(invocation: CommandInvocation): CommandResult {
   const [command, ...args] = invocation.argv;
+  if (command === undefined) {
+    return { exitCode: 1, stdout: '', stderr: 'empty argv' };
+  }
   const result = spawnSync(command, args, {
     cwd: invocation.cwd,
     env: { ...process.env, ...(invocation.env ?? {}) },
@@ -130,7 +214,7 @@ function defaultRunner(invocation) {
   };
 }
 
-function createReport(args, repoRoot) {
+function createReport(args: PublishArgs, repoRoot: string): PublishReport {
   return {
     schema_version: 1,
     target: args.target,
@@ -148,8 +232,7 @@ function createReport(args, repoRoot) {
       source: '',
       claude: '',
       codex: '',
-      claude_marketplace: undefined,
-      expected: args.version,
+      ...(args.version !== undefined ? { expected: args.version } : {}),
     },
     commands: [],
     outputs: {},
@@ -158,25 +241,32 @@ function createReport(args, repoRoot) {
   };
 }
 
-function runPublish(argv = process.argv.slice(2), options = {}) {
+export function runPublish(
+  argv: string[] = process.argv.slice(2),
+  options: { repoRoot?: string; runner?: CommandRunner } = {},
+): PublishReport {
   const repoRoot = options.repoRoot ? resolve(options.repoRoot) : DEFAULT_REPO_ROOT;
   const runner = options.runner ?? defaultRunner;
   const args = parseArgs(argv);
   const report = createReport(args, repoRoot);
-  let releaseCodexHome;
-  let claudeSmokeHome;
-  let claudeSmokeProject;
+  let releaseCodexHome: string | undefined;
+  let claudeSmokeHome: string | undefined;
+  let claudeSmokeProject: string | undefined;
 
-  function addWarning(message) {
+  function addWarning(message: string): void {
     report.warnings.push(message);
   }
 
-  function fail(message) {
+  function fail(message: string): never {
     throw new Error(message);
   }
 
-  function runCommand(id, argvForCommand, commandOptions = {}) {
-    const entry = {
+  function runCommand(
+    id: string,
+    argvForCommand: string[],
+    commandOptions: CommandOptions = {},
+  ): CommandResult {
+    const entry: PublishReport['commands'][number] = {
       id,
       argv: argvForCommand,
     };
@@ -191,7 +281,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
       id,
       argv: argvForCommand,
       cwd: commandOptions.cwd ?? repoRoot,
-      env: commandOptions.env,
+      ...(commandOptions.env !== undefined ? { env: commandOptions.env } : {}),
     });
     entry.exit_code = result.exitCode;
 
@@ -203,23 +293,31 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     return result;
   }
 
-  function inspectMetadata() {
-    const sourceVersion = readJson(resolve(repoRoot, 'plugins/version.json'));
-    const claudeManifest = readJson(resolve(repoRoot, 'plugins/claude/.claude-plugin/plugin.json'));
-    const codexManifest = readJson(resolve(repoRoot, 'plugins/circuit/.codex-plugin/plugin.json'));
-    const codexMarketplace = readJson(resolve(repoRoot, '.agents/plugins/marketplace.json'));
+  function inspectMetadata(): void {
+    const sourceVersion = readJson<{ version: string }>(resolve(repoRoot, 'plugins/version.json'));
+    const claudeManifest = readJson<PluginManifest>(
+      resolve(repoRoot, 'plugins/claude/.claude-plugin/plugin.json'),
+    );
+    const codexManifest = readJson<PluginManifest>(
+      resolve(repoRoot, 'plugins/circuit/.codex-plugin/plugin.json'),
+    );
+    const codexMarketplace = readJson<CodexMarketplace>(
+      resolve(repoRoot, '.agents/plugins/marketplace.json'),
+    );
     const claudeMarketplacePath = resolve(repoRoot, '.claude-plugin/marketplace.json');
     const claudeMarketplace = existsSync(claudeMarketplacePath)
-      ? readJson(claudeMarketplacePath)
+      ? readJson<ClaudeMarketplace>(claudeMarketplacePath)
       : undefined;
     const claudeMarketplacePlugin = claudeMarketplace
       ? findClaudeMarketplacePlugin(claudeMarketplace)
       : undefined;
 
     report.versions.source = sourceVersion.version;
-    report.versions.claude = claudeManifest.version;
-    report.versions.codex = codexManifest.version;
-    report.versions.claude_marketplace = claudeMarketplacePlugin?.version;
+    report.versions.claude = claudeManifest.version ?? '';
+    report.versions.codex = codexManifest.version ?? '';
+    if (claudeMarketplacePlugin?.version !== undefined) {
+      report.versions.claude_marketplace = claudeMarketplacePlugin.version;
+    }
     report.outputs.codex_marketplace = codexMarketplace.name;
     report.outputs.codex_source = args.codexSource;
 
@@ -232,7 +330,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
       fail('Codex marketplace must point at ./plugins/circuit');
     }
 
-    const versionValues = [
+    const versionValues: Array<[string, string | undefined]> = [
       ['plugins/version.json', sourceVersion.version],
       ['Claude plugin manifest', claudeManifest.version],
       ['Codex plugin manifest', codexManifest.version],
@@ -265,7 +363,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     }
   }
 
-  function validateOptions() {
+  function validateOptions(): void {
     if (args.target === 'bump') {
       if (!args.version) fail('bump requires --version');
       if (!VERSION_PATTERN.test(args.version)) fail('--version must be a semver string');
@@ -293,7 +391,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     }
   }
 
-  function collectGitState() {
+  function collectGitState(): void {
     const status = runCommand('git_status', ['git', 'status', '--short']).stdout;
     const branch = runCommand('git_branch', ['git', 'branch', '--show-current']).stdout.trim();
     const upstream = runCommand('git_upstream', [
@@ -330,7 +428,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     if (head !== originHead) fail('HEAD must match origin/main');
   }
 
-  function runValidation() {
+  function runValidation(): void {
     if (args.writeGenerated) {
       runCommand('emit_flows', ['npm', 'run', 'emit-flows']);
     }
@@ -355,7 +453,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     }
   }
 
-  function runClaudeInstallSmoke() {
+  function runClaudeInstallSmoke(): void {
     claudeSmokeHome = mkdtempSync(join(tmpdir(), 'circuit-claude-home-'));
     claudeSmokeProject = mkdtempSync(join(tmpdir(), 'circuit-claude-install-'));
     const smokeEnv = { HOME: claudeSmokeHome };
@@ -380,21 +478,23 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     report.outputs.claude_install_smoke_status = 'ok';
   }
 
-  function runBump() {
+  function runBump(): void {
     const paths = versionFiles(repoRoot);
-    const sourceVersion = readJson(paths.source);
-    const claudeManifest = readJson(paths.claude);
-    const codexManifest = readJson(paths.codex);
-    const claudeMarketplace = readJson(paths.claudeMarketplace);
+    const sourceVersion = readJson<{ version: string }>(paths.source);
+    const claudeManifest = readJson<PluginManifest>(paths.claude);
+    const codexManifest = readJson<PluginManifest>(paths.codex);
+    const claudeMarketplace = readJson<ClaudeMarketplace>(paths.claudeMarketplace);
     const claudeMarketplacePlugin = findClaudeMarketplacePlugin(claudeMarketplace);
     if (claudeMarketplacePlugin === undefined) {
       fail('Claude marketplace entry must include circuit plugin');
     }
 
-    sourceVersion.version = args.version;
-    claudeManifest.version = args.version;
-    codexManifest.version = args.version;
-    claudeMarketplacePlugin.version = args.version;
+    const nextVersion = args.version;
+    if (nextVersion === undefined) fail('bump requires --version');
+    sourceVersion.version = nextVersion;
+    claudeManifest.version = nextVersion;
+    codexManifest.version = nextVersion;
+    claudeMarketplacePlugin.version = nextVersion;
 
     const touchedFiles = [
       'plugins/version.json',
@@ -406,7 +506,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
     if (args.dryRun) {
       report.commands.push({
         id: 'bump_versions',
-        argv: ['write plugin versions', args.version],
+        argv: ['write plugin versions', nextVersion],
         skipped: true,
       });
     } else {
@@ -425,11 +525,11 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
       ]);
     }
 
-    report.outputs.bumped_version = args.version;
+    report.outputs.bumped_version = nextVersion;
     report.outputs.bumped_files = touchedFiles;
   }
 
-  function runLocalPublish() {
+  function runLocalPublish(): void {
     runCommand('codex_cache_sync', ['npm', 'run', 'sync:codex-plugin-cache'], { effect: true });
     const cacheCheck = runCommand('codex_cache_check', ['npm', 'run', 'check:codex-plugin-cache']);
     report.outputs.codex_cache_status = cacheCheck.stdout.includes('"status": "ok"')
@@ -437,7 +537,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
       : 'synced';
   }
 
-  function runReleasePublish() {
+  function runReleasePublish(): void {
     const tag = `circuit--v${report.versions.source}`;
     report.outputs.claude_tag = tag;
 
@@ -448,6 +548,8 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
 
     releaseCodexHome = mkdtempSync(join(tmpdir(), 'circuit-codex-release-'));
     const codexEnv = { CODEX_HOME: releaseCodexHome };
+    if (args.codexSource === undefined) fail('release requires --codex-source');
+    if (args.codexMarketplace === undefined) fail('release requires --codex-marketplace');
     runCommand(
       'codex_marketplace_add_release',
       ['codex', 'plugin', 'marketplace', 'add', args.codexSource, '--ref', tag],
@@ -502,7 +604,7 @@ function runPublish(argv = process.argv.slice(2), options = {}) {
   return report;
 }
 
-function printHumanSummary(report) {
+function printHumanSummary(report: PublishReport): void {
   const status = report.status.toUpperCase();
   console.log(`${status}: ${report.target} plugin publish ${report.dry_run ? '(dry-run)' : ''}`);
   if (report.warnings.length > 0) {
@@ -528,5 +630,3 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === SCRIPT_PATH) {
   }
   process.exit(report.status === 'failed' ? 1 : 0);
 }
-
-export { defaultRunner, isRemoteCodexSource, parseArgs, runPublish };

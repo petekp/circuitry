@@ -17,8 +17,9 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.d.mts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "scripts/**/*.d.mts"],
   "exclude": ["node_modules", "dist", "bootstrap"]
 }

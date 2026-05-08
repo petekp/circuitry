@@ -43,7 +43,7 @@ Known gaps:
   is not.
 - the checked-in Codex marketplace is named `circuit-next`, while the local
   cache sync still defaults to `circuit-next-local`.
-- `scripts/publish-plugins.mjs` validates, tags, pushes, and reports both host
+- `scripts/publish-plugins.ts` validates, tags, pushes, and reports both host
   package outcomes together.
 
 ## Goals
@@ -77,18 +77,18 @@ V1 does not include:
 Add one script:
 
 ```bash
-node scripts/publish-plugins.mjs <target> [options]
+node scripts/publish-plugins.ts <target> [options]
 ```
 
 Expose it through package scripts:
 
 ```json
 {
-  "publish:plugins": "node scripts/publish-plugins.mjs check",
-  "publish:plugins:bump": "node scripts/publish-plugins.mjs bump",
-  "publish:plugins:check": "node scripts/publish-plugins.mjs check",
-  "publish:plugins:local": "node scripts/publish-plugins.mjs local",
-  "publish:plugins:release": "node scripts/publish-plugins.mjs release --codex-source petekp/circuit-next --codex-marketplace circuit-next"
+  "publish:plugins": "node scripts/publish-plugins.ts check",
+  "publish:plugins:bump": "node scripts/publish-plugins.ts bump",
+  "publish:plugins:check": "node scripts/publish-plugins.ts check",
+  "publish:plugins:local": "node scripts/publish-plugins.ts local",
+  "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next"
 }
 ```
 
@@ -496,7 +496,7 @@ Use fake command runners for tests. Do not run real `claude`, `codex`,
 
 1. Add version-alignment tests and a read-only inspect module.
 2. Add `plugins/version.json` or equivalent manifest alignment.
-3. Add `scripts/publish-plugins.mjs` with `check` target only.
+3. Add `scripts/publish-plugins.ts` with `check` target only.
 4. Add local target with Codex cache sync/check and Claude validation.
 5. Add root Claude marketplace metadata and validation.
 6. Add release dry-run with remote Codex source validation.

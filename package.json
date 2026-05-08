@@ -8,7 +8,7 @@
     "circuit-next": "./bin/circuit-next"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "check": "tsc --noEmit",
@@ -21,23 +21,23 @@
     "soak:runtime": "vitest run tests/soak && npm run verify && npm run check-flow-drift",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "emit-flows": "npm run build && node scripts/emit-flows.mjs",
-    "check-flow-drift": "npm run build && node scripts/emit-flows.mjs --check",
-    "emit-release": "npm run build && node scripts/release/emit-current-capabilities.mjs && node scripts/release/render-parity-matrix.mjs && node scripts/release/render-readiness-report.mjs",
-    "capture-proofs:golden-runs": "npm run build && node scripts/release/capture-golden-run-proofs.mjs",
-    "check-release-infra": "npm run build && node scripts/release/emit-current-capabilities.mjs --check && node scripts/release/check-parity.mjs && node scripts/release/check-public-claims.mjs && node scripts/release/check-proof-coverage.mjs && node scripts/release/render-parity-matrix.mjs --check && node scripts/release/render-readiness-report.mjs --check && node scripts/release/audit-public-docs.mjs",
+    "emit-flows": "npm run build && node scripts/emit-flows.ts",
+    "check-flow-drift": "npm run build && node scripts/emit-flows.ts --check",
+    "emit-release": "npm run build && node scripts/release/emit-current-capabilities.ts && node scripts/release/render-parity-matrix.mjs && node scripts/release/render-readiness-report.mjs",
+    "capture-proofs:golden-runs": "npm run build && node scripts/release/capture-golden-run-proofs.ts",
+    "check-release-infra": "npm run build && node scripts/release/emit-current-capabilities.ts --check && node scripts/release/check-parity.mjs && node scripts/release/check-public-claims.mjs && node scripts/release/check-proof-coverage.mjs && node scripts/release/render-parity-matrix.mjs --check && node scripts/release/render-readiness-report.mjs --check && node scripts/release/audit-public-docs.mjs",
     "check-release-ready": "npm run check-release-infra && node scripts/release/check-release-ready.mjs",
     "smoke:host:codex": "node scripts/host-smoke/codex-handoff.mjs",
     "smoke:host:claude": "node scripts/host-smoke/claude-handoff.mjs",
     "sync:codex-plugin-cache": "node scripts/sync-codex-plugin-cache.mjs",
     "check:codex-plugin-cache": "node scripts/sync-codex-plugin-cache.mjs --check",
-    "publish:plugins": "node scripts/publish-plugins.mjs check",
-    "publish:plugins:bump": "node scripts/publish-plugins.mjs bump",
-    "publish:plugins:check": "node scripts/publish-plugins.mjs check",
-    "publish:plugins:local": "node scripts/publish-plugins.mjs local",
-    "publish:plugins:release": "node scripts/publish-plugins.mjs release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
-    "verify": "npm run check && npm run lint && npm run build && npm run test && node scripts/emit-flows.mjs --check && npm run check-release-infra",
-    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && node scripts/emit-flows.mjs --check",
+    "publish:plugins": "node scripts/publish-plugins.ts check",
+    "publish:plugins:bump": "node scripts/publish-plugins.ts bump",
+    "publish:plugins:check": "node scripts/publish-plugins.ts check",
+    "publish:plugins:local": "node scripts/publish-plugins.ts local",
+    "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
+    "verify": "npm run check && npm run lint && npm run build && npm run test && node scripts/emit-flows.ts --check && npm run check-release-infra",
+    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && node scripts/emit-flows.ts --check",
     "circuit:run": "./bin/circuit-next"
   },
   "dependencies": {

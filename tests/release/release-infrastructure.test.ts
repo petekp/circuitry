@@ -449,7 +449,7 @@ describe('release truth infrastructure', () => {
       ...scenario.backing_paths,
     ]);
     const goldenProofClaim = claims.claims.find((claim) => claim.id === 'CLAIM-GOLDEN-PROOF');
-    const captureScripts = ['scripts/release/capture-golden-run-proofs.mjs'];
+    const captureScripts = ['scripts/release/capture-golden-run-proofs.ts'];
 
     expect(exists(legacyProofRunsRoot)).toBe(false);
     expect(indexedPaths.length).toBeGreaterThan(0);
@@ -555,7 +555,7 @@ describe('release truth infrastructure', () => {
 
   it('all-golden proof capture includes the Explore decision proof', () => {
     const script = readFileSync(
-      resolve(root, 'scripts/release/capture-golden-run-proofs.mjs'),
+      resolve(root, 'scripts/release/capture-golden-run-proofs.ts'),
       'utf8',
     );
 
@@ -566,7 +566,7 @@ describe('release truth infrastructure', () => {
 
   it('captures the golden Fix proof through runtime executor injection instead of composeWriter', () => {
     const script = readFileSync(
-      resolve(root, 'scripts/release/capture-golden-run-proofs.mjs'),
+      resolve(root, 'scripts/release/capture-golden-run-proofs.ts'),
       'utf8',
     );
 

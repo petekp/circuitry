@@ -1,4 +1,4 @@
-// Tests for the stale-sibling guard in scripts/emit-flows.mjs.
+// Tests for the stale-sibling guard in scripts/emit-flows.ts.
 //
 // The CLI loader at src/cli/circuit.ts prefers `<mode>.json` over
 // `circuit.json` when an entry mode is requested, so a stale per-mode
@@ -14,7 +14,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const projectRoot = resolve(__dirname, '../..');
-const emitScript = resolve(projectRoot, 'scripts/emit-flows.mjs');
+const emitScript = resolve(projectRoot, 'scripts/emit-flows.ts');
 const buildSkillDir = resolve(projectRoot, 'generated/flows/build');
 const stalePath = resolve(buildSkillDir, 'never-a-mode.json');
 const claudeBuildSkillDir = resolve(projectRoot, 'plugins/claude/skills/build');
@@ -48,7 +48,7 @@ function removeDirIfPresent(path: string) {
   if (planted(path)) rmSync(path, { recursive: true, force: true });
 }
 
-describe('emit-flows.mjs — stale per-mode sibling guard', () => {
+describe('emit-flows.ts — stale per-mode sibling guard', () => {
   beforeAll(() => {
     // The script imports from dist/, so make sure it's built before any
     // subprocess calls. The verify pipeline does this in order; the test

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type CommandInvocation, runPublish } from '../../scripts/publish-plugins.mjs';
+import { type CommandInvocation, runPublish } from '../../scripts/publish-plugins.ts';
 
 const REPO_ROOT = resolve('.');
 
@@ -35,12 +35,12 @@ function createFixture(options: FixtureOptions = {}): string {
 
   writeJson(join(root, 'package.json'), {
     scripts: {
-      'publish:plugins': 'node scripts/publish-plugins.mjs check',
-      'publish:plugins:bump': 'node scripts/publish-plugins.mjs bump',
-      'publish:plugins:check': 'node scripts/publish-plugins.mjs check',
-      'publish:plugins:local': 'node scripts/publish-plugins.mjs local',
+      'publish:plugins': 'node scripts/publish-plugins.ts check',
+      'publish:plugins:bump': 'node scripts/publish-plugins.ts bump',
+      'publish:plugins:check': 'node scripts/publish-plugins.ts check',
+      'publish:plugins:local': 'node scripts/publish-plugins.ts local',
       'publish:plugins:release':
-        'node scripts/publish-plugins.mjs release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
+        'node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
     },
   });
   writeJson(join(root, 'plugins/version.json'), { version });
@@ -131,12 +131,12 @@ describe('plugin publish automation', () => {
       scripts: Record<string, string>;
     };
 
-    expect(pkg.scripts['publish:plugins']).toBe('node scripts/publish-plugins.mjs check');
-    expect(pkg.scripts['publish:plugins:bump']).toBe('node scripts/publish-plugins.mjs bump');
-    expect(pkg.scripts['publish:plugins:check']).toBe('node scripts/publish-plugins.mjs check');
-    expect(pkg.scripts['publish:plugins:local']).toBe('node scripts/publish-plugins.mjs local');
+    expect(pkg.scripts['publish:plugins']).toBe('node scripts/publish-plugins.ts check');
+    expect(pkg.scripts['publish:plugins:bump']).toBe('node scripts/publish-plugins.ts bump');
+    expect(pkg.scripts['publish:plugins:check']).toBe('node scripts/publish-plugins.ts check');
+    expect(pkg.scripts['publish:plugins:local']).toBe('node scripts/publish-plugins.ts local');
     expect(pkg.scripts['publish:plugins:release']).toBe(
-      'node scripts/publish-plugins.mjs release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
+      'node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
     );
   });
 

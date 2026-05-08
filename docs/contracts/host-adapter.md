@@ -150,7 +150,7 @@ Current adapters:
 
 The generated surface source map at `docs/generated-surfaces.md` is the
 source of truth for command sources, compiled flow outputs, host mirrors, and
-edit rules. `scripts/emit-flows.mjs --check` drift-checks that map alongside
+edit rules. `scripts/emit-flows.ts --check` drift-checks that map alongside
 the generated files it describes.
 
 Generated Codex skills MUST translate slash-command placeholders into

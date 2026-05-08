@@ -92,7 +92,7 @@ terminology migration in progress.
    `writers/` (one file per writer kind your flow uses: `compose` /
    `close` / `verification` / `checkpoint`).
 2. Add the package to `src/flows/catalog.ts`.
-3. `npm run build && node scripts/emit-flows.mjs` to regenerate
+3. `npm run build && node scripts/emit-flows.ts` to regenerate
    command mirrors and public host flow output.
 4. `npm run verify`.
 

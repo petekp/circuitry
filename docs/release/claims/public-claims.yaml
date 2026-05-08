@@ -7,7 +7,7 @@ claims:
     surfaces: [README.md, docs/release/parity-matrix.generated.md]
     backing:
       capability_ids: [flow:build, flow:explore, flow:fix, flow:migrate, flow:review, flow:sweep]
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: If false, the release catalog itself is misleading.
     readiness_refs: [REL-004]
   - id: CLAIM-FIX-CANONICAL
@@ -17,7 +17,7 @@ claims:
     surfaces: [README.md, plugins/claude/commands/run.md, docs/release/parity-matrix.generated.md]
     backing:
       capability_ids: [flow:fix]
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users need one clear bug-fixing entry point, not two names for the same kind of work.
     readiness_refs: [REL-018]
   - id: CLAIM-CUSTOM-CONNECTOR-PROTOCOL
@@ -31,7 +31,7 @@ claims:
         - tests/runner/custom-connector-runtime.test.ts
         - tests/runner/runner-relay-provenance.test.ts
         - tests/contracts/host-experience-docs.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users following docs must be able to build a compatible connector.
     readiness_refs: [REL-001]
   - id: CLAIM-CODEX-ISOLATED
@@ -42,7 +42,7 @@ claims:
     backing:
       test_paths:
         - tests/contracts/connector-schema.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users may trust an isolation guarantee that runtime does not provide.
     readiness_refs: [REL-002]
   - id: CLAIM-RICH-ROUTES
@@ -55,7 +55,7 @@ claims:
       test_paths:
         - tests/unit/compile-schematic-per-mode.test.ts
         - tests/runner/terminal-outcome-mapping.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Real failures can abort instead of retrying, revising, asking, handing off, or escalating.
     readiness_refs: [REL-003]
   - id: CLAIM-REVIEW-EVIDENCE-POLICY
@@ -81,7 +81,7 @@ claims:
       test_paths:
         - tests/contracts/flow-router.test.ts
         - tests/runner/cli-router.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users can ask Circuit to execute a plan and receive analysis-only output that preserves the next-action burden.
     readiness_refs: [REL-016]
   - id: CLAIM-WRITE-CAPABLE-WORKER
@@ -94,7 +94,7 @@ claims:
       test_paths:
         - tests/runner/cli-router.test.ts
         - tests/runner/operator-summary-writer.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users may be surprised that a delegated worker can edit files with bypassed host approvals.
     readiness_refs: [REL-007]
   - id: CLAIM-GOLDEN-PROOF
@@ -129,6 +129,6 @@ claims:
       proof_ids: [proof:doctor-first-run]
       test_paths:
         - tests/contracts/host-experience-docs.test.ts
-      script_checks: [scripts/release/emit-current-capabilities.mjs --check]
+      script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: A setup failure can be mistaken for a product failure.
     readiness_refs: [REL-017]

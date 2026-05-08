@@ -23,6 +23,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { flowPackages } from '../../src/flows/catalog.js';
+import { FlowSchematic } from '../../src/schemas/flow-schematic.js';
+import type { SelectionOverride } from '../../src/schemas/selection-policy.js';
 
 const WORKFLOWS_ROOT = 'src/flows';
 const DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'] as const;
@@ -66,6 +68,12 @@ function listPackageDirectories(): readonly string[] {
   return entries;
 }
 
+function concreteSkillsFrom(selection: SelectionOverride | undefined): readonly string[] {
+  if (selection === undefined) return [];
+  if (selection.skills.mode === 'inherit') return [];
+  return selection.skills.skills.map((skill) => skill as unknown as string);
+}
+
 describe('flow catalog completeness', () => {
   // Anti-vacuity floor — guards every "every package has X" assertion
   // below from passing vacuously if `flowPackages` is silently
@@ -85,6 +93,33 @@ describe('flow catalog completeness', () => {
     for (const flow of ['build', 'explore', 'fix', 'migrate', 'review', 'sweep']) {
       expect(visibilityById.get(flow), `${flow} should be host-visible`).toBe('public');
     }
+  });
+
+  it('public built-in flows do not name concrete local skill ids', () => {
+    const offenders: string[] = [];
+
+    for (const pkg of flowPackages) {
+      if (pkg.visibility !== 'public') continue;
+      const schematic = FlowSchematic.parse(JSON.parse(readFileSync(pkg.paths.schematic, 'utf8')));
+
+      const flowSkills = concreteSkillsFrom(schematic.default_selection);
+      if (flowSkills.length > 0) {
+        offenders.push(`${pkg.id}: default_selection.skills -> ${flowSkills.join(', ')}`);
+      }
+
+      for (const item of schematic.items) {
+        const stepSkills = concreteSkillsFrom(item.selection);
+        if (stepSkills.length === 0) continue;
+        offenders.push(
+          `${pkg.id}.${item.id as unknown as string}: selection.skills -> ${stepSkills.join(', ')}`,
+        );
+      }
+    }
+
+    expect(
+      offenders,
+      'public built-ins must expose optional skill_slots instead of naming operator-local SkillIds',
+    ).toEqual([]);
   });
 
   it('every src/flows/<id>/ directory is registered in the catalog', () => {
@@ -167,7 +202,7 @@ describe('flow catalog completeness', () => {
 
   it('command surface ownership is documented and matches emit-flows', () => {
     const generatedSurfaceMap = readFileSync('docs/generated-surfaces.md', 'utf8');
-    const emitScript = readFileSync('scripts/emit-flows.mjs', 'utf8');
+    const emitScript = readFileSync('scripts/emit-flows.ts', 'utf8');
     const routerMatch = /const HOST_DIRECT_COMMANDS = \[([^\]]+)\]/.exec(emitScript);
     expect(
       routerMatch,

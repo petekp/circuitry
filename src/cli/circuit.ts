@@ -338,7 +338,7 @@ function resolveFixturePath(
   const root = resolve(flowRoot ?? 'generated/flows');
   // When a mode is explicitly requested, prefer the per-mode file if the
   // schematic author emitted one. Schematics with route_overrides produce
-  // <mode>.json siblings of circuit.json — see scripts/emit-flows.mjs.
+  // <mode>.json siblings of circuit.json — see scripts/emit-flows.ts.
   // Falls back to circuit.json otherwise.
   if (modeName !== undefined) {
     const perMode = resolve(root, flowName, `${modeName}.json`);
