@@ -1,3 +1,8 @@
+# Enforce LF line endings on every text file. Without this, Windows
+# checkouts pick up CRLF and biome's formatter rejects every file in
+# the repo, breaking the windows-latest CI matrix slot.
+* text=auto eol=lf
+
 # Generated plugin surfaces — keep linguist out of the repo language stats
 # and signal "this is generated" to GitHub diff views. The source of truth
 # lives under src/flows/<id>/ and src/commands/. The emit script
