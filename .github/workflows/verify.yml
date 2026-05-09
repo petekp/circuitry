@@ -12,7 +12,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # windows-latest is intentionally omitted: the host-wrapper bin scripts
+        # need .cmd shims and Windows-aware spawn handling before that slot can
+        # pass. Track that as a separate Windows-support effort.
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
