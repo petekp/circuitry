@@ -92,6 +92,44 @@ describe('operator summary writer', () => {
     expect(markdown).not.toContain('v0.1.0 closed');
   });
 
+  it('rewrites the Review headline to flag scope_empty so a CLEAN/0-findings verdict cannot quietly stand in for "nothing was reviewed"', () => {
+    writeReport('reports/review-result.json', {
+      scope: 'review the new evil.js — flag any safety problems',
+      findings: [],
+      verdict: 'CLEAN',
+      evidence_summary: {
+        kind: 'git-working-tree',
+        untracked_content_policy: 'metadata-only',
+        untracked_file_count: 0,
+        untracked_files_sampled: 0,
+        untracked_files_truncated: false,
+      },
+      evidence_warnings: [
+        {
+          kind: 'scope_empty',
+          message:
+            'review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review.',
+        },
+      ],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: baseResult('review'),
+      route: { selectedFlow: 'review' },
+    });
+
+    expect(written.summary.headline).toContain('no uncommitted changes to examine');
+    expect(written.summary.headline).toContain('reflects scope, not safety');
+    expect(written.summary.headline).not.toMatch(/^Circuit: Review complete\./);
+    expect(written.summary.evidence_warnings).toContainEqual(
+      expect.objectContaining({ kind: 'scope_empty' }),
+    );
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain('no uncommitted changes to examine');
+    expect(markdown).toContain('scope_empty');
+  });
+
   it('summarizes Build, Fix, and Migrate close reports with verification and review status', () => {
     const cases = [
       {

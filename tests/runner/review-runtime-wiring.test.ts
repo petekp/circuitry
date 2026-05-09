@@ -521,6 +521,78 @@ describe('registered review compose writer', () => {
     );
   });
 
+  it('emits scope_empty when the working tree has no staged or unstaged diff so a CLEAN verdict cannot quietly stand in for "nothing was reviewed"', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'scope-empty-warning');
+    const projectRoot = join(runFolderBase, 'scope-empty-project');
+    mkdirSync(projectRoot, { recursive: true });
+    execFileSync('git', ['init'], { cwd: projectRoot, stdio: 'pipe' });
+    // No staged changes, no unstaged changes, no untracked files. The reviewer
+    // is given a scope hint pointing at content that is not part of the
+    // working-tree diff (e.g., already-committed code, HEAD~1 history).
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '79000000-0000-0000-0000-000000000020',
+      goal: 'review the new evil.js — flag any safety problems',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
+      projectRoot,
+      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const intake = ReviewIntake.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'review-intake.json'), 'utf8')),
+    );
+    expect(intake.evidence.kind).toBe('git-working-tree');
+    if (intake.evidence.kind !== 'git-working-tree') return;
+    expect(intake.evidence.staged_diff.text).toBe('');
+    expect(intake.evidence.unstaged_diff.text).toBe('');
+    expect(intake.evidence_warnings).toContainEqual(
+      expect.objectContaining({
+        kind: 'scope_empty',
+        message: expect.stringContaining('HEAD~1 differences not examined'),
+      }),
+    );
+    const report = ReviewResult.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'review-result.json'), 'utf8')),
+    );
+    expect(report.evidence_warnings).toContainEqual(
+      expect.objectContaining({ kind: 'scope_empty' }),
+    );
+  });
+
+  it('does not emit scope_empty when the working tree contains a staged diff', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'scope-empty-not-emitted-with-diff');
+    const projectRoot = join(runFolderBase, 'scope-empty-not-emitted-project');
+    mkdirSync(join(projectRoot, 'src'), { recursive: true });
+    execFileSync('git', ['init'], { cwd: projectRoot, stdio: 'pipe' });
+    writeFileSync(join(projectRoot, 'src', 'review-target.ts'), 'const answer = 42;\n');
+    execFileSync('git', ['add', 'src/review-target.ts'], { cwd: projectRoot, stdio: 'pipe' });
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '79000000-0000-0000-0000-000000000021',
+      goal: 'review the staged change',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
+      projectRoot,
+      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const intake = ReviewIntake.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'review-intake.json'), 'utf8')),
+    );
+    expect(intake.evidence_warnings).not.toContainEqual(
+      expect.objectContaining({ kind: 'scope_empty' }),
+    );
+  });
+
   it('derives the analyze result path from the live flow graph', async () => {
     const renamedResultPath = 'stages/analyze/review-findings-renamed.json';
     const { bytes } = loadFixtureWithRenamedAnalyzeResultPath(renamedResultPath);

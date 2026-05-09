@@ -230,6 +230,18 @@ function evidenceWarnings(evidence: ReviewEvidence): ReviewEvidenceWarning[] {
   }
 
   const warnings: ReviewEvidenceWarning[] = [];
+  if (
+    evidence.staged_diff.text.length === 0 &&
+    evidence.unstaged_diff.text.length === 0 &&
+    !gitCommandFailed(evidence.staged_diff.text) &&
+    !gitCommandFailed(evidence.unstaged_diff.text)
+  ) {
+    warnings.push({
+      kind: 'scope_empty',
+      message:
+        'review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review.',
+    });
+  }
   if (evidence.staged_diff.truncated) {
     warnings.push({
       kind: 'diff_truncated',

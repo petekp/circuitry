@@ -16,6 +16,7 @@ export const ReviewEvidenceWarningKind = z.enum([
   'untracked_file_content_omitted',
   'untracked_files_truncated',
   'evidence_unavailable',
+  'scope_empty',
 ]);
 export type ReviewEvidenceWarningKind = z.infer<typeof ReviewEvidenceWarningKind>;
 

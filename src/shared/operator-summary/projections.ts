@@ -48,16 +48,29 @@ function reviewEvidenceDetails(report: JsonObject | undefined): string[] {
   return [];
 }
 
+function hasEvidenceWarningKind(report: JsonObject | undefined, kind: string): boolean {
+  return arrayField(report, 'evidence_warnings').some(
+    (item) => isObject(item) && stringField(item, 'kind') === kind,
+  );
+}
+
 const reviewProjector: SummaryProjector = ({ flowReport }) => {
   const verdict = stringField(flowReport, 'verdict') ?? 'review complete';
   const findings = arrayField(flowReport, 'findings').length;
+  const scopeEmpty = hasEvidenceWarningKind(flowReport, 'scope_empty');
   const summaryDetail = flowSummaryDetail(flowReport);
   const details: string[] = [];
   if (summaryDetail !== undefined) details.push(summaryDetail);
   details.push(`Findings: ${findings}`);
   details.push(...reviewEvidenceDetails(flowReport));
+  // When the working-tree diff was empty, the reviewer had nothing to inspect,
+  // so a CLEAN/0-findings headline silently understates the scope limitation.
+  // Lead with the limitation and qualify the verdict instead.
+  const headline = scopeEmpty
+    ? `Circuit: Review found no uncommitted changes to examine; committed history (HEAD~1) was not part of this review. Verdict ${verdict} reflects scope, not safety. Findings: ${findings}.`
+    : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
-    headline: `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`,
+    headline,
     details,
   } satisfies SummaryProjection;
 };
