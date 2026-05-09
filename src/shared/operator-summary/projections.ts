@@ -77,8 +77,19 @@ function buildFixMigrateDetails(flowReport: JsonObject | undefined): string[] {
   return details;
 }
 
-const buildProjector: SummaryProjector = ({ flowReport }) => {
-  const outcome = stringField(flowReport, 'outcome') ?? 'complete';
+// Fall back to the run-level outcome when the flow-result file is missing
+// (e.g., the flow hit @stop before close-step ran). Defaulting to 'complete'
+// would let the operator summary silently contradict result.json on any
+// non-complete terminal path.
+function flowOutcomeOrRunFallback(
+  flowReport: JsonObject | undefined,
+  runOutcome: string,
+): string {
+  return stringField(flowReport, 'outcome') ?? runOutcome;
+}
+
+const buildProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
   const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
   const review = stringField(flowReport, 'review_verdict') ?? 'unknown';
   const headline = ((): string => {
@@ -93,8 +104,8 @@ const buildProjector: SummaryProjector = ({ flowReport }) => {
   return { headline, details: buildFixMigrateDetails(flowReport) } satisfies SummaryProjection;
 };
 
-const fixProjector: SummaryProjector = ({ flowReport }) => {
-  const outcome = stringField(flowReport, 'outcome') ?? 'complete';
+const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
   const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
   const review =
     stringField(flowReport, 'review_verdict') ??
@@ -106,8 +117,8 @@ const fixProjector: SummaryProjector = ({ flowReport }) => {
   } satisfies SummaryProjection;
 };
 
-const migrateProjector: SummaryProjector = ({ flowReport }) => {
-  const outcome = stringField(flowReport, 'outcome') ?? 'complete';
+const migrateProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
   const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
   const review = stringField(flowReport, 'review_verdict') ?? 'unknown';
   return {
@@ -116,8 +127,8 @@ const migrateProjector: SummaryProjector = ({ flowReport }) => {
   } satisfies SummaryProjection;
 };
 
-const sweepProjector: SummaryProjector = ({ flowReport }) => {
-  const outcome = stringField(flowReport, 'outcome') ?? 'complete';
+const sweepProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
   const deferred = numberField(flowReport, 'deferred_count');
   const headline =
     deferred === undefined

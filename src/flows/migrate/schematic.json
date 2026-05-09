@@ -346,7 +346,7 @@
       },
       "routes": {
         "continue": "close-step",
-        "stop": "@stop"
+        "stop": "close-step"
       },
       "block": "review"
     },

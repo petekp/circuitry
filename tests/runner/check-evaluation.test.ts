@@ -403,14 +403,16 @@ describe('relay verdict truth: edge-case parser coverage', () => {
   }
 });
 
-// When a relay step declares `writes.report` and the check FAILS,
-// the canonical report at `writes.report.path` must NOT be written.
-// Transcript slots (request / receipt / result) are still durable
-// evidence of what was attempted and ARE written. This locks down the
-// verdict-admissibility half of materialization; the materializer
-// schema-parse test covers the symmetric schema-parse condition.
-describe('check fail does not materialize the canonical report', () => {
-  it('explore-shaped fixture (writes.report declared) on check fail: transcript files exist, report file does NOT', async () => {
+// When a relay step declares `writes.report` and the verdict gate FAILS
+// but the body parses against the declared schema, the canonical report at
+// `writes.report.path` IS still written. The verdict gate governs route
+// selection only; downstream readers (operator-summary projection, CI
+// tooling, status storyboard) need the schema-tied report whenever the
+// relay step entered with a structurally valid body. The materializer
+// schema-parse test covers the symmetric case where the body fails to
+// parse against the schema and the report is correctly omitted.
+describe('verdict-fail with schema-valid body still materializes the canonical report', () => {
+  it('explore-shaped fixture (writes.report declared) on verdict fail: transcript files exist AND report file is written from the relay body', async () => {
     // Mutate the runtime-proof fixture to declare writes.report on the
     // relay step (runtime-proof vanilla has no report slot).
     const { bytes } = loadFixture();
@@ -425,12 +427,12 @@ describe('check fail does not materialize the canonical report', () => {
     const mutatedBytes = Buffer.from(JSON.stringify(raw));
     CompiledFlow.parse(raw);
 
-    const runFolder = join(runFolderBase, 'report-not-written-on-fail');
+    const runFolder = join(runFolderBase, 'report-written-on-verdict-fail');
     const outcome = await runCheckCase({
       runFolder,
       bytes: mutatedBytes,
       runId: '53000000-0000-0000-0000-00000000a200',
-      goal: 'slice 53 HIGH 2: check fail must not materialize canonical report',
+      goal: 'verdict-fail body with schema-valid shape materializes the canonical report',
       resultBody: '{"verdict":"reject"}',
     });
 
@@ -441,8 +443,12 @@ describe('check fail does not materialize the canonical report', () => {
     expect(existsSync(join(runFolder, 'reports', 'relay.receipt.json'))).toBe(true);
     expect(existsSync(join(runFolder, 'reports', 'relay.result.json'))).toBe(true);
 
-    // Canonical report file does NOT exist (check failed → not materialized).
-    expect(existsSync(join(runFolder, 'reports', 'relay-canonical.json'))).toBe(false);
+    // Canonical report file IS written: the body parses against
+    // runtime-proof-canonical@v1, so downstream readers get the
+    // schema-tied artifact even when the verdict gate failed.
+    const reportPath = join(runFolder, 'reports', 'relay-canonical.json');
+    expect(existsSync(reportPath)).toBe(true);
+    expect(JSON.parse(readFileSync(reportPath, 'utf8'))).toEqual({ verdict: 'reject' });
   });
 
   it('explore-shaped fixture on check PASS: report IS materialized (sanity counterpart)', async () => {

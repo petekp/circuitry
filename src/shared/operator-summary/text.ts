@@ -44,6 +44,8 @@ export function friendlyReviewStatus(status: string): string {
   if (status === 'accept-with-fixes') return 'requested follow-up fixes';
   if (status === 'accept-with-fold-ins') return 'accepted with follow-up notes';
   if (status === 'release-approved') return 'approved for release';
+  if (status === 'release-with-followups') return 'approved with follow-ups';
+  if (status === 'release-blocked') return 'blocked from release';
   return status;
 }
 

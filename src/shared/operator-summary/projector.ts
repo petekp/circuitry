@@ -21,6 +21,12 @@ export type SummaryProjectorInput = {
   readonly flowId: string;
   readonly flowReport: JsonObject | undefined;
   readonly resultSummary: string;
+  // Run-level outcome from result.json (e.g., 'complete', 'stopped',
+  // 'aborted', 'checkpoint_waiting'). Per-flow projectors use this as
+  // a fallback when the flow-result file is missing — without it, the
+  // projector cannot tell apart "flow ran to close-step" from "flow
+  // hit @stop before close-step ran" and would silently render 'complete'.
+  readonly runOutcome: string;
 };
 
 export type SummaryProjector = (input: SummaryProjectorInput) => SummaryProjection;

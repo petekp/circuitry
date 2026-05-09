@@ -358,7 +358,7 @@ describe('Sweep runtime wiring', () => {
     expect(existsSync(join(runFolder, 'reports/relay/sweep-survey.result.json'))).toBe(true);
   });
 
-  it('aborts on critical-injections review verdict before writing the canonical Sweep review report', async () => {
+  it('writes the canonical Sweep review report on critical-injections so downstream readers see the verdict', async () => {
     const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-critical');
 
@@ -387,7 +387,10 @@ describe('Sweep runtime wiring', () => {
 
     expect(outcome.outcome).toBe('aborted');
     expect(outcome.reason).toMatch(/critical-injections/);
-    expect(existsSync(join(runFolder, 'reports/sweep/review.json'))).toBe(false);
+    // Verdict gate fails ('critical-injections' is not in sweep-review.pass),
+    // but the body parses against sweep.review@v1, so the schema-tied report
+    // is still materialized for the operator-summary projector.
+    expect(existsSync(join(runFolder, 'reports/sweep/review.json'))).toBe(true);
     expect(existsSync(join(runFolder, 'reports/relay/sweep-review.result.json'))).toBe(true);
   });
 });

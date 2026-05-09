@@ -14667,7 +14667,8 @@ var ReviewEvidenceWarningKind = external_exports.enum([
   "untracked_file_skipped",
   "untracked_file_content_omitted",
   "untracked_files_truncated",
-  "evidence_unavailable"
+  "evidence_unavailable",
+  "scope_empty"
 ]);
 var ReviewEvidenceWarning = external_exports.object({
   kind: ReviewEvidenceWarningKind,
@@ -14933,6 +14934,12 @@ function evidenceWarnings(evidence) {
     ];
   }
   const warnings = [];
+  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
+    warnings.push({
+      kind: "scope_empty",
+      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review."
+    });
+  }
   if (evidence.staged_diff.truncated) {
     warnings.push({
       kind: "diff_truncated",
@@ -18645,10 +18652,33 @@ async function executeProductionRelayAttempt(input) {
   }
   const relayCompletedVerdict = evaluation.kind === "pass" ? evaluation.verdict : evaluation.observedVerdict ?? NO_VERDICT_SENTINEL;
   const durationMs = Math.max(0, Date.now() - startMs);
-  if (evaluation.kind === "pass" && step.report !== void 0) {
-    const reportBody = parsedBody === void 0 ? JSON.parse(relayResult.result_body) : parsedBody;
-    await context.files.writeJson(step.report, reportBody);
-    parsedBody = reportBody;
+  let writtenReportPath;
+  if (step.report !== void 0) {
+    let reportBody;
+    if (checkEvaluation.kind === "pass" && evaluation.kind === "pass") {
+      reportBody = parsedBody;
+      if (reportBody === void 0) {
+        try {
+          reportBody = JSON.parse(relayResult.result_body);
+        } catch {
+          reportBody = void 0;
+        }
+      }
+    } else if (checkEvaluation.kind === "fail" && step.report.schema !== void 0) {
+      const parseResult = parseReport(step.report.schema, relayResult.result_body);
+      if (parseResult.kind === "ok") {
+        try {
+          reportBody = JSON.parse(relayResult.result_body);
+        } catch {
+          reportBody = void 0;
+        }
+      }
+    }
+    if (reportBody !== void 0) {
+      await context.files.writeJson(step.report, reportBody);
+      parsedBody = reportBody;
+      writtenReportPath = step.report.path;
+    }
   }
   await context.trace.append({
     run_id: context.runId,
@@ -18676,7 +18706,7 @@ async function executeProductionRelayAttempt(input) {
     duration_ms: durationMs,
     result_path: result.path,
     ...parsedBody === void 0 ? {} : { parsed_body: parsedBody },
-    ...step.report === void 0 || evaluation.kind !== "pass" ? {} : { report_path: step.report.path }
+    ...writtenReportPath === void 0 ? {} : { report_path: writtenReportPath }
   };
 }
 async function executeRelay(step, context, connector) {
@@ -22572,6 +22602,10 @@ function friendlyReviewStatus(status) {
     return "accepted with follow-up notes";
   if (status === "release-approved")
     return "approved for release";
+  if (status === "release-with-followups")
+    return "approved with follow-ups";
+  if (status === "release-blocked")
+    return "blocked from release";
   return status;
 }
 function friendlyVerificationStatus(status) {
@@ -22730,17 +22764,22 @@ function reviewEvidenceDetails(report) {
   }
   return [];
 }
+function hasEvidenceWarningKind(report, kind) {
+  return arrayField(report, "evidence_warnings").some((item) => isObject3(item) && stringField2(item, "kind") === kind);
+}
 var reviewProjector = ({ flowReport }) => {
   const verdict = stringField2(flowReport, "verdict") ?? "review complete";
   const findings = arrayField(flowReport, "findings").length;
+  const scopeEmpty = hasEvidenceWarningKind(flowReport, "scope_empty");
   const summaryDetail = flowSummaryDetail(flowReport);
   const details = [];
   if (summaryDetail !== void 0)
     details.push(summaryDetail);
   details.push(`Findings: ${findings}`);
   details.push(...reviewEvidenceDetails(flowReport));
+  const headline = scopeEmpty ? `Circuit: Review found no uncommitted changes to examine; committed history (HEAD~1) was not part of this review. Verdict ${verdict} reflects scope, not safety. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
-    headline: `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`,
+    headline,
     details
   };
 };
@@ -22759,8 +22798,11 @@ function buildFixMigrateDetails(flowReport) {
   }
   return details;
 }
-var buildProjector = ({ flowReport }) => {
-  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+function flowOutcomeOrRunFallback(flowReport, runOutcome2) {
+  return stringField2(flowReport, "outcome") ?? runOutcome2;
+}
+var buildProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const verification = stringField2(flowReport, "verification_status") ?? "unknown";
   const review = stringField2(flowReport, "review_verdict") ?? "unknown";
   const headline = (() => {
@@ -22774,8 +22816,8 @@ var buildProjector = ({ flowReport }) => {
   })();
   return { headline, details: buildFixMigrateDetails(flowReport) };
 };
-var fixProjector = ({ flowReport }) => {
-  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const verification = stringField2(flowReport, "verification_status") ?? "unknown";
   const review = stringField2(flowReport, "review_verdict") ?? stringField2(flowReport, "review_status") ?? "unknown";
   return {
@@ -22783,8 +22825,8 @@ var fixProjector = ({ flowReport }) => {
     details: buildFixMigrateDetails(flowReport)
   };
 };
-var migrateProjector = ({ flowReport }) => {
-  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+var migrateProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const verification = stringField2(flowReport, "verification_status") ?? "unknown";
   const review = stringField2(flowReport, "review_verdict") ?? "unknown";
   return {
@@ -22792,8 +22834,8 @@ var migrateProjector = ({ flowReport }) => {
     details: buildFixMigrateDetails(flowReport)
   };
 };
-var sweepProjector = ({ flowReport }) => {
-  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+var sweepProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const deferred = numberField(flowReport, "deferred_count");
   const headline = deferred === void 0 ? `Circuit: Sweep finished with outcome ${outcome}.` : `Circuit: Sweep finished with outcome ${outcome}. Deferred: ${plural(deferred, "item")}.`;
   const summaryDetail = flowSummaryDetail(flowReport);
@@ -23005,7 +23047,8 @@ function writeOperatorSummary(input) {
     runFolder: input.runFolder,
     flowId,
     flowReport,
-    resultSummary: input.runResult.summary
+    resultSummary: input.runResult.summary,
+    runOutcome: input.runResult.outcome
   });
   const details = [
     ...flowMayInvokeWriteCapableWorker(flowId) ? [`Worker access: ${WRITE_CAPABLE_WORKER_DISCLOSURE}`] : [],

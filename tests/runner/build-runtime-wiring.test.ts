@@ -249,7 +249,7 @@ describe('Build runtime wiring', () => {
     expect(existsSync(join(runFolder, 'reports/relay/build-act.result.json'))).toBe(true);
   });
 
-  it('aborts review rejection before writing the canonical Build review report', async () => {
+  it('writes the canonical Build review report on rejection so downstream readers see the verdict', async () => {
     const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'review-reject');
 
@@ -278,7 +278,10 @@ describe('Build runtime wiring', () => {
 
     expect(outcome.outcome).toBe('aborted');
     expect(outcome.reason).toMatch(/connector declared verdict 'reject'/);
-    expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(false);
+    // The verdict gate fails ('reject' is not in build-review.pass), but
+    // the body parses against build.review@v1, so the schema-tied report
+    // is still materialized for the operator-summary projector.
+    expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(true);
     expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
   });
 

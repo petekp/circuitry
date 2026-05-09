@@ -194,6 +194,34 @@ describe('operator summary writer', () => {
     }
   });
 
+  it('falls back to the run-level outcome when the flow-result file is missing instead of silently rendering complete', () => {
+    // No reports/migrate-result.json on disk — simulates the legacy @stop
+    // path where close-step never ran. Without the runOutcome fallback,
+    // the migrate projector would default outcome to 'complete' and
+    // contradict result.json's stopped outcome.
+    const stoppedResult = RunResult.parse({
+      schema_version: 1,
+      run_id: '87000000-0000-0000-0000-000000000007',
+      flow_id: 'migrate',
+      goal: 'run migrate',
+      outcome: 'stopped',
+      summary: 'migrate v0.1.0 closed 3 step(s) for goal "run migrate".',
+      closed_at: '2026-04-28T12:00:00.000Z',
+      trace_entries_observed: 3,
+      manifest_hash: 'abc123',
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: stoppedResult,
+      route: { selectedFlow: 'migrate' },
+    });
+
+    expect(written.summary.headline).toBe(
+      'Circuit: Migrate finished with outcome stopped. Verification: unknown. Review: unknown.',
+    );
+  });
+
   it('renders Explore summaries as concise operator guidance', () => {
     writeReport('reports/explore-result.json', {
       summary:

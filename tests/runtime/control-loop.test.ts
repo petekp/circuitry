@@ -1149,7 +1149,7 @@ describe('runtime control-loop parity twins', () => {
     );
   });
 
-  it('keeps transcript evidence but omits the canonical report on failed relay admission', async () => {
+  it('keeps transcript evidence and writes the canonical report on failed relay admission when body parses', async () => {
     const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
     const { result, trace, resultJson, inspection } = await runRuntimeProofRelayCase({
       flowBytes: relayFlowBytes({
@@ -1169,11 +1169,14 @@ describe('runtime control-loop parity twins', () => {
     expect(result.outcome).toBe('aborted');
     expect(result.verdict).toBeUndefined();
     expect(resultJson.verdict).toBeUndefined();
+    // The verdict gate fails ('reject' is not in pass=['accept']), but the
+    // body parses against runtime-proof-canonical@v1, so the schema-tied
+    // report is still materialized for downstream readers.
     expect(inspection).toEqual({
       requestExists: true,
       receiptExists: true,
       resultExists: true,
-      reportExists: false,
+      reportExists: true,
     });
 
     const relayCompleted = trace.find(
@@ -1183,7 +1186,6 @@ describe('runtime control-loop parity twins', () => {
       kind: 'relay.completed',
       verdict: 'reject',
     });
-    expect(relayCompleted).not.toHaveProperty('report_path');
   });
 
   it('writes the canonical report only after relay admission passes', async () => {

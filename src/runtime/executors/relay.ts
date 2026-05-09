@@ -450,11 +450,45 @@ export async function executeProductionRelayAttempt(input: {
       : (evaluation.observedVerdict ?? NO_VERDICT_SENTINEL);
   const durationMs = Math.max(0, Date.now() - startMs);
 
-  if (evaluation.kind === 'pass' && step.report !== undefined) {
-    const reportBody =
-      parsedBody === undefined ? (JSON.parse(relayResult.result_body) as unknown) : parsedBody;
-    await context.files.writeJson(step.report, reportBody);
-    parsedBody = reportBody;
+  // Persist the schema-tied report when downstream readers (operator-summary
+  // projection, CI tooling, status storyboard) need it. Two paths:
+  //   - verdict-gate pass AND validator (if any) approved: write as before.
+  //   - verdict-gate fail BUT body parses against the declared schema:
+  //     write anyway. The verdict gate governs route selection only; it
+  //     does not gate artifact emission. A relay step that returned a
+  //     structurally valid body (e.g., review with verdict 'release-blocked')
+  //     must still produce its schema-tied report so the close-path can
+  //     read it and the operator summary can render the real verdict.
+  // A pass-then-downgrade (validator rejected on schema/cross-validator/
+  // provenance grounds) is intentionally NOT written — those are substantive
+  // validation failures, not gate failures.
+  let writtenReportPath: string | undefined;
+  if (step.report !== undefined) {
+    let reportBody: unknown;
+    if (checkEvaluation.kind === 'pass' && evaluation.kind === 'pass') {
+      reportBody = parsedBody;
+      if (reportBody === undefined) {
+        try {
+          reportBody = JSON.parse(relayResult.result_body) as unknown;
+        } catch {
+          reportBody = undefined;
+        }
+      }
+    } else if (checkEvaluation.kind === 'fail' && step.report.schema !== undefined) {
+      const parseResult = parseReport(step.report.schema, relayResult.result_body);
+      if (parseResult.kind === 'ok') {
+        try {
+          reportBody = JSON.parse(relayResult.result_body) as unknown;
+        } catch {
+          reportBody = undefined;
+        }
+      }
+    }
+    if (reportBody !== undefined) {
+      await context.files.writeJson(step.report, reportBody);
+      parsedBody = reportBody;
+      writtenReportPath = step.report.path;
+    }
   }
 
   await context.trace.append({
@@ -484,9 +518,7 @@ export async function executeProductionRelayAttempt(input: {
     duration_ms: durationMs,
     result_path: result.path,
     ...(parsedBody === undefined ? {} : { parsed_body: parsedBody }),
-    ...(step.report === undefined || evaluation.kind !== 'pass'
-      ? {}
-      : { report_path: step.report.path }),
+    ...(writtenReportPath === undefined ? {} : { report_path: writtenReportPath }),
   };
 }
 

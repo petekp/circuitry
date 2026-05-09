@@ -388,6 +388,58 @@ describe('Migrate runtime wiring', () => {
     expect(result.review_verdict).toBe('release-with-followups');
   }, 180_000);
 
+  it('marks outcome=failed and still writes the schema-tied review report when the release review returns release-blocked', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'release-blocked');
+
+    const reviewBody = JSON.stringify({
+      verdict: 'release-blocked',
+      summary: 'Release cannot ship: brief required const, batch shipped let.',
+      findings: [
+        {
+          severity: 'critical',
+          text: 'Brief objective is convert var to const but batch wrote let',
+          file_refs: ['legacy.js:1'],
+        },
+      ],
+    });
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: 'a1000000-0000-0000-0000-000000000004',
+      goal: 'Migrate the auth flow with a release-blocked review verdict',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 27, 12, 0, 0)),
+      relayer: migrateRelayerWith(reviewBody),
+      childCompiledFlowResolver: makeChildResolver(),
+      childRunner: makeStubChildRunner('accept'),
+      projectRoot: makeVerificationProjectRoot(),
+    });
+
+    // Run-level outcome is complete because close-step ran end-to-end
+    // even on release-blocked. The flow-level outcome (migrate-result.outcome)
+    // is 'failed' to reflect the product status.
+    expect(outcome.outcome).toBe('complete');
+
+    const review = MigrateReview.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports/migrate/review.json'), 'utf8')),
+    );
+    expect(review.verdict).toBe('release-blocked');
+    expect(review.findings).toHaveLength(1);
+
+    const result = MigrateResult.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports/migrate-result.json'), 'utf8')),
+    );
+    expect(result.outcome).toBe('failed');
+    expect(result.review_verdict).toBe('release-blocked');
+    expect(result.verification_status).toBe('passed');
+
+    const labels = (await readTraceEntries(runFolder)).map(traceEntryLabel);
+    expect(labels).toContain('relay.completed:review-step');
+    expect(labels).toContain('step.completed:close-step');
+  }, 180_000);
+
   it('aborts with outcome=aborted when the child Build sub-run returns a verdict outside check.pass', async () => {
     const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'check-rejected');

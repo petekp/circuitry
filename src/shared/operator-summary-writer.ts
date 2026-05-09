@@ -314,6 +314,7 @@ export function writeOperatorSummary(input: {
     flowId,
     flowReport,
     resultSummary: input.runResult.summary,
+    runOutcome: input.runResult.outcome,
   });
 
   const details = [

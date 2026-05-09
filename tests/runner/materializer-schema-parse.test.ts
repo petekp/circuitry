@@ -323,12 +323,14 @@ describe('materializer schema-parse', () => {
     expect(resultParsed.reason).toBe(closed.reason);
   });
 
-  it('(d) check-fail interaction: check-fail on bad verdict still skips report write even when body would be schema-valid — check-fail reason (not schema-parse reason) is what lands', async () => {
-    // Body { verdict: "reject", rationale: "..." } would PASS
-    // runtime-proof-strict@v1 schema parse if we got that far — but the
-    // check evaluator rejects "reject" (not in check.pass ["ok"]).
-    // Expectation: the report is NOT written and the reason text
-    // names the verdict rejection path, not the schema parse path.
+  it('(d) check-fail interaction: check-fail on bad verdict still writes the canonical report when body parses against the schema — check-fail reason (not schema-parse reason) is what lands', async () => {
+    // Body { verdict: "reject", rationale: "..." } PASSES
+    // runtime-proof-strict@v1 schema parse — but the check evaluator
+    // rejects "reject" (not in check.pass ["ok"]). The schema-tied
+    // report IS written so downstream readers see the verdict;
+    // the verdict gate governs route selection, not artifact emission.
+    // The reason text still names the verdict rejection path, not
+    // the schema parse path.
     const { bytes } = loadMutatedFixture((raw) => {
       addCanonicalReport(raw, 'runtime-proof-strict@v1');
     });
@@ -337,14 +339,22 @@ describe('materializer schema-parse', () => {
       runFolder,
       bytes,
       runId: '54000000-0000-0000-0000-000000000004',
-      goal: 'case (d): check-fail dominates even on schema-valid body',
+      goal: 'case (d): check-fail still materializes report when body parses',
       resultBody: '{"verdict":"reject","rationale":"schema-valid but verdict not in check.pass"}',
     });
 
     expect(outcome.result.outcome).toBe('aborted');
 
+    // Schema-tied report IS materialized — the body parses against
+    // runtime-proof-strict@v1, so downstream readers (operator-summary
+    // projector, CI tooling, status storyboard) get the artifact even
+    // though the verdict failed the gate.
     const reportAbs = join(runFolder, 'reports', 'relay-canonical.json');
-    expect(existsSync(reportAbs)).toBe(false);
+    expect(existsSync(reportAbs)).toBe(true);
+    expect(JSON.parse(readFileSync(reportAbs, 'utf8'))).toEqual({
+      verdict: 'reject',
+      rationale: 'schema-valid but verdict not in check.pass',
+    });
 
     const ge = outcome.trace_entries.find(
       (e) => e.kind === 'check.evaluated' && e.check_kind === 'result_verdict',

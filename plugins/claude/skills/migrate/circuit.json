@@ -288,7 +288,7 @@
       "routes": {
         "continue": "close-step",
         "pass": "close-step",
-        "stop": "@stop"
+        "stop": "close-step"
       },
       "executor": "worker",
       "kind": "relay",
