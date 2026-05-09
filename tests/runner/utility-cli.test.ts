@@ -384,9 +384,9 @@ describe('utility CLI commands', () => {
     expect(save.code, save.stderr).toBe(0);
     const saved = JSON.parse(save.stdout) as { continuity_path: string; index_path: string };
     const corrupted = JSON.parse(readFileSync(saved.continuity_path, 'utf8')) as {
-      narrative: { goal?: string };
+      narrative: { goal?: string | undefined };
     };
-    delete corrupted.narrative.goal;
+    corrupted.narrative.goal = undefined;
     writeFileSync(saved.continuity_path, JSON.stringify(corrupted, null, 2));
 
     const resume = await captureMain(['handoff', 'resume', '--control-plane', controlPlane]);
@@ -431,12 +431,7 @@ describe('utility CLI commands', () => {
       )}\n`,
     );
 
-    const resume = await captureMain([
-      'handoff',
-      'resume',
-      '--control-plane',
-      controlPlane,
-    ]);
+    const resume = await captureMain(['handoff', 'resume', '--control-plane', controlPlane]);
     expect(resume.code).toBe(1);
     expect(JSON.parse(resume.stdout)).toMatchObject({
       action: 'resume',
@@ -497,12 +492,7 @@ describe('utility CLI commands', () => {
       )}\n`,
     );
 
-    const resume = await captureMain([
-      'handoff',
-      'resume',
-      '--control-plane',
-      controlPlane,
-    ]);
+    const resume = await captureMain(['handoff', 'resume', '--control-plane', controlPlane]);
     expect(resume.code).toBe(1);
     expect(JSON.parse(resume.stdout)).toMatchObject({
       action: 'resume',
@@ -519,12 +509,7 @@ describe('utility CLI commands', () => {
     mkdirSync(continuityRoot, { recursive: true });
     writeFileSync(join(continuityRoot, 'index.json'), '{not-json');
 
-    const resume = await captureMain([
-      'handoff',
-      'resume',
-      '--control-plane',
-      controlPlane,
-    ]);
+    const resume = await captureMain(['handoff', 'resume', '--control-plane', controlPlane]);
     expect(resume.code).toBe(1);
     expect(JSON.parse(resume.stdout)).toMatchObject({
       action: 'resume',

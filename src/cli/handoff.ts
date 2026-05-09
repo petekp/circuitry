@@ -1330,7 +1330,12 @@ export async function runHandoffCommand(
     const isInvalidResume = args.action === 'resume' && result.status === 'invalid';
     const isNotFoundResume = args.action === 'resume' && result.status === 'not_found';
     const invalidMessage =
-      isInvalidResume && 'error' in result && typeof result.error === 'object' && result.error !== null && 'message' in result.error && typeof result.error.message === 'string'
+      isInvalidResume &&
+      'error' in result &&
+      typeof result.error === 'object' &&
+      result.error !== null &&
+      'message' in result.error &&
+      typeof result.error.message === 'string'
         ? result.error.message
         : 'malformed continuity record';
     if (progress !== undefined) {

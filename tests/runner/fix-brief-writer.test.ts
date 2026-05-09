@@ -3,8 +3,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fixBriefComposeBuilder } from '../../src/flows/fix/writers/brief.js';
-import type { ComposeBuildContext } from '../../src/flows/registries/compose-writers/types.js';
+import { fixCompiledFlowPackage } from '../../src/flows/fix/index.js';
+import type {
+  ComposeBuildContext,
+  ComposeBuilder,
+} from '../../src/flows/registries/compose-writers/types.js';
+
+function requireFixBriefComposeBuilder(): ComposeBuilder {
+  const builder = fixCompiledFlowPackage.writers.compose.find(
+    (writer) => writer.resultSchemaName === 'fix.brief@v1',
+  );
+  if (builder === undefined) {
+    throw new Error('fix.brief@v1 compose builder is not registered on the Fix package');
+  }
+  return builder;
+}
+
+const fixBriefComposeBuilder = requireFixBriefComposeBuilder();
 
 const tempRoots: string[] = [];
 
