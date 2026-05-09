@@ -1,12 +1,12 @@
-import type {
-  ProgressDisplay,
-  ProgressEvent,
-  ProgressPresentation,
+import {
+  MAX_STATUS_TEXT_CHARS,
+  type ProgressDisplay,
+  type ProgressEvent,
+  type ProgressPresentation,
 } from '../schemas/progress-event.js';
 import type { ProgressReporter } from './relay-runtime-types.js';
 
 const MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
-const MAX_PROGRESS_STATUS_TEXT_CHARS = 180;
 
 export function reportProgress(progress: ProgressReporter | undefined, event: ProgressEvent): void {
   if (progress === undefined) return;
@@ -31,13 +31,31 @@ export function progressDisplay(
   };
 }
 
+function truncateStatusText(text: string): string {
+  if (text.length <= MAX_STATUS_TEXT_CHARS) return text;
+  return `${text.slice(0, MAX_STATUS_TEXT_CHARS - 14)} [truncated]`;
+}
+
+// Used at the progress-event boundary: input may already be a status line
+// (with or without `Circuit:` / `⎿` chrome). Strips chrome, then truncates.
+// Does NOT enforce sentence-final punctuation — that is the caller's concern
+// and would risk double-period output if applied here.
 function normalizeStatusText(text: string): string {
   const withoutChrome = text
     .replace(/^Circuit:\s*/i, '')
     .replace(/^⎿\s*/, '')
     .trim();
-  if (withoutChrome.length <= MAX_PROGRESS_STATUS_TEXT_CHARS) return withoutChrome;
-  return `${withoutChrome.slice(0, MAX_PROGRESS_STATUS_TEXT_CHARS - 14)} [truncated]`;
+  return truncateStatusText(withoutChrome);
+}
+
+// Used when projecting an operator-summary headline (already chrome'd with
+// `Circuit:`) into a status_text field. Strips the prefix, ensures sentence-
+// final punctuation, then truncates. Co-located with normalizeStatusText so
+// the shared cap and the chrome-strip rules stay synchronized.
+export function statusTextFromHeadline(headline: string): string {
+  const stripped = headline.replace(/^Circuit:\s*/i, '').trim();
+  const withSentence = /[.!?]$/.test(stripped) ? stripped : `${stripped}.`;
+  return truncateStatusText(withSentence);
 }
 
 export function progressPresentation(input: {

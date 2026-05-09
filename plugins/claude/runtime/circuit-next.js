@@ -19874,9 +19874,225 @@ function createDefaultExecutors(options = {}) {
 import { readFileSync as readFileSync15 } from "node:fs";
 import { join as join8 } from "node:path";
 
+// dist/schemas/progress-event.js
+var MAX_STATUS_TEXT_CHARS = 180;
+var ProgressDisplay = external_exports.object({
+  text: external_exports.string().min(1).max(240),
+  importance: external_exports.enum(["major", "detail"]),
+  tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
+}).strict();
+var ProgressPresentationLineMode = external_exports.enum(["append", "replace_slot", "suppress"]);
+var ProgressPresentation = external_exports.object({
+  block_id: external_exports.string().min(1).max(120),
+  line_mode: ProgressPresentationLineMode,
+  slot_id: external_exports.string().min(1).max(120).optional(),
+  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
+  depth: external_exports.number().int().min(0).max(8).optional()
+}).strict().superRefine((presentation, ctx) => {
+  if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["slot_id"],
+      message: "slot_id is required when line_mode is replace_slot"
+    });
+  }
+  if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["status_text"],
+      message: "status_text is required unless line_mode is suppress"
+    });
+  }
+});
+var ProgressTaskStatus = external_exports.enum(["pending", "in_progress", "completed", "failed"]);
+var ProgressTask = external_exports.object({
+  id: external_exports.string().min(1).max(96),
+  title: external_exports.string().min(1).max(120),
+  status: ProgressTaskStatus
+}).strict();
+var ProgressEventBase = external_exports.object({
+  schema_version: external_exports.literal(1),
+  type: external_exports.string().min(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  recorded_at: external_exports.string().datetime(),
+  label: external_exports.string().min(1),
+  display: ProgressDisplay,
+  presentation: ProgressPresentation.optional()
+}).strict();
+var RunStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.started"),
+  run_folder: external_exports.string().min(1)
+}).strict();
+var RouteSelectedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("route.selected"),
+  selected_flow: CompiledFlowId,
+  routed_by: external_exports.enum(["explicit", "classifier"]),
+  router_reason: external_exports.string().min(1),
+  router_signal: external_exports.string().min(1).optional(),
+  entry_mode: external_exports.string().min(1).optional(),
+  entry_mode_source: external_exports.enum(["explicit", "classifier"]).optional()
+}).strict();
+var StepStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive()
+}).strict();
+var StepCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  route_taken: external_exports.string().min(1)
+}).strict();
+var StepAbortedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.aborted"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  reason: external_exports.string().min(1)
+}).strict();
+var EvidenceCollectedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("evidence.collected"),
+  step_id: StepId,
+  report_path: external_exports.string().min(1),
+  report_schema: external_exports.string().min(1),
+  warning_count: external_exports.number().int().nonnegative()
+}).strict();
+var EvidenceWarningProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("evidence.warning"),
+  step_id: StepId,
+  report_path: external_exports.string().min(1),
+  warning_kind: external_exports.string().min(1),
+  message: external_exports.string().min(1),
+  path: external_exports.string().min(1).optional()
+}).strict();
+var RelayStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("relay.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  role: RelayRole,
+  connector_name: external_exports.string().min(1),
+  connector_kind: external_exports.enum(["builtin", "custom"]),
+  filesystem_capability: external_exports.enum(["read-only", "trusted-write", "isolated-write"])
+}).strict();
+var RelayCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("relay.completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative()
+}).strict();
+var FanoutStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_count: external_exports.number().int().positive(),
+  branch_ids: external_exports.array(external_exports.string().min(1)).min(1)
+}).strict();
+var FanoutBranchStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.branch_started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId.optional(),
+  worktree_path: external_exports.string().min(1).optional()
+}).strict();
+var FanoutBranchCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.branch_completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId.optional(),
+  child_outcome: RunClosedOutcome,
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative()
+}).strict();
+var FanoutJoinedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.joined"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  aggregate_path: external_exports.string().min(1),
+  branches_completed: external_exports.number().int().nonnegative(),
+  branches_failed: external_exports.number().int().nonnegative(),
+  selected_branch_id: external_exports.string().min(1).optional()
+}).strict();
+var CheckpointWaitingProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("checkpoint.waiting"),
+  step_id: StepId,
+  request_path: external_exports.string().min(1),
+  allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
+}).strict();
+var TaskListUpdatedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("task_list.updated"),
+  tasks: external_exports.array(ProgressTask).min(1)
+}).strict();
+var UserInputOption = external_exports.object({
+  label: external_exports.string().min(1).max(80),
+  description: external_exports.string().min(1).max(160),
+  checkpoint_choice: external_exports.string().min(1).max(80)
+}).strict();
+var UserInputQuestion = external_exports.object({
+  id: external_exports.string().min(1).max(80),
+  header: external_exports.string().min(1).max(12),
+  question: external_exports.string().min(1).max(240),
+  options: external_exports.array(UserInputOption).min(1).max(4),
+  allow_free_text: external_exports.literal(false)
+}).strict();
+var UserInputRequestedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("user_input.requested"),
+  checkpoint: external_exports.object({
+    step_id: StepId,
+    request_path: external_exports.string().min(1),
+    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
+  }).strict(),
+  questions: external_exports.array(UserInputQuestion).min(1).max(3),
+  resume: external_exports.object({
+    run_folder: external_exports.string().min(1),
+    checkpoint_choice_arg: external_exports.string().min(1),
+    command: external_exports.string().min(1)
+  }).strict()
+}).strict();
+var RunCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.completed"),
+  outcome: RunClosedOutcome,
+  result_path: external_exports.string().min(1)
+}).strict();
+var RunAbortedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.aborted"),
+  outcome: external_exports.literal("aborted"),
+  result_path: external_exports.string().min(1),
+  reason: external_exports.string().min(1).optional()
+}).strict();
+var ProgressEvent = external_exports.discriminatedUnion("type", [
+  RunStartedProgressEvent,
+  RouteSelectedProgressEvent,
+  StepStartedProgressEvent,
+  StepCompletedProgressEvent,
+  StepAbortedProgressEvent,
+  EvidenceCollectedProgressEvent,
+  EvidenceWarningProgressEvent,
+  RelayStartedProgressEvent,
+  RelayCompletedProgressEvent,
+  FanoutStartedProgressEvent,
+  FanoutBranchStartedProgressEvent,
+  FanoutBranchCompletedProgressEvent,
+  FanoutJoinedProgressEvent,
+  CheckpointWaitingProgressEvent,
+  TaskListUpdatedProgressEvent,
+  UserInputRequestedProgressEvent,
+  RunCompletedProgressEvent,
+  RunAbortedProgressEvent
+]);
+
 // dist/shared/progress-output.js
 var MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
-var MAX_PROGRESS_STATUS_TEXT_CHARS = 180;
 function reportProgress(progress, event) {
   if (progress === void 0)
     return;
@@ -19894,11 +20110,19 @@ function progressDisplay(text, importance, tone) {
     tone
   };
 }
+function truncateStatusText(text) {
+  if (text.length <= MAX_STATUS_TEXT_CHARS)
+    return text;
+  return `${text.slice(0, MAX_STATUS_TEXT_CHARS - 14)} [truncated]`;
+}
 function normalizeStatusText(text) {
   const withoutChrome = text.replace(/^Circuit:\s*/i, "").replace(/^⎿\s*/, "").trim();
-  if (withoutChrome.length <= MAX_PROGRESS_STATUS_TEXT_CHARS)
-    return withoutChrome;
-  return `${withoutChrome.slice(0, MAX_PROGRESS_STATUS_TEXT_CHARS - 14)} [truncated]`;
+  return truncateStatusText(withoutChrome);
+}
+function statusTextFromHeadline(headline) {
+  const stripped = headline.replace(/^Circuit:\s*/i, "").trim();
+  const withSentence = /[.!?]$/.test(stripped) ? stripped : `${stripped}.`;
+  return truncateStatusText(withSentence);
 }
 function progressPresentation(input) {
   const lineMode = input.lineMode ?? "append";
@@ -21491,222 +21715,6 @@ async function resumeCompiledFlow(options) {
   return result;
 }
 
-// dist/schemas/progress-event.js
-var ProgressDisplay = external_exports.object({
-  text: external_exports.string().min(1).max(240),
-  importance: external_exports.enum(["major", "detail"]),
-  tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
-}).strict();
-var ProgressPresentationLineMode = external_exports.enum(["append", "replace_slot", "suppress"]);
-var ProgressPresentation = external_exports.object({
-  block_id: external_exports.string().min(1).max(120),
-  line_mode: ProgressPresentationLineMode,
-  slot_id: external_exports.string().min(1).max(120).optional(),
-  status_text: external_exports.string().min(1).max(180).optional(),
-  depth: external_exports.number().int().min(0).max(8).optional()
-}).strict().superRefine((presentation, ctx) => {
-  if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["slot_id"],
-      message: "slot_id is required when line_mode is replace_slot"
-    });
-  }
-  if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["status_text"],
-      message: "status_text is required unless line_mode is suppress"
-    });
-  }
-});
-var ProgressTaskStatus = external_exports.enum(["pending", "in_progress", "completed", "failed"]);
-var ProgressTask = external_exports.object({
-  id: external_exports.string().min(1).max(96),
-  title: external_exports.string().min(1).max(120),
-  status: ProgressTaskStatus
-}).strict();
-var ProgressEventBase = external_exports.object({
-  schema_version: external_exports.literal(1),
-  type: external_exports.string().min(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  recorded_at: external_exports.string().datetime(),
-  label: external_exports.string().min(1),
-  display: ProgressDisplay,
-  presentation: ProgressPresentation.optional()
-}).strict();
-var RunStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.started"),
-  run_folder: external_exports.string().min(1)
-}).strict();
-var RouteSelectedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("route.selected"),
-  selected_flow: CompiledFlowId,
-  routed_by: external_exports.enum(["explicit", "classifier"]),
-  router_reason: external_exports.string().min(1),
-  router_signal: external_exports.string().min(1).optional(),
-  entry_mode: external_exports.string().min(1).optional(),
-  entry_mode_source: external_exports.enum(["explicit", "classifier"]).optional()
-}).strict();
-var StepStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive()
-}).strict();
-var StepCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  route_taken: external_exports.string().min(1)
-}).strict();
-var StepAbortedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.aborted"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  reason: external_exports.string().min(1)
-}).strict();
-var EvidenceCollectedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("evidence.collected"),
-  step_id: StepId,
-  report_path: external_exports.string().min(1),
-  report_schema: external_exports.string().min(1),
-  warning_count: external_exports.number().int().nonnegative()
-}).strict();
-var EvidenceWarningProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("evidence.warning"),
-  step_id: StepId,
-  report_path: external_exports.string().min(1),
-  warning_kind: external_exports.string().min(1),
-  message: external_exports.string().min(1),
-  path: external_exports.string().min(1).optional()
-}).strict();
-var RelayStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("relay.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  role: RelayRole,
-  connector_name: external_exports.string().min(1),
-  connector_kind: external_exports.enum(["builtin", "custom"]),
-  filesystem_capability: external_exports.enum(["read-only", "trusted-write", "isolated-write"])
-}).strict();
-var RelayCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("relay.completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative()
-}).strict();
-var FanoutStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_count: external_exports.number().int().positive(),
-  branch_ids: external_exports.array(external_exports.string().min(1)).min(1)
-}).strict();
-var FanoutBranchStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.branch_started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId.optional(),
-  worktree_path: external_exports.string().min(1).optional()
-}).strict();
-var FanoutBranchCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.branch_completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId.optional(),
-  child_outcome: RunClosedOutcome,
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative()
-}).strict();
-var FanoutJoinedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.joined"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
-  aggregate_path: external_exports.string().min(1),
-  branches_completed: external_exports.number().int().nonnegative(),
-  branches_failed: external_exports.number().int().nonnegative(),
-  selected_branch_id: external_exports.string().min(1).optional()
-}).strict();
-var CheckpointWaitingProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("checkpoint.waiting"),
-  step_id: StepId,
-  request_path: external_exports.string().min(1),
-  allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
-}).strict();
-var TaskListUpdatedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("task_list.updated"),
-  tasks: external_exports.array(ProgressTask).min(1)
-}).strict();
-var UserInputOption = external_exports.object({
-  label: external_exports.string().min(1).max(80),
-  description: external_exports.string().min(1).max(160),
-  checkpoint_choice: external_exports.string().min(1).max(80)
-}).strict();
-var UserInputQuestion = external_exports.object({
-  id: external_exports.string().min(1).max(80),
-  header: external_exports.string().min(1).max(12),
-  question: external_exports.string().min(1).max(240),
-  options: external_exports.array(UserInputOption).min(1).max(4),
-  allow_free_text: external_exports.literal(false)
-}).strict();
-var UserInputRequestedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("user_input.requested"),
-  checkpoint: external_exports.object({
-    step_id: StepId,
-    request_path: external_exports.string().min(1),
-    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
-  }).strict(),
-  questions: external_exports.array(UserInputQuestion).min(1).max(3),
-  resume: external_exports.object({
-    run_folder: external_exports.string().min(1),
-    checkpoint_choice_arg: external_exports.string().min(1),
-    command: external_exports.string().min(1)
-  }).strict()
-}).strict();
-var RunCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.completed"),
-  outcome: RunClosedOutcome,
-  result_path: external_exports.string().min(1)
-}).strict();
-var RunAbortedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.aborted"),
-  outcome: external_exports.literal("aborted"),
-  result_path: external_exports.string().min(1),
-  reason: external_exports.string().min(1).optional()
-}).strict();
-var ProgressEvent = external_exports.discriminatedUnion("type", [
-  RunStartedProgressEvent,
-  RouteSelectedProgressEvent,
-  StepStartedProgressEvent,
-  StepCompletedProgressEvent,
-  StepAbortedProgressEvent,
-  EvidenceCollectedProgressEvent,
-  EvidenceWarningProgressEvent,
-  RelayStartedProgressEvent,
-  RelayCompletedProgressEvent,
-  FanoutStartedProgressEvent,
-  FanoutBranchStartedProgressEvent,
-  FanoutBranchCompletedProgressEvent,
-  FanoutJoinedProgressEvent,
-  CheckpointWaitingProgressEvent,
-  TaskListUpdatedProgressEvent,
-  UserInputRequestedProgressEvent,
-  RunCompletedProgressEvent,
-  RunAbortedProgressEvent
-]);
-
 // dist/flows/router.js
 var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
 var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
@@ -22197,7 +22205,7 @@ var OperatorSummary = external_exports.object({
   router_reason: external_exports.string().min(1).optional(),
   outcome: external_exports.union([RunClosedOutcome, external_exports.literal("checkpoint_waiting")]),
   headline: external_exports.string().min(1),
-  status_text: external_exports.string().min(1).max(180).optional(),
+  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
   brief_slots: OperatorBriefSlots.optional(),
   details: external_exports.array(external_exports.string().min(1)),
   evidence_warnings: external_exports.array(OperatorSummaryWarning),
@@ -22238,8 +22246,14 @@ function buildSanitizePattern() {
 var SANITIZE_PATTERN = buildSanitizePattern();
 var MAX_BULLET_LEN = 4096;
 var MAX_PROMPT_LEN = 32768;
+function sanitizeForRender(value) {
+  return value.replace(SANITIZE_PATTERN, "");
+}
+function escapeHtmlChars(value) {
+  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+}
 function escapeHtml(value) {
-  return value.replace(SANITIZE_PATTERN, "").replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+  return escapeHtmlChars(sanitizeForRender(value));
 }
 function truncate(value, max) {
   return value.length > max ? `${value.slice(0, max - 1)}\u2026` : value;
@@ -22501,7 +22515,6 @@ var FLOW_RESULT_PATHS = {
   review: "reports/review-result.json",
   sweep: "reports/sweep-result.json"
 };
-var MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS = 180;
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
   return join11(runFolder, "reports", "operator-summary.json");
@@ -22562,12 +22575,6 @@ function friendlyResultSummary(summary) {
 }
 function sentence(value) {
   return /[.!?]$/.test(value) ? value : `${value}.`;
-}
-function statusTextFromHeadline(headline) {
-  const statusText = sentence(headline.replace(/^Circuit:\s*/i, "").trim());
-  if (statusText.length <= MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS)
-    return statusText;
-  return `${statusText.slice(0, MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS - 14)} [truncated]`;
 }
 function withoutFinalPunctuation(value) {
   return value.replace(/[.!?]\s*$/, "");

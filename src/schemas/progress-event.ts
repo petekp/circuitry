@@ -3,6 +3,11 @@ import { CompiledFlowId, RunId, StepId } from './ids.js';
 import { RelayRole } from './step.js';
 import { RunClosedOutcome } from './trace-entry.js';
 
+// Single source of truth for status_text length. Imported by progress-output
+// (truncation) and operator-summary (validation). Drift here previously caused
+// validation to pass while truncation clipped at a different boundary.
+export const MAX_STATUS_TEXT_CHARS = 180;
+
 export const ProgressDisplay = z
   .object({
     text: z.string().min(1).max(240),
@@ -20,7 +25,7 @@ export const ProgressPresentation = z
     block_id: z.string().min(1).max(120),
     line_mode: ProgressPresentationLineMode,
     slot_id: z.string().min(1).max(120).optional(),
-    status_text: z.string().min(1).max(180).optional(),
+    status_text: z.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
     depth: z.number().int().min(0).max(8).optional(),
   })
   .strict()

@@ -12,6 +12,7 @@ import {
 } from '../schemas/operator-summary.js';
 import type { RunResult } from '../schemas/result.js';
 import { HTML_PROJECTORS, type HtmlProjectorContext, type JsonObject } from './html/index.js';
+import { statusTextFromHeadline } from './progress-output.js';
 import { RUN_RESULT_RELATIVE_PATH } from './result-path.js';
 import { resolveRunRelative } from './run-relative-path.js';
 import {
@@ -84,7 +85,6 @@ const FLOW_RESULT_PATHS: Record<string, string> = {
   review: 'reports/review-result.json',
   sweep: 'reports/sweep-result.json',
 };
-const MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS = 180;
 
 // Label used when listing the HTML artifact in report_paths. Not load-bearing
 // for control flow — markdown rendering and CLI plumbing read summary.html_path
@@ -164,12 +164,6 @@ function friendlyResultSummary(summary: string): string {
 
 function sentence(value: string): string {
   return /[.!?]$/.test(value) ? value : `${value}.`;
-}
-
-function statusTextFromHeadline(headline: string): string {
-  const statusText = sentence(headline.replace(/^Circuit:\s*/i, '').trim());
-  if (statusText.length <= MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS) return statusText;
-  return `${statusText.slice(0, MAX_OPERATOR_SUMMARY_STATUS_TEXT_CHARS - 14)} [truncated]`;
 }
 
 function withoutFinalPunctuation(value: string): string {
@@ -338,6 +332,14 @@ function exploreDecisionReport(
   );
 }
 
+// Looser gate than the HTML projector's `loadHtmlPayload`. Returns the
+// snapshot as soon as a tournament has *picked* a winner — even before
+// decision.json is finalized — because the markdown summary should surface
+// the selected-option label and rationale-so-far the moment they exist. The
+// HTML projector intentionally waits for `decision_verdict === 'decided'`
+// since a checkpoint_waiting state without decision.json would render an
+// empty/incomplete grid. Keep the asymmetry: do not tighten this gate
+// without revisiting the projector.
 function exploreTournamentSnapshot(flowReport: JsonObject | undefined): JsonObject | undefined {
   const snapshot = isObject(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : undefined;
   if (stringField(snapshot, 'decision_verdict') === 'decided') return snapshot;

@@ -41,10 +41,24 @@ const SANITIZE_PATTERN = buildSanitizePattern();
 export const MAX_BULLET_LEN = 4096;
 export const MAX_PROMPT_LEN = 32_768;
 
+// Strip dangerous-but-validation-passing characters before HTML escaping.
+// Separated from escapeHtml so each step is named for what it does — and so
+// callers that compose primitives (e.g. building HTML fragments by hand) can
+// invoke just the sanitizer if they need to.
+export function sanitizeForRender(value: string): string {
+  return value.replace(SANITIZE_PATTERN, '');
+}
+
+function escapeHtmlChars(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+}
+
+// Escape operator-controlled text for safe insertion into HTML body or
+// attribute contexts. Composes sanitizeForRender + the 5-char escape map;
+// the 5-char map covers both contexts because we always quote attributes
+// with double quotes.
 export function escapeHtml(value: string): string {
-  return value
-    .replace(SANITIZE_PATTERN, '')
-    .replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+  return escapeHtmlChars(sanitizeForRender(value));
 }
 
 export function truncate(value: string, max: number): string {
