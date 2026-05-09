@@ -804,15 +804,26 @@ if (rawArgs[0] === 'present') {
     const exitStatus = status ?? 1;
     if (exitStatus !== 0) {
       // The runtime may have produced a structured refusal envelope on stdout
-      // (e.g. handoff resume against an invalid continuity record). Render it
-      // before the generic failure tag so the operator sees the substance,
-      // not just an exit code.
+      // (e.g. handoff resume against an invalid continuity record). Render
+      // ONLY explicit refusal/abort envelopes — never `outcome: 'complete'`
+      // or `outcome: 'checkpoint_waiting'`, which would print success text
+      // (and on `complete` would even auto-open a browser) for a process that
+      // exited non-zero. Genuine crashes still fall through to the generic
+      // failure tag.
       const stdoutTrimmed = stdoutText.trim();
       if (stdoutTrimmed.length > 0) {
         try {
           const parsed = JSON.parse(stdoutTrimmed);
           if (isRecord(parsed)) {
-            renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks);
+            const outcome = stringField(parsed, 'outcome');
+            const refusalStatus = stringField(parsed, 'status');
+            const isAbortedFlow = outcome === 'aborted';
+            const isUtilityRefusal =
+              outcome === undefined &&
+              (refusalStatus === 'invalid' || refusalStatus === 'refused');
+            if (isAbortedFlow || isUtilityRefusal) {
+              renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks);
+            }
           }
         } catch {
           // No structured body — fall through to the generic failure line.

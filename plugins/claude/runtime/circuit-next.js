@@ -22787,7 +22787,9 @@ function flowSummaryDetail(flowReport) {
   return summary === void 0 ? void 0 : `Result: ${friendlyResultSummary(summary)}`;
 }
 function firstLineSummary(text, max) {
-  const firstLine = text.split(/\r?\n/, 1)[0]?.trim() ?? "";
+  const firstLine = (text.split(/\r?\n/, 1)[0] ?? "").replace(/^[\s>#*\-`|]+/, "").trim();
+  if (firstLine.length === 0)
+    return "(no text)";
   if (firstLine.length <= max)
     return firstLine;
   return `${firstLine.slice(0, Math.max(1, max - 1))}\u2026`;
