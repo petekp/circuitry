@@ -185,8 +185,7 @@ describe('operator summary writer', () => {
             { report_id: 'fix.review', path: 'reports/fix/review.json', schema: 'fix.review@v1' },
           ],
         },
-        expected:
-          'Circuit: Fix finished with outcome fixed. Verification: passed. Review: accepted.',
+        expected: 'Circuit: Fix complete. Verification: passed. Review: accepted.',
       },
       {
         flow: 'migrate',
@@ -229,6 +228,74 @@ describe('operator summary writer', () => {
       expect(written.summary.report_paths.some((report) => report.schema?.endsWith('@v1'))).toBe(
         true,
       );
+    }
+  });
+
+  it('renders Fix outcomes through friendly phrases instead of leaking the raw "outcome partial" enum into the headline', () => {
+    const cases: Array<{
+      readonly outcome: string;
+      readonly verification: string;
+      readonly review: string;
+      readonly expectedHeadline: string;
+    }> = [
+      {
+        outcome: 'fixed',
+        verification: 'passed',
+        review: 'accept',
+        expectedHeadline: 'Circuit: Fix complete. Verification: passed. Review: accepted.',
+      },
+      {
+        outcome: 'partial',
+        verification: 'passed',
+        review: 'accept',
+        expectedHeadline:
+          'Circuit: Fix applied with follow-ups. Verification: passed. Review: accepted.',
+      },
+      {
+        outcome: 'partial',
+        verification: 'passed',
+        review: 'accept-with-fixes',
+        expectedHeadline:
+          'Circuit: Fix applied with follow-ups. Verification: passed. Review: requested follow-up fixes.',
+      },
+      {
+        outcome: 'failed',
+        verification: 'failed',
+        review: 'accept-with-fixes',
+        expectedHeadline:
+          'Circuit: Fix attempt failed verification. Verification: failed. Review: requested follow-up fixes.',
+      },
+      {
+        outcome: 'not-reproduced',
+        verification: 'not-run',
+        review: 'accept',
+        expectedHeadline:
+          'Circuit: Could not reproduce the issue. Verification: not-run. Review: accepted.',
+      },
+    ];
+
+    for (const entry of cases) {
+      writeReport('reports/fix-result.json', {
+        summary: 'Fix bug: patched change',
+        outcome: entry.outcome,
+        verification_status: entry.verification,
+        review_verdict: entry.review,
+        evidence_links: [
+          { report_id: 'fix.review', path: 'reports/fix/review.json', schema: 'fix.review@v1' },
+        ],
+      });
+
+      const written = writeOperatorSummary({
+        runFolder,
+        runResult: baseResult('fix'),
+        route: { selectedFlow: 'fix' },
+      });
+
+      expect(written.summary.headline).toBe(entry.expectedHeadline);
+      // Verbatim guard against the original F-M-2 wording. If this string
+      // ever reappears in the headline, the regression has returned.
+      expect(written.summary.headline).not.toContain('outcome partial');
+      expect(written.summary.headline).not.toMatch(/Fix finished with outcome/);
     }
   });
 

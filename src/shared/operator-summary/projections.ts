@@ -9,6 +9,8 @@ import { exploreSummaryProjector } from './explore.js';
 import { arrayField, type JsonObject, isObject, numberField, stringField } from './json.js';
 import type { SummaryProjection, SummaryProjector } from './projector.js';
 import {
+  capitalized,
+  friendlyFixOutcome,
   friendlyResultSummary,
   friendlyReviewStatus,
   friendlyVerificationStatus,
@@ -124,8 +126,14 @@ const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
     stringField(flowReport, 'review_verdict') ??
     stringField(flowReport, 'review_status') ??
     'unknown';
+  // Avoid "outcome partial" on the happy-with-followups path — the operator
+  // reads that as "the fix was only partially applied", but Fix uses 'partial'
+  // for "applied + verified, regression test deferred or review asked for
+  // follow-ups." Render every Fix outcome through friendlyFixOutcome so the
+  // headline never collides with run-level outcome vocabulary.
+  const headline = `Circuit: ${capitalized(friendlyFixOutcome(outcome))}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   return {
-    headline: `Circuit: Fix finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
+    headline,
     details: buildFixMigrateDetails(flowReport),
   } satisfies SummaryProjection;
 };

@@ -54,3 +54,17 @@ export function friendlyVerificationStatus(status: string): string {
   if (status === 'failed') return 'failed';
   return status;
 }
+
+// Fix's domain outcome taxonomy ('fixed', 'partial', 'not-reproduced', ...)
+// collides with the run-level vocabulary on words like 'partial' that read as
+// "incomplete" to a casual operator. The phrases below describe the *change*
+// the run produced rather than parroting the schema enum value.
+export function friendlyFixOutcome(outcome: string): string {
+  if (outcome === 'fixed') return 'fix complete';
+  if (outcome === 'partial') return 'fix applied with follow-ups';
+  if (outcome === 'not-reproduced') return 'could not reproduce the issue';
+  if (outcome === 'failed') return 'fix attempt failed verification';
+  if (outcome === 'stopped') return 'fix stopped';
+  if (outcome === 'handoff') return 'fix handed off';
+  return outcome;
+}

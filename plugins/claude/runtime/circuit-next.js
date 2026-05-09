@@ -14667,7 +14667,8 @@ var ReviewEvidenceWarningKind = external_exports.enum([
   "untracked_file_skipped",
   "untracked_file_content_omitted",
   "untracked_files_truncated",
-  "evidence_unavailable"
+  "evidence_unavailable",
+  "scope_empty"
 ]);
 var ReviewEvidenceWarning = external_exports.object({
   kind: ReviewEvidenceWarningKind,
@@ -14933,6 +14934,12 @@ function evidenceWarnings(evidence) {
     ];
   }
   const warnings = [];
+  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
+    warnings.push({
+      kind: "scope_empty",
+      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review."
+    });
+  }
   if (evidence.staged_diff.truncated) {
     warnings.push({
       kind: "diff_truncated",
@@ -22608,6 +22615,21 @@ function friendlyVerificationStatus(status) {
     return "failed";
   return status;
 }
+function friendlyFixOutcome(outcome) {
+  if (outcome === "fixed")
+    return "fix complete";
+  if (outcome === "partial")
+    return "fix applied with follow-ups";
+  if (outcome === "not-reproduced")
+    return "could not reproduce the issue";
+  if (outcome === "failed")
+    return "fix attempt failed verification";
+  if (outcome === "stopped")
+    return "fix stopped";
+  if (outcome === "handoff")
+    return "fix handed off";
+  return outcome;
+}
 
 // dist/shared/operator-summary/explore.js
 var NUMBERED_LABEL_PATTERN = /\(\d+\)\s+([A-Z][^—–()]{1,120}?)\s*[—–]/g;
@@ -22757,17 +22779,22 @@ function reviewEvidenceDetails(report) {
   }
   return [];
 }
+function hasEvidenceWarningKind(report, kind) {
+  return arrayField(report, "evidence_warnings").some((item) => isObject3(item) && stringField2(item, "kind") === kind);
+}
 var reviewProjector = ({ flowReport }) => {
   const verdict = stringField2(flowReport, "verdict") ?? "review complete";
   const findings = arrayField(flowReport, "findings").length;
+  const scopeEmpty = hasEvidenceWarningKind(flowReport, "scope_empty");
   const summaryDetail = flowSummaryDetail(flowReport);
   const details = [];
   if (summaryDetail !== void 0)
     details.push(summaryDetail);
   details.push(`Findings: ${findings}`);
   details.push(...reviewEvidenceDetails(flowReport));
+  const headline = scopeEmpty ? `Circuit: Review found no uncommitted changes to examine; committed history (HEAD~1) was not part of this review. Verdict ${verdict} reflects scope, not safety. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
-    headline: `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`,
+    headline,
     details
   };
 };
@@ -22808,8 +22835,9 @@ var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const verification = stringField2(flowReport, "verification_status") ?? "unknown";
   const review = stringField2(flowReport, "review_verdict") ?? stringField2(flowReport, "review_status") ?? "unknown";
+  const headline = `Circuit: ${capitalized(friendlyFixOutcome(outcome))}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   return {
-    headline: `Circuit: Fix finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
+    headline,
     details: buildFixMigrateDetails(flowReport)
   };
 };
