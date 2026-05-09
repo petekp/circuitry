@@ -6,6 +6,7 @@
       "dist",
       "coverage",
       "bootstrap",
+      "evals",
       "plugins/claude/runtime",
       "plugins/circuit/runtime",
       ".circuit",
