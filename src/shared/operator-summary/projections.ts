@@ -65,11 +65,13 @@ const reviewProjector: SummaryProjector = ({ flowReport }) => {
   if (summaryDetail !== undefined) details.push(summaryDetail);
   details.push(`Findings: ${findings}`);
   details.push(...reviewEvidenceDetails(flowReport));
-  // When the working-tree diff was empty, the reviewer had nothing to inspect,
-  // so a CLEAN/0-findings headline silently understates the scope limitation.
-  // Lead with the limitation and qualify the verdict instead.
+  // When the reviewer had no source content to inspect, a CLEAN/0-findings
+  // headline silently understates the scope limitation. Drop the verdict
+  // reference (it is meaningless when scope is empty, and would read awkwardly
+  // through the fallback if verdict were ever absent) and lead with the
+  // scope-was-empty fact instead.
   const headline = scopeEmpty
-    ? `Circuit: Review found no uncommitted changes to examine; committed history (HEAD~1) was not part of this review. Verdict ${verdict} reflects scope, not safety. Findings: ${findings}.`
+    ? `Circuit: Review had no uncommitted source content to examine; committed history (HEAD~1) was not part of this review. Findings: ${findings}.`
     : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
     headline,

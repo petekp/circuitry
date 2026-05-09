@@ -14934,10 +14934,11 @@ function evidenceWarnings(evidence) {
     ];
   }
   const warnings = [];
-  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
+  const hasUntrackedContent = evidence.untracked_files.some((file) => file.content !== void 0);
+  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !hasUntrackedContent && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
     warnings.push({
       kind: "scope_empty",
-      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review."
+      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. The reviewer had no source content to inspect: staged/unstaged diffs were empty and no untracked file content was relayed."
     });
   }
   if (evidence.staged_diff.truncated) {
@@ -22792,7 +22793,7 @@ var reviewProjector = ({ flowReport }) => {
     details.push(summaryDetail);
   details.push(`Findings: ${findings}`);
   details.push(...reviewEvidenceDetails(flowReport));
-  const headline = scopeEmpty ? `Circuit: Review found no uncommitted changes to examine; committed history (HEAD~1) was not part of this review. Verdict ${verdict} reflects scope, not safety. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
+  const headline = scopeEmpty ? `Circuit: Review had no uncommitted source content to examine; committed history (HEAD~1) was not part of this review. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
     headline,
     details
@@ -25684,7 +25685,7 @@ function usage3() {
     "",
     "`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.",
     "",
-    "Mode and depth are paired per flow, not free flags. For most flows the supported pairs are mode/depth where the names match (e.g., `--mode lite --depth lite`), with `--mode default --depth standard` as the default. If you supply an unsupported pair, the rejection message lists the supported pairs for that flow.",
+    "Mode and depth are paired per flow, not free flags. Every flow supports `default/standard` (the default if you supply neither). Other pairs vary per flow: most support `lite/lite`, `deep/deep`, and `autonomous/autonomous`; Migrate omits `lite/lite`; Review supports only `default/standard`; Explore adds `tournament/tournament`. If you supply an unsupported pair, the rejection message lists the supported pairs for that flow.",
     "",
     "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/migrate/sweep flows and then composes the runtime boundary using the configured relay connector.",
     "",
@@ -26084,6 +26085,7 @@ function classifyRuntimeSupport(input) {
     };
   }
   const supportedPairs = rows.map((row) => `${row.entryModeName}/${row.depth}`).join(", ");
+  const supportsClause = customArchetypeSupported ? `${flowId} (via '${customArchetype}' archetype) supports (mode/depth): ${supportedPairs}` : `${flowId} supports (mode/depth): ${supportedPairs}`;
   const hasCheckpoint = input.flow.steps.some((step) => step.kind === "checkpoint");
   if ((depth === "deep" || depth === "tournament") && hasCheckpoint) {
     return {
@@ -26091,7 +26093,7 @@ function classifyRuntimeSupport(input) {
       flowId,
       entryModeName,
       depth,
-      reason: `checkpoint-waiting depth '${depth}' is not supported for this flow. ${flowId} supports (mode/depth): ${supportedPairs}`
+      reason: `checkpoint-waiting depth '${depth}' is not supported for this flow. ${supportsClause}`
     };
   }
   return {
@@ -26099,7 +26101,7 @@ function classifyRuntimeSupport(input) {
     flowId,
     entryModeName,
     depth,
-    reason: `fresh ${flowId} entry mode '${entryModeName}' at depth '${depth}' is not supported. ${flowId} supports (mode/depth): ${supportedPairs}`
+    reason: `fresh ${flowId} entry mode '${entryModeName}' at depth '${depth}' is not supported. ${supportsClause}`
   };
 }
 async function main(argv, options = {}) {

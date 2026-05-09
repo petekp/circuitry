@@ -108,7 +108,7 @@ describe('operator summary writer', () => {
         {
           kind: 'scope_empty',
           message:
-            'review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review.',
+            'review scoped to uncommitted changes only; HEAD~1 differences not examined. The reviewer had no source content to inspect: staged/unstaged diffs were empty and no untracked file content was relayed.',
         },
       ],
     });
@@ -119,14 +119,19 @@ describe('operator summary writer', () => {
       route: { selectedFlow: 'review' },
     });
 
-    expect(written.summary.headline).toContain('no uncommitted changes to examine');
-    expect(written.summary.headline).toContain('reflects scope, not safety');
+    expect(written.summary.headline).toContain('no uncommitted source content to examine');
+    expect(written.summary.headline).toContain('committed history (HEAD~1) was not part of this');
     expect(written.summary.headline).not.toMatch(/^Circuit: Review complete\./);
+    // Verdict reference must not survive into the scope_empty headline:
+    // verdict is meaningless when no source content was inspected, and
+    // the projector's fallback for a missing verdict reads ungrammatical
+    // ("Verdict review complete reflects scope...") through the headline.
+    expect(written.summary.headline).not.toMatch(/Verdict\s/);
     expect(written.summary.evidence_warnings).toContainEqual(
       expect.objectContaining({ kind: 'scope_empty' }),
     );
     const markdown = readFileSync(written.markdownPath, 'utf8');
-    expect(markdown).toContain('no uncommitted changes to examine');
+    expect(markdown).toContain('no uncommitted source content to examine');
     expect(markdown).toContain('scope_empty');
   });
 
@@ -271,6 +276,18 @@ describe('operator summary writer', () => {
         review: 'accept',
         expectedHeadline:
           'Circuit: Could not reproduce the issue. Verification: not-run. Review: accepted.',
+      },
+      {
+        outcome: 'stopped',
+        verification: 'passed',
+        review: 'accept',
+        expectedHeadline: 'Circuit: Fix stopped. Verification: passed. Review: accepted.',
+      },
+      {
+        outcome: 'handoff',
+        verification: 'not-run',
+        review: 'accept',
+        expectedHeadline: 'Circuit: Fix handed off. Verification: not-run. Review: accepted.',
       },
     ];
 

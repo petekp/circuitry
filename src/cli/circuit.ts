@@ -146,7 +146,7 @@ export function usage(): string {
     '',
     '`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.',
     '',
-    'Mode and depth are paired per flow, not free flags. For most flows the supported pairs are mode/depth where the names match (e.g., `--mode lite --depth lite`), with `--mode default --depth standard` as the default. If you supply an unsupported pair, the rejection message lists the supported pairs for that flow.',
+    'Mode and depth are paired per flow, not free flags. Every flow supports `default/standard` (the default if you supply neither). Other pairs vary per flow: most support `lite/lite`, `deep/deep`, and `autonomous/autonomous`; Migrate omits `lite/lite`; Review supports only `default/standard`; Explore adds `tournament/tournament`. If you supply an unsupported pair, the rejection message lists the supported pairs for that flow.',
     '',
     'With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/migrate/sweep flows and then composes the runtime boundary using the configured relay connector.',
     '',
@@ -597,6 +597,13 @@ function classifyRuntimeSupport(input: {
   // Help-text and per-flow docs would otherwise need to list these separately
   // and drift; the runtime support matrix is already the source of truth.
   const supportedPairs = rows.map((row) => `${row.entryModeName}/${row.depth}`).join(', ');
+  // For a custom flow that inherits an archetype, the supported-pair list is
+  // intrinsic to the archetype, not the custom flow itself. Mirror the
+  // 'supported' branch above so the user can see where the constraint came
+  // from instead of believing it lives on their custom flow.
+  const supportsClause = customArchetypeSupported
+    ? `${flowId} (via '${customArchetype}' archetype) supports (mode/depth): ${supportedPairs}`
+    : `${flowId} supports (mode/depth): ${supportedPairs}`;
 
   const hasCheckpoint = input.flow.steps.some((step) => step.kind === 'checkpoint');
   if ((depth === 'deep' || depth === 'tournament') && hasCheckpoint) {
@@ -605,7 +612,7 @@ function classifyRuntimeSupport(input: {
       flowId,
       entryModeName,
       depth,
-      reason: `checkpoint-waiting depth '${depth}' is not supported for this flow. ${flowId} supports (mode/depth): ${supportedPairs}`,
+      reason: `checkpoint-waiting depth '${depth}' is not supported for this flow. ${supportsClause}`,
     };
   }
 
@@ -614,7 +621,7 @@ function classifyRuntimeSupport(input: {
     flowId,
     entryModeName,
     depth,
-    reason: `fresh ${flowId} entry mode '${entryModeName}' at depth '${depth}' is not supported. ${flowId} supports (mode/depth): ${supportedPairs}`,
+    reason: `fresh ${flowId} entry mode '${entryModeName}' at depth '${depth}' is not supported. ${supportsClause}`,
   };
 }
 

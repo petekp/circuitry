@@ -564,6 +564,66 @@ describe('registered review compose writer', () => {
     );
   });
 
+  it('does not emit scope_empty when an untracked file with content is being relayed — that file IS uncommitted scope', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'scope-empty-not-emitted-untracked-content');
+    const projectRoot = join(runFolderBase, 'scope-empty-untracked-content-project');
+    mkdirSync(projectRoot, { recursive: true });
+    execFileSync('git', ['init'], { cwd: projectRoot, stdio: 'pipe' });
+    writeFileSync(join(projectRoot, 'scratch.js'), "console.log('hello');\n");
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '79000000-0000-0000-0000-000000000022',
+      goal: 'review the new untracked scratch.js',
+      depth: 'standard',
+      evidencePolicy: { includeUntrackedFileContent: true },
+      now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
+      projectRoot,
+      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const intake = ReviewIntake.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'review-intake.json'), 'utf8')),
+    );
+    expect(intake.evidence_warnings).not.toContainEqual(
+      expect.objectContaining({ kind: 'scope_empty' }),
+    );
+  });
+
+  it('still emits scope_empty when untracked files exist but their content is not relayed (metadata-only)', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'scope-empty-still-fires-metadata-only');
+    const projectRoot = join(runFolderBase, 'scope-empty-metadata-only-project');
+    mkdirSync(projectRoot, { recursive: true });
+    execFileSync('git', ['init'], { cwd: projectRoot, stdio: 'pipe' });
+    writeFileSync(join(projectRoot, 'scratch.js'), "console.log('hello');\n");
+
+    // Default content policy is metadata-only — untracked file paths/sizes
+    // are relayed, but not the file contents the reviewer would need to
+    // audit. The reviewer effectively has nothing to inspect.
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '79000000-0000-0000-0000-000000000023',
+      goal: 'review the new untracked scratch.js without --include-untracked-content',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
+      projectRoot,
+      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const intake = ReviewIntake.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports', 'review-intake.json'), 'utf8')),
+    );
+    expect(intake.evidence_warnings).toContainEqual(
+      expect.objectContaining({ kind: 'scope_empty' }),
+    );
+  });
+
   it('does not emit scope_empty when the working tree contains a staged diff', async () => {
     const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'scope-empty-not-emitted-with-diff');

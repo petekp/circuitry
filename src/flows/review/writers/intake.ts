@@ -230,16 +230,25 @@ function evidenceWarnings(evidence: ReviewEvidence): ReviewEvidenceWarning[] {
   }
 
   const warnings: ReviewEvidenceWarning[] = [];
+  // scope_empty captures "the reviewer was not given enough evidence to make a
+  // meaningful safety judgment." Trigger: diff text is empty AND no untracked
+  // file content was relayed (either no untracked files, content policy is
+  // metadata-only, or every untracked file was skipped). Untracked metadata
+  // alone — paths and sizes — is not source content the reviewer can audit, so
+  // the warning still fires for the metadata-only case; the existing
+  // untracked_file_content_omitted warning is the actionable companion there.
+  const hasUntrackedContent = evidence.untracked_files.some((file) => file.content !== undefined);
   if (
     evidence.staged_diff.text.length === 0 &&
     evidence.unstaged_diff.text.length === 0 &&
+    !hasUntrackedContent &&
     !gitCommandFailed(evidence.staged_diff.text) &&
     !gitCommandFailed(evidence.unstaged_diff.text)
   ) {
     warnings.push({
       kind: 'scope_empty',
       message:
-        'review scoped to uncommitted changes only; HEAD~1 differences not examined. No staged or unstaged diff was present, so committed changes were not part of this review.',
+        'review scoped to uncommitted changes only; HEAD~1 differences not examined. The reviewer had no source content to inspect: staged/unstaged diffs were empty and no untracked file content was relayed.',
     });
   }
   if (evidence.staged_diff.truncated) {
