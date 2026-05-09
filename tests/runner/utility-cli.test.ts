@@ -365,6 +365,108 @@ describe('utility CLI commands', () => {
     ).toBeNull();
   });
 
+  it('returns a clean invalid envelope and exits non-zero when resuming a malformed record', async () => {
+    const controlPlane = tempRoot('circuit-handoff-resume-invalid-');
+    const save = await captureMain([
+      'handoff',
+      'save',
+      '--goal',
+      'Resume release work',
+      '--next',
+      'DO: continue the parity matrix',
+      '--control-plane',
+      controlPlane,
+      '--record-id',
+      'continuity-22222222-2222-4222-8222-222222222222',
+      '--created-at',
+      '2026-04-29T23:10:00.000Z',
+    ]);
+    expect(save.code, save.stderr).toBe(0);
+    const saved = JSON.parse(save.stdout) as { continuity_path: string; index_path: string };
+    const corrupted = JSON.parse(readFileSync(saved.continuity_path, 'utf8')) as {
+      narrative: { goal?: string };
+    };
+    delete corrupted.narrative.goal;
+    writeFileSync(saved.continuity_path, JSON.stringify(corrupted, null, 2));
+
+    const resume = await captureMain(['handoff', 'resume', '--control-plane', controlPlane]);
+    expect(resume.code).toBe(1);
+    const envelope = JSON.parse(resume.stdout) as {
+      action: string;
+      status: string;
+      record_id?: string;
+      error: { code: string; message: string };
+      operator_summary_markdown_path: string;
+    };
+    expect(envelope).toMatchObject({
+      action: 'resume',
+      status: 'invalid',
+      record_id: 'continuity-22222222-2222-4222-8222-222222222222',
+      error: { code: 'record_invalid' },
+    });
+    expect(resume.stderr).not.toContain('"code": "invalid_type"');
+    expect(existsSync(envelope.operator_summary_markdown_path)).toBe(true);
+  });
+
+  it('returns invalid envelope on resume when the index points at a missing record', async () => {
+    const projectRoot = tempRoot('circuit-handoff-resume-missing-');
+    const controlPlane = join(projectRoot, '.circuit-next');
+    const continuityRoot = join(controlPlane, 'continuity');
+    mkdirSync(continuityRoot, { recursive: true });
+    writeFileSync(
+      join(continuityRoot, 'index.json'),
+      `${JSON.stringify(
+        {
+          schema_version: 1,
+          project_root: projectRoot,
+          pending_record: {
+            record_id: 'continuity-33333333-3333-4333-8333-333333333333',
+            continuity_kind: 'standalone',
+            created_at: '2026-04-29T23:12:00.000Z',
+          },
+          current_run: null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const resume = await captureMain([
+      'handoff',
+      'resume',
+      '--control-plane',
+      controlPlane,
+    ]);
+    expect(resume.code).toBe(1);
+    expect(JSON.parse(resume.stdout)).toMatchObject({
+      action: 'resume',
+      status: 'invalid',
+      record_id: 'continuity-33333333-3333-4333-8333-333333333333',
+      error: { code: 'record_missing' },
+    });
+  });
+
+  it('returns invalid envelope on resume when the index is unparseable', async () => {
+    const projectRoot = tempRoot('circuit-handoff-resume-corrupt-');
+    const controlPlane = join(projectRoot, '.circuit-next');
+    const continuityRoot = join(controlPlane, 'continuity');
+    mkdirSync(continuityRoot, { recursive: true });
+    writeFileSync(join(continuityRoot, 'index.json'), '{not-json');
+
+    const resume = await captureMain([
+      'handoff',
+      'resume',
+      '--control-plane',
+      controlPlane,
+    ]);
+    expect(resume.code).toBe(1);
+    expect(JSON.parse(resume.stdout)).toMatchObject({
+      action: 'resume',
+      status: 'invalid',
+      error: { code: 'index_invalid' },
+    });
+  });
+
   it('renders a read-only handoff brief for host injection', async () => {
     const projectRoot = tempRoot('circuit-handoff-brief-project-');
     const controlPlane = join(projectRoot, '.circuit-next');

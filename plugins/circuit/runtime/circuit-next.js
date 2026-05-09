@@ -25384,6 +25384,31 @@ function saveContinuity(args, now) {
   writeJson2(resultPath2, result);
   return { ...result, result_path: resultPath2 };
 }
+function readJsonSafely(path) {
+  try {
+    return { ok: true, value: JSON.parse(readFileSync24(path, "utf8")) };
+  } catch {
+    return { ok: false };
+  }
+}
+function invalidResumeResult(controlPlane, code, message, recordId) {
+  const summaryPath2 = operatorSummaryPath(controlPlane);
+  writeMarkdown(summaryPath2, `# Circuit Handoff
+
+Saved continuity record could not be resumed: ${message}`);
+  const result = {
+    schema_version: 1,
+    action: "resume",
+    status: "invalid",
+    index_path: indexPath(controlPlane),
+    ...recordId === void 0 ? {} : { record_id: recordId },
+    operator_summary_markdown_path: summaryPath2,
+    error: { code, message }
+  };
+  const resultPath2 = handoffResultPath(controlPlane, "resume");
+  writeJson2(resultPath2, result);
+  return { ...result, result_path: resultPath2 };
+}
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
@@ -25401,7 +25426,15 @@ function resumeContinuity(args) {
     writeJson2(resultPath3, result2);
     return { ...result2, result_path: resultPath3 };
   }
-  const index = ContinuityIndex.parse(JSON.parse(readFileSync24(indexAbs, "utf8")));
+  const indexRaw = readJsonSafely(indexAbs);
+  if (!indexRaw.ok) {
+    return invalidResumeResult(controlPlane, "index_invalid", "Continuity index is malformed.");
+  }
+  const indexParsed = ContinuityIndex.safeParse(indexRaw.value);
+  if (!indexParsed.success) {
+    return invalidResumeResult(controlPlane, "index_invalid", "Continuity index is malformed.");
+  }
+  const index = indexParsed.data;
   if (index.pending_record === null) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
@@ -25418,11 +25451,19 @@ function resumeContinuity(args) {
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
   if (!existsSync12(recordAbs)) {
-    throw new Error(`continuity index points at missing record: ${recordAbs}`);
+    return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
-  const record = ContinuityRecord.parse(JSON.parse(readFileSync24(recordAbs, "utf8")));
+  const recordRaw = readJsonSafely(recordAbs);
+  if (!recordRaw.ok) {
+    return invalidResumeResult(controlPlane, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
+  }
+  const recordParsed = ContinuityRecord.safeParse(recordRaw.value);
+  if (!recordParsed.success) {
+    return invalidResumeResult(controlPlane, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
+  }
+  const record = recordParsed.data;
   if (record.continuity_kind !== index.pending_record.continuity_kind) {
-    throw new Error(`continuity index kind '${index.pending_record.continuity_kind}' disagrees with record kind '${record.continuity_kind}' for ${record.record_id}`);
+    return invalidResumeResult(controlPlane, "record_kind_mismatch", "Continuity index kind disagrees with the pointed record.", record.record_id);
   }
   const summaryPath2 = operatorSummaryPath(controlPlane);
   writeMarkdown(summaryPath2, summaryForRecord(record, "pending_record"));
@@ -25524,28 +25565,39 @@ async function runHandoffCommand(argv, options = {}) {
   }
   try {
     const result = args.action === "save" ? saveContinuity(args, now) : args.action === "resume" ? resumeContinuity(args) : clearContinuity(args, now);
+    const isInvalidResume = args.action === "resume" && result.status === "invalid";
+    const isNotFoundResume = args.action === "resume" && result.status === "not_found";
+    const invalidMessage = isInvalidResume && "error" in result && typeof result.error === "object" && result.error !== null && "message" in result.error && typeof result.error.message === "string" ? result.error.message : "malformed continuity record";
     if (progress !== void 0) {
-      const statusText = args.action === "resume" && result.status === "not_found" ? "No saved Circuit handoff was found." : `Handoff ${args.action} completed.`;
-      progress.emit({
-        type: "run.completed",
-        recorded_at: now().toISOString(),
-        label: "Handoff completed",
-        display: {
-          text: args.action === "resume" && result.status === "not_found" ? "No saved Circuit handoff was found." : `Circuit handoff ${args.action} completed.`,
-          importance: "major",
-          tone: result.status === "not_found" ? "warning" : "success"
-        },
-        presentation: progressPresentation({
-          blockId: progress.runId,
-          statusText
-        }),
-        outcome: "complete",
-        result_path: result.result_path
-      });
+      const statusText = isInvalidResume ? "Saved Circuit handoff could not be resumed." : isNotFoundResume ? "No saved Circuit handoff was found." : `Handoff ${args.action} completed.`;
+      const text = isInvalidResume ? `Circuit handoff resume aborted: ${invalidMessage}` : isNotFoundResume ? "No saved Circuit handoff was found." : `Circuit handoff ${args.action} completed.`;
+      const tone = isInvalidResume ? "error" : isNotFoundResume ? "warning" : "success";
+      if (isInvalidResume) {
+        progress.emit({
+          type: "run.aborted",
+          recorded_at: now().toISOString(),
+          label: "Handoff aborted",
+          display: { text, importance: "major", tone },
+          presentation: progressPresentation({ blockId: progress.runId, statusText }),
+          outcome: "aborted",
+          result_path: result.result_path,
+          reason: invalidMessage
+        });
+      } else {
+        progress.emit({
+          type: "run.completed",
+          recorded_at: now().toISOString(),
+          label: "Handoff completed",
+          display: { text, importance: "major", tone },
+          presentation: progressPresentation({ blockId: progress.runId, statusText }),
+          outcome: "complete",
+          result_path: result.result_path
+        });
+      }
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}
 `);
-    return 0;
+    return isInvalidResume ? 1 : 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     process.stderr.write(`error: ${message}
