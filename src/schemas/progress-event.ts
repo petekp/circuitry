@@ -8,9 +8,13 @@ import { RunClosedOutcome } from './trace-entry.js';
 // validation to pass while truncation clipped at a different boundary.
 export const MAX_STATUS_TEXT_CHARS = 180;
 
+// Single source of truth for display.text length — the longer cap used for
+// the major-importance banner line. Same drift rationale as MAX_STATUS_TEXT_CHARS.
+export const MAX_DISPLAY_TEXT_CHARS = 240;
+
 export const ProgressDisplay = z
   .object({
-    text: z.string().min(1).max(240),
+    text: z.string().min(1).max(MAX_DISPLAY_TEXT_CHARS),
     importance: z.enum(['major', 'detail']),
     tone: z.enum(['info', 'success', 'warning', 'error', 'checkpoint']),
   })

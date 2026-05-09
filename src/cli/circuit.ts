@@ -13,7 +13,6 @@ import { Depth } from '../schemas/depth.js';
 import { CompiledFlowId, RunId } from '../schemas/ids.js';
 import { computeManifestHash } from '../schemas/manifest.js';
 import {
-  type ProgressDisplay,
   ProgressEvent,
   type ProgressEvent as ProgressEventValue,
 } from '../schemas/progress-event.js';
@@ -23,7 +22,7 @@ import { classifyCompiledFlowTask } from '../flows/router.js';
 import { discoverConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
-import { progressPresentation } from '../shared/progress-output.js';
+import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
@@ -55,7 +54,6 @@ import {
 // flag stays rejected until real dry-run support lands.
 
 const DEFAULT_RUNS_BASE = '.circuit-next/runs';
-const MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
 const DEFAULT_DEV_VERSION = '0.0.0-dev';
 
 interface RuntimeSupportRow {
@@ -402,19 +400,6 @@ function progressReporter(enabled: boolean): ((event: ProgressEventValue) => voi
   return (event) => {
     const parsed = ProgressEvent.parse(event);
     process.stderr.write(`${JSON.stringify(parsed)}\n`);
-  };
-}
-
-function progressDisplay(
-  text: string,
-  importance: ProgressDisplay['importance'],
-  tone: ProgressDisplay['tone'],
-): ProgressDisplay {
-  if (text.length <= MAX_PROGRESS_DISPLAY_TEXT_CHARS) return { text, importance, tone };
-  return {
-    text: `${text.slice(0, MAX_PROGRESS_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
-    importance,
-    tone,
   };
 }
 

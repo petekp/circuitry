@@ -1,12 +1,11 @@
 import {
+  MAX_DISPLAY_TEXT_CHARS,
   MAX_STATUS_TEXT_CHARS,
   type ProgressDisplay,
   type ProgressEvent,
   type ProgressPresentation,
 } from '../schemas/progress-event.js';
 import type { ProgressReporter } from './relay-runtime-types.js';
-
-const MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
 
 export function reportProgress(progress: ProgressReporter | undefined, event: ProgressEvent): void {
   if (progress === undefined) return;
@@ -23,9 +22,9 @@ export function progressDisplay(
   importance: ProgressDisplay['importance'],
   tone: ProgressDisplay['tone'],
 ): ProgressDisplay {
-  if (text.length <= MAX_PROGRESS_DISPLAY_TEXT_CHARS) return { text, importance, tone };
+  if (text.length <= MAX_DISPLAY_TEXT_CHARS) return { text, importance, tone };
   return {
-    text: `${text.slice(0, MAX_PROGRESS_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
+    text: `${text.slice(0, MAX_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
     importance,
     tone,
   };

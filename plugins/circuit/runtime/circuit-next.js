@@ -7341,7 +7341,7 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync12, readFileSync as readFileSync24 } from "node:fs";
+import { existsSync as existsSync13, readFileSync as readFileSync25 } from "node:fs";
 import { dirname as dirname10, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
@@ -19876,8 +19876,9 @@ import { join as join8 } from "node:path";
 
 // dist/schemas/progress-event.js
 var MAX_STATUS_TEXT_CHARS = 180;
+var MAX_DISPLAY_TEXT_CHARS = 240;
 var ProgressDisplay = external_exports.object({
-  text: external_exports.string().min(1).max(240),
+  text: external_exports.string().min(1).max(MAX_DISPLAY_TEXT_CHARS),
   importance: external_exports.enum(["major", "detail"]),
   tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
 }).strict();
@@ -20092,7 +20093,6 @@ var ProgressEvent = external_exports.discriminatedUnion("type", [
 ]);
 
 // dist/shared/progress-output.js
-var MAX_PROGRESS_DISPLAY_TEXT_CHARS = 240;
 function reportProgress(progress, event) {
   if (progress === void 0)
     return;
@@ -20102,10 +20102,10 @@ function reportProgress(progress, event) {
   }
 }
 function progressDisplay(text, importance, tone) {
-  if (text.length <= MAX_PROGRESS_DISPLAY_TEXT_CHARS)
+  if (text.length <= MAX_DISPLAY_TEXT_CHARS)
     return { text, importance, tone };
   return {
-    text: `${text.slice(0, MAX_PROGRESS_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
+    text: `${text.slice(0, MAX_DISPLAY_TEXT_CHARS - 14)} [truncated]`,
     importance,
     tone
   };
@@ -22171,7 +22171,7 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync8, mkdirSync, readFileSync as readFileSync18, rmSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync9, mkdirSync, readFileSync as readFileSync19, rmSync, writeFileSync } from "node:fs";
 import { dirname as dirname6, join as join11 } from "node:path";
 
 // dist/schemas/operator-summary.js
@@ -22488,43 +22488,8 @@ var HTML_PROJECTORS = {
   explore: exploreTournamentProjector
 };
 
-// dist/shared/operator-summary-writer.js
-function readPriorRoute(runFolder) {
-  const path = join11(runFolder, "reports", "operator-summary.json");
-  if (!existsSync8(path))
-    return {};
-  try {
-    const raw = JSON.parse(readFileSync18(path, "utf8"));
-    if (!isObject3(raw))
-      return {};
-    const routedBy = raw.routed_by;
-    const routerReason = raw.router_reason;
-    return {
-      ...routedBy === "explicit" || routedBy === "classifier" ? { routedBy } : {},
-      ...typeof routerReason === "string" && routerReason.length > 0 ? { routerReason } : {}
-    };
-  } catch {
-    return {};
-  }
-}
-var FLOW_RESULT_PATHS = {
-  build: "reports/build-result.json",
-  explore: "reports/explore-result.json",
-  fix: "reports/fix-result.json",
-  migrate: "reports/migrate-result.json",
-  review: "reports/review-result.json",
-  sweep: "reports/sweep-result.json"
-};
-var HTML_REPORT_LABEL = "Operator summary (HTML)";
-function jsonPath(runFolder) {
-  return join11(runFolder, "reports", "operator-summary.json");
-}
-function markdownPath(runFolder) {
-  return join11(runFolder, "reports", "operator-summary.md");
-}
-function htmlPath(runFolder) {
-  return join11(runFolder, "reports", "operator-summary.html");
-}
+// dist/shared/operator-summary/json.js
+import { existsSync as existsSync8, readFileSync as readFileSync18 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -22554,6 +22519,25 @@ function objectField(report, key) {
   const value = report?.[key];
   return isObject3(value) ? value : void 0;
 }
+function evidenceReportById(runFolder, flowReport, reportId) {
+  for (const item of arrayField(flowReport, "evidence_links")) {
+    if (!isObject3(item))
+      continue;
+    if (stringField2(item, "report_id") !== reportId)
+      continue;
+    const path = stringField2(item, "path");
+    if (path === void 0)
+      return void 0;
+    try {
+      return readJsonIfPresent(runFolder, path);
+    } catch {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+
+// dist/shared/operator-summary/text.js
 function plural(count, singular, pluralText = `${singular}s`) {
   return `${count} ${count === 1 ? singular : pluralText}`;
 }
@@ -22562,6 +22546,12 @@ function capitalized(value) {
   if (first === void 0)
     return value;
   return `${first.toUpperCase()}${value.slice(1)}`;
+}
+function sentence(value) {
+  return /[.!?]$/.test(value) ? value : `${value}.`;
+}
+function withoutFinalPunctuation(value) {
+  return value.replace(/[.!?]\s*$/, "");
 }
 function friendlyRunNote(flowId, summary) {
   const match = /^([a-z-]+) v[\d.]+ closed (\d+) step\(s\) for goal ".+"\.$/.exec(summary);
@@ -22573,16 +22563,30 @@ function friendlyRunNote(flowId, summary) {
 function friendlyResultSummary(summary) {
   return summary.replace(/^(?:Build|Fix|Migrate|Review|Explore|Sweep) result for .+?:\s*/, "").replace(/^Explore .+?:\s*/, "");
 }
-function sentence(value) {
-  return /[.!?]$/.test(value) ? value : `${value}.`;
+function friendlyReviewStatus(status) {
+  if (status === "accept")
+    return "accepted";
+  if (status === "accept-with-fixes")
+    return "requested follow-up fixes";
+  if (status === "accept-with-fold-ins")
+    return "accepted with follow-up notes";
+  if (status === "release-approved")
+    return "approved for release";
+  return status;
 }
-function withoutFinalPunctuation(value) {
-  return value.replace(/[.!?]\s*$/, "");
+function friendlyVerificationStatus(status) {
+  if (status === "passed")
+    return "passed";
+  if (status === "failed")
+    return "failed";
+  return status;
 }
+
+// dist/shared/operator-summary/explore.js
+var NUMBERED_LABEL_PATTERN = /\(\d+\)\s+([A-Z][^—–()]{1,120}?)\s*[—–]/g;
 function stripExplorePrefix(summary) {
   return friendlyResultSummary(summary).trim();
 }
-var NUMBERED_LABEL_PATTERN = /\(\d+\)\s+([A-Z][^—–()]{1,120}?)\s*[—–]/g;
 function numberedRecommendationLabels(text) {
   const labels = [];
   for (const match of text.matchAll(NUMBERED_LABEL_PATTERN)) {
@@ -22591,6 +22595,13 @@ function numberedRecommendationLabels(text) {
       labels.push(label);
   }
   return labels;
+}
+function firstNumberedItemPrefix(text) {
+  const match = new RegExp(NUMBERED_LABEL_PATTERN.source).exec(text);
+  if (match === null || match.index === void 0)
+    return void 0;
+  const prefix = text.slice(0, match.index).trim();
+  return prefix.length === 0 ? void 0 : prefix;
 }
 function compactExploreRecommendation(summary) {
   const text = stripExplorePrefix(summary);
@@ -22604,13 +22615,6 @@ function compactExploreRecommendation(summary) {
   }
   const [firstSentence = text] = text.split(/(?<=[.!?])\s+/);
   return `Recommendation: ${sentence(firstSentence.trim())}`;
-}
-function firstNumberedItemPrefix(text) {
-  const match = new RegExp(NUMBERED_LABEL_PATTERN.source).exec(text);
-  if (match === null || match.index === void 0)
-    return void 0;
-  const prefix = text.slice(0, match.index).trim();
-  return prefix.length === 0 ? void 0 : prefix;
 }
 function compactExploreProof(summary) {
   const text = stripExplorePrefix(summary);
@@ -22626,6 +22630,231 @@ function compactExploreStartingPoint(summary) {
   const match = /Recommend starting with\s+(.+?)\./s.exec(text);
   const raw = match?.[1]?.trim();
   return raw === void 0 || raw.length === 0 ? void 0 : `Start with: ${raw}.`;
+}
+function exploreDecisionReport(runFolder, flowReport) {
+  return evidenceReportById(runFolder, flowReport, "explore.decision") ?? readJsonIfPresent(runFolder, "reports/decision.json");
+}
+function exploreTournamentSnapshot(flowReport) {
+  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  if (stringField2(snapshot, "decision_verdict") === "decided")
+    return snapshot;
+  return stringField2(snapshot, "selected_option_id") === void 0 ? void 0 : snapshot;
+}
+function exploreReviewFoldInDetails(flowReport) {
+  const foldIns = objectField(flowReport, "review_fold_ins");
+  if (foldIns === void 0)
+    return [];
+  const details = [];
+  const objections = stringArrayField(foldIns, "objections");
+  const missedAngles = stringArrayField(foldIns, "missed_angles");
+  details.push("Reviewer: Accepted the direction, with notes to fold in.");
+  for (const objection of objections)
+    details.push(`Follow-up: ${objection}`);
+  for (const angle of missedAngles)
+    details.push(`Follow-up: ${angle}`);
+  return details;
+}
+function exploreGuidanceDetails(flowReport) {
+  const summary = stringField2(flowReport, "summary");
+  if (summary === void 0)
+    return [];
+  return [
+    compactExploreRecommendation(summary),
+    compactExploreProof(summary),
+    compactExploreStartingPoint(summary)
+  ].filter((detail) => detail !== void 0);
+}
+var exploreSummaryProjector = ({ runFolder, flowReport, resultSummary: resultSummary2 }) => {
+  const verdictSnapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  const headline = (() => {
+    if (exploreTournamentSnapshot(flowReport) !== void 0) {
+      const decisionReport = exploreDecisionReport(runFolder, flowReport);
+      const selected = stringField2(decisionReport, "selected_option_label") ?? stringField2(verdictSnapshot, "selected_option_id") ?? "selected option";
+      const decision2 = stringField2(decisionReport, "decision") ?? stringField2(flowReport, "summary") ?? resultSummary2;
+      return `Circuit: Decision made. Selected: ${selected}. ${sentence(decision2)}`;
+    }
+    const review = stringField2(verdictSnapshot, "review_verdict") ?? "complete";
+    return review === "accept-with-fold-ins" ? "Circuit: Recommendation ready. The direction is useful, with follow-up notes." : "Circuit: Recommendation ready. The direction is ready to use.";
+  })();
+  const details = [
+    ...exploreGuidanceDetails(flowReport),
+    ...exploreReviewFoldInDetails(flowReport)
+  ];
+  if (exploreTournamentSnapshot(flowReport) !== void 0) {
+    const decisionReport = exploreDecisionReport(runFolder, flowReport);
+    const question = stringField2(decisionReport, "decision_question");
+    const rationale = stringField2(decisionReport, "rationale");
+    const risks = stringArrayField(decisionReport, "residual_risks");
+    const nextAction = stringField2(decisionReport, "next_action");
+    if (question !== void 0)
+      details.push(`Decision question: ${question}`);
+    if (rationale !== void 0)
+      details.push(`Rationale: ${rationale}`);
+    if (risks.length > 0)
+      details.push(`Residual risks: ${risks.join("; ")}`);
+    if (nextAction !== void 0)
+      details.push(`Next action: ${nextAction}`);
+  }
+  return { headline, details };
+};
+
+// dist/shared/operator-summary/projections.js
+function flowSummaryDetail(flowReport) {
+  const summary = stringField2(flowReport, "summary");
+  return summary === void 0 ? void 0 : `Result: ${friendlyResultSummary(summary)}`;
+}
+function reviewEvidenceDetails(report) {
+  const evidenceSummary2 = isObject3(report?.evidence_summary) ? report.evidence_summary : void 0;
+  const kind = stringField2(evidenceSummary2, "kind");
+  if (kind === "unavailable") {
+    const message = stringField2(evidenceSummary2, "message");
+    return message === void 0 ? [] : [`Review evidence: unavailable (${message})`];
+  }
+  if (kind !== "git-working-tree")
+    return [];
+  const policy2 = stringField2(evidenceSummary2, "untracked_content_policy");
+  const count = numberField(evidenceSummary2, "untracked_file_count") ?? 0;
+  const sampled = numberField(evidenceSummary2, "untracked_files_sampled") ?? 0;
+  const truncated = evidenceSummary2?.untracked_files_truncated === true;
+  if (policy2 === "include-content") {
+    const suffix = truncated ? "; additional untracked files were not sampled" : "";
+    return [
+      `Untracked evidence: contents included for ${plural(sampled, "file")} (${plural(count, "untracked file")} found${suffix}).`
+    ];
+  }
+  if (policy2 === "metadata-only" && count > 0) {
+    const suffix = truncated ? "; additional untracked files were not sampled" : "";
+    return [
+      `Untracked evidence: paths and sizes only for ${plural(sampled, "file")} (${plural(count, "untracked file")} found${suffix}).`
+    ];
+  }
+  return [];
+}
+var reviewProjector = ({ flowReport }) => {
+  const verdict = stringField2(flowReport, "verdict") ?? "review complete";
+  const findings = arrayField(flowReport, "findings").length;
+  const summaryDetail = flowSummaryDetail(flowReport);
+  const details = [];
+  if (summaryDetail !== void 0)
+    details.push(summaryDetail);
+  details.push(`Findings: ${findings}`);
+  details.push(...reviewEvidenceDetails(flowReport));
+  return {
+    headline: `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`,
+    details
+  };
+};
+function buildFixMigrateDetails(flowReport) {
+  const details = [];
+  const summaryDetail = flowSummaryDetail(flowReport);
+  if (summaryDetail !== void 0)
+    details.push(summaryDetail);
+  const verification = stringField2(flowReport, "verification_status");
+  const review = stringField2(flowReport, "review_verdict");
+  if (verification !== void 0) {
+    details.push(`Verification: ${friendlyVerificationStatus(verification)}.`);
+  }
+  if (review !== void 0) {
+    details.push(`Review: ${friendlyReviewStatus(review)}.`);
+  }
+  return details;
+}
+var buildProjector = ({ flowReport }) => {
+  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
+  const review = stringField2(flowReport, "review_verdict") ?? "unknown";
+  const headline = (() => {
+    if (outcome === "complete" && verification === "passed" && review === "accept") {
+      return "Circuit: Build complete. Change implemented, verification passed, review accepted.";
+    }
+    if (outcome === "needs_attention" && verification === "passed") {
+      return "Circuit: Build needs follow-up. Verification passed, but review requested fixes.";
+    }
+    return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
+  })();
+  return { headline, details: buildFixMigrateDetails(flowReport) };
+};
+var fixProjector = ({ flowReport }) => {
+  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
+  const review = stringField2(flowReport, "review_verdict") ?? stringField2(flowReport, "review_status") ?? "unknown";
+  return {
+    headline: `Circuit: Fix finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
+    details: buildFixMigrateDetails(flowReport)
+  };
+};
+var migrateProjector = ({ flowReport }) => {
+  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
+  const review = stringField2(flowReport, "review_verdict") ?? "unknown";
+  return {
+    headline: `Circuit: Migrate finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
+    details: buildFixMigrateDetails(flowReport)
+  };
+};
+var sweepProjector = ({ flowReport }) => {
+  const outcome = stringField2(flowReport, "outcome") ?? "complete";
+  const deferred = numberField(flowReport, "deferred_count");
+  const headline = deferred === void 0 ? `Circuit: Sweep finished with outcome ${outcome}.` : `Circuit: Sweep finished with outcome ${outcome}. Deferred: ${plural(deferred, "item")}.`;
+  const summaryDetail = flowSummaryDetail(flowReport);
+  return {
+    headline,
+    details: summaryDetail === void 0 ? [] : [summaryDetail]
+  };
+};
+var defaultProjector = ({ resultSummary: resultSummary2 }) => ({
+  headline: resultSummary2,
+  details: []
+});
+var SUMMARY_PROJECTORS = {
+  build: buildProjector,
+  explore: exploreSummaryProjector,
+  fix: fixProjector,
+  migrate: migrateProjector,
+  review: reviewProjector,
+  sweep: sweepProjector
+};
+function projectSummary(input) {
+  const projector = SUMMARY_PROJECTORS[input.flowId] ?? defaultProjector;
+  return projector(input);
+}
+
+// dist/shared/operator-summary-writer.js
+function readPriorRoute(runFolder) {
+  const path = join11(runFolder, "reports", "operator-summary.json");
+  if (!existsSync9(path))
+    return {};
+  try {
+    const raw = JSON.parse(readFileSync19(path, "utf8"));
+    if (!isObject3(raw))
+      return {};
+    const routedBy = raw.routed_by;
+    const routerReason = raw.router_reason;
+    return {
+      ...routedBy === "explicit" || routedBy === "classifier" ? { routedBy } : {},
+      ...typeof routerReason === "string" && routerReason.length > 0 ? { routerReason } : {}
+    };
+  } catch {
+    return {};
+  }
+}
+var FLOW_RESULT_PATHS = {
+  build: "reports/build-result.json",
+  explore: "reports/explore-result.json",
+  fix: "reports/fix-result.json",
+  migrate: "reports/migrate-result.json",
+  review: "reports/review-result.json",
+  sweep: "reports/sweep-result.json"
+};
+var HTML_REPORT_LABEL = "Operator summary (HTML)";
+function jsonPath(runFolder) {
+  return join11(runFolder, "reports", "operator-summary.json");
+}
+function markdownPath(runFolder) {
+  return join11(runFolder, "reports", "operator-summary.md");
+}
+function htmlPath(runFolder) {
+  return join11(runFolder, "reports", "operator-summary.html");
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -22661,56 +22890,6 @@ function evidenceLinks(runFolder, report) {
     }
   });
 }
-function evidenceReportById(runFolder, report, reportId) {
-  for (const item of arrayField(report, "evidence_links")) {
-    if (!isObject3(item))
-      continue;
-    if (stringField2(item, "report_id") !== reportId)
-      continue;
-    const path = stringField2(item, "path");
-    if (path === void 0)
-      return void 0;
-    try {
-      return readJsonIfPresent(runFolder, path);
-    } catch {
-      return void 0;
-    }
-  }
-  return void 0;
-}
-function exploreDecisionReport(runFolder, flowReport) {
-  return evidenceReportById(runFolder, flowReport, "explore.decision") ?? readJsonIfPresent(runFolder, "reports/decision.json");
-}
-function exploreTournamentSnapshot(flowReport) {
-  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
-  if (stringField2(snapshot, "decision_verdict") === "decided")
-    return snapshot;
-  return stringField2(snapshot, "selected_option_id") === void 0 ? void 0 : snapshot;
-}
-function exploreReviewFoldInDetails(flowReport) {
-  const foldIns = objectField(flowReport, "review_fold_ins");
-  if (foldIns === void 0)
-    return [];
-  const details = [];
-  const objections = stringArrayField(foldIns, "objections");
-  const missedAngles = stringArrayField(foldIns, "missed_angles");
-  details.push("Reviewer: Accepted the direction, with notes to fold in.");
-  for (const objection of objections)
-    details.push(`Follow-up: ${objection}`);
-  for (const angle of missedAngles)
-    details.push(`Follow-up: ${angle}`);
-  return details;
-}
-function exploreGuidanceDetails(flowReport) {
-  const summary = stringField2(flowReport, "summary");
-  if (summary === void 0)
-    return [];
-  return [
-    compactExploreRecommendation(summary),
-    compactExploreProof(summary),
-    compactExploreStartingPoint(summary)
-  ].filter((detail) => detail !== void 0);
-}
 function checkpointOptionDetails(runFolder, allowedChoices) {
   const optionsReport = readJsonIfPresent(runFolder, "reports/decision-options.json");
   const labelsById = /* @__PURE__ */ new Map();
@@ -22727,140 +22906,6 @@ function checkpointOptionDetails(runFolder, allowedChoices) {
     const label = labelsById.get(choice);
     return label === void 0 ? [] : [`${label} (${choice})`];
   });
-}
-function reviewEvidenceDetails(report) {
-  const evidenceSummary2 = isObject3(report?.evidence_summary) ? report.evidence_summary : void 0;
-  const kind = stringField2(evidenceSummary2, "kind");
-  if (kind === "unavailable") {
-    const message = stringField2(evidenceSummary2, "message");
-    return message === void 0 ? [] : [`Review evidence: unavailable (${message})`];
-  }
-  if (kind !== "git-working-tree")
-    return [];
-  const policy2 = stringField2(evidenceSummary2, "untracked_content_policy");
-  const count = numberField(evidenceSummary2, "untracked_file_count") ?? 0;
-  const sampled = numberField(evidenceSummary2, "untracked_files_sampled") ?? 0;
-  const truncated = evidenceSummary2?.untracked_files_truncated === true;
-  if (policy2 === "include-content") {
-    const suffix = truncated ? "; additional untracked files were not sampled" : "";
-    return [
-      `Untracked evidence: contents included for ${plural(sampled, "file")} (${plural(count, "untracked file")} found${suffix}).`
-    ];
-  }
-  if (policy2 === "metadata-only" && count > 0) {
-    const suffix = truncated ? "; additional untracked files were not sampled" : "";
-    return [
-      `Untracked evidence: paths and sizes only for ${plural(sampled, "file")} (${plural(count, "untracked file")} found${suffix}).`
-    ];
-  }
-  return [];
-}
-function friendlyReviewStatus(status) {
-  if (status === "accept")
-    return "accepted";
-  if (status === "accept-with-fixes")
-    return "requested follow-up fixes";
-  if (status === "accept-with-fold-ins")
-    return "accepted with follow-up notes";
-  if (status === "release-approved")
-    return "approved for release";
-  return status;
-}
-function friendlyVerificationStatus(status) {
-  if (status === "passed")
-    return "passed";
-  if (status === "failed")
-    return "failed";
-  return status;
-}
-function flowHeadline(input) {
-  const { flowId, flowReport, resultSummary: resultSummary2, runFolder } = input;
-  if (flowId === "review") {
-    const verdict = stringField2(flowReport, "verdict") ?? "review complete";
-    const findings = arrayField(flowReport, "findings").length;
-    return `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
-  }
-  if (flowId === "build") {
-    const outcome = stringField2(flowReport, "outcome") ?? "complete";
-    const verification = stringField2(flowReport, "verification_status") ?? "unknown";
-    const review = stringField2(flowReport, "review_verdict") ?? "unknown";
-    if (outcome === "complete" && verification === "passed" && review === "accept") {
-      return "Circuit: Build complete. Change implemented, verification passed, review accepted.";
-    }
-    if (outcome === "needs_attention" && verification === "passed") {
-      return "Circuit: Build needs follow-up. Verification passed, but review requested fixes.";
-    }
-    return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
-  }
-  if (flowId === "fix") {
-    const outcome = stringField2(flowReport, "outcome") ?? "complete";
-    const verification = stringField2(flowReport, "verification_status") ?? "unknown";
-    const review = stringField2(flowReport, "review_verdict") ?? stringField2(flowReport, "review_status") ?? "unknown";
-    return `Circuit: Fix finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
-  }
-  if (flowId === "migrate") {
-    const outcome = stringField2(flowReport, "outcome") ?? "complete";
-    const verification = stringField2(flowReport, "verification_status") ?? "unknown";
-    const review = stringField2(flowReport, "review_verdict") ?? "unknown";
-    return `Circuit: Migrate finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
-  }
-  if (flowId === "explore") {
-    const verdictSnapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
-    if (exploreTournamentSnapshot(flowReport) !== void 0) {
-      const decisionReport = exploreDecisionReport(runFolder, flowReport);
-      const selected = stringField2(decisionReport, "selected_option_label") ?? stringField2(verdictSnapshot, "selected_option_id") ?? "selected option";
-      const decision2 = stringField2(decisionReport, "decision") ?? stringField2(flowReport, "summary") ?? resultSummary2;
-      return `Circuit: Decision made. Selected: ${selected}. ${sentence(decision2)}`;
-    }
-    const review = stringField2(verdictSnapshot, "review_verdict") ?? "complete";
-    return review === "accept-with-fold-ins" ? "Circuit: Recommendation ready. The direction is useful, with follow-up notes." : "Circuit: Recommendation ready. The direction is ready to use.";
-  }
-  if (flowId === "sweep") {
-    const outcome = stringField2(flowReport, "outcome") ?? "complete";
-    const deferred = numberField(flowReport, "deferred_count");
-    return deferred === void 0 ? `Circuit: Sweep finished with outcome ${outcome}.` : `Circuit: Sweep finished with outcome ${outcome}. Deferred: ${plural(deferred, "item")}.`;
-  }
-  return resultSummary2;
-}
-function flowDetails(input) {
-  const { flowId, flowReport, runFolder } = input;
-  const details = [];
-  const summary = stringField2(flowReport, "summary");
-  if (summary !== void 0 && flowId !== "explore")
-    details.push(`Result: ${friendlyResultSummary(summary)}`);
-  if (flowId === "review") {
-    const findings = arrayField(flowReport, "findings").length;
-    details.push(`Findings: ${findings}`);
-    details.push(...reviewEvidenceDetails(flowReport));
-  }
-  if (flowId === "build" || flowId === "fix" || flowId === "migrate") {
-    const verification = stringField2(flowReport, "verification_status");
-    const review = stringField2(flowReport, "review_verdict");
-    if (verification !== void 0)
-      details.push(`Verification: ${friendlyVerificationStatus(verification)}.`);
-    if (review !== void 0)
-      details.push(`Review: ${friendlyReviewStatus(review)}.`);
-  }
-  if (flowId === "explore") {
-    details.push(...exploreGuidanceDetails(flowReport));
-    details.push(...exploreReviewFoldInDetails(flowReport));
-  }
-  if (flowId === "explore" && exploreTournamentSnapshot(flowReport) !== void 0) {
-    const decisionReport = exploreDecisionReport(runFolder, flowReport);
-    const question = stringField2(decisionReport, "decision_question");
-    const rationale = stringField2(decisionReport, "rationale");
-    const risks = stringArrayField(decisionReport, "residual_risks");
-    const nextAction = stringField2(decisionReport, "next_action");
-    if (question !== void 0)
-      details.push(`Decision question: ${question}`);
-    if (rationale !== void 0)
-      details.push(`Rationale: ${rationale}`);
-    if (risks.length > 0)
-      details.push(`Residual risks: ${risks.join("; ")}`);
-    if (nextAction !== void 0)
-      details.push(`Next action: ${nextAction}`);
-  }
-  return details;
 }
 function renderMarkdown(summary) {
   const lines = ["Circuit", `\u23BF ${summary.status_text ?? statusTextFromHeadline(summary.headline)}`];
@@ -22923,14 +22968,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync8(candidateHtmlPath))
+    if (existsSync9(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
       writeFileSync(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync8(candidateHtmlPath))
+      if (existsSync9(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -22956,10 +23001,16 @@ function writeOperatorSummary(input) {
     });
   }
   reportPaths.push(...evidenceLinks(input.runFolder, flowReport));
+  const projection = projectSummary({
+    runFolder: input.runFolder,
+    flowId,
+    flowReport,
+    resultSummary: input.runResult.summary
+  });
   const details = [
     ...flowMayInvokeWriteCapableWorker(flowId) ? [`Worker access: ${WRITE_CAPABLE_WORKER_DISCLOSURE}`] : [],
     ...flowId === "explore" ? [] : [`Run note: ${friendlyRunNote(flowId, input.runResult.summary)}`],
-    ...flowDetails({ runFolder: input.runFolder, flowId, flowReport })
+    ...projection.details
   ];
   if (input.runResult.outcome === "checkpoint_waiting") {
     const checkpoint = input.runResult.checkpoint;
@@ -22970,12 +23021,7 @@ function writeOperatorSummary(input) {
   if (input.runResult.outcome === "aborted" && input.runResult.reason !== void 0) {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
-  const headline = input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : flowHeadline({
-    runFolder: input.runFolder,
-    flowId,
-    flowReport,
-    resultSummary: input.runResult.summary
-  });
+  const headline = input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : projection.headline;
   const candidate = OperatorSummary.parse({
     schema_version: 1,
     run_id: input.runResult.run_id,
@@ -23010,12 +23056,12 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync9, mkdirSync as mkdirSync2, readFileSync as readFileSync20, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync10, mkdirSync as mkdirSync2, readFileSync as readFileSync21, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname8, join as join12, resolve as resolve9 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync19 } from "node:fs";
+import { readFileSync as readFileSync20 } from "node:fs";
 import { dirname as dirname7, relative as relative5, resolve as resolve8 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
@@ -23049,7 +23095,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync19(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync20(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -23282,9 +23328,9 @@ function candidateTemplatePaths(args) {
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync9(candidate))
+    if (!existsSync10(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync20(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync21(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -23363,8 +23409,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync9(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync20(manifestPath(input.home), "utf8"));
+  if (existsSync10(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync21(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -23408,23 +23454,23 @@ function writeDraft(input) {
 }
 function loadDraftFlow(home, slug) {
   const path = join12(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync20(path, "utf8")));
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync21(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync9(join12(draft, "SKILL.md"))) {
+  if (!existsSync10(join12(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
   const customFlowRoot = join12(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join12(skillRoot, "SKILL.md"), readFileSync20(join12(draft, "SKILL.md"), "utf8"));
-  writeText(join12(skillRoot, "circuit.yaml"), readFileSync20(join12(draft, "circuit.yaml"), "utf8"));
-  writeText(join12(customFlowRoot, "circuit.json"), readFileSync20(join12(draft, "circuit.json"), "utf8"));
-  writeText(join12(commandRoot(input.home), `${input.slug}.md`), readFileSync20(join12(draft, "command.md"), "utf8"));
+  writeText(join12(skillRoot, "SKILL.md"), readFileSync21(join12(draft, "SKILL.md"), "utf8"));
+  writeText(join12(skillRoot, "circuit.yaml"), readFileSync21(join12(draft, "circuit.yaml"), "utf8"));
+  writeText(join12(customFlowRoot, "circuit.json"), readFileSync21(join12(draft, "circuit.json"), "utf8"));
+  writeText(join12(commandRoot(input.home), `${input.slug}.md`), readFileSync21(join12(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -23488,11 +23534,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync9(join12(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync10(join12(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync9(join12(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync10(join12(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -23558,7 +23604,7 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync11, mkdirSync as mkdirSync3, readFileSync as readFileSync23, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3, readFileSync as readFileSync24, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import { dirname as dirname9, join as join16, resolve as resolve11 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23568,13 +23614,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve10 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync21, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync22, writeFileSync as writeFileSync3 } from "node:fs";
 import { join as join13 } from "node:path";
 function manifestSnapshotPath(runFolder) {
   return join13(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync21(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync22(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -23583,7 +23629,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync10 } from "node:fs";
+import { existsSync as existsSync11 } from "node:fs";
 import { join as join14 } from "node:path";
 
 // dist/schemas/run-status.js
@@ -23745,9 +23791,9 @@ function optionalReportPaths(runFolder) {
   const operatorSummary = join14(runFolder, "reports", "operator-summary.json");
   const operatorSummaryMarkdown = join14(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync10(result) ? { result_path: result } : {},
-    ...existsSync10(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync10(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync11(result) ? { result_path: result } : {},
+    ...existsSync11(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync11(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -23762,14 +23808,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync22 } from "node:fs";
+import { readFileSync as readFileSync23 } from "node:fs";
 import { join as join15 } from "node:path";
 function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
   const tracePath = join15(runFolder, "trace.ndjson");
-  const text = readFileSync22(tracePath, "utf8");
+  const text = readFileSync23(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -23954,7 +24000,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync22(requestAbs, "utf8");
+    requestText = readFileSync23(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -24671,23 +24717,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync11(indexAbs))
+  if (!existsSync12(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync23(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync24(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync11(recordAbs)) {
+  if (!existsSync12(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record;
   try {
-    record = ContinuityRecord.parse(JSON.parse(readFileSync23(recordAbs, "utf8")));
+    record = ContinuityRecord.parse(JSON.parse(readFileSync24(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -24720,7 +24766,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync23(0, "utf8");
+  const raw = readFileSync24(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -24800,7 +24846,7 @@ function resolveHooksFileArg(args) {
 }
 function resolveLauncherArg(args) {
   const launcher = resolve11(args.launcher ?? defaultLauncherPath());
-  if (!existsSync11(launcher)) {
+  if (!existsSync12(launcher)) {
     throw new Error(`Circuit launcher not found: ${launcher}`);
   }
   return launcher;
@@ -24823,9 +24869,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync11(path))
+  if (!existsSync12(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync23(path, "utf8"));
+  const parsed = JSON.parse(readFileSync24(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -24932,9 +24978,9 @@ function launcherPathFromCircuitHookCommand(command) {
 function writeHooksConfig(path, config) {
   mkdirSync3(dirname9(path), { recursive: true });
   let backupPath;
-  if (existsSync11(path)) {
+  if (existsSync12(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync11(candidate)) {
+    if (!existsSync12(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
@@ -24985,7 +25031,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync11(hooksPath)) {
+  if (!existsSync12(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -25024,7 +25070,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync11(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync12(hooksPath), detail: hooksPath });
   let config;
   try {
     config = readHooksConfig(hooksPath);
@@ -25049,7 +25095,7 @@ function doctorCodexHandoffHook(args) {
       const launchers = commands.map(launcherPathFromCircuitHookCommand).filter((item) => item !== void 0);
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync11(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync12(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -25076,7 +25122,7 @@ function doctorCodexHandoffHook(args) {
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
     host: "codex",
     action: "doctor",
-    status: failed.length === 0 ? "ok" : existsSync11(hooksPath) ? "invalid" : "missing",
+    status: failed.length === 0 ? "ok" : existsSync12(hooksPath) ? "invalid" : "missing",
     hooks_path: hooksPath,
     checks
   };
@@ -25269,7 +25315,7 @@ function saveContinuity(args, now) {
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync11(indexAbs)) {
+  if (!existsSync12(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -25283,7 +25329,7 @@ function resumeContinuity(args) {
     writeJson2(resultPath3, result2);
     return { ...result2, result_path: resultPath3 };
   }
-  const index = ContinuityIndex.parse(JSON.parse(readFileSync23(indexAbs, "utf8")));
+  const index = ContinuityIndex.parse(JSON.parse(readFileSync24(indexAbs, "utf8")));
   if (index.pending_record === null) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
@@ -25299,10 +25345,10 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync11(recordAbs)) {
+  if (!existsSync12(recordAbs)) {
     throw new Error(`continuity index points at missing record: ${recordAbs}`);
   }
-  const record = ContinuityRecord.parse(JSON.parse(readFileSync23(recordAbs, "utf8")));
+  const record = ContinuityRecord.parse(JSON.parse(readFileSync24(recordAbs, "utf8")));
   if (record.continuity_kind !== index.pending_record.continuity_kind) {
     throw new Error(`continuity index kind '${index.pending_record.continuity_kind}' disagrees with record kind '${record.continuity_kind}' for ${record.record_id}`);
   }
@@ -25522,7 +25568,6 @@ async function runRunsCommand(argv) {
 
 // dist/cli/circuit.js
 var DEFAULT_RUNS_BASE = ".circuit-next/runs";
-var MAX_PROGRESS_DISPLAY_TEXT_CHARS2 = 240;
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
 var RUNTIME_SUPPORT_MATRIX = {
   review: [{ entryModeName: "default", depth: "standard" }],
@@ -25588,7 +25633,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync24(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync25(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -25811,7 +25856,7 @@ function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   const root = resolve12(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
     const perMode = resolve12(root, flowName, `${modeName}.json`);
-    if (existsSync12(perMode))
+    if (existsSync13(perMode))
       return perMode;
   }
   return resolve12(root, flowName, "circuit.json");
@@ -25823,15 +25868,6 @@ function progressReporter(enabled) {
     const parsed = ProgressEvent.parse(event);
     process.stderr.write(`${JSON.stringify(parsed)}
 `);
-  };
-}
-function progressDisplay2(text, importance, tone) {
-  if (text.length <= MAX_PROGRESS_DISPLAY_TEXT_CHARS2)
-    return { text, importance, tone };
-  return {
-    text: `${text.slice(0, MAX_PROGRESS_DISPLAY_TEXT_CHARS2 - 14)} [truncated]`,
-    importance,
-    tone
   };
 }
 function routeSelectedStatusText(flowId, entryModeName) {
@@ -25870,10 +25906,10 @@ function resolveEntryModeSelection(args, route) {
   return {};
 }
 function loadFixture(fixturePath) {
-  if (!existsSync12(fixturePath)) {
+  if (!existsSync13(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync24(fixturePath);
+  const bytes = readFileSync25(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -25917,7 +25953,7 @@ function customFlowArchetype(input) {
     return void 0;
   try {
     const flowRoot2 = resolve12(input.args.flowRoot);
-    const manifest = JSON.parse(readFileSync24(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync25(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
       return void 0;
     }
@@ -26030,7 +26066,7 @@ async function main(argv, options = {}) {
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress2 === void 0 ? {} : { progress: progress2 }
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync24(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync25(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -26083,7 +26119,7 @@ async function main(argv, options = {}) {
     flow_id: flow.id,
     recorded_at: now().toISOString(),
     label: `Selected ${route.flowName}`,
-    display: progressDisplay2(`Circuit: ${selectedStatusText}`, "major", "info"),
+    display: progressDisplay(`Circuit: ${selectedStatusText}`, "major", "info"),
     presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
     selected_flow: flow.id,
     routed_by: route.source,
@@ -26173,7 +26209,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync24(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync25(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,
