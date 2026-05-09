@@ -803,6 +803,21 @@ if (rawArgs[0] === 'present') {
     if (stderrRemainder.trim().length > 0) handleStderrLine(stderrRemainder);
     const exitStatus = status ?? 1;
     if (exitStatus !== 0) {
+      // The runtime may have produced a structured refusal envelope on stdout
+      // (e.g. handoff resume against an invalid continuity record). Render it
+      // before the generic failure tag so the operator sees the substance,
+      // not just an exit code.
+      const stdoutTrimmed = stdoutText.trim();
+      if (stdoutTrimmed.length > 0) {
+        try {
+          const parsed = JSON.parse(stdoutTrimmed);
+          if (isRecord(parsed)) {
+            renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks);
+          }
+        } catch {
+          // No structured body — fall through to the generic failure line.
+        }
+      }
       process.stderr.write(`Circuit run failed (exit ${exitStatus}).\n`);
       const diagnostic = shortDiagnostic(diagnosticLines);
       if (diagnostic.length > 0) {

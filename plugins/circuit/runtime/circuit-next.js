@@ -13167,13 +13167,19 @@ function pickVerificationScript(projectRoot) {
   const pkgPath = join(projectRoot, "package.json");
   if (!existsSync2(pkgPath))
     return DEFAULT_VERIFY_SCRIPT;
-  let pkg;
+  let parsed;
   try {
-    pkg = JSON.parse(readFileSync5(pkgPath, "utf8"));
+    parsed = JSON.parse(readFileSync5(pkgPath, "utf8"));
   } catch {
     return DEFAULT_VERIFY_SCRIPT;
   }
-  const scripts = pkg.scripts ?? {};
+  if (parsed === null || typeof parsed !== "object")
+    return DEFAULT_VERIFY_SCRIPT;
+  const scriptsRaw = parsed.scripts;
+  if (scriptsRaw === null || typeof scriptsRaw !== "object" || Array.isArray(scriptsRaw)) {
+    return DEFAULT_VERIFY_SCRIPT;
+  }
+  const scripts = scriptsRaw;
   for (const name of PREFERRED_VERIFY_SCRIPTS) {
     if (typeof scripts[name] === "string")
       return name;
@@ -22778,6 +22784,29 @@ function flowSummaryDetail(flowReport) {
   const summary = stringField2(flowReport, "summary");
   return summary === void 0 ? void 0 : `Result: ${friendlyResultSummary(summary)}`;
 }
+function firstLineSummary(text, max) {
+  const firstLine = text.split(/\r?\n/, 1)[0]?.trim() ?? "";
+  if (firstLine.length <= max)
+    return firstLine;
+  return `${firstLine.slice(0, Math.max(1, max - 1))}\u2026`;
+}
+function reviewFindingDetails(report) {
+  const findings = arrayField(report, "findings");
+  if (findings.length === 0)
+    return ["Findings: 0"];
+  const lines = [];
+  for (const finding of findings) {
+    if (!isObject3(finding))
+      continue;
+    const severity = (stringField2(finding, "severity") ?? "unknown").toUpperCase();
+    const text = stringField2(finding, "text") ?? "(no text)";
+    const fileRefs = stringArrayField(finding, "file_refs");
+    const summary = firstLineSummary(text, 140);
+    const fileSuffix = fileRefs.length === 0 ? "" : ` \u2014 at ${fileRefs.join(", ")}`;
+    lines.push(`[${severity}] ${summary}${fileSuffix}`);
+  }
+  return lines;
+}
 function reviewEvidenceDetails(report) {
   const evidenceSummary2 = isObject3(report?.evidence_summary) ? report.evidence_summary : void 0;
   const kind = stringField2(evidenceSummary2, "kind");
@@ -22816,7 +22845,7 @@ var reviewProjector = ({ flowReport }) => {
   const details = [];
   if (summaryDetail !== void 0)
     details.push(summaryDetail);
-  details.push(`Findings: ${findings}`);
+  details.push(...reviewFindingDetails(flowReport));
   details.push(...reviewEvidenceDetails(flowReport));
   const headline = scopeEmpty ? `Circuit: Review had no uncommitted source content to examine; committed history (HEAD~1) was not part of this review. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {
@@ -25542,7 +25571,7 @@ async function runHandoffCommand(argv, options = {}) {
   }
   if (args.action === "brief") {
     if (!args.json) {
-      process.stderr.write("error: handoff brief requires --json\n");
+      process.stderr.write("handoff brief returns machine-readable JSON for host injection. Pass --json to confirm that output mode and run it.\n");
       return 2;
     }
     process.stdout.write(`${JSON.stringify(handoffBrief(args), null, 2)}
