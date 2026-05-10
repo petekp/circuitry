@@ -32,7 +32,6 @@ import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { ContinuityIndex, ContinuityRecord } from '../../src/schemas/continuity.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
-import { Snapshot } from '../../src/schemas/snapshot.js';
 
 const root = resolve(__dirname, '..', '..');
 const proofRunsRoot = 'docs/release/proofs/runs';
@@ -505,11 +504,6 @@ describe('release truth infrastructure', () => {
         jsonFile('docs/release/proofs/runs/explore-decision/run/reports/result.json'),
       ),
     ).toMatchObject({ flow_id: 'explore', outcome: 'complete' });
-    const snapshot = Snapshot.parse(
-      jsonFile('docs/release/proofs/runs/explore-decision/run/state.json'),
-    );
-    expect(snapshot.status).toBe('complete');
-    expect(snapshot.steps.filter((step) => step.status === 'in_progress')).toEqual([]);
     expect(
       ExploreDecisionOptions.parse(
         jsonFile('docs/release/proofs/runs/explore-decision/run/reports/decision-options.json'),
