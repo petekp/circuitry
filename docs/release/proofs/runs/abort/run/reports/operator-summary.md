@@ -1,29 +1,5 @@
-# Circuit Summary
+Circuit
+⎿ Run aborted.
 
-Circuit run aborted.
-
-## What Happened
-
-- Selected flow: `build`
-- Outcome: `aborted`
-- Routed by: `explicit`
-- Router reason: explicit flow positional argument
-
-## Details
-
-- Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.
-- Run note: Run closed with outcome aborted.
-- Abort reason: route 'retry' for step 'act-step' exhausted max_attempts=2
-
-## Evidence Warnings
-
-- None
-
-## Run Files
-
-- Run folder: <repo>/docs/release/proofs/runs/abort/run
-- Result path: <repo>/docs/release/proofs/runs/abort/run/reports/result.json
-
-## Reports
-
-- Run result: <repo>/docs/release/proofs/runs/abort/run/reports/result.json
+- Worker access: A worker can edit this checkout.
+- Abort reason: route 'retry' for step 'act-step' exhausted max_attempts=2; last recovery reason: relay step 'act-step': connector invocation failed (proof connector failure while implementing the synthetic Build change)

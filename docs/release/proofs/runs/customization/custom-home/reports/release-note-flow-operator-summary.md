@@ -9,6 +9,9 @@ Draft release notes from a change summary.
 ## Validation
 The generated compiled flow parsed successfully and passed flow-kind policy validation.
 
+## Runtime Policy
+Custom roots created by `circuit-next create` publish a normal runnable flow command.
+
 ## Usage
 `circuit-next run release-note-flow --flow-root '<repo>/docs/release/proofs/runs/customization/custom-home/flows' --goal '<task>' --progress jsonl`
 

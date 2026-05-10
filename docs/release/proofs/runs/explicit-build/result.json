@@ -12,6 +12,7 @@
   "trace_entries_observed": 4,
   "operator_summary_path": "<repo>/docs/release/proofs/runs/explicit-build/run/reports/operator-summary.json",
   "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/explicit-build/run/reports/operator-summary.md",
+  "operator_summary_status_text": "Waiting for a checkpoint choice.",
   "checkpoint": {
     "step_id": "frame-step",
     "request_path": "<repo>/docs/release/proofs/runs/explicit-build/run/reports/checkpoints/frame-step-request.json",

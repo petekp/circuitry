@@ -6,9 +6,10 @@
   "routed_by": "explicit",
   "router_reason": "explicit flow positional argument",
   "outcome": "checkpoint_waiting",
-  "headline": "Circuit is waiting for a checkpoint choice.",
+  "headline": "Circuit: Waiting for a checkpoint choice.",
+  "status_text": "Waiting for a checkpoint choice.",
   "details": [
-    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Worker access: A worker can edit this checkout.",
     "Run note: checkpoint 'frame-step' is waiting for an operator choice."
   ],
   "evidence_warnings": [],

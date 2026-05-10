@@ -13,5 +13,6 @@
   "trace_entries_observed": 34,
   "result_path": "<repo>/docs/release/proofs/runs/plan-execution/run/reports/result.json",
   "operator_summary_path": "<repo>/docs/release/proofs/runs/plan-execution/run/reports/operator-summary.json",
-  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/plan-execution/run/reports/operator-summary.md"
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/plan-execution/run/reports/operator-summary.md",
+  "operator_summary_status_text": "Build complete. Change implemented, verification passed, review accepted."
 }

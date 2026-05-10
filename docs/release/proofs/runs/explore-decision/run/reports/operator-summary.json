@@ -18,6 +18,7 @@
   "evidence_warnings": [],
   "run_folder": "<repo>/docs/release/proofs/runs/explore-decision/run",
   "result_path": "<repo>/docs/release/proofs/runs/explore-decision/run/reports/result.json",
+  "html_path": "<repo>/docs/release/proofs/runs/explore-decision/run/reports/operator-summary.html",
   "report_paths": [
     {
       "label": "Run result",

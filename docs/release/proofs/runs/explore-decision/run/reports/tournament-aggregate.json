@@ -4,33 +4,8 @@
   "branch_count": 4,
   "branches": [
     {
-      "branch_id": "option-2",
-      "child_run_id": "56eee32f-c3a8-467f-b7a2-2c91508d3ac0",
-      "child_outcome": "complete",
-      "verdict": "accept",
-      "admitted": true,
-      "result_path": "reports/tournament-branches/option-2/report.json",
-      "duration_ms": 3,
-      "result_body": {
-        "verdict": "accept",
-        "option_id": "option-2",
-        "option_label": "Vue",
-        "case_summary": "Choose Vue for a smaller surface and faster product iteration.",
-        "assumptions": [
-          "The operator values implementation speed."
-        ],
-        "evidence_refs": [
-          "reports/decision-options.json"
-        ],
-        "risks": [
-          "Team familiarity may be thinner."
-        ],
-        "next_action": "Run a Build plan for a Vue prototype."
-      }
-    },
-    {
       "branch_id": "option-1",
-      "child_run_id": "ae8517db-9154-4435-a33b-295ee8c82387",
+      "child_run_id": "72660a23-4768-43af-9b85-b7531be53373",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,
@@ -54,8 +29,33 @@
       }
     },
     {
+      "branch_id": "option-2",
+      "child_run_id": "89b3dcb9-aa06-4034-9a02-b1e4a743599f",
+      "child_outcome": "complete",
+      "verdict": "accept",
+      "admitted": true,
+      "result_path": "reports/tournament-branches/option-2/report.json",
+      "duration_ms": 3,
+      "result_body": {
+        "verdict": "accept",
+        "option_id": "option-2",
+        "option_label": "Vue",
+        "case_summary": "Choose Vue for a smaller surface and faster product iteration.",
+        "assumptions": [
+          "The operator values implementation speed."
+        ],
+        "evidence_refs": [
+          "reports/decision-options.json"
+        ],
+        "risks": [
+          "Team familiarity may be thinner."
+        ],
+        "next_action": "Run a Build plan for a Vue prototype."
+      }
+    },
+    {
       "branch_id": "option-3",
-      "child_run_id": "9da1a0bf-8010-4445-a5ca-446c8c02edf4",
+      "child_run_id": "a992b4a1-a6d6-414a-8ac1-35aed439f06f",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,
@@ -80,7 +80,7 @@
     },
     {
       "branch_id": "option-4",
-      "child_run_id": "d0b12ae2-f5c9-495b-adfd-5a1fd837bc2b",
+      "child_run_id": "236739d9-6abc-4f97-9a6c-a1cebaf79afd",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,

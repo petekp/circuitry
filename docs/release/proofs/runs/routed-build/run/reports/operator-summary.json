@@ -6,13 +6,14 @@
   "routed_by": "classifier",
   "router_reason": "matched develop prefix; routed to implementation Build flow",
   "outcome": "complete",
-  "headline": "Circuit finished Build. The change was implemented, verification passed, and review accepted it.",
+  "headline": "Circuit: Build complete. Change implemented, verification passed, review accepted.",
+  "status_text": "Build complete. Change implemented, verification passed, review accepted.",
   "details": [
-    "Worker access: This flow may invoke a write-capable Claude Code worker. Circuit will verify and review the result, but the worker can edit files in this checkout.",
+    "Worker access: A worker can edit this checkout.",
     "Run note: Run closed with outcome complete via @complete.",
     "Result: add a small safe change: Implemented the requested synthetic change.",
-    "Verification: passed",
-    "Review verdict: accept"
+    "Verification: passed.",
+    "Review: accepted."
   ],
   "evidence_warnings": [],
   "run_folder": "<repo>/docs/release/proofs/runs/routed-build/run",

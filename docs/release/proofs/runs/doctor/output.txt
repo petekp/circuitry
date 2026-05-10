@@ -8,7 +8,9 @@ stdout:
   "status": "ok",
   "plugin_root": "<repo>/plugins/circuit",
   "flow_root": "<repo>/plugins/circuit/flows",
-  "command": "<repo>/bin/circuit-next",
+  "runtime_source": "bundled",
+  "runtime_path": "<repo>/plugins/circuit/runtime/circuit-next.js",
+  "runtime_version": "0.1.0-alpha.4",
   "checks": [
     {
       "name": "plugin_manifest_exists",
@@ -49,7 +51,7 @@ stdout:
     },
     {
       "name": "codex_user_handoff_hook_installed",
-      "ok": false,
+      "ok": true,
       "detail": "Install with: circuit-next handoff hooks install --host codex (checks <home>/.codex/hooks.json)",
       "severity": "warning"
     },
@@ -199,24 +201,39 @@ stdout:
       "detail": "<repo>/plugins/circuit/commands/sweep.md"
     },
     {
-      "name": "circuit_next_binary_available",
+      "name": "node_version_supported",
       "ok": true,
-      "detail": "<repo>/bin/circuit-next"
+      "detail": "node=24.15.0 required>=22.18.0"
+    },
+    {
+      "name": "bundled_runtime_exists",
+      "ok": true,
+      "detail": "<repo>/plugins/circuit/runtime/circuit-next.js"
+    },
+    {
+      "name": "runtime_resolved",
+      "ok": true,
+      "detail": "bundled:<repo>/plugins/circuit/runtime/circuit-next.js"
+    },
+    {
+      "name": "runtime_version_executes",
+      "ok": true,
+      "detail": "status=0 source=bundled stderr="
     },
     {
       "name": "temp_repo_review_smoke",
       "ok": true,
-      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"b31701bb-b315-486f-9858-313fcfdfb06e\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-05T23:02:54.962Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit selected review: matched change review request; routed to audit-only review flow\",\"importance\":\"major\",\"tone\":\"info\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review flow\",\"router_signal\":\"change review request\"}\n{\"sc"
+      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"bc299f6e-6b49-4062-aa0d-ac2b70ca6431\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-10T01:36:53.748Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"bc299f6e-6b49-4062-aa0d-ac2b70ca6431\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
     },
     {
       "name": "temp_repo_review_progress",
       "ok": true,
-      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,step.completed,task_list.updated,step.started,task_list.updated,relay.started,step.completed,task_list.updated,step.started,task_list.updated,step.completed,task_list.updated,run.completed"
+      "detail": "events=route.selected,run.started,task_list.updated,step.started,task_list.updated,evidence.collected,evidence.warning,step.completed,task_list.updated,step.started,task_list.updated,relay.started,relay.completed,step.completed,task_list.updated,step.started,task_list.updated,evidence.collected,evidence.warning,step.completed,task_list.updated,run.completed"
     },
     {
       "name": "temp_repo_review_progress_display",
       "ok": true,
-      "detail": "display_events=17"
+      "detail": "display_events=22"
     },
     {
       "name": "temp_repo_review_operator_summary",
