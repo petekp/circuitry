@@ -22,11 +22,11 @@ import {
 import type { RunResult } from '../schemas/result.js';
 import { HTML_PROJECTORS, type HtmlProjectorContext } from './html/index.js';
 import {
+  type JsonObject,
   arrayField,
   evidenceReportById,
   friendlyRunNote,
   isObject,
-  type JsonObject,
   projectSummary,
   readJsonIfPresent,
   stringField,

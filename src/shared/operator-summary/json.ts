@@ -41,10 +41,7 @@ export function stringArrayField(report: JsonObject | undefined, key: string): s
   return arrayField(report, key).filter((item): item is string => typeof item === 'string');
 }
 
-export function objectField(
-  report: JsonObject | undefined,
-  key: string,
-): JsonObject | undefined {
+export function objectField(report: JsonObject | undefined, key: string): JsonObject | undefined {
   const value = report?.[key];
   return isObject(value) ? value : undefined;
 }
