@@ -44,6 +44,17 @@ const BUILD_REVIEW_BODY = JSON.stringify({
   findings: [],
 });
 
+// Stub Review relay payload used across CLI router tests. The schema requires
+// reviewer prose on every verdict, so a bare `{verdict, findings}` body would
+// fail validation and abort the run.
+const REVIEW_RELAY_BODY = JSON.stringify({
+  verdict: 'NO_ISSUES_FOUND',
+  findings: [],
+  assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+  verification: ['Inspected the relayed intake report.'],
+  confidence_limitations: [],
+});
+
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
@@ -457,7 +468,7 @@ describe('CLI router', () => {
         '--run-folder',
         join(runFolderBase, 'review'),
       ],
-      '{"verdict":"NO_ISSUES_FOUND","findings":[]}',
+      REVIEW_RELAY_BODY,
     );
 
     expect(output.flow_id).toBe('review');
@@ -479,7 +490,7 @@ describe('CLI router', () => {
         '--run-folder',
         runFolder,
       ],
-      '{"verdict":"NO_ISSUES_FOUND","findings":[]}',
+      REVIEW_RELAY_BODY,
     );
 
     expect(output.flow_id).toBe('review');
@@ -755,7 +766,7 @@ describe('CLI router', () => {
         '--run-folder',
         runFolder,
       ],
-      '{"verdict":"NO_ISSUES_FOUND","findings":[]}',
+      REVIEW_RELAY_BODY,
       { configCwd: projectRoot },
     );
 
@@ -994,7 +1005,7 @@ describe('CLI router', () => {
         '--run-folder',
         join(runFolderBase, 'run-routed-review'),
       ],
-      '{"verdict":"NO_ISSUES_FOUND","findings":[]}',
+      REVIEW_RELAY_BODY,
     );
 
     expect(output.flow_id).toBe('review');

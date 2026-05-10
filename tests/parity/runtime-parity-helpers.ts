@@ -251,6 +251,9 @@ function reportBody(
         scope: goal,
         findings: [],
         verdict: 'CLEAN',
+        assessment: 'Parity fixture: no findings observed in the relayed evidence.',
+        verification: ['Runtime parity fixture stub.'],
+        confidence_limitations: [],
         evidence_summary: reviewEvidenceSummary(),
         evidence_warnings: [],
       });
@@ -824,7 +827,13 @@ async function writeRelayFiles(step: ExecutableStep, context: RunContext): Promi
   if (step.writes?.result !== undefined) {
     const body =
       step.id === 'audit-step'
-        ? ReviewRelayResult.parse({ verdict: 'NO_ISSUES_FOUND', findings: [] })
+        ? ReviewRelayResult.parse({
+            verdict: 'NO_ISSUES_FOUND',
+            findings: [],
+            assessment: 'Parity fixture: no findings observed in the relayed evidence.',
+            verification: ['Runtime parity fixture stub.'],
+            confidence_limitations: [],
+          })
         : reportBody(step, context, step.writes.report?.schema);
     await context.files.writeJson(step.writes.result, body);
   }

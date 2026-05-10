@@ -92,6 +92,126 @@ describe('operator summary writer', () => {
     expect(markdown).not.toContain('v0.1.0 closed');
   });
 
+  it('renders the reviewer assessment, verification steps, and confidence limitations on a clean verdict', () => {
+    writeReport('reports/review-result.json', {
+      scope: 'review the staged change',
+      findings: [],
+      verdict: 'CLEAN',
+      assessment:
+        'Reviewer inspected the staged diff and the new test fixture; nothing actionable surfaced.',
+      verification: [
+        'Read src/example.ts',
+        'Replayed the staged diff against tests/example.test.ts',
+      ],
+      confidence_limitations: [
+        'HEAD~1 history was out of scope for this review.',
+        'No untracked content was relayed.',
+      ],
+      evidence_summary: {
+        kind: 'git-working-tree',
+        untracked_content_policy: 'metadata-only',
+        untracked_file_count: 0,
+        untracked_files_sampled: 0,
+        untracked_files_truncated: false,
+      },
+      evidence_warnings: [],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: baseResult('review'),
+      route: { selectedFlow: 'review' },
+    });
+
+    expect(written.summary.headline).toBe('Circuit: Review complete. Verdict: CLEAN. Findings: 0.');
+    // The bare "Findings: 0" detail is replaced by the reviewer's assessment.
+    expect(written.summary.details).not.toContain('Findings: 0');
+    expect(written.summary.details).toContain(
+      'Assessment: Reviewer inspected the staged diff and the new test fixture; nothing actionable surfaced.',
+    );
+    expect(written.summary.details).toContain(
+      'Verified: Read src/example.ts; Replayed the staged diff against tests/example.test.ts',
+    );
+    expect(written.summary.details).toContain(
+      'Confidence limitations: HEAD~1 history was out of scope for this review.; No untracked content was relayed.',
+    );
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain('Assessment: Reviewer inspected the staged diff');
+    expect(markdown).toContain('Verified: Read src/example.ts');
+    expect(markdown).toContain('Confidence limitations:');
+  });
+
+  it('keeps the assessment alongside finding bullets when issues are found', () => {
+    writeReport('reports/review-result.json', {
+      scope: 'review evil.js',
+      findings: [
+        {
+          severity: 'high',
+          id: 'eval-001',
+          text: 'eval call enables remote code execution',
+          file_refs: ['evil.js:7'],
+        },
+      ],
+      verdict: 'ISSUES_FOUND',
+      assessment: 'Reviewer flagged one high-severity issue in evil.js.',
+      verification: ['Read evil.js'],
+      confidence_limitations: [],
+      evidence_warnings: [],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: baseResult('review'),
+      route: { selectedFlow: 'review' },
+    });
+
+    expect(written.summary.details).toContain(
+      'Assessment: Reviewer flagged one high-severity issue in evil.js.',
+    );
+    expect(written.summary.details).toContain(
+      '[HIGH] eval call enables remote code execution — at evil.js:7',
+    );
+    expect(written.summary.details).toContain('Verified: Read evil.js');
+    expect(written.summary.details).not.toContain('Confidence limitations:');
+  });
+
+  it('frames Explore review fold-ins as optional considerations when the reviewer left no objections', () => {
+    writeReport('reports/explore-result.json', {
+      summary:
+        "Explore 'doc set': Add a contributor onboarding doc. Recommend starting with the README.",
+      verdict_snapshot: {
+        compose_verdict: 'accept',
+        review_verdict: 'accept-with-fold-ins',
+        objection_count: 0,
+        missed_angle_count: 1,
+      },
+      review_fold_ins: {
+        overall_assessment: 'Direction is useful.',
+        objections: [],
+        missed_angles: ['Mention the contributor agreement up front.'],
+      },
+      evidence_links: [],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: baseResult('explore'),
+      route: { selectedFlow: 'explore' },
+    });
+
+    expect(written.summary.headline).toBe(
+      'Circuit: Recommendation accepted, with optional considerations.',
+    );
+    expect(written.summary.details).toContain(
+      'Reviewer: Accepted the direction, with optional considerations.',
+    );
+    expect(written.summary.details).toContain(
+      'Consider: Mention the contributor agreement up front.',
+    );
+    expect(written.summary.details.join('\n')).not.toContain('Required fold-in:');
+    expect(written.summary.details.join('\n')).not.toContain('Follow-up:');
+  });
+
   it('rewrites the Review headline to flag scope_empty so a CLEAN/0-findings verdict cannot quietly stand in for "nothing was reviewed"', () => {
     writeReport('reports/review-result.json', {
       scope: 'review the new evil.js — flag any safety problems',
@@ -449,21 +569,24 @@ describe('operator summary writer', () => {
     });
 
     expect(written.summary.headline).toBe(
-      'Circuit: Recommendation ready. The direction is useful, with follow-up notes.',
+      'Circuit: Recommendation accepted, with required fold-ins to address.',
     );
     expect(written.summary.details).toEqual([
       'Recommendation: Build a private eval suite around product-specific failure modes: Seam-fit eval; Operator-prose eval.',
       'Before building: inspect src/ and tests/ for an existing eval harness; confirm the saved run corpus.',
       'Start with: the operator-prose eval.',
-      'Reviewer: Accepted the direction, with notes to fold in.',
-      'Follow-up: Clarify whether host output was inspected directly.',
-      'Follow-up: Check the operator summary markdown, not only the JSON report.',
+      'Reviewer: Accepted the direction, with required fold-ins.',
+      'Required fold-in: Clarify whether host output was inspected directly.',
+      'Consider: Check the operator summary markdown, not only the JSON report.',
     ]);
     const markdown = readFileSync(written.markdownPath, 'utf8');
-    expect(markdown).toContain('Circuit\n⎿ Recommendation ready. The direction is useful');
+    expect(markdown).toContain('Circuit\n⎿ Recommendation accepted, with required fold-ins');
     expect(markdown).toContain(
       'Recommendation: Build a private eval suite around product-specific failure modes',
     );
+    expect(markdown).toContain('Required fold-in: Clarify whether host output was inspected');
+    expect(markdown).toContain('Consider: Check the operator summary markdown');
+    expect(markdown).not.toContain('Follow-up:');
     expect(markdown).not.toContain('accept-with-fold-ins');
     expect(markdown).not.toContain('Run folder:');
     expect(markdown).not.toContain('## Reports');

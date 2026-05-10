@@ -9,7 +9,13 @@ import { TraceEntry } from '../../src/schemas/trace-entry.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
-const REVIEW_RELAY_BODY = JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] });
+const REVIEW_RELAY_BODY = JSON.stringify({
+  verdict: 'NO_ISSUES_FOUND',
+  findings: [],
+  assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+  verification: ['Inspected the relayed intake report.'],
+  confidence_limitations: [],
+});
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;

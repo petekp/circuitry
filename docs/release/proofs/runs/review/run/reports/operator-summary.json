@@ -6,20 +6,19 @@
   "routed_by": "explicit",
   "router_reason": "explicit flow positional argument",
   "outcome": "complete",
-  "headline": "Circuit finished Review. Verdict: CLEAN. Findings: 0.",
+  "headline": "Circuit: Review complete. Verdict: CLEAN. Findings: 0.",
+  "status_text": "Review complete. Verdict: CLEAN. Findings: 0.",
   "details": [
     "Run note: Run closed with outcome complete via @complete.",
-    "Findings: 0",
-    "Untracked evidence: paths and sizes only for 20 files (71 untracked files found; additional untracked files were not sampled)."
+    "Assessment: Reviewer inspected the relayed staged-diff and untracked-file evidence and found nothing actionable in scope.",
+    "Verified: Inspected the relayed review-intake report.; Cross-checked the staged diff against the untracked-file metadata.",
+    "Confidence limitations: Untracked file contents were omitted from the relay (metadata-only policy).; Untracked file evidence was capped at 20 files.",
+    "Untracked evidence: paths and sizes only for 20 files (20 untracked files found)."
   ],
   "evidence_warnings": [
     {
       "kind": "diff_truncated",
       "message": "unstaged diff was truncated before relay"
-    },
-    {
-      "kind": "untracked_files_truncated",
-      "message": "untracked file evidence was limited to 20 files"
     },
     {
       "kind": "untracked_file_content_omitted",

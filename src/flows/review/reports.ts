@@ -125,6 +125,20 @@ export const ReviewResult = z
     scope: z.string().min(1),
     findings: z.array(ReviewFinding),
     verdict: ReviewResultVerdict,
+    // Plain-language paragraph from the reviewer: what was checked and what
+    // they concluded. Required even on a CLEAN verdict so a no-findings result
+    // does not collapse to "Findings: 0" without context. The operator-summary
+    // renderer reads this when the projection has no findings to list.
+    assessment: z.string().min(1),
+    // Concrete verification steps the reviewer performed: files inspected,
+    // commands run, evidence cross-referenced. Empty array is permitted but
+    // discouraged — the prompt asks the reviewer to name at least one step.
+    verification: z.array(z.string().min(1)),
+    // Known gaps that limit certainty (out-of-scope files, untracked content
+    // omitted, missing context). Empty array is permitted when the reviewer
+    // had complete coverage; the operator-summary renderer surfaces non-empty
+    // entries so a CLEAN verdict cannot quietly stand in for "high confidence".
+    confidence_limitations: z.array(z.string().min(1)),
     evidence_summary: ReviewEvidenceSummary.optional(),
     evidence_warnings: z.array(ReviewEvidenceWarning).default([]),
   })
@@ -145,6 +159,20 @@ export const ReviewRelayResult = z
   .object({
     verdict: ReviewRelayVerdict,
     findings: z.array(ReviewFinding),
+    // See ReviewResult.assessment — the reviewer's plain-language paragraph
+    // describing what was checked and what they concluded. Required for both
+    // NO_ISSUES_FOUND and ISSUES_FOUND verdicts: a clean output without an
+    // assessment is the regression that motivated this addition (vanilla
+    // Claude Code says what it checked even on a no-findings review; Circuit
+    // used to collapse to "Findings: 0").
+    assessment: z.string().min(1),
+    // Concrete verification steps the reviewer performed (files, commands,
+    // evidence). Required as an array; the relay prompt asks for at least
+    // one entry.
+    verification: z.array(z.string().min(1)),
+    // Known gaps that limit certainty. Required as an array (may be empty
+    // when coverage was complete).
+    confidence_limitations: z.array(z.string().min(1)),
   })
   .strict()
   .superRefine((report, ctx) => {

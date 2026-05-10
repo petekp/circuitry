@@ -2,21 +2,26 @@
   "scope": "review this change",
   "findings": [],
   "verdict": "CLEAN",
+  "assessment": "Reviewer inspected the relayed staged-diff and untracked-file evidence and found nothing actionable in scope.",
+  "verification": [
+    "Inspected the relayed review-intake report.",
+    "Cross-checked the staged diff against the untracked-file metadata."
+  ],
+  "confidence_limitations": [
+    "Untracked file contents were omitted from the relay (metadata-only policy).",
+    "Untracked file evidence was capped at 20 files."
+  ],
   "evidence_summary": {
     "kind": "git-working-tree",
     "untracked_content_policy": "metadata-only",
-    "untracked_file_count": 71,
+    "untracked_file_count": 20,
     "untracked_files_sampled": 20,
-    "untracked_files_truncated": true
+    "untracked_files_truncated": false
   },
   "evidence_warnings": [
     {
       "kind": "diff_truncated",
       "message": "unstaged diff was truncated before relay"
-    },
-    {
-      "kind": "untracked_files_truncated",
-      "message": "untracked file evidence was limited to 20 files"
     },
     {
       "kind": "untracked_file_content_omitted",

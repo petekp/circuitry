@@ -18,7 +18,13 @@ let root: string;
 let homeDir: string;
 let cwdDir: string;
 
-const REVIEW_RELAY_BODY = JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] });
+const REVIEW_RELAY_BODY = JSON.stringify({
+  verdict: 'NO_ISSUES_FOUND',
+  findings: [],
+  assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+  verification: ['Inspected the relayed intake report.'],
+  confidence_limitations: [],
+});
 
 function writeUserConfig(text: string): void {
   const path = userGlobalConfigPath(homeDir);

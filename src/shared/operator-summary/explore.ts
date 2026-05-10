@@ -7,8 +7,8 @@
 // surface (json.ts, text.ts, projector.ts) stays small.
 
 import {
-  evidenceReportById,
   type JsonObject,
+  evidenceReportById,
   isObject,
   objectField,
   readJsonIfPresent,
@@ -16,11 +16,7 @@ import {
   stringField,
 } from './json.js';
 import type { SummaryProjection, SummaryProjector } from './projector.js';
-import {
-  friendlyResultSummary,
-  sentence,
-  withoutFinalPunctuation,
-} from './text.js';
+import { friendlyResultSummary, sentence, withoutFinalPunctuation } from './text.js';
 
 // Match a labeled list item of the form `(N) Capitalized label — explanation`.
 // Guards:
@@ -131,17 +127,39 @@ function exploreTournamentSnapshot(flowReport: JsonObject | undefined): JsonObje
   return stringField(snapshot, 'selected_option_id') === undefined ? undefined : snapshot;
 }
 
+// Reviewer fold-ins split by weight:
+//   - objections: things the reviewer says must be addressed → "Required
+//     fold-in" so the operator treats them as work to do before acting on
+//     the recommendation.
+//   - missed_angles: lighter-weight considerations → "Consider" so the
+//     operator treats them as enhancements, not blockers.
+// Previously both rendered as the same generic "Follow-up:" line, which
+// hid the distinction the reviewer was drawing.
 function exploreReviewFoldInDetails(flowReport: JsonObject | undefined): string[] {
   const foldIns = objectField(flowReport, 'review_fold_ins');
   if (foldIns === undefined) return [];
 
-  const details: string[] = [];
   const objections = stringArrayField(foldIns, 'objections');
   const missedAngles = stringArrayField(foldIns, 'missed_angles');
-  details.push('Reviewer: Accepted the direction, with notes to fold in.');
-  for (const objection of objections) details.push(`Follow-up: ${objection}`);
-  for (const angle of missedAngles) details.push(`Follow-up: ${angle}`);
+  const details: string[] = [];
+  if (objections.length > 0) {
+    details.push('Reviewer: Accepted the direction, with required fold-ins.');
+  } else if (missedAngles.length > 0) {
+    details.push('Reviewer: Accepted the direction, with optional considerations.');
+  } else {
+    details.push('Reviewer: Accepted the direction.');
+  }
+  for (const objection of objections) details.push(`Required fold-in: ${objection}`);
+  for (const angle of missedAngles) details.push(`Consider: ${angle}`);
   return details;
+}
+
+function reviewFoldInWeight(flowReport: JsonObject | undefined): 'required' | 'optional' | 'none' {
+  const foldIns = objectField(flowReport, 'review_fold_ins');
+  if (foldIns === undefined) return 'none';
+  if (stringArrayField(foldIns, 'objections').length > 0) return 'required';
+  if (stringArrayField(foldIns, 'missed_angles').length > 0) return 'optional';
+  return 'none';
 }
 
 function exploreGuidanceDetails(flowReport: JsonObject | undefined): string[] {
@@ -177,9 +195,20 @@ export const exploreSummaryProjector: SummaryProjector = ({
       return `Circuit: Decision made. Selected: ${selected}. ${sentence(decision)}`;
     }
     const review = stringField(verdictSnapshot, 'review_verdict') ?? 'complete';
-    return review === 'accept-with-fold-ins'
-      ? 'Circuit: Recommendation ready. The direction is useful, with follow-up notes.'
-      : 'Circuit: Recommendation ready. The direction is ready to use.';
+    if (review !== 'accept-with-fold-ins') {
+      return 'Circuit: Recommendation ready. The direction is ready to use.';
+    }
+    // Don't say "ready" when the reviewer accepted only with caveats. Promote
+    // the weight of the fold-ins (required vs optional) into the headline so
+    // the operator sees the qualification before acting.
+    const weight = reviewFoldInWeight(flowReport);
+    if (weight === 'required') {
+      return 'Circuit: Recommendation accepted, with required fold-ins to address.';
+    }
+    if (weight === 'optional') {
+      return 'Circuit: Recommendation accepted, with optional considerations.';
+    }
+    return 'Circuit: Recommendation accepted, with reviewer notes.';
   })();
 
   const details: string[] = [

@@ -727,7 +727,13 @@ describe('Codex host plugin package', () => {
             relay: async (_input: RelayInput): Promise<RelayResult> => ({
               request_payload: 'stub-request',
               receipt_id: 'stub-receipt',
-              result_body: '{"verdict":"NO_ISSUES_FOUND","findings":[]}',
+              result_body: JSON.stringify({
+                verdict: 'NO_ISSUES_FOUND',
+                findings: [],
+                assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+                verification: ['Inspected the relayed intake report.'],
+                confidence_limitations: [],
+              }),
               duration_ms: 1,
               cli_version: '0.0.0-stub',
             }),

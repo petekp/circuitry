@@ -8,7 +8,13 @@ import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
-const REVIEW_RELAY_BODY = JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] });
+const REVIEW_RELAY_BODY = JSON.stringify({
+  verdict: 'NO_ISSUES_FOUND',
+  findings: [],
+  assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+  verification: ['Inspected the relayed intake report.'],
+  confidence_limitations: [],
+});
 const BUILD_RELAY_BODY = JSON.stringify({
   verdict: 'accept',
   summary: 'Build relay completed for runtime soak',

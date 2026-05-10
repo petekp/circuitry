@@ -68,6 +68,26 @@ function deterministicNow(startMs: number): () => Date {
   return () => new Date(startMs + n++ * 1000);
 }
 
+// Stub reviewer prose attached to every NO_ISSUES_FOUND relay payload these
+// tests fabricate. The schema requires `assessment`, `verification`, and
+// `confidence_limitations` on every verdict, so each fixture body needs them
+// even when the test cares only about routing and trace shape.
+function stubProse(): {
+  assessment: string;
+  verification: string[];
+  confidence_limitations: string[];
+} {
+  return {
+    assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+    verification: ['Inspected the relayed intake report.'],
+    confidence_limitations: [],
+  };
+}
+
+function cleanRelayResult(): ReviewRelayResult {
+  return { verdict: 'NO_ISSUES_FOUND', findings: [], ...stubProse() };
+}
+
 function relayerWith(result: ReviewRelayResult): RelayFn {
   return relayerWithBody(JSON.stringify(result));
 }
@@ -114,7 +134,7 @@ const CASES: Array<{
   {
     name: 'clean review',
     runId: '79000000-0000-0000-0000-000000000001',
-    relay: { verdict: 'NO_ISSUES_FOUND', findings: [] },
+    relay: cleanRelayResult(),
     expectedVerdict: 'CLEAN',
   },
   {
@@ -130,6 +150,7 @@ const CASES: Array<{
           file_refs: ['src/example.ts:12'],
         },
       ] satisfies ReviewFinding[],
+      ...stubProse(),
     },
     expectedVerdict: 'ISSUES_FOUND',
   },
@@ -156,7 +177,7 @@ describe('registered review compose writer', () => {
       goal,
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -164,10 +185,14 @@ describe('registered review compose writer', () => {
     const reportPath = join(runFolder, 'reports', 'review-result.json');
     expect(existsSync(reportPath)).toBe(true);
     const report = ReviewResult.parse(JSON.parse(readFileSync(reportPath, 'utf8')));
+    const prose = stubProse();
     expect(report).toEqual({
       scope: goal,
       findings: [],
       verdict: 'CLEAN',
+      assessment: prose.assessment,
+      verification: prose.verification,
+      confidence_limitations: prose.confidence_limitations,
       evidence_summary: {
         kind: 'unavailable',
         message: 'CompiledFlowInvocation.projectRoot was not provided',
@@ -208,7 +233,7 @@ describe('registered review compose writer', () => {
           return {
             request_payload: input.prompt,
             receipt_id: 'stub-receipt-review-evidence',
-            result_body: JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+            result_body: JSON.stringify(cleanRelayResult()),
             duration_ms: 1,
             cli_version: '0.0.0-stub',
           };
@@ -245,7 +270,7 @@ describe('registered review compose writer', () => {
           return {
             request_payload: input.prompt,
             receipt_id: 'stub-receipt-review-metadata-only',
-            result_body: JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+            result_body: JSON.stringify(cleanRelayResult()),
             duration_ms: 1,
             cli_version: '0.0.0-stub',
           };
@@ -295,7 +320,7 @@ describe('registered review compose writer', () => {
           return {
             request_payload: input.prompt,
             receipt_id: 'stub-receipt-review-content-opt-in',
-            result_body: JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+            result_body: JSON.stringify(cleanRelayResult()),
             duration_ms: 1,
             cli_version: '0.0.0-stub',
           };
@@ -362,7 +387,7 @@ describe('registered review compose writer', () => {
           return {
             request_payload: input.prompt,
             receipt_id: 'stub-receipt-review-large-diff',
-            result_body: JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+            result_body: JSON.stringify(cleanRelayResult()),
             duration_ms: 1,
             cli_version: '0.0.0-stub',
           };
@@ -410,7 +435,7 @@ describe('registered review compose writer', () => {
         evidencePolicy: { includeUntrackedFileContent: true },
         now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
         projectRoot,
-        relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+        relayer: relayerWith(cleanRelayResult()),
       });
 
       expect(outcome.outcome).toBe('complete');
@@ -456,7 +481,7 @@ describe('registered review compose writer', () => {
       evidencePolicy: { includeUntrackedFileContent: true },
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
       projectRoot,
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -495,7 +520,7 @@ describe('registered review compose writer', () => {
       goal: 'review without project root evidence',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
       progress: (event) => progress.push(ProgressEvent.parse(event)),
     });
 
@@ -539,7 +564,7 @@ describe('registered review compose writer', () => {
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
       projectRoot,
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -581,7 +606,7 @@ describe('registered review compose writer', () => {
       evidencePolicy: { includeUntrackedFileContent: true },
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
       projectRoot,
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -612,7 +637,7 @@ describe('registered review compose writer', () => {
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
       projectRoot,
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -641,7 +666,7 @@ describe('registered review compose writer', () => {
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 14, 0, 0)),
       projectRoot,
-      relayer: relayerWith({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+      relayer: relayerWith(cleanRelayResult()),
     });
 
     expect(outcome.outcome).toBe('complete');
@@ -668,6 +693,7 @@ describe('registered review compose writer', () => {
           file_refs: ['src/example.ts:22'],
         },
       ],
+      ...stubProse(),
     } satisfies ReviewRelayResult;
 
     const outcome = await runCompiledFlow({

@@ -12057,7 +12057,7 @@ var exploreReviewVerdictShapeHint = {
     "Respond with a single raw JSON object whose top-level shape is exactly:",
     '{ "verdict": "<one-of-accepted-verdicts>", "overall_assessment": "<review summary>", "objections": ["<blocking or follow-up objection>"], "missed_angles": ["<important angle not covered>"] }',
     "Use empty arrays when there are no objections or missed angles. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    `Audit the compose against the brief on these axes before deciding the verdict. Subject fidelity: the subject must match the brief; flag if it includes unrelated topics. Evidence groundedness: every evidence_ref must be a real path in the run; flag fabricated, missing, or unresolvable references. Internal consistency: the recommendation and supporting_aspects must not contradict each other or the verdict; flag self-negating or contradictory sentences. Epistemic calibration: confidence must match the evidence; flag overclaiming, false certainty, or assertions unsupported by the cited reports. Success-condition alignment: the success_condition_alignment field must substantively explain how the recommendation satisfies the brief's success condition with specifics from the analysis; flag if it is generic, formulaic, vacuous, merely restates the brief, or could be pasted into any other compose unchanged ("This satisfies the brief." is the canonical failure).`,
+    `Audit the compose against the brief on these axes before deciding the verdict. Subject fidelity: the subject must match the brief; flag if it includes unrelated topics. Evidence groundedness: every evidence_ref must be a real path in the run; flag fabricated, missing, or unresolvable references. Internal consistency: the recommendation and supporting_aspects must not contradict each other or the verdict; flag self-negating or contradictory sentences. Epistemic calibration: confidence must match the evidence; flag overclaiming, false certainty, or assertions unsupported by the cited reports. Specifically flag mild readiness overclaims: if the compose says more proof, validation, repo inspection, or follow-up investigation is still needed, object to any claim that the result is enough, safe, or ready to proceed confidently or without follow-up. Success-condition alignment: the success_condition_alignment field must substantively explain how the recommendation satisfies the brief's success condition with specifics from the analysis; flag if it is generic, formulaic, vacuous, merely restates the brief, or could be pasted into any other compose unchanged ("This satisfies the brief." is the canonical failure).`,
     "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against explore.review-verdict@v1 before writing reports/review-verdict.json."
   ].join(" ")
 };
@@ -14682,11 +14682,14 @@ var reviewRelayShapeHint = {
   },
   instruction: [
     "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] }',
-    'Use an empty findings array when there are no issues: { "verdict": "NO_ISSUES_FOUND", "findings": [] }.',
+    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }], "assessment": "<plain-language paragraph>", "verification": ["<step you performed>"], "confidence_limitations": ["<gap that limits certainty>"] }',
+    'Use an empty findings array when there are no issues: { "verdict": "NO_ISSUES_FOUND", "findings": [], "assessment": "...", "verification": ["..."], "confidence_limitations": ["..."] }.',
     "Use an empty file_refs array when a finding has no file-specific reference.",
+    "The assessment field is REQUIRED on every verdict, including NO_ISSUES_FOUND. State plainly what you checked and what you concluded; do not return a bare verdict.",
+    "The verification array lists the concrete steps you took: files inspected, commands run, evidence cross-referenced. Include at least one entry on every verdict; this is how the operator can audit the review.",
+    "The confidence_limitations array names anything that limits certainty: out-of-scope files, omitted untracked content, areas you did not inspect, assumptions you had to make. Use an empty array only when coverage was complete.",
     "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and the close step validates findings before writing reports/review-result.json."
+    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and the close step validates findings, assessment, verification, and confidence_limitations before writing reports/review-result.json."
   ].join(" ")
 };
 
@@ -14768,6 +14771,20 @@ var ReviewResult = external_exports.object({
   scope: external_exports.string().min(1),
   findings: external_exports.array(ReviewFinding),
   verdict: ReviewResultVerdict,
+  // Plain-language paragraph from the reviewer: what was checked and what
+  // they concluded. Required even on a CLEAN verdict so a no-findings result
+  // does not collapse to "Findings: 0" without context. The operator-summary
+  // renderer reads this when the projection has no findings to list.
+  assessment: external_exports.string().min(1),
+  // Concrete verification steps the reviewer performed: files inspected,
+  // commands run, evidence cross-referenced. Empty array is permitted but
+  // discouraged — the prompt asks the reviewer to name at least one step.
+  verification: external_exports.array(external_exports.string().min(1)),
+  // Known gaps that limit certainty (out-of-scope files, untracked content
+  // omitted, missing context). Empty array is permitted when the reviewer
+  // had complete coverage; the operator-summary renderer surfaces non-empty
+  // entries so a CLEAN verdict cannot quietly stand in for "high confidence".
+  confidence_limitations: external_exports.array(external_exports.string().min(1)),
   evidence_summary: ReviewEvidenceSummary.optional(),
   evidence_warnings: external_exports.array(ReviewEvidenceWarning).default([])
 }).strict().superRefine((report, ctx) => {
@@ -14782,7 +14799,21 @@ var ReviewResult = external_exports.object({
 });
 var ReviewRelayResult = external_exports.object({
   verdict: ReviewRelayVerdict,
-  findings: external_exports.array(ReviewFinding)
+  findings: external_exports.array(ReviewFinding),
+  // See ReviewResult.assessment — the reviewer's plain-language paragraph
+  // describing what was checked and what they concluded. Required for both
+  // NO_ISSUES_FOUND and ISSUES_FOUND verdicts: a clean output without an
+  // assessment is the regression that motivated this addition (vanilla
+  // Claude Code says what it checked even on a no-findings review; Circuit
+  // used to collapse to "Findings: 0").
+  assessment: external_exports.string().min(1),
+  // Concrete verification steps the reviewer performed (files, commands,
+  // evidence). Required as an array; the relay prompt asks for at least
+  // one entry.
+  verification: external_exports.array(external_exports.string().min(1)),
+  // Known gaps that limit certainty. Required as an array (may be empty
+  // when coverage was complete).
+  confidence_limitations: external_exports.array(external_exports.string().min(1))
 }).strict().superRefine((report, ctx) => {
   const expected = report.findings.length === 0 ? "NO_ISSUES_FOUND" : "ISSUES_FOUND";
   if (report.verdict !== expected) {
@@ -15087,6 +15118,9 @@ var reviewResultComposeBuilder = {
       scope: intake.scope,
       findings: relayResult.findings,
       verdict: computeReviewVerdict(relayResult.findings),
+      assessment: relayResult.assessment,
+      verification: relayResult.verification,
+      confidence_limitations: relayResult.confidence_limitations,
       evidence_summary: evidenceSummary(intake.evidence),
       evidence_warnings: intake.evidence_warnings
     });
@@ -22727,15 +22761,31 @@ function exploreReviewFoldInDetails(flowReport) {
   const foldIns = objectField(flowReport, "review_fold_ins");
   if (foldIns === void 0)
     return [];
-  const details = [];
   const objections = stringArrayField(foldIns, "objections");
   const missedAngles = stringArrayField(foldIns, "missed_angles");
-  details.push("Reviewer: Accepted the direction, with notes to fold in.");
+  const details = [];
+  if (objections.length > 0) {
+    details.push("Reviewer: Accepted the direction, with required fold-ins.");
+  } else if (missedAngles.length > 0) {
+    details.push("Reviewer: Accepted the direction, with optional considerations.");
+  } else {
+    details.push("Reviewer: Accepted the direction.");
+  }
   for (const objection of objections)
-    details.push(`Follow-up: ${objection}`);
+    details.push(`Required fold-in: ${objection}`);
   for (const angle of missedAngles)
-    details.push(`Follow-up: ${angle}`);
+    details.push(`Consider: ${angle}`);
   return details;
+}
+function reviewFoldInWeight(flowReport) {
+  const foldIns = objectField(flowReport, "review_fold_ins");
+  if (foldIns === void 0)
+    return "none";
+  if (stringArrayField(foldIns, "objections").length > 0)
+    return "required";
+  if (stringArrayField(foldIns, "missed_angles").length > 0)
+    return "optional";
+  return "none";
 }
 function exploreGuidanceDetails(flowReport) {
   const summary = stringField2(flowReport, "summary");
@@ -22757,7 +22807,17 @@ var exploreSummaryProjector = ({ runFolder, flowReport, resultSummary: resultSum
       return `Circuit: Decision made. Selected: ${selected}. ${sentence(decision2)}`;
     }
     const review = stringField2(verdictSnapshot, "review_verdict") ?? "complete";
-    return review === "accept-with-fold-ins" ? "Circuit: Recommendation ready. The direction is useful, with follow-up notes." : "Circuit: Recommendation ready. The direction is ready to use.";
+    if (review !== "accept-with-fold-ins") {
+      return "Circuit: Recommendation ready. The direction is ready to use.";
+    }
+    const weight = reviewFoldInWeight(flowReport);
+    if (weight === "required") {
+      return "Circuit: Recommendation accepted, with required fold-ins to address.";
+    }
+    if (weight === "optional") {
+      return "Circuit: Recommendation accepted, with optional considerations.";
+    }
+    return "Circuit: Recommendation accepted, with reviewer notes.";
   })();
   const details = [
     ...exploreGuidanceDetails(flowReport),
@@ -22796,8 +22856,9 @@ function firstLineSummary(text, max) {
 }
 function reviewFindingDetails(report) {
   const findings = arrayField(report, "findings");
-  if (findings.length === 0)
-    return ["Findings: 0"];
+  if (findings.length === 0) {
+    return stringField2(report, "assessment") === void 0 ? ["Findings: 0"] : [];
+  }
   const lines = [];
   for (const finding of findings) {
     if (!isObject3(finding))
@@ -22808,6 +22869,22 @@ function reviewFindingDetails(report) {
     const summary = firstLineSummary(text, 140);
     const fileSuffix = fileRefs.length === 0 ? "" : ` \u2014 at ${fileRefs.join(", ")}`;
     lines.push(`[${severity}] ${summary}${fileSuffix}`);
+  }
+  return lines;
+}
+function reviewAssessmentDetails(report) {
+  const lines = [];
+  const assessment = stringField2(report, "assessment");
+  if (assessment !== void 0 && assessment.trim().length > 0) {
+    lines.push(`Assessment: ${assessment.trim()}`);
+  }
+  const verification = stringArrayField(report, "verification").map((step) => step.trim()).filter((step) => step.length > 0);
+  if (verification.length > 0) {
+    lines.push(`Verified: ${verification.join("; ")}`);
+  }
+  const limitations = stringArrayField(report, "confidence_limitations").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+  if (limitations.length > 0) {
+    lines.push(`Confidence limitations: ${limitations.join("; ")}`);
   }
   return lines;
 }
@@ -22846,10 +22923,15 @@ var reviewProjector = ({ flowReport }) => {
   const findings = arrayField(flowReport, "findings").length;
   const scopeEmpty = hasEvidenceWarningKind(flowReport, "scope_empty");
   const summaryDetail = flowSummaryDetail(flowReport);
+  const assessmentDetails = reviewAssessmentDetails(flowReport);
+  const [assessmentLine, ...verificationAndLimitations] = assessmentDetails;
   const details = [];
   if (summaryDetail !== void 0)
     details.push(summaryDetail);
+  if (assessmentLine !== void 0)
+    details.push(assessmentLine);
   details.push(...reviewFindingDetails(flowReport));
+  details.push(...verificationAndLimitations);
   details.push(...reviewEvidenceDetails(flowReport));
   const headline = scopeEmpty ? `Circuit: Review had no uncommitted source content to examine; committed history (HEAD~1) was not part of this review. Findings: ${findings}.` : `Circuit: Review complete. Verdict: ${verdict}. Findings: ${findings}.`;
   return {

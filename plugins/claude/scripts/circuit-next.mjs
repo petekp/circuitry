@@ -593,7 +593,7 @@ function runDoctor() {
                   command: [
                     process.execPath,
                     '-e',
-                    "require('node:fs').writeFileSync(process.argv[2], JSON.stringify({verdict:'NO_ISSUES_FOUND',findings:[]}))",
+                    "require('node:fs').writeFileSync(process.argv[2], JSON.stringify({verdict:'NO_ISSUES_FOUND',findings:[],assessment:'Doctor stub reviewer: nothing actionable in the relayed evidence.',verification:['Doctor stub: inspected the relayed intake report.'],confidence_limitations:[]}))",
                   ],
                   prompt_transport: 'prompt-file',
                   output: { kind: 'output-file' },
@@ -819,8 +819,7 @@ if (rawArgs[0] === 'present') {
             const refusalStatus = stringField(parsed, 'status');
             const isAbortedFlow = outcome === 'aborted';
             const isUtilityRefusal =
-              outcome === undefined &&
-              (refusalStatus === 'invalid' || refusalStatus === 'refused');
+              outcome === undefined && (refusalStatus === 'invalid' || refusalStatus === 'refused');
             if (isAbortedFlow || isUtilityRefusal) {
               renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks);
             }

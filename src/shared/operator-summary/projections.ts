@@ -42,7 +42,13 @@ function firstLineSummary(text: string, max: number): string {
 
 function reviewFindingDetails(report: JsonObject | undefined): string[] {
   const findings = arrayField(report, 'findings');
-  if (findings.length === 0) return ['Findings: 0'];
+  if (findings.length === 0) {
+    // Drop the bare "Findings: 0" line when the reviewer included an
+    // assessment paragraph — the assessment carries the same "no issues"
+    // information with context. Old reports without an assessment fall
+    // back to the legacy line so the summary still names the count.
+    return stringField(report, 'assessment') === undefined ? ['Findings: 0'] : [];
+  }
   const lines: string[] = [];
   for (const finding of findings) {
     if (!isObject(finding)) continue;
@@ -52,6 +58,32 @@ function reviewFindingDetails(report: JsonObject | undefined): string[] {
     const summary = firstLineSummary(text, 140);
     const fileSuffix = fileRefs.length === 0 ? '' : ` — at ${fileRefs.join(', ')}`;
     lines.push(`[${severity}] ${summary}${fileSuffix}`);
+  }
+  return lines;
+}
+
+// Reviewer-supplied prose: the assessment paragraph, the verification steps
+// they took, and any confidence limitations they flagged. Required on the
+// relay/result schema so a CLEAN verdict cannot collapse to a bare count;
+// rendered here so the operator sees what was checked even when there are
+// no findings to list.
+function reviewAssessmentDetails(report: JsonObject | undefined): string[] {
+  const lines: string[] = [];
+  const assessment = stringField(report, 'assessment');
+  if (assessment !== undefined && assessment.trim().length > 0) {
+    lines.push(`Assessment: ${assessment.trim()}`);
+  }
+  const verification = stringArrayField(report, 'verification')
+    .map((step) => step.trim())
+    .filter((step) => step.length > 0);
+  if (verification.length > 0) {
+    lines.push(`Verified: ${verification.join('; ')}`);
+  }
+  const limitations = stringArrayField(report, 'confidence_limitations')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (limitations.length > 0) {
+    lines.push(`Confidence limitations: ${limitations.join('; ')}`);
   }
   return lines;
 }
@@ -95,9 +127,18 @@ const reviewProjector: SummaryProjector = ({ flowReport }) => {
   const findings = arrayField(flowReport, 'findings').length;
   const scopeEmpty = hasEvidenceWarningKind(flowReport, 'scope_empty');
   const summaryDetail = flowSummaryDetail(flowReport);
+  const assessmentDetails = reviewAssessmentDetails(flowReport);
+  // Order: legacy result-summary line, assessment paragraph (the reviewer's
+  // framing), the findings list, then verification + limitations + evidence.
+  // Assessment lives in `assessmentDetails`; we splice the verification and
+  // limitations entries between findings and evidence so the operator reads
+  // conclusion → specifics → methodology → caveats → metadata.
+  const [assessmentLine, ...verificationAndLimitations] = assessmentDetails;
   const details: string[] = [];
   if (summaryDetail !== undefined) details.push(summaryDetail);
+  if (assessmentLine !== undefined) details.push(assessmentLine);
   details.push(...reviewFindingDetails(flowReport));
+  details.push(...verificationAndLimitations);
   details.push(...reviewEvidenceDetails(flowReport));
   // When the reviewer had no source content to inspect, a CLEAN/0-findings
   // headline silently understates the scope limitation. Drop the verdict
@@ -132,10 +173,7 @@ function buildFixMigrateDetails(flowReport: JsonObject | undefined): string[] {
 // (e.g., the flow hit @stop before close-step ran). Defaulting to 'complete'
 // would let the operator summary silently contradict result.json on any
 // non-complete terminal path.
-function flowOutcomeOrRunFallback(
-  flowReport: JsonObject | undefined,
-  runOutcome: string,
-): string {
+function flowOutcomeOrRunFallback(flowReport: JsonObject | undefined, runOutcome: string): string {
   return stringField(flowReport, 'outcome') ?? runOutcome;
 }
 

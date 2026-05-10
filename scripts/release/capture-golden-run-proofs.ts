@@ -183,6 +183,16 @@ function reviewRelayer(): Relayer {
       result_body: JSON.stringify({
         verdict: 'NO_ISSUES_FOUND',
         findings: [],
+        assessment:
+          'Reviewer inspected the relayed staged-diff and untracked-file evidence and found nothing actionable in scope.',
+        verification: [
+          'Inspected the relayed review-intake report.',
+          'Cross-checked the staged diff against the untracked-file metadata.',
+        ],
+        confidence_limitations: [
+          'Untracked file contents were omitted from the relay (metadata-only policy).',
+          'Untracked file evidence was capped at 20 files.',
+        ],
       }),
       duration_ms: 10,
       cli_version: 'proof-stub',

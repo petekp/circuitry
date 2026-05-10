@@ -48,14 +48,29 @@ describe('REVIEW-I2 verdict determinism property', () => {
       const expected = counts.critical === 0 && counts.high === 0 ? 'CLEAN' : 'ISSUES_FOUND';
 
       expect(computeReviewVerdict(findings)).toBe(expected);
+      const prose = {
+        assessment: `case ${i}: deterministic verdict assertion`,
+        verification: ['Property check'],
+        confidence_limitations: [],
+      };
       expect(
-        ReviewResult.safeParse({ scope: `case ${i}`, findings, verdict: expected }).success,
+        ReviewResult.safeParse({
+          scope: `case ${i}`,
+          findings,
+          verdict: expected,
+          ...prose,
+        }).success,
       ).toBe(true);
 
       const wrong = expected === 'CLEAN' ? 'ISSUES_FOUND' : 'CLEAN';
-      expect(ReviewResult.safeParse({ scope: `case ${i}`, findings, verdict: wrong }).success).toBe(
-        false,
-      );
+      expect(
+        ReviewResult.safeParse({
+          scope: `case ${i}`,
+          findings,
+          verdict: wrong,
+          ...prose,
+        }).success,
+      ).toBe(false);
     }
   });
 });

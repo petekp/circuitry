@@ -103,6 +103,9 @@ export const reviewResultComposeBuilder: ComposeBuilder = {
       scope: intake.scope,
       findings: relayResult.findings,
       verdict: computeReviewVerdict(relayResult.findings),
+      assessment: relayResult.assessment,
+      verification: relayResult.verification,
+      confidence_limitations: relayResult.confidence_limitations,
       evidence_summary: evidenceSummary(intake.evidence),
       evidence_warnings: intake.evidence_warnings,
     });

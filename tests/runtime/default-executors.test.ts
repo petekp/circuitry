@@ -15,6 +15,13 @@ describe('runtime default executors', () => {
         join(process.cwd(), 'generated', 'flows', 'review', 'circuit.json'),
       );
       let relayCalls = 0;
+      const stubRelayPayload = {
+        verdict: 'NO_ISSUES_FOUND' as const,
+        findings: [] as never[],
+        assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+        verification: ['Inspected the relayed intake report.'],
+        confidence_limitations: [] as string[],
+      };
 
       const result = await runCompiledFlow({
         flowBytes,
@@ -30,7 +37,7 @@ describe('runtime default executors', () => {
             return {
               request_payload: input.prompt,
               receipt_id: 'default-review-receipt',
-              result_body: JSON.stringify({ verdict: 'NO_ISSUES_FOUND', findings: [] }),
+              result_body: JSON.stringify(stubRelayPayload),
               duration_ms: 0,
               cli_version: 'test-relayer',
             };
@@ -63,7 +70,7 @@ describe('runtime default executors', () => {
             await readFile(join(runDir, 'stages', 'analyze', 'review-raw-findings.json'), 'utf8'),
           ),
         ),
-      ).toEqual({ verdict: 'NO_ISSUES_FOUND', findings: [] });
+      ).toEqual(stubRelayPayload);
       expect(
         ReviewResult.parse(
           JSON.parse(await readFile(join(runDir, 'reports', 'review-result.json'), 'utf8')),

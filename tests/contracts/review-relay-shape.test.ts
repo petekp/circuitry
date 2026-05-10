@@ -54,22 +54,40 @@ describe('review analyze relay shape', () => {
           file_refs: ['src/example.ts'],
         },
       ],
+      assessment: 'Reviewer inspected the staged diff and found one high-severity issue.',
+      verification: ['Read src/example.ts', 'Replayed the staged diff'],
+      confidence_limitations: [],
     });
     expect(typeof parsedResult.verdict).toBe('string');
     expect(parsedResult.verdict).toBe('ISSUES_FOUND');
     expect(Array.isArray(parsedResult.findings)).toBe(true);
     expect(parsedResult.findings[0]?.severity).toBe('high');
-    expect(ReviewRelayResult.safeParse({ verdict: 'CLEAN', findings: [] }).success).toBe(false);
+    expect(parsedResult.assessment.length).toBeGreaterThan(0);
+    expect(parsedResult.verification.length).toBeGreaterThan(0);
+
+    const cleanShape = {
+      verdict: 'NO_ISSUES_FOUND',
+      findings: [],
+      assessment: 'Reviewer inspected the relayed evidence and found nothing actionable.',
+      verification: ['Inspected the relayed intake report.'],
+      confidence_limitations: ['HEAD~1 history was out of scope.'],
+    };
+    expect(ReviewRelayResult.safeParse({ ...cleanShape, verdict: 'CLEAN' }).success).toBe(false);
     expect(
       ReviewRelayResult.safeParse({
+        ...cleanShape,
         verdict: 'NO_ISSUES_FOUND',
         findings: parsedResult.findings,
       }).success,
     ).toBe(false);
-    expect(ReviewRelayResult.parse({ verdict: 'NO_ISSUES_FOUND', findings: [] })).toEqual({
-      verdict: 'NO_ISSUES_FOUND',
-      findings: [],
-    });
+    // Bare {verdict, findings} relay payloads — the legacy shape — must now
+    // be rejected. The reviewer prose fields (assessment, verification,
+    // confidence_limitations) are required so a NO_ISSUES_FOUND verdict
+    // cannot collapse to a bare count without explaining what was checked.
+    expect(ReviewRelayResult.safeParse({ verdict: 'NO_ISSUES_FOUND', findings: [] }).success).toBe(
+      false,
+    );
+    expect(ReviewRelayResult.parse(cleanShape)).toEqual(cleanShape);
   });
 
   it('literal checks reject source/check/pass drift even if the base RelayStep schema later widens', () => {
