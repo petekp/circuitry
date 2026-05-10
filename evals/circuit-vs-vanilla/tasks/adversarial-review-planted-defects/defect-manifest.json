@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "fixture_path": "fixture-uploads.js",
+  "defects": [
+    {
+      "id": "D1-eval-rce",
+      "severity": "critical",
+      "subtlety": "obvious",
+      "line": 14,
+      "category": "code-injection",
+      "title": "eval() executes attacker-controlled rule string",
+      "description": "compileFilenameRule passes `rule` directly to eval(). If `rule` is ever derived from request input or any non-trusted source, this is RCE. Even if it's strictly admin-only, eval is unsafe — use a vetted parser or AST evaluator.",
+      "minimum_acceptable_catch": "Names eval as the issue and identifies it as code-injection / RCE."
+    },
+    {
+      "id": "D2-sql-injection",
+      "severity": "high",
+      "subtlety": "obvious",
+      "line": 19,
+      "category": "sql-injection",
+      "title": "SQL query interpolates ownerName without parameterization",
+      "description": "findUploadsByOwner builds a raw SQL string with ownerName interpolated into single quotes. A name containing `'` injects SQL. Should use parameterized queries.",
+      "minimum_acceptable_catch": "Names SQL injection and points at the string interpolation."
+    },
+    {
+      "id": "D3-counter-race",
+      "severity": "medium",
+      "subtlety": "moderate",
+      "line": 26,
+      "category": "race-condition",
+      "title": "uploadCounter has a TOCTOU race",
+      "description": "recordUpload reads counter.value, awaits the DB insert, then writes counter.value + 1. Two concurrent uploads will both read the same `current`, insert duplicate ids, and the second write overwrites the first. Use a transaction-bound sequence, atomic increment, or per-row uniqueness constraint.",
+      "minimum_acceptable_catch": "Identifies the read-await-write pattern as a race / TOCTOU on shared state."
+    },
+    {
+      "id": "D4-chunk-off-by-one",
+      "severity": "medium",
+      "subtlety": "subtle",
+      "line": 33,
+      "category": "off-by-one",
+      "title": "chunkBuffer drops the final byte when length is not chunk-aligned",
+      "description": "Loop bound is `i < buffer.length - 1`, which stops one iteration too early. The final chunk loses its last byte (or the final partial chunk is dropped entirely if length is one past a chunk boundary). Should be `i < buffer.length`.",
+      "minimum_acceptable_catch": "Identifies the loop bound as off-by-one and notes data loss."
+    },
+    {
+      "id": "D5-finally-swallows-rejection",
+      "severity": "medium",
+      "subtlety": "subtle",
+      "line": 45,
+      "category": "error-handling",
+      "title": "Finally block calls async cleanup without await — rejection swallowed and original result lost",
+      "description": "processWithCleanup returns the processed result from try, but `cleanup(file)` in the finally block returns a promise that is neither awaited nor returned. If cleanup rejects, the rejection is silently dropped. If cleanup resolves but takes time, the function may resolve before cleanup finishes (callers think file is cleaned up when it isn't). Also, the un-awaited promise creates an unhandled-rejection warning.",
+      "minimum_acceptable_catch": "Identifies that cleanup is async and not awaited in finally, and notes either swallowed rejection or premature resolve."
+    }
+    ,
+    {
+      "id": "D6-symlink-followed-after-traversal-check",
+      "severity": "medium",
+      "subtlety": "very subtle",
+      "line": 51,
+      "category": "path-traversal",
+      "title": "readPublicAsset path-traversal check is bypassable via symlinks",
+      "description": "readPublicAsset uses path.resolve + startsWith to confirm the resolved path string sits under PUBLIC_ROOT, then calls fs.readFileSync on that path. fs.readFileSync follows symlinks, so a symlink under PUBLIC_ROOT pointing at /etc/passwd passes the string check and leaks the symlink target. Found by Circuit on first run; not anticipated when the fixture was authored. Use fs.realpathSync on the resolved path and re-check containment, or open with O_NOFOLLOW.",
+      "minimum_acceptable_catch": "Identifies that fs.readFileSync follows symlinks and that the startsWith check does not constrain the symlink target.",
+      "discovered_by": "circuit on first run; was originally planted as a red herring (RH1) but turned out to contain a real defect"
+    }
+  ],
+  "red_herrings": [],
+  "notes": "RH1 was originally drafted as a red herring (readPublicAsset assumed safe because of the path-traversal check) but Circuit identified a real symlink-following defect that the author had not anticipated. The function is now scored as planted defect D6, severity medium, subtlety very subtle. This is documented in RESULT-NOTES.md."
+}
