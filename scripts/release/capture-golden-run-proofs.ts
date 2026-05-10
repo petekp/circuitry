@@ -343,7 +343,8 @@ const fixProofVerificationExecutor: StepExecutor = async (step, context) => {
     await writePassing({
       overall_status: 'passed',
       head_sha: '0000000000000000000000000000000000000000',
-      working_tree_porcelain: [],
+      entries: [],
+      hidden_index_flags: [],
     });
     return { route: 'pass', details: { writer: 'fix-proof', proof: 'baseline-snapshot' } };
   }
@@ -357,12 +358,16 @@ const fixProofVerificationExecutor: StepExecutor = async (step, context) => {
       observed: ['src/login.ts'],
       undeclared_extras: [],
       missing_declared: [],
+      baseline_dirty_mutated: [],
+      hidden_index_flags: [],
     });
     return { route: 'pass', details: { writer: 'fix-proof', proof: 'change-set' } };
   }
-  // Other verification steps (fix-regression-baseline, fix-verify) keep the
-  // live executor — they already work against the deterministic node command
-  // candidates baked into the synthetic brief.
+  // Other verification steps (fix-regression-baseline, fix-verify,
+  // fix-regression-rerun) keep the live executor — they already work against
+  // the deterministic node command candidates baked into the synthetic brief
+  // (the regression test is deferred, so both regression-baseline and
+  // regression-rerun emit 'deferred' without spawning anything).
   const verificationRuntime = (await import(
     resolve(projectRoot, 'dist/runtime/executors/verification.js')
   )) as { executeVerification: StepExecutor };

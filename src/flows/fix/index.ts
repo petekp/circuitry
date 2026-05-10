@@ -16,6 +16,7 @@ import {
   FixDiagnosis,
   FixNoReproDecision,
   FixRegressionProof,
+  FixRegressionRerun,
   FixResult,
   FixReview,
   FixVerification,
@@ -25,6 +26,7 @@ import { fixBriefComposeBuilder } from './writers/brief.js';
 import { fixChangeSetWriter } from './writers/change-set.js';
 import { fixCloseBuilder } from './writers/close.js';
 import { fixRegressionBaselineWriter } from './writers/regression-baseline.js';
+import { fixRegressionRerunWriter } from './writers/regression-rerun.js';
 import { fixVerificationWriter } from './writers/verification.js';
 
 const FIX_SIGNALS: readonly CompiledFlowSignal[] = [
@@ -86,6 +88,7 @@ export const fixCompiledFlowPackage: CompiledFlowPackage = {
     { schemaName: 'fix.regression-proof@v1', schema: FixRegressionProof },
     { schemaName: 'fix.baseline-snapshot@v1', schema: FixBaselineSnapshot },
     { schemaName: 'fix.verification@v1', schema: FixVerification },
+    { schemaName: 'fix.regression-rerun@v1', schema: FixRegressionRerun },
     { schemaName: 'fix.change-set@v1', schema: FixChangeSet },
     { schemaName: 'fix.result@v1', schema: FixResult },
   ],
@@ -96,6 +99,7 @@ export const fixCompiledFlowPackage: CompiledFlowPackage = {
       fixRegressionBaselineWriter,
       fixBaselineSnapshotWriter,
       fixVerificationWriter,
+      fixRegressionRerunWriter,
       fixChangeSetWriter,
     ],
     checkpoint: [],

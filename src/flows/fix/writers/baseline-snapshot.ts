@@ -5,18 +5,21 @@
 // what counts as "before the fix" — anything that becomes dirty between this
 // snapshot and the change-set step is owned by fix-act.
 //
-// Two commands run:
-//   1. `git rev-parse HEAD`       — records the commit SHA at fix-act start
-//   2. `git status --porcelain`   — records every file already dirty
-//      (modified, untracked, staged, etc.) so the change-set writer can
-//      subtract pre-existing dirt from observed post-fix dirt and end up
-//      with just the fix's actual file changes.
+// One command runs: `node src/flows/fix/writers/git-state.mjs` from the
+// project root. The helper wraps git rev-parse + git status (porcelain v1
+// with -z and --untracked-files=all) + per-dirty-path `git hash-object` +
+// `git ls-files -v` (for assume-unchanged / skip-worktree detection) and
+// emits a single JSON document. We use a helper instead of letting the
+// writer call git directly because the verification executor is limited to
+// a fixed VerificationCommand list at loadCommands time, and we need a
+// dynamic loop to fingerprint each dirty path.
 //
-// overall_status is always 'passed' here. The snapshot's job is to record
-// state, not to gate routing — even on a clean tree we want the run to
-// continue. Failures (e.g. git missing, not a repo) abort via the runner's
-// own error path.
+// overall_status is always 'passed' — the snapshot's job is to record state,
+// not to gate routing. Failures (git missing, not a repo, etc.) abort via
+// the runner's own error path because the helper exits non-zero.
 
+import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
 import type {
   VerificationBuildContext,
   VerificationBuilder,
@@ -25,64 +28,85 @@ import type {
 } from '../../registries/verification-writers/types.js';
 import { FixBaselineSnapshot } from '../reports.js';
 
-const GIT_TIMEOUT_MS = 30_000;
-const GIT_MAX_OUTPUT_BYTES = 1_000_000;
+const GIT_TIMEOUT_MS = 60_000;
+const GIT_MAX_OUTPUT_BYTES = 5_000_000;
 
-const REV_PARSE_COMMAND: VerificationCommand = {
-  id: 'fix-baseline-snapshot-rev-parse',
-  cwd: '.',
-  argv: ['git', 'rev-parse', 'HEAD'],
-  timeout_ms: GIT_TIMEOUT_MS,
-  max_output_bytes: GIT_MAX_OUTPUT_BYTES,
-  env: {},
-};
+const GIT_STATE_HELPER_PATH = fileURLToPath(new URL('./git-state.mjs', import.meta.url));
 
-const STATUS_COMMAND: VerificationCommand = {
-  id: 'fix-baseline-snapshot-status',
-  cwd: '.',
-  argv: ['git', 'status', '--porcelain'],
-  timeout_ms: GIT_TIMEOUT_MS,
-  max_output_bytes: GIT_MAX_OUTPUT_BYTES,
-  env: {},
-};
+// Shape of the helper's stdout JSON. Validated before we trust it to build a
+// FixBaselineSnapshot — a corrupt helper observation should fail fast with a
+// clear message rather than silently passing incomplete state downstream.
+const GitStateHelperOutput = z
+  .object({
+    head_sha: z.string().min(1),
+    entries: z.array(
+      z
+        .object({
+          status_code: z.string().length(2),
+          path: z.string().min(1),
+          fingerprint: z.string().min(1),
+          from: z.string().min(1).optional(),
+        })
+        .strict(),
+    ),
+    hidden_index_flags: z.array(
+      z.object({ tag: z.string().length(1), path: z.string().min(1) }).strict(),
+    ),
+  })
+  .strict();
+export type GitStateHelperOutput = z.infer<typeof GitStateHelperOutput>;
+
+export function fixGitStateCommand(id: string): VerificationCommand {
+  return {
+    id,
+    cwd: '.',
+    argv: [process.execPath, GIT_STATE_HELPER_PATH],
+    timeout_ms: GIT_TIMEOUT_MS,
+    max_output_bytes: GIT_MAX_OUTPUT_BYTES,
+    env: {},
+  };
+}
+
+export function parseGitStateObservation(
+  observation: VerificationCommandObservation,
+  schemaName: string,
+): GitStateHelperOutput {
+  if (observation.status !== 'passed') {
+    throw new Error(
+      `${schemaName}: git-state helper failed (exit ${observation.exit_code}): ${observation.stderr_summary}`,
+    );
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(observation.stdout_summary);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`${schemaName}: git-state helper stdout was not valid JSON: ${reason}`);
+  }
+  return GitStateHelperOutput.parse(parsed);
+}
 
 export const fixBaselineSnapshotWriter: VerificationBuilder = {
   resultSchemaName: 'fix.baseline-snapshot@v1',
   loadCommands(_context: VerificationBuildContext): readonly VerificationCommand[] {
-    return [REV_PARSE_COMMAND, STATUS_COMMAND];
+    return [fixGitStateCommand('fix-baseline-snapshot-git-state')];
   },
   buildResult(observations: readonly VerificationCommandObservation[]): unknown {
-    if (observations.length !== 2) {
+    if (observations.length !== 1) {
       throw new Error(
-        `fix.baseline-snapshot@v1: expected 2 git observations, got ${observations.length}`,
+        `fix.baseline-snapshot@v1: expected 1 git-state observation, got ${observations.length}`,
       );
     }
-    const [revParse, status] = observations;
-    if (revParse === undefined || status === undefined) {
-      throw new Error('fix.baseline-snapshot@v1: git observations missing');
+    const observation = observations[0];
+    if (observation === undefined) {
+      throw new Error('fix.baseline-snapshot@v1: git-state observation missing');
     }
-    if (revParse.status !== 'passed') {
-      throw new Error(
-        `fix.baseline-snapshot@v1: git rev-parse HEAD failed (exit ${revParse.exit_code}): ${revParse.stderr_summary}`,
-      );
-    }
-    if (status.status !== 'passed') {
-      throw new Error(
-        `fix.baseline-snapshot@v1: git status --porcelain failed (exit ${status.exit_code}): ${status.stderr_summary}`,
-      );
-    }
-    const head = revParse.stdout_summary.trim();
-    if (head.length === 0) {
-      throw new Error('fix.baseline-snapshot@v1: git rev-parse HEAD returned no SHA');
-    }
-    const porcelainLines = status.stdout_summary
-      .split('\n')
-      .map((line) => line.replace(/\r$/, ''))
-      .filter((line) => line.length > 0);
+    const state = parseGitStateObservation(observation, 'fix.baseline-snapshot@v1');
     return FixBaselineSnapshot.parse({
       overall_status: 'passed',
-      head_sha: head,
-      working_tree_porcelain: porcelainLines,
+      head_sha: state.head_sha,
+      entries: state.entries,
+      hidden_index_flags: state.hidden_index_flags,
     });
   },
 };

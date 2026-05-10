@@ -10,6 +10,7 @@ const FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'fix.baseline-snapshot': 'fix.baseline-snapshot@v1',
   'fix.change': 'fix.change@v1',
   'fix.verification': 'fix.verification@v1',
+  'fix.regression-rerun': 'fix.regression-rerun@v1',
   'fix.change-set': 'fix.change-set@v1',
   'fix.review': 'fix.review@v1',
 } as const;
@@ -23,6 +24,7 @@ const FIX_RESULT_PATH_BY_ARTIFACT_ID = {
   'fix.baseline-snapshot': 'reports/fix/baseline-snapshot.json',
   'fix.change': 'reports/fix/change.json',
   'fix.verification': 'reports/fix/verification.json',
+  'fix.regression-rerun': 'reports/fix/regression-rerun.json',
   'fix.change-set': 'reports/fix/change-set.json',
   'fix.review': 'reports/fix/review.json',
 } as const;
@@ -35,6 +37,7 @@ const REQUIRED_FIX_RESULT_ARTIFACT_IDS = [
   'fix.baseline-snapshot',
   'fix.change',
   'fix.verification',
+  'fix.regression-rerun',
   'fix.change-set',
 ] as const;
 
@@ -395,36 +398,90 @@ export const FixRegressionProof = z
   });
 export type FixRegressionProof = z.infer<typeof FixRegressionProof>;
 
+// Per-path entry in a baseline-snapshot working tree.
+//
+// Captures both the status code (XY from `git status --porcelain=v1 -z`) and
+// a content fingerprint so the change-set writer can detect when fix-act
+// mutates a path that was already dirty at baseline. Without the fingerprint,
+// a path that flips from "dirty (operator's edit)" to "dirty (operator's edit
+// + fix-act's further edit)" looks identical in path-set terms and the fix
+// can hide undeclared changes inside pre-existing dirt.
+export const FixBaselineSnapshotEntry = z
+  .object({
+    // Raw two-character porcelain status (e.g. ' M', '??', 'R ', 'AD').
+    status_code: z.string().length(2),
+    // Working-tree path. For renames/copies this is the destination; the
+    // source is in `from`.
+    path: z.string().min(1),
+    // Content fingerprint:
+    //   - 40-char hex git OID for files we could `git hash-object`
+    //   - '<deleted>' for paths whose working-tree copy is gone
+    //   - '<unhashable:...>' if hash-object failed unexpectedly
+    fingerprint: z.string().min(1),
+    from: z.string().min(1).optional(),
+  })
+  .strict();
+export type FixBaselineSnapshotEntry = z.infer<typeof FixBaselineSnapshotEntry>;
+
+// Paths flagged with `git update-index --assume-unchanged` or
+// `--skip-worktree` are invisible to `git status`, so an adversary can hide
+// tracked edits behind these flags. The change-set writer fails closed when
+// hidden_index_flags is non-empty; the field is a list rather than a count
+// so the failure message can name the offending paths.
+export const FixHiddenIndexFlag = z
+  .object({
+    tag: z.string().length(1),
+    path: z.string().min(1),
+  })
+  .strict();
+export type FixHiddenIndexFlag = z.infer<typeof FixHiddenIndexFlag>;
+
 // Runtime-owned pre-fix-act snapshot of git state. Captured immediately before
 // the implementer touches the working tree, this artifact is the baseline that
 // the post-verify change-set step diffs against. The change-set step compares
-// the file list it observes after the fix against the snapshot's porcelain to
-// determine which files are part of "the fix" (anything that wasn't dirty
-// pre-fix is owned by fix-act). overall_status is always 'passed' — the
-// snapshot exists to record state, not to gate routing.
+// the entries it observes after the fix against this snapshot's entries:
+//   - paths in the post snapshot but not in baseline = newly-dirty paths
+//     (introduced by fix-act)
+//   - paths in baseline whose post fingerprint differs = pre-existing dirt
+//     that fix-act further mutated
+// Both categories together form the set of paths fix-act actually touched,
+// which the change-set then compares against `fix.change@v1` `changed_files`.
+//
+// overall_status is always 'passed' — the snapshot exists to record state,
+// not to gate routing. Failures abort via the runner's normal error path.
 export const FixBaselineSnapshot = z
   .object({
     overall_status: z.literal('passed'),
     head_sha: z.string().min(1),
-    // Each entry is a single line of `git status --porcelain` output (XY plus
-    // path). Empty array means the working tree was clean.
-    working_tree_porcelain: z.array(z.string().min(1)),
+    // Per-path porcelain entries with content fingerprints. Empty array means
+    // the working tree was clean.
+    entries: z.array(FixBaselineSnapshotEntry),
+    // Paths flagged with assume-unchanged or skip-worktree at baseline. The
+    // change-set step refuses status='pass' when this list is non-empty
+    // because such paths can be edited without `git status` noticing.
+    hidden_index_flags: z.array(FixHiddenIndexFlag),
   })
   .strict();
 export type FixBaselineSnapshot = z.infer<typeof FixBaselineSnapshot>;
 
 // Runtime-owned change-set verdict. After fix-verify the runtime captures the
-// post-fix git state and computes the actual file list touched by the fix
-// (post porcelain minus pre porcelain). It compares that list against the
-// implementer's `fix.change@v1` `changed_files` declaration:
-//   - 'pass'   — every observed file appears in declared, and every declared
-//                file appears in observed. The implementer told the truth
-//                about what they touched.
-//   - 'fail'   — at least one file was touched that the implementer did not
-//                declare (an undeclared extra) or at least one file the
-//                implementer declared was not actually modified (a missing
-//                declared). fix-close cannot mark outcome 'fixed' on a failed
-//                change-set.
+// post-fix git state and computes the actual file list touched by the fix:
+//
+//   observed = (paths newly-dirty post-fix)
+//            ∪ (paths dirty at baseline whose fingerprint changed)
+//
+// It compares observed against the implementer's `fix.change@v1`
+// `changed_files` declaration:
+//   - 'pass'   — observed equals declared exactly, AND HEAD hasn't moved,
+//                AND no hidden_index_flags are present. The implementer told
+//                the truth about what they touched, the agent didn't commit
+//                mid-run, and no path is hidden from git status.
+//   - 'fail'   — at least one of:
+//                  * an undeclared extra (touched but not declared)
+//                  * a missing declared (declared but never modified)
+//                  * HEAD moved between baseline and post-fix
+//                  * a path is flagged assume-unchanged or skip-worktree
+//                fix-close cannot mark outcome 'fixed' on a failed change-set.
 //
 // overall_status mirrors status for verification routing: 'passed' when status
 // is 'pass', 'failed' when status is 'fail'.
@@ -439,6 +496,16 @@ export const FixChangeSet = z
     observed: z.array(z.string().min(1)),
     undeclared_extras: z.array(z.string().min(1)),
     missing_declared: z.array(z.string().min(1)),
+    // Subset of `observed` that came from baseline-dirty mutation rather than
+    // newly-dirty paths. Carried for transparency: a path here means it was
+    // already dirty at fix-act start and fix-act further mutated it. The
+    // verdict logic doesn't branch on this — these paths must still appear in
+    // declared (if any are missing, they show up as undeclared_extras and the
+    // status flips to 'fail').
+    baseline_dirty_mutated: z.array(z.string().min(1)),
+    // Paths flagged assume-unchanged or skip-worktree, surfaced from the
+    // post-fix snapshot. status 'pass' requires this to be empty.
+    hidden_index_flags: z.array(FixHiddenIndexFlag),
   })
   .strict()
   .superRefine((changeSet, ctx) => {
@@ -474,20 +541,39 @@ export const FixChangeSet = z
         message: 'missing_declared must equal declared minus observed (in declared order)',
       });
     }
-    const isClean =
+    // baseline_dirty_mutated must be a subset of observed (every mutated
+    // baseline path is, by definition, a path fix-act touched).
+    for (const [index, path] of changeSet.baseline_dirty_mutated.entries()) {
+      if (!observedSet.has(path)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['baseline_dirty_mutated', index],
+          message: `baseline_dirty_mutated path '${path}' must also appear in observed`,
+        });
+      }
+    }
+    const headDiverged = changeSet.head_sha !== changeSet.baseline_head_sha;
+    const hiddenFlagged = changeSet.hidden_index_flags.length > 0;
+    const setsClean =
       changeSet.undeclared_extras.length === 0 && changeSet.missing_declared.length === 0;
+    const isClean = setsClean && !headDiverged && !hiddenFlagged;
     if (changeSet.status === 'pass' && !isClean) {
+      const violations: string[] = [];
+      if (!setsClean) violations.push('non-empty undeclared_extras or missing_declared');
+      if (headDiverged) violations.push('baseline_head_sha differs from head_sha');
+      if (hiddenFlagged) violations.push('non-empty hidden_index_flags');
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['status'],
-        message: "status 'pass' requires both undeclared_extras and missing_declared to be empty",
+        message: `status 'pass' requires no failure conditions, but: ${violations.join('; ')}`,
       });
     }
     if (changeSet.status === 'fail' && isClean) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['status'],
-        message: "status 'fail' requires at least one undeclared_extras or missing_declared entry",
+        message:
+          "status 'fail' requires at least one of: undeclared_extras, missing_declared, HEAD divergence, or hidden_index_flags",
       });
     }
     if (changeSet.status === 'fail' && changeSet.reason === undefined) {
@@ -499,6 +585,93 @@ export const FixChangeSet = z
     }
   });
 export type FixChangeSet = z.infer<typeof FixChangeSet>;
+
+// Runtime-owned post-fix rerun of the brief's regression command. The
+// regression-baseline step ran the same command BEFORE fix-act and recorded
+// 'proved' (failed as expected) or 'deferred' (no command in the brief).
+// This step reruns the same command AFTER fix-verify and checks the result:
+//   - 'cleared'      — baseline was 'proved' AND the rerun passed. The fix
+//                      actually fixed the regression. Required for outcome
+//                      'fixed'.
+//   - 'still-failing' — baseline was 'proved' AND the rerun also failed.
+//                      The fix did not fix the regression, even though the
+//                      brief's verification candidates may have passed.
+//                      fix-close cannot mark outcome 'fixed'.
+//   - 'deferred'     — brief deferred the regression test, so there is
+//                      nothing to rerun. (Mirrors the baseline 'deferred'
+//                      status; outcome 'fixed' is still gated by
+//                      regression_status='proved' separately.)
+//
+// overall_status routes the verification executor: 'passed' when status is
+// 'cleared' or 'deferred' (continue), 'failed' when status is 'still-failing'
+// (recover via the step's retry route, which routes back to fix-act).
+export const FixRegressionRerunStatus = z.enum(['cleared', 'still-failing', 'deferred']);
+export type FixRegressionRerunStatus = z.infer<typeof FixRegressionRerunStatus>;
+
+export const FixRegressionRerun = z
+  .object({
+    status: FixRegressionRerunStatus,
+    overall_status: z.enum(['passed', 'failed']),
+    reason: z.string().min(1).optional(),
+    rerun: FixRegressionProofObservation.optional(),
+  })
+  .strict()
+  .superRefine((proof, ctx) => {
+    const expectedOverall = proof.status === 'still-failing' ? 'failed' : 'passed';
+    if (proof.overall_status !== expectedOverall) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['overall_status'],
+        message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`,
+      });
+    }
+    if (proof.status === 'deferred') {
+      if (proof.rerun !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rerun'],
+          message: "rerun must be omitted when status is 'deferred'",
+        });
+      }
+      if (proof.reason === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['reason'],
+          message: "reason is required when status is 'deferred'",
+        });
+      }
+    } else {
+      if (proof.rerun === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rerun'],
+          message: `rerun is required when status is '${proof.status}'`,
+        });
+      }
+      if (proof.status === 'cleared' && proof.rerun?.command_status !== 'passed') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: "status 'cleared' requires rerun command_status 'passed'",
+        });
+      }
+      if (proof.status === 'still-failing' && proof.rerun?.command_status !== 'failed') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: "status 'still-failing' requires rerun command_status 'failed'",
+        });
+      }
+      if (proof.status === 'still-failing' && proof.reason === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['reason'],
+          message: "reason is required when status is 'still-failing'",
+        });
+      }
+    }
+  });
+export type FixRegressionRerun = z.infer<typeof FixRegressionRerun>;
 
 export const FixReviewVerdict = z.enum(['accept', 'accept-with-fixes', 'reject']);
 export type FixReviewVerdict = z.infer<typeof FixReviewVerdict>;
@@ -549,6 +722,7 @@ export const FixResultReportId = z.enum([
   'fix.baseline-snapshot',
   'fix.change',
   'fix.verification',
+  'fix.regression-rerun',
   'fix.change-set',
   'fix.review',
 ]);
@@ -590,6 +764,7 @@ export const FixResult = z
     outcome: FixResultOutcome,
     verification_status: z.enum(['passed', 'failed', 'not-run']),
     regression_status: z.enum(['proved', 'deferred', 'not-applicable']),
+    regression_rerun_status: FixRegressionRerunStatus,
     change_set_status: z.enum(['pass', 'fail']),
     review_status: FixReviewStatus,
     review_verdict: FixReviewVerdict.optional(),
@@ -637,6 +812,30 @@ export const FixResult = z
         code: z.ZodIssueCode.custom,
         path: ['regression_status'],
         message: "regression_status must be 'proved' when outcome is 'fixed'",
+      });
+    }
+
+    if (result.outcome === 'fixed' && result.regression_rerun_status !== 'cleared') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['regression_rerun_status'],
+        message: "regression_rerun_status must be 'cleared' when outcome is 'fixed'",
+      });
+    }
+
+    if (result.regression_status === 'deferred' && result.regression_rerun_status !== 'deferred') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['regression_rerun_status'],
+        message: "regression_rerun_status must be 'deferred' when regression_status is 'deferred'",
+      });
+    }
+
+    if (result.regression_status === 'proved' && result.regression_rerun_status === 'deferred') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['regression_rerun_status'],
+        message: "regression_rerun_status cannot be 'deferred' when regression_status is 'proved'",
       });
     }
 

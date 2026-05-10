@@ -53,6 +53,10 @@
     },
     {
       "generic": "verification.result@v1",
+      "actual": "fix.regression-rerun@v1"
+    },
+    {
+      "generic": "verification.result@v1",
       "actual": "fix.change-set@v1"
     },
     {
@@ -411,6 +415,33 @@
         "required": ["status", "overall_status"]
       },
       "routes": {
+        "continue": "fix-regression-rerun",
+        "retry": "fix-act",
+        "stop": "@stop"
+      },
+      "block": "run-verification"
+    },
+    {
+      "id": "fix-regression-rerun",
+      "title": "Verify \u2014 rerun regression command after fix",
+      "stage": "verify",
+      "input": {
+        "proof": "verification.plan@v1",
+        "brief": "fix.brief@v1"
+      },
+      "output": "fix.regression-rerun@v1",
+      "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
+      "execution": {
+        "kind": "verification"
+      },
+      "protocol": "fix-regression-rerun@v1",
+      "writes": {
+        "report_path": "reports/fix/regression-rerun.json"
+      },
+      "check": {
+        "required": ["status", "overall_status"]
+      },
+      "routes": {
         "continue": "fix-review",
         "retry": "fix-act",
         "stop": "@stop"
@@ -468,6 +499,7 @@
         "baseline_snapshot": "fix.baseline-snapshot@v1",
         "change": "fix.change@v1",
         "verification": "fix.verification@v1",
+        "regression_rerun": "fix.regression-rerun@v1",
         "change_set": "fix.change-set@v1"
       },
       "output": "fix.result@v1",
@@ -510,6 +542,7 @@
         "baseline_snapshot": "fix.baseline-snapshot@v1",
         "change": "fix.change@v1",
         "verification": "fix.verification@v1",
+        "regression_rerun": "fix.regression-rerun@v1",
         "change_set": "fix.change-set@v1",
         "review": "fix.review@v1"
       },
