@@ -299,6 +299,7 @@ const fixProofComposeExecutor: StepExecutor = async (step, context) => {
     run_id: context.runId,
     kind: 'step.report_written',
     step_id: step.id,
+    attempt: context.activeStepAttempt ?? 1,
     report_path: report.path,
     report_schema: report.schema,
   });
