@@ -13,5 +13,6 @@
   "trace_entries_observed": 36,
   "result_path": "<repo>/docs/release/proofs/runs/fix/run/reports/result.json",
   "operator_summary_path": "<repo>/docs/release/proofs/runs/fix/run/reports/operator-summary.json",
-  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/fix/run/reports/operator-summary.md"
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/fix/run/reports/operator-summary.md",
+  "operator_summary_status_text": "Fix applied with follow-ups. Verification: passed. Review: skipped."
 }

@@ -11,9 +11,9 @@
   "details": [
     "Run note: Run closed with outcome complete via @complete.",
     "Assessment: Reviewer inspected the relayed staged-diff and untracked-file evidence and found nothing actionable in scope.",
-    "Verified: Inspected the relayed review-intake report.; Cross-checked the staged diff against the untracked-file metadata.",
+    "Reviewer steps: Inspected the relayed review-intake report.; Cross-checked the staged diff against the untracked-file metadata.",
     "Confidence limitations: Untracked file contents were omitted from the relay (metadata-only policy).; Untracked file evidence was capped at 20 files.",
-    "Untracked evidence: paths and sizes only for 20 files (20 untracked files found)."
+    "Untracked evidence: paths and sizes only for 19 files (19 untracked files found)."
   ],
   "evidence_warnings": [
     {

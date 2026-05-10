@@ -223,7 +223,7 @@ stdout:
     {
       "name": "temp_repo_review_smoke",
       "ok": true,
-      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"bc299f6e-6b49-4062-aa0d-ac2b70ca6431\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-10T01:36:53.748Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"bc299f6e-6b49-4062-aa0d-ac2b70ca6431\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
+      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"c59fa71a-9bfe-47ea-a7b6-46e20b7bfd65\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-10T15:52:48.350Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"c59fa71a-9bfe-47ea-a7b6-46e20b7bfd65\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
     },
     {
       "name": "temp_repo_review_progress",

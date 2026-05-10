@@ -130,14 +130,14 @@ describe('operator summary writer', () => {
       'Assessment: Reviewer inspected the staged diff and the new test fixture; nothing actionable surfaced.',
     );
     expect(written.summary.details).toContain(
-      'Verified: Read src/example.ts; Replayed the staged diff against tests/example.test.ts',
+      'Reviewer steps: Read src/example.ts; Replayed the staged diff against tests/example.test.ts',
     );
     expect(written.summary.details).toContain(
       'Confidence limitations: HEAD~1 history was out of scope for this review.; No untracked content was relayed.',
     );
     const markdown = readFileSync(written.markdownPath, 'utf8');
     expect(markdown).toContain('Assessment: Reviewer inspected the staged diff');
-    expect(markdown).toContain('Verified: Read src/example.ts');
+    expect(markdown).toContain('Reviewer steps: Read src/example.ts');
     expect(markdown).toContain('Confidence limitations:');
   });
 
@@ -171,7 +171,7 @@ describe('operator summary writer', () => {
     expect(written.summary.details).toContain(
       '[HIGH] eval call enables remote code execution — at evil.js:7',
     );
-    expect(written.summary.details).toContain('Verified: Read evil.js');
+    expect(written.summary.details).toContain('Reviewer steps: Read evil.js');
     expect(written.summary.details).not.toContain('Confidence limitations:');
   });
 

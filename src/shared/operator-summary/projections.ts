@@ -77,7 +77,7 @@ function reviewAssessmentDetails(report: JsonObject | undefined): string[] {
     .map((step) => step.trim())
     .filter((step) => step.length > 0);
   if (verification.length > 0) {
-    lines.push(`Verified: ${verification.join('; ')}`);
+    lines.push(`Reviewer steps: ${verification.join('; ')}`);
   }
   const limitations = stringArrayField(report, 'confidence_limitations')
     .map((entry) => entry.trim())
