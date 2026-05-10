@@ -7341,12 +7341,12 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync14, readFileSync as readFileSync26 } from "node:fs";
+import { existsSync as existsSync14, readFileSync as readFileSync27 } from "node:fs";
 import { dirname as dirname10, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync17 } from "node:fs";
+import { readFileSync as readFileSync18 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -12811,6 +12811,7 @@ var FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   "fix.context": "fix.context@v1",
   "fix.diagnosis": "fix.diagnosis@v1",
   "fix.no-repro-decision": "fix.no-repro-decision@v1",
+  "fix.regression-proof": "fix.regression-proof@v1",
   "fix.change": "fix.change@v1",
   "fix.verification": "fix.verification@v1",
   "fix.review": "fix.review@v1"
@@ -12820,6 +12821,7 @@ var FIX_RESULT_PATH_BY_ARTIFACT_ID = {
   "fix.context": "reports/fix/context.json",
   "fix.diagnosis": "reports/fix/diagnosis.json",
   "fix.no-repro-decision": "reports/fix/no-repro-decision.json",
+  "fix.regression-proof": "reports/fix/regression-proof.json",
   "fix.change": "reports/fix/change.json",
   "fix.verification": "reports/fix/verification.json",
   "fix.review": "reports/fix/review.json"
@@ -12828,6 +12830,7 @@ var REQUIRED_FIX_RESULT_ARTIFACT_IDS = [
   "fix.brief",
   "fix.context",
   "fix.diagnosis",
+  "fix.regression-proof",
   "fix.change",
   "fix.verification"
 ];
@@ -12999,6 +13002,82 @@ var FixVerification = external_exports.object({
     });
   }
 });
+var FixRegressionProofObservation = external_exports.object({
+  command_id: external_exports.string().min(1),
+  cwd: external_exports.string().min(1),
+  argv: external_exports.array(external_exports.string().min(1)).min(1),
+  timeout_ms: external_exports.number().int().positive(),
+  max_output_bytes: external_exports.number().int().positive(),
+  env: external_exports.record(external_exports.string(), external_exports.string()),
+  exit_code: external_exports.number().int().nonnegative(),
+  command_status: external_exports.enum(["passed", "failed"]),
+  duration_ms: external_exports.number().int().nonnegative(),
+  stdout_summary: external_exports.string(),
+  stderr_summary: external_exports.string()
+}).strict().superRefine((observation, ctx) => {
+  const expected = observation.exit_code === 0 ? "passed" : "failed";
+  if (observation.command_status !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["command_status"],
+      message: `command_status must be '${expected}' when exit_code is ${observation.exit_code}`
+    });
+  }
+});
+var FixRegressionProofStatus = external_exports.enum(["proved", "deferred", "not-proved"]);
+var FixRegressionProof = external_exports.object({
+  status: FixRegressionProofStatus,
+  overall_status: external_exports.enum(["passed", "failed"]),
+  reason: external_exports.string().min(1).optional(),
+  baseline: FixRegressionProofObservation.optional()
+}).strict().superRefine((proof, ctx) => {
+  const expectedOverall = proof.status === "not-proved" ? "failed" : "passed";
+  if (proof.overall_status !== expectedOverall) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["overall_status"],
+      message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`
+    });
+  }
+  if (proof.status === "deferred") {
+    if (proof.baseline !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["baseline"],
+        message: "baseline must be omitted when status is 'deferred'"
+      });
+    }
+    if (proof.reason === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["reason"],
+        message: "reason is required when status is 'deferred'"
+      });
+    }
+  } else {
+    if (proof.baseline === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["baseline"],
+        message: `baseline is required when status is '${proof.status}'`
+      });
+    }
+    if (proof.status === "proved" && proof.baseline?.command_status !== "failed") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["status"],
+        message: "status 'proved' requires baseline command_status 'failed'"
+      });
+    }
+    if (proof.status === "not-proved" && proof.baseline?.command_status !== "passed") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["status"],
+        message: "status 'not-proved' requires baseline command_status 'passed'"
+      });
+    }
+  }
+});
 var FixReviewVerdict = external_exports.enum(["accept", "accept-with-fixes", "reject"]);
 var FixReviewFinding = external_exports.object({
   severity: external_exports.enum(["critical", "high", "medium", "low"]),
@@ -13031,6 +13110,7 @@ var FixResultReportId = external_exports.enum([
   "fix.context",
   "fix.diagnosis",
   "fix.no-repro-decision",
+  "fix.regression-proof",
   "fix.change",
   "fix.verification",
   "fix.review"
@@ -13230,6 +13310,7 @@ var REQUIRED_POINTERS = [
   { report_id: "fix.brief", schema: "fix.brief@v1" },
   { report_id: "fix.context", schema: "fix.context@v1" },
   { report_id: "fix.diagnosis", schema: "fix.diagnosis@v1" },
+  { report_id: "fix.regression-proof", schema: "fix.regression-proof@v1" },
   { report_id: "fix.change", schema: "fix.change@v1" },
   { report_id: "fix.verification", schema: "fix.verification@v1" }
 ];
@@ -13243,6 +13324,7 @@ var fixCloseBuilder = {
     { name: "brief", schema: "fix.brief@v1", required: true },
     { name: "context", schema: "fix.context@v1", required: true },
     { name: "diagnosis", schema: "fix.diagnosis@v1", required: true },
+    { name: "regression", schema: "fix.regression-proof@v1", required: true },
     { name: "change", schema: "fix.change@v1", required: true },
     { name: "verification", schema: "fix.verification@v1", required: true },
     { name: "review", schema: "fix.review@v1", required: false }
@@ -13251,11 +13333,12 @@ var fixCloseBuilder = {
     const brief = FixBrief.parse(context.inputs.brief);
     FixContext.parse(context.inputs.context);
     const diagnosis = FixDiagnosis.parse(context.inputs.diagnosis);
+    const regression = FixRegressionProof.parse(context.inputs.regression);
     const change = FixChange.parse(context.inputs.change);
     const verification = FixVerification.parse(context.inputs.verification);
     const review = context.inputs.review === void 0 ? void 0 : FixReview.parse(context.inputs.review);
     const verificationStatus = verification.overall_status === "passed" ? "passed" : "failed";
-    const regressionStatus = brief.regression_contract.regression_test.status === "failing-before-fix" ? "proved" : "deferred";
+    const regressionStatus = regression.status === "proved" ? "proved" : "deferred";
     const reviewStatus = review === void 0 ? "skipped" : "completed";
     const outcome = diagnosis.reproduction_status === "not-reproduced" ? "not-reproduced" : verificationStatus === "passed" && regressionStatus === "proved" && (review === void 0 || review.verdict === "accept") ? "fixed" : verificationStatus === "passed" && (regressionStatus !== "proved" || review?.verdict === "accept-with-fixes") ? "partial" : "failed";
     const pointers = REQUIRED_POINTERS.map((p) => ({
@@ -13284,8 +13367,64 @@ var fixCloseBuilder = {
   }
 };
 
-// dist/flows/fix/writers/verification.js
+// dist/flows/fix/writers/regression-baseline.js
 import { readFileSync as readFileSync6 } from "node:fs";
+var fixRegressionBaselineWriter = {
+  resultSchemaName: "fix.regression-proof@v1",
+  loadCommands(context) {
+    const briefPath = reportPathForSchemaInCompiledFlow(context.flow, "fix.brief@v1");
+    if (!context.step.reads.includes(briefPath)) {
+      throw new Error(`fix.regression-proof@v1 requires step '${context.step.id}' to read ${briefPath}`);
+    }
+    const brief = FixBrief.parse(JSON.parse(readFileSync6(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    if (brief.regression_contract.regression_test.status !== "failing-before-fix") {
+      return [];
+    }
+    return [brief.regression_contract.regression_test.command];
+  },
+  buildResult(observations) {
+    if (observations.length === 0) {
+      return FixRegressionProof.parse({
+        status: "deferred",
+        overall_status: "passed",
+        reason: "Brief deferred the regression test; no runtime baseline was collected."
+      });
+    }
+    const observation = observations[0];
+    if (observation === void 0) {
+      throw new Error("fix.regression-proof@v1: regression baseline observation missing");
+    }
+    const baseline = {
+      command_id: observation.command.id,
+      cwd: observation.command.cwd,
+      argv: observation.command.argv,
+      timeout_ms: observation.command.timeout_ms,
+      max_output_bytes: observation.command.max_output_bytes,
+      env: observation.command.env,
+      exit_code: observation.exit_code,
+      command_status: observation.status,
+      duration_ms: observation.duration_ms,
+      stdout_summary: observation.stdout_summary,
+      stderr_summary: observation.stderr_summary
+    };
+    if (observation.status === "failed") {
+      return FixRegressionProof.parse({
+        status: "proved",
+        overall_status: "passed",
+        baseline
+      });
+    }
+    return FixRegressionProof.parse({
+      status: "not-proved",
+      overall_status: "failed",
+      reason: "Brief claimed the regression test fails before the fix, but the runtime observed it pass. Diagnosis is wrong about how the bug reproduces.",
+      baseline
+    });
+  }
+};
+
+// dist/flows/fix/writers/verification.js
+import { readFileSync as readFileSync7 } from "node:fs";
 var fixVerificationWriter = {
   resultSchemaName: "fix.verification@v1",
   loadCommands(context) {
@@ -13293,7 +13432,7 @@ var fixVerificationWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`fix.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = FixBrief.parse(JSON.parse(readFileSync6(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = FixBrief.parse(JSON.parse(readFileSync7(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     return brief.verification_command_candidates;
   },
   buildResult(observations) {
@@ -13371,13 +13510,14 @@ var fixCompiledFlowPackage = {
   reportSchemas: [
     { schemaName: "fix.brief@v1", schema: FixBrief },
     { schemaName: "fix.no-repro-decision@v1", schema: FixNoReproDecision },
+    { schemaName: "fix.regression-proof@v1", schema: FixRegressionProof },
     { schemaName: "fix.verification@v1", schema: FixVerification },
     { schemaName: "fix.result@v1", schema: FixResult }
   ],
   writers: {
     compose: [fixBriefComposeBuilder],
     close: [fixCloseBuilder],
-    verification: [fixVerificationWriter],
+    verification: [fixRegressionBaselineWriter, fixVerificationWriter],
     checkpoint: []
   }
 };
@@ -14591,7 +14731,7 @@ var migrateCoexistenceComposeBuilder = {
 };
 
 // dist/flows/migrate/writers/verification.js
-import { readFileSync as readFileSync7 } from "node:fs";
+import { readFileSync as readFileSync8 } from "node:fs";
 var migrateVerificationWriter = {
   resultSchemaName: "migrate.verification@v1",
   loadCommands(context) {
@@ -14599,7 +14739,7 @@ var migrateVerificationWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`migrate.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = MigrateBrief.parse(JSON.parse(readFileSync7(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = MigrateBrief.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     return brief.verification_command_candidates;
   },
   buildResult(observations) {
@@ -14682,11 +14822,11 @@ var reviewRelayShapeHint = {
   },
   instruction: [
     "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }], "assessment": "<plain-language paragraph>", "verification": ["<step you performed>"], "confidence_limitations": ["<gap that limits certainty>"] }',
+    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|medium|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }], "assessment": "<plain-language paragraph>", "verification": ["<step you performed>"], "confidence_limitations": ["<gap that limits certainty>"] }',
     'Use an empty findings array when there are no issues: { "verdict": "NO_ISSUES_FOUND", "findings": [], "assessment": "...", "verification": ["..."], "confidence_limitations": ["..."] }.',
     "Use an empty file_refs array when a finding has no file-specific reference.",
     "The assessment field is REQUIRED on every verdict, including NO_ISSUES_FOUND. State plainly what you checked and what you concluded; do not return a bare verdict.",
-    "The verification array lists the concrete steps you took: files inspected, commands run, evidence cross-referenced. Include at least one entry on every verdict; this is how the operator can audit the review.",
+    "The verification array is your self-report of concrete steps you took: files inspected, commands run, evidence cross-referenced. Include at least one entry on every verdict so the operator can audit the review.",
     "The confidence_limitations array names anything that limits certainty: out-of-scope files, omitted untracked content, areas you did not inspect, assumptions you had to make. Use an empty array only when coverage was complete.",
     "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
     "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and the close step validates findings, assessment, verification, and confidence_limitations before writing reports/review-result.json."
@@ -14694,7 +14834,7 @@ var reviewRelayShapeHint = {
 };
 
 // dist/flows/review/reports.js
-var ReviewFindingSeverity = external_exports.enum(["critical", "high", "low"]);
+var ReviewFindingSeverity = external_exports.enum(["critical", "high", "medium", "low"]);
 var ReviewResultVerdict = external_exports.enum(["CLEAN", "ISSUES_FOUND"]);
 var ReviewRelayVerdict = external_exports.enum(["NO_ISSUES_FOUND", "ISSUES_FOUND"]);
 var ReviewEvidenceWarningKind = external_exports.enum([
@@ -14765,7 +14905,7 @@ var ReviewFinding = external_exports.object({
   file_refs: external_exports.array(external_exports.string().min(1))
 }).strict();
 function computeReviewVerdict(findings) {
-  return findings.some((finding) => finding.severity === "critical" || finding.severity === "high") ? "ISSUES_FOUND" : "CLEAN";
+  return findings.some((finding) => finding.severity !== "low") ? "ISSUES_FOUND" : "CLEAN";
 }
 var ReviewResult = external_exports.object({
   scope: external_exports.string().min(1),
@@ -14793,7 +14933,7 @@ var ReviewResult = external_exports.object({
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["verdict"],
-      message: `verdict must be ${expected} for the report findings (CLEAN iff critical_count == 0 and high_count == 0)`
+      message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`
     });
   }
 });
@@ -15071,7 +15211,7 @@ var reviewIntakeComposeBuilder = {
 };
 
 // dist/flows/review/writers/result.js
-import { readFileSync as readFileSync8 } from "node:fs";
+import { readFileSync as readFileSync9 } from "node:fs";
 function reviewerRelayResultPath(flow, closeStep) {
   const closeStepId = closeStep.id;
   const reviewerRelayes = flow.steps.filter((candidate) => candidate.kind === "relay" && candidate.role === "reviewer" && candidate.routes.pass === closeStepId);
@@ -15112,8 +15252,8 @@ var reviewResultComposeBuilder = {
   // its own resolution.
   build(context) {
     const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, path), "utf8")));
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync9(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync9(resolveRunRelative(context.runFolder, path), "utf8")));
     return ReviewResult.parse({
       scope: intake.scope,
       findings: relayResult.findings,
@@ -15215,7 +15355,7 @@ var runtimeProofCompiledFlowPackage = {
 };
 
 // dist/flows/sweep/cross-report-validators.js
-import { existsSync as existsSync3, readFileSync as readFileSync9 } from "node:fs";
+import { existsSync as existsSync3, readFileSync as readFileSync10 } from "node:fs";
 import { resolve as resolve3 } from "node:path";
 
 // dist/flows/sweep/reports.js
@@ -15448,7 +15588,7 @@ function validateSweepBatchAgainstQueue(flow, runFolder, resultBody) {
   }
   let queueRaw;
   try {
-    queueRaw = readFileSync9(queueAbs, "utf8");
+    queueRaw = readFileSync10(queueAbs, "utf8");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { kind: "fail", reason: `cannot read sweep.queue at '${queueRel}': ${msg}` };
@@ -15643,7 +15783,7 @@ var sweepQueueComposeBuilder = {
 };
 
 // dist/flows/sweep/writers/verification.js
-import { readFileSync as readFileSync10 } from "node:fs";
+import { readFileSync as readFileSync11 } from "node:fs";
 var sweepVerificationWriter = {
   resultSchemaName: "sweep.verification@v1",
   loadCommands(context) {
@@ -15651,7 +15791,7 @@ var sweepVerificationWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`sweep.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = SweepBrief.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = SweepBrief.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     return brief.verification_command_candidates;
   },
   buildResult(observations) {
@@ -16662,7 +16802,7 @@ function isWaitingCheckpointStepOutcome(outcome) {
 }
 
 // dist/runtime/executors/checkpoint.js
-import { readFileSync as readFileSync11 } from "node:fs";
+import { readFileSync as readFileSync12 } from "node:fs";
 
 // dist/shared/recovery-route.js
 var RECOVERY_ROUTE_PRIORITY = [
@@ -16772,7 +16912,7 @@ async function executeCheckpoint(step, context) {
         responsePath: response.path
       });
       await context.files.writeJson(report, body);
-      checkpointReportSha256 = sha256Hex(readFileSync11(context.files.resolve(report), "utf8"));
+      checkpointReportSha256 = sha256Hex(readFileSync12(context.files.resolve(report), "utf8"));
       await context.trace.append({
         run_id: context.runId,
         kind: "step.report_written",
@@ -16788,7 +16928,7 @@ async function executeCheckpoint(step, context) {
       ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
     });
     await context.files.writeJson(request, requestBody);
-    const requestText = readFileSync11(context.files.resolve(request), "utf8");
+    const requestText = readFileSync12(context.files.resolve(request), "utf8");
     await context.trace.append({
       run_id: context.runId,
       kind: "checkpoint.requested",
@@ -16863,7 +17003,7 @@ async function executeCheckpoint(step, context) {
 }
 
 // dist/runtime/executors/compose.js
-import { readFileSync as readFileSync12 } from "node:fs";
+import { readFileSync as readFileSync13 } from "node:fs";
 
 // dist/flows/registries/close-writers/registry.js
 var REGISTRY2 = buildCloseRegistry(flowPackages);
@@ -16912,7 +17052,7 @@ function resolveComposeReadPaths(builder, flow, step) {
 
 // dist/runtime/executors/compose.js
 function readJsonReport(context, path) {
-  return JSON.parse(readFileSync12(context.files.resolve(path), "utf8"));
+  return JSON.parse(readFileSync13(context.files.resolve(path), "utf8"));
 }
 async function writeRegisteredComposeReport(step, context) {
   const report = step.writes?.report;
@@ -18077,7 +18217,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync5, readFileSync as readFileSync13 } from "node:fs";
+import { existsSync as existsSync5, readFileSync as readFileSync14 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -18157,7 +18297,7 @@ function composeRelayPrompt(step, runFolder, loadedSkills = []) {
     if (!existsSync5(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync13(abs, "utf8")}`;
+${readFileSync14(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   return [
@@ -18177,7 +18317,7 @@ ${readFileSync13(abs, "utf8")}`;
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync6, readFileSync as readFileSync14, readdirSync } from "node:fs";
+import { existsSync as existsSync6, readFileSync as readFileSync15, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join4, resolve as resolve5 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
@@ -18248,7 +18388,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync14(candidate.path, "utf8");
+    text = readFileSync15(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -19969,7 +20109,7 @@ function createDefaultExecutors(options = {}) {
 }
 
 // dist/runtime/projections/progress.js
-import { readFileSync as readFileSync16 } from "node:fs";
+import { readFileSync as readFileSync17 } from "node:fs";
 import { join as join9 } from "node:path";
 
 // dist/schemas/progress-event.js
@@ -20251,7 +20391,7 @@ function compiledFlowMayInvokeWriteCapableWorker(flow) {
 }
 
 // dist/runtime/projections/tournament-checkpoint-context.js
-import { readFileSync as readFileSync15 } from "node:fs";
+import { readFileSync as readFileSync16 } from "node:fs";
 import { join as join8 } from "node:path";
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -20263,7 +20403,7 @@ function boundedText(value, max) {
 }
 function readJson2(runDir, path) {
   try {
-    return JSON.parse(readFileSync15(join8(runDir, path), "utf8"));
+    return JSON.parse(readFileSync16(join8(runDir, path), "utf8"));
   } catch {
     return void 0;
   }
@@ -20449,7 +20589,7 @@ function reportTaskListProgress(input) {
   });
 }
 function readJsonReport2(runDir, reportPath) {
-  return JSON.parse(readFileSync16(join9(runDir, reportPath), "utf8"));
+  return JSON.parse(readFileSync17(join9(runDir, reportPath), "utf8"));
 }
 function warningRecordsFromReport(body) {
   if (body === null || typeof body !== "object" || Array.isArray(body))
@@ -20540,7 +20680,7 @@ function stringArray(value) {
 }
 function checkpointPrompt(requestPath) {
   try {
-    const raw = JSON.parse(readFileSync16(requestPath, "utf8"));
+    const raw = JSON.parse(readFileSync17(requestPath, "utf8"));
     if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
       const prompt = raw.prompt;
       if (typeof prompt === "string" && prompt.length > 0)
@@ -21648,7 +21788,7 @@ function declaredCheckpointRequestPath(step) {
 }
 function readCheckpointRequestContext(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
-  const requestText = readFileSync17(requestAbs, "utf8");
+  const requestText = readFileSync18(requestAbs, "utf8");
   if (sha256Hex(requestText) !== input.expectedRequestHash) {
     throw new Error("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
@@ -21968,7 +22108,7 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync8, readFileSync as readFileSync18 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync19 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join11, resolve as resolve7 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit-next", "config.yaml"];
@@ -21990,7 +22130,7 @@ function loadConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve7(sourcePath);
   if (!existsSync8(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync18(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync19(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -22269,7 +22409,7 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync10, mkdirSync, readFileSync as readFileSync20, rmSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync10, mkdirSync, readFileSync as readFileSync21, rmSync, writeFileSync } from "node:fs";
 import { dirname as dirname6, join as join12 } from "node:path";
 
 // dist/schemas/operator-summary.js
@@ -22587,7 +22727,7 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync9, readFileSync as readFileSync19 } from "node:fs";
+import { existsSync as existsSync9, readFileSync as readFileSync20 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -22595,7 +22735,7 @@ function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
   if (!existsSync9(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync19(path, "utf8"));
+  const parsed = JSON.parse(readFileSync20(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -22659,7 +22799,7 @@ function friendlyRunNote(flowId, summary) {
   return summary;
 }
 function friendlyResultSummary(summary) {
-  return summary.replace(/^(?:Build|Fix|Migrate|Review|Explore|Sweep) result for .+?:\s*/, "").replace(/^Explore .+?:\s*/, "");
+  return summary.replace(/^(?:Build|Fix|Migrate|Review|Explore|Sweep) result for .+?:\s*/, "").replace(/^Explore '[\s\S]*?':\s*/, "").replace(/^Explore .+?:\s*/, "");
 }
 function friendlyReviewStatus(status) {
   if (status === "accept")
@@ -22880,7 +23020,7 @@ function reviewAssessmentDetails(report) {
   }
   const verification = stringArrayField(report, "verification").map((step) => step.trim()).filter((step) => step.length > 0);
   if (verification.length > 0) {
-    lines.push(`Verified: ${verification.join("; ")}`);
+    lines.push(`Reviewer steps: ${verification.join("; ")}`);
   }
   const limitations = stringArrayField(report, "confidence_limitations").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
   if (limitations.length > 0) {
@@ -23024,7 +23164,7 @@ function readPriorRoute(runFolder) {
   if (!existsSync10(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync20(path, "utf8"));
+    const raw = JSON.parse(readFileSync21(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -23256,12 +23396,12 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync11, mkdirSync as mkdirSync2, readFileSync as readFileSync22, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync11, mkdirSync as mkdirSync2, readFileSync as readFileSync23, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname8, join as join13, resolve as resolve9 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync21 } from "node:fs";
+import { readFileSync as readFileSync22 } from "node:fs";
 import { dirname as dirname7, relative as relative5, resolve as resolve8 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
@@ -23295,7 +23435,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync21(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync22(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -23530,7 +23670,7 @@ function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
     if (!existsSync11(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync22(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync23(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -23610,7 +23750,7 @@ function publishManifest(input) {
     custom_flows: []
   };
   if (existsSync11(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync22(manifestPath(input.home), "utf8"));
+    existing = JSON.parse(readFileSync23(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -23654,7 +23794,7 @@ function writeDraft(input) {
 }
 function loadDraftFlow(home, slug) {
   const path = join13(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync22(path, "utf8")));
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync23(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
@@ -23667,10 +23807,10 @@ function publishDraft(input) {
   const customFlowRoot = join13(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join13(skillRoot, "SKILL.md"), readFileSync22(join13(draft, "SKILL.md"), "utf8"));
-  writeText(join13(skillRoot, "circuit.yaml"), readFileSync22(join13(draft, "circuit.yaml"), "utf8"));
-  writeText(join13(customFlowRoot, "circuit.json"), readFileSync22(join13(draft, "circuit.json"), "utf8"));
-  writeText(join13(commandRoot(input.home), `${input.slug}.md`), readFileSync22(join13(draft, "command.md"), "utf8"));
+  writeText(join13(skillRoot, "SKILL.md"), readFileSync23(join13(draft, "SKILL.md"), "utf8"));
+  writeText(join13(skillRoot, "circuit.yaml"), readFileSync23(join13(draft, "circuit.yaml"), "utf8"));
+  writeText(join13(customFlowRoot, "circuit.json"), readFileSync23(join13(draft, "circuit.json"), "utf8"));
+  writeText(join13(commandRoot(input.home), `${input.slug}.md`), readFileSync23(join13(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -23804,7 +23944,7 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3, readFileSync as readFileSync25, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3, readFileSync as readFileSync26, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import { dirname as dirname9, join as join17, resolve as resolve11 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23814,13 +23954,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve10 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync23, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync24, writeFileSync as writeFileSync3 } from "node:fs";
 import { join as join14 } from "node:path";
 function manifestSnapshotPath(runFolder) {
   return join14(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync23(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync24(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -24008,14 +24148,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync24 } from "node:fs";
+import { readFileSync as readFileSync25 } from "node:fs";
 import { join as join16 } from "node:path";
 function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
   const tracePath = join16(runFolder, "trace.ndjson");
-  const text = readFileSync24(tracePath, "utf8");
+  const text = readFileSync25(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -24200,7 +24340,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync24(requestAbs, "utf8");
+    requestText = readFileSync25(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -24921,7 +25061,7 @@ function handoffBrief(args) {
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync25(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync26(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
@@ -24933,7 +25073,7 @@ function handoffBrief(args) {
   }
   let record;
   try {
-    record = ContinuityRecord.parse(JSON.parse(readFileSync25(recordAbs, "utf8")));
+    record = ContinuityRecord.parse(JSON.parse(readFileSync26(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -24966,7 +25106,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync25(0, "utf8");
+  const raw = readFileSync26(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -25071,7 +25211,7 @@ function defaultHooksConfig() {
 function readHooksConfig(path) {
   if (!existsSync13(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync25(path, "utf8"));
+  const parsed = JSON.parse(readFileSync26(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -25526,7 +25666,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync25(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync26(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -25899,7 +26039,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync26(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync27(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -26175,7 +26315,7 @@ function loadFixture(fixturePath) {
   if (!existsSync14(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync26(fixturePath);
+  const bytes = readFileSync27(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -26219,7 +26359,7 @@ function customFlowArchetype(input) {
     return void 0;
   try {
     const flowRoot2 = resolve12(input.args.flowRoot);
-    const manifest = JSON.parse(readFileSync26(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync27(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
       return void 0;
     }
@@ -26334,7 +26474,7 @@ async function main(argv, options = {}) {
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress2 === void 0 ? {} : { progress: progress2 }
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync26(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -26477,7 +26617,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync26(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

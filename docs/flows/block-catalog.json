@@ -180,6 +180,7 @@
       "title": "Run Verification",
       "purpose": "Run declared proof commands or checks and capture their result.",
       "input_contracts": ["verification.plan@v1", "change.evidence@v1"],
+      "alternative_input_contracts": [["verification.plan@v1"]],
       "output_contract": "verification.result@v1",
       "action_surface": "orchestrator",
       "produces_evidence": ["command list", "exit status", "bounded output", "pass or fail"],

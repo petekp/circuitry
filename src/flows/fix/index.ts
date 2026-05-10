@@ -13,12 +13,14 @@ import {
   FixContext,
   FixDiagnosis,
   FixNoReproDecision,
+  FixRegressionProof,
   FixResult,
   FixReview,
   FixVerification,
 } from './reports.js';
 import { fixBriefComposeBuilder } from './writers/brief.js';
 import { fixCloseBuilder } from './writers/close.js';
+import { fixRegressionBaselineWriter } from './writers/regression-baseline.js';
 import { fixVerificationWriter } from './writers/verification.js';
 
 const FIX_SIGNALS: readonly CompiledFlowSignal[] = [
@@ -77,13 +79,14 @@ export const fixCompiledFlowPackage: CompiledFlowPackage = {
   reportSchemas: [
     { schemaName: 'fix.brief@v1', schema: FixBrief },
     { schemaName: 'fix.no-repro-decision@v1', schema: FixNoReproDecision },
+    { schemaName: 'fix.regression-proof@v1', schema: FixRegressionProof },
     { schemaName: 'fix.verification@v1', schema: FixVerification },
     { schemaName: 'fix.result@v1', schema: FixResult },
   ],
   writers: {
     compose: [fixBriefComposeBuilder],
     close: [fixCloseBuilder],
-    verification: [fixVerificationWriter],
+    verification: [fixRegressionBaselineWriter, fixVerificationWriter],
     checkpoint: [],
   },
 };

@@ -6,6 +6,7 @@ const FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'fix.context': 'fix.context@v1',
   'fix.diagnosis': 'fix.diagnosis@v1',
   'fix.no-repro-decision': 'fix.no-repro-decision@v1',
+  'fix.regression-proof': 'fix.regression-proof@v1',
   'fix.change': 'fix.change@v1',
   'fix.verification': 'fix.verification@v1',
   'fix.review': 'fix.review@v1',
@@ -16,6 +17,7 @@ const FIX_RESULT_PATH_BY_ARTIFACT_ID = {
   'fix.context': 'reports/fix/context.json',
   'fix.diagnosis': 'reports/fix/diagnosis.json',
   'fix.no-repro-decision': 'reports/fix/no-repro-decision.json',
+  'fix.regression-proof': 'reports/fix/regression-proof.json',
   'fix.change': 'reports/fix/change.json',
   'fix.verification': 'reports/fix/verification.json',
   'fix.review': 'reports/fix/review.json',
@@ -25,6 +27,7 @@ const REQUIRED_FIX_RESULT_ARTIFACT_IDS = [
   'fix.brief',
   'fix.context',
   'fix.diagnosis',
+  'fix.regression-proof',
   'fix.change',
   'fix.verification',
 ] as const;
@@ -280,6 +283,112 @@ export const FixVerification = z
   });
 export type FixVerification = z.infer<typeof FixVerification>;
 
+// Runtime-owned regression proof. The brief's regression contract states the
+// model's *intent* — what test should reproduce the bug. This artifact records
+// what the runtime actually observed when it executed that test before the fix
+// was applied:
+//   - 'proved'     — runtime ran the regression command and observed it fail
+//                    (matching the brief's failing-before-fix expectation, so
+//                    the test does reproduce the bug).
+//   - 'deferred'   — brief did not specify a runnable regression test; no
+//                    proof was collected. fix-close cannot mark outcome
+//                    'fixed' on a deferred proof.
+//   - 'not-proved' — runtime ran the regression command but it passed,
+//                    contradicting the brief. The bug is not actually being
+//                    reproduced by the named test, so any later "fix" is
+//                    unfounded. Treated as a verification failure.
+//
+// `overall_status` exists so the verification executor can route on the
+// outcome: 'passed' when status is 'proved' or 'deferred' (continue), 'failed'
+// when status is 'not-proved' (recovery).
+export const FixRegressionProofObservation = z
+  .object({
+    command_id: z.string().min(1),
+    cwd: z.string().min(1),
+    argv: z.array(z.string().min(1)).min(1),
+    timeout_ms: z.number().int().positive(),
+    max_output_bytes: z.number().int().positive(),
+    env: z.record(z.string(), z.string()),
+    exit_code: z.number().int().nonnegative(),
+    command_status: z.enum(['passed', 'failed']),
+    duration_ms: z.number().int().nonnegative(),
+    stdout_summary: z.string(),
+    stderr_summary: z.string(),
+  })
+  .strict()
+  .superRefine((observation, ctx) => {
+    const expected = observation.exit_code === 0 ? 'passed' : 'failed';
+    if (observation.command_status !== expected) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['command_status'],
+        message: `command_status must be '${expected}' when exit_code is ${observation.exit_code}`,
+      });
+    }
+  });
+export type FixRegressionProofObservation = z.infer<typeof FixRegressionProofObservation>;
+
+export const FixRegressionProofStatus = z.enum(['proved', 'deferred', 'not-proved']);
+export type FixRegressionProofStatus = z.infer<typeof FixRegressionProofStatus>;
+
+export const FixRegressionProof = z
+  .object({
+    status: FixRegressionProofStatus,
+    overall_status: z.enum(['passed', 'failed']),
+    reason: z.string().min(1).optional(),
+    baseline: FixRegressionProofObservation.optional(),
+  })
+  .strict()
+  .superRefine((proof, ctx) => {
+    const expectedOverall = proof.status === 'not-proved' ? 'failed' : 'passed';
+    if (proof.overall_status !== expectedOverall) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['overall_status'],
+        message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`,
+      });
+    }
+    if (proof.status === 'deferred') {
+      if (proof.baseline !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['baseline'],
+          message: "baseline must be omitted when status is 'deferred'",
+        });
+      }
+      if (proof.reason === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['reason'],
+          message: "reason is required when status is 'deferred'",
+        });
+      }
+    } else {
+      if (proof.baseline === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['baseline'],
+          message: `baseline is required when status is '${proof.status}'`,
+        });
+      }
+      if (proof.status === 'proved' && proof.baseline?.command_status !== 'failed') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: "status 'proved' requires baseline command_status 'failed'",
+        });
+      }
+      if (proof.status === 'not-proved' && proof.baseline?.command_status !== 'passed') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: "status 'not-proved' requires baseline command_status 'passed'",
+        });
+      }
+    }
+  });
+export type FixRegressionProof = z.infer<typeof FixRegressionProof>;
+
 export const FixReviewVerdict = z.enum(['accept', 'accept-with-fixes', 'reject']);
 export type FixReviewVerdict = z.infer<typeof FixReviewVerdict>;
 
@@ -325,6 +434,7 @@ export const FixResultReportId = z.enum([
   'fix.context',
   'fix.diagnosis',
   'fix.no-repro-decision',
+  'fix.regression-proof',
   'fix.change',
   'fix.verification',
   'fix.review',

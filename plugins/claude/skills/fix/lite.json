@@ -41,7 +41,7 @@
       "id": "verify-stage",
       "title": "Verify",
       "canonical": "verify",
-      "steps": ["fix-verify"]
+      "steps": ["fix-regression-baseline", "fix-verify"]
     },
     {
       "id": "close-stage",
@@ -124,8 +124,8 @@
       "protocol": "fix-diagnose@v1",
       "reads": ["reports/fix/brief.json", "reports/fix/context.json"],
       "routes": {
-        "continue": "fix-act",
-        "pass": "fix-act",
+        "continue": "fix-regression-baseline",
+        "pass": "fix-regression-baseline",
         "retry": "fix-gather-context",
         "ask": "fix-no-repro-decision",
         "stop": "@stop"
@@ -157,8 +157,8 @@
       "protocol": "fix-no-repro-decision@v1",
       "reads": ["reports/fix/diagnosis.json"],
       "routes": {
-        "continue": "fix-act",
-        "pass": "fix-act",
+        "continue": "fix-regression-baseline",
+        "pass": "fix-regression-baseline",
         "revise": "fix-diagnose",
         "stop": "@stop",
         "handoff": "fix-handoff",
@@ -188,6 +188,34 @@
           "ref": "response"
         },
         "allow": ["continue"]
+      }
+    },
+    {
+      "id": "fix-regression-baseline",
+      "title": "Verify — capture regression baseline",
+      "protocol": "fix-regression-baseline@v1",
+      "reads": ["reports/fix/brief.json", "reports/fix/diagnosis.json"],
+      "routes": {
+        "continue": "fix-act",
+        "pass": "fix-act",
+        "retry": "fix-diagnose",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "verification",
+      "writes": {
+        "report": {
+          "path": "reports/fix/regression-proof.json",
+          "schema": "fix.regression-proof@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["status", "overall_status"]
       }
     },
     {
@@ -261,6 +289,7 @@
         "reports/fix/brief.json",
         "reports/fix/context.json",
         "reports/fix/diagnosis.json",
+        "reports/fix/regression-proof.json",
         "reports/fix/change.json",
         "reports/fix/verification.json"
       ],

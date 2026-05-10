@@ -1,15 +1,17 @@
 // Fix close-with-evidence builder.
 //
-// Reads brief + context + diagnosis + change + verification (required)
-// plus review (optional — lite mode skips review via route_overrides).
+// Reads brief + context + diagnosis + regression-proof + change + verification
+// (all required) plus review (optional — lite mode skips review via
+// route_overrides). regression_status is read from the runtime-owned
+// fix.regression-proof@v1 artifact, never derived from the brief, so a model
+// claim of "failing-before-fix" cannot grant outcome 'fixed' on its own.
+//
 // Outcome rules:
 //   - reproduction_status='not-reproduced' → 'not-reproduced'
 //   - verification passed AND regression proved AND review accepted cleanly → 'fixed'
 //   - verification passed AND regression proved AND review accepted with fixes → 'partial'
-//   - verification passed AND regression not proved → 'partial'
+//   - verification passed AND regression not proved (deferred) → 'partial'
 //   - otherwise → 'failed'
-// review_status is 'completed' when the review input is present (and
-// review_verdict is set), 'skipped' otherwise (with a default skip reason).
 
 import { reportPathForSchemaInCompiledFlow } from '../../registries/close-writers/shared.js';
 import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
@@ -18,6 +20,7 @@ import {
   FixChange,
   FixContext,
   FixDiagnosis,
+  FixRegressionProof,
   FixResult,
   type FixResultReportPointer,
   FixReview,
@@ -28,6 +31,7 @@ const REQUIRED_POINTERS = [
   { report_id: 'fix.brief', schema: 'fix.brief@v1' },
   { report_id: 'fix.context', schema: 'fix.context@v1' },
   { report_id: 'fix.diagnosis', schema: 'fix.diagnosis@v1' },
+  { report_id: 'fix.regression-proof', schema: 'fix.regression-proof@v1' },
   { report_id: 'fix.change', schema: 'fix.change@v1' },
   { report_id: 'fix.verification', schema: 'fix.verification@v1' },
 ] as const;
@@ -43,6 +47,7 @@ export const fixCloseBuilder: CloseBuilder = {
     { name: 'brief', schema: 'fix.brief@v1', required: true },
     { name: 'context', schema: 'fix.context@v1', required: true },
     { name: 'diagnosis', schema: 'fix.diagnosis@v1', required: true },
+    { name: 'regression', schema: 'fix.regression-proof@v1', required: true },
     { name: 'change', schema: 'fix.change@v1', required: true },
     { name: 'verification', schema: 'fix.verification@v1', required: true },
     { name: 'review', schema: 'fix.review@v1', required: false },
@@ -51,16 +56,15 @@ export const fixCloseBuilder: CloseBuilder = {
     const brief = FixBrief.parse(context.inputs.brief);
     FixContext.parse(context.inputs.context);
     const diagnosis = FixDiagnosis.parse(context.inputs.diagnosis);
+    const regression = FixRegressionProof.parse(context.inputs.regression);
     const change = FixChange.parse(context.inputs.change);
     const verification = FixVerification.parse(context.inputs.verification);
     const review =
       context.inputs.review === undefined ? undefined : FixReview.parse(context.inputs.review);
 
     const verificationStatus = verification.overall_status === 'passed' ? 'passed' : 'failed';
-    const regressionStatus =
-      brief.regression_contract.regression_test.status === 'failing-before-fix'
-        ? 'proved'
-        : 'deferred';
+    const regressionStatus: FixResult['regression_status'] =
+      regression.status === 'proved' ? 'proved' : 'deferred';
     const reviewStatus = review === undefined ? 'skipped' : 'completed';
 
     const outcome: FixResult['outcome'] =

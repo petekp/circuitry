@@ -44,6 +44,10 @@
       "actual": "fix.verification@v1"
     },
     {
+      "generic": "verification.result@v1",
+      "actual": "fix.regression-proof@v1"
+    },
+    {
       "generic": "review.verdict@v1",
       "actual": "fix.review@v1"
     },
@@ -209,7 +213,7 @@
         "pass": ["accept"]
       },
       "routes": {
-        "continue": "fix-act",
+        "continue": "fix-regression-baseline",
         "retry": "fix-gather-context",
         "ask": "fix-no-repro-decision",
         "stop": "@stop"
@@ -254,13 +258,41 @@
         "safe_autonomous_choice": "continue"
       },
       "routes": {
-        "continue": "fix-act",
+        "continue": "fix-regression-baseline",
         "revise": "fix-diagnose",
         "stop": "@stop",
         "handoff": "fix-handoff",
         "escalate": "@escalate"
       },
       "block": "human-decision"
+    },
+    {
+      "id": "fix-regression-baseline",
+      "title": "Verify \u2014 capture regression baseline",
+      "stage": "verify",
+      "input": {
+        "proof": "verification.plan@v1",
+        "brief": "fix.brief@v1",
+        "diagnosis": "fix.diagnosis@v1"
+      },
+      "output": "fix.regression-proof@v1",
+      "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
+      "execution": {
+        "kind": "verification"
+      },
+      "protocol": "fix-regression-baseline@v1",
+      "writes": {
+        "report_path": "reports/fix/regression-proof.json"
+      },
+      "check": {
+        "required": ["status", "overall_status"]
+      },
+      "routes": {
+        "continue": "fix-act",
+        "retry": "fix-diagnose",
+        "stop": "@stop"
+      },
+      "block": "run-verification"
     },
     {
       "id": "fix-act",
@@ -371,6 +403,7 @@
         "brief": "fix.brief@v1",
         "context": "fix.context@v1",
         "diagnosis": "fix.diagnosis@v1",
+        "regression": "fix.regression-proof@v1",
         "change": "fix.change@v1",
         "verification": "fix.verification@v1"
       },
@@ -409,6 +442,7 @@
         "brief": "fix.brief@v1",
         "context": "fix.context@v1",
         "diagnosis": "fix.diagnosis@v1",
+        "regression": "fix.regression-proof@v1",
         "change": "fix.change@v1",
         "verification": "fix.verification@v1",
         "review": "fix.review@v1"
