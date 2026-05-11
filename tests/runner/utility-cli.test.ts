@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
-import { resolveDefaultLauncher } from '../../src/cli/handoff.js';
+import { missingDefaultLauncherMessage, resolveDefaultLauncher } from '../../src/cli/handoff.js';
 import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from '../../src/cli/runtime-routing-policy.js';
 import {
   CompiledFlow,
@@ -886,7 +886,22 @@ describe('utility CLI commands', () => {
     expect(resolveDefaultLauncher('', moduleDir)).toBe(bin);
   });
 
-  it('returns the source-tree fallback even when bin is missing, so callers surface a clear error', async () => {
+  it('explains the no-wrapper default launcher failure with both supported fixes', () => {
+    const root = tempRoot('circuit-launcher-packaged-');
+    const moduleDir = join(root, 'plugins/circuit/runtime');
+
+    const fallback = resolveDefaultLauncher(undefined, moduleDir);
+    expect(fallback).toBe(resolve(root, 'plugins/bin/circuit-next'));
+    expect(existsSync(fallback)).toBe(false);
+
+    const message = missingDefaultLauncherMessage(fallback);
+    expect(message).toContain('CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected');
+    expect(message).toContain('set CIRCUIT_PLUGIN_ROOT');
+    expect(message).toContain('invoke through plugins/<host>/scripts/circuit-next.mjs');
+    expect(message).toContain(fallback);
+  });
+
+  it('reports a missing explicit launcher path without default-wrapper guidance', async () => {
     const root = tempRoot('circuit-launcher-missing-');
     const moduleDir = join(root, 'src/cli');
     mkdirSync(moduleDir, { recursive: true });

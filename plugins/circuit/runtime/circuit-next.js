@@ -25668,6 +25668,13 @@ function resolveDefaultLauncher(pluginRoot, moduleDir) {
   }
   return resolve11(moduleDir, "../..", "bin/circuit-next");
 }
+function missingDefaultLauncherMessage(launcher) {
+  return [
+    "CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected.",
+    "Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit-next.mjs.",
+    `Tried source-tree fallback launcher: ${launcher}`
+  ].join(" ");
+}
 function defaultLauncherPath() {
   return resolveDefaultLauncher(process.env.CIRCUIT_PLUGIN_ROOT, dirname9(fileURLToPath2(import.meta.url)));
 }
@@ -25682,6 +25689,9 @@ function resolveHooksFileArg(args) {
 function resolveLauncherArg(args) {
   const launcher = resolve11(args.launcher ?? defaultLauncherPath());
   if (!existsSync13(launcher)) {
+    if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
+      throw new Error(missingDefaultLauncherMessage(launcher));
+    }
     throw new Error(`Circuit launcher not found: ${launcher}`);
   }
   return launcher;

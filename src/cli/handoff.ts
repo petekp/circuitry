@@ -550,6 +550,14 @@ export function resolveDefaultLauncher(pluginRoot: string | undefined, moduleDir
   return resolve(moduleDir, '../..', 'bin/circuit-next');
 }
 
+export function missingDefaultLauncherMessage(launcher: string): string {
+  return [
+    'CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected.',
+    'Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit-next.mjs.',
+    `Tried source-tree fallback launcher: ${launcher}`,
+  ].join(' ');
+}
+
 function defaultLauncherPath(): string {
   // Marketplace-safe by env var: CIRCUIT_PLUGIN_ROOT is the primary input;
   // the fileURLToPath argument is only consulted in the source-tree
@@ -574,6 +582,9 @@ function resolveHooksFileArg(args: HandoffArgs): string {
 function resolveLauncherArg(args: HandoffArgs): string {
   const launcher = resolve(args.launcher ?? defaultLauncherPath());
   if (!existsSync(launcher)) {
+    if (args.launcher === undefined && (process.env.CIRCUIT_PLUGIN_ROOT ?? '').length === 0) {
+      throw new Error(missingDefaultLauncherMessage(launcher));
+    }
     throw new Error(`Circuit launcher not found: ${launcher}`);
   }
   return launcher;
