@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { DEFECT_IDS } from './defect-taxonomy.ts';
+import { summarizeCaseSourcePool, summarizeSourcePool } from './reporting.ts';
 import { buildCases, runCase } from './runner.ts';
 import type { DefectId, EvalCaseResult, EvalSummary, JudgeId } from './types.ts';
 
@@ -173,6 +174,7 @@ function summarize(
     finished_at: new Date().toISOString(),
     judge,
     wallclock_ms: wallclockMs,
+    source_pool: summarizeSourcePool(results),
     per_defect: perDefect,
     controls,
     overall: {
@@ -196,6 +198,8 @@ function renderMarkdownReport(results: readonly EvalCaseResult[], summary: EvalS
   lines.push(`Run started: ${summary.started_at}`);
   lines.push(`Run finished: ${summary.finished_at}`);
   lines.push(`Wallclock: ${(summary.wallclock_ms / 1000).toFixed(1)}s`);
+  lines.push(`Sources: ${summary.source_pool.source_count}`);
+  lines.push(`Distinct subjects: ${summary.source_pool.distinct_subjects}`);
   lines.push('');
   lines.push('## Overall');
   lines.push('');
@@ -211,6 +215,17 @@ function renderMarkdownReport(results: readonly EvalCaseResult[], summary: EvalS
     `- Median per-call duration: ${(summary.overall.median_duration_ms / 1000).toFixed(1)}s`,
   );
   lines.push(`- Total compute time: ${(summary.overall.total_duration_ms / 1000).toFixed(1)}s`);
+  lines.push('');
+  lines.push('## Source Pool and Budget');
+  lines.push('');
+  lines.push(`- Source compose runs: ${summary.source_pool.source_count}`);
+  lines.push(`- Distinct subjects: ${summary.source_pool.distinct_subjects}`);
+  if (summary.source_pool.subjects.length > 0) {
+    lines.push(`- Subjects: ${summary.source_pool.subjects.join('; ')}`);
+  }
+  lines.push(
+    '- Treat source count, case count, and median duration as the budget gate before adding judges, flows, or pre-flight use.',
+  );
   lines.push('');
   lines.push('## Per-Defect Catch Rate');
   lines.push('');
@@ -285,6 +300,10 @@ async function main(): Promise<void> {
     `Built ${cases.length} cases from ${requestPaths.length} composes. Judge: ${args.judge}. Defects: ${args.defects.join(', ')}. Controls: ${args.includeControl}.`,
   );
   if (args.dryRun) {
+    const sourcePool = summarizeCaseSourcePool(cases);
+    console.error(
+      `Source pool: ${sourcePool.source_count} compose runs, ${sourcePool.distinct_subjects} distinct subjects.`,
+    );
     for (const c of cases) {
       console.error(
         `  ${c.source_run_id.slice(0, 8)} ${c.defect_id.padEnd(40)} ${c.mutation_summary.slice(0, 60)}`,

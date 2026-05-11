@@ -55,7 +55,7 @@ node --experimental-strip-types evals/verdict-correctness/index.ts \
 node --experimental-strip-types evals/verdict-correctness/index.ts \
   --max-composes 3 --defects fabricated-evidence-ref --no-control
 
-# Dry run — show planned cases without invoking the LLM:
+# Dry run — show planned cases and source-pool size without invoking the LLM:
 node --experimental-strip-types evals/verdict-correctness/index.ts \
   --max-composes 3 --dry-run
 ```
@@ -81,6 +81,21 @@ Each case is one connector subprocess call.
 
 Track cost+wallclock per run to avoid silent suite bloat. The Markdown
 report includes both.
+
+Before adding judges, flows, or a pre-flight gate, run `--dry-run` and
+check the source count, distinct subject count, and planned case count. The
+current smoke-sized run is cheap; a broader suite scales roughly with
+case count and connector wallclock.
+
+## Source pool
+
+The eval can saturate if it keeps reusing the same small set of historical
+composes. Expanding the source pool is a prerequisite to subtler mutators:
+capture more real explore review requests first, then compare catch rates on
+that frozen source pool.
+
+The report records source compose runs and distinct subjects so a 100% catch
+rate can be read against the pool size instead of treated as a broad claim.
 
 ## Limitations
 

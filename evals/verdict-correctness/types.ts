@@ -43,6 +43,7 @@ export interface DefectPlantResult {
 export interface EvalCase {
   readonly source_run_id: string;
   readonly source_request_path: string;
+  readonly source_subject?: string;
   readonly defect_id: DefectId | 'control';
   readonly prompt: string;
   readonly mutation_summary: string;
@@ -74,6 +75,7 @@ export interface EvalSummary {
   readonly finished_at: string;
   readonly judge: JudgeId;
   readonly wallclock_ms: number;
+  readonly source_pool: EvalSourcePoolSummary;
   readonly per_defect: Record<
     DefectId,
     { catches: number; misses: number; errors: number; cases: number }
@@ -89,4 +91,10 @@ export interface EvalSummary {
     total_duration_ms: number;
     median_duration_ms: number;
   };
+}
+
+export interface EvalSourcePoolSummary {
+  readonly source_count: number;
+  readonly distinct_subjects: number;
+  readonly subjects: readonly string[];
 }

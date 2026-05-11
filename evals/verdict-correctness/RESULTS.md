@@ -156,9 +156,10 @@ budgeting future eval runs.
 - Median per-call: 17.8s.
 - Estimated codex spend: ~$1.
 
-The eval is cheap enough to run on every reviewer-prompt change as a
-regression check. If we wired it into a manual command, that would be a
-useful guardrail.
+At the current smoke-sized scope, the eval is cheap enough to run on every
+reviewer-prompt change as a regression check. Before widening it across more
+flows, judges, or pre-flight use, treat case count, source count, median
+duration, and connector failure rate as the budget gate.
 
 ## Limitations
 
@@ -173,6 +174,10 @@ useful guardrail.
   through the agent (Claude Code) connector. An agent-mode pass would
   show whether the alignment-blindness is a model-level issue or
   prompt-level.
+- **Small source pool**: iteration 2 used 8 captured composes. That is enough
+  to confirm the specific alignment fix, but not enough to claim broad
+  reviewer robustness. Add more real explore composes before using subtler
+  mutators as a discrimination test.
 - **Mutators are obvious by design**. Real failures are usually subtler
   combinations. A v0.2 should plant subtler defects (partial
   fabrication of one piece of evidence, mild internal tension rather
@@ -189,6 +194,12 @@ useful guardrail.
    the mutator actually fires on every compose. Re-run.
 4. **Add agent-connector mode** to the eval runner so we can compare
    agent vs codex catch rates on the same defect set.
+5. **Expand and freeze the source pool before v0.2 mutators**. Capture more
+   real explore composes across distinct subjects, then run subtler defects
+   against that fixed pool. If the pool stays at N=8, another 100% catch rate
+   may still be ceiling effect rather than proof.
+6. **Budget before pre-flight use**. Use the dry-run case count and the latest
+   report's median duration before wiring the eval into a regular gate.
 
 Outputs:
 - `evals/verdict-correctness/results/2026-05-08T05-33-21-013Z/results.json`

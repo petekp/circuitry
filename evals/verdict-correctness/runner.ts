@@ -52,6 +52,7 @@ export function buildCases(input: BuildCasesInput): EvalCase[] {
     const requestText = readFileSync(requestPath, 'utf8');
     const parsed = parseRequest(requestText);
     const sourceRunId = extractRunIdFromPath(requestPath);
+    const sourceSubject = parsed.originalCompose.subject;
     if (input.includeControl) {
       // Upgrade the captured shape-hint instruction to the current
       // production text so the control measures the same prompt the
@@ -62,6 +63,7 @@ export function buildCases(input: BuildCasesInput): EvalCase[] {
       cases.push({
         source_run_id: sourceRunId,
         source_request_path: requestPath,
+        source_subject: sourceSubject,
         defect_id: 'control',
         prompt: controlPrompt,
         mutation_summary:
@@ -76,6 +78,7 @@ export function buildCases(input: BuildCasesInput): EvalCase[] {
         cases.push({
           source_run_id: sourceRunId,
           source_request_path: requestPath,
+          source_subject: sourceSubject,
           defect_id: defectId,
           prompt: mutatedRequest,
           mutation_summary: result.mutation_summary,
@@ -84,6 +87,7 @@ export function buildCases(input: BuildCasesInput): EvalCase[] {
         cases.push({
           source_run_id: sourceRunId,
           source_request_path: requestPath,
+          source_subject: sourceSubject,
           defect_id: defectId,
           prompt: requestText,
           mutation_summary: `SKIPPED: ${(err as Error).message}`,

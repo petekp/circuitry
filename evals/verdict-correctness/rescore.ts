@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DEFECT_IDS } from './defect-taxonomy.ts';
+import { summarizeSourcePool } from './reporting.ts';
 import { scoreDefect } from './scorer.ts';
 import type { DefectId, EvalCaseResult, EvalSummary } from './types.ts';
 
@@ -93,6 +94,7 @@ function summarize(results: readonly EvalCaseResult[]): EvalSummary {
     finished_at: new Date().toISOString(),
     judge: 'codex',
     wallclock_ms: 0,
+    source_pool: summarizeSourcePool(results),
     per_defect: perDefect,
     controls,
     overall: {
