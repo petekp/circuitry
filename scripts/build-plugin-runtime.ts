@@ -16,6 +16,22 @@ const outputPaths = [
   'plugins/circuit/runtime/circuit-next.js',
 ];
 
+// The bundled CLI resolves git-state.mjs via `new URL('./git-state.mjs',
+// import.meta.url)`, so the helper must live next to circuit-next.js in
+// every plugin runtime directory. tsc -p tsconfig.build.json does not copy
+// .mjs assets, so we also mirror the helper into dist/ so source-tree CLI
+// runs (used by npm test and by `node dist/cli/circuit.js`) find it.
+const ASSET_SIDECARS: Array<{ src: string; outs: readonly string[] }> = [
+  {
+    src: 'src/flows/fix/writers/git-state.mjs',
+    outs: [
+      'plugins/claude/runtime/git-state.mjs',
+      'plugins/circuit/runtime/git-state.mjs',
+      'dist/flows/fix/writers/git-state.mjs',
+    ],
+  },
+];
+
 function readVersion(): string {
   const raw = JSON.parse(readFileSync(versionManifestPath, 'utf8')) as { version?: unknown };
   if (typeof raw.version !== 'string' || raw.version.length === 0) {
@@ -81,6 +97,32 @@ for (const rel of outputPaths) {
     mkdirSync(dirname(outAbs), { recursive: true });
     writeFileSync(outAbs, bundle);
     console.log(`emitted ${rel}`);
+  }
+}
+
+for (const sidecar of ASSET_SIDECARS) {
+  const srcAbs = resolve(repoRoot, sidecar.src);
+  const sourceBody = readFileSync(srcAbs, 'utf8');
+  for (const rel of sidecar.outs) {
+    const outAbs = resolve(repoRoot, rel);
+    if (checkMode) {
+      let current: string | undefined;
+      try {
+        current = readFileSync(outAbs, 'utf8');
+      } catch {
+        current = undefined;
+      }
+      if (current === sourceBody) {
+        console.log(`✓ ${rel} is in sync with ${sidecar.src}`);
+      } else {
+        console.error(`✗ ${rel} drifted from ${sidecar.src}; run npm run build-plugin-runtime`);
+        drifted = true;
+      }
+    } else {
+      mkdirSync(dirname(outAbs), { recursive: true });
+      writeFileSync(outAbs, sourceBody);
+      console.log(`emitted ${rel}`);
+    }
   }
 }
 
