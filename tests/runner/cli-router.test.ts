@@ -399,46 +399,6 @@ async function runMainExit(argv: readonly string[]): Promise<{ exit: number; std
   }
 }
 
-async function runMainUnsupportedRuntimeFailure(
-  argv: readonly string[],
-): Promise<{ exit: number; stderr: string }> {
-  let stdout = '';
-  let stderr = '';
-  const origStdoutWrite = process.stdout.write;
-  const origStderrWrite = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
-      relayer: relayerWithBody('{"verdict":"accept"}'),
-      now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
-      runId: '84000000-0000-0000-0000-000000000098',
-      configHomeDir: join(runFolderBase, 'empty-home'),
-      configCwd: process.cwd(),
-    });
-    expect(stdout).toBe('');
-    expect(stderr).toContain(`error: ${'unsupported runtime invocation'}`);
-    const runFolderFlag = argv.indexOf('--run-folder');
-    if (runFolderFlag >= 0) {
-      const runFolder = argv[runFolderFlag + 1];
-      if (typeof runFolder !== 'string') {
-        throw new Error('expected --run-folder to be followed by a path');
-      }
-      expect(existsSync(runFolder)).toBe(false);
-    }
-    return { exit, stderr };
-  } finally {
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
-  }
-}
-
 async function withStrictruntime<T>(operation: () => Promise<T>): Promise<T> {
   const originalStrictRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
   try {
@@ -1188,9 +1148,9 @@ describe('CLI router', () => {
     expect(relayResolvedSelection).toMatchObject({ depth: 'lite' });
   }, 30_000);
 
-  it('fails closed when --depth overrides the selected --entry-mode into an unproven route', async () => {
+  it('rejects mismatched --entry-mode and --depth pairs at parse time with the consistent alias on each side', async () => {
     const runFolder = join(runFolderBase, 'build-entry-mode-depth-override');
-    const result = await runMainUnsupportedRuntimeFailure([
+    const result = await runMainExit([
       'build',
       '--goal',
       'Add a tiny Build feature from the CLI with an override',
@@ -1203,12 +1163,17 @@ describe('CLI router', () => {
     ]);
 
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain("fresh build entry mode 'deep' at depth 'standard'");
+    expect(result.stderr).toContain(
+      'error: --mode deep and --depth standard name different thoroughness levels.',
+    );
+    expect(result.stderr).toContain('--mode deep implies --depth deep');
+    expect(result.stderr).toContain('--depth standard implies --mode default');
+    expect(existsSync(runFolder)).toBe(false);
   });
 
-  it('fails closed when explicit autonomous --depth overrides the default --entry-mode', async () => {
+  it('rejects mismatched default mode with autonomous depth before the run folder is written', async () => {
     const runFolder = join(runFolderBase, 'build-default-entry-autonomous-override');
-    const result = await runMainUnsupportedRuntimeFailure([
+    const result = await runMainExit([
       'build',
       '--goal',
       'Add a tiny Build feature from the CLI with autonomous override',
@@ -1221,12 +1186,15 @@ describe('CLI router', () => {
     ]);
 
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain("fresh build entry mode 'default' at depth 'autonomous'");
+    expect(result.stderr).toContain(
+      'error: --mode default and --depth autonomous name different thoroughness levels.',
+    );
+    expect(existsSync(runFolder)).toBe(false);
   });
 
-  it('lists the supported (mode/depth) pairs in the rejection message so the user can immediately retry with a valid pair', async () => {
+  it('suggests both consistent pairs in the rejection so the operator can pick one and retry', async () => {
     const runFolder = join(runFolderBase, 'build-entry-mode-depth-override-actionable');
-    const result = await runMainUnsupportedRuntimeFailure([
+    const result = await runMainExit([
       'build',
       '--goal',
       'Add a tiny Build feature from the CLI with an override',
@@ -1239,9 +1207,10 @@ describe('CLI router', () => {
     ]);
 
     expect(result.exit).toBe(2);
-    // Build's runtime support matrix as of the source-of-truth in cli/circuit.ts.
+    expect(result.stderr).toContain('--mode deep implies --depth deep');
+    expect(result.stderr).toContain('--depth standard implies --mode default');
     expect(result.stderr).toContain(
-      'build supports (mode/depth): default/standard, lite/lite, deep/deep, autonomous/autonomous',
+      'Supply one consistent pair, or supply only one of --mode/--depth.',
     );
   });
 
