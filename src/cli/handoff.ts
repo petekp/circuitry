@@ -543,10 +543,7 @@ function defaultCodexHooksFile(): string {
 // fall back to computing a path from import.meta.url when the env var is
 // absent — i.e., running bin/circuit-next directly from a source-tree
 // checkout without the wrapper in the chain.
-export function resolveDefaultLauncher(
-  pluginRoot: string | undefined,
-  moduleDir: string,
-): string {
+export function resolveDefaultLauncher(pluginRoot: string | undefined, moduleDir: string): string {
   if (pluginRoot !== undefined && pluginRoot.length > 0) {
     return resolve(pluginRoot, 'scripts/circuit-next.mjs');
   }

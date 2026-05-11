@@ -28,14 +28,15 @@
 // failure message names the file and line so the author can either pick
 // the right pattern or write a one-line justification.
 
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const LOOKBACK_LINES = 10;
-export const SAFETY_PATTERN = /Marketplace-safe by (build-time replacement|build-pipeline emission|env var|source-tree fallback):/i;
+export const SAFETY_PATTERN =
+  /Marketplace-safe by (build-time replacement|build-pipeline emission|env var|source-tree fallback):/i;
 
 function listSrcFiles() {
   const out = execSync('git ls-files src', { cwd: REPO_ROOT, encoding: 'utf8' });
@@ -91,8 +92,7 @@ function main() {
     process.stderr.write(`  ${finding.file}:${finding.line}  ${finding.source}\n`);
   }
   process.stderr.write(
-    `\nUnannotated sites: ${findings.length}. ` +
-      'See scripts/release/audit-marketplace-safe-paths.mjs for the rationale.\n',
+    `\nUnannotated sites: ${findings.length}. See scripts/release/audit-marketplace-safe-paths.mjs for the rationale.\n`,
   );
   process.exit(1);
 }

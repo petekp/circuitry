@@ -459,9 +459,7 @@ function validateModeDepthAliasConsistency(args: ParsedArgs): void {
   if (expectedDepth === args.depth) return;
   const expectedMode = entryModeForDepth(args.depth);
   throw new Error(
-    `--mode ${args.entryMode} and --depth ${args.depth} name different thoroughness levels. ` +
-      `--mode ${args.entryMode} implies --depth ${expectedDepth}; --depth ${args.depth} implies --mode ${expectedMode}. ` +
-      'Supply one consistent pair, or supply only one of --mode/--depth.',
+    `--mode ${args.entryMode} and --depth ${args.depth} name different thoroughness levels. --mode ${args.entryMode} implies --depth ${expectedDepth}; --depth ${args.depth} implies --mode ${expectedMode}. Supply one consistent pair, or supply only one of --mode/--depth.`,
   );
 }
 
