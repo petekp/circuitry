@@ -1118,20 +1118,47 @@ describe('CLI router', () => {
     expect(bootstrap).toMatchObject({ depth: 'standard' });
   });
 
-  it('fails closed when explicit --depth suppresses classifier-inferred Fix mode into an unproven route', async () => {
-    const runFolder = join(runFolderBase, 'fix-explicit-depth');
+  it('infers the matching entry mode from --depth when --mode is omitted (F-M-1)', async () => {
+    const runFolder = join(runFolderBase, 'fix-depth-only');
 
-    const result = await runMainUnsupportedRuntimeFailure([
+    const output = await runMainJson(
+      [
+        '--goal',
+        'fix: restore the missing token regression test',
+        '--depth',
+        'deep',
+        '--run-folder',
+        runFolder,
+      ],
+      '{"verdict":"accept"}',
+    );
+
+    expect(output.flow_id).toBe('fix');
+    expect(output.entry_mode).toBe('deep');
+    expect(output.entry_mode_source).toBe('explicit');
+    const bootstrap = traceEntryLog(runFolder).find(
+      (trace_entry) => trace_entry.kind === 'run.bootstrapped',
+    );
+    expect(bootstrap).toMatchObject({ depth: 'deep' });
+  });
+
+  it('rejects --depth values not in the per-flow allowlist before route selection (F-M-2)', async () => {
+    const runFolder = join(runFolderBase, 'fix-depth-tournament');
+
+    const result = await runMainExit([
+      'fix',
       '--goal',
-      'fix: restore the missing token regression test',
+      'fix: a regression bug',
       '--depth',
-      'deep',
+      'tournament',
       '--run-folder',
       runFolder,
     ]);
 
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain("checkpoint-waiting depth 'deep'");
+    expect(result.stderr).toContain("--depth tournament is not supported by flow 'fix'");
+    expect(result.stderr).toContain('fix supports depths:');
+    expect(existsSync(runFolder)).toBe(false);
   });
 
   it('accepts --entry-mode and uses that mode depth when --depth is omitted', async () => {
