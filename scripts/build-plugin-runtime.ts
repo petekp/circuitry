@@ -105,7 +105,11 @@ for (const sidecar of ASSET_SIDECARS) {
   const sourceBody = readFileSync(srcAbs, 'utf8');
   for (const rel of sidecar.outs) {
     const outAbs = resolve(repoRoot, rel);
-    if (checkMode) {
+    // dist/* targets are gitignored local-build artifacts that tsc does not
+    // emit, so they need to be brought into being in --check mode too;
+    // committed targets under plugins/* still go through the drift gate.
+    const emitOnly = rel.startsWith('dist/');
+    if (checkMode && !emitOnly) {
       let current: string | undefined;
       try {
         current = readFileSync(outAbs, 'utf8');

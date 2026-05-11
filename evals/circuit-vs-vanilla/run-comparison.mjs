@@ -158,7 +158,13 @@ function commandOutput(command, args, fallback = 'unavailable') {
 }
 
 function findExecutable(name, { required = true } = {}) {
-  const result = runSync('zsh', ['-lc', `command -v ${shellQuote(name)}`]);
+  let result;
+  try {
+    result = runSync('zsh', ['-lc', `command -v ${shellQuote(name)}`]);
+  } catch {
+    // zsh may not be installed in CI; fall through to required-handling.
+    result = { status: 1, stdout: '' };
+  }
   if (result.status !== 0) {
     if (required) throw new Error(`could not find ${name} on PATH`);
     return name;
