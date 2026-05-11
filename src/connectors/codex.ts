@@ -335,6 +335,18 @@ export function buildCodexArgs(input: CodexRelayInput, schemaPath?: string): str
 //
 // Exported for direct test coverage of the cleanup-on-throw path; not a
 // stable runtime surface.
+//
+// Probe whether a JSON Schema can be passed to codex's `--output-schema`.
+// The OpenAI Responses API backs that flag with the `response_format`
+// slot, which requires a root of `type: "object"` (no top-level
+// `anyOf`/`oneOf`/array/primitive). When this returns false, the caller
+// must skip the flag and rely on the prose shape hint instead.
+//
+// Exported for direct test coverage; not a stable runtime surface.
+export function isPlainObjectTypeRoot(schema: Record<string, unknown>): boolean {
+  return schema.type === 'object';
+}
+
 export async function writeSchemaTempFile(
   schema: Record<string, unknown>,
 ): Promise<{ dir: string; path: string }> {
@@ -374,7 +386,15 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
   let tempDir: string | undefined;
   let schemaPath: string | undefined;
   try {
-    if (input.responseSchema !== undefined) {
+    // Codex's `--output-schema` is backed by the OpenAI Responses API
+    // `response_format` slot, which rejects any root that is not
+    // `type: "object"` (top-level `anyOf`, `oneOf`, arrays, primitives,
+    // etc. all fail with `invalid_json_schema`). Discriminated unions
+    // from Zod surface as top-level `anyOf` here. Degrade gracefully:
+    // when the schema's root is not a plain object, skip the flag and
+    // fall back to the prose shape hint already embedded in the prompt.
+    // The downstream runtime Zod check still validates worker output.
+    if (input.responseSchema !== undefined && isPlainObjectTypeRoot(input.responseSchema)) {
       const allocated = await writeSchemaTempFile(input.responseSchema);
       tempDir = allocated.dir;
       schemaPath = allocated.path;

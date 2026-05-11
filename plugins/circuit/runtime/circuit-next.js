@@ -18213,18 +18213,27 @@ function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
     throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
   }
   const receipt_id = initTraceEntry.session_id;
-  const result_body_raw = resultTraceEntry.result;
   const cli_version = initTraceEntry.claude_code_version;
   if (typeof receipt_id !== "string" || receipt_id.length === 0) {
     throw new Error("init.session_id missing or empty");
   }
-  if (typeof result_body_raw !== "string") {
-    throw new Error("result.result missing or not a string");
-  }
   if (typeof cli_version !== "string" || cli_version.length === 0) {
     throw new Error("init.claude_code_version missing or empty");
   }
-  const result_body = extractJsonObject(result_body_raw);
+  const structuredOutput = resultTraceEntry.structured_output;
+  let result_body;
+  if (structuredOutput !== void 0 && structuredOutput !== null) {
+    if (typeof structuredOutput !== "object") {
+      throw new Error("result.structured_output present but not an object");
+    }
+    result_body = JSON.stringify(structuredOutput);
+  } else {
+    const result_body_raw = resultTraceEntry.result;
+    if (typeof result_body_raw !== "string") {
+      throw new Error("result.result missing or not a string");
+    }
+    result_body = extractJsonObject(result_body_raw);
+  }
   return {
     request_payload: prompt,
     receipt_id,
@@ -18364,6 +18373,9 @@ function buildCodexArgs(input, schemaPath) {
   assertCodexSpawnArgvBoundary(args);
   return args;
 }
+function isPlainObjectTypeRoot(schema) {
+  return schema.type === "object";
+}
 async function writeSchemaTempFile(schema) {
   const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
   try {
@@ -18389,7 +18401,7 @@ async function relayCodex(input) {
   let tempDir;
   let schemaPath;
   try {
-    if (input.responseSchema !== void 0) {
+    if (input.responseSchema !== void 0 && isPlainObjectTypeRoot(input.responseSchema)) {
       const allocated = await writeSchemaTempFile(input.responseSchema);
       tempDir = allocated.dir;
       schemaPath = allocated.path;

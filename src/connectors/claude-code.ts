@@ -348,23 +348,38 @@ export function parseClaudeCodeStdout(
   }
 
   const receipt_id = initTraceEntry.session_id;
-  const result_body_raw = resultTraceEntry.result;
   const cli_version = initTraceEntry.claude_code_version;
   if (typeof receipt_id !== 'string' || receipt_id.length === 0) {
     throw new Error('init.session_id missing or empty');
   }
-  if (typeof result_body_raw !== 'string') {
-    throw new Error('result.result missing or not a string');
-  }
   if (typeof cli_version !== 'string' || cli_version.length === 0) {
     throw new Error('init.claude_code_version missing or empty');
   }
-  // Tolerant extraction: workers preamble status sentences before their
-  // JSON response despite the shape-hint instruction. Strip any prose
-  // wrapping the JSON object so downstream check evaluation and report
-  // schema parsing see clean JSON. Non-JSON output (rare) flows through
-  // unchanged.
-  const result_body = extractJsonObject(result_body_raw);
+  // When `--json-schema` is in effect, claude-code routes the validated
+  // JSON payload into `result.structured_output` (as a parsed object) and
+  // leaves `result.result` as model prose (or empty when the model emits
+  // zero free-form text alongside the StructuredOutput tool call). Prefer
+  // the structured payload; fall back to the prose field when the schema
+  // flag wasn't set.
+  const structuredOutput = resultTraceEntry.structured_output;
+  let result_body: string;
+  if (structuredOutput !== undefined && structuredOutput !== null) {
+    if (typeof structuredOutput !== 'object') {
+      throw new Error('result.structured_output present but not an object');
+    }
+    result_body = JSON.stringify(structuredOutput);
+  } else {
+    const result_body_raw = resultTraceEntry.result;
+    if (typeof result_body_raw !== 'string') {
+      throw new Error('result.result missing or not a string');
+    }
+    // Tolerant extraction: workers preamble status sentences before their
+    // JSON response despite the shape-hint instruction. Strip any prose
+    // wrapping the JSON object so downstream check evaluation and report
+    // schema parsing see clean JSON. Non-JSON output (rare) flows through
+    // unchanged.
+    result_body = extractJsonObject(result_body_raw);
+  }
   return {
     request_payload: prompt,
     receipt_id,
