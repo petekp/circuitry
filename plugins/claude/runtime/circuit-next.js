@@ -25662,8 +25662,14 @@ function defaultCodexHooksFile() {
   const codexHome = process.env.CODEX_HOME ?? resolve11(homedir4(), ".codex");
   return resolve11(codexHome, "hooks.json");
 }
+function resolveDefaultLauncher(moduleDir) {
+  const wrapperLauncher = resolve11(moduleDir, "..", "scripts/circuit-next.mjs");
+  if (existsSync13(wrapperLauncher))
+    return wrapperLauncher;
+  return resolve11(moduleDir, "../..", "bin/circuit-next");
+}
 function defaultLauncherPath() {
-  return resolve11(dirname9(fileURLToPath2(import.meta.url)), "../..", "bin/circuit-next");
+  return resolveDefaultLauncher(dirname9(fileURLToPath2(import.meta.url)));
 }
 function parseCodexHooksHost(args) {
   if (args.host === "codex")
@@ -26506,7 +26512,7 @@ function usage3() {
     "",
     "`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.",
     "",
-    "Mode and depth are paired per flow, not free flags. Every flow supports `default/standard` (the default if you supply neither). Other pairs vary per flow: most support `lite/lite`, `deep/deep`, and `autonomous/autonomous`; Migrate omits `lite/lite`; Review supports only `default/standard`; Explore adds `tournament/tournament`. If you supply an unsupported pair, the rejection message lists the supported pairs for that flow.",
+    "Mode and depth are paired per flow, not free flags. Every flow supports `default/standard` (the default if you supply neither). Other pairs vary per flow: most support `lite/lite`, `deep/deep`, and `autonomous/autonomous`; Migrate omits `lite/lite`; Review supports only `default/standard`; Explore adds `tournament/tournament`. If you supply `--depth` without `--mode`, the matching entry mode is inferred (e.g., `--depth deep` implies `--mode deep`). `--depth` values are validated against the per-flow allowlist; if a flow does not support a given depth the rejection lists the supported depths.",
     "",
     "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/migrate/sweep flows and then composes the runtime boundary using the configured relay connector.",
     "",
@@ -26781,6 +26787,11 @@ function resolveCompiledFlowRoute(args) {
   }
   return classifyCompiledFlowTask(args.goal);
 }
+function entryModeForDepth(depth) {
+  if (depth === "standard")
+    return "default";
+  return depth;
+}
 function resolveEntryModeSelection(args, route) {
   if (args.entryMode !== void 0) {
     return {
@@ -26789,8 +26800,13 @@ function resolveEntryModeSelection(args, route) {
       reason: "explicit --mode/--entry-mode argument"
     };
   }
-  if (args.depthProvided)
-    return {};
+  if (args.depthProvided && args.depth !== void 0) {
+    return {
+      entryModeName: entryModeForDepth(args.depth),
+      source: "explicit",
+      reason: `inferred from --depth ${args.depth}`
+    };
+  }
   if (route.inferredEntryModeName !== void 0) {
     return {
       entryModeName: route.inferredEntryModeName,
@@ -26799,6 +26815,17 @@ function resolveEntryModeSelection(args, route) {
     };
   }
   return {};
+}
+function validateFlowDepth(args, route) {
+  if (!args.depthProvided || args.depth === void 0)
+    return;
+  const rows = RUNTIME_SUPPORT_MATRIX[route.flowName];
+  if (rows === void 0)
+    return;
+  if (rows.some((row) => row.depth === args.depth))
+    return;
+  const allowedDepths = Array.from(new Set(rows.map((row) => row.depth))).join(", ");
+  throw new Error(`--depth ${args.depth} is not supported by flow '${route.flowName}'. ${route.flowName} supports depths: ${allowedDepths}`);
 }
 function loadFixture(fixturePath) {
   if (!existsSync14(fixturePath)) {
@@ -27001,6 +27028,13 @@ async function main(argv, options = {}) {
     throw new Error("internal error: --goal missing outside checkpoint resume mode");
   }
   const route = resolveCompiledFlowRoute(args);
+  try {
+    validateFlowDepth(args, route);
+  } catch (err) {
+    process.stderr.write(`error: ${err.message}
+`);
+    return 2;
+  }
   const entryModeSelection = resolveEntryModeSelection(args, route);
   const fixturePath = resolveFixturePath(route.flowName, entryModeSelection.entryModeName, args.fixturePath, args.flowRoot);
   const { flow, bytes } = loadFixture(fixturePath);
