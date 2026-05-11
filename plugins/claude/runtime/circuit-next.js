@@ -26527,7 +26527,7 @@ function usage3() {
 }
 function readSourceVersion() {
   if (true)
-    return "0.1.0-alpha.5";
+    return "0.1.0-alpha.6";
   const candidates = [
     resolve12(dirname10(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
     resolve12(process.cwd(), "plugins/version.json")
