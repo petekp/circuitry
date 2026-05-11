@@ -1,6 +1,6 @@
 {
   "name": "circuit",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "description": "Structured, resumable, multi-stage developer flows for Claude Code. /circuit:run selects the best flow for a natural-language task and invokes /circuit:explore, /circuit:review, /circuit:migrate, /circuit:fix, /circuit:build, or /circuit:sweep; /circuit:create and /circuit:handoff cover custom flows and continuity.",
   "author": {
     "name": "Pete Petrash"
