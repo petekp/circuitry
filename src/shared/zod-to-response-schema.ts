@@ -17,6 +17,22 @@
 // If a flow's schema can't be expressed in draft-07 without $ref,
 // `zod-to-json-schema` will still emit a usable schema; the strictness
 // is best-effort, not load-bearing.
+//
+// Conversion-fidelity note. `zod-to-json-schema` silently drops Zod
+// constructs that don't have a structural equivalent in JSON Schema:
+//   - `.superRefine` / `.refine` predicates — value-conditional rules
+//     (e.g. "findings must be non-empty when verdict !== 'accept'") do
+//     NOT transfer. Express such rules structurally via discriminated
+//     unions when CLI-level enforcement matters; otherwise the runtime
+//     Zod parse still catches the violation, but the CLI does not.
+//   - `.preprocess` input-coercion — the JSON Schema reflects the
+//     post-coercion type, so lenient input shapes are lost. Use
+//     `z.union` instead of `z.preprocess` when the leniency needs to
+//     be visible to the CLI.
+//
+// Migration debt: `zod-to-json-schema` ends active maintenance in 2025
+// per its README; Zod 4 ships a native `z.toJSONSchema` that supersedes
+// this wrapper. Replace the dependency when the repo upgrades to Zod 4.
 
 import type { ZodTypeAny } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';

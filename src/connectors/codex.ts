@@ -327,19 +327,33 @@ export function buildCodexArgs(input: CodexRelayInput, schemaPath?: string): str
   return args;
 }
 
-async function writeSchemaTempFile(schema: Record<string, unknown>): Promise<string> {
+// Allocate the temp directory FIRST and return it alongside the file path
+// so the caller can register the dir for cleanup before any operation that
+// might throw (JSON.stringify on a BigInt, EAGAIN on writeFile, etc.) gets
+// a chance to leak it. Callers must hold the returned `dir` through a
+// try/finally even if `path` is never written successfully.
+//
+// Exported for direct test coverage of the cleanup-on-throw path; not a
+// stable runtime surface.
+export async function writeSchemaTempFile(
+  schema: Record<string, unknown>,
+): Promise<{ dir: string; path: string }> {
   const dir = await mkdtemp(joinPath(tmpdir(), 'circuit-codex-schema-'));
-  const path = joinPath(dir, 'schema.json');
-  await writeFile(path, JSON.stringify(schema), 'utf8');
-  return path;
+  try {
+    const path = joinPath(dir, 'schema.json');
+    await writeFile(path, JSON.stringify(schema), 'utf8');
+    return { dir, path };
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    throw err;
+  }
 }
 
-async function cleanupSchemaTempDir(schemaPath: string | undefined): Promise<void> {
-  if (schemaPath === undefined) return;
+async function cleanupSchemaTempDir(dir: string | undefined): Promise<void> {
+  if (dir === undefined) return;
   // Remove the entire mkdtemp directory; the schema file is the only
   // thing in it, but `rm -rf` against the dir is safer than dance-
   // around-then-rmdir if any future code ever drops a sibling artifact.
-  const dir = joinPath(schemaPath, '..');
   try {
     await rm(dir, { recursive: true, force: true });
   } catch {
@@ -351,13 +365,22 @@ async function cleanupSchemaTempDir(schemaPath: string | undefined): Promise<voi
 export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const cli_version = captureCodexVersion();
-  const schemaPath =
-    input.responseSchema === undefined
-      ? undefined
-      : await writeSchemaTempFile(input.responseSchema);
-  const args = buildCodexArgs(input, schemaPath);
-  const start = performance.now();
+  // Acquire the schema temp file FIRST and put every subsequent operation
+  // inside the try block. If `buildCodexArgs` throws (boundary assertion)
+  // or if `spawn` throws, the `finally` still runs and the mkdtemp
+  // directory is cleaned. `writeSchemaTempFile` cleans up its own dir if
+  // the JSON serialization itself throws (BigInt, circular ref) so this
+  // local `tempDir` only sees a successfully-allocated directory.
+  let tempDir: string | undefined;
+  let schemaPath: string | undefined;
   try {
+    if (input.responseSchema !== undefined) {
+      const allocated = await writeSchemaTempFile(input.responseSchema);
+      tempDir = allocated.dir;
+      schemaPath = allocated.path;
+    }
+    const args = buildCodexArgs(input, schemaPath);
+    const start = performance.now();
     return await new Promise<RelayResult>((resolve, reject) => {
       let child: ChildProcess;
       try {
@@ -486,7 +509,7 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
       });
     });
   } finally {
-    await cleanupSchemaTempDir(schemaPath);
+    await cleanupSchemaTempDir(tempDir);
   }
 }
 

@@ -46,13 +46,20 @@ const NonEmptyStringArray = z.array(z.string().min(1)).min(1);
 // Lenient form for relay-emitted evidence-style fields. Workers occasionally
 // answer with a single string ("git diff README.md shows: ...") on retry
 // attempts where the recovery context confuses the schema field name with a
-// freeform-prose request. Coerce a single non-empty string to a one-element
-// array before validation so the run does not abort over a shape detail
-// that has no downstream consumer (evidence is documentation/audit only).
-const LenientNonEmptyStringArray = z.preprocess(
-  (val) => (typeof val === 'string' && val.length > 0 ? [val] : val),
+// freeform-prose request. Accept either a single non-empty string or a
+// non-empty array of non-empty strings; normalize to array. Expressed as a
+// `z.union` (not `z.preprocess`) so the JSON Schema piped to the CLI via
+// `responseJsonSchemaFromZod` correctly renders both shapes as `anyOf` and
+// the leniency holds at both the Zod boundary and the CLI boundary. Evidence
+// is documentation/audit only — no downstream consumer dereferences elements,
+// so the array normalization is purely for type consistency.
+const LenientNonEmptyStringArray = z.union([
+  z
+    .string()
+    .min(1)
+    .transform((value) => [value] as string[]),
   z.array(z.string().min(1)).min(1),
-);
+]);
 
 export const FixVerificationCommand = VerificationCommand;
 export type FixVerificationCommand = z.infer<typeof FixVerificationCommand>;
@@ -697,22 +704,35 @@ export const FixReviewFinding = z
   .strict();
 export type FixReviewFinding = z.infer<typeof FixReviewFinding>;
 
-export const FixReview = z
-  .object({
-    verdict: FixReviewVerdict,
-    summary: z.string().min(1).describe('review summary'),
-    findings: z.array(FixReviewFinding),
-  })
-  .strict()
-  .superRefine((review, ctx) => {
-    if (review.verdict !== 'accept' && review.findings.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['findings'],
-        message: `findings must be non-empty when verdict is '${review.verdict}'`,
-      });
-    }
-  });
+// Expressed as a discriminated union so the verdict-conditional minimum
+// on `findings` becomes a structural JSON-Schema constraint rather than a
+// superRefine (which `zod-to-json-schema` silently drops). With this shape,
+// the CLI's `--json-schema` / `--output-schema` boundary rejects
+// {verdict: 'reject'|'accept-with-fixes', findings: []} at the same gate
+// where Zod would reject it.
+export const FixReview = z.discriminatedUnion('verdict', [
+  z
+    .object({
+      verdict: z.literal('accept'),
+      summary: z.string().min(1).describe('review summary'),
+      findings: z.array(FixReviewFinding),
+    })
+    .strict(),
+  z
+    .object({
+      verdict: z.literal('accept-with-fixes'),
+      summary: z.string().min(1).describe('review summary'),
+      findings: z.array(FixReviewFinding).min(1),
+    })
+    .strict(),
+  z
+    .object({
+      verdict: z.literal('reject'),
+      summary: z.string().min(1).describe('review summary'),
+      findings: z.array(FixReviewFinding).min(1),
+    })
+    .strict(),
+]);
 export type FixReview = z.infer<typeof FixReview>;
 
 export const FixResultOutcome = z.enum([

@@ -84,11 +84,98 @@ describe('renderShapeSkeleton', () => {
   });
 
   it('renders fix.review@v1 with verdict enum and findings array of objects', () => {
+    // FixReview is a discriminated union, but every branch shares the same
+    // key set with a literal `verdict`, so the renderer collapses to one
+    // shape with the discriminator displayed as an enum-style placeholder.
     const out = renderShapeSkeleton(FixReview);
     expect(out).toContain('"verdict": "<accept|accept-with-fixes|reject>"');
     expect(out).toContain('"summary":');
     expect(out).toContain('"findings": [{');
     expect(out).toContain('"severity": "<critical|high|medium|low>"');
     expect(out).toContain('"file_refs":');
+    expect(out).not.toContain(' | ');
+  });
+
+  // Regression: a recursive `z.lazy()` schema (Node → children → Node)
+  // previously blew the stack at hint render time. The renderer now
+  // detects revisits of the same Zod node and emits `<recursive>`.
+  it('renders a recursive z.lazy schema without throwing', () => {
+    type Node = { name: string; children: Node[] };
+    const Node: z.ZodType<Node> = z.lazy(() =>
+      z.object({
+        name: z.string(),
+        children: z.array(Node),
+      }),
+    );
+    expect(() => renderShapeSkeleton(Node)).not.toThrow();
+    const out = renderShapeSkeleton(Node);
+    expect(out).toContain('"name":');
+    expect(out).toContain('<recursive>');
+  });
+
+  // Regression: a `.describe()` text containing a double quote or backslash
+  // used to break the skeleton's quoting. JSON-escape ensures the
+  // resulting placeholder is syntactically clean.
+  it('JSON-escapes embedded quotes and backslashes in .describe() text', () => {
+    const schema = z.object({
+      title: z.string().describe('contains "quoted" word and a \\ slash'),
+    });
+    const out = renderShapeSkeleton(schema);
+    expect(out).toContain('\\"quoted\\"');
+    expect(out).toContain('\\\\');
+  });
+
+  it('JSON-escapes object keys that contain special characters', () => {
+    const schema = z.object({
+      'has "quote"': z.string(),
+    });
+    const out = renderShapeSkeleton(schema);
+    expect(out).toContain('"has \\"quote\\"":');
+  });
+
+  // Regression: numeric native enums used to render their reverse-mapped
+  // KEY names ("A|B"), but Zod only accepts the numeric VALUES.
+  it('renders numeric nativeEnum values, not reverse-mapped names', () => {
+    enum Priority {
+      Low = 0,
+      High = 1,
+    }
+    const schema = z.object({
+      priority: z.nativeEnum(Priority),
+    });
+    const out = renderShapeSkeleton(schema);
+    expect(out).toContain('"<0|1>"');
+    expect(out).not.toContain('Low');
+    expect(out).not.toContain('High');
+  });
+
+  it('renders string nativeEnum values as the accepted string values', () => {
+    enum Color {
+      Red = 'red',
+      Blue = 'blue',
+    }
+    const schema = z.object({
+      color: z.nativeEnum(Color),
+    });
+    const out = renderShapeSkeleton(schema);
+    expect(out).toContain('"<red|blue>"');
+  });
+
+  it('collapses a same-shape discriminated union into a single shape', () => {
+    const schema = z.discriminatedUnion('verdict', [
+      z.object({ verdict: z.literal('accept'), reason: z.string() }).strict(),
+      z.object({ verdict: z.literal('reject'), reason: z.string() }).strict(),
+    ]);
+    const out = renderShapeSkeleton(schema);
+    expect(out).toBe('{ "verdict": "<accept|reject>", "reason": "<string>" }');
+  });
+
+  it('falls back to pipe-separated branches when discriminated branches differ in shape', () => {
+    const schema = z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('cmd'), command: z.string() }).strict(),
+      z.object({ kind: z.literal('proc'), procedure: z.string() }).strict(),
+    ]);
+    const out = renderShapeSkeleton(schema);
+    expect(out).toContain(' | ');
   });
 });

@@ -12758,52 +12758,178 @@ var exploreCompiledFlowPackage = {
   }
 };
 
-// dist/flows/fix/relay-hints.js
-var fixContextShapeHint = {
-  kind: "schema",
-  schema: "fix.context@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "accept", "sources": [{ "kind": "<file|command|log|operator-note|reference>", "ref": "<project-relative path, command id, log line, note id, or external reference>", "summary": "<one-line summary of what this source contributed>" }], "observations": ["<observation grounded in the sources>"], "open_questions": ["<question still unresolved after gathering context>"] }',
-    "sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources \u2014 do not invent details that the sources do not support.",
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against fix.context@v1 before writing reports/fix/context.json."
-  ].join(" ")
-};
-var fixDiagnosisShapeHint = {
-  kind: "schema",
-  schema: "fix.diagnosis@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "accept", "reproduction_status": "<reproduced|not-reproduced|intermittent|not-attempted>", "cause_summary": "<one-line root-cause statement>", "confidence": "<low|medium|high>", "evidence": ["<file:line, command result, or report reference that supports the cause>"], "residual_uncertainty": ["<remaining unknown that could still affect the fix>"] }',
-    'evidence must contain at least one entry, expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" \u2014 if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against fix.diagnosis@v1 before writing reports/fix/diagnosis.json."
-  ].join(" ")
-};
-var fixChangeShapeHint = {
-  kind: "schema",
-  schema: "fix.change@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "accept", "summary": "<what changed and why>", "diagnosis_ref": "<reference to the diagnosis report or section that motivates this change>", "changed_files": ["<project-relative path that was edited>"], "evidence": ["<test output, command result, or before/after observation that confirms the change works>"] }',
-    "Make the smallest change that resolves the diagnosed cause. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry.",
-    "`evidence` is a JSON array of short distinct strings \u2014 one observation per element. It is a schema field name, not a request for prose. Even on retry attempts where you are summarizing prior verification output, keep each observation as its own array element.",
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against fix.change@v1 before writing reports/fix/change.json."
-  ].join(" ")
-};
-var fixReviewShapeHint = {
-  kind: "schema",
-  schema: "fix.review@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<accept|accept-with-fixes|reject>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] }',
-    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
-    'Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against fix.review@v1 before writing reports/fix/review.json."
-  ].join(" ")
-};
+// dist/flows/registries/shape-hints/from-zod.js
+function defOf(node) {
+  return node._def;
+}
+function escapeJsonInner(value) {
+  const serialized = JSON.stringify(value);
+  return serialized.slice(1, serialized.length - 1);
+}
+function leafDescriptionOr(node, fallback) {
+  const description = defOf(node).description;
+  if (typeof description === "string" && description.length > 0) {
+    return `"<${escapeJsonInner(description)}>"`;
+  }
+  return fallback;
+}
+var MAX_RECURSION_DEPTH = 32;
+function renderShapeSkeleton(schema) {
+  return renderNode(schema, /* @__PURE__ */ new Set(), 0);
+}
+function renderNode(node, visited, depth) {
+  if (visited.has(node) || depth > MAX_RECURSION_DEPTH) {
+    return "<recursive>";
+  }
+  visited.add(node);
+  try {
+    return renderNodeInner(node, visited, depth + 1);
+  } finally {
+    visited.delete(node);
+  }
+}
+function renderNodeInner(node, visited, depth) {
+  const def = defOf(node);
+  switch (def.typeName) {
+    case "ZodObject": {
+      const shapeFn = def.shape;
+      const shape = typeof shapeFn === "function" ? shapeFn() : def.shape;
+      const entries = Object.entries(shape).map(([key, child]) => `"${escapeJsonInner(key)}": ${renderNode(child, visited, depth)}`);
+      return `{ ${entries.join(", ")} }`;
+    }
+    case "ZodArray": {
+      const inner = renderNode(def.type, visited, depth);
+      return `[${inner}]`;
+    }
+    case "ZodOptional":
+    case "ZodNullable":
+    case "ZodDefault":
+    case "ZodReadonly":
+    case "ZodBranded":
+    case "ZodCatch":
+      return renderNode(def.innerType, visited, depth);
+    case "ZodEffects":
+      return renderNode(def.schema, visited, depth);
+    case "ZodPipeline":
+      return renderNode(def.out, visited, depth);
+    case "ZodLiteral": {
+      const value = def.value;
+      return typeof value === "string" ? JSON.stringify(value) : JSON.stringify(value);
+    }
+    case "ZodEnum": {
+      const values = def.values;
+      return `"<${values.map(escapeJsonInner).join("|")}>"`;
+    }
+    case "ZodNativeEnum": {
+      const raw = def.values;
+      const isReverseMapped = Object.values(raw).some((value) => typeof value === "number" && Object.hasOwn(raw, String(value)));
+      const accepted = isReverseMapped ? Object.values(raw).filter((value) => typeof value === "number") : Object.values(raw);
+      const rendered = accepted.map((value) => typeof value === "string" ? escapeJsonInner(value) : String(value));
+      return `"<${rendered.join("|")}>"`;
+    }
+    case "ZodString":
+      return leafDescriptionOr(node, '"<string>"');
+    case "ZodNumber":
+      return leafDescriptionOr(node, "<number>");
+    case "ZodBigInt":
+      return leafDescriptionOr(node, "<bigint>");
+    case "ZodBoolean":
+      return leafDescriptionOr(node, "<true|false>");
+    case "ZodDate":
+      return leafDescriptionOr(node, '"<iso-date>"');
+    case "ZodNull":
+      return "null";
+    case "ZodUndefined":
+      return "<undefined>";
+    case "ZodAny":
+      return leafDescriptionOr(node, "<any>");
+    case "ZodUnknown":
+      return leafDescriptionOr(node, "<unknown>");
+    case "ZodNever":
+      return "<never>";
+    case "ZodRecord":
+      return `{ "<key>": ${renderNode(def.valueType, visited, depth)} }`;
+    case "ZodMap":
+      return `{ "<key>": ${renderNode(def.valueType, visited, depth)} }`;
+    case "ZodTuple": {
+      const items = def.items.map((item) => renderNode(item, visited, depth));
+      const rest = def.rest;
+      if (rest !== void 0 && rest !== null) {
+        items.push(`...${renderNode(rest, visited, depth)}`);
+      }
+      return `[${items.join(", ")}]`;
+    }
+    case "ZodDiscriminatedUnion": {
+      const discriminator = def.discriminator;
+      const options = def.options;
+      const collapsed = collapseDiscriminatedUnion(discriminator, options, visited, depth);
+      if (collapsed !== void 0)
+        return collapsed;
+      return options.map((opt) => renderNode(opt, visited, depth)).join(" | ");
+    }
+    case "ZodUnion": {
+      const options = def.options;
+      return options.map((opt) => renderNode(opt, visited, depth)).join(" | ");
+    }
+    case "ZodLazy": {
+      const getter = def.getter;
+      return renderNode(getter(), visited, depth);
+    }
+    case "ZodIntersection": {
+      const left = renderNode(def.left, visited, depth);
+      const right = renderNode(def.right, visited, depth);
+      return `${left} & ${right}`;
+    }
+    default:
+      return `<${def.typeName}>`;
+  }
+}
+function collapseDiscriminatedUnion(discriminator, options, visited, depth) {
+  if (options.length === 0)
+    return void 0;
+  const objectShapes = [];
+  const discriminatorValues = [];
+  for (const option of options) {
+    const optDef = defOf(option);
+    if (optDef.typeName !== "ZodObject")
+      return void 0;
+    const shapeFn = optDef.shape;
+    const shape = typeof shapeFn === "function" ? shapeFn() : optDef.shape;
+    objectShapes.push(shape);
+    const discriminatorNode = shape[discriminator];
+    if (discriminatorNode === void 0)
+      return void 0;
+    const discriminatorDef = defOf(discriminatorNode);
+    if (discriminatorDef.typeName !== "ZodLiteral")
+      return void 0;
+    discriminatorValues.push(discriminatorDef.value);
+  }
+  const firstShape = objectShapes[0];
+  if (firstShape === void 0)
+    return void 0;
+  const keyList = Object.keys(firstShape);
+  const keyListSorted = keyList.slice().sort();
+  for (const shape of objectShapes) {
+    const shapeKeys = Object.keys(shape).slice().sort();
+    if (shapeKeys.length !== keyListSorted.length)
+      return void 0;
+    for (let idx = 0; idx < shapeKeys.length; idx += 1) {
+      if (shapeKeys[idx] !== keyListSorted[idx])
+        return void 0;
+    }
+  }
+  const entries = keyList.map((key) => {
+    if (key === discriminator) {
+      const rendered = discriminatorValues.map((value) => typeof value === "string" ? escapeJsonInner(value) : String(value));
+      return `"${escapeJsonInner(key)}": "<${rendered.join("|")}>"`;
+    }
+    const child = firstShape[key];
+    if (child === void 0)
+      return `"${escapeJsonInner(key)}": <missing>`;
+    return `"${escapeJsonInner(key)}": ${renderNode(child, visited, depth)}`;
+  });
+  return `{ ${entries.join(", ")} }`;
+}
 
 // dist/flows/fix/reports.js
 var FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
@@ -12844,7 +12970,10 @@ var REQUIRED_FIX_RESULT_ARTIFACT_IDS = [
   "fix.change-set"
 ];
 var NonEmptyStringArray2 = external_exports.array(external_exports.string().min(1)).min(1);
-var LenientNonEmptyStringArray = external_exports.preprocess((val) => typeof val === "string" && val.length > 0 ? [val] : val, external_exports.array(external_exports.string().min(1)).min(1));
+var LenientNonEmptyStringArray = external_exports.union([
+  external_exports.string().min(1).transform((value) => [value]),
+  external_exports.array(external_exports.string().min(1)).min(1)
+]);
 var FixVerificationCommand = VerificationCommand;
 var FixRegressionContract = external_exports.object({
   expected_behavior: external_exports.string().min(1),
@@ -12893,14 +13022,14 @@ var FixBrief = external_exports.object({
 }).strict();
 var FixContextSource = external_exports.object({
   kind: external_exports.enum(["file", "command", "log", "operator-note", "reference"]),
-  ref: external_exports.string().min(1),
-  summary: external_exports.string().min(1)
+  ref: external_exports.string().min(1).describe("project-relative path, command id, log line, note id, or external reference"),
+  summary: external_exports.string().min(1).describe("one-line summary of what this source contributed")
 }).strict();
 var FixContext = external_exports.object({
   verdict: external_exports.literal("accept"),
   sources: external_exports.array(FixContextSource).min(1),
-  observations: NonEmptyStringArray2,
-  open_questions: external_exports.array(external_exports.string().min(1))
+  observations: external_exports.array(external_exports.string().min(1).describe("observation grounded in the sources")).min(1),
+  open_questions: external_exports.array(external_exports.string().min(1).describe("question still unresolved after gathering context"))
 }).strict();
 var FixReproductionStatus = external_exports.enum([
   "reproduced",
@@ -12911,10 +13040,10 @@ var FixReproductionStatus = external_exports.enum([
 var FixDiagnosis = external_exports.object({
   verdict: external_exports.literal("accept"),
   reproduction_status: FixReproductionStatus,
-  cause_summary: external_exports.string().min(1),
+  cause_summary: external_exports.string().min(1).describe("one-line root-cause statement"),
   confidence: external_exports.enum(["low", "medium", "high"]),
   evidence: LenientNonEmptyStringArray,
-  residual_uncertainty: external_exports.array(external_exports.string().min(1))
+  residual_uncertainty: external_exports.array(external_exports.string().min(1).describe("remaining unknown that could still affect the fix"))
 }).strict().superRefine((diagnosis, ctx) => {
   if (diagnosis.reproduction_status !== "reproduced" && diagnosis.residual_uncertainty.length === 0) {
     ctx.addIssue({
@@ -12956,9 +13085,9 @@ var FixNoReproDecision = external_exports.object({
 });
 var FixChange = external_exports.object({
   verdict: external_exports.literal("accept"),
-  summary: external_exports.string().min(1),
-  diagnosis_ref: external_exports.string().min(1),
-  changed_files: NonEmptyStringArray2,
+  summary: external_exports.string().min(1).describe("what changed and why"),
+  diagnosis_ref: external_exports.string().min(1).describe("reference to the diagnosis report or section that motivates this change"),
+  changed_files: external_exports.array(external_exports.string().min(1).describe("project-relative path that was edited")).min(1),
   evidence: LenientNonEmptyStringArray
 }).strict();
 var FixVerificationCommandResult = external_exports.object({
@@ -13268,22 +13397,26 @@ var FixRegressionRerun = external_exports.object({
 var FixReviewVerdict = external_exports.enum(["accept", "accept-with-fixes", "reject"]);
 var FixReviewFinding = external_exports.object({
   severity: external_exports.enum(["critical", "high", "medium", "low"]),
-  text: external_exports.string().min(1),
-  file_refs: external_exports.array(external_exports.string().min(1))
+  text: external_exports.string().min(1).describe("finding text"),
+  file_refs: external_exports.array(external_exports.string().min(1).describe("file:line reference"))
 }).strict();
-var FixReview = external_exports.object({
-  verdict: FixReviewVerdict,
-  summary: external_exports.string().min(1),
-  findings: external_exports.array(FixReviewFinding)
-}).strict().superRefine((review, ctx) => {
-  if (review.verdict !== "accept" && review.findings.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["findings"],
-      message: `findings must be non-empty when verdict is '${review.verdict}'`
-    });
-  }
-});
+var FixReview = external_exports.discriminatedUnion("verdict", [
+  external_exports.object({
+    verdict: external_exports.literal("accept"),
+    summary: external_exports.string().min(1).describe("review summary"),
+    findings: external_exports.array(FixReviewFinding)
+  }).strict(),
+  external_exports.object({
+    verdict: external_exports.literal("accept-with-fixes"),
+    summary: external_exports.string().min(1).describe("review summary"),
+    findings: external_exports.array(FixReviewFinding).min(1)
+  }).strict(),
+  external_exports.object({
+    verdict: external_exports.literal("reject"),
+    summary: external_exports.string().min(1).describe("review summary"),
+    findings: external_exports.array(FixReviewFinding).min(1)
+  }).strict()
+]);
 var FixResultOutcome = external_exports.enum([
   "fixed",
   "not-reproduced",
@@ -13457,6 +13590,57 @@ var FixResult = external_exports.object({
     });
   }
 });
+
+// dist/flows/fix/relay-hints.js
+function mechanicalTail(schema, reportPath) {
+  return [
+    "Do not include extra top-level keys.",
+    "Do not wrap the JSON in Markdown code fences.",
+    "Do not include any prose before or after the JSON object.",
+    `The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against ${schema} before writing ${reportPath}.`
+  ].join(" ");
+}
+function shapeInstruction(skeleton) {
+  return `Respond with a single raw JSON object whose top-level shape is exactly: ${skeleton}`;
+}
+var fixContextShapeHint = {
+  kind: "schema",
+  schema: "fix.context@v1",
+  instruction: [
+    shapeInstruction(renderShapeSkeleton(FixContext)),
+    "sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources \u2014 do not invent details that the sources do not support.",
+    mechanicalTail("fix.context@v1", "reports/fix/context.json")
+  ].join(" ")
+};
+var fixDiagnosisShapeHint = {
+  kind: "schema",
+  schema: "fix.diagnosis@v1",
+  instruction: [
+    shapeInstruction(renderShapeSkeleton(FixDiagnosis)),
+    'evidence must contain at least one entry (file:line, command result, or report reference that supports the cause), expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" \u2014 if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
+    mechanicalTail("fix.diagnosis@v1", "reports/fix/diagnosis.json")
+  ].join(" ")
+};
+var fixChangeShapeHint = {
+  kind: "schema",
+  schema: "fix.change@v1",
+  instruction: [
+    shapeInstruction(renderShapeSkeleton(FixChange)),
+    "Make the smallest change that resolves the diagnosed cause. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry (test output, command result, or before/after observation that confirms the change works).",
+    "`evidence` is a JSON array of short distinct strings \u2014 one observation per element. It is a schema field name, not a request for prose. Even on retry attempts where you are summarizing prior verification output, keep each observation as its own array element.",
+    mechanicalTail("fix.change@v1", "reports/fix/change.json")
+  ].join(" ")
+};
+var fixReviewShapeHint = {
+  kind: "schema",
+  schema: "fix.review@v1",
+  instruction: [
+    shapeInstruction(renderShapeSkeleton(FixReview)),
+    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
+    'Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference.',
+    mechanicalTail("fix.review@v1", "reports/fix/review.json")
+  ].join(" ")
+};
 
 // dist/flows/fix/writers/baseline-snapshot.js
 import { fileURLToPath } from "node:url";
@@ -17610,7 +17794,7 @@ async function executeCompose(step, context) {
 }
 
 // dist/runtime/executors/fanout.js
-import { join as joinPath } from "node:path";
+import { join as joinPath2 } from "node:path";
 
 // dist/shared/fanout-aggregate-report.js
 function buildFanoutAggregate(policy2, outcomes, winnerBranchId) {
@@ -17700,7 +17884,7 @@ function evaluateFanoutJoinPolicy(input) {
 
 // dist/runtime/fanout/branch-execution.js
 import { randomUUID } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile3 } from "node:fs/promises";
+import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile4 } from "node:fs/promises";
 import { dirname as dirname2, join as join5 } from "node:path";
 
 // dist/flows/registries/cross-report-validators.js
@@ -17740,6 +17924,11 @@ var TEST_FIXTURE_SCHEMAS = Object.freeze({
   "fanout-aggregate@v1": FanoutAggregateFixtureShape
 });
 var REGISTRY5 = buildReportSchemaRegistry(flowPackages, TEST_FIXTURE_SCHEMAS);
+function findReportZodSchema(schemaName) {
+  if (!Object.hasOwn(REGISTRY5, schemaName))
+    return void 0;
+  return REGISTRY5[schemaName];
+}
 function parseReport(schemaName, resultBody) {
   if (!Object.hasOwn(REGISTRY5, schemaName)) {
     return {
@@ -17773,7 +17962,7 @@ function parseReport(schemaName, resultBody) {
 }
 
 // dist/runtime/executors/relay.js
-import { mkdir as mkdir2, writeFile as writeFile2 } from "node:fs/promises";
+import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
 import { dirname } from "node:path";
 
 // dist/connectors/claude-code.js
@@ -17879,6 +18068,9 @@ function buildClaudeCodeArgs(input) {
   if (effort !== void 0) {
     assertClaudeCodeEffort(effort);
     args.push("--effort", effort);
+  }
+  if (input.responseSchema !== void 0) {
+    args.push("--json-schema", JSON.stringify(input.responseSchema));
   }
   args.push(input.prompt);
   return args;
@@ -18044,6 +18236,9 @@ function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
 
 // dist/connectors/codex.js
 import { execFileSync, spawn as spawn2 } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
 import { performance as performance2 } from "node:perf_hooks";
 var CODEX_NO_WRITE_FLAGS = Object.freeze([
   "exec",
@@ -18151,7 +18346,7 @@ function assertCodexSpawnArgvBoundary(args) {
     }
   }
 }
-function buildCodexArgs(input) {
+function buildCodexArgs(input, schemaPath) {
   const args = [...CODEX_NO_WRITE_FLAGS];
   const model = selectedModelForProvider("codex", input.resolvedSelection, "openai");
   if (model !== void 0) {
@@ -18162,112 +18357,145 @@ function buildCodexArgs(input) {
     assertCodexEffort(effort);
     args.push("-c", codexReasoningEffortConfigValue(effort));
   }
+  if (schemaPath !== void 0) {
+    args.push("--output-schema", schemaPath);
+  }
   args.push(input.prompt);
   assertCodexSpawnArgvBoundary(args);
   return args;
 }
+async function writeSchemaTempFile(schema) {
+  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
+  try {
+    const path = joinPath(dir, "schema.json");
+    await writeFile(path, JSON.stringify(schema), "utf8");
+    return { dir, path };
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
+    throw err;
+  }
+}
+async function cleanupSchemaTempDir(dir) {
+  if (dir === void 0)
+    return;
+  try {
+    await rm(dir, { recursive: true, force: true });
+  } catch {
+  }
+}
 async function relayCodex(input) {
   const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
   const cli_version = captureCodexVersion();
-  const args = buildCodexArgs(input);
-  const start = performance2.now();
-  return await new Promise((resolve13, reject) => {
-    let child;
-    try {
-      child = spawn2(CODEX_EXECUTABLE, args, {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: process.env,
-        detached: true
-      });
-    } catch (err) {
-      reject(new Error(`codex subprocess spawn failed: ${err.message}`));
-      return;
+  let tempDir;
+  let schemaPath;
+  try {
+    if (input.responseSchema !== void 0) {
+      const allocated = await writeSchemaTempFile(input.responseSchema);
+      tempDir = allocated.dir;
+      schemaPath = allocated.path;
     }
-    let stdout = "";
-    let stdoutBytes = 0;
-    let stderr = "";
-    let stderrBytes = 0;
-    let stdoutCapped = false;
-    let stderrCapped = false;
-    let timedOut = false;
-    let killGroupSucceeded = false;
-    const killProcessGroup = (signal) => {
-      const pid = child.pid;
-      if (typeof pid !== "number")
-        return false;
+    const args = buildCodexArgs(input, schemaPath);
+    const start = performance2.now();
+    return await new Promise((resolve13, reject) => {
+      let child;
       try {
-        process.kill(-pid, signal);
-        return true;
-      } catch {
+        child = spawn2(CODEX_EXECUTABLE, args, {
+          stdio: ["ignore", "pipe", "pipe"],
+          env: process.env,
+          detached: true
+        });
+      } catch (err) {
+        reject(new Error(`codex subprocess spawn failed: ${err.message}`));
+        return;
+      }
+      let stdout = "";
+      let stdoutBytes = 0;
+      let stderr = "";
+      let stderrBytes = 0;
+      let stdoutCapped = false;
+      let stderrCapped = false;
+      let timedOut = false;
+      let killGroupSucceeded = false;
+      const killProcessGroup = (signal) => {
+        const pid = child.pid;
+        if (typeof pid !== "number")
+          return false;
         try {
-          child.kill(signal);
+          process.kill(-pid, signal);
           return true;
         } catch {
-          return false;
+          try {
+            child.kill(signal);
+            return true;
+          } catch {
+            return false;
+          }
         }
-      }
-    };
-    let killGraceTimer;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroupSucceeded = killProcessGroup("SIGTERM");
-      killGraceTimer = setTimeout(() => {
-        killProcessGroup("SIGKILL");
-        killGraceTimer = void 0;
-      }, SIGTERM_TO_SIGKILL_GRACE_MS2);
-    }, timeoutMs2);
-    const clearAllTimers = () => {
-      clearTimeout(timer);
-      if (killGraceTimer !== void 0) {
-        clearTimeout(killGraceTimer);
-        killGraceTimer = void 0;
-      }
-    };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (chunk) => {
-      if (stdoutBytes + chunk.length > STDOUT_MAX_BYTES2) {
-        stdoutCapped = true;
-        return;
-      }
-      stdout += chunk;
-      stdoutBytes += chunk.length;
+      };
+      let killGraceTimer;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        killGroupSucceeded = killProcessGroup("SIGTERM");
+        killGraceTimer = setTimeout(() => {
+          killProcessGroup("SIGKILL");
+          killGraceTimer = void 0;
+        }, SIGTERM_TO_SIGKILL_GRACE_MS2);
+      }, timeoutMs2);
+      const clearAllTimers = () => {
+        clearTimeout(timer);
+        if (killGraceTimer !== void 0) {
+          clearTimeout(killGraceTimer);
+          killGraceTimer = void 0;
+        }
+      };
+      child.stdout?.setEncoding("utf8");
+      child.stderr?.setEncoding("utf8");
+      child.stdout?.on("data", (chunk) => {
+        if (stdoutBytes + chunk.length > STDOUT_MAX_BYTES2) {
+          stdoutCapped = true;
+          return;
+        }
+        stdout += chunk;
+        stdoutBytes += chunk.length;
+      });
+      child.stderr?.on("data", (chunk) => {
+        if (stderrBytes + chunk.length > STDERR_MAX_BYTES2) {
+          stderrCapped = true;
+          return;
+        }
+        stderr += chunk;
+        stderrBytes += chunk.length;
+      });
+      child.on("error", (err) => {
+        clearAllTimers();
+        reject(new Error(`codex subprocess spawn error: ${err.message}`));
+      });
+      child.on("close", (code, signal) => {
+        clearAllTimers();
+        const duration_ms = performance2.now() - start;
+        if (timedOut) {
+          reject(new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${killGroupSucceeded ? "sent" : "failed"}; final signal=${signal ?? "none"}; stderr[:500]=${stderr.slice(0, 500)}`));
+          return;
+        }
+        if (code !== 0) {
+          reject(new Error(`codex subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ""}; stderr[:500]=${stderr.slice(0, 500)}`));
+          return;
+        }
+        if (stdoutCapped) {
+          reject(new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`));
+          return;
+        }
+        try {
+          resolve13(parseCodexStdout(stdout, input.prompt, duration_ms, cli_version));
+        } catch (err) {
+          const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
+          reject(new Error(`codex subprocess: ${err.message}; stdout[:500]=${stdout.slice(0, 500)}; stderr[:200]=${stderr.slice(0, 200)}${stderrSuffix}`));
+        }
+      });
     });
-    child.stderr?.on("data", (chunk) => {
-      if (stderrBytes + chunk.length > STDERR_MAX_BYTES2) {
-        stderrCapped = true;
-        return;
-      }
-      stderr += chunk;
-      stderrBytes += chunk.length;
-    });
-    child.on("error", (err) => {
-      clearAllTimers();
-      reject(new Error(`codex subprocess spawn error: ${err.message}`));
-    });
-    child.on("close", (code, signal) => {
-      clearAllTimers();
-      const duration_ms = performance2.now() - start;
-      if (timedOut) {
-        reject(new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${killGroupSucceeded ? "sent" : "failed"}; final signal=${signal ?? "none"}; stderr[:500]=${stderr.slice(0, 500)}`));
-        return;
-      }
-      if (code !== 0) {
-        reject(new Error(`codex subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ""}; stderr[:500]=${stderr.slice(0, 500)}`));
-        return;
-      }
-      if (stdoutCapped) {
-        reject(new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`));
-        return;
-      }
-      try {
-        resolve13(parseCodexStdout(stdout, input.prompt, duration_ms, cli_version));
-      } catch (err) {
-        const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
-        reject(new Error(`codex subprocess: ${err.message}; stdout[:500]=${stdout.slice(0, 500)}; stderr[:200]=${stderr.slice(0, 200)}${stderrSuffix}`));
-      }
-    });
-  });
+  } finally {
+    await cleanupSchemaTempDir(tempDir);
+  }
 }
 var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set(["agent_message", "command_execution", "reasoning"]);
 var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
@@ -18375,8 +18603,8 @@ function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
 
 // dist/connectors/custom.js
 import { spawn as spawn3 } from "node:child_process";
-import { mkdtemp, readFile as readFile2, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdtemp as mkdtemp2, readFile as readFile2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
+import { tmpdir as tmpdir2 } from "node:os";
 import { join as join3 } from "node:path";
 import { performance as performance3 } from "node:perf_hooks";
 var DEFAULT_TIMEOUT_MS3 = 12e4;
@@ -18407,10 +18635,10 @@ async function relayCustom(input) {
   if (executable === void 0) {
     throw new Error(`custom connector '${descriptor.name}' command is empty`);
   }
-  const tempDir = await mkdtemp(join3(tmpdir(), "circuit-custom-connector-"));
+  const tempDir = await mkdtemp2(join3(tmpdir2(), "circuit-custom-connector-"));
   const promptFile = join3(tempDir, "prompt.txt");
   const outputFile = join3(tempDir, "output.txt");
-  await writeFile(promptFile, input.prompt, "utf8");
+  await writeFile2(promptFile, input.prompt, "utf8");
   const args = [...baseArgs, promptFile, outputFile];
   const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
   const start = performance3.now();
@@ -18510,7 +18738,7 @@ async function relayCustom(input) {
       });
     });
   } finally {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm2(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -18976,6 +19204,1302 @@ ${err.message}`);
   return loaded;
 }
 
+// node_modules/zod-to-json-schema/dist/esm/Options.js
+var ignoreOverride = Symbol("Let zodToJsonSchema decide on which parser to use");
+var defaultOptions = {
+  name: void 0,
+  $refStrategy: "root",
+  basePath: ["#"],
+  effectStrategy: "input",
+  pipeStrategy: "all",
+  dateStrategy: "format:date-time",
+  mapStrategy: "entries",
+  removeAdditionalStrategy: "passthrough",
+  allowedAdditionalProperties: true,
+  rejectedAdditionalProperties: false,
+  definitionPath: "definitions",
+  target: "jsonSchema7",
+  strictUnions: false,
+  definitions: {},
+  errorMessages: false,
+  markdownDescription: false,
+  patternStrategy: "escape",
+  applyRegexFlags: false,
+  emailStrategy: "format:email",
+  base64Strategy: "contentEncoding:base64",
+  nameStrategy: "ref",
+  openAiAnyTypeName: "OpenAiAnyType"
+};
+var getDefaultOptions = (options) => typeof options === "string" ? {
+  ...defaultOptions,
+  name: options
+} : {
+  ...defaultOptions,
+  ...options
+};
+
+// node_modules/zod-to-json-schema/dist/esm/Refs.js
+var getRefs = (options) => {
+  const _options = getDefaultOptions(options);
+  const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
+  return {
+    ..._options,
+    flags: { hasReferencedOpenAiAnyType: false },
+    currentPath,
+    propertyPath: void 0,
+    seen: new Map(Object.entries(_options.definitions).map(([name, def]) => [
+      def._def,
+      {
+        def: def._def,
+        path: [..._options.basePath, _options.definitionPath, name],
+        // Resolution of references will be forced even though seen, so it's ok that the schema is undefined here for now.
+        jsonSchema: void 0
+      }
+    ]))
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+function addErrorMessage(res, key, errorMessage3, refs) {
+  if (!refs?.errorMessages)
+    return;
+  if (errorMessage3) {
+    res.errorMessage = {
+      ...res.errorMessage,
+      [key]: errorMessage3
+    };
+  }
+}
+function setResponseValueAndErrors(res, key, value, errorMessage3, refs) {
+  res[key] = value;
+  addErrorMessage(res, key, errorMessage3, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+var getRelativePath = (pathA, pathB) => {
+  let i = 0;
+  for (; i < pathA.length && i < pathB.length; i++) {
+    if (pathA[i] !== pathB[i])
+      break;
+  }
+  return [(pathA.length - i).toString(), ...pathB.slice(i)].join("/");
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+function parseAnyDef(refs) {
+  if (refs.target !== "openAi") {
+    return {};
+  }
+  const anyDefinitionPath = [
+    ...refs.basePath,
+    refs.definitionPath,
+    refs.openAiAnyTypeName
+  ];
+  refs.flags.hasReferencedOpenAiAnyType = true;
+  return {
+    $ref: refs.$refStrategy === "relative" ? getRelativePath(anyDefinitionPath, refs.currentPath) : anyDefinitionPath.join("/")
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+function parseArrayDef(def, refs) {
+  const res = {
+    type: "array"
+  };
+  if (def.type?._def && def.type?._def?.typeName !== ZodFirstPartyTypeKind.ZodAny) {
+    res.items = parseDef(def.type._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "items"]
+    });
+  }
+  if (def.minLength) {
+    setResponseValueAndErrors(res, "minItems", def.minLength.value, def.minLength.message, refs);
+  }
+  if (def.maxLength) {
+    setResponseValueAndErrors(res, "maxItems", def.maxLength.value, def.maxLength.message, refs);
+  }
+  if (def.exactLength) {
+    setResponseValueAndErrors(res, "minItems", def.exactLength.value, def.exactLength.message, refs);
+    setResponseValueAndErrors(res, "maxItems", def.exactLength.value, def.exactLength.message, refs);
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+function parseBigintDef(def, refs) {
+  const res = {
+    type: "integer",
+    format: "int64"
+  };
+  if (!def.checks)
+    return res;
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMinimum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMaximum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res, "multipleOf", check.value, check.message, refs);
+        break;
+    }
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+function parseBooleanDef() {
+  return {
+    type: "boolean"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+function parseBrandedDef(_def, refs) {
+  return parseDef(_def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+var parseCatchDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+function parseDateDef(def, refs, overrideDateStrategy) {
+  const strategy = overrideDateStrategy ?? refs.dateStrategy;
+  if (Array.isArray(strategy)) {
+    return {
+      anyOf: strategy.map((item, i) => parseDateDef(def, refs, item))
+    };
+  }
+  switch (strategy) {
+    case "string":
+    case "format:date-time":
+      return {
+        type: "string",
+        format: "date-time"
+      };
+    case "format:date":
+      return {
+        type: "string",
+        format: "date"
+      };
+    case "integer":
+      return integerDateParser(def, refs);
+  }
+}
+var integerDateParser = (def, refs) => {
+  const res = {
+    type: "integer",
+    format: "unix-time"
+  };
+  if (refs.target === "openApi3") {
+    return res;
+  }
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "min":
+        setResponseValueAndErrors(
+          res,
+          "minimum",
+          check.value,
+          // This is in milliseconds
+          check.message,
+          refs
+        );
+        break;
+      case "max":
+        setResponseValueAndErrors(
+          res,
+          "maximum",
+          check.value,
+          // This is in milliseconds
+          check.message,
+          refs
+        );
+        break;
+    }
+  }
+  return res;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+function parseDefaultDef(_def, refs) {
+  return {
+    ...parseDef(_def.innerType._def, refs),
+    default: _def.defaultValue()
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+function parseEffectsDef(_def, refs) {
+  return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+function parseEnumDef(def) {
+  return {
+    type: "string",
+    enum: Array.from(def.values)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+var isJsonSchema7AllOfType = (type) => {
+  if ("type" in type && type.type === "string")
+    return false;
+  return "allOf" in type;
+};
+function parseIntersectionDef(def, refs) {
+  const allOf = [
+    parseDef(def.left._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "0"]
+    }),
+    parseDef(def.right._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "1"]
+    })
+  ].filter((x) => !!x);
+  let unevaluatedProperties = refs.target === "jsonSchema2019-09" ? { unevaluatedProperties: false } : void 0;
+  const mergedAllOf = [];
+  allOf.forEach((schema) => {
+    if (isJsonSchema7AllOfType(schema)) {
+      mergedAllOf.push(...schema.allOf);
+      if (schema.unevaluatedProperties === void 0) {
+        unevaluatedProperties = void 0;
+      }
+    } else {
+      let nestedSchema = schema;
+      if ("additionalProperties" in schema && schema.additionalProperties === false) {
+        const { additionalProperties, ...rest } = schema;
+        nestedSchema = rest;
+      } else {
+        unevaluatedProperties = void 0;
+      }
+      mergedAllOf.push(nestedSchema);
+    }
+  });
+  return mergedAllOf.length ? {
+    allOf: mergedAllOf,
+    ...unevaluatedProperties
+  } : void 0;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+function parseLiteralDef(def, refs) {
+  const parsedType = typeof def.value;
+  if (parsedType !== "bigint" && parsedType !== "number" && parsedType !== "boolean" && parsedType !== "string") {
+    return {
+      type: Array.isArray(def.value) ? "array" : "object"
+    };
+  }
+  if (refs.target === "openApi3") {
+    return {
+      type: parsedType === "bigint" ? "integer" : parsedType,
+      enum: [def.value]
+    };
+  }
+  return {
+    type: parsedType === "bigint" ? "integer" : parsedType,
+    const: def.value
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+var emojiRegex2 = void 0;
+var zodPatterns = {
+  /**
+   * `c` was changed to `[cC]` to replicate /i flag
+   */
+  cuid: /^[cC][^\s-]{8,}$/,
+  cuid2: /^[0-9a-z]+$/,
+  ulid: /^[0-9A-HJKMNP-TV-Z]{26}$/,
+  /**
+   * `a-z` was added to replicate /i flag
+   */
+  email: /^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-\.]*)[a-zA-Z0-9_+-]@([a-zA-Z0-9][a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/,
+  /**
+   * Constructed a valid Unicode RegExp
+   *
+   * Lazily instantiate since this type of regex isn't supported
+   * in all envs (e.g. React Native).
+   *
+   * See:
+   * https://github.com/colinhacks/zod/issues/2433
+   * Fix in Zod:
+   * https://github.com/colinhacks/zod/commit/9340fd51e48576a75adc919bff65dbc4a5d4c99b
+   */
+  emoji: () => {
+    if (emojiRegex2 === void 0) {
+      emojiRegex2 = RegExp("^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$", "u");
+    }
+    return emojiRegex2;
+  },
+  /**
+   * Unused
+   */
+  uuid: /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/,
+  /**
+   * Unused
+   */
+  ipv4: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/,
+  ipv4Cidr: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/,
+  /**
+   * Unused
+   */
+  ipv6: /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/,
+  ipv6Cidr: /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/,
+  base64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/,
+  base64url: /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/,
+  nanoid: /^[a-zA-Z0-9_-]{21}$/,
+  jwt: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/
+};
+function parseStringDef(def, refs) {
+  const res = {
+    type: "string"
+  };
+  if (def.checks) {
+    for (const check of def.checks) {
+      switch (check.kind) {
+        case "min":
+          setResponseValueAndErrors(res, "minLength", typeof res.minLength === "number" ? Math.max(res.minLength, check.value) : check.value, check.message, refs);
+          break;
+        case "max":
+          setResponseValueAndErrors(res, "maxLength", typeof res.maxLength === "number" ? Math.min(res.maxLength, check.value) : check.value, check.message, refs);
+          break;
+        case "email":
+          switch (refs.emailStrategy) {
+            case "format:email":
+              addFormat(res, "email", check.message, refs);
+              break;
+            case "format:idn-email":
+              addFormat(res, "idn-email", check.message, refs);
+              break;
+            case "pattern:zod":
+              addPattern(res, zodPatterns.email, check.message, refs);
+              break;
+          }
+          break;
+        case "url":
+          addFormat(res, "uri", check.message, refs);
+          break;
+        case "uuid":
+          addFormat(res, "uuid", check.message, refs);
+          break;
+        case "regex":
+          addPattern(res, check.regex, check.message, refs);
+          break;
+        case "cuid":
+          addPattern(res, zodPatterns.cuid, check.message, refs);
+          break;
+        case "cuid2":
+          addPattern(res, zodPatterns.cuid2, check.message, refs);
+          break;
+        case "startsWith":
+          addPattern(res, RegExp(`^${escapeLiteralCheckValue(check.value, refs)}`), check.message, refs);
+          break;
+        case "endsWith":
+          addPattern(res, RegExp(`${escapeLiteralCheckValue(check.value, refs)}$`), check.message, refs);
+          break;
+        case "datetime":
+          addFormat(res, "date-time", check.message, refs);
+          break;
+        case "date":
+          addFormat(res, "date", check.message, refs);
+          break;
+        case "time":
+          addFormat(res, "time", check.message, refs);
+          break;
+        case "duration":
+          addFormat(res, "duration", check.message, refs);
+          break;
+        case "length":
+          setResponseValueAndErrors(res, "minLength", typeof res.minLength === "number" ? Math.max(res.minLength, check.value) : check.value, check.message, refs);
+          setResponseValueAndErrors(res, "maxLength", typeof res.maxLength === "number" ? Math.min(res.maxLength, check.value) : check.value, check.message, refs);
+          break;
+        case "includes": {
+          addPattern(res, RegExp(escapeLiteralCheckValue(check.value, refs)), check.message, refs);
+          break;
+        }
+        case "ip": {
+          if (check.version !== "v6") {
+            addFormat(res, "ipv4", check.message, refs);
+          }
+          if (check.version !== "v4") {
+            addFormat(res, "ipv6", check.message, refs);
+          }
+          break;
+        }
+        case "base64url":
+          addPattern(res, zodPatterns.base64url, check.message, refs);
+          break;
+        case "jwt":
+          addPattern(res, zodPatterns.jwt, check.message, refs);
+          break;
+        case "cidr": {
+          if (check.version !== "v6") {
+            addPattern(res, zodPatterns.ipv4Cidr, check.message, refs);
+          }
+          if (check.version !== "v4") {
+            addPattern(res, zodPatterns.ipv6Cidr, check.message, refs);
+          }
+          break;
+        }
+        case "emoji":
+          addPattern(res, zodPatterns.emoji(), check.message, refs);
+          break;
+        case "ulid": {
+          addPattern(res, zodPatterns.ulid, check.message, refs);
+          break;
+        }
+        case "base64": {
+          switch (refs.base64Strategy) {
+            case "format:binary": {
+              addFormat(res, "binary", check.message, refs);
+              break;
+            }
+            case "contentEncoding:base64": {
+              setResponseValueAndErrors(res, "contentEncoding", "base64", check.message, refs);
+              break;
+            }
+            case "pattern:zod": {
+              addPattern(res, zodPatterns.base64, check.message, refs);
+              break;
+            }
+          }
+          break;
+        }
+        case "nanoid": {
+          addPattern(res, zodPatterns.nanoid, check.message, refs);
+        }
+        case "toLowerCase":
+        case "toUpperCase":
+        case "trim":
+          break;
+        default:
+          /* @__PURE__ */ ((_) => {
+          })(check);
+      }
+    }
+  }
+  return res;
+}
+function escapeLiteralCheckValue(literal, refs) {
+  return refs.patternStrategy === "escape" ? escapeNonAlphaNumeric(literal) : literal;
+}
+var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
+function escapeNonAlphaNumeric(source) {
+  let result = "";
+  for (let i = 0; i < source.length; i++) {
+    if (!ALPHA_NUMERIC.has(source[i])) {
+      result += "\\";
+    }
+    result += source[i];
+  }
+  return result;
+}
+function addFormat(schema, value, message, refs) {
+  if (schema.format || schema.anyOf?.some((x) => x.format)) {
+    if (!schema.anyOf) {
+      schema.anyOf = [];
+    }
+    if (schema.format) {
+      schema.anyOf.push({
+        format: schema.format,
+        ...schema.errorMessage && refs.errorMessages && {
+          errorMessage: { format: schema.errorMessage.format }
+        }
+      });
+      delete schema.format;
+      if (schema.errorMessage) {
+        delete schema.errorMessage.format;
+        if (Object.keys(schema.errorMessage).length === 0) {
+          delete schema.errorMessage;
+        }
+      }
+    }
+    schema.anyOf.push({
+      format: value,
+      ...message && refs.errorMessages && { errorMessage: { format: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema, "format", value, message, refs);
+  }
+}
+function addPattern(schema, regex, message, refs) {
+  if (schema.pattern || schema.allOf?.some((x) => x.pattern)) {
+    if (!schema.allOf) {
+      schema.allOf = [];
+    }
+    if (schema.pattern) {
+      schema.allOf.push({
+        pattern: schema.pattern,
+        ...schema.errorMessage && refs.errorMessages && {
+          errorMessage: { pattern: schema.errorMessage.pattern }
+        }
+      });
+      delete schema.pattern;
+      if (schema.errorMessage) {
+        delete schema.errorMessage.pattern;
+        if (Object.keys(schema.errorMessage).length === 0) {
+          delete schema.errorMessage;
+        }
+      }
+    }
+    schema.allOf.push({
+      pattern: stringifyRegExpWithFlags(regex, refs),
+      ...message && refs.errorMessages && { errorMessage: { pattern: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
+  }
+}
+function stringifyRegExpWithFlags(regex, refs) {
+  if (!refs.applyRegexFlags || !regex.flags) {
+    return regex.source;
+  }
+  const flags = {
+    i: regex.flags.includes("i"),
+    m: regex.flags.includes("m"),
+    s: regex.flags.includes("s")
+    // `.` matches newlines
+  };
+  const source = flags.i ? regex.source.toLowerCase() : regex.source;
+  let pattern = "";
+  let isEscaped = false;
+  let inCharGroup = false;
+  let inCharRange = false;
+  for (let i = 0; i < source.length; i++) {
+    if (isEscaped) {
+      pattern += source[i];
+      isEscaped = false;
+      continue;
+    }
+    if (flags.i) {
+      if (inCharGroup) {
+        if (source[i].match(/[a-z]/)) {
+          if (inCharRange) {
+            pattern += source[i];
+            pattern += `${source[i - 2]}-${source[i]}`.toUpperCase();
+            inCharRange = false;
+          } else if (source[i + 1] === "-" && source[i + 2]?.match(/[a-z]/)) {
+            pattern += source[i];
+            inCharRange = true;
+          } else {
+            pattern += `${source[i]}${source[i].toUpperCase()}`;
+          }
+          continue;
+        }
+      } else if (source[i].match(/[a-z]/)) {
+        pattern += `[${source[i]}${source[i].toUpperCase()}]`;
+        continue;
+      }
+    }
+    if (flags.m) {
+      if (source[i] === "^") {
+        pattern += `(^|(?<=[\r
+]))`;
+        continue;
+      } else if (source[i] === "$") {
+        pattern += `($|(?=[\r
+]))`;
+        continue;
+      }
+    }
+    if (flags.s && source[i] === ".") {
+      pattern += inCharGroup ? `${source[i]}\r
+` : `[${source[i]}\r
+]`;
+      continue;
+    }
+    pattern += source[i];
+    if (source[i] === "\\") {
+      isEscaped = true;
+    } else if (inCharGroup && source[i] === "]") {
+      inCharGroup = false;
+    } else if (!inCharGroup && source[i] === "[") {
+      inCharGroup = true;
+    }
+  }
+  try {
+    new RegExp(pattern);
+  } catch {
+    console.warn(`Could not convert regex pattern at ${refs.currentPath.join("/")} to a flag-independent form! Falling back to the flag-ignorant source`);
+    return regex.source;
+  }
+  return pattern;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+function parseRecordDef(def, refs) {
+  if (refs.target === "openAi") {
+    console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
+  }
+  if (refs.target === "openApi3" && def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
+    return {
+      type: "object",
+      required: def.keyType._def.values,
+      properties: def.keyType._def.values.reduce((acc, key) => ({
+        ...acc,
+        [key]: parseDef(def.valueType._def, {
+          ...refs,
+          currentPath: [...refs.currentPath, "properties", key]
+        }) ?? parseAnyDef(refs)
+      }), {}),
+      additionalProperties: refs.rejectedAdditionalProperties
+    };
+  }
+  const schema = {
+    type: "object",
+    additionalProperties: parseDef(def.valueType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    }) ?? refs.allowedAdditionalProperties
+  };
+  if (refs.target === "openApi3") {
+    return schema;
+  }
+  if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.checks?.length) {
+    const { type, ...keyType } = parseStringDef(def.keyType._def, refs);
+    return {
+      ...schema,
+      propertyNames: keyType
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
+    return {
+      ...schema,
+      propertyNames: {
+        enum: def.keyType._def.values
+      }
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodBranded && def.keyType._def.type._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.type._def.checks?.length) {
+    const { type, ...keyType } = parseBrandedDef(def.keyType._def, refs);
+    return {
+      ...schema,
+      propertyNames: keyType
+    };
+  }
+  return schema;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+function parseMapDef(def, refs) {
+  if (refs.mapStrategy === "record") {
+    return parseRecordDef(def, refs);
+  }
+  const keys = parseDef(def.keyType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "0"]
+  }) || parseAnyDef(refs);
+  const values = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "1"]
+  }) || parseAnyDef(refs);
+  return {
+    type: "array",
+    maxItems: 125,
+    items: {
+      type: "array",
+      items: [keys, values],
+      minItems: 2,
+      maxItems: 2
+    }
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+function parseNativeEnumDef(def) {
+  const object = def.values;
+  const actualKeys = Object.keys(def.values).filter((key) => {
+    return typeof object[object[key]] !== "number";
+  });
+  const actualValues = actualKeys.map((key) => object[key]);
+  const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
+  return {
+    type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
+    enum: actualValues
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+function parseNeverDef(refs) {
+  return refs.target === "openAi" ? void 0 : {
+    not: parseAnyDef({
+      ...refs,
+      currentPath: [...refs.currentPath, "not"]
+    })
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+function parseNullDef(refs) {
+  return refs.target === "openApi3" ? {
+    enum: ["null"],
+    nullable: true
+  } : {
+    type: "null"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+var primitiveMappings = {
+  ZodString: "string",
+  ZodNumber: "number",
+  ZodBigInt: "integer",
+  ZodBoolean: "boolean",
+  ZodNull: "null"
+};
+function parseUnionDef(def, refs) {
+  if (refs.target === "openApi3")
+    return asAnyOf(def, refs);
+  const options = def.options instanceof Map ? Array.from(def.options.values()) : def.options;
+  if (options.every((x) => x._def.typeName in primitiveMappings && (!x._def.checks || !x._def.checks.length))) {
+    const types = options.reduce((types2, x) => {
+      const type = primitiveMappings[x._def.typeName];
+      return type && !types2.includes(type) ? [...types2, type] : types2;
+    }, []);
+    return {
+      type: types.length > 1 ? types : types[0]
+    };
+  } else if (options.every((x) => x._def.typeName === "ZodLiteral" && !x.description)) {
+    const types = options.reduce((acc, x) => {
+      const type = typeof x._def.value;
+      switch (type) {
+        case "string":
+        case "number":
+        case "boolean":
+          return [...acc, type];
+        case "bigint":
+          return [...acc, "integer"];
+        case "object":
+          if (x._def.value === null)
+            return [...acc, "null"];
+        case "symbol":
+        case "undefined":
+        case "function":
+        default:
+          return acc;
+      }
+    }, []);
+    if (types.length === options.length) {
+      const uniqueTypes = types.filter((x, i, a) => a.indexOf(x) === i);
+      return {
+        type: uniqueTypes.length > 1 ? uniqueTypes : uniqueTypes[0],
+        enum: options.reduce((acc, x) => {
+          return acc.includes(x._def.value) ? acc : [...acc, x._def.value];
+        }, [])
+      };
+    }
+  } else if (options.every((x) => x._def.typeName === "ZodEnum")) {
+    return {
+      type: "string",
+      enum: options.reduce((acc, x) => [
+        ...acc,
+        ...x._def.values.filter((x2) => !acc.includes(x2))
+      ], [])
+    };
+  }
+  return asAnyOf(def, refs);
+}
+var asAnyOf = (def, refs) => {
+  const anyOf = (def.options instanceof Map ? Array.from(def.options.values()) : def.options).map((x, i) => parseDef(x._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", `${i}`]
+  })).filter((x) => !!x && (!refs.strictUnions || typeof x === "object" && Object.keys(x).length > 0));
+  return anyOf.length ? { anyOf } : void 0;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+function parseNullableDef(def, refs) {
+  if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
+    if (refs.target === "openApi3") {
+      return {
+        type: primitiveMappings[def.innerType._def.typeName],
+        nullable: true
+      };
+    }
+    return {
+      type: [
+        primitiveMappings[def.innerType._def.typeName],
+        "null"
+      ]
+    };
+  }
+  if (refs.target === "openApi3") {
+    const base2 = parseDef(def.innerType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath]
+    });
+    if (base2 && "$ref" in base2)
+      return { allOf: [base2], nullable: true };
+    return base2 && { ...base2, nullable: true };
+  }
+  const base = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "0"]
+  });
+  return base && { anyOf: [base, { type: "null" }] };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+function parseNumberDef(def, refs) {
+  const res = {
+    type: "number"
+  };
+  if (!def.checks)
+    return res;
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "int":
+        res.type = "integer";
+        addErrorMessage(res, "type", check.message, refs);
+        break;
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMinimum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMaximum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res, "multipleOf", check.value, check.message, refs);
+        break;
+    }
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+function parseObjectDef(def, refs) {
+  const forceOptionalIntoNullable = refs.target === "openAi";
+  const result = {
+    type: "object",
+    properties: {}
+  };
+  const required = [];
+  const shape = def.shape();
+  for (const propName in shape) {
+    let propDef = shape[propName];
+    if (propDef === void 0 || propDef._def === void 0) {
+      continue;
+    }
+    let propOptional = safeIsOptional(propDef);
+    if (propOptional && forceOptionalIntoNullable) {
+      if (propDef._def.typeName === "ZodOptional") {
+        propDef = propDef._def.innerType;
+      }
+      if (!propDef.isNullable()) {
+        propDef = propDef.nullable();
+      }
+      propOptional = false;
+    }
+    const parsedDef = parseDef(propDef._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "properties", propName],
+      propertyPath: [...refs.currentPath, "properties", propName]
+    });
+    if (parsedDef === void 0) {
+      continue;
+    }
+    result.properties[propName] = parsedDef;
+    if (!propOptional) {
+      required.push(propName);
+    }
+  }
+  if (required.length) {
+    result.required = required;
+  }
+  const additionalProperties = decideAdditionalProperties(def, refs);
+  if (additionalProperties !== void 0) {
+    result.additionalProperties = additionalProperties;
+  }
+  return result;
+}
+function decideAdditionalProperties(def, refs) {
+  if (def.catchall._def.typeName !== "ZodNever") {
+    return parseDef(def.catchall._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    });
+  }
+  switch (def.unknownKeys) {
+    case "passthrough":
+      return refs.allowedAdditionalProperties;
+    case "strict":
+      return refs.rejectedAdditionalProperties;
+    case "strip":
+      return refs.removeAdditionalStrategy === "strict" ? refs.allowedAdditionalProperties : refs.rejectedAdditionalProperties;
+  }
+}
+function safeIsOptional(schema) {
+  try {
+    return schema.isOptional();
+  } catch {
+    return true;
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+var parseOptionalDef = (def, refs) => {
+  if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
+    return parseDef(def.innerType._def, refs);
+  }
+  const innerSchema = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "1"]
+  });
+  return innerSchema ? {
+    anyOf: [
+      {
+        not: parseAnyDef(refs)
+      },
+      innerSchema
+    ]
+  } : parseAnyDef(refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+var parsePipelineDef = (def, refs) => {
+  if (refs.pipeStrategy === "input") {
+    return parseDef(def.in._def, refs);
+  } else if (refs.pipeStrategy === "output") {
+    return parseDef(def.out._def, refs);
+  }
+  const a = parseDef(def.in._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", "0"]
+  });
+  const b = parseDef(def.out._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", a ? "1" : "0"]
+  });
+  return {
+    allOf: [a, b].filter((x) => x !== void 0)
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+function parsePromiseDef(def, refs) {
+  return parseDef(def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+function parseSetDef(def, refs) {
+  const items = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items"]
+  });
+  const schema = {
+    type: "array",
+    uniqueItems: true,
+    items
+  };
+  if (def.minSize) {
+    setResponseValueAndErrors(schema, "minItems", def.minSize.value, def.minSize.message, refs);
+  }
+  if (def.maxSize) {
+    setResponseValueAndErrors(schema, "maxItems", def.maxSize.value, def.maxSize.message, refs);
+  }
+  return schema;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+function parseTupleDef(def, refs) {
+  if (def.rest) {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      items: def.items.map((x, i) => parseDef(x._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i}`]
+      })).reduce((acc, x) => x === void 0 ? acc : [...acc, x], []),
+      additionalItems: parseDef(def.rest._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "additionalItems"]
+      })
+    };
+  } else {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      maxItems: def.items.length,
+      items: def.items.map((x, i) => parseDef(x._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i}`]
+      })).reduce((acc, x) => x === void 0 ? acc : [...acc, x], [])
+    };
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+function parseUndefinedDef(refs) {
+  return {
+    not: parseAnyDef(refs)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+function parseUnknownDef(refs) {
+  return parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+var parseReadonlyDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+var selectParser = (def, typeName, refs) => {
+  switch (typeName) {
+    case ZodFirstPartyTypeKind.ZodString:
+      return parseStringDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodNumber:
+      return parseNumberDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodObject:
+      return parseObjectDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBigInt:
+      return parseBigintDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBoolean:
+      return parseBooleanDef();
+    case ZodFirstPartyTypeKind.ZodDate:
+      return parseDateDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodUndefined:
+      return parseUndefinedDef(refs);
+    case ZodFirstPartyTypeKind.ZodNull:
+      return parseNullDef(refs);
+    case ZodFirstPartyTypeKind.ZodArray:
+      return parseArrayDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodUnion:
+    case ZodFirstPartyTypeKind.ZodDiscriminatedUnion:
+      return parseUnionDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodIntersection:
+      return parseIntersectionDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodTuple:
+      return parseTupleDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodRecord:
+      return parseRecordDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodLiteral:
+      return parseLiteralDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodEnum:
+      return parseEnumDef(def);
+    case ZodFirstPartyTypeKind.ZodNativeEnum:
+      return parseNativeEnumDef(def);
+    case ZodFirstPartyTypeKind.ZodNullable:
+      return parseNullableDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodOptional:
+      return parseOptionalDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodMap:
+      return parseMapDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodSet:
+      return parseSetDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodLazy:
+      return () => def.getter()._def;
+    case ZodFirstPartyTypeKind.ZodPromise:
+      return parsePromiseDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodNaN:
+    case ZodFirstPartyTypeKind.ZodNever:
+      return parseNeverDef(refs);
+    case ZodFirstPartyTypeKind.ZodEffects:
+      return parseEffectsDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodAny:
+      return parseAnyDef(refs);
+    case ZodFirstPartyTypeKind.ZodUnknown:
+      return parseUnknownDef(refs);
+    case ZodFirstPartyTypeKind.ZodDefault:
+      return parseDefaultDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBranded:
+      return parseBrandedDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodReadonly:
+      return parseReadonlyDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodCatch:
+      return parseCatchDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodPipeline:
+      return parsePipelineDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodFunction:
+    case ZodFirstPartyTypeKind.ZodVoid:
+    case ZodFirstPartyTypeKind.ZodSymbol:
+      return void 0;
+    default:
+      return /* @__PURE__ */ ((_) => void 0)(typeName);
+  }
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parseDef.js
+function parseDef(def, refs, forceResolution = false) {
+  const seenItem = refs.seen.get(def);
+  if (refs.override) {
+    const overrideResult = refs.override?.(def, refs, seenItem, forceResolution);
+    if (overrideResult !== ignoreOverride) {
+      return overrideResult;
+    }
+  }
+  if (seenItem && !forceResolution) {
+    const seenSchema = get$ref(seenItem, refs);
+    if (seenSchema !== void 0) {
+      return seenSchema;
+    }
+  }
+  const newItem = { def, path: refs.currentPath, jsonSchema: void 0 };
+  refs.seen.set(def, newItem);
+  const jsonSchemaOrGetter = selectParser(def, def.typeName, refs);
+  const jsonSchema = typeof jsonSchemaOrGetter === "function" ? parseDef(jsonSchemaOrGetter(), refs) : jsonSchemaOrGetter;
+  if (jsonSchema) {
+    addMeta(def, refs, jsonSchema);
+  }
+  if (refs.postProcess) {
+    const postProcessResult = refs.postProcess(jsonSchema, def, refs);
+    newItem.jsonSchema = jsonSchema;
+    return postProcessResult;
+  }
+  newItem.jsonSchema = jsonSchema;
+  return jsonSchema;
+}
+var get$ref = (item, refs) => {
+  switch (refs.$refStrategy) {
+    case "root":
+      return { $ref: item.path.join("/") };
+    case "relative":
+      return { $ref: getRelativePath(refs.currentPath, item.path) };
+    case "none":
+    case "seen": {
+      if (item.path.length < refs.currentPath.length && item.path.every((value, index) => refs.currentPath[index] === value)) {
+        console.warn(`Recursive reference detected at ${refs.currentPath.join("/")}! Defaulting to any`);
+        return parseAnyDef(refs);
+      }
+      return refs.$refStrategy === "seen" ? parseAnyDef(refs) : void 0;
+    }
+  }
+};
+var addMeta = (def, refs, jsonSchema) => {
+  if (def.description) {
+    jsonSchema.description = def.description;
+    if (refs.markdownDescription) {
+      jsonSchema.markdownDescription = def.description;
+    }
+  }
+  return jsonSchema;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+var zodToJsonSchema = (schema, options) => {
+  const refs = getRefs(options);
+  let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema2]) => ({
+    ...acc,
+    [name2]: parseDef(schema2._def, {
+      ...refs,
+      currentPath: [...refs.basePath, refs.definitionPath, name2]
+    }, true) ?? parseAnyDef(refs)
+  }), {}) : void 0;
+  const name = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
+  const main2 = parseDef(schema._def, name === void 0 ? refs : {
+    ...refs,
+    currentPath: [...refs.basePath, refs.definitionPath, name]
+  }, false) ?? parseAnyDef(refs);
+  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
+  if (title !== void 0) {
+    main2.title = title;
+  }
+  if (refs.flags.hasReferencedOpenAiAnyType) {
+    if (!definitions) {
+      definitions = {};
+    }
+    if (!definitions[refs.openAiAnyTypeName]) {
+      definitions[refs.openAiAnyTypeName] = {
+        // Skipping "object" as no properties can be defined and additionalProperties must be "false"
+        type: ["string", "number", "integer", "boolean", "array", "null"],
+        items: {
+          $ref: refs.$refStrategy === "relative" ? "1" : [
+            ...refs.basePath,
+            refs.definitionPath,
+            refs.openAiAnyTypeName
+          ].join("/")
+        }
+      };
+    }
+  }
+  const combined = name === void 0 ? definitions ? {
+    ...main2,
+    [refs.definitionPath]: definitions
+  } : main2 : {
+    $ref: [
+      ...refs.$refStrategy === "relative" ? [] : refs.basePath,
+      refs.definitionPath,
+      name
+    ].join("/"),
+    [refs.definitionPath]: {
+      ...definitions,
+      [name]: main2
+    }
+  };
+  if (refs.target === "jsonSchema7") {
+    combined.$schema = "http://json-schema.org/draft-07/schema#";
+  } else if (refs.target === "jsonSchema2019-09" || refs.target === "openAi") {
+    combined.$schema = "https://json-schema.org/draft/2019-09/schema#";
+  }
+  if (refs.target === "openAi" && ("anyOf" in combined || "oneOf" in combined || "allOf" in combined || "type" in combined && Array.isArray(combined.type))) {
+    console.warn("Warning: OpenAI may not support schemas with unions as roots! Try wrapping it in an object property.");
+  }
+  return combined;
+};
+
+// dist/shared/zod-to-response-schema.js
+function responseJsonSchemaFromZod(schema) {
+  const result = zodToJsonSchema(schema, {
+    target: "jsonSchema7",
+    $refStrategy: "none"
+  });
+  if (typeof result !== "object" || result === null) {
+    throw new Error("zod-to-json-schema returned a non-object value");
+  }
+  return result;
+}
+
 // dist/runtime/connectors/resolver.js
 var CLAUDE_CODE_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
 var CODEX_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
@@ -19169,7 +20693,8 @@ async function relayWithResolvedConnector(connector, input) {
   const relayInput = {
     prompt: input.prompt,
     ...input.timeoutMs === void 0 ? {} : { timeoutMs: input.timeoutMs },
-    ...input.resolvedSelection === void 0 ? {} : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) }
+    ...input.resolvedSelection === void 0 ? {} : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) },
+    ...input.responseSchema === void 0 ? {} : { responseSchema: input.responseSchema }
   };
   if (connector.kind === "builtin" && connector.name === "claude-code") {
     return relayClaudeCode(relayInput);
@@ -19256,7 +20781,7 @@ async function executeProductionRelayAttempt(input) {
   }
   const requestPath = context.files.resolve(request);
   await mkdir2(dirname(requestPath), { recursive: true });
-  await writeFile2(requestPath, prompt, "utf8");
+  await writeFile3(requestPath, prompt, "utf8");
   const requestPayloadHash = sha256Hex(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
@@ -19286,17 +20811,28 @@ async function executeProductionRelayAttempt(input) {
     attempt,
     request_payload_hash: requestPayloadHash
   });
+  const responseSchema = (() => {
+    const schemaName = step.report?.schema;
+    if (schemaName === void 0)
+      return void 0;
+    const zodSchema = findReportZodSchema(schemaName);
+    if (zodSchema === void 0)
+      return void 0;
+    return responseJsonSchemaFromZod(zodSchema);
+  })();
   let relayResult;
   try {
     const relayTimeoutMs = timeoutMs(step);
     relayResult = context.relayer === void 0 ? await relayWithResolvedConnector(relayExecution.connector, {
       prompt,
       ...relayTimeoutMs === void 0 ? {} : { timeoutMs: relayTimeoutMs },
-      resolvedSelection
+      resolvedSelection,
+      ...responseSchema === void 0 ? {} : { responseSchema }
     }) : await context.relayer.relay({
       prompt,
       ...relayTimeoutMs === void 0 ? {} : { timeoutMs: relayTimeoutMs },
-      resolvedSelection
+      resolvedSelection,
+      ...responseSchema === void 0 ? {} : { responseSchema }
     });
   } catch (error) {
     const reason = (input.formatConnectorFailureReason ?? ((stepId, caught) => `relay step '${stepId}': connector invocation failed (${caught.message})`))(step.id, error);
@@ -19650,7 +21186,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     }
     const requestPath = context.files.resolve(`${branchDirRel}/request.json`);
     await mkdir3(dirname2(requestPath), { recursive: true });
-    await writeFile3(requestPath, `${JSON.stringify({ branch_id: branch.branch_id, goal: branch.goal }, null, 2)}
+    await writeFile4(requestPath, `${JSON.stringify({ branch_id: branch.branch_id, goal: branch.goal }, null, 2)}
 `, "utf8");
     const relayExecution = resolveRelayExecution({
       flowId: context.flow.id,
@@ -19676,7 +21212,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     await context.files.writeJson({ path: reportPath, schema: branch.report_schema }, reportBody);
     const receiptPath = context.files.resolve(`${branchDirRel}/receipt.txt`);
     await mkdir3(dirname2(receiptPath), { recursive: true });
-    await writeFile3(receiptPath, `stub relay receipt for ${branch.branch_id}
+    await writeFile4(receiptPath, `stub relay receipt for ${branch.branch_id}
 `, "utf8");
     const durationMs = Math.max(0, Date.now() - startMs);
     await context.trace.append({
@@ -20104,7 +21640,7 @@ async function executeFanout(step, context, relayConnector) {
         if (context.projectRoot === void 0) {
           throw new Error(`fanout step '${step.id}': projectRoot is required to anchor per-branch worktrees`);
         }
-        const worktreePath = joinPath(context.projectRoot, ".circuit-next", "worktrees", context.runId, step.id, branch.branch_id);
+        const worktreePath = joinPath2(context.projectRoot, ".circuit-next", "worktrees", context.runId, step.id, branch.branch_id);
         if (branchNeedsWorktree(branch))
           provisioned.push(worktreePath);
         outcome = await executeSubRunFanoutBranch(step, context, branch, worktreeRunner, branchDirRel, worktreePath);
@@ -20195,7 +21731,7 @@ async function executeFanout(step, context, relayConnector) {
 
 // dist/runtime/executors/sub-run.js
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { mkdir as mkdir4, readFile as readFile4, writeFile as writeFile4 } from "node:fs/promises";
+import { mkdir as mkdir4, readFile as readFile4, writeFile as writeFile5 } from "node:fs/promises";
 import { dirname as dirname3, join as join6 } from "node:path";
 function checkPassVerdicts(step) {
   const pass = step.check.pass;
@@ -20331,7 +21867,7 @@ async function executeSubRun(step, context) {
   const childResultText = await readFile4(childResult.resultPath, "utf8");
   const parentResultPath = context.files.resolve(resultWrite);
   await mkdir4(dirname3(parentResultPath), { recursive: true });
-  await writeFile4(parentResultPath, childResultText, "utf8");
+  await writeFile5(parentResultPath, childResultText, "utf8");
   const parsedChildResult = parseChildResultBody(step, childResultText);
   if (parsedChildResult.body === void 0) {
     const reason = parsedChildResult.failureReason ?? `sub-run step '${step.id}': child result body could not be parsed`;
@@ -21688,7 +23224,7 @@ var validateReportValue = (schemaName, value) => {
 };
 
 // dist/runtime/run-files/run-file-store.js
-import { mkdir as mkdir5, readFile as readFile5, writeFile as writeFile5 } from "node:fs/promises";
+import { mkdir as mkdir5, readFile as readFile5, writeFile as writeFile6 } from "node:fs/promises";
 import { dirname as dirname4 } from "node:path";
 var RunFileStore = class {
   runDir;
@@ -21706,7 +23242,7 @@ var RunFileStore = class {
     }
     const fullPath = this.resolve(ref);
     await mkdir5(dirname4(fullPath), { recursive: true });
-    await writeFile5(fullPath, `${JSON.stringify(value, null, 2)}
+    await writeFile6(fullPath, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     return fullPath;
   }
@@ -21716,7 +23252,7 @@ var RunFileStore = class {
     }
     const fullPath = this.resolve(ref);
     await mkdir5(dirname4(fullPath), { recursive: true });
-    await writeFile5(fullPath, value, "utf8");
+    await writeFile6(fullPath, value, "utf8");
     return fullPath;
   }
   async readJson(ref) {
@@ -21726,7 +23262,7 @@ var RunFileStore = class {
 };
 
 // dist/runtime/run/manifest-snapshot.js
-import { mkdir as mkdir6, readFile as readFile6, writeFile as writeFile6 } from "node:fs/promises";
+import { mkdir as mkdir6, readFile as readFile6, writeFile as writeFile7 } from "node:fs/promises";
 import { dirname as dirname5, join as join10 } from "node:path";
 var MANIFEST_SNAPSHOT_RUN_FILE = "manifest.snapshot.json";
 function runtimeManifestSnapshotPath(runDir) {
@@ -21745,7 +23281,7 @@ async function writeRuntimeManifestSnapshot(input) {
   });
   const path = runtimeManifestSnapshotPath(input.runDir);
   await mkdir6(dirname5(path), { recursive: true });
-  await writeFile6(path, `${JSON.stringify(snapshot, null, 2)}
+  await writeFile7(path, `${JSON.stringify(snapshot, null, 2)}
 `, { encoding: "utf8", flag: "wx" });
   return snapshot;
 }
