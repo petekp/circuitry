@@ -7341,12 +7341,12 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync14, readFileSync as readFileSync29 } from "node:fs";
+import { existsSync as existsSync14, readFileSync as readFileSync30 } from "node:fs";
 import { dirname as dirname10, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync20 } from "node:fs";
+import { readFileSync as readFileSync21 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -11751,7 +11751,7 @@ var BuildResult = external_exports.object({
 });
 
 // dist/flows/build/writers/checkpoint-brief.js
-import { readFileSync } from "node:fs";
+import { readFileSync as readFileSync2 } from "node:fs";
 
 // dist/shared/connector-relay.js
 import { createHash } from "node:crypto";
@@ -11819,6 +11819,167 @@ function resolveRunRelative(runFolder, relPath) {
   return targetAbs;
 }
 
+// dist/shared/verification-resolver.js
+import { existsSync as existsSync2, readFileSync } from "node:fs";
+import { join } from "node:path";
+var ProofPlanBlockedError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ProofPlanBlockedError";
+  }
+};
+function isProofPlanBlockedError(error) {
+  return error instanceof ProofPlanBlockedError || error instanceof Error && error.name === "ProofPlanBlockedError";
+}
+function readPackageInfo(projectRoot) {
+  const packageJsonPath = join(projectRoot, "package.json");
+  if (!existsSync2(packageJsonPath)) {
+    return `Cannot choose verification commands because ${packageJsonPath} does not exist.`;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `Cannot choose verification commands because package.json could not be parsed: ${message}.`;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return "Cannot choose verification commands because package.json is not a JSON object.";
+  }
+  const scriptsRaw = parsed.scripts;
+  if (scriptsRaw === null || typeof scriptsRaw !== "object" || Array.isArray(scriptsRaw)) {
+    return "Cannot choose verification commands because package.json scripts must be an object.";
+  }
+  const scripts = {};
+  for (const [name, value] of Object.entries(scriptsRaw ?? {})) {
+    if (typeof value === "string")
+      scripts[name] = value;
+  }
+  if (Object.keys(scripts).length === 0) {
+    return "Cannot choose verification commands because package.json does not define any scripts.";
+  }
+  const packageManagerRaw = parsed.packageManager;
+  return {
+    scripts,
+    ...typeof packageManagerRaw === "string" ? { packageManager: packageManagerRaw } : {}
+  };
+}
+function packageManagerFromPackageJson(value) {
+  if (value === "npm" || value.startsWith("npm@"))
+    return "npm";
+  if (value === "pnpm" || value.startsWith("pnpm@"))
+    return "pnpm";
+  if (value === "yarn" || value.startsWith("yarn@"))
+    return "yarn";
+  return `Cannot choose verification commands because packageManager ${JSON.stringify(value)} is not supported by the Node-script resolver.`;
+}
+function resolvePackageManager(projectRoot, info) {
+  if (info.packageManager !== void 0)
+    return packageManagerFromPackageJson(info.packageManager);
+  if (existsSync2(join(projectRoot, "pnpm-lock.yaml")))
+    return "pnpm";
+  if (existsSync2(join(projectRoot, "yarn.lock")))
+    return "yarn";
+  if (existsSync2(join(projectRoot, "package-lock.json")))
+    return "npm";
+  return "npm";
+}
+function uniqueNeeds(needs) {
+  const source = needs === void 0 || needs.length === 0 ? ["general"] : needs;
+  return [...new Set(source)];
+}
+function firstGeneralScript(scripts) {
+  for (const name of ["verify", "test", "check"]) {
+    if (typeof scripts[name] === "string")
+      return name;
+  }
+  return void 0;
+}
+function commandForScript(input) {
+  return {
+    id: `${input.commandIdPrefix}-${input.script}`,
+    cwd: ".",
+    argv: [input.manager, "run", input.script],
+    timeout_ms: input.timeoutMs,
+    max_output_bytes: input.maxOutputBytes,
+    env: { ...input.env }
+  };
+}
+function resolveVerificationCommands(input) {
+  if (input.projectRoot === void 0) {
+    return {
+      status: "blocked",
+      reason: "Cannot choose verification commands because projectRoot was not provided."
+    };
+  }
+  const packageInfo = readPackageInfo(input.projectRoot);
+  if (typeof packageInfo === "string")
+    return { status: "blocked", reason: packageInfo };
+  const manager = resolvePackageManager(input.projectRoot, packageInfo);
+  if (typeof manager === "string" && !["npm", "pnpm", "yarn"].includes(manager)) {
+    return { status: "blocked", reason: manager };
+  }
+  const needs = uniqueNeeds(input.requestedNeeds);
+  const missing = [];
+  const selectedScripts = [];
+  for (const need of needs) {
+    if (need === "general") {
+      const generalScript = firstGeneralScript(packageInfo.scripts);
+      if (generalScript === void 0) {
+        missing.push("one of verify, test, or check");
+      } else {
+        selectedScripts.push(generalScript);
+      }
+      continue;
+    }
+    if (typeof packageInfo.scripts[need] === "string") {
+      selectedScripts.push(need);
+    } else {
+      missing.push(need);
+    }
+  }
+  if (missing.length > 0) {
+    return {
+      status: "blocked",
+      reason: `Cannot choose verification commands because package.json is missing required script ${missing.join(", ")}.`
+    };
+  }
+  const commands = [...new Set(selectedScripts)].map((script) => commandForScript({
+    manager,
+    script,
+    commandIdPrefix: input.commandIdPrefix,
+    timeoutMs: input.timeoutMs ?? 12e4,
+    maxOutputBytes: input.maxOutputBytes ?? 2e5,
+    env: input.env ?? {}
+  }));
+  if (commands.length === 0) {
+    return {
+      status: "blocked",
+      reason: "Cannot choose verification commands because no verification scripts were selected."
+    };
+  }
+  return { status: "ready", commands };
+}
+function requireResolvedVerificationCommands(input) {
+  const result = resolveVerificationCommands(input);
+  if (result.status === "blocked")
+    throw new ProofPlanBlockedError(result.reason);
+  return result.commands;
+}
+function goalAsksForNeed(goal, need) {
+  const escaped = need.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const proofWords = String.raw`(?:run|runs|pass|passes|passing|green|clean|keep|stays?|must|should|ensure|verify|verification|proof)`;
+  return new RegExp(String.raw`\b${escaped}\b\s*(?:\+|&|and|,)\s*\b(?:build|lint)\b`, "i").test(goal) || new RegExp(String.raw`\b(?:build|lint)\b\s*(?:\+|&|and|,)\s*\b${escaped}\b`, "i").test(goal) || new RegExp(String.raw`\b${proofWords}\b[\s\S]{0,40}\b${escaped}\b`, "i").test(goal) || new RegExp(String.raw`\b${escaped}\b[\s\S]{0,40}\b${proofWords}\b`, "i").test(goal);
+}
+function inferBuildVerificationNeeds(goal) {
+  const needs = [];
+  if (goalAsksForNeed(goal, "build"))
+    needs.push("build");
+  if (goalAsksForNeed(goal, "lint"))
+    needs.push("lint");
+  return needs.length > 0 ? needs : ["general"];
+}
+
 // dist/flows/registries/checkpoint-writers/types.js
 function checkpointChoiceIds(step) {
   return step.policy.choices.map((choice) => choice.id);
@@ -11828,7 +11989,7 @@ function checkpointChoiceIds(step) {
 var BuildBriefReportTemplate = external_exports.object({
   scope: external_exports.string().min(1),
   success_criteria: external_exports.array(external_exports.string().min(1)).min(1),
-  verification_command_candidates: external_exports.array(VerificationCommand).min(1)
+  verification_command_candidates: external_exports.array(VerificationCommand).min(1).optional()
 }).strict();
 var buildBriefCheckpointBuilder = {
   resultSchemaName: "build.brief@v1",
@@ -11838,11 +11999,19 @@ var buildBriefCheckpointBuilder = {
       throw new Error(`checkpoint step '${context.step.id}' writing build.brief@v1 requires policy.report_template`);
     }
     const template = BuildBriefReportTemplate.parse(rawTemplate);
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
+      goal: context.goal,
+      requestedNeeds: inferBuildVerificationNeeds(context.goal),
+      commandIdPrefix: "build",
+      timeoutMs: 12e4,
+      maxOutputBytes: 2e5
+    });
     return BuildBrief.parse({
       objective: context.goal,
       scope: template.scope,
       success_criteria: template.success_criteria,
-      verification_command_candidates: template.verification_command_candidates,
+      verification_command_candidates: verificationCommands,
       checkpoint: {
         request_path: context.step.writes.request,
         response_path: context.responsePath,
@@ -11852,7 +12021,7 @@ var buildBriefCheckpointBuilder = {
   },
   validateResumeContext(context) {
     const reportAbs = resolveRunRelative(context.runFolder, context.reportPath);
-    const raw = readFileSync(reportAbs, "utf8");
+    const raw = readFileSync2(reportAbs, "utf8");
     if (context.reportSha256 === void 0) {
       throw new Error("checkpoint resume rejected: checkpoint request is missing checkpoint_report_sha256");
     }
@@ -11944,7 +12113,7 @@ var buildPlanComposeBuilder = {
 };
 
 // dist/flows/build/writers/verification.js
-import { readFileSync as readFileSync2 } from "node:fs";
+import { readFileSync as readFileSync3 } from "node:fs";
 var buildVerificationWriter = {
   resultSchemaName: "build.verification@v1",
   loadCommands(context) {
@@ -11952,7 +12121,7 @@ var buildVerificationWriter = {
     if (!context.step.reads.includes(planPath)) {
       throw new Error(`build.verification@v1 requires step '${context.step.id}' to read ${planPath}`);
     }
-    const plan = BuildPlan.parse(JSON.parse(readFileSync2(resolveRunRelative(context.runFolder, planPath), "utf8")));
+    const plan = BuildPlan.parse(JSON.parse(readFileSync3(resolveRunRelative(context.runFolder, planPath), "utf8")));
     return plan.verification.commands;
   },
   buildResult(observations) {
@@ -12429,7 +12598,7 @@ var exploreBriefComposeBuilder = {
 };
 
 // dist/flows/explore/writers/close.js
-import { readFileSync as readFileSync3 } from "node:fs";
+import { readFileSync as readFileSync4 } from "node:fs";
 var POINTERS2 = [
   { report_id: "explore.brief", schema: "explore.brief@v1" },
   { report_id: "explore.analysis", schema: "explore.analysis@v1" },
@@ -12478,7 +12647,7 @@ var exploreCloseBuilder = {
       const review2 = ExploreTournamentReview.parse(context.inputs.tournamentReview);
       const decision2 = ExploreDecision.parse(context.inputs.decision);
       const aggregatePath = requiredTournamentAggregatePath(context);
-      ExploreTournamentAggregate.parse(JSON.parse(readFileSync3(resolveRunRelative(context.runFolder, aggregatePath), "utf8")));
+      ExploreTournamentAggregate.parse(JSON.parse(readFileSync4(resolveRunRelative(context.runFolder, aggregatePath), "utf8")));
       return ExploreResult.parse({
         summary: `Explore '${brief.subject}': ${decision2.decision}`,
         verdict_snapshot: {
@@ -12628,10 +12797,10 @@ var exploreDecisionOptionsComposeBuilder = {
 };
 
 // dist/flows/explore/writers/decision.js
-import { readFileSync as readFileSync4 } from "node:fs";
+import { readFileSync as readFileSync5 } from "node:fs";
 var CHECKPOINT_RESPONSE_STEP_ID = "tradeoff-checkpoint-step";
 function readJson(runFolder, path) {
-  return JSON.parse(readFileSync4(resolveRunRelative(runFolder, path), "utf8"));
+  return JSON.parse(readFileSync5(resolveRunRelative(runFolder, path), "utf8"));
 }
 function requiredRead(stepReads, suffix) {
   const path = stepReads.find((entry) => entry.endsWith(suffix));
@@ -13704,40 +13873,18 @@ var fixBaselineSnapshotWriter = {
 };
 
 // dist/flows/fix/writers/brief.js
-import { existsSync as existsSync2, readFileSync as readFileSync5 } from "node:fs";
-import { join } from "node:path";
-var PREFERRED_VERIFY_SCRIPTS = ["verify", "test", "check"];
-var DEFAULT_VERIFY_SCRIPT = "verify";
-function pickVerificationScript(projectRoot) {
-  if (projectRoot === void 0)
-    return DEFAULT_VERIFY_SCRIPT;
-  const pkgPath = join(projectRoot, "package.json");
-  if (!existsSync2(pkgPath))
-    return DEFAULT_VERIFY_SCRIPT;
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync5(pkgPath, "utf8"));
-  } catch {
-    return DEFAULT_VERIFY_SCRIPT;
-  }
-  if (parsed === null || typeof parsed !== "object")
-    return DEFAULT_VERIFY_SCRIPT;
-  const scriptsRaw = parsed.scripts;
-  if (scriptsRaw === null || typeof scriptsRaw !== "object" || Array.isArray(scriptsRaw)) {
-    return DEFAULT_VERIFY_SCRIPT;
-  }
-  const scripts = scriptsRaw;
-  for (const name of PREFERRED_VERIFY_SCRIPTS) {
-    if (typeof scripts[name] === "string")
-      return name;
-  }
-  return DEFAULT_VERIFY_SCRIPT;
-}
 var fixBriefComposeBuilder = {
   resultSchemaName: "fix.brief@v1",
   build(context) {
     const goal = context.goal;
-    const scriptName = pickVerificationScript(context.projectRoot);
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
+      goal,
+      requestedNeeds: ["general"],
+      commandIdPrefix: "fix",
+      timeoutMs: 6e5,
+      maxOutputBytes: 2e5
+    });
     return FixBrief.parse({
       problem_statement: goal,
       expected_behavior: `Resolve: ${goal}`,
@@ -13756,16 +13903,7 @@ var fixBriefComposeBuilder = {
         }
       },
       success_criteria: [`Demonstrate the fix addresses: ${goal}`],
-      verification_command_candidates: [
-        {
-          id: "fix-proof",
-          cwd: ".",
-          argv: ["npm", "run", scriptName],
-          timeout_ms: 6e5,
-          max_output_bytes: 2e5,
-          env: {}
-        }
-      ]
+      verification_command_candidates: verificationCommands
     });
   }
 };
@@ -15306,18 +15444,18 @@ var MigrateResult = external_exports.object({
 });
 
 // dist/flows/migrate/writers/brief.js
-var DEFAULT_MIGRATE_VERIFICATION_COMMAND = {
-  id: "migrate-proof",
-  cwd: ".",
-  argv: ["npm", "run", "check"],
-  timeout_ms: 12e4,
-  max_output_bytes: 2e5,
-  env: {}
-};
 var migrateBriefComposeBuilder = {
   resultSchemaName: "migrate.brief@v1",
   build(context) {
     const goal = context.goal;
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
+      goal,
+      requestedNeeds: ["general"],
+      commandIdPrefix: "migrate",
+      timeoutMs: 12e4,
+      maxOutputBytes: 2e5
+    });
     return MigrateBrief.parse({
       objective: goal,
       source: `Existing implementation referenced by: ${goal}`,
@@ -15326,7 +15464,7 @@ var migrateBriefComposeBuilder = {
       success_criteria: [`Demonstrate the migration addresses: ${goal}`],
       coexistence_appetite: "short-window",
       rollback_plan: "Revert the batch sub-run commit; the pre-migration source still works because coexistence kept it in place.",
-      verification_command_candidates: [DEFAULT_MIGRATE_VERIFICATION_COMMAND]
+      verification_command_candidates: verificationCommands
     });
   }
 };
@@ -16346,18 +16484,18 @@ var sweepReviewShapeHint = {
 };
 
 // dist/flows/sweep/writers/brief.js
-var DEFAULT_SWEEP_VERIFICATION_COMMAND = {
-  id: "sweep-proof",
-  cwd: ".",
-  argv: ["npm", "run", "check"],
-  timeout_ms: 12e4,
-  max_output_bytes: 2e5,
-  env: {}
-};
 var sweepBriefComposeBuilder = {
   resultSchemaName: "sweep.brief@v1",
   build(context) {
     const goal = context.goal;
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
+      goal,
+      requestedNeeds: ["general"],
+      commandIdPrefix: "sweep",
+      timeoutMs: 12e4,
+      maxOutputBytes: 2e5
+    });
     return SweepBrief.parse({
       objective: goal,
       sweep_type: "cleanup",
@@ -16366,7 +16504,7 @@ var sweepBriefComposeBuilder = {
       scope_exclusions: [],
       out_of_scope: [],
       high_risk_boundaries: [],
-      verification_command_candidates: [DEFAULT_SWEEP_VERIFICATION_COMMAND]
+      verification_command_candidates: verificationCommands
     });
   }
 };
@@ -17581,6 +17719,7 @@ async function executeCheckpoint(step, context) {
         runFolder: context.runDir,
         step: compiledStep,
         goal: context.goal,
+        ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
         responsePath: response.path
       });
       await context.files.writeJson(report, body);
@@ -18120,13 +18259,22 @@ async function relayClaudeCode(input) {
         }
       }
     };
+    let killGraceTimer;
     const timer = setTimeout(() => {
       timedOut = true;
       killGroupSucceeded = killProcessGroup("SIGTERM");
-      setTimeout(() => {
+      killGraceTimer = setTimeout(() => {
         killProcessGroup("SIGKILL");
+        killGraceTimer = void 0;
       }, SIGTERM_TO_SIGKILL_GRACE_MS);
     }, timeoutMs2);
+    const clearAllTimers = () => {
+      clearTimeout(timer);
+      if (killGraceTimer !== void 0) {
+        clearTimeout(killGraceTimer);
+        killGraceTimer = void 0;
+      }
+    };
     child.stdout?.setEncoding("utf8");
     child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", (chunk) => {
@@ -18146,14 +18294,16 @@ async function relayClaudeCode(input) {
       stderrBytes += chunk.length;
     });
     child.on("error", (err) => {
-      clearTimeout(timer);
+      clearAllTimers();
       reject(new Error(`claude-code subprocess spawn error: ${err.message}`));
     });
     child.on("close", (code, signal) => {
-      clearTimeout(timer);
+      clearAllTimers();
       const duration_ms = performance.now() - start;
       if (timedOut) {
-        reject(new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${killGroupSucceeded ? "sent" : "failed"}; final signal=${signal ?? "none"}; stderr[:500]=${stderr.slice(0, 500)}`));
+        const stdoutSuffix = stdoutCapped ? " [stdout capped]" : "";
+        const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
+        reject(new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${killGroupSucceeded ? "sent" : "failed"}; final signal=${signal ?? "none"}; stdout[:500]=${stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${stderr.slice(0, 500)}${stderrSuffix}`));
         return;
       }
       if (code !== 0) {
@@ -21926,8 +22076,8 @@ async function executeSubRun(step, context) {
 
 // dist/runtime/executors/verification.js
 import { spawnSync as spawnSync3 } from "node:child_process";
-import { existsSync as existsSync7, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute4, relative as relative4, resolve as resolve6 } from "node:path";
+import { existsSync as existsSync7, lstatSync as lstatSync4, readFileSync as readFileSync18, realpathSync as realpathSync3 } from "node:fs";
+import { isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve6 } from "node:path";
 
 // dist/flows/registries/verification-writers/registry.js
 var REGISTRY6 = buildVerificationRegistry(flowPackages);
@@ -21952,10 +22102,10 @@ function resolveProjectRelativeCwd(projectRoot, cwd) {
   const rootAbs = resolve6(projectRoot);
   const targetAbs = resolve6(rootAbs, cwd);
   if (!isInsideOrSame2(rootAbs, targetAbs)) {
-    throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} escapes project root`);
+    throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} escapes project root`);
   }
   if (!existsSync7(rootAbs)) {
-    throw new Error(`verification project root rejected: ${rootAbs} does not exist`);
+    throw new ProofPlanBlockedError(`verification project root rejected: ${rootAbs} does not exist`);
   }
   const rootReal = realpathSync3.native(rootAbs);
   let cursor = rootAbs;
@@ -21964,20 +22114,20 @@ function resolveProjectRelativeCwd(projectRoot, cwd) {
       continue;
     cursor = resolve6(cursor, segment);
     if (!existsSync7(cursor)) {
-      throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} does not exist`);
+      throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} does not exist`);
     }
     const stat2 = lstatSync4(cursor);
     if (stat2.isSymbolicLink()) {
-      throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} crosses symlink ${JSON.stringify(cursor)}`);
+      throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} crosses symlink ${JSON.stringify(cursor)}`);
     }
     const cursorReal = realpathSync3.native(cursor);
     if (!isInsideOrSame2(rootReal, cursorReal)) {
-      throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root through ${JSON.stringify(cursor)}`);
+      throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root through ${JSON.stringify(cursor)}`);
     }
   }
   const targetReal = realpathSync3.native(targetAbs);
   if (!isInsideOrSame2(rootReal, targetReal)) {
-    throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root`);
+    throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root`);
   }
   return targetReal;
 }
@@ -22000,16 +22150,67 @@ function verificationFailureReason(stepId, error) {
   const message = error instanceof Error ? error.message : String(error);
   return `verification step '${stepId}': report writer failed (${message})`;
 }
+function commandBinaryName2(argv0) {
+  const normalized = argv0.replaceAll("\\", "/");
+  return normalized.slice(normalized.lastIndexOf("/") + 1).toLowerCase();
+}
+function packageScriptInvocation(command) {
+  const argv0 = command.argv[0];
+  if (argv0 === void 0)
+    return void 0;
+  const binary = commandBinaryName2(argv0);
+  if (binary !== "npm" && binary !== "pnpm" && binary !== "yarn")
+    return void 0;
+  if (command.argv[1] !== "run")
+    return void 0;
+  const script = command.argv[2];
+  if (script === void 0) {
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' invokes ${binary} run without a script name.`);
+  }
+  return script;
+}
+function preflightPackageScript(command, cwdAbs) {
+  const script = packageScriptInvocation(command);
+  if (script === void 0)
+    return;
+  const packageJsonPath = join7(cwdAbs, "package.json");
+  if (!existsSync7(packageJsonPath)) {
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' requires package.json at cwd ${JSON.stringify(command.cwd)}.`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync18(packageJsonPath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' could not parse package.json at cwd ${JSON.stringify(command.cwd)}: ${message}.`);
+  }
+  const scripts = parsed && typeof parsed === "object" ? parsed.scripts : void 0;
+  if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' requires package.json scripts at cwd ${JSON.stringify(command.cwd)}.`);
+  }
+  if (typeof scripts[script] !== "string") {
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' references missing package script "${script}" at cwd ${JSON.stringify(command.cwd)}.`);
+  }
+}
+function isLaunchError(error) {
+  const code = error.code;
+  return code === "ENOENT" || code === "EACCES" || code === "ENOTDIR";
+}
 function runCommand(command, projectRoot) {
   const started = Date.now();
+  const cwd = resolveProjectRelativeCwd(projectRoot, command.cwd);
+  preflightPackageScript(command, cwd);
   const result = spawnSync3(command.argv[0], command.argv.slice(1), {
-    cwd: resolveProjectRelativeCwd(projectRoot, command.cwd),
+    cwd,
     env: verificationEnvironment(command.env),
     encoding: "utf8",
     maxBuffer: command.max_output_bytes,
     shell: false,
     timeout: command.timeout_ms
   });
+  if (result.error !== void 0 && isLaunchError(result.error)) {
+    throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' could not launch ${JSON.stringify(command.argv[0])}: ${result.error.message}`);
+  }
   const exitCode = typeof result.status === "number" && result.error === void 0 ? result.status : 1;
   const stderrParts = [
     typeof result.stderr === "string" ? result.stderr : "",
@@ -22038,7 +22239,7 @@ async function executeVerification(step, context) {
     report = stepReport;
     reportSchema = stepReport.schema;
     if (context.projectRoot === void 0) {
-      throw new Error(`verification step '${step.id}' requires projectRoot for project-relative cwd resolution`);
+      throw new ProofPlanBlockedError(`verification step '${step.id}' requires projectRoot for project-relative cwd resolution`);
     }
     const projectRoot = context.projectRoot;
     const compiledFlow = requireCompiledFlow(context, step);
@@ -22057,7 +22258,8 @@ async function executeVerification(step, context) {
     body = builder.buildResult(observations, builderContext);
     await context.files.writeJson(report, body);
   } catch (error) {
-    const reason2 = verificationFailureReason(step.id, error);
+    const blocked = isProofPlanBlockedError(error);
+    const reason2 = blocked ? error.message : verificationFailureReason(step.id, error);
     await context.trace.append({
       run_id: context.runId,
       kind: "check.evaluated",
@@ -22067,6 +22269,8 @@ async function executeVerification(step, context) {
       outcome: "fail",
       reason: reason2
     });
+    if (blocked)
+      throw error;
     throw new Error(reason2);
   }
   await context.trace.append({
@@ -22146,8 +22350,8 @@ function createDefaultExecutors(options = {}) {
 }
 
 // dist/runtime/projections/progress.js
-import { readFileSync as readFileSync19 } from "node:fs";
-import { join as join9 } from "node:path";
+import { readFileSync as readFileSync20 } from "node:fs";
+import { join as join10 } from "node:path";
 
 // dist/schemas/progress-event.js
 var MAX_STATUS_TEXT_CHARS = 180;
@@ -22411,10 +22615,10 @@ function progressPresentation(input) {
 }
 
 // dist/shared/result-path.js
-import { join as join7 } from "node:path";
+import { join as join8 } from "node:path";
 var RUN_RESULT_RELATIVE_PATH = "reports/result.json";
 function runResultPath(runFolder) {
-  return join7(runFolder, RUN_RESULT_RELATIVE_PATH);
+  return join8(runFolder, RUN_RESULT_RELATIVE_PATH);
 }
 
 // dist/shared/write-capable-worker-disclosure.js
@@ -22428,8 +22632,8 @@ function compiledFlowMayInvokeWriteCapableWorker(flow) {
 }
 
 // dist/runtime/projections/tournament-checkpoint-context.js
-import { readFileSync as readFileSync18 } from "node:fs";
-import { join as join8 } from "node:path";
+import { readFileSync as readFileSync19 } from "node:fs";
+import { join as join9 } from "node:path";
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -22440,7 +22644,7 @@ function boundedText(value, max) {
 }
 function readJson2(runDir, path) {
   try {
-    return JSON.parse(readFileSync18(join8(runDir, path), "utf8"));
+    return JSON.parse(readFileSync19(join9(runDir, path), "utf8"));
   } catch {
     return void 0;
   }
@@ -22626,7 +22830,7 @@ function reportTaskListProgress(input) {
   });
 }
 function readJsonReport2(runDir, reportPath) {
-  return JSON.parse(readFileSync19(join9(runDir, reportPath), "utf8"));
+  return JSON.parse(readFileSync20(join10(runDir, reportPath), "utf8"));
 }
 function warningRecordsFromReport(body) {
   if (body === null || typeof body !== "object" || Array.isArray(body))
@@ -22717,7 +22921,7 @@ function stringArray(value) {
 }
 function checkpointPrompt(requestPath) {
   try {
-    const raw = JSON.parse(readFileSync19(requestPath, "utf8"));
+    const raw = JSON.parse(readFileSync20(requestPath, "utf8"));
     if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
       const prompt = raw.prompt;
       if (typeof prompt === "string" && prompt.length > 0)
@@ -22731,7 +22935,7 @@ function checkpointChoiceLabel(choice) {
   return choice.split(/[-_]/).filter((part) => part.length > 0).map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 function checkpointRequestPath(runDir, requestPath) {
-  return requestPath.startsWith("/") ? requestPath : join9(runDir, requestPath);
+  return requestPath.startsWith("/") ? requestPath : join10(runDir, requestPath);
 }
 function fanoutChildOutcome(value) {
   if (value === "complete" || value === "aborted" || value === "handoff" || value === "stopped" || value === "escalated") {
@@ -23275,10 +23479,10 @@ var RunFileStore = class {
 
 // dist/runtime/run/manifest-snapshot.js
 import { mkdir as mkdir6, readFile as readFile6, writeFile as writeFile7 } from "node:fs/promises";
-import { dirname as dirname5, join as join10 } from "node:path";
+import { dirname as dirname5, join as join11 } from "node:path";
 var MANIFEST_SNAPSHOT_RUN_FILE = "manifest.snapshot.json";
 function runtimeManifestSnapshotPath(runDir) {
-  return join10(runDir, MANIFEST_SNAPSHOT_RUN_FILE);
+  return join11(runDir, MANIFEST_SNAPSHOT_RUN_FILE);
 }
 async function writeRuntimeManifestSnapshot(input) {
   const bytes = Buffer.from(input.bytes);
@@ -23620,6 +23824,7 @@ async function executeExecutableFlowWithWaiting(flow, options) {
       }
     } catch (error) {
       const message = error.message;
+      const reason = isProofPlanBlockedError(error) ? message : `step '${step.id}' handler threw: ${message}`;
       await trace.append({
         run_id: runId,
         kind: "step.aborted",
@@ -23627,7 +23832,7 @@ async function executeExecutableFlowWithWaiting(flow, options) {
         attempt,
         reason: message
       });
-      return await closeRun(context, "aborted", void 0, `step '${step.id}' handler threw: ${message}`);
+      return await closeRun(context, "aborted", void 0, reason);
     }
     const target = step.routes[route];
     if (target === void 0) {
@@ -23825,7 +24030,7 @@ function declaredCheckpointRequestPath(step) {
 }
 function readCheckpointRequestContext(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
-  const requestText = readFileSync20(requestAbs, "utf8");
+  const requestText = readFileSync21(requestAbs, "utf8");
   if (sha256Hex(requestText) !== input.expectedRequestHash) {
     throw new Error("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
@@ -24145,16 +24350,16 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync8, readFileSync as readFileSync21 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync22 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join11, resolve as resolve7 } from "node:path";
+import { join as join12, resolve as resolve7 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit-next", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
-  return join11(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+  return join12(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
 function projectConfigPath(cwd = process.cwd()) {
-  return join11(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+  return join12(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
 function parseConfigYaml(text, sourcePath) {
   try {
@@ -24167,7 +24372,7 @@ function loadConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve7(sourcePath);
   if (!existsSync8(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync21(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync22(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -24446,8 +24651,8 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync10, mkdirSync, readFileSync as readFileSync23, rmSync, writeFileSync } from "node:fs";
-import { dirname as dirname6, join as join12 } from "node:path";
+import { existsSync as existsSync10, mkdirSync, readFileSync as readFileSync24, rmSync, writeFileSync } from "node:fs";
+import { dirname as dirname6, join as join13 } from "node:path";
 
 // dist/schemas/operator-summary.js
 var OperatorSummaryWarning = external_exports.object({
@@ -24764,7 +24969,7 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync9, readFileSync as readFileSync22 } from "node:fs";
+import { existsSync as existsSync9, readFileSync as readFileSync23 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -24772,7 +24977,7 @@ function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
   if (!existsSync9(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync22(path, "utf8"));
+  const parsed = JSON.parse(readFileSync23(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -25197,11 +25402,11 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join12(runFolder, "reports", "operator-summary.json");
+  const path = join13(runFolder, "reports", "operator-summary.json");
   if (!existsSync10(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync23(path, "utf8"));
+    const raw = JSON.parse(readFileSync24(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -25224,13 +25429,13 @@ var FLOW_RESULT_PATHS = {
 };
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.json");
+  return join13(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.md");
+  return join13(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.html");
+  return join13(runFolder, "reports", "operator-summary.html");
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -25433,12 +25638,12 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync11, mkdirSync as mkdirSync2, readFileSync as readFileSync25, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync11, mkdirSync as mkdirSync2, readFileSync as readFileSync26, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname8, join as join13, resolve as resolve9 } from "node:path";
+import { dirname as dirname8, join as join14, resolve as resolve9 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync24 } from "node:fs";
+import { readFileSync as readFileSync25 } from "node:fs";
 import { dirname as dirname7, relative as relative5, resolve as resolve8 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
@@ -25472,7 +25677,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync24(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync25(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -25653,34 +25858,34 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve9(args.home ?? join13(homedir3(), ".config", "circuit-next", "custom"));
+  return resolve9(args.home ?? join14(homedir3(), ".config", "circuit-next", "custom"));
 }
 function draftRoot(home, slug) {
-  return join13(home, "drafts", slug);
+  return join14(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join13(home, "skills", slug);
+  return join14(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join13(home, "flows");
+  return join14(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit-next run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join13(home, "commands");
+  return join14(home, "commands");
 }
 function reportsRoot(home) {
-  return join13(home, "reports");
+  return join14(home, "reports");
 }
 function manifestPath(home) {
-  return join13(home, "manifest.json");
+  return join14(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join13(reportsRoot(home), `${slug}-create-result.json`);
+  return join14(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join13(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join14(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
   mkdirSync2(dirname8(path), { recursive: true });
@@ -25707,7 +25912,7 @@ function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
     if (!existsSync11(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync25(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync26(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -25787,7 +25992,7 @@ function publishManifest(input) {
     custom_flows: []
   };
   if (existsSync11(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync25(manifestPath(input.home), "utf8"));
+    existing = JSON.parse(readFileSync26(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -25798,16 +26003,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join13(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join13(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join13(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join14(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join14(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join14(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join13(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join14(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -25818,10 +26023,10 @@ function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
   mkdirSync2(root, { recursive: true });
-  writeText(join13(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join13(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
-  writeJson(join13(root, "circuit.json"), input.flow);
-  writeText(join13(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  writeText(join14(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join14(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
+  writeJson(join14(root, "circuit.json"), input.flow);
+  writeText(join14(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -25830,24 +26035,24 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join13(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync25(path, "utf8")));
+  const path = join14(draftRoot(home, slug), "circuit.json");
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync26(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync11(join13(draft, "SKILL.md"))) {
+  if (!existsSync11(join14(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join13(flowRoot(input.home), input.slug);
+  const customFlowRoot = join14(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join13(skillRoot, "SKILL.md"), readFileSync25(join13(draft, "SKILL.md"), "utf8"));
-  writeText(join13(skillRoot, "circuit.yaml"), readFileSync25(join13(draft, "circuit.yaml"), "utf8"));
-  writeText(join13(customFlowRoot, "circuit.json"), readFileSync25(join13(draft, "circuit.json"), "utf8"));
-  writeText(join13(commandRoot(input.home), `${input.slug}.md`), readFileSync25(join13(draft, "command.md"), "utf8"));
+  writeText(join14(skillRoot, "SKILL.md"), readFileSync26(join14(draft, "SKILL.md"), "utf8"));
+  writeText(join14(skillRoot, "circuit.yaml"), readFileSync26(join14(draft, "circuit.yaml"), "utf8"));
+  writeText(join14(customFlowRoot, "circuit.json"), readFileSync26(join14(draft, "circuit.json"), "utf8"));
+  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync26(join14(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -25911,11 +26116,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync11(join13(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync11(join14(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync11(join13(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync11(join14(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -25939,11 +26144,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join13(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join14(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join13(flowRoot(home), slug, "circuit.json"),
-        command_path: join13(commandRoot(home), `${slug}.md`),
+        flow_path: join14(flowRoot(home), slug, "circuit.json"),
+        command_path: join14(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -25981,9 +26186,9 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname9, join as join17, resolve as resolve11 } from "node:path";
+import { dirname as dirname9, join as join18, resolve as resolve11 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/project-run-folder.js
@@ -25991,13 +26196,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve10 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync26, writeFileSync as writeFileSync3 } from "node:fs";
-import { join as join14 } from "node:path";
+import { readFileSync as readFileSync27, writeFileSync as writeFileSync3 } from "node:fs";
+import { join as join15 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join14(runFolder, "manifest.snapshot.json");
+  return join15(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync26(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync27(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -26007,7 +26212,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 
 // dist/run-status/projection-common.js
 import { existsSync as existsSync12 } from "node:fs";
-import { join as join15 } from "node:path";
+import { join as join16 } from "node:path";
 
 // dist/schemas/run-status.js
 var RunStatusEngineState = external_exports.enum([
@@ -26165,8 +26370,8 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join15(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join15(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join16(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join16(runFolder, "reports", "operator-summary.md");
   return {
     ...existsSync12(result) ? { result_path: result } : {},
     ...existsSync12(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
@@ -26185,14 +26390,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync27 } from "node:fs";
-import { join as join16 } from "node:path";
+import { readFileSync as readFileSync28 } from "node:fs";
+import { join as join17 } from "node:path";
 function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join16(runFolder, "trace.ndjson");
-  const text = readFileSync27(tracePath, "utf8");
+  const tracePath = join17(runFolder, "trace.ndjson");
+  const text = readFileSync28(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -26377,7 +26582,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync27(requestAbs, "utf8");
+    requestText = readFileSync28(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -26958,25 +27163,25 @@ function continuityRoot(controlPlane) {
   return resolve11(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join17(continuityRoot(controlPlane), "records");
+  return join18(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join17(continuityRoot(controlPlane), "index.json");
+  return join18(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join17(recordsRoot(controlPlane), `${recordId}.json`);
+  return join18(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join17(continuityRoot(controlPlane), "reports");
+  return join18(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join17(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join18(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join17(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join18(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join17(controlPlane, "active-run.md");
+  return join18(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
   mkdirSync3(dirname9(path), { recursive: true });
@@ -27098,7 +27303,7 @@ function handoffBrief(args) {
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync28(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync29(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
@@ -27110,7 +27315,7 @@ function handoffBrief(args) {
   }
   let record;
   try {
-    record = ContinuityRecord.parse(JSON.parse(readFileSync28(recordAbs, "utf8")));
+    record = ContinuityRecord.parse(JSON.parse(readFileSync29(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -27143,7 +27348,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync28(0, "utf8");
+  const raw = readFileSync29(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -27264,7 +27469,7 @@ function defaultHooksConfig() {
 function readHooksConfig(path) {
   if (!existsSync13(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync28(path, "utf8"));
+  const parsed = JSON.parse(readFileSync29(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -27719,7 +27924,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync28(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync29(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -28092,7 +28297,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync29(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync30(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -28403,7 +28608,7 @@ function loadFixture(fixturePath) {
   if (!existsSync14(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync29(fixturePath);
+  const bytes = readFileSync30(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -28447,7 +28652,7 @@ function customFlowArchetype(input) {
     return void 0;
   try {
     const flowRoot2 = resolve12(input.args.flowRoot);
-    const manifest = JSON.parse(readFileSync29(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync30(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
       return void 0;
     }
@@ -28562,7 +28767,7 @@ async function main(argv, options = {}) {
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress2 === void 0 ? {} : { progress: progress2 }
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync30(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -28713,7 +28918,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync30(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

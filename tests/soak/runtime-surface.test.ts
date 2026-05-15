@@ -90,12 +90,12 @@ async function captureMain(
   }
 }
 
-function writeProjectRoot(path: string): void {
+function writeProjectRoot(
+  path: string,
+  scripts: Record<string, string> = { check: 'node -e "process.exit(0)"' },
+): void {
   mkdirSync(path, { recursive: true });
-  writeFileSync(
-    join(path, 'package.json'),
-    `${JSON.stringify({ scripts: { check: 'node -e "process.exit(0)"' } }, null, 2)}\n`,
-  );
+  writeFileSync(join(path, 'package.json'), `${JSON.stringify({ scripts }, null, 2)}\n`);
 }
 
 function progressEvents(stderr: string): readonly ReturnType<typeof ProgressEvent.parse>[] {
@@ -185,6 +185,50 @@ describe('runtime surface soak', () => {
     expect(resumed.code, resumed.stderr).toBe(0);
     expect(JSON.parse(resumed.stdout)).toMatchObject({ flow_id: 'build', outcome: 'complete' });
     expect(progressEvents(resumed.stderr).map((event) => event.type)).toContain('run.completed');
+  });
+
+  it('runs Build end-to-end with resolver-selected build and lint scripts', async () => {
+    const projectRoot = join(runFolderBase, 'build-lint-project');
+    writeProjectRoot(projectRoot, {
+      build: 'node -e "process.stdout.write(\\"build-ok\\")"',
+      lint: 'node -e "process.stdout.write(\\"lint-ok\\")"',
+    });
+    const runFolder = join(runFolderBase, 'build-lint');
+
+    const result = await captureMain(
+      ['run', 'build', '--goal', 'Build + lint must stay clean', '--run-folder', runFolder],
+      { configCwd: projectRoot, relayer: buildRelayer() },
+    );
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ flow_id: 'build', outcome: 'complete' });
+
+    const brief = JSON.parse(readFileSync(join(runFolder, 'reports/build/brief.json'), 'utf8')) as {
+      verification_command_candidates: Array<{ argv: string[] }>;
+    };
+    expect(brief.verification_command_candidates.map((command) => command.argv)).toEqual([
+      ['npm', 'run', 'build'],
+      ['npm', 'run', 'lint'],
+    ]);
+
+    const verification = JSON.parse(
+      readFileSync(join(runFolder, 'reports/build/verification.json'), 'utf8'),
+    ) as {
+      overall_status: string;
+      commands: Array<{ argv: string[]; status: string; stdout_summary: string }>;
+    };
+    expect(verification.overall_status).toBe('passed');
+    expect(verification.commands.map((command) => command.argv)).toEqual([
+      ['npm', 'run', 'build'],
+      ['npm', 'run', 'lint'],
+    ]);
+    expect(verification.commands.map((command) => command.status)).toEqual(['passed', 'passed']);
+    expect(verification.commands.map((command) => command.stdout_summary).join('\n')).toContain(
+      'build-ok',
+    );
+    expect(verification.commands.map((command) => command.stdout_summary).join('\n')).toContain(
+      'lint-ok',
+    );
   });
 
   it('runs generated explicit fixtures and rejects untrusted fixture copies', async () => {

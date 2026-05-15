@@ -58,7 +58,9 @@ function commandPlan(command: {
   });
 }
 
-function verificationCompiledFlow(): { bytes: Buffer } {
+function verificationCompiledFlow(options: { verifyRoutes?: Record<string, string> } = {}): {
+  bytes: Buffer;
+} {
   const raw = {
     schema_version: '2',
     id: 'build-verification-exec-test',
@@ -107,7 +109,7 @@ function verificationCompiledFlow(): { bytes: Buffer } {
         title: 'Verify',
         protocol: 'build-verify@v1',
         reads: ['reports/build/plan.json'],
-        routes: { pass: '@complete' },
+        routes: options.verifyRoutes ?? { pass: '@complete' },
         executor: 'orchestrator',
         kind: 'verification',
         writes: {
@@ -231,6 +233,89 @@ describe('Build verification command execution', () => {
       status: 'failed',
       stderr_summary: 'nope',
     });
+  });
+
+  it('blocks the proof plan when an npm script is missing before spawn', async () => {
+    const { bytes } = verificationCompiledFlow({
+      verifyRoutes: { pass: '@complete', retry: 'seed-plan-step' },
+    });
+    const runFolder = join(runFolderBase, 'missing-npm-script');
+    const projectRoot = join(runFolderBase, 'missing-script-project');
+    mkdirSync(projectRoot, { recursive: true });
+    writeFileSync(
+      join(projectRoot, 'package.json'),
+      `${JSON.stringify({ private: true, scripts: { test: 'node -e "process.exit(0)"' } })}\n`,
+    );
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      projectRoot,
+      runId: 'b2000000-0000-0000-0000-000000000009',
+      goal: 'Run stale verification',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 25, 2, 45, 0)),
+      executors: planWriter(
+        commandPlan({
+          argv: ['npm', 'run', 'check'],
+        }),
+      ),
+    });
+
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/missing package script "check"/);
+    expect(outcome.reason).not.toMatch(/failed one or more commands|retry/);
+    expect(existsSync(join(runFolder, 'reports/build/verification.json'))).toBe(false);
+  });
+
+  it('blocks the proof plan when the command binary cannot launch', async () => {
+    const { bytes } = verificationCompiledFlow();
+    const runFolder = join(runFolderBase, 'missing-binary');
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      projectRoot: process.cwd(),
+      runId: 'b2000000-0000-0000-0000-000000000011',
+      goal: 'Run unavailable binary',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 25, 2, 50, 0)),
+      executors: planWriter(
+        commandPlan({
+          argv: ['definitely-not-a-circuit-verifier', '--version'],
+        }),
+      ),
+    });
+
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/could not launch/);
+    expect(existsSync(join(runFolder, 'reports/build/verification.json'))).toBe(false);
+  });
+
+  it('blocks the proof plan when cwd is invalid', async () => {
+    const { bytes } = verificationCompiledFlow();
+    const runFolder = join(runFolderBase, 'missing-cwd');
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      projectRoot: process.cwd(),
+      runId: 'b2000000-0000-0000-0000-000000000012',
+      goal: 'Run invalid cwd verification',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 25, 2, 55, 0)),
+      executors: planWriter(
+        commandPlan({
+          cwd: 'does-not-exist',
+          argv: [process.execPath, '-e', "process.stdout.write('never')"],
+        }),
+      ),
+    });
+
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/verification cwd rejected.*does not exist/);
+    expect(outcome.reason).not.toMatch(/report writer failed/);
+    expect(existsSync(join(runFolder, 'reports/build/verification.json'))).toBe(false);
   });
 
   it('fails closed on timeout while keeping typed verification evidence', async () => {

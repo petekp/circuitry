@@ -27,6 +27,7 @@ export interface CheckpointBuildContext {
   readonly runFolder: string;
   readonly step: CheckpointStep;
   readonly goal: string;
+  readonly projectRoot?: string;
   // The brief is fully populated at first write — response_path always
   // resolves to step.writes.response. There is no separate first-write
   // / re-stamp path; the report is written exactly once per

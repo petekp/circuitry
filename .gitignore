@@ -15,6 +15,7 @@ coverage/
 .turbo/
 .circuit-next/
 .claude/projects/
+.claude/worktrees/
 # Runtime lock from the Claude Code harness (sessionId/pid/acquiredAt). Not
 # a deliverable; per-machine ephemeral state.
 .claude/scheduled_tasks.lock

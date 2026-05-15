@@ -115,6 +115,7 @@ export async function executeCheckpoint(
         runFolder: context.runDir,
         step: compiledStep,
         goal: context.goal,
+        ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
         responsePath: response.path,
       });
       await context.files.writeJson(report, body);

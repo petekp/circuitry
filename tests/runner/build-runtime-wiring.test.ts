@@ -195,7 +195,7 @@ describe('Build runtime wiring', () => {
       runDir: runFolder,
       flowBytes: bytes,
       runId: 'b2000000-0000-0000-0000-000000000010',
-      goal: 'Retry Build after first verification failure',
+      goal: 'Retry implementation after first verification failure',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 25, 8, 5, 0)),
       relayer: relayerWith(),

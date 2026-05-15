@@ -32,7 +32,7 @@ import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 // with a stub childRunner (so the batch sub-run does not descend into a
 // real Build child) and a stub reviewer relayer, and asserts that
 // every typed Migrate report is materialised correctly. Verification
-// runs the brief's default `npm run check` command in a tiny temporary
+// runs the resolver-selected `npm run check` command in a tiny temporary
 // project root, keeping command execution real without making this fixture
 // pay for a repo-wide typecheck.
 //

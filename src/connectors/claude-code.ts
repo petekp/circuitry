@@ -196,16 +196,25 @@ export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<Rela
       }
     };
 
+    let killGraceTimer: NodeJS.Timeout | undefined;
     const timer = setTimeout(() => {
       timedOut = true;
       killGroupSucceeded = killProcessGroup('SIGTERM');
       // Escalate to SIGKILL after the grace window. We do NOT reject here —
       // resolution / rejection is deferred to the `close` handler so the
       // promise settles only after the subprocess has actually exited.
-      setTimeout(() => {
+      killGraceTimer = setTimeout(() => {
         killProcessGroup('SIGKILL');
+        killGraceTimer = undefined;
       }, SIGTERM_TO_SIGKILL_GRACE_MS);
     }, timeoutMs);
+    const clearAllTimers = () => {
+      clearTimeout(timer);
+      if (killGraceTimer !== undefined) {
+        clearTimeout(killGraceTimer);
+        killGraceTimer = undefined;
+      }
+    };
 
     child.stdout?.setEncoding('utf8');
     child.stderr?.setEncoding('utf8');
@@ -229,16 +238,18 @@ export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<Rela
       stderrBytes += chunk.length;
     });
     child.on('error', (err) => {
-      clearTimeout(timer);
+      clearAllTimers();
       reject(new Error(`claude-code subprocess spawn error: ${err.message}`));
     });
     child.on('close', (code, signal) => {
-      clearTimeout(timer);
+      clearAllTimers();
       const duration_ms = performance.now() - start;
       if (timedOut) {
+        const stdoutSuffix = stdoutCapped ? ' [stdout capped]' : '';
+        const stderrSuffix = stderrCapped ? ' [stderr capped]' : '';
         reject(
           new Error(
-            `claude-code subprocess timed out after ${timeoutMs}ms; group-kill ${killGroupSucceeded ? 'sent' : 'failed'}; final signal=${signal ?? 'none'}; stderr[:500]=${stderr.slice(0, 500)}`,
+            `claude-code subprocess timed out after ${timeoutMs}ms; group-kill ${killGroupSucceeded ? 'sent' : 'failed'}; final signal=${signal ?? 'none'}; stdout[:500]=${stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${stderr.slice(0, 500)}${stderrSuffix}`,
           ),
         );
         return;

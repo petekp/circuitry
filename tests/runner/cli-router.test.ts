@@ -60,6 +60,25 @@ function deterministicNow(startMs: number): () => Date {
   return () => new Date(startMs + n++ * 1000);
 }
 
+function createProofProject(name: string): string {
+  const projectRoot = join(runFolderBase, name);
+  mkdirSync(projectRoot, { recursive: true });
+  writeFileSync(
+    join(projectRoot, 'package.json'),
+    `${JSON.stringify(
+      {
+        private: true,
+        scripts: {
+          verify: 'node -e "process.exit(0)"',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return projectRoot;
+}
+
 function relayerWithBody(body: string): RelayFn {
   return {
     connectorName: 'claude-code',
@@ -278,6 +297,7 @@ async function runMainJson(
 async function runMainJsonWithRelayer(
   argv: readonly string[],
   relayer: RelayFn,
+  options: { readonly configCwd?: string } = {},
 ): Promise<Record<string, unknown>> {
   let captured = '';
   const origWrite = process.stdout.write;
@@ -291,7 +311,7 @@ async function runMainJsonWithRelayer(
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
-      configCwd: process.cwd(),
+      configCwd: options.configCwd ?? process.cwd(),
     });
     expect(exit).toBe(0);
   } finally {
@@ -303,6 +323,7 @@ async function runMainJsonWithRelayer(
 async function runMainJsonWithRelayerAndProgress(
   argv: readonly string[],
   relayer: RelayFn,
+  options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
   let stdout = '';
   let stderr = '';
@@ -322,7 +343,7 @@ async function runMainJsonWithRelayerAndProgress(
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
-      configCwd: process.cwd(),
+      configCwd: options.configCwd ?? process.cwd(),
     });
     expect(exit).toBe(0);
   } finally {
@@ -342,6 +363,7 @@ async function runMainJsonWithRelayerAndProgress(
 async function runMainJsonWithProgress(
   argv: readonly string[],
   relayBody: string,
+  options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
   let stdout = '';
   let stderr = '';
@@ -361,7 +383,7 @@ async function runMainJsonWithProgress(
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
-      configCwd: process.cwd(),
+      configCwd: options.configCwd ?? process.cwd(),
     });
     expect(exit).toBe(0);
   } finally {
@@ -687,9 +709,11 @@ describe('CLI router', () => {
 
   it('resolves sub-run child flows through the public CLI', async () => {
     const runFolder = join(runFolderBase, 'migrate-cli-sub-run');
+    const projectRoot = createProofProject('migrate-cli-sub-run-project');
     const output = await runMainJsonWithRelayer(
       ['migrate', '--goal', 'migrate a tiny legacy API', '--run-folder', runFolder],
       migrateCliRelayer(),
+      { configCwd: projectRoot },
     );
 
     const trace_entries = traceEntryLog(runFolder);
@@ -785,9 +809,11 @@ describe('CLI router', () => {
   });
 
   it('omitted flow positional routes build-like goals through the classifier', async () => {
+    const projectRoot = createProofProject('build-router-project');
     const output = await runMainJson(
       ['--goal', 'develop: add a focused feature', '--run-folder', join(runFolderBase, 'build')],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     expect(output.flow_id).toBe('build');
@@ -800,6 +826,7 @@ describe('CLI router', () => {
 
   it('omitted flow positional preserves router metadata on Build checkpoint_waiting output', async () => {
     const runFolder = join(runFolderBase, 'build-router-checkpoint-waiting');
+    const projectRoot = createProofProject('build-router-checkpoint-waiting-project');
     const output = await runMainJson(
       [
         '--goal',
@@ -810,6 +837,7 @@ describe('CLI router', () => {
         runFolder,
       ],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     expect(output.schema_version).toBe(1);
@@ -829,6 +857,7 @@ describe('CLI router', () => {
 
   it('emits checkpoint.waiting progress for paused checkpoint runs', async () => {
     const runFolder = join(runFolderBase, 'build-router-checkpoint-progress');
+    const projectRoot = createProofProject('build-router-checkpoint-progress-project');
     const { output, progress } = await runMainJsonWithProgress(
       [
         '--goal',
@@ -841,6 +870,7 @@ describe('CLI router', () => {
         runFolder,
       ],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     expect(output.outcome).toBe('checkpoint_waiting');
@@ -917,6 +947,7 @@ describe('CLI router', () => {
   });
 
   it('omitted flow positional starts a flow for plan-execution requests', async () => {
+    const projectRoot = createProofProject('plan-execution-project');
     const output = await runMainJson(
       [
         '--goal',
@@ -925,6 +956,7 @@ describe('CLI router', () => {
         join(runFolderBase, 'plan-execution'),
       ],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     expect(output.flow_id).toBe('build');
@@ -1123,6 +1155,7 @@ describe('CLI router', () => {
 
   it('accepts --entry-mode and uses that mode depth when --depth is omitted', async () => {
     const runFolder = join(runFolderBase, 'build-lite-entry-mode');
+    const projectRoot = createProofProject('build-lite-entry-mode-project');
     const output = await runMainJson(
       [
         'build',
@@ -1134,6 +1167,7 @@ describe('CLI router', () => {
         runFolder,
       ],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     const trace_entries = traceEntryLog(runFolder);
@@ -1263,9 +1297,11 @@ describe('CLI router', () => {
 
   it('prints a versioned checkpoint_waiting envelope without result_path', async () => {
     const runFolder = join(runFolderBase, 'checkpoint-waiting');
+    const projectRoot = createProofProject('checkpoint-waiting-project');
     const output = await runMainJson(
       ['build', '--goal', 'Frame via CLI', '--entry-mode', 'deep', '--run-folder', runFolder],
       '{"verdict":"accept"}',
+      { configCwd: projectRoot },
     );
 
     expect(output.schema_version).toBe(1);

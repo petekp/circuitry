@@ -487,6 +487,19 @@ function runDoctor() {
       );
 
       const checkpointRunFolder = resolve(smokeRoot, 'checkpoint-run');
+      writeFileSync(
+        resolve(smokeRoot, 'package.json'),
+        `${JSON.stringify(
+          {
+            private: true,
+            scripts: {
+              verify: 'node -e "process.exit(0)"',
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
       const checkpointResult = spawnSync(
         resolved.runtime.command,
         runtimeArgs(resolved.runtime, [

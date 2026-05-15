@@ -1,8 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, realpathSync } from 'node:fs';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { findVerificationWriter } from '../../flows/registries/verification-writers/registry.js';
 import type { VerificationCommand } from '../../flows/registries/verification-writers/types.js';
+import {
+  ProofPlanBlockedError,
+  isProofPlanBlockedError,
+} from '../../shared/verification-resolver.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { VerificationStep } from '../manifest/executable-flow.js';
 import {
@@ -30,10 +34,14 @@ function resolveProjectRelativeCwd(projectRoot: string, cwd: string): string {
   const rootAbs = resolve(projectRoot);
   const targetAbs = resolve(rootAbs, cwd);
   if (!isInsideOrSame(rootAbs, targetAbs)) {
-    throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} escapes project root`);
+    throw new ProofPlanBlockedError(
+      `verification cwd rejected: ${JSON.stringify(cwd)} escapes project root`,
+    );
   }
   if (!existsSync(rootAbs)) {
-    throw new Error(`verification project root rejected: ${rootAbs} does not exist`);
+    throw new ProofPlanBlockedError(
+      `verification project root rejected: ${rootAbs} does not exist`,
+    );
   }
   const rootReal = realpathSync.native(rootAbs);
   let cursor = rootAbs;
@@ -41,24 +49,28 @@ function resolveProjectRelativeCwd(projectRoot: string, cwd: string): string {
     if (segment === '.') continue;
     cursor = resolve(cursor, segment);
     if (!existsSync(cursor)) {
-      throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} does not exist`);
+      throw new ProofPlanBlockedError(
+        `verification cwd rejected: ${JSON.stringify(cwd)} does not exist`,
+      );
     }
     const stat = lstatSync(cursor);
     if (stat.isSymbolicLink()) {
-      throw new Error(
+      throw new ProofPlanBlockedError(
         `verification cwd rejected: ${JSON.stringify(cwd)} crosses symlink ${JSON.stringify(cursor)}`,
       );
     }
     const cursorReal = realpathSync.native(cursor);
     if (!isInsideOrSame(rootReal, cursorReal)) {
-      throw new Error(
+      throw new ProofPlanBlockedError(
         `verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root through ${JSON.stringify(cursor)}`,
       );
     }
   }
   const targetReal = realpathSync.native(targetAbs);
   if (!isInsideOrSame(rootReal, targetReal)) {
-    throw new Error(`verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root`);
+    throw new ProofPlanBlockedError(
+      `verification cwd rejected: ${JSON.stringify(cwd)} escapes real project root`,
+    );
   }
   return targetReal;
 }
@@ -83,16 +95,83 @@ function verificationFailureReason(stepId: string, error: unknown): string {
   return `verification step '${stepId}': report writer failed (${message})`;
 }
 
+function commandBinaryName(argv0: string): string {
+  const normalized = argv0.replaceAll('\\', '/');
+  return normalized.slice(normalized.lastIndexOf('/') + 1).toLowerCase();
+}
+
+function packageScriptInvocation(command: VerificationCommand): string | undefined {
+  const argv0 = command.argv[0];
+  if (argv0 === undefined) return undefined;
+  const binary = commandBinaryName(argv0);
+  if (binary !== 'npm' && binary !== 'pnpm' && binary !== 'yarn') return undefined;
+  if (command.argv[1] !== 'run') return undefined;
+  const script = command.argv[2];
+  if (script === undefined) {
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' invokes ${binary} run without a script name.`,
+    );
+  }
+  return script;
+}
+
+function preflightPackageScript(command: VerificationCommand, cwdAbs: string): void {
+  const script = packageScriptInvocation(command);
+  if (script === undefined) return;
+
+  const packageJsonPath = join(cwdAbs, 'package.json');
+  if (!existsSync(packageJsonPath)) {
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' requires package.json at cwd ${JSON.stringify(command.cwd)}.`,
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' could not parse package.json at cwd ${JSON.stringify(command.cwd)}: ${message}.`,
+    );
+  }
+
+  const scripts =
+    parsed && typeof parsed === 'object' ? (parsed as { scripts?: unknown }).scripts : undefined;
+  if (scripts === null || typeof scripts !== 'object' || Array.isArray(scripts)) {
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' requires package.json scripts at cwd ${JSON.stringify(command.cwd)}.`,
+    );
+  }
+  if (typeof (scripts as Record<string, unknown>)[script] !== 'string') {
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' references missing package script "${script}" at cwd ${JSON.stringify(command.cwd)}.`,
+    );
+  }
+}
+
+function isLaunchError(error: Error): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === 'ENOENT' || code === 'EACCES' || code === 'ENOTDIR';
+}
+
 function runCommand(command: VerificationCommand, projectRoot: string) {
   const started = Date.now();
+  const cwd = resolveProjectRelativeCwd(projectRoot, command.cwd);
+  preflightPackageScript(command, cwd);
   const result = spawnSync(command.argv[0] as string, command.argv.slice(1), {
-    cwd: resolveProjectRelativeCwd(projectRoot, command.cwd),
+    cwd,
     env: verificationEnvironment(command.env),
     encoding: 'utf8',
     maxBuffer: command.max_output_bytes,
     shell: false,
     timeout: command.timeout_ms,
   });
+  if (result.error !== undefined && isLaunchError(result.error)) {
+    throw new ProofPlanBlockedError(
+      `Proof plan blocked: verification command '${command.id}' could not launch ${JSON.stringify(command.argv[0])}: ${result.error.message}`,
+    );
+  }
   const exitCode =
     typeof result.status === 'number' && result.error === undefined ? result.status : 1;
   const stderrParts = [
@@ -131,7 +210,7 @@ export async function executeVerification(
     report = stepReport;
     reportSchema = stepReport.schema;
     if (context.projectRoot === undefined) {
-      throw new Error(
+      throw new ProofPlanBlockedError(
         `verification step '${step.id}' requires projectRoot for project-relative cwd resolution`,
       );
     }
@@ -155,7 +234,8 @@ export async function executeVerification(
     };
     await context.files.writeJson(report, body);
   } catch (error) {
-    const reason = verificationFailureReason(step.id, error);
+    const blocked = isProofPlanBlockedError(error);
+    const reason = blocked ? error.message : verificationFailureReason(step.id, error);
     await context.trace.append({
       run_id: context.runId,
       kind: 'check.evaluated',
@@ -165,6 +245,7 @@ export async function executeVerification(
       outcome: 'fail',
       reason,
     });
+    if (blocked) throw error;
     throw new Error(reason);
   }
 

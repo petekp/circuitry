@@ -108,16 +108,6 @@
             "The requested behavior is implemented",
             "Verification passes",
             "Review completes without a blocking issue"
-          ],
-          "verification_command_candidates": [
-            {
-              "id": "npm-check",
-              "cwd": ".",
-              "argv": ["npm", "run", "check"],
-              "timeout_ms": 120000,
-              "max_output_bytes": 200000,
-              "env": {}
-            }
           ]
         }
       },

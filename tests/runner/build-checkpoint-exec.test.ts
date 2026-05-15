@@ -1189,6 +1189,13 @@ describe('Build checkpoint execution substrate', () => {
     mkdirSync(originalProjectRoot, { recursive: true });
     mkdirSync(wrongProjectRoot, { recursive: true });
     writeFileSync(join(originalProjectRoot, 'marker.txt'), 'present\n');
+    writeFileSync(
+      join(originalProjectRoot, 'package.json'),
+      `${JSON.stringify({
+        private: true,
+        scripts: { verify: `${process.execPath} -e "require('node:fs').accessSync('marker.txt')"` },
+      })}\n`,
+    );
     const { flow, bytes } = checkpointToVerificationCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-verification-context');
 
@@ -1225,7 +1232,7 @@ describe('Build checkpoint execution substrate', () => {
     const { flow, bytes } = checkpointToVerificationCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-no-project-root');
 
-    await runCompiledFlow({
+    const outcome = await runCompiledFlow({
       runFolder,
       flow,
       flowBytes: bytes,
@@ -1236,15 +1243,9 @@ describe('Build checkpoint execution substrate', () => {
       now: deterministicNow(Date.UTC(2026, 3, 25, 4, 30, 0)),
     });
 
-    const resumed = await resumeCompiledFlowCheckpoint({
-      runFolder,
-      selection: 'continue',
-      projectRoot: resumeProjectRoot,
-      now: deterministicNow(Date.UTC(2026, 3, 25, 4, 35, 0)),
-    });
-
-    expect(resumed.result.outcome).toBe('aborted');
-    expect(resumed.result.reason).toMatch(/requires projectRoot/);
+    if (isGraphCheckpointWaitingResult(outcome.result)) throw new Error('expected run to close');
+    expect(outcome.result.outcome).toBe('aborted');
+    expect(outcome.result.reason).toMatch(/projectRoot was not provided/);
   });
 
   it('resolves autonomous depth only through a declared safe autonomous choice', async () => {

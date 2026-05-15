@@ -16,6 +16,7 @@ import type {
   RelayFn,
   RuntimeEvidencePolicy,
 } from '../../shared/relay-runtime-types.js';
+import { isProofPlanBlockedError } from '../../shared/verification-resolver.js';
 import type { TerminalTarget } from '../domain/route.js';
 import type { RunClosedOutcome } from '../domain/run.js';
 import { isWaitingCheckpointStepOutcome } from '../domain/step.js';
@@ -449,6 +450,9 @@ export async function executeExecutableFlowWithWaiting(
       }
     } catch (error) {
       const message = (error as Error).message;
+      const reason = isProofPlanBlockedError(error)
+        ? message
+        : `step '${step.id}' handler threw: ${message}`;
       await trace.append({
         run_id: runId,
         kind: 'step.aborted',
@@ -456,12 +460,7 @@ export async function executeExecutableFlowWithWaiting(
         attempt,
         reason: message,
       });
-      return await closeRun(
-        context,
-        'aborted',
-        undefined,
-        `step '${step.id}' handler threw: ${message}`,
-      );
+      return await closeRun(context, 'aborted', undefined, reason);
     }
 
     const target = step.routes[route];

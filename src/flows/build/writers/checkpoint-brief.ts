@@ -18,6 +18,10 @@ import { VerificationCommand } from '../../../schemas/verification.js';
 import { sha256Hex } from '../../../shared/connector-relay.js';
 import { resolveRunRelative } from '../../../shared/run-relative-path.js';
 import {
+  inferBuildVerificationNeeds,
+  requireResolvedVerificationCommands,
+} from '../../../shared/verification-resolver.js';
+import {
   type CheckpointBriefBuilder,
   type CheckpointBuildContext,
   type CheckpointResumeContext,
@@ -29,7 +33,7 @@ const BuildBriefReportTemplate = z
   .object({
     scope: z.string().min(1),
     success_criteria: z.array(z.string().min(1)).min(1),
-    verification_command_candidates: z.array(VerificationCommand).min(1),
+    verification_command_candidates: z.array(VerificationCommand).min(1).optional(),
   })
   .strict();
 
@@ -43,11 +47,19 @@ export const buildBriefCheckpointBuilder: CheckpointBriefBuilder = {
       );
     }
     const template = BuildBriefReportTemplate.parse(rawTemplate);
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
+      goal: context.goal,
+      requestedNeeds: inferBuildVerificationNeeds(context.goal),
+      commandIdPrefix: 'build',
+      timeoutMs: 120_000,
+      maxOutputBytes: 200_000,
+    });
     return BuildBrief.parse({
       objective: context.goal,
       scope: template.scope,
       success_criteria: template.success_criteria,
-      verification_command_candidates: template.verification_command_candidates,
+      verification_command_candidates: verificationCommands,
       checkpoint: {
         request_path: context.step.writes.request,
         response_path: context.responsePath,

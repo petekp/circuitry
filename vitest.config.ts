@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 // Coverage as info, not enforcement — no thresholds. Per the
 // methodology-strip rule, ratchets stay cut until concrete pain
@@ -9,6 +9,7 @@ import { defineConfig } from 'vitest/config';
 //     useful for ad-hoc tooling without forcing a threshold gate
 export default defineConfig({
   test: {
+    exclude: [...configDefaults.exclude, '.claude/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

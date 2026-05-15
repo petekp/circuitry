@@ -21,6 +21,22 @@ import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.j
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
 
+function writeBuildProofPackage(root: string): void {
+  writeFileSync(
+    join(root, 'package.json'),
+    `${JSON.stringify(
+      {
+        private: true,
+        scripts: {
+          build: 'node -e "process.exit(0)"',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
   return () => new Date(startMs + n++ * 1000);
@@ -778,6 +794,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
 
   it('validates checkpoint report hashes when the request carries one', async () => {
     const runDir = join(tempDir, 'report-hash');
+    writeBuildProofPackage(tempDir);
     const buildBytes = await readFile(join(process.cwd(), 'generated/flows/build/circuit.json'));
     const result = await runCompiledFlowWithWaiting({
       flowBytes: buildBytes,
@@ -800,6 +817,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
 
   it('rejects a missing checkpoint report when the request carries its hash', async () => {
     const runDir = join(tempDir, 'missing-report');
+    writeBuildProofPackage(tempDir);
     const buildBytes = await readFile(join(process.cwd(), 'generated/flows/build/circuit.json'));
     const result = await runCompiledFlowWithWaiting({
       flowBytes: buildBytes,

@@ -57,16 +57,19 @@ afterEach(() => {
 });
 
 describe('fixBriefComposeBuilder verification script discovery', () => {
-  it('defaults to npm run verify when no projectRoot is provided', () => {
-    const brief = buildBrief(undefined);
-    expect(brief.verification_command_candidates).toHaveLength(1);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
+  it('blocks when no projectRoot is provided', () => {
+    expect(() => buildBrief(undefined)).toThrow(/projectRoot was not provided/);
   });
 
-  it('defaults to npm run verify when projectRoot has no package.json', () => {
+  it('blocks when projectRoot has no package.json', () => {
     const root = tempRoot('fix-brief-no-pkg-');
-    const brief = buildBrief(root);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
+    expect(() => buildBrief(root)).toThrow(/package\.json.*does not exist/);
+  });
+
+  it('blocks instead of inventing npm run verify when no general proof script exists', () => {
+    const root = tempRoot('fix-brief-lint-only-');
+    writePackageJson(root, { lint: 'echo ok' });
+    expect(() => buildBrief(root)).toThrow(/verify, test, or check/);
   });
 
   it('picks verify when present in package.json scripts', () => {
@@ -90,38 +93,28 @@ describe('fixBriefComposeBuilder verification script discovery', () => {
     expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'check']);
   });
 
-  it('does not fall back to lint alone (lint is too forgiving for a verify gate)', () => {
-    const root = tempRoot('fix-brief-lint-only-');
-    writePackageJson(root, { lint: 'echo ok' });
-    const brief = buildBrief(root);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
-  });
-
-  it('defaults to verify when package.json is malformed', () => {
+  it('blocks when package.json is malformed', () => {
     const root = tempRoot('fix-brief-malformed-');
     writeFileSync(join(root, 'package.json'), '{not json');
-    const brief = buildBrief(root);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
+    expect(() => buildBrief(root)).toThrow(/could not be parsed/);
   });
 
-  it('defaults to verify when scripts is an array rather than an object', () => {
+  it('blocks when scripts is an array rather than an object', () => {
     const root = tempRoot('fix-brief-scripts-array-');
     writeFileSync(
       join(root, 'package.json'),
       JSON.stringify({ name: 'odd', scripts: [] }, null, 2),
     );
-    const brief = buildBrief(root);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
+    expect(() => buildBrief(root)).toThrow(/scripts must be an object/);
   });
 
-  it('defaults to verify when scripts is null', () => {
+  it('blocks when scripts is null', () => {
     const root = tempRoot('fix-brief-scripts-null-');
     writeFileSync(
       join(root, 'package.json'),
       JSON.stringify({ name: 'odd', scripts: null }, null, 2),
     );
-    const brief = buildBrief(root);
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
+    expect(() => buildBrief(root)).toThrow(/scripts must be an object/);
   });
 
   it('respects priority: verify wins over test wins over check', () => {

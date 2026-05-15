@@ -2,53 +2,30 @@
 //
 // Fabricates a default FixBrief from the run goal alone. A real Fix
 // run would expect an interactive frame step (host checkpoint) to
-// enrich the regression contract; the inline-compose fallback here
-// keeps schematic execution honest when no operator input is available,
-// defaulting to deferred repro and a verification command derived from
-// the project's package.json scripts.
+// enrich the regression contract; the inline-compose fallback here keeps
+// schematic execution honest when no operator input is available, defaulting
+// to deferred repro and a verification command resolved from real package
+// scripts.
 
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { requireResolvedVerificationCommands } from '../../../shared/verification-resolver.js';
 import type {
   ComposeBuildContext,
   ComposeBuilder,
 } from '../../registries/compose-writers/types.js';
 import { FixBrief } from '../reports.js';
 
-// Priority order for verification-style scripts. `verify` is the
-// canonical name; `test` and `check` are the next-most-common signals
-// of "did this break the project". `lint` is intentionally omitted
-// because lint failures usually warn rather than fail the build.
-const PREFERRED_VERIFY_SCRIPTS = ['verify', 'test', 'check'] as const;
-const DEFAULT_VERIFY_SCRIPT = 'verify';
-
-function pickVerificationScript(projectRoot: string | undefined): string {
-  if (projectRoot === undefined) return DEFAULT_VERIFY_SCRIPT;
-  const pkgPath = join(projectRoot, 'package.json');
-  if (!existsSync(pkgPath)) return DEFAULT_VERIFY_SCRIPT;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(readFileSync(pkgPath, 'utf8'));
-  } catch {
-    return DEFAULT_VERIFY_SCRIPT;
-  }
-  if (parsed === null || typeof parsed !== 'object') return DEFAULT_VERIFY_SCRIPT;
-  const scriptsRaw = (parsed as { scripts?: unknown }).scripts;
-  if (scriptsRaw === null || typeof scriptsRaw !== 'object' || Array.isArray(scriptsRaw)) {
-    return DEFAULT_VERIFY_SCRIPT;
-  }
-  const scripts = scriptsRaw as Record<string, unknown>;
-  for (const name of PREFERRED_VERIFY_SCRIPTS) {
-    if (typeof scripts[name] === 'string') return name;
-  }
-  return DEFAULT_VERIFY_SCRIPT;
-}
-
 export const fixBriefComposeBuilder: ComposeBuilder = {
   resultSchemaName: 'fix.brief@v1',
   build(context: ComposeBuildContext): unknown {
     const goal = context.goal;
-    const scriptName = pickVerificationScript(context.projectRoot);
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
+      goal,
+      requestedNeeds: ['general'],
+      commandIdPrefix: 'fix',
+      timeoutMs: 600_000,
+      maxOutputBytes: 200_000,
+    });
     return FixBrief.parse({
       problem_statement: goal,
       expected_behavior: `Resolve: ${goal}`,
@@ -69,16 +46,7 @@ export const fixBriefComposeBuilder: ComposeBuilder = {
         },
       },
       success_criteria: [`Demonstrate the fix addresses: ${goal}`],
-      verification_command_candidates: [
-        {
-          id: 'fix-proof',
-          cwd: '.',
-          argv: ['npm', 'run', scriptName],
-          timeout_ms: 600_000,
-          max_output_bytes: 200_000,
-          env: {},
-        },
-      ],
+      verification_command_candidates: verificationCommands,
     });
   },
 };

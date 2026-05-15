@@ -1343,7 +1343,7 @@ describe('runtime control-loop parity twins', () => {
     });
 
     expect(result.outcome).toBe('aborted');
-    expect(result.reason).toMatch(/verification step 'verification-step': report writer failed/);
+    expect(result.reason).toMatch(/requires projectRoot for project-relative cwd resolution/);
     expect(resultJson.outcome).toBe('aborted');
     expect(resultJson.reason).toBe(result.reason);
     expect(inspection).toEqual({ reportExists: false });
