@@ -7341,12 +7341,12 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync13, readFileSync as readFileSync27 } from "node:fs";
+import { existsSync as existsSync13, readFileSync as readFileSync28 } from "node:fs";
 import { dirname as dirname10, resolve as resolve11 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync18 } from "node:fs";
+import { readFileSync as readFileSync19 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -14463,6 +14463,743 @@ var fixCompiledFlowPackage = {
   }
 };
 
+// dist/flows/pursue/relay-hints.js
+var pursuitBatchShapeHint = {
+  kind: "schema",
+  schema: "pursuit.batch@v1",
+  instruction: [
+    "Respond with a single raw JSON object for pursuit.batch@v1.",
+    'Shape: { "verdict": "<accept|partial|blocked>", "summary": "<plain summary>", "serialized_execution": true, "completed": [{ "pursuit_id": "<id>", "status": "completed", "summary": "<what happened>", "evidence": ["<evidence>"] }], "skipped": [{ "pursuit_id": "<id>", "status": "skipped", "summary": "<why skipped>", "evidence": [] }], "blocked": [{ "pursuit_id": "<id>", "status": "blocked", "summary": "<why blocked>", "evidence": [] }], "failed": [{ "pursuit_id": "<id>", "status": "failed", "summary": "<why failed>", "evidence": [] }], "actual_touch_set": { "paths": ["<changed or inspected project-relative path>"], "symbols": ["<symbol>"], "commands": ["<command>"], "generated_outputs": ["<generated output path>"] }, "proof_evidence": ["<evidence>"] }.',
+    "Execute code-changing work serially. Do not run parallel code-writing agents. If a pursuit cannot be safely completed serially, put it in blocked rather than guessing.",
+    "Keep estimated touch sets separate from actual touch sets. actual_touch_set must describe what really changed or was materially inspected during this batch.",
+    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences."
+  ].join(" ")
+};
+var pursuitReviewShapeHint = {
+  kind: "schema",
+  schema: "pursuit.review@v1",
+  instruction: [
+    "Respond with a single raw JSON object for pursuit.review@v1.",
+    'Shape: { "verdict": "<clean|needs-followup|blocked>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line>"] }] }.',
+    "Review whether the batch followed the pursuit contract, serialized code-changing work, preserved the difference between estimated and actual touch sets, and surfaced skipped or blocked pursuits honestly.",
+    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow retries before closing.',
+    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences."
+  ].join(" ")
+};
+
+// dist/flows/pursue/reports.js
+var PURSUIT_RESULT_SCHEMA_BY_REPORT_ID = {
+  "pursuit.contract": "pursuit.contract@v1",
+  "pursuit.graph": "pursuit.graph@v1",
+  "pursuit.wave-plan": "pursuit.wave-plan@v1",
+  "pursuit.batch": "pursuit.batch@v1",
+  "pursuit.verification": "pursuit.verification@v1",
+  "pursuit.review": "pursuit.review@v1"
+};
+var PURSUIT_RESULT_PATH_BY_REPORT_ID = {
+  "pursuit.contract": "reports/pursuit/contract.json",
+  "pursuit.graph": "reports/pursuit/graph.json",
+  "pursuit.wave-plan": "reports/pursuit/wave-plan.json",
+  "pursuit.batch": "reports/pursuit/batch.json",
+  "pursuit.verification": "reports/pursuit/verification.json",
+  "pursuit.review": "reports/pursuit/review.json"
+};
+var NonEmptyStringArray3 = external_exports.array(external_exports.string().min(1)).min(1);
+var PursuitId = external_exports.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/);
+var PursuitRisk = external_exports.enum(["low", "medium", "high"]);
+var PursuitTouchSet = external_exports.object({
+  paths: external_exports.array(external_exports.string().min(1)),
+  symbols: external_exports.array(external_exports.string().min(1)),
+  commands: external_exports.array(external_exports.string().min(1)),
+  generated_outputs: external_exports.array(external_exports.string().min(1))
+}).strict();
+var PursuitContractItem = external_exports.object({
+  id: PursuitId,
+  title: external_exports.string().min(1),
+  goal: external_exports.string().min(1),
+  scope: external_exports.string().min(1),
+  assumptions: external_exports.array(external_exports.string().min(1)),
+  estimated_touch_set: PursuitTouchSet,
+  proof_plan: NonEmptyStringArray3,
+  check_in_triggers: NonEmptyStringArray3,
+  rollback_notes: external_exports.array(external_exports.string().min(1)),
+  risk: PursuitRisk
+}).strict();
+var PursuitContract = external_exports.object({
+  objective: external_exports.string().min(1),
+  pursuits: external_exports.array(PursuitContractItem).min(1),
+  execution_policy: external_exports.object({
+    code_writes: external_exports.literal("serial-only"),
+    read_only_parallelism: external_exports.literal("allowed"),
+    parallel_write_status: external_exports.literal("blocked-until-safe-apply")
+  }).strict(),
+  verification_command_candidates: external_exports.array(VerificationCommand).min(1)
+}).strict().superRefine((contract, ctx) => {
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, pursuit] of contract.pursuits.entries()) {
+    if (seen.has(pursuit.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["pursuits", index, "id"],
+        message: `duplicate pursuit id: ${pursuit.id}`
+      });
+    }
+    seen.add(pursuit.id);
+  }
+});
+var PursuitGraphNode = external_exports.object({
+  id: PursuitId,
+  goal: external_exports.string().min(1),
+  estimated_touch_set: PursuitTouchSet,
+  risk: PursuitRisk,
+  status: external_exports.enum(["ready", "blocked", "deferred"]),
+  reason: external_exports.string().min(1)
+}).strict();
+var PursuitGraphEdge = external_exports.object({
+  from: PursuitId,
+  to: PursuitId,
+  kind: external_exports.enum(["hard-dependency", "soft-dependency", "conflict", "composes-with"]),
+  reason: external_exports.string().min(1)
+}).strict();
+var PursuitGraphGroup = external_exports.object({
+  id: PursuitId,
+  pursuit_ids: external_exports.array(PursuitId).min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var PursuitGraph = external_exports.object({
+  verdict: external_exports.literal("accept"),
+  nodes: external_exports.array(PursuitGraphNode).min(1),
+  edges: external_exports.array(PursuitGraphEdge),
+  serial_groups: external_exports.array(PursuitGraphGroup).min(1),
+  parallel_read_only_groups: external_exports.array(PursuitGraphGroup).min(1),
+  blocked: external_exports.array(external_exports.object({
+    pursuit_id: PursuitId,
+    reason: external_exports.string().min(1)
+  }).strict())
+}).strict().superRefine((graph, ctx) => {
+  const nodeIds = /* @__PURE__ */ new Set();
+  for (const [index, node] of graph.nodes.entries()) {
+    if (nodeIds.has(node.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["nodes", index, "id"],
+        message: `duplicate node id: ${node.id}`
+      });
+    }
+    nodeIds.add(node.id);
+  }
+  for (const [index, edge] of graph.edges.entries()) {
+    if (!nodeIds.has(edge.from)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["edges", index, "from"],
+        message: `edge references unknown pursuit id: ${edge.from}`
+      });
+    }
+    if (!nodeIds.has(edge.to)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["edges", index, "to"],
+        message: `edge references unknown pursuit id: ${edge.to}`
+      });
+    }
+  }
+  for (const [groupIndex, group] of [
+    ...graph.serial_groups,
+    ...graph.parallel_read_only_groups
+  ].entries()) {
+    for (const [index, id] of group.pursuit_ids.entries()) {
+      if (!nodeIds.has(id)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["groups", groupIndex, "pursuit_ids", index],
+          message: `group references unknown pursuit id: ${id}`
+        });
+      }
+    }
+  }
+  for (const [index, item] of graph.blocked.entries()) {
+    if (!nodeIds.has(item.pursuit_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["blocked", index, "pursuit_id"],
+        message: `blocked item references unknown pursuit id: ${item.pursuit_id}`
+      });
+    }
+  }
+});
+var PursuitWave = external_exports.object({
+  id: PursuitId,
+  kind: external_exports.enum(["read-only", "code-change"]),
+  pursuit_ids: external_exports.array(PursuitId).min(1),
+  execution: external_exports.enum(["parallel", "serial"]),
+  reason: external_exports.string().min(1),
+  re_ground_after: external_exports.boolean()
+}).strict();
+var PursuitWavePlan = external_exports.object({
+  verdict: external_exports.literal("accept"),
+  waves: external_exports.array(PursuitWave).min(1),
+  no_parallel_writes_reason: external_exports.string().min(1)
+}).strict().superRefine((plan, ctx) => {
+  for (const [index, wave] of plan.waves.entries()) {
+    if (wave.kind === "code-change" && wave.execution !== "serial") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["waves", index, "execution"],
+        message: "code-change waves must execute serially in Pursuits V1"
+      });
+    }
+  }
+});
+var PursuitBatchItem = external_exports.object({
+  pursuit_id: PursuitId,
+  status: external_exports.enum(["completed", "skipped", "blocked", "failed"]),
+  summary: external_exports.string().min(1),
+  evidence: external_exports.array(external_exports.string().min(1))
+}).strict();
+var PursuitBatch = external_exports.object({
+  verdict: external_exports.enum(["accept", "partial", "blocked"]),
+  summary: external_exports.string().min(1),
+  serialized_execution: external_exports.literal(true),
+  completed: external_exports.array(PursuitBatchItem),
+  skipped: external_exports.array(PursuitBatchItem),
+  blocked: external_exports.array(PursuitBatchItem),
+  failed: external_exports.array(PursuitBatchItem),
+  actual_touch_set: PursuitTouchSet,
+  proof_evidence: NonEmptyStringArray3
+}).strict().superRefine((batch, ctx) => {
+  for (const [field, expectedStatus] of [
+    ["completed", "completed"],
+    ["skipped", "skipped"],
+    ["blocked", "blocked"],
+    ["failed", "failed"]
+  ]) {
+    for (const [index, item] of batch[field].entries()) {
+      if (item.status !== expectedStatus) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field, index, "status"],
+          message: `status must be '${expectedStatus}' for ${field} items`
+        });
+      }
+    }
+  }
+  if (batch.verdict === "accept" && (batch.blocked.length > 0 || batch.failed.length > 0)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "verdict must not be 'accept' when blocked or failed items exist"
+    });
+  }
+  if (batch.verdict === "accept" && batch.skipped.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "verdict must not be 'accept' when skipped items exist"
+    });
+  }
+  if (batch.verdict === "blocked" && batch.blocked.length === 0 && batch.failed.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "verdict must be backed by blocked or failed items when it is 'blocked'"
+    });
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const [field, items] of [
+    ["completed", batch.completed],
+    ["skipped", batch.skipped],
+    ["blocked", batch.blocked],
+    ["failed", batch.failed]
+  ]) {
+    for (const [index, item] of items.entries()) {
+      if (seen.has(item.pursuit_id)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field, index, "pursuit_id"],
+          message: `duplicate pursuit id in batch: ${item.pursuit_id}`
+        });
+      }
+      seen.add(item.pursuit_id);
+    }
+  }
+});
+var PursuitVerification = VerificationResult;
+var PursuitReviewFinding = external_exports.object({
+  severity: external_exports.enum(["critical", "high", "medium", "low"]),
+  text: external_exports.string().min(1),
+  file_refs: external_exports.array(external_exports.string().min(1))
+}).strict();
+var PursuitReviewVerdict = external_exports.enum(["clean", "needs-followup", "blocked"]);
+var PursuitReview = external_exports.object({
+  verdict: PursuitReviewVerdict,
+  summary: external_exports.string().min(1),
+  findings: external_exports.array(PursuitReviewFinding)
+}).strict().superRefine((review, ctx) => {
+  const mediumOrHigher = review.findings.filter((finding) => ["critical", "high", "medium"].includes(finding.severity));
+  if (review.verdict === "clean" && review.findings.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["findings"],
+      message: "findings must be empty when verdict is 'clean'"
+    });
+  }
+  if (review.verdict !== "clean" && review.findings.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["findings"],
+      message: `findings must be non-empty when verdict is '${review.verdict}'`
+    });
+  }
+  if (review.verdict === "needs-followup" && mediumOrHigher.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "verdict must be 'blocked' when review findings include medium, high, or critical severity"
+    });
+  }
+});
+var PursuitResultReportId = external_exports.enum([
+  "pursuit.contract",
+  "pursuit.graph",
+  "pursuit.wave-plan",
+  "pursuit.batch",
+  "pursuit.verification",
+  "pursuit.review"
+]);
+var PursuitResultReportPointer = external_exports.object({
+  report_id: PursuitResultReportId,
+  path: external_exports.string().min(1),
+  schema: external_exports.string().min(1)
+}).strict().superRefine((pointer, ctx) => {
+  const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
+  if (pointer.schema !== expectedSchema) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["schema"],
+      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
+    });
+  }
+  const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
+  if (pointer.path !== expectedPath) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["path"],
+      message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
+    });
+  }
+});
+var PursuitResult = external_exports.object({
+  summary: external_exports.string().min(1),
+  outcome: external_exports.enum(["complete", "needs_attention", "blocked", "failed"]),
+  verification_status: external_exports.enum(["passed", "failed"]),
+  review_verdict: PursuitReviewVerdict,
+  total_pursuits: external_exports.number().int().positive(),
+  completed_count: external_exports.number().int().nonnegative(),
+  skipped_count: external_exports.number().int().nonnegative(),
+  blocked_count: external_exports.number().int().nonnegative(),
+  failed_count: external_exports.number().int().nonnegative(),
+  serial_code_writes: external_exports.literal(true),
+  evidence_links: external_exports.array(PursuitResultReportPointer).length(6)
+}).strict().superRefine((result, ctx) => {
+  const accounted = result.completed_count + result.skipped_count + result.blocked_count + result.failed_count;
+  if (accounted !== result.total_pursuits) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["total_pursuits"],
+      message: "total_pursuits must equal completed + skipped + blocked + failed counts"
+    });
+  }
+  if (result.outcome === "complete") {
+    if (result.verification_status !== "passed") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["verification_status"],
+        message: "verification_status must be 'passed' when outcome is 'complete'"
+      });
+    }
+    if (result.review_verdict !== "clean") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["review_verdict"],
+        message: "review_verdict must be 'clean' when outcome is 'complete'"
+      });
+    }
+    if (result.blocked_count > 0 || result.failed_count > 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["outcome"],
+        message: "outcome must not be 'complete' when pursuits are blocked or failed"
+      });
+    }
+    if (result.skipped_count > 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["outcome"],
+        message: "outcome must not be 'complete' when pursuits are skipped"
+      });
+    }
+  }
+});
+
+// dist/flows/pursue/writers/close.js
+var POINTERS3 = [
+  { report_id: "pursuit.contract", schema: "pursuit.contract@v1" },
+  { report_id: "pursuit.graph", schema: "pursuit.graph@v1" },
+  { report_id: "pursuit.wave-plan", schema: "pursuit.wave-plan@v1" },
+  { report_id: "pursuit.batch", schema: "pursuit.batch@v1" },
+  { report_id: "pursuit.verification", schema: "pursuit.verification@v1" },
+  { report_id: "pursuit.review", schema: "pursuit.review@v1" }
+];
+function assertBatchCoversContract(contract, batch) {
+  const expected = new Set(contract.pursuits.map((pursuit) => pursuit.id));
+  const seen = /* @__PURE__ */ new Set();
+  const issues = [];
+  for (const item of [...batch.completed, ...batch.skipped, ...batch.blocked, ...batch.failed]) {
+    if (!expected.has(item.pursuit_id)) {
+      issues.push(`unknown pursuit id '${item.pursuit_id}'`);
+      continue;
+    }
+    if (seen.has(item.pursuit_id)) {
+      issues.push(`duplicate pursuit id '${item.pursuit_id}'`);
+      continue;
+    }
+    seen.add(item.pursuit_id);
+  }
+  for (const id of expected) {
+    if (!seen.has(id))
+      issues.push(`missing pursuit id '${id}'`);
+  }
+  if (issues.length > 0) {
+    throw new Error(`pursuit.batch@v1 does not cover pursuit.contract@v1: ${issues.join("; ")}`);
+  }
+}
+var pursuitCloseBuilder = {
+  resultSchemaName: "pursuit.result@v1",
+  reads: [
+    { name: "contract", schema: "pursuit.contract@v1", required: true },
+    { name: "graph", schema: "pursuit.graph@v1", required: true },
+    { name: "wavePlan", schema: "pursuit.wave-plan@v1", required: true },
+    { name: "batch", schema: "pursuit.batch@v1", required: true },
+    { name: "verification", schema: "pursuit.verification@v1", required: true },
+    { name: "review", schema: "pursuit.review@v1", required: true }
+  ],
+  build(context) {
+    const contract = PursuitContract.parse(context.inputs.contract);
+    PursuitGraph.parse(context.inputs.graph);
+    PursuitWavePlan.parse(context.inputs.wavePlan);
+    const batch = PursuitBatch.parse(context.inputs.batch);
+    const verification = PursuitVerification.parse(context.inputs.verification);
+    const review = PursuitReview.parse(context.inputs.review);
+    assertBatchCoversContract(contract, batch);
+    const completedCount = batch.completed.length;
+    const skippedCount = batch.skipped.length;
+    const blockedCount = batch.blocked.length;
+    const failedCount = batch.failed.length;
+    const verificationOk = verification.overall_status === "passed";
+    const outcome = failedCount > 0 || !verificationOk || review.verdict === "blocked" ? "failed" : blockedCount > 0 || batch.verdict === "blocked" ? "blocked" : skippedCount > 0 || review.verdict === "needs-followup" || batch.verdict === "partial" ? "needs_attention" : "complete";
+    return PursuitResult.parse({
+      summary: `Pursuits result for ${contract.objective}: ${batch.summary}`,
+      outcome,
+      verification_status: verification.overall_status,
+      review_verdict: review.verdict,
+      total_pursuits: contract.pursuits.length,
+      completed_count: completedCount,
+      skipped_count: skippedCount,
+      blocked_count: blockedCount,
+      failed_count: failedCount,
+      serial_code_writes: true,
+      evidence_links: POINTERS3.map((pointer) => ({
+        ...pointer,
+        path: reportPathForSchemaInCompiledFlow(context.flow, pointer.schema)
+      }))
+    });
+  }
+};
+
+// dist/flows/pursue/writers/contract.js
+var DEFAULT_CHECK_IN_TRIGGERS = [
+  "The work requires a product or design decision that is not implied by the goal.",
+  "The likely change crosses a high-risk boundary or irreversible operation.",
+  "The requested proof cannot be discovered from the project.",
+  "The implementation would require parallel code writes, which Pursuits V1 blocks."
+];
+function slugFor(index) {
+  return `pursuit-${index + 1}`;
+}
+function stripListMarker(line) {
+  return line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, "").trim();
+}
+function splitPursuits(goal) {
+  const lines = goal.split(/\r?\n/).map((line) => stripListMarker(line)).filter((line) => line.length > 0);
+  if (lines.length > 1)
+    return lines;
+  const semicolonParts = goal.split(";").map((part) => part.trim()).filter((part) => part.length > 0);
+  return semicolonParts.length > 1 ? semicolonParts : [goal.trim()];
+}
+function estimatedTouchSet(text) {
+  const pathMatches = text.match(/(?:[\w.-]+\/)+[\w.-]+\.(?:ts|tsx|js|jsx|json|md|mjs|cjs|css|html|yml|yaml)/g);
+  const commandMatches = text.match(/\bnpm run [a-z0-9:-]+\b/gi);
+  const generatedOutputs = (pathMatches ?? []).filter((path) => path.startsWith("generated/") || path.startsWith("plugins/") || path.includes("/generated/") || path.includes("/plugins/"));
+  return {
+    paths: [...new Set(pathMatches ?? [])],
+    symbols: [],
+    commands: [...new Set(commandMatches ?? [])],
+    generated_outputs: [...new Set(generatedOutputs)]
+  };
+}
+function riskFor(touchSet, text) {
+  if (touchSet.generated_outputs.length > 0)
+    return "high";
+  if (/\b(migrate|rewrite|schema|runtime|auth|security|delete|remove)\b/i.test(text)) {
+    return "high";
+  }
+  if (touchSet.paths.length > 1 || /\b(refactor|integration|flow|route|verification)\b/i.test(text)) {
+    return "medium";
+  }
+  return "low";
+}
+var pursuitContractComposeBuilder = {
+  resultSchemaName: "pursuit.contract@v1",
+  build(context) {
+    const goal = context.goal.trim();
+    const verificationCommands = requireResolvedVerificationCommands({
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
+      goal,
+      requestedNeeds: ["general"],
+      commandIdPrefix: "pursuit",
+      timeoutMs: 12e4,
+      maxOutputBytes: 2e5
+    });
+    const pursuits = splitPursuits(goal).map((item, index) => {
+      const touchSet = estimatedTouchSet(item);
+      return {
+        id: slugFor(index),
+        title: item.length > 80 ? `${item.slice(0, 77)}...` : item,
+        goal: item,
+        scope: item,
+        assumptions: [
+          "Circuit may gather context and execute engineering work inside the declared scope.",
+          "Code-changing work is serialized in Pursuits V1 even when discovery can run in parallel."
+        ],
+        estimated_touch_set: touchSet,
+        proof_plan: [
+          "Use project-discovered verification commands rather than assuming a fixed script exists.",
+          "Record actual files and evidence after the implementation batch runs."
+        ],
+        check_in_triggers: DEFAULT_CHECK_IN_TRIGGERS,
+        rollback_notes: [
+          "Stop and report rather than apply parallel writes.",
+          "Use the final actual touch set and git diff to recover any partial change."
+        ],
+        risk: riskFor(touchSet, item)
+      };
+    });
+    return PursuitContract.parse({
+      objective: goal,
+      pursuits,
+      execution_policy: {
+        code_writes: "serial-only",
+        read_only_parallelism: "allowed",
+        parallel_write_status: "blocked-until-safe-apply"
+      },
+      verification_command_candidates: verificationCommands
+    });
+  }
+};
+
+// dist/flows/pursue/writers/graph.js
+function setsOverlap(left, right) {
+  const rightSet = new Set(right);
+  return left.some((item) => rightSet.has(item));
+}
+function touchSetsOverlap(left, right) {
+  return setsOverlap(left.paths, right.paths) || setsOverlap(left.symbols, right.symbols) || setsOverlap(left.commands, right.commands) || setsOverlap(left.generated_outputs, right.generated_outputs);
+}
+var pursuitGraphComposeBuilder = {
+  resultSchemaName: "pursuit.graph@v1",
+  reads: [{ name: "contract", schema: "pursuit.contract@v1", required: true }],
+  build(context) {
+    const contract = PursuitContract.parse(context.inputs.contract);
+    const nodes = contract.pursuits.map((pursuit) => ({
+      id: pursuit.id,
+      goal: pursuit.goal,
+      estimated_touch_set: pursuit.estimated_touch_set,
+      risk: pursuit.risk,
+      status: "ready",
+      reason: pursuit.risk === "high" ? "High-risk pursuit is ready, but code-changing work remains serialized." : "Ready for coordinated execution."
+    }));
+    const edges = [];
+    for (let i = 0; i < contract.pursuits.length; i += 1) {
+      const left = contract.pursuits[i];
+      if (left === void 0)
+        continue;
+      for (let j = i + 1; j < contract.pursuits.length; j += 1) {
+        const right = contract.pursuits[j];
+        if (right === void 0)
+          continue;
+        if (touchSetsOverlap(left.estimated_touch_set, right.estimated_touch_set)) {
+          edges.push({
+            from: left.id,
+            to: right.id,
+            kind: "conflict",
+            reason: "Estimated touch sets overlap, so V1 serializes these pursuits."
+          });
+        } else {
+          edges.push({
+            from: left.id,
+            to: right.id,
+            kind: "composes-with",
+            reason: "No estimated touch-set overlap was found; discovery may run in parallel, but code writes still serialize in V1."
+          });
+        }
+      }
+    }
+    return PursuitGraph.parse({
+      verdict: "accept",
+      nodes,
+      edges,
+      serial_groups: [
+        {
+          id: "serial-code-writes",
+          pursuit_ids: contract.pursuits.map((pursuit) => pursuit.id),
+          reason: "Pursuits V1 serializes all code-changing work until safe worktree apply exists."
+        }
+      ],
+      parallel_read_only_groups: [
+        {
+          id: "parallel-discovery",
+          pursuit_ids: contract.pursuits.map((pursuit) => pursuit.id),
+          reason: "Read-only discovery can happen in parallel because it does not mutate the worktree."
+        }
+      ],
+      blocked: []
+    });
+  }
+};
+
+// dist/flows/pursue/writers/verification.js
+import { readFileSync as readFileSync10 } from "node:fs";
+var pursuitVerificationWriter = {
+  resultSchemaName: "pursuit.verification@v1",
+  loadCommands(context) {
+    const contractPath = reportPathForSchemaInCompiledFlow(context.flow, "pursuit.contract@v1");
+    if (!context.step.reads.includes(contractPath)) {
+      throw new Error(`pursuit.verification@v1 requires step '${context.step.id}' to read ${contractPath}`);
+    }
+    const contract = PursuitContract.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, contractPath), "utf8")));
+    return contract.verification_command_candidates;
+  },
+  buildResult(observations) {
+    const overallStatus = observations.some((o) => o.status === "failed") ? "failed" : "passed";
+    return PursuitVerification.parse({
+      overall_status: overallStatus,
+      commands: observations.map((o) => ({
+        command_id: o.command.id,
+        argv: o.command.argv,
+        cwd: o.command.cwd,
+        exit_code: o.exit_code,
+        status: o.status,
+        duration_ms: o.duration_ms,
+        stdout_summary: o.stdout_summary,
+        stderr_summary: o.stderr_summary
+      }))
+    });
+  }
+};
+
+// dist/flows/pursue/writers/wave-plan.js
+var pursuitWavePlanComposeBuilder = {
+  resultSchemaName: "pursuit.wave-plan@v1",
+  reads: [
+    { name: "contract", schema: "pursuit.contract@v1", required: true },
+    { name: "graph", schema: "pursuit.graph@v1", required: true }
+  ],
+  build(context) {
+    const contract = PursuitContract.parse(context.inputs.contract);
+    const graph = PursuitGraph.parse(context.inputs.graph);
+    const allPursuitIds = contract.pursuits.map((pursuit) => pursuit.id);
+    return PursuitWavePlan.parse({
+      verdict: "accept",
+      waves: [
+        {
+          id: "read-only-discovery",
+          kind: "read-only",
+          pursuit_ids: graph.parallel_read_only_groups[0]?.pursuit_ids ?? allPursuitIds,
+          execution: "parallel",
+          reason: "Gather context for each pursuit before code-changing work begins.",
+          re_ground_after: false
+        },
+        ...graph.serial_groups.map((group, index) => ({
+          id: index === 0 ? "serial-code-writes" : `serial-code-writes-${index + 1}`,
+          kind: "code-change",
+          pursuit_ids: group.pursuit_ids,
+          execution: "serial",
+          reason: group.reason,
+          re_ground_after: true
+        }))
+      ],
+      no_parallel_writes_reason: "Pursuits V1 does not apply parallel worktree edits. Code-changing work runs serially until safe apply and shared post-apply verification exist."
+    });
+  }
+};
+
+// dist/flows/pursue/index.js
+var PURSUE_SIGNALS = [
+  { label: "pursue prefix", pattern: /^\s*pursue\s*:/i },
+  {
+    label: "pursuit request",
+    pattern: /^\s*(?:please\s+)?(?:pursue|coordinate|handle)\b.*\b(?:pursuit|pursuits|ideas|goals|tracks)\b/i
+  },
+  {
+    label: "multiple autonomous goals",
+    pattern: /^\s*(?:please\s+)?(?:run|execute|coordinate)\b.*\b(?:multiple|several|parallel)\b.*\b(?:goals|ideas|changes|tracks)\b/i
+  }
+];
+var pursueCompiledFlowPackage = {
+  id: "pursue",
+  visibility: "public",
+  paths: {
+    schematic: "src/flows/pursue/schematic.json"
+  },
+  routing: {
+    order: 25,
+    signals: PURSUE_SIGNALS,
+    reasonForMatch(signal) {
+      return `matched ${signal.label}; routed to Pursue flow`;
+    }
+  },
+  relayReports: [
+    {
+      schemaName: "pursuit.batch@v1",
+      schema: PursuitBatch,
+      relayHint: pursuitBatchShapeHint.instruction
+    },
+    {
+      schemaName: "pursuit.review@v1",
+      schema: PursuitReview,
+      relayHint: pursuitReviewShapeHint.instruction
+    }
+  ],
+  reportSchemas: [
+    { schemaName: "pursuit.contract@v1", schema: PursuitContract },
+    { schemaName: "pursuit.graph@v1", schema: PursuitGraph },
+    { schemaName: "pursuit.wave-plan@v1", schema: PursuitWavePlan },
+    { schemaName: "pursuit.verification@v1", schema: PursuitVerification },
+    { schemaName: "pursuit.result@v1", schema: PursuitResult }
+  ],
+  writers: {
+    compose: [
+      pursuitContractComposeBuilder,
+      pursuitGraphComposeBuilder,
+      pursuitWavePlanComposeBuilder
+    ],
+    close: [pursuitCloseBuilder],
+    verification: [pursuitVerificationWriter],
+    checkpoint: []
+  }
+};
+
 // dist/flows/review/relay-hints.js
 var reviewRelayShapeHint = {
   kind: "structural",
@@ -14861,7 +15598,7 @@ var reviewIntakeComposeBuilder = {
 };
 
 // dist/flows/review/writers/result.js
-import { readFileSync as readFileSync10 } from "node:fs";
+import { readFileSync as readFileSync11 } from "node:fs";
 function reviewerRelayResultPath(flow, closeStep) {
   const closeStepId = closeStep.id;
   const reviewerRelayes = flow.steps.filter((candidate) => candidate.kind === "relay" && candidate.role === "reviewer" && candidate.routes.pass === closeStepId);
@@ -14902,8 +15639,8 @@ var reviewResultComposeBuilder = {
   // its own resolution.
   build(context) {
     const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, path), "utf8")));
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, path), "utf8")));
     return ReviewResult.parse({
       scope: intake.scope,
       findings: relayResult.findings,
@@ -15008,6 +15745,7 @@ var runtimeProofCompiledFlowPackage = {
 var flowPackages = [
   reviewCompiledFlowPackage,
   fixCompiledFlowPackage,
+  pursueCompiledFlowPackage,
   runtimeProofCompiledFlowPackage,
   buildCompiledFlowPackage,
   exploreCompiledFlowPackage
@@ -16855,7 +17593,7 @@ function isWaitingCheckpointStepOutcome(outcome) {
 }
 
 // dist/runtime/executors/checkpoint.js
-import { readFileSync as readFileSync11 } from "node:fs";
+import { readFileSync as readFileSync12 } from "node:fs";
 
 // dist/shared/recovery-route.js
 var RECOVERY_ROUTE_PRIORITY = [
@@ -16966,7 +17704,7 @@ async function executeCheckpoint(step, context) {
         responsePath: response.path
       });
       await context.files.writeJson(report, body);
-      checkpointReportSha256 = sha256Hex(readFileSync11(context.files.resolve(report), "utf8"));
+      checkpointReportSha256 = sha256Hex(readFileSync12(context.files.resolve(report), "utf8"));
       await context.trace.append({
         run_id: context.runId,
         kind: "step.report_written",
@@ -16982,7 +17720,7 @@ async function executeCheckpoint(step, context) {
       ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
     });
     await context.files.writeJson(request, requestBody);
-    const requestText = readFileSync11(context.files.resolve(request), "utf8");
+    const requestText = readFileSync12(context.files.resolve(request), "utf8");
     await context.trace.append({
       run_id: context.runId,
       kind: "checkpoint.requested",
@@ -17057,7 +17795,7 @@ async function executeCheckpoint(step, context) {
 }
 
 // dist/runtime/executors/compose.js
-import { readFileSync as readFileSync12 } from "node:fs";
+import { readFileSync as readFileSync13 } from "node:fs";
 
 // dist/flows/registries/close-writers/registry.js
 var REGISTRY2 = buildCloseRegistry(flowPackages);
@@ -17106,7 +17844,7 @@ function resolveComposeReadPaths(builder, flow, step) {
 
 // dist/runtime/executors/compose.js
 function readJsonReport(context, path) {
-  return JSON.parse(readFileSync12(context.files.resolve(path), "utf8"));
+  return JSON.parse(readFileSync13(context.files.resolve(path), "utf8"));
 }
 function readOptionalJsonReport(context, path, required) {
   try {
@@ -18369,7 +19107,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync4, readFileSync as readFileSync13 } from "node:fs";
+import { existsSync as existsSync4, readFileSync as readFileSync14 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -18449,7 +19187,7 @@ function composeRelayPrompt(step, runFolder, loadedSkills = []) {
     if (!existsSync4(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync13(abs, "utf8")}`;
+${readFileSync14(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   return [
@@ -18469,7 +19207,7 @@ ${readFileSync13(abs, "utf8")}`;
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync5, readFileSync as readFileSync14, readdirSync } from "node:fs";
+import { existsSync as existsSync5, readFileSync as readFileSync15, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join4, resolve as resolve4 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
@@ -18540,7 +19278,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync14(candidate.path, "utf8");
+    text = readFileSync15(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -21353,7 +22091,7 @@ async function executeSubRun(step, context) {
 
 // dist/runtime/executors/verification.js
 import { spawnSync as spawnSync3 } from "node:child_process";
-import { existsSync as existsSync6, lstatSync as lstatSync4, readFileSync as readFileSync15, realpathSync as realpathSync3 } from "node:fs";
+import { existsSync as existsSync6, lstatSync as lstatSync4, readFileSync as readFileSync16, realpathSync as realpathSync3 } from "node:fs";
 import { isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve5 } from "node:path";
 
 // dist/flows/registries/verification-writers/registry.js
@@ -21456,7 +22194,7 @@ function preflightPackageScript(command, cwdAbs) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync15(packageJsonPath, "utf8"));
+    parsed = JSON.parse(readFileSync16(packageJsonPath, "utf8"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' could not parse package.json at cwd ${JSON.stringify(command.cwd)}: ${message}.`);
@@ -21627,7 +22365,7 @@ function createDefaultExecutors(options = {}) {
 }
 
 // dist/runtime/projections/progress.js
-import { readFileSync as readFileSync17 } from "node:fs";
+import { readFileSync as readFileSync18 } from "node:fs";
 import { join as join10 } from "node:path";
 
 // dist/schemas/progress-event.js
@@ -21909,7 +22647,7 @@ function compiledFlowMayInvokeWriteCapableWorker(flow) {
 }
 
 // dist/runtime/projections/tournament-checkpoint-context.js
-import { readFileSync as readFileSync16 } from "node:fs";
+import { readFileSync as readFileSync17 } from "node:fs";
 import { join as join9 } from "node:path";
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -21921,7 +22659,7 @@ function boundedText(value, max) {
 }
 function readJson2(runDir, path) {
   try {
-    return JSON.parse(readFileSync16(join9(runDir, path), "utf8"));
+    return JSON.parse(readFileSync17(join9(runDir, path), "utf8"));
   } catch {
     return void 0;
   }
@@ -22107,7 +22845,7 @@ function reportTaskListProgress(input) {
   });
 }
 function readJsonReport2(runDir, reportPath) {
-  return JSON.parse(readFileSync17(join10(runDir, reportPath), "utf8"));
+  return JSON.parse(readFileSync18(join10(runDir, reportPath), "utf8"));
 }
 function warningRecordsFromReport(body) {
   if (body === null || typeof body !== "object" || Array.isArray(body))
@@ -22198,7 +22936,7 @@ function stringArray(value) {
 }
 function checkpointPrompt(requestPath) {
   try {
-    const raw = JSON.parse(readFileSync17(requestPath, "utf8"));
+    const raw = JSON.parse(readFileSync18(requestPath, "utf8"));
     if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
       const prompt = raw.prompt;
       if (typeof prompt === "string" && prompt.length > 0)
@@ -23349,7 +24087,7 @@ function declaredCheckpointRequestPath(step) {
 }
 function readCheckpointRequestContext(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
-  const requestText = readFileSync18(requestAbs, "utf8");
+  const requestText = readFileSync19(requestAbs, "utf8");
   if (sha256Hex(requestText) !== input.expectedRequestHash) {
     throw new Error("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
@@ -23628,7 +24366,7 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync7, readFileSync as readFileSync19 } from "node:fs";
+import { existsSync as existsSync7, readFileSync as readFileSync20 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join12, resolve as resolve6 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit-next", "config.yaml"];
@@ -23650,7 +24388,7 @@ function loadConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve6(sourcePath);
   if (!existsSync7(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync19(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync20(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -23929,7 +24667,7 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync9, mkdirSync, readFileSync as readFileSync21, rmSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync9, mkdirSync, readFileSync as readFileSync22, rmSync, writeFileSync } from "node:fs";
 import { dirname as dirname6, join as join13 } from "node:path";
 
 // dist/schemas/operator-summary.js
@@ -24247,7 +24985,7 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync8, readFileSync as readFileSync20 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync21 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -24255,7 +24993,7 @@ function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
   if (!existsSync8(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync20(path, "utf8"));
+  const parsed = JSON.parse(readFileSync21(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -24642,6 +25380,28 @@ var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
     details: buildFixDetails(flowReport)
   };
 };
+var pursueProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
+  const total = numberField(flowReport, "total_pursuits");
+  const completed = numberField(flowReport, "completed_count") ?? 0;
+  const skipped = numberField(flowReport, "skipped_count") ?? 0;
+  const blocked = numberField(flowReport, "blocked_count") ?? 0;
+  const failed = numberField(flowReport, "failed_count") ?? 0;
+  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
+  const review = stringField2(flowReport, "review_verdict") ?? "unknown";
+  const countPrefix = total === void 0 ? "" : `${completed}/${total} ${total === 1 ? "pursuit" : "pursuits"} completed. `;
+  const details = [
+    `Code-changing work was serialized. Skipped: ${skipped}. Blocked: ${blocked}. Failed: ${failed}.`,
+    `Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`
+  ];
+  const summaryDetail = flowSummaryDetail(flowReport);
+  if (summaryDetail !== void 0)
+    details.unshift(summaryDetail);
+  return {
+    headline: `Circuit: Pursue finished with outcome ${outcome}. ${countPrefix}Verification: ${friendlyVerificationStatus(verification)}.`,
+    details
+  };
+};
 var defaultProjector = ({ resultSummary: resultSummary2 }) => ({
   headline: resultSummary2,
   details: []
@@ -24650,6 +25410,7 @@ var SUMMARY_PROJECTORS = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  pursue: pursueProjector,
   review: reviewProjector
 };
 function projectSummary(input) {
@@ -24663,7 +25424,7 @@ function readPriorRoute(runFolder) {
   if (!existsSync9(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync21(path, "utf8"));
+    const raw = JSON.parse(readFileSync22(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -24893,12 +25654,12 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync10, mkdirSync as mkdirSync2, readFileSync as readFileSync23, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync10, mkdirSync as mkdirSync2, readFileSync as readFileSync24, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname8, join as join14, resolve as resolve8 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync22 } from "node:fs";
+import { readFileSync as readFileSync23 } from "node:fs";
 import { dirname as dirname7, relative as relative5, resolve as resolve7 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
@@ -24932,7 +25693,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync22(resolve7(dirname7(resolve7(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync23(resolve7(dirname7(resolve7(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -25158,7 +25919,7 @@ function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
     if (!existsSync10(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync23(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync24(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -25238,7 +25999,7 @@ function publishManifest(input) {
     custom_flows: []
   };
   if (existsSync10(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync23(manifestPath(input.home), "utf8"));
+    existing = JSON.parse(readFileSync24(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -25282,7 +26043,7 @@ function writeDraft(input) {
 }
 function loadDraftFlow(home, slug) {
   const path = join14(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync23(path, "utf8")));
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync24(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
@@ -25295,10 +26056,10 @@ function publishDraft(input) {
   const customFlowRoot = join14(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join14(skillRoot, "SKILL.md"), readFileSync23(join14(draft, "SKILL.md"), "utf8"));
-  writeText(join14(skillRoot, "circuit.yaml"), readFileSync23(join14(draft, "circuit.yaml"), "utf8"));
-  writeText(join14(customFlowRoot, "circuit.json"), readFileSync23(join14(draft, "circuit.json"), "utf8"));
-  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync23(join14(draft, "command.md"), "utf8"));
+  writeText(join14(skillRoot, "SKILL.md"), readFileSync24(join14(draft, "SKILL.md"), "utf8"));
+  writeText(join14(skillRoot, "circuit.yaml"), readFileSync24(join14(draft, "circuit.yaml"), "utf8"));
+  writeText(join14(customFlowRoot, "circuit.json"), readFileSync24(join14(draft, "circuit.json"), "utf8"));
+  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync24(join14(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -25432,7 +26193,7 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3, readFileSync as readFileSync26, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3, readFileSync as readFileSync27, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import { dirname as dirname9, join as join18, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -25442,13 +26203,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve9 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync24, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync25, writeFileSync as writeFileSync3 } from "node:fs";
 import { join as join15 } from "node:path";
 function manifestSnapshotPath(runFolder) {
   return join15(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync24(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync25(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -25636,14 +26397,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync25 } from "node:fs";
+import { readFileSync as readFileSync26 } from "node:fs";
 import { join as join17 } from "node:path";
 function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
   const tracePath = join17(runFolder, "trace.ndjson");
-  const text = readFileSync25(tracePath, "utf8");
+  const text = readFileSync26(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -25828,7 +26589,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync25(requestAbs, "utf8");
+    requestText = readFileSync26(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -26549,7 +27310,7 @@ function handoffBrief(args) {
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync26(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync27(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
@@ -26561,7 +27322,7 @@ function handoffBrief(args) {
   }
   let record;
   try {
-    record = ContinuityRecord.parse(JSON.parse(readFileSync26(recordAbs, "utf8")));
+    record = ContinuityRecord.parse(JSON.parse(readFileSync27(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -26594,7 +27355,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync26(0, "utf8");
+  const raw = readFileSync27(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -26715,7 +27476,7 @@ function defaultHooksConfig() {
 function readHooksConfig(path) {
   if (!existsSync12(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync26(path, "utf8"));
+  const parsed = JSON.parse(readFileSync27(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -27170,7 +27931,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync26(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync27(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -27532,7 +28293,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync27(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync28(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -27843,7 +28604,7 @@ function loadFixture(fixturePath) {
   if (!existsSync13(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync27(fixturePath);
+  const bytes = readFileSync28(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -27887,7 +28648,7 @@ function customFlowArchetype(input) {
     return void 0;
   try {
     const flowRoot2 = resolve11(input.args.flowRoot);
-    const manifest = JSON.parse(readFileSync27(resolve11(dirname10(flowRoot2), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync28(resolve11(dirname10(flowRoot2), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
       return void 0;
     }
@@ -28002,7 +28763,7 @@ async function main(argv, options = {}) {
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress2 === void 0 ? {} : { progress: progress2 }
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync28(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -28153,7 +28914,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync28(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

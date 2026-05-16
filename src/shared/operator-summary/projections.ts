@@ -212,6 +212,31 @@ const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
   } satisfies SummaryProjection;
 };
 
+const pursueProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
+  const total = numberField(flowReport, 'total_pursuits');
+  const completed = numberField(flowReport, 'completed_count') ?? 0;
+  const skipped = numberField(flowReport, 'skipped_count') ?? 0;
+  const blocked = numberField(flowReport, 'blocked_count') ?? 0;
+  const failed = numberField(flowReport, 'failed_count') ?? 0;
+  const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
+  const review = stringField(flowReport, 'review_verdict') ?? 'unknown';
+  const countPrefix =
+    total === undefined
+      ? ''
+      : `${completed}/${total} ${total === 1 ? 'pursuit' : 'pursuits'} completed. `;
+  const details = [
+    `Code-changing work was serialized. Skipped: ${skipped}. Blocked: ${blocked}. Failed: ${failed}.`,
+    `Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
+  ];
+  const summaryDetail = flowSummaryDetail(flowReport);
+  if (summaryDetail !== undefined) details.unshift(summaryDetail);
+  return {
+    headline: `Circuit: Pursue finished with outcome ${outcome}. ${countPrefix}Verification: ${friendlyVerificationStatus(verification)}.`,
+    details,
+  } satisfies SummaryProjection;
+};
+
 // Default projection used when no per-flow projector is registered. The
 // resultSummary is the run-result summary string; the writer's overlay code
 // adds run-note framing on top, so leaving details empty here keeps the
@@ -225,6 +250,7 @@ export const SUMMARY_PROJECTORS: Partial<Record<string, SummaryProjector>> = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  pursue: pursueProjector,
   review: reviewProjector,
 };
 

@@ -35,8 +35,11 @@ export function acceptedSchematicStagesForBlock(
     case 'diagnose':
       return ['analyze'];
     case 'plan':
+    case 'coordinate-pursuits':
     case 'queue':
       return ['plan'];
+    case 'pursue':
+      return ['frame'];
     case 'act':
     case 'batch':
       return ['act'];

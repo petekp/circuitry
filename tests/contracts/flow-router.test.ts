@@ -7,7 +7,9 @@ describe('flow router classifier', () => {
     // Order is incidental — the router's evaluation order comes from
     // each package's routing.order, not from this array. Asserting set
     // membership keeps the test stable across catalog reordering.
-    expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(['build', 'explore', 'fix', 'review'].sort());
+    expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(
+      ['build', 'explore', 'fix', 'pursue', 'review'].sort(),
+    );
   });
 
   it('routes review/audit-style tasks to the review flow', () => {
@@ -128,6 +130,21 @@ describe('flow router classifier', () => {
     for (const task of cases) {
       const decision = classifyCompiledFlowTask(task);
       expect(decision.flowName, task).toBe('build');
+      expect(decision.source).toBe('classifier');
+      expect(decision.matched_signal).toBeDefined();
+    }
+  });
+
+  it('routes multi-pursuit coordination tasks to the pursue flow', () => {
+    const cases = [
+      'pursue: fix auth, update docs, and improve verification without collisions',
+      'coordinate multiple goals across the runtime and plugin package',
+      'please handle several pursuits without overlapping file edits',
+    ];
+
+    for (const task of cases) {
+      const decision = classifyCompiledFlowTask(task);
+      expect(decision.flowName, task).toBe('pursue');
       expect(decision.source).toBe('classifier');
       expect(decision.matched_signal).toBeDefined();
     }

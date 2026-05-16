@@ -1,0 +1,318 @@
+{
+  "schema_version": "1",
+  "id": "pursue",
+  "title": "Pursue Schematic",
+  "purpose": "Pursue flow: turn one or more rough operator ideas into pursuit contracts, coordinate their order, execute code-changing work serially, verify, review for interference, and close with evidence.",
+  "status": "active",
+  "version": "0.1.0",
+  "starts_at": "contract-step",
+  "initial_contracts": ["task.intake@v1", "route.decision@v1", "verification.plan@v1"],
+  "contract_aliases": [
+    {
+      "generic": "flow.brief@v1",
+      "actual": "pursuit.contract@v1"
+    },
+    {
+      "generic": "plan.strategy@v1",
+      "actual": "pursuit.wave-plan@v1"
+    },
+    {
+      "generic": "work.queue@v1",
+      "actual": "pursuit.graph@v1"
+    },
+    {
+      "generic": "batch.result@v1",
+      "actual": "pursuit.batch@v1"
+    },
+    {
+      "generic": "change.evidence@v1",
+      "actual": "pursuit.batch@v1"
+    },
+    {
+      "generic": "verification.result@v1",
+      "actual": "pursuit.verification@v1"
+    },
+    {
+      "generic": "review.verdict@v1",
+      "actual": "pursuit.review@v1"
+    },
+    {
+      "generic": "flow.result@v1",
+      "actual": "pursuit.result@v1"
+    }
+  ],
+  "entry": {
+    "signals": {
+      "include": ["pursue", "pursuit", "coordinate pursuits", "multiple autonomous goals"],
+      "exclude": []
+    },
+    "intent_prefixes": ["pursue"]
+  },
+  "entry_modes": [
+    {
+      "name": "default",
+      "depth": "standard",
+      "description": "Default Pursue entry mode."
+    },
+    {
+      "name": "autonomous",
+      "depth": "autonomous",
+      "description": "Autonomous Pursue entry mode with the same serial-write safety policy."
+    }
+  ],
+  "stage_path_policy": {
+    "mode": "partial",
+    "omits": ["analyze"],
+    "rationale": "Pursuits V1 folds read-only discovery policy into the coordination graph before acting; a separate Analyze stage can be added when dynamic discovery fanout lands."
+  },
+  "stages": [
+    {
+      "canonical": "frame",
+      "id": "frame-stage",
+      "title": "Frame"
+    },
+    {
+      "canonical": "plan",
+      "id": "plan-stage",
+      "title": "Coordinate"
+    },
+    {
+      "canonical": "act",
+      "id": "act-stage",
+      "title": "Execute"
+    },
+    {
+      "canonical": "verify",
+      "id": "verify-stage",
+      "title": "Verify"
+    },
+    {
+      "canonical": "review",
+      "id": "review-stage",
+      "title": "Review"
+    },
+    {
+      "canonical": "close",
+      "id": "close-stage",
+      "title": "Close"
+    }
+  ],
+  "items": [
+    {
+      "id": "contract-step",
+      "title": "Frame - create pursuit contract",
+      "stage": "frame",
+      "input": {
+        "intake": "task.intake@v1",
+        "route": "route.decision@v1"
+      },
+      "output": "pursuit.contract@v1",
+      "evidence_requirements": [
+        "ownership contract",
+        "estimated touch set",
+        "proof plan",
+        "check-in triggers"
+      ],
+      "execution": {
+        "kind": "compose"
+      },
+      "protocol": "pursuit-contract@v1",
+      "writes": {
+        "report_path": "reports/pursuit/contract.json"
+      },
+      "check": {
+        "required": ["objective", "pursuits", "verification_command_candidates"]
+      },
+      "routes": {
+        "continue": "graph-step",
+        "stop": "@stop"
+      },
+      "block": "pursue"
+    },
+    {
+      "id": "graph-step",
+      "title": "Coordinate - build pursuit graph",
+      "stage": "plan",
+      "input": {
+        "contract": "pursuit.contract@v1"
+      },
+      "output": "pursuit.graph@v1",
+      "evidence_requirements": [
+        "dependency graph",
+        "conflict analysis",
+        "serial groups",
+        "parallel read-only groups"
+      ],
+      "execution": {
+        "kind": "compose"
+      },
+      "protocol": "pursuit-graph@v1",
+      "writes": {
+        "report_path": "reports/pursuit/graph.json"
+      },
+      "check": {
+        "required": ["nodes", "serial_groups", "parallel_read_only_groups"]
+      },
+      "routes": {
+        "continue": "wave-plan-step",
+        "stop": "@stop"
+      },
+      "block": "coordinate-pursuits"
+    },
+    {
+      "id": "wave-plan-step",
+      "title": "Plan - order execution waves",
+      "stage": "plan",
+      "input": {
+        "brief": "pursuit.contract@v1",
+        "context": "pursuit.graph@v1"
+      },
+      "output": "pursuit.wave-plan@v1",
+      "evidence_requirements": ["ordered steps", "risk notes", "proof strategy"],
+      "execution": {
+        "kind": "compose"
+      },
+      "protocol": "pursuit-wave-plan@v1",
+      "writes": {
+        "report_path": "reports/pursuit/wave-plan.json"
+      },
+      "check": {
+        "required": ["waves", "no_parallel_writes_reason"]
+      },
+      "routes": {
+        "continue": "batch-step",
+        "stop": "@stop"
+      },
+      "block": "plan"
+    },
+    {
+      "id": "batch-step",
+      "title": "Execute - run serialized pursuit batch",
+      "stage": "act",
+      "input": {
+        "queue": "pursuit.graph@v1",
+        "brief": "pursuit.contract@v1",
+        "plan": "pursuit.wave-plan@v1"
+      },
+      "output": "pursuit.batch@v1",
+      "evidence_requirements": [
+        "completed items",
+        "skipped items",
+        "blocked items",
+        "failed items"
+      ],
+      "execution": {
+        "kind": "relay",
+        "role": "implementer"
+      },
+      "protocol": "pursuit-batch@v1",
+      "writes": {
+        "report_path": "reports/pursuit/batch.json",
+        "request_path": "reports/relay/pursuit-batch.request.json",
+        "receipt_path": "reports/relay/pursuit-batch.receipt.txt",
+        "result_path": "reports/relay/pursuit-batch.result.json"
+      },
+      "check": {
+        "pass": ["accept", "partial"]
+      },
+      "routes": {
+        "continue": "verify-step",
+        "retry": "batch-step",
+        "stop": "@stop"
+      },
+      "block": "batch"
+    },
+    {
+      "id": "verify-step",
+      "title": "Verify - run Pursue proof commands",
+      "stage": "verify",
+      "input": {
+        "proof": "verification.plan@v1",
+        "brief": "pursuit.contract@v1",
+        "change": "pursuit.batch@v1"
+      },
+      "output": "pursuit.verification@v1",
+      "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
+      "execution": {
+        "kind": "verification"
+      },
+      "protocol": "pursuit-verify@v1",
+      "writes": {
+        "report_path": "reports/pursuit/verification.json"
+      },
+      "check": {
+        "required": ["overall_status", "commands"]
+      },
+      "routes": {
+        "continue": "review-step",
+        "retry": "batch-step",
+        "stop": "@stop"
+      },
+      "block": "run-verification"
+    },
+    {
+      "id": "review-step",
+      "title": "Review - check pursuit coordination",
+      "stage": "review",
+      "input": {
+        "brief": "pursuit.contract@v1",
+        "change": "pursuit.batch@v1",
+        "verification": "pursuit.verification@v1"
+      },
+      "output": "pursuit.review@v1",
+      "evidence_requirements": ["verdict", "findings", "confidence", "required fixes"],
+      "execution": {
+        "kind": "relay",
+        "role": "reviewer"
+      },
+      "protocol": "pursuit-review@v1",
+      "writes": {
+        "report_path": "reports/pursuit/review.json",
+        "request_path": "reports/relay/pursuit-review.request.json",
+        "receipt_path": "reports/relay/pursuit-review.receipt.txt",
+        "result_path": "reports/relay/pursuit-review.result.json"
+      },
+      "check": {
+        "pass": ["clean", "needs-followup"]
+      },
+      "routes": {
+        "continue": "close-step",
+        "retry": "batch-step",
+        "stop": "@stop"
+      },
+      "block": "review"
+    },
+    {
+      "id": "close-step",
+      "title": "Close - summarize pursuit result",
+      "stage": "close",
+      "input": {
+        "brief": "pursuit.contract@v1",
+        "graph": "pursuit.graph@v1",
+        "plan": "pursuit.wave-plan@v1",
+        "verification": "pursuit.verification@v1",
+        "review": "pursuit.review@v1",
+        "batch": "pursuit.batch@v1"
+      },
+      "output": "pursuit.result@v1",
+      "evidence_requirements": ["outcome", "evidence pointers", "residual risks", "follow-ups"],
+      "execution": {
+        "kind": "compose"
+      },
+      "protocol": "pursuit-close@v1",
+      "writes": {
+        "report_path": "reports/pursuit-result.json"
+      },
+      "check": {
+        "required": ["summary", "outcome", "evidence_links"]
+      },
+      "routes": {
+        "complete": "@complete",
+        "stop": "@stop",
+        "handoff": "@handoff",
+        "escalate": "@escalate"
+      },
+      "block": "close-with-evidence"
+    }
+  ]
+}

@@ -8,6 +8,7 @@
 import { buildCompiledFlowPackage } from './build/index.js';
 import { exploreCompiledFlowPackage } from './explore/index.js';
 import { fixCompiledFlowPackage } from './fix/index.js';
+import { pursueCompiledFlowPackage } from './pursue/index.js';
 import { reviewCompiledFlowPackage } from './review/index.js';
 import { runtimeProofCompiledFlowPackage } from './runtime-proof/index.js';
 import type { CompiledFlowPackage } from './types.js';
@@ -15,6 +16,7 @@ import type { CompiledFlowPackage } from './types.js';
 export const flowPackages: readonly CompiledFlowPackage[] = [
   reviewCompiledFlowPackage,
   fixCompiledFlowPackage,
+  pursueCompiledFlowPackage,
   runtimeProofCompiledFlowPackage,
   buildCompiledFlowPackage,
   exploreCompiledFlowPackage,

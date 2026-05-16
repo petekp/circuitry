@@ -218,6 +218,56 @@
       }
     },
     {
+      "id": "pursue",
+      "title": "Pursue",
+      "purpose": "Turn a rough operator idea into a bounded autonomous ownership contract.",
+      "input_contracts": ["task.intake@v1", "route.decision@v1"],
+      "output_contract": "pursuit.contract@v1",
+      "action_surface": "orchestrator",
+      "produces_evidence": [
+        "ownership contract",
+        "estimated touch set",
+        "proof plan",
+        "check-in triggers"
+      ],
+      "check": {
+        "kind": "schema",
+        "description": "The pursuit contract must preserve the operator goal, declare scope, estimate likely touch points, and name when Circuit should check in."
+      },
+      "allowed_routes": ["continue", "ask", "stop"],
+      "human_interaction": "optional",
+      "host_capabilities": {
+        "claude": [],
+        "codex": [],
+        "non_interactive": []
+      }
+    },
+    {
+      "id": "coordinate-pursuits",
+      "title": "Coordinate Pursuits",
+      "purpose": "Prioritize multiple pursuit contracts by dependency, conflict risk, and safe composition.",
+      "input_contracts": ["pursuit.contract@v1"],
+      "output_contract": "pursuit.graph@v1",
+      "action_surface": "orchestrator",
+      "produces_evidence": [
+        "dependency graph",
+        "conflict analysis",
+        "serial groups",
+        "parallel read-only groups"
+      ],
+      "check": {
+        "kind": "coordination",
+        "description": "The graph must account for every pursuit and explain which work serializes, which discovery can run in parallel, and why."
+      },
+      "allowed_routes": ["continue", "ask", "stop"],
+      "human_interaction": "optional",
+      "host_capabilities": {
+        "claude": [],
+        "codex": [],
+        "non_interactive": []
+      }
+    },
+    {
       "id": "queue",
       "title": "Queue",
       "purpose": "Turn broad work into ordered items with state and risk class.",

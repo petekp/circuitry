@@ -81,6 +81,35 @@
       "unsupported_route_outcomes": ["connector-failed"]
     },
     {
+      "id": "pursue",
+      "source": "src/flows/pursue/schematic.json",
+      "routing": {
+        "routable": true,
+        "is_default": false,
+        "order": 25,
+        "signal_labels": ["multiple autonomous goals", "pursue prefix", "pursuit request"]
+      },
+      "entry_modes": ["autonomous", "default"],
+      "stages": ["Frame", "Coordinate", "Execute", "Verify", "Review", "Close"],
+      "reports": [
+        "pursuit.batch@v1",
+        "pursuit.contract@v1",
+        "pursuit.graph@v1",
+        "pursuit.result@v1",
+        "pursuit.review@v1",
+        "pursuit.verification@v1",
+        "pursuit.wave-plan@v1"
+      ],
+      "writers": {
+        "compose": 3,
+        "close": 1,
+        "verification": 1,
+        "checkpoint": 0
+      },
+      "route_outcomes": ["complete", "continue", "escalate", "handoff", "retry", "stop"],
+      "unsupported_route_outcomes": []
+    },
+    {
       "id": "build",
       "source": "src/flows/build/schematic.json",
       "command_path": "src/flows/build/command.md",
@@ -196,7 +225,7 @@
     "source": ["create", "handoff", "run"],
     "claude_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
     "codex_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
-    "claude_plugin_skills": ["build", "explore", "fix", "review"]
+    "claude_plugin_skills": ["build", "explore", "fix", "pursue", "review"]
   },
   "connectors": [
     {
@@ -561,6 +590,33 @@
       }
     },
     {
+      "id": "flow:pursue",
+      "kind": "flow",
+      "title": "pursue flow",
+      "status": "implemented",
+      "summary": "Flow pursue is registered in the catalog.",
+      "evidence": ["src/flows/pursue/schematic.json", "generated/flows/pursue/circuit.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": ["autonomous", "default"],
+        "stage_path": ["Frame", "Coordinate", "Execute", "Verify", "Review", "Close"],
+        "outputs": [
+          "pursuit.batch@v1",
+          "pursuit.contract@v1",
+          "pursuit.graph@v1",
+          "pursuit.result@v1",
+          "pursuit.review@v1",
+          "pursuit.verification@v1",
+          "pursuit.wave-plan@v1"
+        ],
+        "review": "Compiled review stages or reviewer relays are present.",
+        "verification": "Compiled verification steps write command-result reports before close.",
+        "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
+        "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder."
+      }
+    },
+    {
       "id": "flow:review",
       "kind": "flow",
       "title": "review flow",
@@ -862,6 +918,36 @@
       "status": "implemented",
       "summary": "fix declares entry mode lite.",
       "evidence": ["generated/flows/fix"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:pursue:autonomous",
+      "kind": "mode",
+      "title": "pursue autonomous",
+      "status": "implemented",
+      "summary": "pursue declares entry mode autonomous.",
+      "evidence": ["generated/flows/pursue"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:pursue:default",
+      "kind": "mode",
+      "title": "pursue default",
+      "status": "implemented",
+      "summary": "pursue declares entry mode default.",
+      "evidence": ["generated/flows/pursue"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1177,6 +1263,96 @@
       "status": "implemented",
       "summary": "stop maps to an executable compiled route.",
       "evidence": ["src/flows/fix/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:complete",
+      "kind": "route_outcome",
+      "title": "pursue route complete",
+      "status": "implemented",
+      "summary": "complete maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:continue",
+      "kind": "route_outcome",
+      "title": "pursue route continue",
+      "status": "implemented",
+      "summary": "continue maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:escalate",
+      "kind": "route_outcome",
+      "title": "pursue route escalate",
+      "status": "implemented",
+      "summary": "escalate maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:handoff",
+      "kind": "route_outcome",
+      "title": "pursue route handoff",
+      "status": "implemented",
+      "summary": "handoff maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:retry",
+      "kind": "route_outcome",
+      "title": "pursue route retry",
+      "status": "implemented",
+      "summary": "retry maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:pursue:stop",
+      "kind": "route_outcome",
+      "title": "pursue route stop",
+      "status": "implemented",
+      "summary": "stop maps to an executable compiled route.",
+      "evidence": ["src/flows/pursue/schematic.json"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],

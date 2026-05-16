@@ -7,7 +7,7 @@
 // runner ever regrows flow-specific knowledge in its close path, this test
 // breaks.
 //
-// The registry currently has three real builders: build, explore, and fix.
+// The registry has real builders for public flows that own close reports.
 // The synthetic builder is invoked through the runtime executor seam so the global
 // registry stays untouched.
 
@@ -127,10 +127,11 @@ afterEach(() => {
 });
 
 describe('close-with-evidence registry', () => {
-  it('exposes findCloseBuilder for the three real flows', () => {
+  it('exposes findCloseBuilder for the real close-enabled flows', () => {
     expect(findCloseBuilder('build.result@v1')?.resultSchemaName).toBe('build.result@v1');
     expect(findCloseBuilder('explore.result@v1')?.resultSchemaName).toBe('explore.result@v1');
     expect(findCloseBuilder('fix.result@v1')?.resultSchemaName).toBe('fix.result@v1');
+    expect(findCloseBuilder('pursuit.result@v1')?.resultSchemaName).toBe('pursuit.result@v1');
   });
 
   it('returns undefined for an unregistered schema', () => {

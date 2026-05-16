@@ -11,6 +11,8 @@ export const FLOW_BLOCK_IDS = [
   'act',
   'run-verification',
   'review',
+  'pursue',
+  'coordinate-pursuits',
   'queue',
   'batch',
   'risk-rollback-check',
@@ -45,6 +47,7 @@ export const FlowBlockCheckKind = z.enum([
   'review',
   'risk',
   'queue',
+  'coordination',
 ]);
 export type FlowBlockCheckKind = z.infer<typeof FlowBlockCheckKind>;
 
