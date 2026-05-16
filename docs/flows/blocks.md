@@ -93,7 +93,7 @@ Fix should contribute these reusable blocks:
 | Block | Why it is reusable |
 |---|---|
 | Regression Contract | Many change flows need expected behavior, actual behavior, and proof target. |
-| Diagnose Problem | Fix needs it directly; Migrate and Sweep also need "why this is risky or broken" analysis. |
+| Diagnose Problem | Fix needs it directly; Review also needs "why this is risky or broken" analysis. |
 | No-Repro Decision | Any flow can hit uncertain evidence and need operator choice. |
 | Optional Review Branch | Lite-style paths can skip review only when mode and evidence allow it. |
 | Conditional Close | Some flows close as fixed, not reproduced, partially complete, skipped, or handed off. |
@@ -165,7 +165,7 @@ Future work should start by asking:
 4. Which routes are allowed by mode?
 5. Which block is missing and should be built generically?
 
-This means Fix, Migrate, Sweep, and custom flows are not necessarily
+This means Build, Fix, Review, and custom flows are not necessarily
 separate implementation towers. They should be different schematics over
 a shared set of blocks.
 

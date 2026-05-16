@@ -30,7 +30,7 @@ export const fixContextShapeHint: SchemaShapeHint = {
   schema: 'fix.context@v1',
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixContext)),
-    'sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources — do not invent details that the sources do not support.',
+    'Read the relevant source and tests before reporting context. This step is read-only by intent: do not edit files, write files, or run commands that modify the checkout. Include the files, commands, or notes that define the bug boundary and the proof commands the operator expects. sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources — do not invent details that the sources do not support.',
     mechanicalTail('fix.context@v1', 'reports/fix/context.json'),
   ].join(' '),
 };
@@ -40,7 +40,7 @@ export const fixDiagnosisShapeHint: SchemaShapeHint = {
   schema: 'fix.diagnosis@v1',
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixDiagnosis)),
-    'evidence must contain at least one entry (file:line, command result, or report reference that supports the cause), expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" — if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
+    'Compare the failing behavior against the intended behavior before naming the cause. This step is read-only by intent: do not edit files, write files, or run commands that modify the checkout. Check whether the bug could have sibling edge cases, not only the first failing assertion. evidence must contain at least one entry (file:line, command result, or report reference that supports the cause), expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" — if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
     mechanicalTail('fix.diagnosis@v1', 'reports/fix/diagnosis.json'),
   ].join(' '),
 };
@@ -50,7 +50,7 @@ export const fixChangeShapeHint: SchemaShapeHint = {
   schema: 'fix.change@v1',
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixChange)),
-    'Make the smallest change that resolves the diagnosed cause. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry (test output, command result, or before/after observation that confirms the change works).',
+    'Make the smallest change that resolves the diagnosed cause and address every objective check named in the brief. Do not stop at the first green assertion if the brief names multiple formats, modes, or edge commands. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry (test output, command result, or before/after observation that confirms the change works).',
     '`evidence` is a JSON array of short distinct strings — one observation per element. It is a schema field name, not a request for prose. Even on retry attempts where you are summarizing prior verification output, keep each observation as its own array element.',
     mechanicalTail('fix.change@v1', 'reports/fix/change.json'),
   ].join(' '),
@@ -61,7 +61,7 @@ export const fixReviewShapeHint: SchemaShapeHint = {
   schema: 'fix.review@v1',
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixReview)),
-    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
+    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Look for missed edge cases, partially handled input variants, and changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
     'Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference.',
     mechanicalTail('fix.review@v1', 'reports/fix/review.json'),
   ].join(' '),

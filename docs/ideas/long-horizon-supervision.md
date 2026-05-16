@@ -110,10 +110,10 @@ the real additions.
 ## Design constraints to get right
 
 **Heartbeat cadence is per-run, not per-workflow-type.** A 4-hour
-Build doesn't want the same heartbeat as a 12-hour Migrate. Default
+Build doesn't want the same heartbeat as a 12-hour architecture change. Default
 something sane (every 30 minutes?) and let the operator tune it per
 run. Probably also wants a "max heartbeats per run" cap so a
-runaway supervisor can't burn budget overnight.
+runaway supervisor can't burn budget while unattended.
 
 **Supervisor must be cheap and *narrow*.** The supervisor's job is
 "is the trajectory still right?", not "review the diff line by
@@ -189,7 +189,7 @@ this idea solves a problem you don't currently have.
 
 Two reasons it might still be worth thinking about:
 
-1. **Marketplace fit.** "Circuit can run unattended overnight with a
+1. **Marketplace fit.** "Circuit can run unattended for long stretches with a
    supervisor that course-corrects and a status board you check in
    the morning" is a clean external value prop. Other workflow
    runners don't have this; the tweet suggests there's real demand
@@ -204,8 +204,8 @@ asks for it is exactly the trap to avoid.** Circuit's recent
 methodology strip cut a lot of speculative scaffolding. This idea
 should sit in `docs/ideas/` and stay there until either (a) you
 personally hit a long-horizon use case where you wish you had this,
-or (b) someone in the marketplace says "I want to run Circuit
-overnight." Until then, the recipe-pattern path — operator stitches
+or (b) someone in the marketplace says "I want to run Circuit unattended
+for long stretches." Until then, the recipe-pattern path — operator stitches
 together a supervisor by hand using existing tools — is the right
 level of investment.
 

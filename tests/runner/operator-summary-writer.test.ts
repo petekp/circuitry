@@ -335,7 +335,7 @@ describe('operator summary writer', () => {
     expect(written.summary.details).toContain('[LOW] (no text)');
   });
 
-  it('summarizes Build, Fix, and Migrate close reports with verification and review status', () => {
+  it('summarizes Build and Fix close reports with verification and review status', () => {
     const cases = [
       {
         flow: 'build',
@@ -391,26 +391,6 @@ describe('operator summary writer', () => {
           ],
         },
         expected: 'Circuit: Fix complete. Verification: passed. Review: accepted.',
-      },
-      {
-        flow: 'migrate',
-        label: 'Migrate',
-        relPath: 'reports/migrate-result.json',
-        body: {
-          summary: 'Migrate SDK: release approved',
-          outcome: 'complete',
-          verification_status: 'passed',
-          review_verdict: 'release-approved',
-          evidence_links: [
-            {
-              report_id: 'migrate.review',
-              path: 'reports/migrate/review.json',
-              schema: 'migrate.review@v1',
-            },
-          ],
-        },
-        expected:
-          'Circuit: Migrate finished with outcome complete. Verification: passed. Review: approved for release.',
       },
     ];
 
@@ -517,17 +497,17 @@ describe('operator summary writer', () => {
   });
 
   it('falls back to the run-level outcome when the flow-result file is missing instead of silently rendering complete', () => {
-    // No reports/migrate-result.json on disk — simulates the legacy @stop
+    // No reports/build-result.json on disk — simulates the legacy @stop
     // path where close-step never ran. Without the runOutcome fallback,
-    // the migrate projector would default outcome to 'complete' and
-    // contradict result.json's stopped outcome.
+    // the projector would default outcome to 'complete' and contradict
+    // result.json's stopped outcome.
     const stoppedResult = RunResult.parse({
       schema_version: 1,
       run_id: '87000000-0000-0000-0000-000000000007',
-      flow_id: 'migrate',
-      goal: 'run migrate',
+      flow_id: 'build',
+      goal: 'run build',
       outcome: 'stopped',
-      summary: 'migrate v0.1.0 closed 3 step(s) for goal "run migrate".',
+      summary: 'build v0.1.0 closed 3 step(s) for goal "run build".',
       closed_at: '2026-04-28T12:00:00.000Z',
       trace_entries_observed: 3,
       manifest_hash: 'abc123',
@@ -536,11 +516,11 @@ describe('operator summary writer', () => {
     const written = writeOperatorSummary({
       runFolder,
       runResult: stoppedResult,
-      route: { selectedFlow: 'migrate' },
+      route: { selectedFlow: 'build' },
     });
 
     expect(written.summary.headline).toBe(
-      'Circuit: Migrate finished with outcome stopped. Verification: unknown. Review: unknown.',
+      'Circuit: Build finished with outcome stopped. Verification: unknown. Review: unknown.',
     );
   });
 

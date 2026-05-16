@@ -350,7 +350,6 @@ export const ProofScenario = z
     category: z.enum([
       'doing-work',
       'deciding',
-      'maintenance',
       'continuity',
       'customization',
       'first-run',

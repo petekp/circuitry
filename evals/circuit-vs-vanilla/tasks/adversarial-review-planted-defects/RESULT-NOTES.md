@@ -22,7 +22,7 @@ Initial run hit a structural defect in Circuit's Review flow: the model produced
 
 Vanilla on the same input produced a complete review.
 
-This was a real product defect — the operator's natural vocabulary collided with Circuit's narrowed enum. Fixed by widening the enum and updating the relay-hint prompt + verdict logic. Other Circuit flows (build, fix, migrate, sweep) already used the 4-level vocabulary; Review was the outlier.
+This was a real product defect — the operator's natural vocabulary collided with Circuit's narrowed enum. Fixed by widening the enum and updating the relay-hint prompt + verdict logic. Other Circuit flows already used the 4-level vocabulary; Review was the outlier.
 
 ## Scoring (after fix)
 
@@ -140,9 +140,9 @@ The architectural changes outlined in Run 1 (adversarial second pass, tool-groun
 
 ### Implication for flow choice
 
-Build, Fix, and Migrate have plan-then-act and verification-gate steps that direct prompting cannot replicate by prompt engineering alone. They are structurally better testbeds for the 10x bar than Review.
+Build and Fix have plan-then-act and verification-gate steps that direct prompting cannot replicate by prompt engineering alone. They are structurally better testbeds for the 10x bar than Review.
 
-Recommendation: stop iterating on Review structured prompting. Either commit to one architectural change on Review (tool-grounded verification is the candidate based on this evidence) or pick Build/Fix/Migrate as the testbed for the 10x calibration and re-baseline there.
+Recommendation: stop iterating on Review structured prompting. Either commit to one architectural change on Review (tool-grounded verification is the candidate based on this evidence) or pick Build/Fix as the testbed for the 10x calibration and re-baseline there.
 
 ### What this experiment revealed
 
@@ -153,6 +153,6 @@ Recommendation: stop iterating on Review structured prompting. Either commit to 
 ## Suggested follow-ups (after Run 2)
 
 - Pick a single architectural change for Review (tool-grounded verification is the leading candidate from D6 evidence) and run a third comparison.
-- OR move calibration to Build/Fix/Migrate — they have verification-gate steps that direct prompting cannot replicate.
+- OR move calibration to Build/Fix — they have verification-gate steps that direct prompting cannot replicate.
 - Build a second adversarial-review task and run sonnet-medium on it before committing to either path; one task is not a baseline.
 - Audit the Verified-list mechanic for whether items in the list are actually defensible vs. confident-sounding placeholders.

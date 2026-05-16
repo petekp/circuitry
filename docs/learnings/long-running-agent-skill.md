@@ -129,8 +129,8 @@ discipline is worth lifting; its no-more-operator-input rule isn't.
 
 The skill's whole shape is end-to-end: one big run, one big goal.
 Circuit's flows are kind-of-work-specific — Build, Fix, Explore,
-Review, Migrate, Sweep — because the right shape for a fix isn't the
-right shape for a migration. We'd not collapse them into a single
+Review — because the right shape for a fix isn't the
+right shape for a review. We'd not collapse them into a single
 macro flow even if we shipped a Build flow tomorrow.
 
 ## The architectural disagreement

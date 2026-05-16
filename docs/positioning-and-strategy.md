@@ -24,7 +24,7 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 
 ### Long pitch (post-audit version, recommended for marketing surfaces)
 
-> Most people drive a coding agent with one long chat and hope. Circuit gives that work a shape — named ways to explore, build, fix, and sweep.
+> Most people drive a coding agent with one long chat and hope. Circuit gives that work a shape — named ways to explore, build, fix, and review.
 >
 > Each flow encodes the moves experienced AI engineers actually reach for: investigate before you build, plan before you act, verify before you review. The implementer isn't the reviewer — Circuit runs them as separate workers, the way frontier labs do. Every step demands evidence the agent has to produce; it can't close out without showing its work. Patterns most people only land on after months of trial and error. You get them as defaults.
 >
@@ -58,7 +58,7 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 
 | Claim | Status | Evidence |
 | --- | --- | --- |
-| Named ways to explore, build, fix, sweep | **Supported** | `src/flows/` directories; signal-routed entry per flow |
+| Named ways to explore, build, fix, review | **Supported** | `src/flows/` directories; signal-routed entry per flow |
 | Flows encode patterns experienced AI engineers reach for | **Strongly supported** | Build's stages: Frame→Plan→Act→Verify→Review→Close; explicit `evidence_requirements`; separate implementer/reviewer roles |
 | Each step is a modular unit of capability | **Supported** | `StepExecutionKind` enum: `compose | relay | verification | checkpoint | sub-run | fanout` |
 | Modules upgrade independently; flows inherit improvements | **Partially supported** | Versioning bone structure exists (`schema_version`, per-flow `version`, `candidate/active/deprecated`), but no distribution / auto-update channel exists yet |
@@ -242,7 +242,7 @@ Findings from a market scan in May 2026. The point: who is operating in the same
 
 The four properties Circuit has and direct competitors don't:
 
-1. **Flow taxonomy.** Competitors ship one pipeline. Circuit ships six different shapes for six kinds of work (Build / Explore / Repair / Migrate / Sweep / Review). *Different work needs different shapes* is a different theory of the field than *one universal pipeline.* Migrate and Sweep especially have no peer.
+1. **Flow taxonomy.** Competitors ship one pipeline. Circuit ships distinct shapes for Build, Explore, Fix, and Review. *Different work needs different shapes* is a different theory of the field than *one universal pipeline.*
 2. **Schema-versioned typed records.** Competitors produce markdown. Circuit's typed JSON reports are queryable in ways markdown isn't — the foundation for the project-memory positioning in Section 7.
 3. **Six-layer override chain + depth modes.** No other project found has this granularity. Per-step model/effort selection plus lite/standard/deep/autonomous as per-invocation choice is genuinely unique.
 4. **Custom flow shapes.** `/circuit:create` lets users author their own typed schematic flows that the engine runs as first-class peers to the built-in ones. Most competitors offer skill/agent extensibility, not flow-shape extensibility. (See Section 10 for the personalized-flow direction.)
@@ -261,17 +261,17 @@ The four properties Circuit has and direct competitors don't:
 - **YAML/JSON-defined flows as a product** (not a framework). `/circuit:create` is unusual.
 - **Per-step model/effort overrides** at six layers of granularity.
 - **Standalone Review surface** as a peer to Build (not a step inside Build).
-- **Migrate-shaped and Sweep-shaped flows** — the kinds of work the universal-pipeline competitors don't address well.
+- **Different flow shapes for thinking, changing, fixing, and reviewing** — the kinds of work the universal-pipeline competitors don't address well.
 
 ### Implications for the lead pitch
 
-The lead should surface flow taxonomy *early* and *visibly*. The current pitch has it in the second sentence (*"named ways to explore, build, fix, and sweep"*) but doesn't make the philosophical bet explicit. A reader pattern-matching to VexJoy or Superpowers will assume "named flows" means "one pipeline with named stages" rather than "different flow shapes for different kinds of work."
+The lead should surface flow taxonomy *early* and *visibly*. The current pitch has it in the second sentence (*"named ways to explore, build, fix, and review"*) but doesn't make the philosophical bet explicit. A reader pattern-matching to VexJoy or Superpowers will assume "named flows" means "one pipeline with named stages" rather than "different flow shapes for different kinds of work."
 
-Probable adjustment: make the *six-flows* and the *different-shapes-for-different-work* claim louder. *"One universal pipeline doesn't fit all your work. Circuit ships six different shapes."* Forces the reader to choose between the two theories of the field instead of conflating them.
+Probable adjustment: make the *core-flow* and the *different-shapes-for-different-work* claim louder. *"One universal pipeline doesn't fit all your work. Circuit ships distinct shapes for thinking, changing, fixing, and reviewing."* Forces the reader to choose between the two theories of the field instead of conflating them.
 
 ### One-line answers for direct comparisons (before pitch ships)
 
-- *vs. VexJoy:* "VexJoy ships one pipeline that routes everything. Circuit ships six different flows for six different kinds of work, with typed schema-versioned records you can query."
+- *vs. VexJoy:* "VexJoy ships one pipeline that routes everything. Circuit ships distinct flows for distinct kinds of work, with typed schema-versioned records you can query."
 - *vs. Superpowers:* "Superpowers is one methodology. Circuit is a taxonomy of flows for different kinds of work."
 - *vs. GSD:* "GSD ships a staged pipeline. Circuit ships routed flows with schema-versioned records and per-step model selection."
 

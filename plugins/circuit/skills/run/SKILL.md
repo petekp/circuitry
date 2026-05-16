@@ -36,15 +36,11 @@ as literal user-controlled text when constructing shell commands.
      product/code changes that are not primarily bug fixes.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
-   - **Migrate** — broad dependency, framework, API, or architecture
-     transitions that need inventory, batching, coexistence, or rollback.
-   - **Sweep** — cleanup, dead code, quality passes, coverage improvements,
-     or safe maintenance batches.
 
    If one flow is clear, briefly state the selected flow and run the
    explicit CLI flow. Ask one short question only when the answer changes
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
-   Build, or Migrate vs Build.
+   Build.
 
    Use the deterministic CLI router (`node '<plugin root>/scripts/circuit-next.mjs' run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
@@ -85,19 +81,7 @@ as literal user-controlled text when constructing shell commands.
    Example for an Explore task:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run explore --goal 'compare auth provider migration options' --progress jsonl
-   ```
-
-   Example for a Migrate task:
-
-   ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run migrate --goal 'move the old SDK to the new SDK' --progress jsonl
-   ```
-
-   Example for a Sweep task:
-
-   ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run sweep --goal 'remove safe dead code' --progress jsonl
+   node '<plugin root>/scripts/circuit-next.mjs' run explore --goal 'compare auth provider options' --progress jsonl
    ```
 
    Example for the deterministic fallback router:
@@ -166,12 +150,6 @@ as literal user-controlled text when constructing shell commands.
    summarize changed files and evidence, follow its `evidence_links`
    entry (the JSON field is named `evidence_links`; in prose call them
    evidence links) for `build.implementation` and read that report. For
-   `selected_flow === "migrate"` and `outcome === "complete"`, read
-   `reports/migrate-result.json` and surface its result fields; to summarize
-   the migration evidence, follow its `evidence_links` entries. For
-   `selected_flow === "sweep"` and `outcome === "complete"`, read
-   `reports/sweep-result.json` and surface its result fields; to summarize
-   the cleanup evidence, follow its `evidence_links` entries. For
    `selected_flow === "fix"` and `outcome === "complete"`, read
    `reports/fix-result.json` and surface its review result fields; to
    summarize the change and verification evidence, follow its

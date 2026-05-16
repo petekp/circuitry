@@ -1,12 +1,12 @@
 schema_version: 1
 claims:
   - id: CLAIM-FLOW-CATALOG-CURRENT
-    claim: Circuit-next has current flow packages for Build, Explore, Fix, Migrate, Review, and Sweep.
+    claim: Circuit-next has current flow packages for Build, Explore, Fix, and Review.
     type: flow
     status: verified_current
     surfaces: [README.md, docs/release/parity-matrix.generated.md]
     backing:
-      capability_ids: [flow:build, flow:explore, flow:fix, flow:migrate, flow:review, flow:sweep]
+      capability_ids: [flow:build, flow:explore, flow:fix, flow:review]
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: If false, the release catalog itself is misleading.
     readiness_refs: [REL-004]
@@ -85,7 +85,7 @@ claims:
     user_risk: Users can ask Circuit to execute a plan and receive analysis-only output that preserves the next-action burden.
     readiness_refs: [REL-016]
   - id: CLAIM-WRITE-CAPABLE-WORKER
-    claim: Write-capable worker behavior must be disclosed before first Build/Fix/Migrate/Sweep runs that can edit files.
+    claim: Write-capable worker behavior must be disclosed before first Build/Fix runs that can edit files.
     type: safety
     status: verified_current
     surfaces: [README.md, progress output, final summaries]
@@ -98,7 +98,7 @@ claims:
     user_risk: Users may be surprised that a delegated worker can edit files with bypassed host approvals.
     readiness_refs: [REL-007]
   - id: CLAIM-GOLDEN-PROOF
-    claim: Public proof must cover doing work, deciding, maintenance/migration, continuity, customization, failure, first-run, and plan execution.
+    claim: Public proof must cover doing work, deciding, continuity, customization, failure, first-run, and plan execution.
     type: proof
     status: verified_current
     surfaces: [README.md, docs/release/proofs/index.yaml, docs/release/proofs/runs]
@@ -110,8 +110,6 @@ claims:
         - proof:checkpoint-resume
         - proof:abort-failure
         - proof:fix
-        - proof:migrate
-        - proof:sweep
         - proof:explore-decision
         - proof:handoff
         - proof:customization

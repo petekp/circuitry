@@ -64,7 +64,7 @@ function reviewerStructuralStep(): RelayStep {
 
 describe('relay shape-hint registry', () => {
   it('round-trips every catalog-declared schema hint through the registry', () => {
-    // Floor: at least the seven hints landed before this refactor must
+    // Floor: at least the core hints landed before this refactor must
     // still be present. Prevents the derived-set test from passing
     // vacuously if some future catalog change were to drop every
     // relayHint.
@@ -84,29 +84,6 @@ describe('relay shape-hint registry', () => {
     }
   });
 
-  it('Sweep hints describe each Sweep relay report shape', () => {
-    function requireHint(schema: string): string {
-      const hint = findRelayShapeHint(relayStepWithSchema(schema));
-      if (hint === undefined) throw new Error(`expected relay shape hint for ${schema}`);
-      return hint;
-    }
-
-    const analysis = requireHint('sweep.analysis@v1');
-    expect(analysis).toContain('"candidates"');
-    expect(analysis).toContain('"confidence"');
-    expect(analysis).toContain('"risk"');
-
-    const batch = requireHint('sweep.batch@v1');
-    expect(batch).toContain('"items"');
-    expect(batch).toContain('"candidate_id"');
-    expect(batch).toContain('to_execute');
-
-    const review = requireHint('sweep.review@v1');
-    expect(review).toContain('"findings"');
-    expect(review).toContain('clean');
-    expect(review).toContain('critical-injections');
-  });
-
   it('Build hints keep implementation and review scoped to the requested behavior', () => {
     const implementation = findRelayShapeHint(relayStepWithSchema('build.implementation@v1'));
     const review = findRelayShapeHint(relayStepWithSchema('build.review@v1'));
@@ -115,6 +92,20 @@ describe('relay shape-hint registry', () => {
     expect(implementation).toContain('Do not broaden semantics');
     expect(review).toContain('not just against passing tests');
     expect(review).toContain('broadens semantics beyond the goal');
+  });
+
+  it('Fix hints push workers toward complete bug proof, not shallow test pass', () => {
+    const context = findRelayShapeHint(relayStepWithSchema('fix.context@v1'));
+    const diagnosis = findRelayShapeHint(relayStepWithSchema('fix.diagnosis@v1'));
+    const implementation = findRelayShapeHint(relayStepWithSchema('fix.change@v1'));
+    const review = findRelayShapeHint(relayStepWithSchema('fix.review@v1'));
+
+    expect(context).toContain('Read the relevant source and tests');
+    expect(context).toContain('This step is read-only by intent');
+    expect(diagnosis).toContain('Compare the failing behavior against the intended behavior');
+    expect(diagnosis).toContain('This step is read-only by intent');
+    expect(implementation).toContain('address every objective check');
+    expect(review).toContain('Look for missed edge cases');
   });
 
   it('returns undefined when the schema is not registered and no structural hint matches', () => {

@@ -67,8 +67,8 @@ makes Circuit cross-host: every host adapter speaks the same JSON
 protocol to the same binary. A run from Claude Code and a run from the
 terminal produce identical run folders.
 
-**Flows are data, not code.** A flow — Build, Fix, Explore, Migrate,
-Review, Sweep — is authored as a JSON *schematic* and compiled into a
+**Flows are data, not code.** A flow — Build, Fix, Explore, or
+Review — is authored as a JSON *schematic* and compiled into a
 runtime graph. The engine never imports a flow's code module. New flows
 are added by appending to a catalog (§19); the engine derives every
 per-flow behavior — routing, report writers, shape hints, skill slots —
@@ -915,9 +915,7 @@ default flow.
 **Plan-execution shortcuts.** A separate classifier branch picks up
 imperative phrasings — "execute this plan", "carry out this checklist"
 — and routes them based on what kind of work the plan describes.
-"Decide between options" routes to Explore in tournament mode;
-"migrate from X to Y" routes to Migrate at deep depth; "overnight
-cleanup" routes to Sweep autonomous. These are conveniences for habits
+"Decide between options" routes to Explore in tournament mode. These are conveniences for habits
 the operator already has; they are not the canonical front door.
 
 **Explicit flow names.** `circuit-next run build --goal "…"` skips
@@ -966,12 +964,10 @@ package directly; it consumes them through `src/flows/catalog.ts`:
 // src/flows/catalog.ts
 export const flowPackages: readonly CompiledFlowPackage[] = [
   reviewCompiledFlowPackage,
-  migrateCompiledFlowPackage,
   fixCompiledFlowPackage,
   runtimeProofCompiledFlowPackage,
   buildCompiledFlowPackage,
   exploreCompiledFlowPackage,
-  sweepCompiledFlowPackage,
 ];
 ```
 
@@ -1167,7 +1163,7 @@ drift). Strictness is the response to actual incidents, not a
 preference.
 
 The cost is real. Adding a field requires a schema edit, a contract
-update, and (often) a migration of existing fixtures. The benefit is
+update, and often a fixture refresh. The benefit is
 also real: when something goes wrong, it goes wrong *loudly*, at the
 boundary, with a Zod error that names the offending key. The audit
 trail is trustworthy because the schema refuses to admit anything

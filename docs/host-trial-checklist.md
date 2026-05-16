@@ -20,9 +20,8 @@ ready for broader use.
 - Natural Build: run `@Circuit add billing settings to the account page` and
   confirm Codex invokes Circuit with the Build flow.
 - Natural Explore: run
-  `Use Circuit to decide whether we should migrate auth providers` and confirm
-  Codex invokes Circuit with the Explore flow or an explicit decision flow
-  path.
+  `Use Circuit to decide whether we should replace auth providers` and confirm
+  Codex invokes Circuit with the Explore flow or an explicit decision flow path.
 - Explicit Build: invoke the Build flow skill directly for the same kind of
   change.
 - Checkpoint: exercise a checkpointing run and confirm the question/choice is

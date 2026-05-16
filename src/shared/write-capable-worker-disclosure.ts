@@ -1,6 +1,6 @@
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 
-const WRITE_CAPABLE_FLOW_IDS = new Set(['build', 'fix', 'migrate', 'sweep']);
+const WRITE_CAPABLE_FLOW_IDS = new Set(['build', 'fix']);
 
 export const WRITE_CAPABLE_WORKER_DISCLOSURE = 'A worker can edit this checkout.';
 

@@ -23,16 +23,7 @@ interface CreateMainOptions {
   readonly now?: () => Date;
 }
 
-const RESERVED_FLOW_IDS = new Set([
-  'build',
-  'explore',
-  'fix',
-  'handoff',
-  'migrate',
-  'review',
-  'run',
-  'sweep',
-]);
+const RESERVED_FLOW_IDS = new Set(['build', 'explore', 'fix', 'handoff', 'review', 'run']);
 
 function usage(): string {
   return [

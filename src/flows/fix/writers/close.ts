@@ -94,6 +94,12 @@ export const fixCloseBuilder: CloseBuilder = {
       change_set: changeSet,
       verification,
       ...(review === undefined ? {} : { review }),
+      ...(review === undefined && context.closeStep.id === 'fix-close'
+        ? {
+            review_skip_reason:
+              'Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence.',
+          }
+        : {}),
       evidence_links: pointers,
     });
   },

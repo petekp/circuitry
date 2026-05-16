@@ -57,30 +57,6 @@ function classifyPlanExecutionRequest(taskText: string): CompiledFlowRouteDecisi
         'matched decision-oriented plan execution; selected Explore tournament mode',
     };
   }
-  if (/\b(?:migrate|migration|port|rewrite|replace|transition|framework\s+swap)\b/.test(lower)) {
-    return {
-      flowName: 'migrate',
-      source: 'classifier',
-      matched_signal: 'plan-execution',
-      reason: 'matched plan-execution request; selected Migrate for the first migration slice',
-      inferredEntryModeName: 'deep',
-      inferredEntryModeReason:
-        'matched migration-oriented plan execution; selected deep migration thoroughness',
-    };
-  }
-  if (/\b(?:cleanup|clean\s+up|sweep|dead\s+code|quality|coverage|overnight)\b/.test(lower)) {
-    const autonomous = /\bovernight\b/.test(lower);
-    return {
-      flowName: 'sweep',
-      source: 'classifier',
-      matched_signal: 'plan-execution',
-      reason: 'matched plan-execution request; selected Sweep for the first cleanup slice',
-      inferredEntryModeName: autonomous ? 'autonomous' : 'default',
-      inferredEntryModeReason: autonomous
-        ? 'matched overnight plan execution; selected autonomous Sweep thoroughness'
-        : 'matched cleanup-oriented plan execution; selected default Sweep thoroughness',
-    };
-  }
   if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
     return {
       flowName: 'fix',
@@ -111,27 +87,6 @@ function inferEntryMode(
       inferredEntryModeName: 'default',
       inferredEntryModeReason: 'matched develop intent; selected default Build thoroughness',
     };
-  }
-  if (flowName === 'migrate' && /^\s*migrate\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: 'deep',
-      inferredEntryModeReason: 'matched migrate intent; selected deep migration thoroughness',
-    };
-  }
-  if (flowName === 'sweep') {
-    if (/^\s*overnight\s*:/i.test(taskText)) {
-      return {
-        inferredEntryModeName: 'autonomous',
-        inferredEntryModeReason:
-          'matched overnight cleanup intent; selected autonomous Sweep thoroughness',
-      };
-    }
-    if (/^\s*cleanup\s*:/i.test(taskText)) {
-      return {
-        inferredEntryModeName: 'default',
-        inferredEntryModeReason: 'matched cleanup intent; selected default Sweep thoroughness',
-      };
-    }
   }
   if (flowName === 'explore' && /^\s*decide\s*:/i.test(taskText)) {
     return {

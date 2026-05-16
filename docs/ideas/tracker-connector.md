@@ -20,8 +20,8 @@ session lives" creates user confusion about which one to trust.
 
 But there is a real fit at a different layer. Circuit workflows
 already produce structured artifacts at Close — Explore drops a
-report, Migrate produces a batch plan, Rearchitect produces a
-dependency-linked migration plan. Those outputs are exactly the shape
+report, Build can produce implementation follow-ups, and larger
+transition plans can produce dependency-linked work. Those outputs are exactly the shape
 a tracker stores natively: items with edges. Right now they live as
 prose in the run record, where nothing can query them.
 
@@ -52,7 +52,7 @@ Boundary integration means exactly two touchpoints, no more:
 wired in, `/circuit:run` with no argument can ask the tracker for the
 top of the ready queue. The tracker returns one or more unblocked
 issues; Circuit takes the title and body as the task description,
-runs its router (Explore / Build / Repair / Migrate / Sweep), and
+runs its router (Explore / Build / Repair / Review), and
 dispatches.
 
 This is the bigger of the two. It changes the *unit of work entry*
@@ -62,9 +62,8 @@ follow-ups across sessions, that's the difference between "I have to
 remember what to ask for" and "the agent already knows what's next."
 
 **Close sink — "what came out of this run?"** Workflows already
-produce structured artifacts at Close: Migrate's batch plan with
-dependencies between batches, Rearchitect's stepwise migration,
-Sweep's triaged findings, Repair's follow-ups. Those have natural
+produce structured artifacts at Close: Build's follow-ups,
+Review's findings, Explore's option graph, and Repair's follow-ups. Those have natural
 graph shape (issues + edges). Today they live as prose in the run
 record, where nothing can query them. With the connector, Close shows
 the operator a preview of issues + edges to create, and on confirm
@@ -92,13 +91,13 @@ both Circuit and a beads-backed connector:
 **Session 1.**
 
 1. Operator types `/circuit:run`, no args. Circuit calls
-   `connector.ready()`. Beads returns `bd-a3f8` ("Migrate fanout
+   `connector.ready()`. Beads returns `bd-a3f8` ("Move fanout
    executor to runtime").
 2. Circuit calls `connector.claim("bd-a3f8")` so the issue flips to
    `in_progress` and assignee is set. Atomic: if a parallel agent
    tried the same issue, only one wins.
 3. Circuit takes the issue title + body as the task description,
-   runs the router (probably Migrate), dispatches.
+   runs the router (probably Build), dispatches.
 4. The workflow runs normally. Claude Code's task list tracks
    in-session steps. Continuity / handoff records work as today.
    The connector is silent.
@@ -110,7 +109,7 @@ both Circuit and a beads-backed connector:
 **Session 2.**
 
 6. Operator types `/circuit:run`. Connector hits ready queue. Top is
-   now batch 1 of the migration that session 1 filed. Loop compounds.
+   now the first follow-up that session 1 filed. Loop compounds.
 
 The mental model: beads is a **durable producer/consumer queue
 between sessions**. Circuit consumes one item per session (Frame),
@@ -194,8 +193,8 @@ Implementations:
 The operator picks the connector and which workflows participate at
 which boundary. Per-workflow because not every workflow type benefits
 from queue-driven entry — Explore is naturally prompt-driven (an
-investigation question), while Migrate is naturally queue-driven (a
-batch from a planned migration). The defaults below reflect that:
+investigation question), while Repair can use the tracker as a bug queue.
+The defaults below reflect that:
 
 ```yaml
 # user-global circuit config (location TBD — see deferred slice on
@@ -219,12 +218,6 @@ tracker:
     repair:
       source: prefer-tracker  # try ready first, fall back to prompt
       sink: tracker         # regressions / new bugs filed as issues
-    migrate:
-      source: tracker       # migrations consume a planned backlog
-      sink: tracker         # batches feed back as new ready items
-    sweep:
-      source: prompt        # sweeps are scope-driven
-      sink: tracker         # findings become issues
 
   # Connector-specific options
   beads:
@@ -268,8 +261,8 @@ boundary the operator should see. The Close phase shows "here are the
 N issues I'd create with these edges, confirm?" Operator says yes /
 no / edit.
 
-**Idempotent on re-run.** If a workflow re-runs on the same input
-(e.g. a Migrate batch that got re-executed after a fix), it should not
+**Idempotent on re-run.** If a flow re-runs on the same input
+(e.g. a Build batch that got re-executed after a fix), it should not
 create duplicate issues. The connector needs a way to recognize
 "already emitted" — easiest path is a content hash stored in the run
 record, checked against tracker contents before creation.
@@ -341,7 +334,7 @@ the source is not.
 Building the connector layer makes sense only when one of these is
 true:
 
-- An operator actually says "I want my Migrate plan in my tracker."
+- An operator actually says "I want my Build plan in my tracker."
 - Multiple workflows are independently inventing ad-hoc emission and
   the duplication is becoming a maintenance cost.
 - Circuit's marketplace story benefits from advertising
@@ -362,9 +355,9 @@ side second** (Frame ingestion) — it changes the shape of
 Sink-first sequence:
 
 1. Define the canonical emission plan (issue list + edges) as a typed
-   artifact one workflow already produces. Migrate's batch plan is
-   the strongest candidate — it has natural dependencies between
-   batches.
+   artifact one flow already produces. A Build implementation plan is
+   the strongest current candidate — it has natural dependencies between
+   tasks.
 2. Ship the **markdown** connector with sink-side methods only
    (`createIssue`, `linkIssues`, `closeIssue`, `preview`). Zero
    external dependencies. Exercises the full preview / commit /

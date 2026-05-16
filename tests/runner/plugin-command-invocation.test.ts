@@ -29,8 +29,6 @@ const EXPLORE_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'explore.md');
 const RUN_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'run.md');
 const REVIEW_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'review.md');
 const BUILD_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'build.md');
-const MIGRATE_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'migrate.md');
-const SWEEP_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'sweep.md');
 const MANIFEST_PATH = resolve(REPO_ROOT, 'plugins/claude/.claude-plugin/plugin.json');
 const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit-next\.mjs"`;
 
@@ -85,14 +83,6 @@ function hasExecutableBuildInvocation(body: string): boolean {
   return hasExecutableCompiledFlowInvocation(body, 'build');
 }
 
-function hasExecutableMigrateInvocation(body: string): boolean {
-  return hasExecutableCompiledFlowInvocation(body, 'migrate');
-}
-
-function hasExecutableSweepInvocation(body: string): boolean {
-  return hasExecutableCompiledFlowInvocation(body, 'sweep');
-}
-
 function hasExecutableRouterInvocation(body: string): boolean {
   const blocks = extractBashBlocks(body);
   const binInvocation = /^\s*\.\/bin\/circuit-next run --goal(?:\s|$)/;
@@ -120,8 +110,6 @@ describe('plugin command invocation binding', () => {
     const runBody = readFileSync(RUN_COMMAND_PATH, 'utf-8');
     const reviewBody = readFileSync(REVIEW_COMMAND_PATH, 'utf-8');
     const buildBody = readFileSync(BUILD_COMMAND_PATH, 'utf-8');
-    const migrateBody = readFileSync(MIGRATE_COMMAND_PATH, 'utf-8');
-    const sweepBody = readFileSync(SWEEP_COMMAND_PATH, 'utf-8');
 
     it('plugins/claude/commands/explore.md has an executable explore invocation in a fenced bash block with --goal', () => {
       expect(hasExecutableExploreInvocation(exploreBody)).toBe(true);
@@ -139,16 +127,8 @@ describe('plugin command invocation binding', () => {
       expect(hasExecutableBuildInvocation(buildBody)).toBe(true);
     });
 
-    it('plugins/claude/commands/migrate.md has an executable migrate invocation in a fenced bash block with --goal', () => {
-      expect(hasExecutableMigrateInvocation(migrateBody)).toBe(true);
-    });
-
-    it('plugins/claude/commands/sweep.md has an executable sweep invocation in a fenced bash block with --goal', () => {
-      expect(hasExecutableSweepInvocation(sweepBody)).toBe(true);
-    });
-
     it('command bodies use the installed Claude plugin wrapper, not the repo-local launcher', () => {
-      for (const body of [exploreBody, runBody, reviewBody, buildBody, migrateBody, sweepBody]) {
+      for (const body of [exploreBody, runBody, reviewBody, buildBody]) {
         expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"');
         expect(body).not.toMatch(/\.\/bin\/circuit-next/);
         expect(body).not.toMatch(/npm run circuit:run/);

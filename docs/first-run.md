@@ -17,7 +17,7 @@ For the safest first real run, use Review. Review is read-only:
 ./bin/circuit-next run review --goal 'review this checkout for obvious release blockers'
 ```
 
-Build, Fix, Migrate, and Sweep may invoke a write-capable Claude Code worker:
+Build and Fix may invoke a write-capable Claude Code worker:
 
 > A worker can edit this checkout.
 

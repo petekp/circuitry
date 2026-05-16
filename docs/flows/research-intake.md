@@ -160,7 +160,7 @@ burying durable product evidence inside transient agent memory.
 Look for lessons about planning, patching, test loops, review loops, environment
 control, repo state, and operator approval. Claude Code, Codex, Aider,
 OpenHands, SWE-agent, Cursor, Cline/Roo Code, Continue, Devin-like systems,
-CodeRabbit, Sweep, Factory, and Sourcegraph Cody belong here.
+CodeRabbit, Factory, Sourcegraph Cody, and similar coding systems belong here.
 
 Circuit should pay special attention to which systems expose repeatable coding
 flows versus one-off chat sessions.

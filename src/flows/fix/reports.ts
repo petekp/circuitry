@@ -175,18 +175,19 @@ export const FixDiagnosis = z
     ),
   })
   .strict()
-  .superRefine((diagnosis, ctx) => {
+  .transform((diagnosis) => {
     if (
-      diagnosis.reproduction_status !== 'reproduced' &&
-      diagnosis.residual_uncertainty.length === 0
+      diagnosis.reproduction_status === 'reproduced' ||
+      diagnosis.residual_uncertainty.length > 0
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['residual_uncertainty'],
-        message:
-          'residual_uncertainty must be non-empty when the problem was not cleanly reproduced',
-      });
+      return diagnosis;
     }
+    return {
+      ...diagnosis,
+      residual_uncertainty: [
+        'Diagnosis did not cleanly reproduce the bug before the runtime baseline proof.',
+      ],
+    };
   });
 export type FixDiagnosis = z.infer<typeof FixDiagnosis>;
 

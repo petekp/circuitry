@@ -36,18 +36,33 @@ function writePackageJson(root: string, scripts: Record<string, string>): void {
   );
 }
 
-function buildBrief(projectRoot: string | undefined): {
+function buildBrief(
+  projectRoot: string | undefined,
+  goal = 'fix the bug',
+): {
+  regression_contract: {
+    regression_test:
+      | { status: 'failing-before-fix'; command: { argv: readonly string[] } }
+      | { status: 'deferred' };
+    repro: { kind: string; command?: { argv: readonly string[] } };
+  };
   verification_command_candidates: ReadonlyArray<{ argv: readonly string[] }>;
 } {
   const context = {
     runFolder: '/tmp/run',
     flow: {} as never,
     step: {} as never,
-    goal: 'fix the bug',
+    goal,
     inputs: {},
     ...(projectRoot === undefined ? {} : { projectRoot }),
   } as unknown as ComposeBuildContext;
   return fixBriefComposeBuilder.build(context) as {
+    regression_contract: {
+      regression_test:
+        | { status: 'failing-before-fix'; command: { argv: readonly string[] } }
+        | { status: 'deferred' };
+      repro: { kind: string; command?: { argv: readonly string[] } };
+    };
     verification_command_candidates: ReadonlyArray<{ argv: readonly string[] }>;
   };
 }
@@ -84,6 +99,78 @@ describe('fixBriefComposeBuilder verification script discovery', () => {
     writePackageJson(root, { test: 'echo ok', lint: 'echo ok' });
     const brief = buildBrief(root);
     expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'test']);
+  });
+
+  it('uses an explicit backticked regression command as the runtime-owned failing-before-fix proof', () => {
+    const root = tempRoot('fix-brief-explicit-regression-');
+    writePackageJson(root, { test: 'echo ok' });
+    const brief = buildBrief(root, 'Fix the parser. The regression command is `npm test`.');
+
+    expect(brief.regression_contract.regression_test.status).toBe('failing-before-fix');
+    if (brief.regression_contract.regression_test.status !== 'failing-before-fix') {
+      throw new Error('expected failing-before-fix regression contract');
+    }
+    expect(brief.regression_contract.regression_test.command.argv).toEqual(['npm', 'test']);
+    expect(brief.regression_contract.repro.kind).toBe('command');
+    expect(brief.regression_contract.repro.command?.argv).toEqual(['npm', 'test']);
+  });
+
+  it('uses explicit objective check commands as the verification plan', () => {
+    const root = tempRoot('fix-brief-objective-checks-');
+    writePackageJson(root, {
+      verify: 'echo generic',
+      test: 'echo generic',
+      edge: 'echo edge',
+    });
+    const brief = buildBrief(
+      root,
+      `Fix the parser.
+
+Objective check commands:
+- npm test
+- npm run edge
+
+Allowed changed files:
+- src/parser.mjs`,
+    );
+
+    expect(brief.verification_command_candidates.map((command) => command.argv)).toEqual([
+      ['npm', 'test'],
+      ['npm', 'run', 'edge'],
+    ]);
+  });
+
+  it('keeps quoted objective check arguments instead of dropping the command', () => {
+    const root = tempRoot('fix-brief-quoted-objective-checks-');
+    writePackageJson(root, {
+      verify: 'echo generic',
+      edge: 'echo edge',
+    });
+    const brief = buildBrief(
+      root,
+      `Fix the parser.
+
+Objective check commands:
+- npm run edge -- --case "name with spaces"
+- node ./scripts/check.mjs 'email local part'
+
+Allowed changed files:
+- src/parser.mjs`,
+    );
+
+    expect(brief.verification_command_candidates.map((command) => command.argv)).toEqual([
+      ['npm', 'run', 'edge', '--', '--case', 'name with spaces'],
+      ['node', './scripts/check.mjs', 'email local part'],
+    ]);
+  });
+
+  it('keeps the regression contract deferred when the goal names no explicit command', () => {
+    const root = tempRoot('fix-brief-deferred-regression-');
+    writePackageJson(root, { test: 'echo ok' });
+    const brief = buildBrief(root);
+
+    expect(brief.regression_contract.regression_test.status).toBe('deferred');
+    expect(brief.regression_contract.repro.kind).toBe('not-reproducible');
   });
 
   it('falls back to check when only check is defined', () => {

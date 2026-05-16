@@ -91,7 +91,7 @@ const SOURCE_COMMAND_ROOT_REL = 'src/commands';
 const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
 const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"';
 const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit-next.mjs'";
-const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'];
+const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'run'];
 const ROOT_CLAUDE_MARKETPLACE_REL = '.claude-plugin/marketplace.json';
 const LEGACY_ROOT_HOST_SURFACES = ['commands', 'hooks'];
 const CODEX_SKILL_METADATA: Record<string, { title: string; description: string }> = {
@@ -120,11 +120,6 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
     description:
       'Use when the user wants Circuit to save, resume, clear, brief, or install continuity handoff support across sessions.',
   },
-  migrate: {
-    title: 'Circuit Migrate',
-    description:
-      'Use when the user wants Circuit to handle broad dependency, framework, API, or architecture transitions that need inventory, batching, coexistence, or rollback.',
-  },
   review: {
     title: 'Circuit Review',
     description:
@@ -134,11 +129,6 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
     title: 'Circuit Run',
     description:
       'Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits the current coding task.',
-  },
-  sweep: {
-    title: 'Circuit Sweep',
-    description:
-      'Use when the user wants Circuit to run cleanup, dead-code removal, quality passes, coverage improvements, or safe maintenance batches.',
   },
 };
 
@@ -287,7 +277,7 @@ function renderCodexNativeSkillBody(body: string): string {
       'Use the same safe construction rule as the other Circuit host skills:\n',
     )
     .replace(
-      /Explicit flow commands remain available as\s+`\/circuit:explore`,[\s\S]*?`\/circuit:sweep`\./,
+      /Explicit flow commands remain available as\s+`\/circuit:explore`,[\s\S]*?`\/circuit:build`\./,
       'Direct Circuit flow skills remain available when the user already knows the flow.',
     )
     .replace(/\n## Direct Flow Bypass\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g, '\n')
@@ -507,7 +497,7 @@ function renderSurfaceInventory(): string {
       'source yes; outputs no',
       '`plugins/claude/commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
       '`node scripts/emit-flows.ts --check`',
-      'Covers router/direct commands such as run, create, handoff, migrate, and sweep.',
+      'Covers router/direct commands such as run, create, and handoff.',
     ],
     [
       'Generated flow manifests',

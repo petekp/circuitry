@@ -9,7 +9,13 @@ import { configDefaults, defineConfig } from 'vitest/config';
 //     useful for ad-hoc tooling without forcing a threshold gate
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, '.claude/**'],
+    exclude: [
+      ...configDefaults.exclude,
+      '.claude/**',
+      // Benchmark fixtures are tiny standalone repos with intentionally failing Node tests.
+      'evals/fix-vs-vanilla/tasks/**/repo/**',
+      'evals/fix-vs-vanilla/results/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],

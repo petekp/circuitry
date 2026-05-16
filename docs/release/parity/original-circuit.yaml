@@ -64,40 +64,6 @@ capabilities:
       continuity: Active run and handoff support.
       proof: Fix golden run with regression evidence.
     source_refs: [legacy-readme, legacy-circuits, legacy-run-command]
-  - id: flow:migrate
-    kind: flow
-    title: Migrate
-    summary: Manage framework swaps, dependency replacements, and architecture transitions.
-    axes:
-      invocation: "/circuit:migrate and /circuit:run migrate:"
-      intent_hints: ["migrate:"]
-      modes: [default, deep, autonomous]
-      stage_path: [Frame, Inventory, Coexistence Plan, Batch Execution, Verify, Release Review, Close]
-      outputs: [brief.md, inventory.md, plan.md, review.md, result.md]
-      checkpoint: Coexistence plan checkpoint is first-class.
-      review: Release review checks migration safety.
-      verification: Each batch is independently verifiable.
-      worker_handoff: Batch execution can use Build as inner executor.
-      continuity: Migration plan and active run continue across sessions.
-      proof: Migration plan and batch proof run.
-    source_refs: [legacy-readme, legacy-circuits, legacy-run-command]
-  - id: flow:sweep
-    kind: flow
-    title: Sweep
-    summary: Run cleanup, quality, coverage, and docs-sync passes by confidence and risk.
-    axes:
-      invocation: "/circuit:sweep and /circuit:run cleanup: or overnight:"
-      intent_hints: ["cleanup:", "overnight:"]
-      modes: [lite, default, deep, autonomous]
-      stage_path: [Frame, Survey, Queue/Triage, Batch Execute, Verify, Deferred Review, Close]
-      outputs: [brief.md, analysis.md, queue.md, review.md, deferred.md, result.md]
-      checkpoint: Deep confirms each batch; autonomous stops after bounded batch budget.
-      review: Sweep writes review/deferred output during verification.
-      verification: Verifies after each batch and defers ambiguous work.
-      worker_handoff: Survey and batch execution can use workers.
-      continuity: Active run and deferred work survive interruption.
-      proof: Sweep golden run covering queue/deferred output.
-    source_refs: [legacy-readme, legacy-circuits, legacy-run-command]
   - id: utility:review
     kind: utility
     title: Review
@@ -157,33 +123,6 @@ capabilities:
       intent_hints: ["decide:"]
       modes: [tournament]
     source_refs: [legacy-run-command]
-  - id: router:intent:migrate
-    kind: router_intent
-    title: "migrate: intent"
-    summary: Routes migration work to Migrate Deep.
-    axes:
-      invocation: "/circuit:run migrate: <target>"
-      intent_hints: ["migrate:"]
-      modes: [deep]
-    source_refs: [legacy-run-command]
-  - id: router:intent:cleanup
-    kind: router_intent
-    title: "cleanup: intent"
-    summary: Routes cleanup work to Sweep Standard.
-    axes:
-      invocation: "/circuit:run cleanup: <target>"
-      intent_hints: ["cleanup:"]
-      modes: [default]
-    source_refs: [legacy-run-command]
-  - id: router:intent:overnight
-    kind: router_intent
-    title: "overnight: intent"
-    summary: Routes unattended quality work to Sweep Autonomous.
-    axes:
-      invocation: "/circuit:run overnight: <scope>"
-      intent_hints: ["overnight:"]
-      modes: [autonomous]
-    source_refs: [legacy-run-command]
   - id: connector:custom
     kind: connector
     title: Custom connectors
@@ -198,7 +137,7 @@ capabilities:
     title: Checkpoints
     summary: Circuit pauses when judgment is needed and otherwise proceeds.
     axes:
-      checkpoint: Scope, tradeoff, coexistence, and publish choices pause by policy.
+      checkpoint: Scope, tradeoff, and publish choices pause by policy.
       proof: Checkpoint/resume golden run.
     source_refs: [legacy-readme, legacy-circuits]
   - id: feature:continuity

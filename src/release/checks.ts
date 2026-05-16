@@ -255,7 +255,6 @@ export function validateProofCoverage(input: {
   const requiredCategories = new Set([
     'doing-work',
     'deciding',
-    'maintenance',
     'continuity',
     'customization',
     'first-run',

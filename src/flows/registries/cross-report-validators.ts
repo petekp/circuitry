@@ -1,8 +1,7 @@
 // Cross-report validators run after `parseReport` succeeds for a
 // given schema. They enforce constraints that span more than one
 // report and therefore cannot be expressed in the single-report Zod
-// schema — e.g., `sweep.batch.items[].candidate_id` must be a subset of
-// the upstream `sweep.queue.to_execute`.
+// schema.
 //
 // Why a separate registry rather than a Zod superRefine: superRefine
 // only sees the report under validation, not other reports on disk.

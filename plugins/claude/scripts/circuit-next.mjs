@@ -519,7 +519,7 @@ function runDoctor() {
   }
 
   checks.push(check('packaged_flow_root_exists', existsSync(packagedFlowRoot), packagedFlowRoot));
-  for (const flow of ['build', 'explore', 'fix', 'migrate', 'review', 'sweep']) {
+  for (const flow of ['build', 'explore', 'fix', 'review']) {
     const flowPath = resolve(packagedFlowRoot, flow, 'circuit.json');
     checks.push(check(`packaged_flow_${flow}`, existsSync(flowPath), flowPath));
   }

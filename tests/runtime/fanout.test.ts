@@ -93,17 +93,15 @@ function compiledRelayFanoutFlow(
     readonly reportSchema?: string;
     readonly admit?: readonly string[];
     readonly provenanceField?: string;
-    readonly seedSweepQueue?: boolean;
   } = {},
 ): CompiledFlow {
   const reportSchema = opts.reportSchema ?? 'explore.tournament-proposal@v1';
   const admit = opts.admit ?? ['accept'];
-  const seedSweepQueue = opts.seedSweepQueue === true;
   const fanoutStep = {
     id: 'fanout-step',
     title: 'Fanout relay branch',
     protocol: 'fanout-protocol@v1',
-    reads: seedSweepQueue ? ['reports/sweep-queue.json'] : [],
+    reads: [],
     routes: { pass: '@complete' },
     executor: 'orchestrator',
     kind: 'fanout',
@@ -137,29 +135,10 @@ function compiledRelayFanoutFlow(
       verdicts: { admit },
     },
   };
-  const steps = seedSweepQueue
-    ? [
-        {
-          id: 'seed-sweep-queue',
-          title: 'Seed Sweep queue',
-          protocol: 'seed-sweep-queue@v1',
-          reads: [],
-          routes: { pass: 'fanout-step' },
-          executor: 'orchestrator',
-          kind: 'compose',
-          writes: { report: { path: 'reports/sweep-queue.json', schema: 'sweep.queue@v1' } },
-          check: {
-            kind: 'schema_sections',
-            source: { kind: 'report', ref: 'report' },
-            required: ['classified', 'to_execute', 'deferred'],
-          },
-        },
-        fanoutStep,
-      ]
-    : [fanoutStep];
+  const steps = [fanoutStep];
   return CompiledFlow.parse({
     schema_version: '2',
-    id: seedSweepQueue ? 'sweep' : 'explore',
+    id: 'explore',
     version: '0.1.0',
     purpose: 'runtime relay fanout production parity test',
     entry: {
@@ -169,7 +148,7 @@ function compiledRelayFanoutFlow(
     entry_modes: [
       {
         name: 'default',
-        start_at: seedSweepQueue ? 'seed-sweep-queue' : 'fanout-step',
+        start_at: 'fanout-step',
         depth: 'standard',
         description: 'Relay fanout entry.',
       },
@@ -179,7 +158,7 @@ function compiledRelayFanoutFlow(
         id: 'plan-stage',
         title: 'Plan',
         canonical: 'plan',
-        steps: seedSweepQueue ? ['seed-sweep-queue', 'fanout-step'] : ['fanout-step'],
+        steps: ['fanout-step'],
       },
     ],
     stage_path_policy: {
@@ -218,20 +197,7 @@ async function runCompiledRelayFanoutruntime(input: {
     compiledFlow: compiledFlow,
     relayer: input.relayer,
     executors: {
-      compose: async (_step, context) => {
-        await context.files.writeJson(
-          { path: 'reports/sweep-queue.json', schema: 'sweep.queue@v1' },
-          {
-            classified: [
-              { candidate_id: 'c-1', action: 'act', rationale: 'authorized cleanup' },
-              { candidate_id: 'c-99', action: 'defer', rationale: 'not authorized' },
-            ],
-            to_execute: ['c-1'],
-            deferred: ['c-99'],
-          },
-        );
-        return { route: 'pass' };
-      },
+      compose: async () => ({ route: 'pass' }),
     },
     now: () => new Date('2026-05-03T00:00:00.000Z'),
   });
@@ -533,36 +499,6 @@ describe('runtime fanout executor', () => {
     expect(
       existsSync(join(provenance.runDir, 'reports', 'branches', 'option-1', 'report.json')),
     ).toBe(false);
-  });
-
-  it('runs cross-report validation before admitting compiled relay fanout branches', async () => {
-    const offPrescriptionBatch = {
-      verdict: 'accept',
-      summary: 'executed the wrong candidate',
-      changed_files: ['src/off-prescription.ts'],
-      items: [{ candidate_id: 'c-99', status: 'acted', evidence: 'off prescription' }],
-    };
-    const { result, runDir } = await runCompiledRelayFanoutruntime({
-      flow: compiledRelayFanoutFlow({
-        reportSchema: 'sweep.batch@v1',
-        admit: ['accept'],
-        seedSweepQueue: true,
-      }),
-      relayer: {
-        connectorName: 'claude-code',
-        relay: async (input) => ({
-          request_payload: input.prompt,
-          receipt_id: 'receipt-a',
-          result_body: JSON.stringify(offPrescriptionBatch),
-          duration_ms: 3,
-          cli_version: 'test-relay',
-        }),
-      },
-    });
-
-    expect(result.outcome).toBe('aborted');
-    expect(result.reason).toContain('not in queue.to_execute');
-    expect(existsSync(join(runDir, 'reports', 'branches', 'option-1', 'report.json'))).toBe(false);
   });
 
   it('expands dynamic relay branches, writes an aggregate, and joins aggregate-only', async () => {

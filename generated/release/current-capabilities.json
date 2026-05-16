@@ -35,43 +35,6 @@
       "unsupported_route_outcomes": []
     },
     {
-      "id": "migrate",
-      "source": "src/flows/migrate/schematic.json",
-      "routing": {
-        "routable": true,
-        "is_default": false,
-        "order": 10,
-        "signal_labels": ["framework swap signal", "migrate prefix", "migrate request"]
-      },
-      "entry_modes": ["autonomous", "deep", "default"],
-      "stages": [
-        "Frame",
-        "Inventory",
-        "Coexistence Plan",
-        "Batch Execution",
-        "Verify",
-        "Release Review",
-        "Close"
-      ],
-      "reports": [
-        "migrate.batch@v1",
-        "migrate.brief@v1",
-        "migrate.coexistence@v1",
-        "migrate.inventory@v1",
-        "migrate.result@v1",
-        "migrate.review@v1",
-        "migrate.verification@v1"
-      ],
-      "writers": {
-        "compose": 2,
-        "close": 1,
-        "verification": 1,
-        "checkpoint": 0
-      },
-      "route_outcomes": ["complete", "continue", "revise", "stop"],
-      "unsupported_route_outcomes": []
-    },
-    {
       "id": "fix",
       "source": "src/flows/fix/schematic.json",
       "command_path": "src/flows/fix/command.md",
@@ -107,6 +70,7 @@
       "route_outcomes": [
         "ask",
         "complete",
+        "connector-failed",
         "continue",
         "escalate",
         "handoff",
@@ -114,7 +78,7 @@
         "revise",
         "stop"
       ],
-      "unsupported_route_outcomes": []
+      "unsupported_route_outcomes": ["connector-failed"]
     },
     {
       "id": "build",
@@ -186,43 +150,6 @@
       },
       "route_outcomes": ["complete", "continue", "retry", "revise", "stop"],
       "unsupported_route_outcomes": []
-    },
-    {
-      "id": "sweep",
-      "source": "src/flows/sweep/schematic.json",
-      "routing": {
-        "routable": true,
-        "is_default": false,
-        "order": 40,
-        "signal_labels": ["cleanup prefix", "overnight prefix", "sweep request"]
-      },
-      "entry_modes": ["autonomous", "deep", "default", "lite"],
-      "stages": [
-        "Frame",
-        "Survey",
-        "Queue/Triage",
-        "Batch Execute",
-        "Verify",
-        "Deferred Review",
-        "Close"
-      ],
-      "reports": [
-        "sweep.analysis@v1",
-        "sweep.batch@v1",
-        "sweep.brief@v1",
-        "sweep.queue@v1",
-        "sweep.result@v1",
-        "sweep.review@v1",
-        "sweep.verification@v1"
-      ],
-      "writers": {
-        "compose": 2,
-        "close": 1,
-        "verification": 1,
-        "checkpoint": 0
-      },
-      "route_outcomes": ["complete", "continue", "retry", "revise", "stop"],
-      "unsupported_route_outcomes": []
     }
   ],
   "router_intents": [
@@ -255,36 +182,6 @@
       "readiness_refs": []
     },
     {
-      "id": "migrate",
-      "input": "migrate: replace the legacy SDK",
-      "expected_flow": "migrate",
-      "actual_flow": "migrate",
-      "expected_entry_mode": "deep",
-      "actual_entry_mode": "deep",
-      "status": "implemented",
-      "readiness_refs": []
-    },
-    {
-      "id": "cleanup",
-      "input": "cleanup: remove safe dead code",
-      "expected_flow": "sweep",
-      "actual_flow": "sweep",
-      "expected_entry_mode": "default",
-      "actual_entry_mode": "default",
-      "status": "implemented",
-      "readiness_refs": []
-    },
-    {
-      "id": "overnight",
-      "input": "overnight: improve repo quality",
-      "expected_flow": "sweep",
-      "actual_flow": "sweep",
-      "expected_entry_mode": "autonomous",
-      "actual_entry_mode": "autonomous",
-      "status": "implemented",
-      "readiness_refs": []
-    },
-    {
       "id": "plan-execution",
       "input": "Execute this plan: ./docs/specs/headless-engine-host-api-v1.md",
       "expected_flow": "build",
@@ -296,30 +193,10 @@
     }
   ],
   "commands": {
-    "source": ["create", "handoff", "migrate", "run", "sweep"],
-    "claude_plugin": [
-      "build",
-      "create",
-      "explore",
-      "fix",
-      "handoff",
-      "migrate",
-      "review",
-      "run",
-      "sweep"
-    ],
-    "codex_plugin": [
-      "build",
-      "create",
-      "explore",
-      "fix",
-      "handoff",
-      "migrate",
-      "review",
-      "run",
-      "sweep"
-    ],
-    "claude_plugin_skills": ["build", "explore", "fix", "migrate", "review", "sweep"]
+    "source": ["create", "handoff", "run"],
+    "claude_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
+    "codex_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
+    "claude_plugin_skills": ["build", "explore", "fix", "review"]
   },
   "connectors": [
     {
@@ -471,21 +348,6 @@
       }
     },
     {
-      "id": "command:migrate",
-      "kind": "flow",
-      "title": "claude-code command migrate",
-      "status": "implemented",
-      "summary": "Command migrate is present for claude-code.",
-      "evidence": ["plugins/claude/commands/migrate.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
       "id": "command:review",
       "kind": "flow",
       "title": "claude-code command review",
@@ -507,21 +369,6 @@
       "status": "implemented",
       "summary": "Command run is present for claude-code.",
       "evidence": ["plugins/claude/commands/run.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:sweep",
-      "kind": "flow",
-      "title": "claude-code command sweep",
-      "status": "implemented",
-      "summary": "Command sweep is present for claude-code.",
-      "evidence": ["plugins/claude/commands/sweep.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -714,35 +561,6 @@
       }
     },
     {
-      "id": "flow:migrate",
-      "kind": "flow",
-      "title": "migrate flow",
-      "status": "implemented",
-      "summary": "Flow migrate is registered in the catalog.",
-      "evidence": ["src/flows/migrate/schematic.json", "generated/flows/migrate/circuit.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": ["migrate:"],
-        "modes": ["autonomous", "deep", "default"],
-        "stage_path": [
-          "Frame",
-          "Inventory",
-          "Coexistence Plan",
-          "Batch Execution",
-          "Verify",
-          "Release Review",
-          "Close"
-        ],
-        "outputs": ["brief.md", "inventory.md", "plan.md", "result.md", "review.md"],
-        "checkpoint": "Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.",
-        "review": "Compiled review stages or reviewer relays are present.",
-        "verification": "Compiled verification steps write command-result reports before close.",
-        "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
-        "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder.",
-        "proof": "Migration plan and batch proof run."
-      }
-    },
-    {
       "id": "flow:review",
       "kind": "flow",
       "title": "review flow",
@@ -758,35 +576,6 @@
         "review": "Compiled review stages or reviewer relays are present.",
         "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
         "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder."
-      }
-    },
-    {
-      "id": "flow:sweep",
-      "kind": "flow",
-      "title": "sweep flow",
-      "status": "implemented",
-      "summary": "Flow sweep is registered in the catalog.",
-      "evidence": ["src/flows/sweep/schematic.json", "generated/flows/sweep/circuit.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": ["cleanup:", "overnight:"],
-        "modes": ["autonomous", "deep", "default", "lite"],
-        "stage_path": [
-          "Frame",
-          "Survey",
-          "Queue/Triage",
-          "Batch Execute",
-          "Verify",
-          "Deferred Review",
-          "Close"
-        ],
-        "outputs": ["analysis.md", "brief.md", "deferred.md", "queue.md", "result.md", "review.md"],
-        "checkpoint": "Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.",
-        "review": "Compiled review stages or reviewer relays are present.",
-        "verification": "Compiled verification steps write command-result reports before close.",
-        "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
-        "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder.",
-        "proof": "Sweep golden run covering queue/deferred output."
       }
     },
     {
@@ -1082,117 +871,12 @@
       }
     },
     {
-      "id": "mode:migrate:autonomous",
-      "kind": "mode",
-      "title": "migrate autonomous",
-      "status": "implemented",
-      "summary": "migrate declares entry mode autonomous.",
-      "evidence": ["generated/flows/migrate"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:migrate:deep",
-      "kind": "mode",
-      "title": "migrate deep",
-      "status": "implemented",
-      "summary": "migrate declares entry mode deep.",
-      "evidence": ["generated/flows/migrate"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:migrate:default",
-      "kind": "mode",
-      "title": "migrate default",
-      "status": "implemented",
-      "summary": "migrate declares entry mode default.",
-      "evidence": ["generated/flows/migrate"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
       "id": "mode:review:default",
       "kind": "mode",
       "title": "review default",
       "status": "implemented",
       "summary": "review declares entry mode default.",
       "evidence": ["generated/flows/review"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:sweep:autonomous",
-      "kind": "mode",
-      "title": "sweep autonomous",
-      "status": "implemented",
-      "summary": "sweep declares entry mode autonomous.",
-      "evidence": ["generated/flows/sweep"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:sweep:deep",
-      "kind": "mode",
-      "title": "sweep deep",
-      "status": "implemented",
-      "summary": "sweep declares entry mode deep.",
-      "evidence": ["generated/flows/sweep"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:sweep:default",
-      "kind": "mode",
-      "title": "sweep default",
-      "status": "implemented",
-      "summary": "sweep declares entry mode default.",
-      "evidence": ["generated/flows/sweep"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "mode:sweep:lite",
-      "kind": "mode",
-      "title": "sweep lite",
-      "status": "implemented",
-      "summary": "sweep declares entry mode lite.",
-      "evidence": ["generated/flows/sweep"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1397,6 +1081,21 @@
       }
     },
     {
+      "id": "route-outcome:fix:connector-failed",
+      "kind": "route_outcome",
+      "title": "fix route connector-failed",
+      "status": "partial",
+      "summary": "connector-failed is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/fix/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
       "id": "route-outcome:fix:continue",
       "kind": "route_outcome",
       "title": "fix route continue",
@@ -1487,66 +1186,6 @@
       }
     },
     {
-      "id": "route-outcome:migrate:complete",
-      "kind": "route_outcome",
-      "title": "migrate route complete",
-      "status": "implemented",
-      "summary": "complete maps to an executable compiled route.",
-      "evidence": ["src/flows/migrate/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:migrate:continue",
-      "kind": "route_outcome",
-      "title": "migrate route continue",
-      "status": "implemented",
-      "summary": "continue maps to an executable compiled route.",
-      "evidence": ["src/flows/migrate/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:migrate:revise",
-      "kind": "route_outcome",
-      "title": "migrate route revise",
-      "status": "implemented",
-      "summary": "revise maps to an executable compiled route.",
-      "evidence": ["src/flows/migrate/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:migrate:stop",
-      "kind": "route_outcome",
-      "title": "migrate route stop",
-      "status": "implemented",
-      "summary": "stop maps to an executable compiled route.",
-      "evidence": ["src/flows/migrate/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
       "id": "route-outcome:review:complete",
       "kind": "route_outcome",
       "title": "review route complete",
@@ -1607,81 +1246,6 @@
       }
     },
     {
-      "id": "route-outcome:sweep:complete",
-      "kind": "route_outcome",
-      "title": "sweep route complete",
-      "status": "implemented",
-      "summary": "complete maps to an executable compiled route.",
-      "evidence": ["src/flows/sweep/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:sweep:continue",
-      "kind": "route_outcome",
-      "title": "sweep route continue",
-      "status": "implemented",
-      "summary": "continue maps to an executable compiled route.",
-      "evidence": ["src/flows/sweep/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:sweep:retry",
-      "kind": "route_outcome",
-      "title": "sweep route retry",
-      "status": "implemented",
-      "summary": "retry maps to an executable compiled route.",
-      "evidence": ["src/flows/sweep/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:sweep:revise",
-      "kind": "route_outcome",
-      "title": "sweep route revise",
-      "status": "implemented",
-      "summary": "revise maps to an executable compiled route.",
-      "evidence": ["src/flows/sweep/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "route-outcome:sweep:stop",
-      "kind": "route_outcome",
-      "title": "sweep route stop",
-      "status": "implemented",
-      "summary": "stop maps to an executable compiled route.",
-      "evidence": ["src/flows/sweep/schematic.json"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
       "id": "route-outcomes:rich",
       "kind": "route_outcome",
       "title": "Rich route outcomes",
@@ -1692,21 +1256,6 @@
       "axes": {
         "intent_hints": [],
         "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "router:intent:cleanup",
-      "kind": "router_intent",
-      "title": "cleanup routing",
-      "status": "implemented",
-      "summary": "cleanup: remove safe dead code routed to sweep with default mode; expected sweep.",
-      "evidence": ["src/flows/router.ts"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": ["cleanup:"],
-        "modes": ["default"],
         "stage_path": [],
         "outputs": []
       }
@@ -1752,36 +1301,6 @@
       "axes": {
         "intent_hints": ["fix:"],
         "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "router:intent:migrate",
-      "kind": "router_intent",
-      "title": "migrate routing",
-      "status": "implemented",
-      "summary": "migrate: replace the legacy SDK routed to migrate with deep mode; expected migrate.",
-      "evidence": ["src/flows/router.ts"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": ["migrate:"],
-        "modes": ["deep"],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "router:intent:overnight",
-      "kind": "router_intent",
-      "title": "overnight routing",
-      "status": "implemented",
-      "summary": "overnight: improve repo quality routed to sweep with autonomous mode; expected sweep.",
-      "evidence": ["src/flows/router.ts"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": ["overnight:"],
-        "modes": ["autonomous"],
         "stage_path": [],
         "outputs": []
       }
@@ -1840,7 +1359,7 @@
       "kind": "safety",
       "title": "Write-capable worker disclosure",
       "status": "implemented",
-      "summary": "Write-capable Claude Code worker behavior is disclosed in docs, progress, and final summaries for Build/Fix/Migrate/Sweep.",
+      "summary": "Write-capable Claude Code worker behavior is disclosed in docs, progress, and final summaries for Build/Fix.",
       "evidence": [
         "README.md",
         "docs/first-run.md",

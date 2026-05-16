@@ -12,9 +12,7 @@ import {
   ExploreTournamentReview,
 } from '../../src/flows/explore/reports.js';
 import { FixResult } from '../../src/flows/fix/reports.js';
-import { MigrateResult } from '../../src/flows/migrate/reports.js';
 import { ReviewResult } from '../../src/flows/review/reports.js';
-import { SweepResult } from '../../src/flows/sweep/reports.js';
 import {
   compareParity,
   releaseBlockers,
@@ -121,8 +119,6 @@ describe('release truth infrastructure', () => {
 
     expect(capabilities.get('flow:build')?.axes.intent_hints).toEqual(['develop:']);
     expect(capabilities.get('flow:fix')?.axes.intent_hints).toEqual(['fix:']);
-    expect(capabilities.get('flow:migrate')?.axes.intent_hints).toEqual(['migrate:']);
-    expect(capabilities.get('flow:sweep')?.axes.intent_hints).toEqual(['cleanup:', 'overnight:']);
     expect(capabilities.get('flow:explore')?.axes.intent_hints).toEqual(['decide:']);
     expect(capabilities.get('flow:explore')?.axes.stage_path).toContain('Plan or Decision');
     expect(capabilities.get('flow:explore')?.axes.proof).toBe('Golden decision or tournament run.');
@@ -131,12 +127,6 @@ describe('release truth infrastructure', () => {
     );
     expect(capabilities.get('flow:fix')?.axes.proof).toBe(
       'Fix golden run with regression evidence.',
-    );
-    expect(capabilities.get('flow:migrate')?.axes.proof).toBe(
-      'Migration plan and batch proof run.',
-    );
-    expect(capabilities.get('flow:sweep')?.axes.proof).toBe(
-      'Sweep golden run covering queue/deferred output.',
     );
     expect(capabilities.get('flow:explore')?.axes.outputs).toEqual([
       'analysis.md',
@@ -159,15 +149,6 @@ describe('release truth infrastructure', () => {
         'explore.result@v1',
       ]),
     );
-
-    expect(capabilities.get('flow:sweep')?.axes.outputs).toEqual([
-      'analysis.md',
-      'brief.md',
-      'deferred.md',
-      'queue.md',
-      'result.md',
-      'review.md',
-    ]);
 
     expect(capabilities.get('utility:review')?.axes.outputs).toEqual(['review.md']);
     expect(capabilities.get('utility:review')?.axes.review).toContain('fresh reviewer relay');
@@ -591,8 +572,6 @@ describe('release truth infrastructure', () => {
       ['proof:checkpoint-resume', { slug: 'checkpoint', flow: 'build', outcome: 'complete' }],
       ['proof:abort-failure', { slug: 'abort', flow: 'build', outcome: 'aborted' }],
       ['proof:fix', { slug: 'fix', flow: 'fix', outcome: 'complete' }],
-      ['proof:migrate', { slug: 'migrate', flow: 'migrate', outcome: 'complete' }],
-      ['proof:sweep', { slug: 'sweep', flow: 'sweep', outcome: 'complete' }],
       ['proof:plan-execution', { slug: 'plan-execution', flow: 'build', outcome: 'complete' }],
       ['proof:doctor-first-run', { slug: 'doctor', flow: 'doctor', outcome: 'ok' }],
     ]);
@@ -664,15 +643,6 @@ describe('release truth infrastructure', () => {
     expect(
       FixResult.parse(jsonFile('docs/release/proofs/runs/fix/run/reports/fix-result.json')).outcome,
     ).toBe('partial');
-    expect(
-      MigrateResult.parse(
-        jsonFile('docs/release/proofs/runs/migrate/run/reports/migrate-result.json'),
-      ).outcome,
-    ).toBe('complete');
-    expect(
-      SweepResult.parse(jsonFile('docs/release/proofs/runs/sweep/run/reports/sweep-result.json'))
-        .outcome,
-    ).toBe('complete');
 
     const handoffScenario = proofs.scenarios.find((item) => item.id === 'proof:handoff');
     expect(handoffScenario?.status).toBe('verified_current');
@@ -765,7 +735,6 @@ describe('release truth infrastructure', () => {
     const coverage = validateProofCoverage({ proofs, exceptions, pathExists: exists });
     expect(coverage.issues).toEqual([
       'proof category has no scenario: deciding',
-      'proof category has no scenario: maintenance',
       'proof category has no scenario: continuity',
       'proof category has no scenario: customization',
       'proof category has no scenario: first-run',

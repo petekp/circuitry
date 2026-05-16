@@ -26,27 +26,15 @@ const FLOW_COMMAND_SOURCES: Record<string, string> = {
   fix: 'src/flows/fix/command.md',
   review: 'src/flows/review/command.md',
 };
-const EXPECTED_CODEX_COMMANDS = [
-  'build',
-  'create',
-  'explore',
-  'fix',
-  'handoff',
-  'migrate',
-  'review',
-  'run',
-  'sweep',
-];
+const EXPECTED_CODEX_COMMANDS = ['build', 'create', 'explore', 'fix', 'handoff', 'review', 'run'];
 const EXPECTED_CODEX_SKILL_TITLES: Record<string, string> = {
   build: 'Circuit Build',
   create: 'Circuit Create',
   explore: 'Circuit Explore',
   fix: 'Circuit Fix',
   handoff: 'Circuit Handoff',
-  migrate: 'Circuit Migrate',
   review: 'Circuit Review',
   run: 'Circuit Run',
-  sweep: 'Circuit Sweep',
 };
 
 const PluginManifest = z
@@ -683,12 +671,6 @@ describe('Codex host plugin package', () => {
       );
       expect(output.checks).toContainEqual(
         expect.objectContaining({ name: 'bundled_runtime_exists', ok: true }),
-      );
-      expect(output.checks).toContainEqual(
-        expect.objectContaining({ name: 'packaged_flow_migrate', ok: true }),
-      );
-      expect(output.checks).toContainEqual(
-        expect.objectContaining({ name: 'packaged_flow_sweep', ok: true }),
       );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

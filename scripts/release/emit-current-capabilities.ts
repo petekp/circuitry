@@ -137,9 +137,6 @@ function stageAxisLabel(
   const canonical = stage.canonical ?? stage.id;
   if (canonical === 'plan' && /decision/i.test(stage.title ?? '')) return 'Plan or Decision';
   if (flowId === 'fix' && canonical === 'act') return 'Fix';
-  if (flowId === 'sweep' && canonical === 'plan') return 'Queue/Triage';
-  if (flowId === 'sweep' && canonical === 'act') return 'Batch Execute';
-  if (flowId === 'sweep' && canonical === 'review') return 'Deferred Review';
   if (typeof stage.title === 'string' && stage.title.length > 0) return stage.title;
   return canonical;
 }
@@ -192,17 +189,7 @@ const SEMANTIC_OUTPUTS_BY_REPORT = new Map(
     'fix.diagnosis@v1': ['analysis.md'],
     'fix.review@v1': ['review.md'],
     'fix.result@v1': ['result.md'],
-    'migrate.brief@v1': ['brief.md'],
-    'migrate.inventory@v1': ['inventory.md'],
-    'migrate.coexistence@v1': ['plan.md'],
-    'migrate.review@v1': ['review.md'],
-    'migrate.result@v1': ['result.md'],
     'review.result@v1': ['review.md'],
-    'sweep.brief@v1': ['brief.md'],
-    'sweep.analysis@v1': ['analysis.md'],
-    'sweep.queue@v1': ['queue.md', 'deferred.md'],
-    'sweep.review@v1': ['review.md'],
-    'sweep.result@v1': ['result.md'],
   }),
 );
 
@@ -385,20 +372,6 @@ const PROOF_AXIS_BY_SCENARIO = new Map([
     },
   ],
   [
-    'proof:migrate',
-    {
-      capability: 'flow:migrate',
-      proof: 'Migration plan and batch proof run.',
-    },
-  ],
-  [
-    'proof:sweep',
-    {
-      capability: 'flow:sweep',
-      proof: 'Sweep golden run covering queue/deferred output.',
-    },
-  ],
-  [
     'proof:explore-decision',
     {
       capability: 'flow:explore',
@@ -535,27 +508,6 @@ function routerIntentCases(classifyCompiledFlowTask: RouterClassify): RouterInte
       input: 'decide: choose the queue architecture',
       expected_flow: 'explore',
       expected_entry_mode: 'tournament',
-      readiness_refs: [],
-    },
-    {
-      id: 'migrate',
-      input: 'migrate: replace the legacy SDK',
-      expected_flow: 'migrate',
-      expected_entry_mode: 'deep',
-      readiness_refs: [],
-    },
-    {
-      id: 'cleanup',
-      input: 'cleanup: remove safe dead code',
-      expected_flow: 'sweep',
-      expected_entry_mode: 'default',
-      readiness_refs: [],
-    },
-    {
-      id: 'overnight',
-      input: 'overnight: improve repo quality',
-      expected_flow: 'sweep',
-      expected_entry_mode: 'autonomous',
       readiness_refs: [],
     },
     {
@@ -894,7 +846,7 @@ function supportCapabilities(
       title: 'Write-capable worker disclosure',
       status: 'implemented',
       summary:
-        'Write-capable Claude Code worker behavior is disclosed in docs, progress, and final summaries for Build/Fix/Migrate/Sweep.',
+        'Write-capable Claude Code worker behavior is disclosed in docs, progress, and final summaries for Build/Fix.',
       evidence: [
         'README.md',
         'docs/first-run.md',
@@ -975,7 +927,7 @@ async function main(): Promise<void> {
     ...flows.flatMap(routeCapabilities),
     ...routerCapabilities(routerIntents),
     ...claudeCommands.map((id) => commandCapability(id, 'claude-code', true)),
-    ...['create', 'handoff', 'migrate', 'sweep']
+    ...['create', 'handoff']
       .filter((id) => !claudeCommands.includes(id))
       .map((id) => commandCapability(id, 'claude-code', false)),
     ...connectorCapabilities(connectors),

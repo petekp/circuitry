@@ -154,7 +154,7 @@ const reviewProjector: SummaryProjector = ({ flowReport }) => {
   } satisfies SummaryProjection;
 };
 
-function buildFixMigrateDetails(flowReport: JsonObject | undefined): string[] {
+function buildFixDetails(flowReport: JsonObject | undefined): string[] {
   const details: string[] = [];
   const summaryDetail = flowSummaryDetail(flowReport);
   if (summaryDetail !== undefined) details.push(summaryDetail);
@@ -190,7 +190,7 @@ const buildProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
     }
     return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   })();
-  return { headline, details: buildFixMigrateDetails(flowReport) } satisfies SummaryProjection;
+  return { headline, details: buildFixDetails(flowReport) } satisfies SummaryProjection;
 };
 
 const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
@@ -208,31 +208,7 @@ const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
   const headline = `Circuit: ${capitalized(friendlyFixOutcome(outcome))}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   return {
     headline,
-    details: buildFixMigrateDetails(flowReport),
-  } satisfies SummaryProjection;
-};
-
-const migrateProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
-  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
-  const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
-  const review = stringField(flowReport, 'review_verdict') ?? 'unknown';
-  return {
-    headline: `Circuit: Migrate finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
-    details: buildFixMigrateDetails(flowReport),
-  } satisfies SummaryProjection;
-};
-
-const sweepProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
-  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
-  const deferred = numberField(flowReport, 'deferred_count');
-  const headline =
-    deferred === undefined
-      ? `Circuit: Sweep finished with outcome ${outcome}.`
-      : `Circuit: Sweep finished with outcome ${outcome}. Deferred: ${plural(deferred, 'item')}.`;
-  const summaryDetail = flowSummaryDetail(flowReport);
-  return {
-    headline,
-    details: summaryDetail === undefined ? [] : [summaryDetail],
+    details: buildFixDetails(flowReport),
   } satisfies SummaryProjection;
 };
 
@@ -249,9 +225,7 @@ export const SUMMARY_PROJECTORS: Partial<Record<string, SummaryProjector>> = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
-  migrate: migrateProjector,
   review: reviewProjector,
-  sweep: sweepProjector,
 };
 
 export function projectSummary(input: Parameters<SummaryProjector>[0]): SummaryProjection {

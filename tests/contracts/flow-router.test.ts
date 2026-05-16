@@ -7,9 +7,7 @@ describe('flow router classifier', () => {
     // Order is incidental — the router's evaluation order comes from
     // each package's routing.order, not from this array. Asserting set
     // membership keeps the test stable across catalog reordering.
-    expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(
-      ['build', 'explore', 'fix', 'migrate', 'review', 'sweep'].sort(),
-    );
+    expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(['build', 'explore', 'fix', 'review'].sort());
   });
 
   it('routes review/audit-style tasks to the review flow', () => {
@@ -18,7 +16,7 @@ describe('flow router classifier', () => {
       'review the current uncommitted Circuit Codex host surface changes and report any correctness issues',
       'review the current changes for correctness issues',
       'please audit the command wiring',
-      'critique this migration plan',
+      'critique this transition plan',
       'inspect this diff',
       'check this PR before merge',
       'look for bugs in the runner change',
@@ -33,38 +31,6 @@ describe('flow router classifier', () => {
       expect(decision.flowName, task).toBe('review');
       expect(decision.source).toBe('classifier');
       expect(decision.matched_signal).toBeDefined();
-    }
-  });
-
-  it('routes migration-style tasks to the migrate flow', () => {
-    const cases = [
-      'migrate the auth middleware to the new identity stack',
-      'migrate: swap the legacy storage connector',
-      'rewrite the search connector on top of the new SDK',
-      'port the legacy ingester to the streaming pipeline',
-      'replace the deprecated provider with the new one',
-      'transition the build pipeline to turbo',
-      'framework swap from express to fastify',
-      'dependency replacement across the monorepo',
-    ];
-
-    for (const task of cases) {
-      const decision = classifyCompiledFlowTask(task);
-      expect(decision.flowName, task).toBe('migrate');
-      expect(decision.source).toBe('classifier');
-      expect(decision.matched_signal).toBeDefined();
-    }
-  });
-
-  it('keeps migrate-prefixed planning goals on explore via planning-report suppression', () => {
-    const cases = [
-      'migrate: produce a migration plan',
-      'migrate the auth middleware — write a design doc first',
-    ];
-
-    for (const task of cases) {
-      const decision = classifyCompiledFlowTask(task);
-      expect(decision.flowName, task).toBe('explore');
     }
   });
 
@@ -173,21 +139,6 @@ describe('flow router classifier', () => {
     expect(develop.inferredEntryModeName).toBe('default');
     expect(develop.inferredEntryModeReason).toMatch(/develop/i);
 
-    const migrate = classifyCompiledFlowTask('migrate: replace the legacy SDK');
-    expect(migrate.flowName).toBe('migrate');
-    expect(migrate.inferredEntryModeName).toBe('deep');
-    expect(migrate.inferredEntryModeReason).toMatch(/migrate/i);
-
-    const cleanup = classifyCompiledFlowTask('cleanup: remove safe dead code');
-    expect(cleanup.flowName).toBe('sweep');
-    expect(cleanup.inferredEntryModeName).toBe('default');
-    expect(cleanup.inferredEntryModeReason).toMatch(/cleanup/i);
-
-    const overnight = classifyCompiledFlowTask('overnight: improve repo quality');
-    expect(overnight.flowName).toBe('sweep');
-    expect(overnight.inferredEntryModeName).toBe('autonomous');
-    expect(overnight.inferredEntryModeReason).toMatch(/overnight/i);
-
     const decide = classifyCompiledFlowTask('decide: choose the rollout strategy');
     expect(decide.flowName).toBe('explore');
     expect(decide.reason).toMatch(/decide/i);
@@ -203,18 +154,6 @@ describe('flow router classifier', () => {
     expect(general.matched_signal).toBe('plan-execution');
     expect(general.inferredEntryModeName).toBe('default');
     expect(general.reason).toMatch(/first executable slice/i);
-
-    const migrate = classifyCompiledFlowTask('Execute this migration plan: replace legacy SDK');
-    expect(migrate.flowName).toBe('migrate');
-    expect(migrate.inferredEntryModeName).toBe('deep');
-
-    const sweep = classifyCompiledFlowTask('Execute this cleanup checklist: remove dead code');
-    expect(sweep.flowName).toBe('sweep');
-    expect(sweep.inferredEntryModeName).toBe('default');
-
-    const overnight = classifyCompiledFlowTask('Execute this overnight cleanup plan');
-    expect(overnight.flowName).toBe('sweep');
-    expect(overnight.inferredEntryModeName).toBe('autonomous');
 
     const fix = classifyCompiledFlowTask('Execute this bug fix plan: diagnose the flaky test');
     expect(fix.flowName).toBe('fix');

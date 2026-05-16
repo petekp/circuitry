@@ -284,6 +284,9 @@ function project(
     change: overrides.change ?? change(),
     change_set: overrides.change_set ?? changeSetPass(),
     verification: overrides.verification ?? verificationPassed(),
+    ...(overrides.review_skip_reason === undefined
+      ? {}
+      : { review_skip_reason: overrides.review_skip_reason }),
     evidence_links:
       overrides.evidence_links ?? pointers({ withReview: review !== undefined, ...pointerOpts }),
   };
@@ -291,7 +294,7 @@ function project(
 }
 
 describe('projectFixResult', () => {
-  it("returns 'not-reproduced' when diagnosis says not-reproduced, regardless of pillars", () => {
+  it("returns 'not-reproduced' when diagnosis says not-reproduced and runtime proof is deferred", () => {
     const result = project(
       {
         diagnosis: diagnosis('not-reproduced'),
@@ -305,6 +308,16 @@ describe('projectFixResult', () => {
     expect(result.review_skip_reason).toBeDefined();
   });
 
+  it("returns 'fixed' when runtime proof reproduces the bug even if diagnosis says not-reproduced", () => {
+    const result = project({
+      diagnosis: diagnosis('not-reproduced'),
+      regression: regressionProved(),
+      regression_rerun: rerunCleared(),
+    });
+    expect(result.outcome).toBe('fixed');
+    expect(result.regression_status).toBe('proved');
+  });
+
   it("returns 'fixed' when all four pillars are green and review is skipped", () => {
     const result = project();
     expect(result.outcome).toBe('fixed');
@@ -313,6 +326,15 @@ describe('projectFixResult', () => {
     expect(result.regression_rerun_status).toBe('cleared');
     expect(result.change_set_status).toBe('pass');
     expect(result.review_status).toBe('skipped');
+  });
+
+  it('keeps a specific review skip reason when review was unavailable', () => {
+    const result = project({
+      review_skip_reason: 'reviewer connector unavailable after proof passed',
+    });
+    expect(result.outcome).toBe('fixed');
+    expect(result.review_status).toBe('skipped');
+    expect(result.review_skip_reason).toBe('reviewer connector unavailable after proof passed');
   });
 
   it("returns 'fixed' when all pillars are green and review verdict is 'accept'", () => {

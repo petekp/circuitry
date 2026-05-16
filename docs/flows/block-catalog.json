@@ -133,7 +133,7 @@
     {
       "id": "plan",
       "title": "Plan",
-      "purpose": "Choose a bounded implementation, investigation, or migration path.",
+      "purpose": "Choose a bounded implementation, investigation, or transition path.",
       "input_contracts": ["flow.brief@v1", "context.packet@v1", "diagnosis.result@v1"],
       "alternative_input_contracts": [["flow.brief@v1"], ["flow.brief@v1", "context.packet@v1"]],
       "output_contract": "plan.strategy@v1",
@@ -209,7 +209,7 @@
         "kind": "review",
         "description": "The verdict must be one of the declared review outcomes and must include findings when it blocks."
       },
-      "allowed_routes": ["continue", "retry", "revise", "ask", "stop"],
+      "allowed_routes": ["continue", "connector-failed", "retry", "revise", "ask", "stop"],
       "human_interaction": "optional",
       "host_capabilities": {
         "claude": [],

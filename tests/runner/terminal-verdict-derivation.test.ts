@@ -11,7 +11,7 @@ import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Adversarial-review fix #2: deriveTerminalVerdict had no direct
-// end-to-end coverage. Every existing sub-run / migrate
+// end-to-end coverage. Every existing sub-run
 // test stubs the childRunner and hand-writes the child's result.json,
 // so the runner's own walk-backward over trace_entries never executes in
 // those tests. These tests exercise real derivation through

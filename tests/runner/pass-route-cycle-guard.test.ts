@@ -32,6 +32,39 @@ function flowWithPassCycle(): ExecutableFlow {
   };
 }
 
+function flowWithRecoveryCorridor(): ExecutableFlow {
+  return {
+    id: 'runtime-proof-recovery-corridor',
+    version: '0.1.0',
+    entry: 'act-step',
+    stages: [{ id: 'main', stepIds: ['act-step', 'verify-step', 'change-set-step'] }],
+    steps: [
+      {
+        id: 'act-step',
+        kind: 'compose',
+        writer: 'act-writer',
+        routes: { pass: { kind: 'step', stepId: 'verify-step' } },
+      },
+      {
+        id: 'verify-step',
+        kind: 'compose',
+        writer: 'verify-writer',
+        routes: { pass: { kind: 'step', stepId: 'change-set-step' } },
+      },
+      {
+        id: 'change-set-step',
+        kind: 'compose',
+        writer: 'change-set-writer',
+        routes: {
+          pass: { kind: 'terminal', target: '@complete' },
+          retry: { kind: 'step', stepId: 'act-step' },
+        },
+      },
+    ],
+    purpose: 'Exercise recovery through completed forward-path steps.',
+  };
+}
+
 let runFolderBase: string;
 
 beforeEach(() => {
@@ -96,5 +129,36 @@ describe('WF-I11 runtime-safety-floor pass-route cycle guard', () => {
     expect(result.outcome).toBe('aborted');
     expect(result.reason).toBe(outcome.reason);
     expect(result.trace_entries_observed).toBe(trace_entries.length);
+  });
+
+  it('allows recovery to pass through a completed forward-path step before rerunning the failed proof step', async () => {
+    const runFolder = join(runFolderBase, 'recovery-corridor');
+    const outcome = await executeExecutableFlow(flowWithRecoveryCorridor(), {
+      runDir: runFolder,
+      runId: '72000000-0000-0000-0000-000000000002',
+      goal: 'runtime must rerun proof corridor after repair',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 24, 19, 5, 0)),
+      executors: {
+        compose: async (step, context) => {
+          if (step.id === 'change-set-step' && context.activeStepAttempt === 1) {
+            return { route: 'retry', details: { reason: 'change-set mismatch' } };
+          }
+          return { route: 'pass' };
+        },
+      },
+    });
+    const trace_entries = await new TraceStore(runFolder).load();
+
+    expect(outcome.outcome).toBe('complete');
+    const completions = trace_entries.filter((entry) => entry.kind === 'step.completed');
+    expect(completions.map((entry) => [entry.step_id, entry.attempt, entry.route_taken])).toEqual([
+      ['act-step', 1, 'pass'],
+      ['verify-step', 1, 'pass'],
+      ['change-set-step', 1, 'retry'],
+      ['act-step', 2, 'pass'],
+      ['verify-step', 2, 'pass'],
+      ['change-set-step', 2, 'pass'],
+    ]);
   });
 });

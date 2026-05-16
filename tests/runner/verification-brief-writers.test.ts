@@ -5,15 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { buildCompiledFlowPackage } from '../../src/flows/build/index.js';
 import type { BuildBrief } from '../../src/flows/build/reports.js';
-import { migrateCompiledFlowPackage } from '../../src/flows/migrate/index.js';
-import type { MigrateBrief } from '../../src/flows/migrate/reports.js';
 import type { CheckpointBriefBuilder } from '../../src/flows/registries/checkpoint-writers/types.js';
-import type {
-  ComposeBuildContext,
-  ComposeBuilder,
-} from '../../src/flows/registries/compose-writers/types.js';
-import { sweepCompiledFlowPackage } from '../../src/flows/sweep/index.js';
-import type { SweepBrief } from '../../src/flows/sweep/reports.js';
 
 const roots: string[] = [];
 
@@ -35,17 +27,6 @@ function checkpointWriter(): CheckpointBriefBuilder {
     (candidate) => candidate.resultSchemaName === 'build.brief@v1',
   );
   if (writer === undefined) throw new Error('build.brief@v1 checkpoint writer missing');
-  return writer;
-}
-
-function composeWriter(flow: 'migrate' | 'sweep'): ComposeBuilder {
-  const writers =
-    flow === 'migrate'
-      ? migrateCompiledFlowPackage.writers.compose
-      : sweepCompiledFlowPackage.writers.compose;
-  const schema = flow === 'migrate' ? 'migrate.brief@v1' : 'sweep.brief@v1';
-  const writer = writers.find((candidate) => candidate.resultSchemaName === schema);
-  if (writer === undefined) throw new Error(`${schema} compose writer missing`);
   return writer;
 }
 
@@ -89,37 +70,5 @@ describe('verification brief writers', () => {
       ['npm', 'run', 'build'],
       ['npm', 'run', 'lint'],
     ]);
-  });
-
-  it('Migrate resolves a general proof command instead of hardcoding npm run check', () => {
-    const projectRoot = tempRoot('migrate-brief-resolver-');
-    writePackageJson(projectRoot, { verify: 'vitest', check: 'tsc --noEmit' });
-
-    const brief = composeWriter('migrate').build({
-      runFolder: '/tmp/run',
-      flow: {} as never,
-      step: {} as never,
-      goal: 'migrate the legacy API',
-      projectRoot,
-      inputs: {},
-    } satisfies ComposeBuildContext) as MigrateBrief;
-
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'verify']);
-  });
-
-  it('Sweep resolves a general proof command instead of hardcoding npm run check', () => {
-    const projectRoot = tempRoot('sweep-brief-resolver-');
-    writePackageJson(projectRoot, { test: 'vitest', check: 'tsc --noEmit' });
-
-    const brief = composeWriter('sweep').build({
-      runFolder: '/tmp/run',
-      flow: {} as never,
-      step: {} as never,
-      goal: 'cleanup dead code',
-      projectRoot,
-      inputs: {},
-    } satisfies ComposeBuildContext) as SweepBrief;
-
-    expect(brief.verification_command_candidates[0]?.argv).toEqual(['npm', 'run', 'test']);
   });
 });

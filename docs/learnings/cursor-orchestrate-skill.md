@@ -175,7 +175,7 @@ first appear:
 
 What's *not* orthogonal: recursive dispatch (a worker spawning its
 own sub-fanout), wider parallel fan-out within a phase (e.g. parallel
-slice execution in Migrate), structured-handoff returns (dispatch
+slice execution in Build), structured-handoff returns (dispatch
 already does this in a small way). These are extensions of
 circuit-next's existing topology, not imports of a foreign one. We
 just haven't pushed dispatch in those directions because the
@@ -197,7 +197,7 @@ near-term work:
 - The "agent decides, script drives" lens, applied next time a
   circuit feels flaky or repeats itself.
 - The planners-don't-code rule, applied as a Plan-phase contract next
-  time we touch Build or Migrate.
+  time we touch Build.
 
 The node-type table format is worth keeping in mind for any future
 docs pass over circuits/rigor/adapters.

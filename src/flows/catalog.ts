@@ -8,20 +8,16 @@
 import { buildCompiledFlowPackage } from './build/index.js';
 import { exploreCompiledFlowPackage } from './explore/index.js';
 import { fixCompiledFlowPackage } from './fix/index.js';
-import { migrateCompiledFlowPackage } from './migrate/index.js';
 import { reviewCompiledFlowPackage } from './review/index.js';
 import { runtimeProofCompiledFlowPackage } from './runtime-proof/index.js';
-import { sweepCompiledFlowPackage } from './sweep/index.js';
 import type { CompiledFlowPackage } from './types.js';
 
 export const flowPackages: readonly CompiledFlowPackage[] = [
   reviewCompiledFlowPackage,
-  migrateCompiledFlowPackage,
   fixCompiledFlowPackage,
   runtimeProofCompiledFlowPackage,
   buildCompiledFlowPackage,
   exploreCompiledFlowPackage,
-  sweepCompiledFlowPackage,
 ];
 
 const PACKAGES_BY_ID: ReadonlyMap<string, CompiledFlowPackage> = (() => {

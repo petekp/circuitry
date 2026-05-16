@@ -590,6 +590,9 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   const compiledStep = requireCompiledStep(context, step, 'relay');
   const relayAttempt = await executeProductionRelayAttempt({ step, context, compiledStep });
   if (relayAttempt.kind === 'connector_failed') {
+    if (Object.hasOwn(step.routes, 'connector-failed')) {
+      return { route: 'connector-failed', details: { reason: relayAttempt.reason } };
+    }
     const recoveryRoute = recoveryRouteForExecutableStep(step);
     if (recoveryRoute !== undefined)
       return { route: recoveryRoute, details: { reason: relayAttempt.reason } };

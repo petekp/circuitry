@@ -68,7 +68,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('@Circuit the checkout total is wrong when discounts and tax both apply');
     expect(doc).toContain('@Circuit please review my current diff');
     expect(doc).toContain('@Circuit add billing settings to the account page');
-    expect(doc).toContain('Use Circuit to decide whether we should migrate auth providers');
+    expect(doc).toContain('Use Circuit to decide whether we should replace auth providers');
     expect(doc).toContain('/circuit:run <natural task>');
     expect(doc).toContain('Explicit Build');
     expect(doc).toContain('Checkpoint');
@@ -83,15 +83,10 @@ describe('host experience docs', () => {
     expect(doc).toContain('/circuit:run — flow selector');
     expect(doc).toContain('Select the flow before invoking the CLI');
     expect(doc).toContain(
-      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal',
-    );
-    expect(doc).toContain(
       'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal',
     );
     expect(doc).not.toContain('Do not classify the task yourself');
     expect(doc).toContain('Let the presentation wrapper render output');
-    expect(doc).not.toContain('selected_flow === "sweep"');
-    expect(doc).not.toContain('reports/sweep-result.json');
   });
 
   it('teaches one natural-language front door per host in the README', () => {
@@ -107,7 +102,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('worker connector behavior');
     expect(advancedIndex).toBeGreaterThan(0);
 
-    for (const prefix of ['fix:', 'develop:', 'cleanup:', 'overnight:', 'decide:']) {
+    for (const prefix of ['fix:', 'develop:', 'decide:']) {
       const firstIndex = doc.indexOf(prefix);
       expect(firstIndex).toBeGreaterThan(advancedIndex);
     }

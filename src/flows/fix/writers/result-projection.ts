@@ -32,6 +32,7 @@ export interface FixResultProjectorInputs {
   change_set: FixChangeSet;
   verification: FixVerification;
   review?: FixReview;
+  review_skip_reason?: string;
   evidence_links: FixResultReportPointer[];
 }
 
@@ -45,6 +46,7 @@ export function projectFixResult(inputs: FixResultProjectorInputs): FixResult {
     change_set: changeSet,
     verification,
     review,
+    review_skip_reason: reviewSkipReason,
     evidence_links,
   } = inputs;
 
@@ -70,7 +72,7 @@ export function projectFixResult(inputs: FixResultProjectorInputs): FixResult {
       review?.verdict === 'accept-with-fixes');
 
   const outcome: FixResult['outcome'] =
-    diagnosis.reproduction_status === 'not-reproduced'
+    diagnosis.reproduction_status === 'not-reproduced' && regressionStatus !== 'proved'
       ? 'not-reproduced'
       : fixedGate
         ? 'fixed'
@@ -88,7 +90,9 @@ export function projectFixResult(inputs: FixResultProjectorInputs): FixResult {
     review_status: reviewStatus,
     ...(review === undefined ? {} : { review_verdict: review.verdict }),
     ...(review === undefined
-      ? { review_skip_reason: 'Lite mode skipped review per route_overrides.' }
+      ? {
+          review_skip_reason: reviewSkipReason ?? 'Lite mode skipped review per route_overrides.',
+        }
       : {}),
     residual_risks: [...diagnosis.residual_uncertainty],
     evidence_links,

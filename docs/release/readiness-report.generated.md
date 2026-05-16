@@ -8,11 +8,11 @@ This report is the current release truth surface. The infra checks may pass whil
 
 | Measure | Value |
 | --- | --- |
-| Original capabilities | 18 |
-| Current capabilities | 94 |
+| Original capabilities | 13 |
+| Current capabilities | 72 |
 | Tracked exceptions | 3 |
 | Public claims | 10 |
-| Proof scenarios | 13 |
+| Proof scenarios | 11 |
 | Release blockers | 0 |
 | Infra issues | 0 |
 

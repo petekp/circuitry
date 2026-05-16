@@ -147,6 +147,45 @@ function isRecoveryRoute(route: string | undefined): boolean {
   return route !== undefined && RECOVERY_ROUTE_LABELS.has(route);
 }
 
+function canReachStepViaNonRecoveryRoutes(input: {
+  readonly steps: ReadonlyMap<string, ExecutableStep>;
+  readonly fromStepId: string;
+  readonly targetStepId: string;
+}): boolean {
+  if (input.fromStepId === input.targetStepId) return true;
+  const seen = new Set<string>();
+  const queue = [input.fromStepId];
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const stepId = queue[index];
+    if (stepId === undefined || seen.has(stepId)) continue;
+    seen.add(stepId);
+    const step = input.steps.get(stepId);
+    if (step === undefined) continue;
+    for (const [route, target] of Object.entries(step.routes)) {
+      if (isRecoveryRoute(route) || target.kind !== 'step') continue;
+      if (target.stepId === input.targetStepId) return true;
+      queue.push(target.stepId);
+    }
+  }
+
+  return false;
+}
+
+function isRecoveryReturnCorridor(input: {
+  readonly steps: ReadonlyMap<string, ExecutableStep>;
+  readonly activeRecovery: ActiveRecovery | undefined;
+  readonly stepId: string;
+  readonly route: string | undefined;
+}): boolean {
+  if (input.activeRecovery === undefined || isRecoveryRoute(input.route)) return false;
+  return canReachStepViaNonRecoveryRoutes({
+    steps: input.steps,
+    fromStepId: input.stepId,
+    targetStepId: input.activeRecovery.originStepId,
+  });
+}
+
 function configuredMaxAttempts(step: ExecutableStep): number | undefined {
   const budgets = step.budgets;
   if (budgets === undefined || budgets === null || typeof budgets !== 'object') return undefined;
@@ -385,10 +424,12 @@ export async function executeExecutableFlowWithWaiting(
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
     const maxAttempts = maxAttemptsForRoute(step, incomingRouteTaken);
-    const isRecoveryOriginReentry =
-      activeRecovery !== undefined &&
-      activeRecovery.originStepId === step.id &&
-      !isRecoveryRoute(incomingRouteTaken);
+    const isRecoveryOriginReentry = isRecoveryReturnCorridor({
+      steps,
+      activeRecovery,
+      stepId: step.id,
+      route: incomingRouteTaken,
+    });
     const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
     if (
       !isResumedCheckpoint &&
@@ -491,10 +532,12 @@ export async function executeExecutableFlowWithWaiting(
     if (target.kind === 'step') {
       const targetCompletedCount = completedStepCounts.get(target.stepId) ?? 0;
       const targetStep = steps.get(target.stepId);
-      const isRecoveryReturnToOrigin =
-        activeRecovery !== undefined &&
-        activeRecovery.originStepId === target.stepId &&
-        !isRecoveryRoute(route);
+      const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
+        steps,
+        activeRecovery,
+        stepId: target.stepId,
+        route,
+      });
       const targetMaxAttempts =
         targetStep === undefined
           ? maxAttemptsForRoute(step, route)

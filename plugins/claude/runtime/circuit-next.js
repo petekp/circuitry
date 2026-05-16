@@ -7341,12 +7341,12 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync14, readFileSync as readFileSync30 } from "node:fs";
-import { dirname as dirname10, resolve as resolve12 } from "node:path";
+import { existsSync as existsSync13, readFileSync as readFileSync27 } from "node:fs";
+import { dirname as dirname10, resolve as resolve11 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync21 } from "node:fs";
+import { readFileSync as readFileSync18 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -12817,7 +12817,7 @@ function checkpointResponsePath(context) {
   return checkpoint.writes.response;
 }
 function followUpWorkflowFor(nextAction) {
-  const match = /\b(Build|Fix|Migrate|Sweep|Explore|Review)\b/i.exec(nextAction);
+  const match = /\b(Build|Fix|Explore|Review)\b/i.exec(nextAction);
   if (match?.[1] === void 0)
     return "Explore";
   const lower = match[1].toLowerCase();
@@ -13213,14 +13213,16 @@ var FixDiagnosis = external_exports.object({
   confidence: external_exports.enum(["low", "medium", "high"]),
   evidence: LenientNonEmptyStringArray,
   residual_uncertainty: external_exports.array(external_exports.string().min(1).describe("remaining unknown that could still affect the fix"))
-}).strict().superRefine((diagnosis, ctx) => {
-  if (diagnosis.reproduction_status !== "reproduced" && diagnosis.residual_uncertainty.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["residual_uncertainty"],
-      message: "residual_uncertainty must be non-empty when the problem was not cleanly reproduced"
-    });
+}).strict().transform((diagnosis) => {
+  if (diagnosis.reproduction_status === "reproduced" || diagnosis.residual_uncertainty.length > 0) {
+    return diagnosis;
   }
+  return {
+    ...diagnosis,
+    residual_uncertainty: [
+      "Diagnosis did not cleanly reproduce the bug before the runtime baseline proof."
+    ]
+  };
 });
 var FixNoReproDecisionKind = external_exports.enum([
   "add-diagnostics",
@@ -13777,7 +13779,7 @@ var fixContextShapeHint = {
   schema: "fix.context@v1",
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixContext)),
-    "sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources \u2014 do not invent details that the sources do not support.",
+    "Read the relevant source and tests before reporting context. This step is read-only by intent: do not edit files, write files, or run commands that modify the checkout. Include the files, commands, or notes that define the bug boundary and the proof commands the operator expects. sources must contain at least one entry; observations must contain at least one entry. Use an empty open_questions array only when nothing remains unresolved. Every observation must be grounded in the cited sources \u2014 do not invent details that the sources do not support.",
     mechanicalTail("fix.context@v1", "reports/fix/context.json")
   ].join(" ")
 };
@@ -13786,7 +13788,7 @@ var fixDiagnosisShapeHint = {
   schema: "fix.diagnosis@v1",
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixDiagnosis)),
-    'evidence must contain at least one entry (file:line, command result, or report reference that supports the cause), expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" \u2014 if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
+    'Compare the failing behavior against the intended behavior before naming the cause. This step is read-only by intent: do not edit files, write files, or run commands that modify the checkout. Check whether the bug could have sibling edge cases, not only the first failing assertion. evidence must contain at least one entry (file:line, command result, or report reference that supports the cause), expressed as a JSON array of short distinct strings (one supporting fact per element). residual_uncertainty must be non-empty whenever reproduction_status is anything other than "reproduced" \u2014 if you could not cleanly reproduce the bug, name the unknowns honestly. Calibrate confidence to the evidence: do not claim "high" without direct reproduction or equivalent proof.',
     mechanicalTail("fix.diagnosis@v1", "reports/fix/diagnosis.json")
   ].join(" ")
 };
@@ -13795,7 +13797,7 @@ var fixChangeShapeHint = {
   schema: "fix.change@v1",
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixChange)),
-    "Make the smallest change that resolves the diagnosed cause. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry (test output, command result, or before/after observation that confirms the change works).",
+    "Make the smallest change that resolves the diagnosed cause and address every objective check named in the brief. Do not stop at the first green assertion if the brief names multiple formats, modes, or edge commands. Do not refactor adjacent code, broaden behavior, or address unrelated issues in the same edit. changed_files must contain at least one entry; evidence must contain at least one entry (test output, command result, or before/after observation that confirms the change works).",
     "`evidence` is a JSON array of short distinct strings \u2014 one observation per element. It is a schema field name, not a request for prose. Even on retry attempts where you are summarizing prior verification output, keep each observation as its own array element.",
     mechanicalTail("fix.change@v1", "reports/fix/change.json")
   ].join(" ")
@@ -13805,7 +13807,7 @@ var fixReviewShapeHint = {
   schema: "fix.review@v1",
   instruction: [
     shapeInstruction(renderShapeSkeleton(FixReview)),
-    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Flag changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
+    "Review the change against the diagnosed cause and the brief's success criteria, not just against passing verification. Look for missed edge cases, partially handled input variants, and changes that broaden semantics beyond the bug being fixed even when the regression test passes.",
     'Use an empty findings array only with verdict "accept". Verdicts "accept-with-fixes" and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference.',
     mechanicalTail("fix.review@v1", "reports/fix/review.json")
   ].join(" ")
@@ -13873,11 +13875,146 @@ var fixBaselineSnapshotWriter = {
 };
 
 // dist/flows/fix/writers/brief.js
+function parseSimpleArgv(command) {
+  const argv = [];
+  let current = "";
+  let quote;
+  let tokenStarted = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    if (char === void 0)
+      continue;
+    if (quote !== void 0) {
+      if (char === quote) {
+        quote = void 0;
+        tokenStarted = true;
+        continue;
+      }
+      if (quote === '"' && char === "\\") {
+        const next = command[index + 1];
+        if (next === '"' || next === "\\") {
+          current += next;
+          index += 1;
+          tokenStarted = true;
+          continue;
+        }
+      }
+      current += char;
+      tokenStarted = true;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (tokenStarted) {
+        argv.push(current);
+        current = "";
+        tokenStarted = false;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      tokenStarted = true;
+      continue;
+    }
+    if (/[|&;<>()`$]/.test(char))
+      return void 0;
+    current += char;
+    tokenStarted = true;
+  }
+  if (quote !== void 0)
+    return void 0;
+  if (tokenStarted)
+    argv.push(current);
+  if (argv.length === 0)
+    return void 0;
+  if (argv.some((part) => part.length === 0))
+    return void 0;
+  return argv;
+}
+function explicitRegressionCommand(goal) {
+  const match = /\bregression command is\s+`([^`]+)`/i.exec(goal) ?? /\bregression command:\s*`([^`]+)`/i.exec(goal);
+  const rawCommand = match?.[1];
+  if (rawCommand === void 0)
+    return void 0;
+  const argv = parseSimpleArgv(rawCommand);
+  if (argv === void 0)
+    return void 0;
+  return FixVerificationCommand.parse({
+    id: "fix-regression",
+    cwd: ".",
+    argv,
+    timeout_ms: 6e5,
+    max_output_bytes: 2e5,
+    env: {}
+  });
+}
+function commandFromArgv(id, argv) {
+  return FixVerificationCommand.parse({
+    id,
+    cwd: ".",
+    argv,
+    timeout_ms: 6e5,
+    max_output_bytes: 2e5,
+    env: {}
+  });
+}
+function explicitObjectiveCheckCommands(goal) {
+  const match = /\bObjective check commands:\s*\n([\s\S]*?)(?:\n\n|\nAllowed changed files:|$)/i.exec(goal);
+  const rawSection = match?.[1];
+  if (rawSection === void 0)
+    return [];
+  const commands = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const line of rawSection.split("\n")) {
+    const rawCommand = /^\s*-\s+(.+?)\s*$/.exec(line)?.[1];
+    if (rawCommand === void 0)
+      continue;
+    const argv = parseSimpleArgv(rawCommand);
+    if (argv === void 0)
+      continue;
+    const key = argv.join("\0");
+    if (seen.has(key))
+      continue;
+    seen.add(key);
+    commands.push(commandFromArgv(`fix-objective-${commands.length + 1}`, argv));
+  }
+  return commands;
+}
+function regressionContractForGoal(goal) {
+  const command = explicitRegressionCommand(goal);
+  if (command === void 0) {
+    return {
+      expected_behavior: `After fix: ${goal}`,
+      actual_behavior: `Before fix: ${goal}`,
+      repro: {
+        kind: "not-reproducible",
+        deferred_reason: "Default Fix brief \u2014 operator-supplied repro evidence not available at frame time"
+      },
+      regression_test: {
+        status: "deferred",
+        deferred_reason: "Default Fix brief \u2014 regression-test authoring deferred until repro evidence is supplied"
+      }
+    };
+  }
+  return {
+    expected_behavior: `After fix: ${goal}`,
+    actual_behavior: `Before fix: ${goal}`,
+    repro: {
+      kind: "command",
+      command
+    },
+    regression_test: {
+      status: "failing-before-fix",
+      command
+    }
+  };
+}
 var fixBriefComposeBuilder = {
   resultSchemaName: "fix.brief@v1",
   build(context) {
     const goal = context.goal;
-    const verificationCommands = requireResolvedVerificationCommands({
+    const explicitObjectiveCommands = explicitObjectiveCheckCommands(goal);
+    const verificationCommands = explicitObjectiveCommands.length > 0 ? explicitObjectiveCommands : requireResolvedVerificationCommands({
       ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
       goal,
       requestedNeeds: ["general"],
@@ -13890,18 +14027,7 @@ var fixBriefComposeBuilder = {
       expected_behavior: `Resolve: ${goal}`,
       observed_behavior: `Currently: ${goal}`,
       scope: goal,
-      regression_contract: {
-        expected_behavior: `After fix: ${goal}`,
-        actual_behavior: `Before fix: ${goal}`,
-        repro: {
-          kind: "not-reproducible",
-          deferred_reason: "Default Fix brief \u2014 operator-supplied repro evidence not available at frame time"
-        },
-        regression_test: {
-          status: "deferred",
-          deferred_reason: "Default Fix brief \u2014 regression-test authoring deferred until repro evidence is supplied"
-        }
-      },
+      regression_contract: regressionContractForGoal(goal),
       success_criteria: [`Demonstrate the fix addresses: ${goal}`],
       verification_command_candidates: verificationCommands
     });
@@ -14021,7 +14147,7 @@ var fixChangeSetWriter = {
 
 // dist/flows/fix/writers/result-projection.js
 function projectFixResult(inputs) {
-  const { brief, diagnosis, regression, regression_rerun: regressionRerun, change, change_set: changeSet, verification, review, evidence_links } = inputs;
+  const { brief, diagnosis, regression, regression_rerun: regressionRerun, change, change_set: changeSet, verification, review, review_skip_reason: reviewSkipReason, evidence_links } = inputs;
   const verificationStatus = verification.overall_status === "passed" ? "passed" : "failed";
   const regressionStatus = regression.status === "proved" ? "proved" : "deferred";
   const regressionRerunStatus = regressionRerun.status;
@@ -14029,7 +14155,7 @@ function projectFixResult(inputs) {
   const reviewStatus = review === void 0 ? "skipped" : "completed";
   const fixedGate = verificationStatus === "passed" && regressionStatus === "proved" && regressionRerunStatus === "cleared" && changeSetStatus === "pass" && (review === void 0 || review.verdict === "accept");
   const partialGate = verificationStatus === "passed" && (regressionStatus !== "proved" || regressionRerunStatus !== "cleared" || changeSetStatus === "fail" || review?.verdict === "accept-with-fixes");
-  const outcome = diagnosis.reproduction_status === "not-reproduced" ? "not-reproduced" : fixedGate ? "fixed" : partialGate ? "partial" : "failed";
+  const outcome = diagnosis.reproduction_status === "not-reproduced" && regressionStatus !== "proved" ? "not-reproduced" : fixedGate ? "fixed" : partialGate ? "partial" : "failed";
   return FixResult.parse({
     summary: `Fix '${brief.problem_statement}': ${change.summary}`,
     outcome,
@@ -14039,7 +14165,9 @@ function projectFixResult(inputs) {
     change_set_status: changeSetStatus,
     review_status: reviewStatus,
     ...review === void 0 ? {} : { review_verdict: review.verdict },
-    ...review === void 0 ? { review_skip_reason: "Lite mode skipped review per route_overrides." } : {},
+    ...review === void 0 ? {
+      review_skip_reason: reviewSkipReason ?? "Lite mode skipped review per route_overrides."
+    } : {},
     residual_risks: [...diagnosis.residual_uncertainty],
     evidence_links
   });
@@ -14107,6 +14235,9 @@ var fixCloseBuilder = {
       change_set: changeSet,
       verification,
       ...review === void 0 ? {} : { review },
+      ...review === void 0 && context.closeStep.id === "fix-close" ? {
+        review_skip_reason: "Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence."
+      } : {},
       evidence_links: pointers
     });
   }
@@ -14162,7 +14293,7 @@ var fixRegressionBaselineWriter = {
     return FixRegressionProof.parse({
       status: "not-proved",
       overall_status: "failed",
-      reason: "Brief claimed the regression test fails before the fix, but the runtime observed it pass. Diagnosis is wrong about how the bug reproduces.",
+      reason: "Brief claimed the regression test fails before the fix, but the runtime observed it pass. The brief selected the wrong pre-fix proof command or the bug no longer reproduces.",
       baseline
     });
   }
@@ -14332,30 +14463,574 @@ var fixCompiledFlowPackage = {
   }
 };
 
-// dist/flows/migrate/relay-hints.js
-var migrateReviewShapeHint = {
-  kind: "schema",
-  schema: "migrate.review@v1",
+// dist/flows/review/relay-hints.js
+var reviewRelayShapeHint = {
+  kind: "structural",
+  id: "review.relay-result@structural",
+  match(step) {
+    return step.role === "reviewer" && step.check.pass.includes("NO_ISSUES_FOUND") && step.check.pass.includes("ISSUES_FOUND");
+  },
   instruction: [
     "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<release-approved|release-with-followups|release-blocked|reject>", "summary": "<release-review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] }',
-    'Audit the migration as a release decision: do the staged batches together satisfy the migration brief, did verification pass, and is anything left that would block ratification? Flag findings that name specific files, batches, or behaviors \u2014 do not file generic "looks good" notes.',
-    'Use an empty findings array only with verdict "release-approved". Verdicts "release-with-followups", "release-blocked", and "reject" must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against migrate.review@v1 before writing reports/migrate/review.json."
-  ].join(" ")
-};
-var migrateInventoryShapeHint = {
-  kind: "schema",
-  schema: "migrate.inventory@v1",
-  instruction: [
-    "Walk the project to enumerate every concrete location that needs to change for this migration. Use Glob, Grep, and Read to find real files and code patterns matching the brief's source / target / scope. Every items[].path must be a project-relative path that exists on disk; do not fabricate items. This step is read-only by intent: do NOT call Edit, Write, or any Bash command that modifies files.",
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "accept", "summary": "<what was inventoried>", "items": [{ "id": "<stable item id>", "path": "<project-relative path>", "category": "<e.g. import-site, config-file, test-only>", "description": "<one-line description of why this item is in scope>" }], "batches": [{ "id": "<stable batch id>", "title": "<short batch name>", "item_ids": ["<id from items above>"], "rationale": "<why these items group together>" }] }',
-    "Each items[].id must be unique. Each batches[].item_ids[] must reference an items[].id (no orphans). The items array must contain at least one entry; if the walk finds nothing, investigate further before responding rather than emitting an empty inventory. The batches array must contain at least one entry covering at least one item.",
+    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|medium|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }], "assessment": "<plain-language paragraph>", "verification": ["<step you performed>"], "confidence_limitations": ["<gap that limits certainty>"] }',
+    'Use an empty findings array when there are no issues: { "verdict": "NO_ISSUES_FOUND", "findings": [], "assessment": "...", "verification": ["..."], "confidence_limitations": ["..."] }.',
+    "Use an empty file_refs array when a finding has no file-specific reference.",
+    "The assessment field is REQUIRED on every verdict, including NO_ISSUES_FOUND. State plainly what you checked and what you concluded; do not return a bare verdict.",
+    "The verification array is your self-report of concrete steps you took: files inspected, commands run, evidence cross-referenced. Include at least one entry on every verdict so the operator can audit the review.",
+    "The confidence_limitations array names anything that limits certainty: out-of-scope files, omitted untracked content, areas you did not inspect, assumptions you had to make. Use an empty array only when coverage was complete.",
     "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against migrate.inventory@v1 before writing reports/migrate/inventory.json."
+    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and the close step validates findings, assessment, verification, and confidence_limitations before writing reports/review-result.json."
   ].join(" ")
 };
+
+// dist/flows/review/reports.js
+var ReviewFindingSeverity = external_exports.enum(["critical", "high", "medium", "low"]);
+var ReviewResultVerdict = external_exports.enum(["CLEAN", "ISSUES_FOUND"]);
+var ReviewRelayVerdict = external_exports.enum(["NO_ISSUES_FOUND", "ISSUES_FOUND"]);
+var ReviewEvidenceWarningKind = external_exports.enum([
+  "diff_truncated",
+  "git_command_failed",
+  "untracked_file_skipped",
+  "untracked_file_content_omitted",
+  "untracked_files_truncated",
+  "evidence_unavailable",
+  "scope_empty"
+]);
+var ReviewEvidenceWarning = external_exports.object({
+  kind: ReviewEvidenceWarningKind,
+  message: external_exports.string().min(1),
+  path: external_exports.string().min(1).optional()
+}).strict();
+var ReviewEvidenceText = external_exports.object({
+  text: external_exports.string(),
+  truncated: external_exports.boolean()
+}).strict();
+var ReviewUntrackedContentPolicy = external_exports.enum(["metadata-only", "include-content"]);
+var ReviewUntrackedFileEvidence = external_exports.object({
+  path: external_exports.string().min(1),
+  byte_length: external_exports.number().int().nonnegative(),
+  content: ReviewEvidenceText.optional(),
+  skipped_reason: external_exports.string().min(1).optional()
+}).strict();
+var ReviewEvidence = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("unavailable"),
+    reason: external_exports.string().min(1)
+  }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("git-working-tree"),
+    project_root: external_exports.string().min(1),
+    status_short: external_exports.string(),
+    staged_diff: ReviewEvidenceText,
+    unstaged_diff: ReviewEvidenceText,
+    diff_stat: external_exports.string(),
+    untracked_file_count: external_exports.number().int().nonnegative(),
+    untracked_files_truncated: external_exports.boolean(),
+    untracked_content_policy: ReviewUntrackedContentPolicy,
+    untracked_files: external_exports.array(ReviewUntrackedFileEvidence)
+  }).strict()
+]);
+var ReviewEvidenceSummary = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("unavailable"),
+    message: external_exports.string().min(1)
+  }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("git-working-tree"),
+    untracked_content_policy: ReviewUntrackedContentPolicy,
+    untracked_file_count: external_exports.number().int().nonnegative(),
+    untracked_files_sampled: external_exports.number().int().nonnegative(),
+    untracked_files_truncated: external_exports.boolean()
+  }).strict()
+]);
+var ReviewIntake = external_exports.object({
+  scope: external_exports.string().min(1),
+  evidence: ReviewEvidence,
+  evidence_warnings: external_exports.array(ReviewEvidenceWarning).default([])
+}).strict();
+var ReviewFinding = external_exports.object({
+  severity: ReviewFindingSeverity,
+  id: external_exports.string().min(1),
+  text: external_exports.string().min(1),
+  file_refs: external_exports.array(external_exports.string().min(1))
+}).strict();
+function computeReviewVerdict(findings) {
+  return findings.some((finding) => finding.severity !== "low") ? "ISSUES_FOUND" : "CLEAN";
+}
+var ReviewResult = external_exports.object({
+  scope: external_exports.string().min(1),
+  findings: external_exports.array(ReviewFinding),
+  verdict: ReviewResultVerdict,
+  // Plain-language paragraph from the reviewer: what was checked and what
+  // they concluded. Required even on a CLEAN verdict so a no-findings result
+  // does not collapse to "Findings: 0" without context. The operator-summary
+  // renderer reads this when the projection has no findings to list.
+  assessment: external_exports.string().min(1),
+  // Concrete verification steps the reviewer performed: files inspected,
+  // commands run, evidence cross-referenced. Empty array is permitted but
+  // discouraged — the prompt asks the reviewer to name at least one step.
+  verification: external_exports.array(external_exports.string().min(1)),
+  // Known gaps that limit certainty (out-of-scope files, untracked content
+  // omitted, missing context). Empty array is permitted when the reviewer
+  // had complete coverage; the operator-summary renderer surfaces non-empty
+  // entries so a CLEAN verdict cannot quietly stand in for "high confidence".
+  confidence_limitations: external_exports.array(external_exports.string().min(1)),
+  evidence_summary: ReviewEvidenceSummary.optional(),
+  evidence_warnings: external_exports.array(ReviewEvidenceWarning).default([])
+}).strict().superRefine((report, ctx) => {
+  const expected = computeReviewVerdict(report.findings);
+  if (report.verdict !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`
+    });
+  }
+});
+var ReviewRelayResult = external_exports.object({
+  verdict: ReviewRelayVerdict,
+  findings: external_exports.array(ReviewFinding),
+  // See ReviewResult.assessment — the reviewer's plain-language paragraph
+  // describing what was checked and what they concluded. Required for both
+  // NO_ISSUES_FOUND and ISSUES_FOUND verdicts: a clean output without an
+  // assessment is the regression that motivated this addition (vanilla
+  // Claude Code says what it checked even on a no-findings review; Circuit
+  // used to collapse to "Findings: 0").
+  assessment: external_exports.string().min(1),
+  // Concrete verification steps the reviewer performed (files, commands,
+  // evidence). Required as an array; the relay prompt asks for at least
+  // one entry.
+  verification: external_exports.array(external_exports.string().min(1)),
+  // Known gaps that limit certainty. Required as an array (may be empty
+  // when coverage was complete).
+  confidence_limitations: external_exports.array(external_exports.string().min(1))
+}).strict().superRefine((report, ctx) => {
+  const expected = report.findings.length === 0 ? "NO_ISSUES_FOUND" : "ISSUES_FOUND";
+  if (report.verdict !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: `review relay verdict must be ${expected} for findings.length=${report.findings.length}`
+    });
+  }
+});
+
+// dist/flows/review/writers/intake.js
+import { spawnSync } from "node:child_process";
+import { closeSync, lstatSync as lstatSync2, openSync, readSync } from "node:fs";
+import { isAbsolute as isAbsolute2, relative as relative2, resolve as resolve2 } from "node:path";
+var MAX_DIFF_CHARS = 12e4;
+var MAX_UNTRACKED_FILES = 20;
+var MAX_UNTRACKED_FILE_CHARS = 2e4;
+var MAX_GIT_BUFFER_BYTES = 10 * 1024 * 1024;
+var MAX_DIFF_BUFFER_BYTES = Math.max(MAX_DIFF_CHARS * 4, 1024 * 1024);
+var MAX_UNTRACKED_FILE_BYTES = MAX_UNTRACKED_FILE_CHARS + 1;
+function truncateText(text, maxChars) {
+  if (text.length <= maxChars)
+    return { text, truncated: false };
+  return {
+    text: `${text.slice(0, maxChars)}
+[truncated ${text.length - maxChars} characters]`,
+    truncated: true
+  };
+}
+function errorMessage(err) {
+  return err instanceof Error ? err.message : String(err);
+}
+function outputToString(output) {
+  if (output === null || output === void 0)
+    return "";
+  if (typeof output === "string")
+    return output;
+  return Buffer.from(output).toString("utf8");
+}
+function runGit(projectRoot, args, options = {}) {
+  const result = spawnSync("git", [...args], {
+    cwd: projectRoot,
+    encoding: "utf8",
+    maxBuffer: options.maxBufferBytes ?? MAX_GIT_BUFFER_BYTES,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const stdout = outputToString(result.stdout);
+  const stderr = outputToString(result.stderr).trim();
+  if (result.error !== void 0) {
+    if (options.allowPartialStdout === true && stdout.length > 0) {
+      return { ok: true, stdout, truncated_by_buffer: true };
+    }
+    return { ok: false, reason: `git ${args.join(" ")} failed: ${result.error.message}` };
+  }
+  if (result.status !== 0) {
+    const reason = stderr.length > 0 ? stderr : `exited with status ${result.status ?? "unknown"}`;
+    return { ok: false, reason: `git ${args.join(" ")} failed: ${reason}` };
+  }
+  return { ok: true, stdout, truncated_by_buffer: false };
+}
+function runGitDiff(projectRoot, args) {
+  const result = runGit(projectRoot, args, {
+    maxBufferBytes: MAX_DIFF_BUFFER_BYTES,
+    allowPartialStdout: true
+  });
+  if (!result.ok)
+    return truncateText(result.reason, MAX_DIFF_CHARS);
+  if (!result.truncated_by_buffer)
+    return truncateText(result.stdout, MAX_DIFF_CHARS);
+  const truncated = truncateText(result.stdout, MAX_DIFF_CHARS);
+  return {
+    text: `${truncated.text}
+[truncated because git output exceeded ${MAX_DIFF_BUFFER_BYTES} bytes before completion]`,
+    truncated: true
+  };
+}
+function insideProject(projectRoot, path) {
+  const rel = relative2(projectRoot, path);
+  return rel === "" || !rel.startsWith("..") && !isAbsolute2(rel);
+}
+function readUntrackedFile(projectRoot, path, contentPolicy) {
+  const abs = resolve2(projectRoot, path);
+  if (!insideProject(projectRoot, abs)) {
+    return { path, byte_length: 0, skipped_reason: "path resolves outside project root" };
+  }
+  let stat2;
+  try {
+    stat2 = lstatSync2(abs);
+  } catch (err) {
+    return { path, byte_length: 0, skipped_reason: `failed to inspect file: ${errorMessage(err)}` };
+  }
+  if (stat2.isSymbolicLink()) {
+    return { path, byte_length: stat2.size, skipped_reason: "symbolic link skipped" };
+  }
+  if (!stat2.isFile()) {
+    return { path, byte_length: stat2.size, skipped_reason: "not a regular file" };
+  }
+  if (contentPolicy === "metadata-only") {
+    return { path, byte_length: stat2.size };
+  }
+  let fd;
+  try {
+    const byteLimit = Math.min(stat2.size, MAX_UNTRACKED_FILE_BYTES);
+    fd = openSync(abs, "r");
+    const bytes = Buffer.alloc(byteLimit);
+    const bytesRead = readSync(fd, bytes, 0, byteLimit, 0);
+    const sample = bytes.subarray(0, bytesRead);
+    if (sample.includes(0)) {
+      return { path, byte_length: stat2.size, skipped_reason: "binary file skipped" };
+    }
+    const content = truncateText(sample.toString("utf8"), MAX_UNTRACKED_FILE_CHARS);
+    return {
+      path,
+      byte_length: stat2.size,
+      content: stat2.size > bytesRead && !content.truncated ? { ...content, truncated: true } : content
+    };
+  } catch (err) {
+    return {
+      path,
+      byte_length: stat2.size,
+      skipped_reason: `failed to read file: ${errorMessage(err)}`
+    };
+  } finally {
+    if (fd !== void 0) {
+      try {
+        closeSync(fd);
+      } catch {
+      }
+    }
+  }
+}
+function collectUntrackedFiles(projectRoot, contentPolicy) {
+  const listed = runGit(projectRoot, ["ls-files", "--others", "--exclude-standard", "-z"]);
+  if (!listed.ok)
+    return { count: 0, truncated: false, files: [] };
+  const paths = listed.stdout.split("\0").filter((path) => path.length > 0);
+  return {
+    count: paths.length,
+    truncated: paths.length > MAX_UNTRACKED_FILES,
+    files: paths.slice(0, MAX_UNTRACKED_FILES).map((path) => readUntrackedFile(projectRoot, path, contentPolicy))
+  };
+}
+function collectReviewEvidence(projectRoot, options = {}) {
+  if (projectRoot === void 0) {
+    return {
+      kind: "unavailable",
+      reason: "CompiledFlowInvocation.projectRoot was not provided"
+    };
+  }
+  const status = runGit(projectRoot, ["status", "--short"]);
+  if (!status.ok)
+    return { kind: "unavailable", reason: status.reason };
+  const staged = runGitDiff(projectRoot, ["diff", "--cached", "--no-ext-diff", "--"]);
+  const unstaged = runGitDiff(projectRoot, ["diff", "--no-ext-diff", "--"]);
+  const diffStat = runGit(projectRoot, ["diff", "--stat", "--cached", "--no-ext-diff"]);
+  const untrackedContentPolicy = options.includeUntrackedFileContent === true ? "include-content" : "metadata-only";
+  const untracked = collectUntrackedFiles(projectRoot, untrackedContentPolicy);
+  return {
+    kind: "git-working-tree",
+    project_root: projectRoot,
+    status_short: status.stdout,
+    staged_diff: staged,
+    unstaged_diff: unstaged,
+    diff_stat: diffStat.ok ? diffStat.stdout : diffStat.reason,
+    untracked_file_count: untracked.count,
+    untracked_files_truncated: untracked.truncated,
+    untracked_content_policy: untrackedContentPolicy,
+    untracked_files: untracked.files
+  };
+}
+function gitCommandFailed(text) {
+  return /^git\s+.+\s+failed:/.test(text);
+}
+function evidenceWarnings(evidence) {
+  if (evidence.kind === "unavailable") {
+    return [
+      {
+        kind: "evidence_unavailable",
+        message: evidence.reason
+      }
+    ];
+  }
+  const warnings = [];
+  const hasUntrackedContent = evidence.untracked_files.some((file) => file.content !== void 0);
+  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !hasUntrackedContent && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
+    warnings.push({
+      kind: "scope_empty",
+      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. The reviewer had no source content to inspect: staged/unstaged diffs were empty and no untracked file content was relayed."
+    });
+  }
+  if (evidence.staged_diff.truncated) {
+    warnings.push({
+      kind: "diff_truncated",
+      message: "staged diff was truncated before relay"
+    });
+  }
+  if (evidence.unstaged_diff.truncated) {
+    warnings.push({
+      kind: "diff_truncated",
+      message: "unstaged diff was truncated before relay"
+    });
+  }
+  if (gitCommandFailed(evidence.staged_diff.text)) {
+    warnings.push({
+      kind: "git_command_failed",
+      message: evidence.staged_diff.text
+    });
+  }
+  if (gitCommandFailed(evidence.unstaged_diff.text)) {
+    warnings.push({
+      kind: "git_command_failed",
+      message: evidence.unstaged_diff.text
+    });
+  }
+  if (gitCommandFailed(evidence.diff_stat)) {
+    warnings.push({
+      kind: "git_command_failed",
+      message: evidence.diff_stat
+    });
+  }
+  if (evidence.untracked_files_truncated) {
+    warnings.push({
+      kind: "untracked_files_truncated",
+      message: `untracked file evidence was limited to ${MAX_UNTRACKED_FILES} files`
+    });
+  }
+  if (evidence.untracked_content_policy === "metadata-only" && evidence.untracked_file_count > 0) {
+    warnings.push({
+      kind: "untracked_file_content_omitted",
+      message: "untracked file contents were not included; pass --include-untracked-content only when those files are safe to relay"
+    });
+  }
+  for (const file of evidence.untracked_files) {
+    if (file.skipped_reason !== void 0) {
+      warnings.push({
+        kind: "untracked_file_skipped",
+        path: file.path,
+        message: file.skipped_reason
+      });
+    }
+  }
+  return warnings;
+}
+var reviewIntakeComposeBuilder = {
+  resultSchemaName: "review.intake@v1",
+  build(context) {
+    const evidence = collectReviewEvidence(context.projectRoot, context.evidencePolicy?.includeUntrackedFileContent === true ? { includeUntrackedFileContent: true } : {});
+    return ReviewIntake.parse({
+      scope: context.goal,
+      evidence,
+      evidence_warnings: evidenceWarnings(evidence)
+    });
+  }
+};
+
+// dist/flows/review/writers/result.js
+import { readFileSync as readFileSync10 } from "node:fs";
+function reviewerRelayResultPath(flow, closeStep) {
+  const closeStepId = closeStep.id;
+  const reviewerRelayes = flow.steps.filter((candidate) => candidate.kind === "relay" && candidate.role === "reviewer" && candidate.routes.pass === closeStepId);
+  if (reviewerRelayes.length !== 1) {
+    throw new Error(`review.result@v1 requires exactly one reviewer relay routing to '${closeStepId}', found ${reviewerRelayes.length}`);
+  }
+  const resultPath2 = reviewerRelayes[0]?.writes.result;
+  if (resultPath2 === void 0 || !closeStep.reads.includes(resultPath2)) {
+    throw new Error(`review.result@v1 requires close step '${closeStepId}' to read the reviewer relay result path '${resultPath2 ?? "<missing>"}'`);
+  }
+  return resultPath2;
+}
+function reviewIntakePath(flow, closeStep) {
+  const closeStepId = closeStep.id;
+  const intakeStep = flow.steps.find((candidate) => candidate.kind === "compose" && candidate.writes.report.schema === "review.intake@v1" && closeStep.reads.includes(candidate.writes.report.path));
+  const path = intakeStep?.writes.report.path;
+  if (path === void 0) {
+    throw new Error(`review.result@v1 requires close step '${closeStepId}' to read the review intake report`);
+  }
+  return path;
+}
+function evidenceSummary(evidence) {
+  if (evidence.kind === "unavailable") {
+    return { kind: "unavailable", message: evidence.reason };
+  }
+  return {
+    kind: "git-working-tree",
+    untracked_content_policy: evidence.untracked_content_policy,
+    untracked_file_count: evidence.untracked_file_count,
+    untracked_files_sampled: evidence.untracked_files.length,
+    untracked_files_truncated: evidence.untracked_files_truncated
+  };
+}
+var reviewResultComposeBuilder = {
+  resultSchemaName: "review.result@v1",
+  // No declarative reads — the read is a relay result body, not a
+  // typed report at a schema-mapped path. The build function does
+  // its own resolution.
+  build(context) {
+    const path = reviewerRelayResultPath(context.flow, context.step);
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, path), "utf8")));
+    return ReviewResult.parse({
+      scope: intake.scope,
+      findings: relayResult.findings,
+      verdict: computeReviewVerdict(relayResult.findings),
+      assessment: relayResult.assessment,
+      verification: relayResult.verification,
+      confidence_limitations: relayResult.confidence_limitations,
+      evidence_summary: evidenceSummary(intake.evidence),
+      evidence_warnings: intake.evidence_warnings
+    });
+  }
+};
+
+// dist/flows/review/index.js
+var REVIEW_SIGNALS = [
+  { label: "code review", pattern: /\bcode\s+review\b/i },
+  {
+    label: "change review request",
+    pattern: /\breview\s+(?:this\s+|the\s+|my\s+|a\s+)?(?:[\w-]+\s+){0,8}(?:changes?|diff|patch|commit|pr|pull\s+request|code|report|file)\b/i
+  },
+  { label: "audit request", pattern: /\baudit\b/i },
+  { label: "critique request", pattern: /\bcritique\b/i },
+  {
+    label: "change inspection request",
+    pattern: /\binspect\s+(?:this\s+|the\s+|my\s+|a\s+)?(?:change|diff|patch|commit|pr|pull\s+request|code|report|file)\b/i
+  },
+  {
+    label: "change-check request",
+    pattern: /\bcheck\s+(?:this\s+)?(?:change|diff|patch|commit|pr|pull\s+request)\b/i
+  },
+  {
+    label: "issue-finding request",
+    pattern: /\b(?:find|surface|identify|spot|detect|look\s+for)\s+(?:an?\s+|any\s+)?(?:(?:issue|issues)(?!\s*(?:#|\d))|bug|bugs|defect|defects|problem|problems|regression|regressions|risk|risks)\b/i
+  },
+  {
+    label: "risk-hunt request",
+    pattern: /\blook\s+for\s+(?:bugs|issues|regressions|risks)\b/i
+  }
+];
+var reviewCompiledFlowPackage = {
+  id: "review",
+  visibility: "public",
+  paths: {
+    schematic: "src/flows/review/schematic.json",
+    command: "src/flows/review/command.md",
+    contract: "src/flows/review/contract.md"
+  },
+  routing: {
+    order: 0,
+    signals: REVIEW_SIGNALS,
+    reasonForMatch(signal) {
+      return `matched ${signal.label}; routed to audit-only review flow`;
+    }
+  },
+  relayReports: [],
+  reportSchemas: [
+    { schemaName: "review.intake@v1", schema: ReviewIntake },
+    { schemaName: "review.result@v1", schema: ReviewResult }
+  ],
+  writers: {
+    compose: [reviewIntakeComposeBuilder, reviewResultComposeBuilder],
+    close: [],
+    verification: [],
+    checkpoint: []
+  },
+  structuralHints: [reviewRelayShapeHint]
+};
+
+// dist/flows/runtime-proof/reports.js
+var RuntimeProofCompose = external_exports.object({
+  summary: external_exports.string().min(1)
+}).strict();
+
+// dist/flows/runtime-proof/writers/compose.js
+var runtimeProofComposeBuilder = {
+  resultSchemaName: "plan.strategy@v1",
+  build(context) {
+    return RuntimeProofCompose.parse({
+      summary: `Runtime proof composed for: ${context.goal}`
+    });
+  }
+};
+
+// dist/flows/runtime-proof/index.js
+var runtimeProofCompiledFlowPackage = {
+  id: "runtime-proof",
+  visibility: "internal",
+  paths: {
+    schematic: "src/flows/runtime-proof/schematic.json"
+  },
+  relayReports: [],
+  reportSchemas: [{ schemaName: "runtime-proof.compose@v1", schema: RuntimeProofCompose }],
+  writers: {
+    compose: [runtimeProofComposeBuilder],
+    close: [],
+    verification: [],
+    checkpoint: []
+  }
+};
+
+// dist/flows/catalog.js
+var flowPackages = [
+  reviewCompiledFlowPackage,
+  fixCompiledFlowPackage,
+  runtimeProofCompiledFlowPackage,
+  buildCompiledFlowPackage,
+  exploreCompiledFlowPackage
+];
+var PACKAGES_BY_ID = (() => {
+  const map = /* @__PURE__ */ new Map();
+  for (const pkg of flowPackages) {
+    if (map.has(pkg.id)) {
+      throw new Error(`duplicate flow package id '${pkg.id}'`);
+    }
+    map.set(pkg.id, pkg);
+  }
+  return map;
+})();
+function findCompiledFlowPackageById(id) {
+  return PACKAGES_BY_ID.get(id);
+}
+
+// dist/flows/registries/checkpoint-writers/registry.js
+var REGISTRY = buildCheckpointRegistry(flowPackages);
+function findCheckpointBriefBuilder(resultSchemaName) {
+  return REGISTRY.get(resultSchemaName);
+}
 
 // dist/schemas/ids.js
 var slugPattern = /^[a-z][a-z0-9-]*$/;
@@ -14367,41 +15042,6 @@ var InvocationId = external_exports.string().regex(/^inv_[a-f0-9-]+$/).brand();
 var SkillId = external_exports.string().regex(slugPattern).brand();
 var SkillSlotId = external_exports.string().regex(slugPattern).brand();
 var ProtocolId = external_exports.string().regex(/^[a-z][a-z0-9-]*@v\d+$/).brand();
-
-// dist/schemas/change-kind.js
-var ChangeKind = external_exports.enum([
-  "ratchet-advance",
-  "equivalence-refactor",
-  "migration-escrow",
-  "discovery",
-  "disposable",
-  "break-glass"
-]);
-var ChangeKindBase = external_exports.object({
-  failure_mode: external_exports.string().min(1),
-  acceptance_evidence: external_exports.string().min(1),
-  alternate_framing: external_exports.string().min(1)
-});
-var MigrationEscrowChangeKind = ChangeKindBase.extend({
-  change_kind: external_exports.literal("migration-escrow"),
-  expires_at: external_exports.string().datetime(),
-  restoration_plan: external_exports.string().min(1)
-}).strict();
-var BreakGlassChangeKind = ChangeKindBase.extend({
-  change_kind: external_exports.literal("break-glass"),
-  post_hoc_adr_deadline_at: external_exports.string().datetime()
-}).strict();
-var StandardChangeKind = ChangeKindBase.extend({
-  change_kind: external_exports.enum(["ratchet-advance", "equivalence-refactor", "discovery", "disposable"])
-});
-var ChangeKindDeclaration = external_exports.discriminatedUnion("change_kind", [
-  StandardChangeKind.extend({ change_kind: external_exports.literal("ratchet-advance") }).strict(),
-  StandardChangeKind.extend({ change_kind: external_exports.literal("equivalence-refactor") }).strict(),
-  StandardChangeKind.extend({ change_kind: external_exports.literal("discovery") }).strict(),
-  StandardChangeKind.extend({ change_kind: external_exports.literal("disposable") }).strict(),
-  MigrationEscrowChangeKind,
-  BreakGlassChangeKind
-]);
 
 // dist/schemas/check.js
 var ReportSource = external_exports.object({
@@ -14846,7 +15486,7 @@ var FanoutBranchesDynamic = external_exports.object({
   // Runtime expands the template per item at fanout.start time and
   // re-parses each expansion through FanoutBranch (strict regex).
   //
-  // Used by Migrate where batch count is determined by inventory.
+  // Used when batch count is determined by an upstream inventory report.
   source_report: RunRelativePath,
   items_path: external_exports.string().min(1),
   template: FanoutBranchTemplate,
@@ -15018,1694 +15658,6 @@ var RelayResolutionSource = external_exports.discriminatedUnion("source", [
   AutoResolutionSource
 ]);
 
-// dist/schemas/trace-entry.js
-var TraceEntryBase = external_exports.object({
-  schema_version: external_exports.literal(1),
-  sequence: external_exports.number().int().nonnegative(),
-  recorded_at: external_exports.string().datetime(),
-  run_id: RunId
-});
-var HEX642 = /^[0-9a-f]{64}$/;
-var ContentHash = external_exports.string().regex(HEX642, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
-var RunBootstrappedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("run.bootstrapped"),
-  flow_id: CompiledFlowId,
-  invocation_id: InvocationId.optional(),
-  depth: Depth,
-  goal: external_exports.string().min(1),
-  change_kind: ChangeKindDeclaration,
-  manifest_hash: external_exports.string().min(1)
-}).strict();
-var StepEnteredTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.entered"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive()
-}).strict();
-var StepReportWrittenTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.report_written"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  report_path: external_exports.string().min(1),
-  report_schema: external_exports.string().min(1)
-}).strict();
-var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("check.evaluated"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  check_kind: external_exports.enum([
-    "schema_sections",
-    "checkpoint_selection",
-    "result_verdict",
-    "fanout_aggregate"
-  ]),
-  outcome: external_exports.enum(["pass", "fail"]),
-  missing_sections: external_exports.array(external_exports.string()).optional(),
-  reason: external_exports.string().optional()
-}).strict();
-var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("checkpoint.requested"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  options: external_exports.array(external_exports.string()).min(1),
-  request_path: external_exports.string().min(1),
-  request_report_hash: ContentHash
-}).strict();
-var CheckpointResolvedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("checkpoint.resolved"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  selection: external_exports.string().min(1),
-  auto_resolved: external_exports.boolean(),
-  resolution_source: external_exports.enum(["safe-default", "operator", "safe-autonomous"]),
-  response_path: external_exports.string().min(1)
-}).strict();
-var RelayStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  connector: ResolvedConnector,
-  role: RelayRole,
-  resolved_selection: ResolvedSelection,
-  resolved_from: RelayResolutionSource
-}).strict();
-var LoadedSkillEvidence = external_exports.object({
-  id: SkillId,
-  slot: SkillSlotId.optional(),
-  path: external_exports.string().min(1),
-  sha256: ContentHash,
-  bytes: external_exports.number().int().nonnegative()
-}).strict();
-var SkillsLoadedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("skills.loaded"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  skills: external_exports.array(LoadedSkillEvidence).min(1)
-}).strict();
-var RelayCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  result_path: external_exports.string().min(1),
-  receipt_path: external_exports.string().min(1)
-}).strict();
-var RelayRequestTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.request"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  request_payload_hash: ContentHash
-}).strict();
-var RelayFailedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.failed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  connector: ResolvedConnector,
-  role: RelayRole,
-  resolved_selection: ResolvedSelection,
-  resolved_from: RelayResolutionSource,
-  request_payload_hash: ContentHash,
-  reason: external_exports.string().min(1)
-}).strict();
-var RelayReceiptTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.receipt"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  cli_version: external_exports.string().min(1),
-  receipt_id: external_exports.string().min(1).refine((s) => s.trim().length > 0, {
-    message: "receipt_id must contain at least one non-whitespace character"
-  })
-}).strict();
-var RelayResultTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.result"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  result_report_hash: ContentHash
-}).strict();
-var StepCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  route_taken: external_exports.string().min(1)
-}).strict();
-var StepAbortedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.aborted"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  reason: external_exports.string().min(1)
-}).strict();
-var RunClosedOutcome = external_exports.enum(["complete", "aborted", "handoff", "stopped", "escalated"]);
-var SubRunStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("sub_run.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  child_run_id: RunId,
-  child_flow_id: CompiledFlowId,
-  child_entry_mode: external_exports.string().regex(/^[a-z][a-z0-9-]*$/),
-  child_depth: Depth
-}).strict();
-var SubRunCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("sub_run.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  child_run_id: RunId,
-  child_outcome: RunClosedOutcome,
-  // Verdict admitted from the child's terminal result body. NO_VERDICT_SENTINEL
-  // when the child closed without a parseable result body — mirrors the
-  // existing relay.completed sentinel pattern.
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  // Where the child's result.json was copied into the parent run-folder.
-  result_path: external_exports.string().min(1)
-}).strict();
-var FanoutStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  // Resolved branch list AT EXPANSION TIME. For static branches this
-  // mirrors the schematic's authored list. For dynamic branches this is the
-  // result of template expansion against the source report, so an
-  // auditor can see exactly which N branches were spawned without
-  // reconstructing the expansion themselves.
-  branch_ids: external_exports.array(external_exports.string().min(1)).min(1),
-  on_child_failure: FanoutFailurePolicy
-}).strict();
-var FanoutBranchStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.branch_started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId,
-  // Worktree path provisioned for this branch (relative to project root).
-  // Records where the per-branch isolation lived for postmortem auditing.
-  worktree_path: external_exports.string().min(1)
-}).strict();
-var FanoutBranchCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.branch_completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId,
-  child_outcome: RunClosedOutcome,
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  result_path: external_exports.string().min(1)
-}).strict();
-var FanoutJoinedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.joined"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  // The join policy that ran; mirrors the FanoutAggregateCheck.join.policy
-  // field but echoed into the trace_entry so the audit log is self-contained
-  // (no need to cross-reference the schematic to interpret outcomes).
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
-  // For pick-winner: the selected branch_id. Absent for the other policies.
-  selected_branch_id: external_exports.string().min(1).optional(),
-  // Path to the runtime-built aggregate report.
-  aggregate_path: external_exports.string().min(1),
-  // Count of branches that closed 'complete' vs other outcomes — quick
-  // health summary readable without reconstructing per-branch trace_entries.
-  branches_completed: external_exports.number().int().nonnegative(),
-  branches_failed: external_exports.number().int().nonnegative()
-}).strict();
-var RunClosedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("run.closed"),
-  outcome: RunClosedOutcome,
-  reason: external_exports.string().optional()
-}).strict();
-var TraceEntry = external_exports.discriminatedUnion("kind", [
-  RunBootstrappedTraceEntry,
-  StepEnteredTraceEntry,
-  StepReportWrittenTraceEntry,
-  CheckEvaluatedTraceEntry,
-  CheckpointRequestedTraceEntry,
-  CheckpointResolvedTraceEntry,
-  RelayStartedTraceEntry,
-  SkillsLoadedTraceEntry,
-  RelayRequestTraceEntry,
-  RelayFailedTraceEntry,
-  RelayReceiptTraceEntry,
-  RelayResultTraceEntry,
-  RelayCompletedTraceEntry,
-  SubRunStartedTraceEntry,
-  SubRunCompletedTraceEntry,
-  FanoutStartedTraceEntry,
-  FanoutBranchStartedTraceEntry,
-  FanoutBranchCompletedTraceEntry,
-  FanoutJoinedTraceEntry,
-  StepCompletedTraceEntry,
-  StepAbortedTraceEntry,
-  RunClosedTraceEntry
-]).superRefine((ev, ctx) => {
-  if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
-    return;
-  if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolved_from", "role"],
-      message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
-    });
-  }
-});
-
-// dist/schemas/result.js
-var RunResult = external_exports.object({
-  schema_version: external_exports.literal(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  goal: external_exports.string().min(1),
-  outcome: RunClosedOutcome,
-  summary: external_exports.string().min(1),
-  closed_at: external_exports.string().datetime(),
-  trace_entries_observed: external_exports.number().int().nonnegative(),
-  manifest_hash: external_exports.string().min(1),
-  reason: external_exports.string().min(1).optional(),
-  verdict: external_exports.string().min(1).optional()
-}).strict();
-
-// dist/flows/migrate/reports.js
-var MIGRATE_RESULT_SCHEMA_BY_ARTIFACT_ID = {
-  "migrate.brief": "migrate.brief@v1",
-  "migrate.inventory": "migrate.inventory@v1",
-  "migrate.coexistence": "migrate.coexistence@v1",
-  "migrate.batch": "migrate.batch@v1",
-  "migrate.verification": "migrate.verification@v1",
-  "migrate.review": "migrate.review@v1"
-};
-var NonEmptyStringArray3 = external_exports.array(external_exports.string().min(1)).min(1);
-var MigrateBrief = external_exports.object({
-  objective: external_exports.string().min(1),
-  source: external_exports.string().min(1),
-  target: external_exports.string().min(1),
-  scope: external_exports.string().min(1),
-  success_criteria: NonEmptyStringArray3,
-  coexistence_appetite: external_exports.enum(["none", "short-window", "open-ended"]),
-  rollback_plan: external_exports.string().min(1),
-  verification_command_candidates: external_exports.array(VerificationCommand).min(1)
-}).strict();
-var MigrateInventoryItem = external_exports.object({
-  id: external_exports.string().min(1),
-  path: external_exports.string().min(1),
-  category: external_exports.string().min(1),
-  description: external_exports.string().min(1)
-}).strict();
-var MigrateBatchPlan = external_exports.object({
-  id: external_exports.string().min(1),
-  title: external_exports.string().min(1),
-  item_ids: NonEmptyStringArray3,
-  rationale: external_exports.string().min(1)
-}).strict();
-var MigrateInventory = external_exports.object({
-  verdict: external_exports.literal("accept"),
-  summary: external_exports.string().min(1),
-  items: external_exports.array(MigrateInventoryItem).min(1),
-  batches: external_exports.array(MigrateBatchPlan).min(1)
-}).strict().superRefine((inventory, ctx) => {
-  const itemIds = /* @__PURE__ */ new Set();
-  for (const [index, item] of inventory.items.entries()) {
-    if (itemIds.has(item.id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["items", index, "id"],
-        message: `duplicate inventory item id: ${item.id}`
-      });
-    }
-    itemIds.add(item.id);
-  }
-  const batchIds = /* @__PURE__ */ new Set();
-  for (const [batchIndex, batch] of inventory.batches.entries()) {
-    if (batchIds.has(batch.id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["batches", batchIndex, "id"],
-        message: `duplicate batch id: ${batch.id}`
-      });
-    }
-    batchIds.add(batch.id);
-    for (const [itemIndex, itemId] of batch.item_ids.entries()) {
-      if (!itemIds.has(itemId)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["batches", batchIndex, "item_ids", itemIndex],
-          message: `batch '${batch.id}' references unknown inventory item id: ${itemId}`
-        });
-      }
-    }
-  }
-});
-var MigrateCoexistence = external_exports.object({
-  strategy: external_exports.string().min(1),
-  switchover_criteria: NonEmptyStringArray3,
-  health_signals: NonEmptyStringArray3,
-  rollback_path: external_exports.string().min(1),
-  risks: external_exports.array(external_exports.string().min(1))
-}).strict();
-var MigrateBatch = RunResult;
-var MigrateVerification = VerificationResult;
-var MigrateReviewVerdict = external_exports.enum([
-  "release-approved",
-  "release-with-followups",
-  "release-blocked",
-  "reject"
-]);
-var MigrateReviewFinding = external_exports.object({
-  severity: external_exports.enum(["critical", "high", "medium", "low"]),
-  text: external_exports.string().min(1),
-  file_refs: external_exports.array(external_exports.string().min(1))
-}).strict();
-var MigrateReview = external_exports.object({
-  verdict: MigrateReviewVerdict,
-  summary: external_exports.string().min(1),
-  findings: external_exports.array(MigrateReviewFinding)
-}).strict().superRefine((review, ctx) => {
-  if (review.verdict !== "release-approved" && review.findings.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["findings"],
-      message: `findings must be non-empty when verdict is '${review.verdict}'`
-    });
-  }
-});
-var MigrateResultOutcome = external_exports.enum(["complete", "release-deferred", "reverted", "failed"]);
-var MigrateResultReportId = external_exports.enum([
-  "migrate.brief",
-  "migrate.inventory",
-  "migrate.coexistence",
-  "migrate.batch",
-  "migrate.verification",
-  "migrate.review"
-]);
-var MigrateResultReportPointer = external_exports.object({
-  report_id: MigrateResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = MIGRATE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
-var MigrateResult = external_exports.object({
-  summary: external_exports.string().min(1),
-  outcome: MigrateResultOutcome,
-  verification_status: external_exports.enum(["passed", "failed"]),
-  review_verdict: MigrateReviewVerdict,
-  batch_count: external_exports.number().int().nonnegative(),
-  evidence_links: external_exports.array(MigrateResultReportPointer).length(6)
-}).strict().superRefine((result, ctx) => {
-  const seen = /* @__PURE__ */ new Set();
-  for (const [index, pointer] of result.evidence_links.entries()) {
-    if (seen.has(pointer.report_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["evidence_links", index, "report_id"],
-        message: `duplicate report_id '${pointer.report_id}'`
-      });
-    }
-    seen.add(pointer.report_id);
-  }
-  for (const reportId of MigrateResultReportId.options) {
-    if (!seen.has(reportId)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["evidence_links"],
-        message: `missing report_id '${reportId}'`
-      });
-    }
-  }
-});
-
-// dist/flows/migrate/writers/brief.js
-var migrateBriefComposeBuilder = {
-  resultSchemaName: "migrate.brief@v1",
-  build(context) {
-    const goal = context.goal;
-    const verificationCommands = requireResolvedVerificationCommands({
-      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
-      goal,
-      requestedNeeds: ["general"],
-      commandIdPrefix: "migrate",
-      timeoutMs: 12e4,
-      maxOutputBytes: 2e5
-    });
-    return MigrateBrief.parse({
-      objective: goal,
-      source: `Existing implementation referenced by: ${goal}`,
-      target: `Replacement implementation requested by: ${goal}`,
-      scope: goal,
-      success_criteria: [`Demonstrate the migration addresses: ${goal}`],
-      coexistence_appetite: "short-window",
-      rollback_plan: "Revert the batch sub-run commit; the pre-migration source still works because coexistence kept it in place.",
-      verification_command_candidates: verificationCommands
-    });
-  }
-};
-
-// dist/flows/migrate/writers/close.js
-var POINTERS3 = [
-  { report_id: "migrate.brief", schema: "migrate.brief@v1" },
-  { report_id: "migrate.inventory", schema: "migrate.inventory@v1" },
-  { report_id: "migrate.coexistence", schema: "migrate.coexistence@v1" },
-  { report_id: "migrate.batch", schema: "migrate.batch@v1" },
-  { report_id: "migrate.verification", schema: "migrate.verification@v1" },
-  { report_id: "migrate.review", schema: "migrate.review@v1" }
-];
-var migrateCloseBuilder = {
-  resultSchemaName: "migrate.result@v1",
-  reads: [
-    { name: "brief", schema: "migrate.brief@v1", required: true },
-    { name: "inventory", schema: "migrate.inventory@v1", required: true },
-    { name: "coexistence", schema: "migrate.coexistence@v1", required: true },
-    { name: "batch", schema: "migrate.batch@v1", required: true },
-    { name: "verification", schema: "migrate.verification@v1", required: true },
-    { name: "review", schema: "migrate.review@v1", required: true }
-  ],
-  build(context) {
-    const brief = MigrateBrief.parse(context.inputs.brief);
-    const inventory = MigrateInventory.parse(context.inputs.inventory);
-    MigrateCoexistence.parse(context.inputs.coexistence);
-    const batch = MigrateBatch.parse(context.inputs.batch);
-    const verification = MigrateVerification.parse(context.inputs.verification);
-    const review = MigrateReview.parse(context.inputs.review);
-    const verificationOk = verification.overall_status === "passed";
-    const childComplete = batch.outcome === "complete";
-    const outcome = !childComplete ? "reverted" : !verificationOk || review.verdict === "reject" || review.verdict === "release-blocked" ? "failed" : review.verdict === "release-with-followups" ? "release-deferred" : "complete";
-    return MigrateResult.parse({
-      summary: `Migrate result for ${brief.objective}: ${review.summary}`,
-      outcome,
-      verification_status: verification.overall_status,
-      review_verdict: review.verdict,
-      batch_count: inventory.batches.length,
-      evidence_links: POINTERS3.map((p) => ({
-        ...p,
-        path: reportPathForSchemaInCompiledFlow(context.flow, p.schema)
-      }))
-    });
-  }
-};
-
-// dist/flows/migrate/writers/coexistence.js
-var migrateCoexistenceComposeBuilder = {
-  resultSchemaName: "migrate.coexistence@v1",
-  reads: [
-    { name: "brief", schema: "migrate.brief@v1", required: true },
-    { name: "inventory", schema: "migrate.inventory@v1", required: true }
-  ],
-  build(context) {
-    const brief = MigrateBrief.parse(context.inputs.brief);
-    const inventory = MigrateInventory.parse(context.inputs.inventory);
-    return MigrateCoexistence.parse({
-      strategy: `${brief.coexistence_appetite} window: keep ${brief.source} in place while ${brief.target} is rolled out batch by batch (${inventory.batches.length} batch(es) planned).`,
-      switchover_criteria: [
-        "All declared inventory items have been touched and verification passes.",
-        "Release review verdict is release-approved or release-with-followups."
-      ],
-      health_signals: [
-        `Verification command suite (${brief.verification_command_candidates.map((c) => c.id).join(", ")}) reports passed.`,
-        "No regressions reported by the release review."
-      ],
-      rollback_path: brief.rollback_plan,
-      risks: [
-        "Single-batch v0 has no per-batch isolation \u2014 a partial failure rolls back the entire run."
-      ]
-    });
-  }
-};
-
-// dist/flows/migrate/writers/verification.js
-import { readFileSync as readFileSync10 } from "node:fs";
-var migrateVerificationWriter = {
-  resultSchemaName: "migrate.verification@v1",
-  loadCommands(context) {
-    const briefPath = reportPathForSchemaInCompiledFlow(context.flow, "migrate.brief@v1");
-    if (!context.step.reads.includes(briefPath)) {
-      throw new Error(`migrate.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
-    }
-    const brief = MigrateBrief.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, briefPath), "utf8")));
-    return brief.verification_command_candidates;
-  },
-  buildResult(observations) {
-    const overallStatus = observations.some((o) => o.status === "failed") ? "failed" : "passed";
-    return MigrateVerification.parse({
-      overall_status: overallStatus,
-      commands: observations.map((o) => ({
-        command_id: o.command.id,
-        argv: o.command.argv,
-        cwd: o.command.cwd,
-        exit_code: o.exit_code,
-        status: o.status,
-        duration_ms: o.duration_ms,
-        stdout_summary: o.stdout_summary,
-        stderr_summary: o.stderr_summary
-      }))
-    });
-  }
-};
-
-// dist/flows/migrate/index.js
-var MIGRATE_SIGNALS = [
-  { label: "migrate prefix", pattern: /^\s*migrate\s*:/i },
-  {
-    label: "migrate request",
-    pattern: /^\s*(?:please\s+)?(?:migrate|port|swap|replace|rewrite|transition)\s+(?:a\s+|an\s+|the\s+|this\s+|that\s+|my\s+|all\s+|our\s+)?\S+/i
-  },
-  {
-    label: "framework swap signal",
-    pattern: /\b(?:framework|library|dependency|stack)\s+(?:swap|replacement|migration)\b/i
-  }
-];
-var migrateCompiledFlowPackage = {
-  id: "migrate",
-  visibility: "public",
-  paths: {
-    schematic: "src/flows/migrate/schematic.json"
-  },
-  routing: {
-    order: 10,
-    signals: MIGRATE_SIGNALS,
-    skipOnPlanningReport: true,
-    reasonForMatch(signal) {
-      return `matched ${signal.label}; routed to Migrate flow`;
-    }
-  },
-  relayReports: [
-    {
-      schemaName: "migrate.inventory@v1",
-      schema: MigrateInventory,
-      relayHint: migrateInventoryShapeHint.instruction
-    },
-    {
-      schemaName: "migrate.review@v1",
-      schema: MigrateReview,
-      relayHint: migrateReviewShapeHint.instruction
-    }
-  ],
-  reportSchemas: [
-    { schemaName: "migrate.brief@v1", schema: MigrateBrief },
-    { schemaName: "migrate.coexistence@v1", schema: MigrateCoexistence },
-    { schemaName: "migrate.batch@v1", schema: MigrateBatch },
-    { schemaName: "migrate.verification@v1", schema: MigrateVerification },
-    { schemaName: "migrate.result@v1", schema: MigrateResult }
-  ],
-  writers: {
-    compose: [migrateBriefComposeBuilder, migrateCoexistenceComposeBuilder],
-    close: [migrateCloseBuilder],
-    verification: [migrateVerificationWriter],
-    checkpoint: []
-  }
-};
-
-// dist/flows/review/relay-hints.js
-var reviewRelayShapeHint = {
-  kind: "structural",
-  id: "review.relay-result@structural",
-  match(step) {
-    return step.role === "reviewer" && step.check.pass.includes("NO_ISSUES_FOUND") && step.check.pass.includes("ISSUES_FOUND");
-  },
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<one-of-accepted-verdicts>", "findings": [{ "severity": "<critical|high|medium|low>", "id": "<stable finding id>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }], "assessment": "<plain-language paragraph>", "verification": ["<step you performed>"], "confidence_limitations": ["<gap that limits certainty>"] }',
-    'Use an empty findings array when there are no issues: { "verdict": "NO_ISSUES_FOUND", "findings": [], "assessment": "...", "verification": ["..."], "confidence_limitations": ["..."] }.',
-    "Use an empty file_refs array when a finding has no file-specific reference.",
-    "The assessment field is REQUIRED on every verdict, including NO_ISSUES_FOUND. State plainly what you checked and what you concluded; do not return a bare verdict.",
-    "The verification array is your self-report of concrete steps you took: files inspected, commands run, evidence cross-referenced. Include at least one entry on every verdict so the operator can audit the review.",
-    "The confidence_limitations array names anything that limits certainty: out-of-scope files, omitted untracked content, areas you did not inspect, assumptions you had to make. Use an empty array only when coverage was complete.",
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and the close step validates findings, assessment, verification, and confidence_limitations before writing reports/review-result.json."
-  ].join(" ")
-};
-
-// dist/flows/review/reports.js
-var ReviewFindingSeverity = external_exports.enum(["critical", "high", "medium", "low"]);
-var ReviewResultVerdict = external_exports.enum(["CLEAN", "ISSUES_FOUND"]);
-var ReviewRelayVerdict = external_exports.enum(["NO_ISSUES_FOUND", "ISSUES_FOUND"]);
-var ReviewEvidenceWarningKind = external_exports.enum([
-  "diff_truncated",
-  "git_command_failed",
-  "untracked_file_skipped",
-  "untracked_file_content_omitted",
-  "untracked_files_truncated",
-  "evidence_unavailable",
-  "scope_empty"
-]);
-var ReviewEvidenceWarning = external_exports.object({
-  kind: ReviewEvidenceWarningKind,
-  message: external_exports.string().min(1),
-  path: external_exports.string().min(1).optional()
-}).strict();
-var ReviewEvidenceText = external_exports.object({
-  text: external_exports.string(),
-  truncated: external_exports.boolean()
-}).strict();
-var ReviewUntrackedContentPolicy = external_exports.enum(["metadata-only", "include-content"]);
-var ReviewUntrackedFileEvidence = external_exports.object({
-  path: external_exports.string().min(1),
-  byte_length: external_exports.number().int().nonnegative(),
-  content: ReviewEvidenceText.optional(),
-  skipped_reason: external_exports.string().min(1).optional()
-}).strict();
-var ReviewEvidence = external_exports.discriminatedUnion("kind", [
-  external_exports.object({
-    kind: external_exports.literal("unavailable"),
-    reason: external_exports.string().min(1)
-  }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("git-working-tree"),
-    project_root: external_exports.string().min(1),
-    status_short: external_exports.string(),
-    staged_diff: ReviewEvidenceText,
-    unstaged_diff: ReviewEvidenceText,
-    diff_stat: external_exports.string(),
-    untracked_file_count: external_exports.number().int().nonnegative(),
-    untracked_files_truncated: external_exports.boolean(),
-    untracked_content_policy: ReviewUntrackedContentPolicy,
-    untracked_files: external_exports.array(ReviewUntrackedFileEvidence)
-  }).strict()
-]);
-var ReviewEvidenceSummary = external_exports.discriminatedUnion("kind", [
-  external_exports.object({
-    kind: external_exports.literal("unavailable"),
-    message: external_exports.string().min(1)
-  }).strict(),
-  external_exports.object({
-    kind: external_exports.literal("git-working-tree"),
-    untracked_content_policy: ReviewUntrackedContentPolicy,
-    untracked_file_count: external_exports.number().int().nonnegative(),
-    untracked_files_sampled: external_exports.number().int().nonnegative(),
-    untracked_files_truncated: external_exports.boolean()
-  }).strict()
-]);
-var ReviewIntake = external_exports.object({
-  scope: external_exports.string().min(1),
-  evidence: ReviewEvidence,
-  evidence_warnings: external_exports.array(ReviewEvidenceWarning).default([])
-}).strict();
-var ReviewFinding = external_exports.object({
-  severity: ReviewFindingSeverity,
-  id: external_exports.string().min(1),
-  text: external_exports.string().min(1),
-  file_refs: external_exports.array(external_exports.string().min(1))
-}).strict();
-function computeReviewVerdict(findings) {
-  return findings.some((finding) => finding.severity !== "low") ? "ISSUES_FOUND" : "CLEAN";
-}
-var ReviewResult = external_exports.object({
-  scope: external_exports.string().min(1),
-  findings: external_exports.array(ReviewFinding),
-  verdict: ReviewResultVerdict,
-  // Plain-language paragraph from the reviewer: what was checked and what
-  // they concluded. Required even on a CLEAN verdict so a no-findings result
-  // does not collapse to "Findings: 0" without context. The operator-summary
-  // renderer reads this when the projection has no findings to list.
-  assessment: external_exports.string().min(1),
-  // Concrete verification steps the reviewer performed: files inspected,
-  // commands run, evidence cross-referenced. Empty array is permitted but
-  // discouraged — the prompt asks the reviewer to name at least one step.
-  verification: external_exports.array(external_exports.string().min(1)),
-  // Known gaps that limit certainty (out-of-scope files, untracked content
-  // omitted, missing context). Empty array is permitted when the reviewer
-  // had complete coverage; the operator-summary renderer surfaces non-empty
-  // entries so a CLEAN verdict cannot quietly stand in for "high confidence".
-  confidence_limitations: external_exports.array(external_exports.string().min(1)),
-  evidence_summary: ReviewEvidenceSummary.optional(),
-  evidence_warnings: external_exports.array(ReviewEvidenceWarning).default([])
-}).strict().superRefine((report, ctx) => {
-  const expected = computeReviewVerdict(report.findings);
-  if (report.verdict !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["verdict"],
-      message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`
-    });
-  }
-});
-var ReviewRelayResult = external_exports.object({
-  verdict: ReviewRelayVerdict,
-  findings: external_exports.array(ReviewFinding),
-  // See ReviewResult.assessment — the reviewer's plain-language paragraph
-  // describing what was checked and what they concluded. Required for both
-  // NO_ISSUES_FOUND and ISSUES_FOUND verdicts: a clean output without an
-  // assessment is the regression that motivated this addition (vanilla
-  // Claude Code says what it checked even on a no-findings review; Circuit
-  // used to collapse to "Findings: 0").
-  assessment: external_exports.string().min(1),
-  // Concrete verification steps the reviewer performed (files, commands,
-  // evidence). Required as an array; the relay prompt asks for at least
-  // one entry.
-  verification: external_exports.array(external_exports.string().min(1)),
-  // Known gaps that limit certainty. Required as an array (may be empty
-  // when coverage was complete).
-  confidence_limitations: external_exports.array(external_exports.string().min(1))
-}).strict().superRefine((report, ctx) => {
-  const expected = report.findings.length === 0 ? "NO_ISSUES_FOUND" : "ISSUES_FOUND";
-  if (report.verdict !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["verdict"],
-      message: `review relay verdict must be ${expected} for findings.length=${report.findings.length}`
-    });
-  }
-});
-
-// dist/flows/review/writers/intake.js
-import { spawnSync } from "node:child_process";
-import { closeSync, lstatSync as lstatSync2, openSync, readSync } from "node:fs";
-import { isAbsolute as isAbsolute2, relative as relative2, resolve as resolve2 } from "node:path";
-var MAX_DIFF_CHARS = 12e4;
-var MAX_UNTRACKED_FILES = 20;
-var MAX_UNTRACKED_FILE_CHARS = 2e4;
-var MAX_GIT_BUFFER_BYTES = 10 * 1024 * 1024;
-var MAX_DIFF_BUFFER_BYTES = Math.max(MAX_DIFF_CHARS * 4, 1024 * 1024);
-var MAX_UNTRACKED_FILE_BYTES = MAX_UNTRACKED_FILE_CHARS + 1;
-function truncateText(text, maxChars) {
-  if (text.length <= maxChars)
-    return { text, truncated: false };
-  return {
-    text: `${text.slice(0, maxChars)}
-[truncated ${text.length - maxChars} characters]`,
-    truncated: true
-  };
-}
-function errorMessage(err) {
-  return err instanceof Error ? err.message : String(err);
-}
-function outputToString(output) {
-  if (output === null || output === void 0)
-    return "";
-  if (typeof output === "string")
-    return output;
-  return Buffer.from(output).toString("utf8");
-}
-function runGit(projectRoot, args, options = {}) {
-  const result = spawnSync("git", [...args], {
-    cwd: projectRoot,
-    encoding: "utf8",
-    maxBuffer: options.maxBufferBytes ?? MAX_GIT_BUFFER_BYTES,
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  const stdout = outputToString(result.stdout);
-  const stderr = outputToString(result.stderr).trim();
-  if (result.error !== void 0) {
-    if (options.allowPartialStdout === true && stdout.length > 0) {
-      return { ok: true, stdout, truncated_by_buffer: true };
-    }
-    return { ok: false, reason: `git ${args.join(" ")} failed: ${result.error.message}` };
-  }
-  if (result.status !== 0) {
-    const reason = stderr.length > 0 ? stderr : `exited with status ${result.status ?? "unknown"}`;
-    return { ok: false, reason: `git ${args.join(" ")} failed: ${reason}` };
-  }
-  return { ok: true, stdout, truncated_by_buffer: false };
-}
-function runGitDiff(projectRoot, args) {
-  const result = runGit(projectRoot, args, {
-    maxBufferBytes: MAX_DIFF_BUFFER_BYTES,
-    allowPartialStdout: true
-  });
-  if (!result.ok)
-    return truncateText(result.reason, MAX_DIFF_CHARS);
-  if (!result.truncated_by_buffer)
-    return truncateText(result.stdout, MAX_DIFF_CHARS);
-  const truncated = truncateText(result.stdout, MAX_DIFF_CHARS);
-  return {
-    text: `${truncated.text}
-[truncated because git output exceeded ${MAX_DIFF_BUFFER_BYTES} bytes before completion]`,
-    truncated: true
-  };
-}
-function insideProject(projectRoot, path) {
-  const rel = relative2(projectRoot, path);
-  return rel === "" || !rel.startsWith("..") && !isAbsolute2(rel);
-}
-function readUntrackedFile(projectRoot, path, contentPolicy) {
-  const abs = resolve2(projectRoot, path);
-  if (!insideProject(projectRoot, abs)) {
-    return { path, byte_length: 0, skipped_reason: "path resolves outside project root" };
-  }
-  let stat2;
-  try {
-    stat2 = lstatSync2(abs);
-  } catch (err) {
-    return { path, byte_length: 0, skipped_reason: `failed to inspect file: ${errorMessage(err)}` };
-  }
-  if (stat2.isSymbolicLink()) {
-    return { path, byte_length: stat2.size, skipped_reason: "symbolic link skipped" };
-  }
-  if (!stat2.isFile()) {
-    return { path, byte_length: stat2.size, skipped_reason: "not a regular file" };
-  }
-  if (contentPolicy === "metadata-only") {
-    return { path, byte_length: stat2.size };
-  }
-  let fd;
-  try {
-    const byteLimit = Math.min(stat2.size, MAX_UNTRACKED_FILE_BYTES);
-    fd = openSync(abs, "r");
-    const bytes = Buffer.alloc(byteLimit);
-    const bytesRead = readSync(fd, bytes, 0, byteLimit, 0);
-    const sample = bytes.subarray(0, bytesRead);
-    if (sample.includes(0)) {
-      return { path, byte_length: stat2.size, skipped_reason: "binary file skipped" };
-    }
-    const content = truncateText(sample.toString("utf8"), MAX_UNTRACKED_FILE_CHARS);
-    return {
-      path,
-      byte_length: stat2.size,
-      content: stat2.size > bytesRead && !content.truncated ? { ...content, truncated: true } : content
-    };
-  } catch (err) {
-    return {
-      path,
-      byte_length: stat2.size,
-      skipped_reason: `failed to read file: ${errorMessage(err)}`
-    };
-  } finally {
-    if (fd !== void 0) {
-      try {
-        closeSync(fd);
-      } catch {
-      }
-    }
-  }
-}
-function collectUntrackedFiles(projectRoot, contentPolicy) {
-  const listed = runGit(projectRoot, ["ls-files", "--others", "--exclude-standard", "-z"]);
-  if (!listed.ok)
-    return { count: 0, truncated: false, files: [] };
-  const paths = listed.stdout.split("\0").filter((path) => path.length > 0);
-  return {
-    count: paths.length,
-    truncated: paths.length > MAX_UNTRACKED_FILES,
-    files: paths.slice(0, MAX_UNTRACKED_FILES).map((path) => readUntrackedFile(projectRoot, path, contentPolicy))
-  };
-}
-function collectReviewEvidence(projectRoot, options = {}) {
-  if (projectRoot === void 0) {
-    return {
-      kind: "unavailable",
-      reason: "CompiledFlowInvocation.projectRoot was not provided"
-    };
-  }
-  const status = runGit(projectRoot, ["status", "--short"]);
-  if (!status.ok)
-    return { kind: "unavailable", reason: status.reason };
-  const staged = runGitDiff(projectRoot, ["diff", "--cached", "--no-ext-diff", "--"]);
-  const unstaged = runGitDiff(projectRoot, ["diff", "--no-ext-diff", "--"]);
-  const diffStat = runGit(projectRoot, ["diff", "--stat", "--cached", "--no-ext-diff"]);
-  const untrackedContentPolicy = options.includeUntrackedFileContent === true ? "include-content" : "metadata-only";
-  const untracked = collectUntrackedFiles(projectRoot, untrackedContentPolicy);
-  return {
-    kind: "git-working-tree",
-    project_root: projectRoot,
-    status_short: status.stdout,
-    staged_diff: staged,
-    unstaged_diff: unstaged,
-    diff_stat: diffStat.ok ? diffStat.stdout : diffStat.reason,
-    untracked_file_count: untracked.count,
-    untracked_files_truncated: untracked.truncated,
-    untracked_content_policy: untrackedContentPolicy,
-    untracked_files: untracked.files
-  };
-}
-function gitCommandFailed(text) {
-  return /^git\s+.+\s+failed:/.test(text);
-}
-function evidenceWarnings(evidence) {
-  if (evidence.kind === "unavailable") {
-    return [
-      {
-        kind: "evidence_unavailable",
-        message: evidence.reason
-      }
-    ];
-  }
-  const warnings = [];
-  const hasUntrackedContent = evidence.untracked_files.some((file) => file.content !== void 0);
-  if (evidence.staged_diff.text.length === 0 && evidence.unstaged_diff.text.length === 0 && !hasUntrackedContent && !gitCommandFailed(evidence.staged_diff.text) && !gitCommandFailed(evidence.unstaged_diff.text)) {
-    warnings.push({
-      kind: "scope_empty",
-      message: "review scoped to uncommitted changes only; HEAD~1 differences not examined. The reviewer had no source content to inspect: staged/unstaged diffs were empty and no untracked file content was relayed."
-    });
-  }
-  if (evidence.staged_diff.truncated) {
-    warnings.push({
-      kind: "diff_truncated",
-      message: "staged diff was truncated before relay"
-    });
-  }
-  if (evidence.unstaged_diff.truncated) {
-    warnings.push({
-      kind: "diff_truncated",
-      message: "unstaged diff was truncated before relay"
-    });
-  }
-  if (gitCommandFailed(evidence.staged_diff.text)) {
-    warnings.push({
-      kind: "git_command_failed",
-      message: evidence.staged_diff.text
-    });
-  }
-  if (gitCommandFailed(evidence.unstaged_diff.text)) {
-    warnings.push({
-      kind: "git_command_failed",
-      message: evidence.unstaged_diff.text
-    });
-  }
-  if (gitCommandFailed(evidence.diff_stat)) {
-    warnings.push({
-      kind: "git_command_failed",
-      message: evidence.diff_stat
-    });
-  }
-  if (evidence.untracked_files_truncated) {
-    warnings.push({
-      kind: "untracked_files_truncated",
-      message: `untracked file evidence was limited to ${MAX_UNTRACKED_FILES} files`
-    });
-  }
-  if (evidence.untracked_content_policy === "metadata-only" && evidence.untracked_file_count > 0) {
-    warnings.push({
-      kind: "untracked_file_content_omitted",
-      message: "untracked file contents were not included; pass --include-untracked-content only when those files are safe to relay"
-    });
-  }
-  for (const file of evidence.untracked_files) {
-    if (file.skipped_reason !== void 0) {
-      warnings.push({
-        kind: "untracked_file_skipped",
-        path: file.path,
-        message: file.skipped_reason
-      });
-    }
-  }
-  return warnings;
-}
-var reviewIntakeComposeBuilder = {
-  resultSchemaName: "review.intake@v1",
-  build(context) {
-    const evidence = collectReviewEvidence(context.projectRoot, context.evidencePolicy?.includeUntrackedFileContent === true ? { includeUntrackedFileContent: true } : {});
-    return ReviewIntake.parse({
-      scope: context.goal,
-      evidence,
-      evidence_warnings: evidenceWarnings(evidence)
-    });
-  }
-};
-
-// dist/flows/review/writers/result.js
-import { readFileSync as readFileSync11 } from "node:fs";
-function reviewerRelayResultPath(flow, closeStep) {
-  const closeStepId = closeStep.id;
-  const reviewerRelayes = flow.steps.filter((candidate) => candidate.kind === "relay" && candidate.role === "reviewer" && candidate.routes.pass === closeStepId);
-  if (reviewerRelayes.length !== 1) {
-    throw new Error(`review.result@v1 requires exactly one reviewer relay routing to '${closeStepId}', found ${reviewerRelayes.length}`);
-  }
-  const resultPath2 = reviewerRelayes[0]?.writes.result;
-  if (resultPath2 === void 0 || !closeStep.reads.includes(resultPath2)) {
-    throw new Error(`review.result@v1 requires close step '${closeStepId}' to read the reviewer relay result path '${resultPath2 ?? "<missing>"}'`);
-  }
-  return resultPath2;
-}
-function reviewIntakePath(flow, closeStep) {
-  const closeStepId = closeStep.id;
-  const intakeStep = flow.steps.find((candidate) => candidate.kind === "compose" && candidate.writes.report.schema === "review.intake@v1" && closeStep.reads.includes(candidate.writes.report.path));
-  const path = intakeStep?.writes.report.path;
-  if (path === void 0) {
-    throw new Error(`review.result@v1 requires close step '${closeStepId}' to read the review intake report`);
-  }
-  return path;
-}
-function evidenceSummary(evidence) {
-  if (evidence.kind === "unavailable") {
-    return { kind: "unavailable", message: evidence.reason };
-  }
-  return {
-    kind: "git-working-tree",
-    untracked_content_policy: evidence.untracked_content_policy,
-    untracked_file_count: evidence.untracked_file_count,
-    untracked_files_sampled: evidence.untracked_files.length,
-    untracked_files_truncated: evidence.untracked_files_truncated
-  };
-}
-var reviewResultComposeBuilder = {
-  resultSchemaName: "review.result@v1",
-  // No declarative reads — the read is a relay result body, not a
-  // typed report at a schema-mapped path. The build function does
-  // its own resolution.
-  build(context) {
-    const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, path), "utf8")));
-    return ReviewResult.parse({
-      scope: intake.scope,
-      findings: relayResult.findings,
-      verdict: computeReviewVerdict(relayResult.findings),
-      assessment: relayResult.assessment,
-      verification: relayResult.verification,
-      confidence_limitations: relayResult.confidence_limitations,
-      evidence_summary: evidenceSummary(intake.evidence),
-      evidence_warnings: intake.evidence_warnings
-    });
-  }
-};
-
-// dist/flows/review/index.js
-var REVIEW_SIGNALS = [
-  { label: "code review", pattern: /\bcode\s+review\b/i },
-  {
-    label: "change review request",
-    pattern: /\breview\s+(?:this\s+|the\s+|my\s+|a\s+)?(?:[\w-]+\s+){0,8}(?:changes?|diff|patch|commit|pr|pull\s+request|code|report|file)\b/i
-  },
-  { label: "audit request", pattern: /\baudit\b/i },
-  { label: "critique request", pattern: /\bcritique\b/i },
-  {
-    label: "change inspection request",
-    pattern: /\binspect\s+(?:this\s+|the\s+|my\s+|a\s+)?(?:change|diff|patch|commit|pr|pull\s+request|code|report|file)\b/i
-  },
-  {
-    label: "change-check request",
-    pattern: /\bcheck\s+(?:this\s+)?(?:change|diff|patch|commit|pr|pull\s+request)\b/i
-  },
-  {
-    label: "issue-finding request",
-    pattern: /\b(?:find|surface|identify|spot|detect|look\s+for)\s+(?:an?\s+|any\s+)?(?:(?:issue|issues)(?!\s*(?:#|\d))|bug|bugs|defect|defects|problem|problems|regression|regressions|risk|risks)\b/i
-  },
-  {
-    label: "risk-hunt request",
-    pattern: /\blook\s+for\s+(?:bugs|issues|regressions|risks)\b/i
-  }
-];
-var reviewCompiledFlowPackage = {
-  id: "review",
-  visibility: "public",
-  paths: {
-    schematic: "src/flows/review/schematic.json",
-    command: "src/flows/review/command.md",
-    contract: "src/flows/review/contract.md"
-  },
-  routing: {
-    order: 0,
-    signals: REVIEW_SIGNALS,
-    reasonForMatch(signal) {
-      return `matched ${signal.label}; routed to audit-only review flow`;
-    }
-  },
-  relayReports: [],
-  reportSchemas: [
-    { schemaName: "review.intake@v1", schema: ReviewIntake },
-    { schemaName: "review.result@v1", schema: ReviewResult }
-  ],
-  writers: {
-    compose: [reviewIntakeComposeBuilder, reviewResultComposeBuilder],
-    close: [],
-    verification: [],
-    checkpoint: []
-  },
-  structuralHints: [reviewRelayShapeHint]
-};
-
-// dist/flows/runtime-proof/reports.js
-var RuntimeProofCompose = external_exports.object({
-  summary: external_exports.string().min(1)
-}).strict();
-
-// dist/flows/runtime-proof/writers/compose.js
-var runtimeProofComposeBuilder = {
-  resultSchemaName: "plan.strategy@v1",
-  build(context) {
-    return RuntimeProofCompose.parse({
-      summary: `Runtime proof composed for: ${context.goal}`
-    });
-  }
-};
-
-// dist/flows/runtime-proof/index.js
-var runtimeProofCompiledFlowPackage = {
-  id: "runtime-proof",
-  visibility: "internal",
-  paths: {
-    schematic: "src/flows/runtime-proof/schematic.json"
-  },
-  relayReports: [],
-  reportSchemas: [{ schemaName: "runtime-proof.compose@v1", schema: RuntimeProofCompose }],
-  writers: {
-    compose: [runtimeProofComposeBuilder],
-    close: [],
-    verification: [],
-    checkpoint: []
-  }
-};
-
-// dist/flows/sweep/cross-report-validators.js
-import { existsSync as existsSync3, readFileSync as readFileSync12 } from "node:fs";
-import { resolve as resolve3 } from "node:path";
-
-// dist/flows/sweep/reports.js
-var SWEEP_RESULT_SCHEMA_BY_ARTIFACT_ID = {
-  "sweep.brief": "sweep.brief@v1",
-  "sweep.analysis": "sweep.analysis@v1",
-  "sweep.queue": "sweep.queue@v1",
-  "sweep.batch": "sweep.batch@v1",
-  "sweep.verification": "sweep.verification@v1",
-  "sweep.review": "sweep.review@v1"
-};
-var NonEmptyStringArray4 = external_exports.array(external_exports.string().min(1)).min(1);
-var SweepType = external_exports.enum(["cleanup", "quality", "coverage", "docs-sync"]);
-var SweepConfidence = external_exports.enum(["low", "medium", "high"]);
-var SweepRisk = external_exports.enum(["low", "medium", "high"]);
-var SweepBrief = external_exports.object({
-  objective: external_exports.string().min(1),
-  sweep_type: SweepType,
-  scope: external_exports.string().min(1),
-  success_criteria: NonEmptyStringArray4,
-  scope_exclusions: external_exports.array(external_exports.string().min(1)),
-  out_of_scope: external_exports.array(external_exports.string().min(1)),
-  high_risk_boundaries: external_exports.array(external_exports.string().min(1)),
-  verification_command_candidates: external_exports.array(VerificationCommand).min(1)
-}).strict();
-var SweepCandidate = external_exports.object({
-  id: external_exports.string().min(1),
-  category: external_exports.string().min(1),
-  path: external_exports.string().min(1),
-  description: external_exports.string().min(1),
-  confidence: SweepConfidence,
-  risk: SweepRisk
-}).strict();
-var SweepAnalysis = external_exports.object({
-  verdict: external_exports.literal("accept"),
-  summary: external_exports.string().min(1),
-  candidates: external_exports.array(SweepCandidate).min(1)
-}).strict().superRefine((analysis, ctx) => {
-  const seen = /* @__PURE__ */ new Set();
-  for (const [index, candidate] of analysis.candidates.entries()) {
-    if (seen.has(candidate.id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["candidates", index, "id"],
-        message: `duplicate candidate id: ${candidate.id}`
-      });
-    }
-    seen.add(candidate.id);
-  }
-});
-var SweepAction = external_exports.enum(["act", "prove-then-act", "prove", "defer"]);
-var SweepQueueItem = external_exports.object({
-  candidate_id: external_exports.string().min(1),
-  action: SweepAction,
-  rationale: external_exports.string().min(1)
-}).strict();
-var SweepQueue = external_exports.object({
-  classified: external_exports.array(SweepQueueItem).min(1),
-  to_execute: external_exports.array(external_exports.string().min(1)),
-  deferred: external_exports.array(external_exports.string().min(1))
-}).strict().superRefine((queue, ctx) => {
-  const classifiedIds = new Set(queue.classified.map((item) => item.candidate_id));
-  const seenClassified = /* @__PURE__ */ new Set();
-  for (const [index, item] of queue.classified.entries()) {
-    if (seenClassified.has(item.candidate_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["classified", index, "candidate_id"],
-        message: `duplicate classified candidate_id: ${item.candidate_id}`
-      });
-    }
-    seenClassified.add(item.candidate_id);
-  }
-  for (const [index, id] of queue.to_execute.entries()) {
-    if (!classifiedIds.has(id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["to_execute", index],
-        message: `to_execute references unclassified candidate_id: ${id}`
-      });
-    }
-  }
-  for (const [index, id] of queue.deferred.entries()) {
-    if (!classifiedIds.has(id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["deferred", index],
-        message: `deferred references unclassified candidate_id: ${id}`
-      });
-    }
-  }
-  const executeSet = new Set(queue.to_execute);
-  const deferredSet = new Set(queue.deferred);
-  for (const id of executeSet) {
-    if (deferredSet.has(id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["to_execute"],
-        message: `candidate_id appears in both to_execute and deferred: ${id}`
-      });
-    }
-  }
-});
-var SweepBatchItemStatus = external_exports.enum(["acted", "reverted", "partial"]);
-var SweepBatchItemResult = external_exports.object({
-  candidate_id: external_exports.string().min(1),
-  status: SweepBatchItemStatus,
-  evidence: external_exports.string().min(1)
-}).strict();
-var SweepBatchVerdict = external_exports.enum(["accept", "partial", "reverted"]);
-var SweepBatch = external_exports.object({
-  verdict: SweepBatchVerdict,
-  summary: external_exports.string().min(1),
-  changed_files: external_exports.array(external_exports.string().min(1)),
-  items: external_exports.array(SweepBatchItemResult).min(1)
-}).strict().superRefine((batch, ctx) => {
-  const seen = /* @__PURE__ */ new Set();
-  for (const [index, item] of batch.items.entries()) {
-    if (seen.has(item.candidate_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["items", index, "candidate_id"],
-        message: `duplicate item candidate_id: ${item.candidate_id}`
-      });
-    }
-    seen.add(item.candidate_id);
-  }
-  const allReverted = batch.items.every((item) => item.status === "reverted");
-  const anyActed = batch.items.some((item) => item.status === "acted");
-  const anyReverted = batch.items.some((item) => item.status === "reverted");
-  const expectedVerdict = allReverted && batch.items.length > 0 ? "reverted" : anyReverted || !anyActed ? "partial" : "accept";
-  if (batch.verdict !== expectedVerdict) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["verdict"],
-      message: `verdict must be '${expectedVerdict}' for the observed item statuses`
-    });
-  }
-});
-var SweepVerification = VerificationResult;
-var SweepReviewVerdict = external_exports.enum([
-  "clean",
-  "minor-injections",
-  "critical-injections",
-  "reject"
-]);
-var SweepReviewFinding = external_exports.object({
-  severity: external_exports.enum(["critical", "high", "medium", "low"]),
-  text: external_exports.string().min(1),
-  file_refs: external_exports.array(external_exports.string().min(1))
-}).strict();
-var SweepReview = external_exports.object({
-  verdict: SweepReviewVerdict,
-  summary: external_exports.string().min(1),
-  findings: external_exports.array(SweepReviewFinding)
-}).strict().superRefine((review, ctx) => {
-  if (review.verdict !== "clean" && review.findings.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["findings"],
-      message: `findings must be non-empty when verdict is '${review.verdict}'`
-    });
-  }
-});
-var SweepResultOutcome = external_exports.enum(["complete", "partial", "reverted", "failed"]);
-var SweepResultReportId = external_exports.enum([
-  "sweep.brief",
-  "sweep.analysis",
-  "sweep.queue",
-  "sweep.batch",
-  "sweep.verification",
-  "sweep.review"
-]);
-var SweepResultReportPointer = external_exports.object({
-  report_id: SweepResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = SWEEP_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
-var SweepResult = external_exports.object({
-  summary: external_exports.string().min(1),
-  outcome: SweepResultOutcome,
-  verification_status: external_exports.enum(["passed", "failed"]),
-  review_verdict: SweepReviewVerdict,
-  deferred_count: external_exports.number().int().nonnegative(),
-  evidence_links: external_exports.array(SweepResultReportPointer).length(6)
-}).strict().superRefine((result, ctx) => {
-  const seen = /* @__PURE__ */ new Set();
-  for (const [index, pointer] of result.evidence_links.entries()) {
-    if (seen.has(pointer.report_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["evidence_links", index, "report_id"],
-        message: `duplicate report_id '${pointer.report_id}'`
-      });
-    }
-    seen.add(pointer.report_id);
-  }
-  for (const reportId of SweepResultReportId.options) {
-    if (!seen.has(reportId)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["evidence_links"],
-        message: `missing report_id '${reportId}'`
-      });
-    }
-  }
-});
-
-// dist/flows/sweep/cross-report-validators.js
-function validateSweepBatchAgainstQueue(flow, runFolder, resultBody) {
-  if (!flowHasReportSchemaInCompiledFlow(flow, "sweep.queue@v1")) {
-    return { kind: "ok" };
-  }
-  const queueRel = reportPathForSchemaInCompiledFlow(flow, "sweep.queue@v1");
-  const queueAbs = resolve3(runFolder, queueRel);
-  if (!existsSync3(queueAbs)) {
-    return {
-      kind: "fail",
-      reason: `sweep.batch validation requires sweep.queue at '${queueRel}' but file is missing`
-    };
-  }
-  let queueRaw;
-  try {
-    queueRaw = readFileSync12(queueAbs, "utf8");
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { kind: "fail", reason: `cannot read sweep.queue at '${queueRel}': ${msg}` };
-  }
-  let queueJson;
-  try {
-    queueJson = JSON.parse(queueRaw);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { kind: "fail", reason: `sweep.queue at '${queueRel}' is not valid JSON: ${msg}` };
-  }
-  const queueParse = SweepQueue.safeParse(queueJson);
-  if (!queueParse.success) {
-    const issues = queueParse.error.issues.map((issue) => {
-      const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
-      return `${path}: ${issue.message}`;
-    }).join("; ");
-    return {
-      kind: "fail",
-      reason: `sweep.queue at '${queueRel}' failed schema validation (${issues})`
-    };
-  }
-  const queue = queueParse.data;
-  let batchJson;
-  try {
-    batchJson = JSON.parse(resultBody);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { kind: "fail", reason: `sweep.batch body is not valid JSON: ${msg}` };
-  }
-  const batchParse = SweepBatch.safeParse(batchJson);
-  if (!batchParse.success) {
-    return {
-      kind: "fail",
-      reason: "sweep.batch body did not validate against SweepBatch schema (cross-report validator)"
-    };
-  }
-  const batch = batchParse.data;
-  const allowed = new Set(queue.to_execute);
-  const offPrescription = batch.items.map((item) => item.candidate_id).filter((id) => !allowed.has(id));
-  if (offPrescription.length > 0) {
-    return {
-      kind: "fail",
-      reason: `sweep.batch.items contains candidate_id(s) not in queue.to_execute: [${offPrescription.join(", ")}]; queue.to_execute=[${queue.to_execute.join(", ")}]`
-    };
-  }
-  return { kind: "ok" };
-}
-
-// dist/flows/sweep/relay-hints.js
-var sweepAnalysisShapeHint = {
-  kind: "schema",
-  schema: "sweep.analysis@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "accept", "summary": "<what was surveyed>", "candidates": [{ "id": "<stable candidate id>", "category": "<candidate category, e.g. dead-code, lint, coverage-gap>", "path": "<project-relative path>", "description": "<one-line description of the candidate>", "confidence": "<low|medium|high>", "risk": "<low|medium|high>" }] }',
-    "Each candidate id must be unique within candidates. The candidates array must contain at least one entry; if the survey finds none, do not respond \u2014 instead investigate further reads first.",
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against sweep.analysis@v1 before writing reports/sweep/analysis.json."
-  ].join(" ")
-};
-var sweepBatchShapeHint = {
-  kind: "schema",
-  schema: "sweep.batch@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<accept|partial|reverted>", "summary": "<what changed>", "changed_files": ["<project-relative path>"], "items": [{ "candidate_id": "<id from sweep.queue.to_execute>", "status": "<acted|reverted|partial>", "evidence": "<how the change was applied or reverted>" }] }',
-    `The items array must include exactly one entry for every candidate_id in the queue's to_execute list, with no duplicates. The verdict is computed from item statuses: "reverted" iff every item is reverted (and items is non-empty); "partial" iff any item is reverted or no item is acted; otherwise "accept". Use an empty changed_files array only when no file changed.`,
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against sweep.batch@v1 before writing reports/sweep/batch.json."
-  ].join(" ")
-};
-var sweepReviewShapeHint = {
-  kind: "schema",
-  schema: "sweep.review@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<clean|minor-injections|critical-injections|reject>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line reference>"] }] }',
-    'Use an empty findings array only with verdict "clean". Any other verdict must include at least one finding. Use an empty file_refs array when a finding has no file-specific reference.',
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against sweep.review@v1 before writing reports/sweep/review.json."
-  ].join(" ")
-};
-
-// dist/flows/sweep/writers/brief.js
-var sweepBriefComposeBuilder = {
-  resultSchemaName: "sweep.brief@v1",
-  build(context) {
-    const goal = context.goal;
-    const verificationCommands = requireResolvedVerificationCommands({
-      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot },
-      goal,
-      requestedNeeds: ["general"],
-      commandIdPrefix: "sweep",
-      timeoutMs: 12e4,
-      maxOutputBytes: 2e5
-    });
-    return SweepBrief.parse({
-      objective: goal,
-      sweep_type: "cleanup",
-      scope: goal,
-      success_criteria: [`Demonstrate the sweep addresses: ${goal}`],
-      scope_exclusions: [],
-      out_of_scope: [],
-      high_risk_boundaries: [],
-      verification_command_candidates: verificationCommands
-    });
-  }
-};
-
-// dist/flows/sweep/writers/close.js
-var POINTERS4 = [
-  { report_id: "sweep.brief", schema: "sweep.brief@v1" },
-  { report_id: "sweep.analysis", schema: "sweep.analysis@v1" },
-  { report_id: "sweep.queue", schema: "sweep.queue@v1" },
-  { report_id: "sweep.batch", schema: "sweep.batch@v1" },
-  { report_id: "sweep.verification", schema: "sweep.verification@v1" },
-  { report_id: "sweep.review", schema: "sweep.review@v1" }
-];
-var sweepCloseBuilder = {
-  resultSchemaName: "sweep.result@v1",
-  reads: [
-    { name: "brief", schema: "sweep.brief@v1", required: true },
-    { name: "analysis", schema: "sweep.analysis@v1", required: true },
-    { name: "queue", schema: "sweep.queue@v1", required: true },
-    { name: "batch", schema: "sweep.batch@v1", required: true },
-    { name: "verification", schema: "sweep.verification@v1", required: true },
-    { name: "review", schema: "sweep.review@v1", required: true }
-  ],
-  build(context) {
-    const brief = SweepBrief.parse(context.inputs.brief);
-    SweepAnalysis.parse(context.inputs.analysis);
-    const queue = SweepQueue.parse(context.inputs.queue);
-    const batch = SweepBatch.parse(context.inputs.batch);
-    const verification = SweepVerification.parse(context.inputs.verification);
-    const review = SweepReview.parse(context.inputs.review);
-    const verificationOk = verification.overall_status === "passed";
-    const reviewClean = review.verdict === "clean";
-    const reviewMinor = review.verdict === "minor-injections";
-    const outcome = batch.verdict === "reverted" ? "reverted" : !verificationOk || review.verdict === "critical-injections" || review.verdict === "reject" ? "failed" : batch.verdict === "partial" || reviewMinor ? "partial" : reviewClean ? "complete" : "failed";
-    return SweepResult.parse({
-      summary: `Sweep result for ${brief.objective}: ${batch.summary}`,
-      outcome,
-      verification_status: verification.overall_status,
-      review_verdict: review.verdict,
-      deferred_count: queue.deferred.length,
-      evidence_links: POINTERS4.map((p) => ({
-        ...p,
-        path: reportPathForSchemaInCompiledFlow(context.flow, p.schema)
-      }))
-    });
-  }
-};
-
-// dist/flows/sweep/writers/queue.js
-var RISK_ORDER = { low: 0, medium: 1, high: 2 };
-function triageAction(confidence, risk) {
-  if (confidence === "high" && risk === "low")
-    return "act";
-  if (confidence === "high" && risk !== "low")
-    return "prove-then-act";
-  if (confidence === "low" && risk === "high")
-    return "defer";
-  return "prove";
-}
-var sweepQueueComposeBuilder = {
-  resultSchemaName: "sweep.queue@v1",
-  reads: [{ name: "analysis", schema: "sweep.analysis@v1", required: true }],
-  build(context) {
-    const analysis = SweepAnalysis.parse(context.inputs.analysis);
-    const classified = analysis.candidates.map((candidate) => ({
-      candidate_id: candidate.id,
-      action: triageAction(candidate.confidence, candidate.risk),
-      rationale: `${candidate.confidence}-confidence \xD7 ${candidate.risk}-risk: ${candidate.description}`
-    }));
-    const deferred = classified.filter((item) => item.action === "defer").map((item) => item.candidate_id);
-    const executable = classified.filter((item) => item.action !== "defer");
-    const candidateById = new Map(analysis.candidates.map((candidate) => [candidate.id, candidate]));
-    const to_execute = executable.slice().sort((a, b) => {
-      const candidateA = candidateById.get(a.candidate_id);
-      const candidateB = candidateById.get(b.candidate_id);
-      if (candidateA === void 0 || candidateB === void 0)
-        return 0;
-      return RISK_ORDER[candidateA.risk] - RISK_ORDER[candidateB.risk];
-    }).map((item) => item.candidate_id);
-    return SweepQueue.parse({
-      classified,
-      to_execute,
-      deferred
-    });
-  }
-};
-
-// dist/flows/sweep/writers/verification.js
-import { readFileSync as readFileSync13 } from "node:fs";
-var sweepVerificationWriter = {
-  resultSchemaName: "sweep.verification@v1",
-  loadCommands(context) {
-    const briefPath = reportPathForSchemaInCompiledFlow(context.flow, "sweep.brief@v1");
-    if (!context.step.reads.includes(briefPath)) {
-      throw new Error(`sweep.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
-    }
-    const brief = SweepBrief.parse(JSON.parse(readFileSync13(resolveRunRelative(context.runFolder, briefPath), "utf8")));
-    return brief.verification_command_candidates;
-  },
-  buildResult(observations) {
-    const overallStatus = observations.some((o) => o.status === "failed") ? "failed" : "passed";
-    return SweepVerification.parse({
-      overall_status: overallStatus,
-      commands: observations.map((o) => ({
-        command_id: o.command.id,
-        argv: o.command.argv,
-        cwd: o.command.cwd,
-        exit_code: o.exit_code,
-        status: o.status,
-        duration_ms: o.duration_ms,
-        stdout_summary: o.stdout_summary,
-        stderr_summary: o.stderr_summary
-      }))
-    });
-  }
-};
-
-// dist/flows/sweep/index.js
-var SWEEP_SIGNALS = [
-  { label: "cleanup prefix", pattern: /^\s*cleanup\s*:/i },
-  { label: "overnight prefix", pattern: /^\s*overnight\s*:/i },
-  {
-    label: "sweep request",
-    pattern: /^\s*(?:please\s+)?(?:sweep|cleanup|clean\s+up)\s+(?:a\s+|an\s+|the\s+|this\s+|that\s+|our\s+|my\s+)?(?:repo|repository|codebase|dead\s+code|lint|docs|documentation|coverage|quality)\b/i
-  }
-];
-var sweepCompiledFlowPackage = {
-  id: "sweep",
-  visibility: "public",
-  paths: {
-    schematic: "src/flows/sweep/schematic.json"
-  },
-  routing: {
-    order: 40,
-    signals: SWEEP_SIGNALS,
-    reasonForMatch(signal) {
-      return `matched ${signal.label}; routed to Sweep flow`;
-    }
-  },
-  relayReports: [
-    {
-      schemaName: "sweep.analysis@v1",
-      schema: SweepAnalysis,
-      relayHint: sweepAnalysisShapeHint.instruction
-    },
-    {
-      schemaName: "sweep.batch@v1",
-      schema: SweepBatch,
-      relayHint: sweepBatchShapeHint.instruction,
-      crossReportValidate: validateSweepBatchAgainstQueue
-    },
-    {
-      schemaName: "sweep.review@v1",
-      schema: SweepReview,
-      relayHint: sweepReviewShapeHint.instruction
-    }
-  ],
-  reportSchemas: [
-    { schemaName: "sweep.brief@v1", schema: SweepBrief },
-    { schemaName: "sweep.queue@v1", schema: SweepQueue },
-    { schemaName: "sweep.verification@v1", schema: SweepVerification },
-    { schemaName: "sweep.result@v1", schema: SweepResult }
-  ],
-  writers: {
-    compose: [sweepBriefComposeBuilder, sweepQueueComposeBuilder],
-    close: [sweepCloseBuilder],
-    verification: [sweepVerificationWriter],
-    checkpoint: []
-  }
-};
-
-// dist/flows/catalog.js
-var flowPackages = [
-  reviewCompiledFlowPackage,
-  migrateCompiledFlowPackage,
-  fixCompiledFlowPackage,
-  runtimeProofCompiledFlowPackage,
-  buildCompiledFlowPackage,
-  exploreCompiledFlowPackage,
-  sweepCompiledFlowPackage
-];
-var PACKAGES_BY_ID = (() => {
-  const map = /* @__PURE__ */ new Map();
-  for (const pkg of flowPackages) {
-    if (map.has(pkg.id)) {
-      throw new Error(`duplicate flow package id '${pkg.id}'`);
-    }
-    map.set(pkg.id, pkg);
-  }
-  return map;
-})();
-function findCompiledFlowPackageById(id) {
-  return PACKAGES_BY_ID.get(id);
-}
-
-// dist/flows/registries/checkpoint-writers/registry.js
-var REGISTRY = buildCheckpointRegistry(flowPackages);
-function findCheckpointBriefBuilder(resultSchemaName) {
-  return REGISTRY.get(resultSchemaName);
-}
-
 // dist/schemas/host.js
 var HostKind = external_exports.enum(["generic-shell", "claude-code", "codex"]);
 var HostConfig = external_exports.object({
@@ -16799,8 +15751,8 @@ var TERMINAL_TARGETS = [
 ];
 
 // dist/runtime/run-files/paths.js
-import { existsSync as existsSync4, lstatSync as lstatSync3, realpathSync as realpathSync2 } from "node:fs";
-import { isAbsolute as isAbsolute3, relative as relative3, resolve as resolve4, sep } from "node:path";
+import { existsSync as existsSync3, lstatSync as lstatSync3, realpathSync as realpathSync2 } from "node:fs";
+import { isAbsolute as isAbsolute3, relative as relative3, resolve as resolve3, sep } from "node:path";
 function isInsideOrSame(root, target) {
   const fromRoot = relative3(root, target);
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute3(fromRoot);
@@ -16831,8 +15783,8 @@ function resolveRunFilePath(runDir, runRelativePath) {
   if (isAbsolute3(runRelativePath)) {
     throw new Error(`run file path must be relative: ${runRelativePath}`);
   }
-  const root = resolve4(runDir);
-  const fullPath = resolve4(root, runRelativePath);
+  const root = resolve3(runDir);
+  const fullPath = resolve3(root, runRelativePath);
   if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
     throw new Error(`run file path escapes run directory: ${runRelativePath}`);
   }
@@ -16843,15 +15795,15 @@ function resolveRunFilePath(runDir, runRelativePath) {
   if (validation.length > 0) {
     throw new Error(`run file path ${validation[0]}: ${runRelativePath}`);
   }
-  if (existsSync4(root)) {
+  if (existsSync3(root)) {
     if (lstatSync3(root).isSymbolicLink()) {
       throw new Error(`run file path crosses symlink: ${runRelativePath}`);
     }
     const rootReal = realpathSync2.native(root);
     let cursor = root;
     for (const segment of runRelativePath.split("/")) {
-      cursor = resolve4(cursor, segment);
-      if (!existsSync4(cursor))
+      cursor = resolve3(cursor, segment);
+      if (!existsSync3(cursor))
         break;
       if (lstatSync3(cursor).isSymbolicLink()) {
         throw new Error(`run file path crosses symlink: ${runRelativePath}`);
@@ -17142,6 +16094,297 @@ function fromCompiledFlow(flow) {
 // dist/runtime/trace/trace-store.js
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { join as join2 } from "node:path";
+
+// dist/schemas/change-kind.js
+var ChangeKind = external_exports.enum([
+  "ratchet-advance",
+  "equivalence-refactor",
+  "migration-escrow",
+  "discovery",
+  "disposable",
+  "break-glass"
+]);
+var ChangeKindBase = external_exports.object({
+  failure_mode: external_exports.string().min(1),
+  acceptance_evidence: external_exports.string().min(1),
+  alternate_framing: external_exports.string().min(1)
+});
+var MigrationEscrowChangeKind = ChangeKindBase.extend({
+  change_kind: external_exports.literal("migration-escrow"),
+  expires_at: external_exports.string().datetime(),
+  restoration_plan: external_exports.string().min(1)
+}).strict();
+var BreakGlassChangeKind = ChangeKindBase.extend({
+  change_kind: external_exports.literal("break-glass"),
+  post_hoc_adr_deadline_at: external_exports.string().datetime()
+}).strict();
+var StandardChangeKind = ChangeKindBase.extend({
+  change_kind: external_exports.enum(["ratchet-advance", "equivalence-refactor", "discovery", "disposable"])
+});
+var ChangeKindDeclaration = external_exports.discriminatedUnion("change_kind", [
+  StandardChangeKind.extend({ change_kind: external_exports.literal("ratchet-advance") }).strict(),
+  StandardChangeKind.extend({ change_kind: external_exports.literal("equivalence-refactor") }).strict(),
+  StandardChangeKind.extend({ change_kind: external_exports.literal("discovery") }).strict(),
+  StandardChangeKind.extend({ change_kind: external_exports.literal("disposable") }).strict(),
+  MigrationEscrowChangeKind,
+  BreakGlassChangeKind
+]);
+
+// dist/schemas/trace-entry.js
+var TraceEntryBase = external_exports.object({
+  schema_version: external_exports.literal(1),
+  sequence: external_exports.number().int().nonnegative(),
+  recorded_at: external_exports.string().datetime(),
+  run_id: RunId
+});
+var HEX642 = /^[0-9a-f]{64}$/;
+var ContentHash = external_exports.string().regex(HEX642, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RunBootstrappedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("run.bootstrapped"),
+  flow_id: CompiledFlowId,
+  invocation_id: InvocationId.optional(),
+  depth: Depth,
+  goal: external_exports.string().min(1),
+  change_kind: ChangeKindDeclaration,
+  manifest_hash: external_exports.string().min(1)
+}).strict();
+var StepEnteredTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.entered"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive()
+}).strict();
+var StepReportWrittenTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.report_written"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  report_path: external_exports.string().min(1),
+  report_schema: external_exports.string().min(1)
+}).strict();
+var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("check.evaluated"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  check_kind: external_exports.enum([
+    "schema_sections",
+    "checkpoint_selection",
+    "result_verdict",
+    "fanout_aggregate"
+  ]),
+  outcome: external_exports.enum(["pass", "fail"]),
+  missing_sections: external_exports.array(external_exports.string()).optional(),
+  reason: external_exports.string().optional()
+}).strict();
+var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("checkpoint.requested"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  options: external_exports.array(external_exports.string()).min(1),
+  request_path: external_exports.string().min(1),
+  request_report_hash: ContentHash
+}).strict();
+var CheckpointResolvedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("checkpoint.resolved"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  selection: external_exports.string().min(1),
+  auto_resolved: external_exports.boolean(),
+  resolution_source: external_exports.enum(["safe-default", "operator", "safe-autonomous"]),
+  response_path: external_exports.string().min(1)
+}).strict();
+var RelayStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  connector: ResolvedConnector,
+  role: RelayRole,
+  resolved_selection: ResolvedSelection,
+  resolved_from: RelayResolutionSource
+}).strict();
+var LoadedSkillEvidence = external_exports.object({
+  id: SkillId,
+  slot: SkillSlotId.optional(),
+  path: external_exports.string().min(1),
+  sha256: ContentHash,
+  bytes: external_exports.number().int().nonnegative()
+}).strict();
+var SkillsLoadedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("skills.loaded"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  skills: external_exports.array(LoadedSkillEvidence).min(1)
+}).strict();
+var RelayCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  result_path: external_exports.string().min(1),
+  receipt_path: external_exports.string().min(1)
+}).strict();
+var RelayRequestTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.request"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  request_payload_hash: ContentHash
+}).strict();
+var RelayFailedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.failed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  connector: ResolvedConnector,
+  role: RelayRole,
+  resolved_selection: ResolvedSelection,
+  resolved_from: RelayResolutionSource,
+  request_payload_hash: ContentHash,
+  reason: external_exports.string().min(1)
+}).strict();
+var RelayReceiptTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.receipt"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  cli_version: external_exports.string().min(1),
+  receipt_id: external_exports.string().min(1).refine((s) => s.trim().length > 0, {
+    message: "receipt_id must contain at least one non-whitespace character"
+  })
+}).strict();
+var RelayResultTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.result"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  result_report_hash: ContentHash
+}).strict();
+var StepCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  route_taken: external_exports.string().min(1)
+}).strict();
+var StepAbortedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.aborted"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  reason: external_exports.string().min(1)
+}).strict();
+var RunClosedOutcome = external_exports.enum(["complete", "aborted", "handoff", "stopped", "escalated"]);
+var SubRunStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("sub_run.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  child_run_id: RunId,
+  child_flow_id: CompiledFlowId,
+  child_entry_mode: external_exports.string().regex(/^[a-z][a-z0-9-]*$/),
+  child_depth: Depth
+}).strict();
+var SubRunCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("sub_run.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  child_run_id: RunId,
+  child_outcome: RunClosedOutcome,
+  // Verdict admitted from the child's terminal result body. NO_VERDICT_SENTINEL
+  // when the child closed without a parseable result body — mirrors the
+  // existing relay.completed sentinel pattern.
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  // Where the child's result.json was copied into the parent run-folder.
+  result_path: external_exports.string().min(1)
+}).strict();
+var FanoutStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  // Resolved branch list AT EXPANSION TIME. For static branches this
+  // mirrors the schematic's authored list. For dynamic branches this is the
+  // result of template expansion against the source report, so an
+  // auditor can see exactly which N branches were spawned without
+  // reconstructing the expansion themselves.
+  branch_ids: external_exports.array(external_exports.string().min(1)).min(1),
+  on_child_failure: FanoutFailurePolicy
+}).strict();
+var FanoutBranchStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.branch_started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId,
+  // Worktree path provisioned for this branch (relative to project root).
+  // Records where the per-branch isolation lived for postmortem auditing.
+  worktree_path: external_exports.string().min(1)
+}).strict();
+var FanoutBranchCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.branch_completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId,
+  child_outcome: RunClosedOutcome,
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  result_path: external_exports.string().min(1)
+}).strict();
+var FanoutJoinedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.joined"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  // The join policy that ran; mirrors the FanoutAggregateCheck.join.policy
+  // field but echoed into the trace_entry so the audit log is self-contained
+  // (no need to cross-reference the schematic to interpret outcomes).
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  // For pick-winner: the selected branch_id. Absent for the other policies.
+  selected_branch_id: external_exports.string().min(1).optional(),
+  // Path to the runtime-built aggregate report.
+  aggregate_path: external_exports.string().min(1),
+  // Count of branches that closed 'complete' vs other outcomes — quick
+  // health summary readable without reconstructing per-branch trace_entries.
+  branches_completed: external_exports.number().int().nonnegative(),
+  branches_failed: external_exports.number().int().nonnegative()
+}).strict();
+var RunClosedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("run.closed"),
+  outcome: RunClosedOutcome,
+  reason: external_exports.string().optional()
+}).strict();
+var TraceEntry = external_exports.discriminatedUnion("kind", [
+  RunBootstrappedTraceEntry,
+  StepEnteredTraceEntry,
+  StepReportWrittenTraceEntry,
+  CheckEvaluatedTraceEntry,
+  CheckpointRequestedTraceEntry,
+  CheckpointResolvedTraceEntry,
+  RelayStartedTraceEntry,
+  SkillsLoadedTraceEntry,
+  RelayRequestTraceEntry,
+  RelayFailedTraceEntry,
+  RelayReceiptTraceEntry,
+  RelayResultTraceEntry,
+  RelayCompletedTraceEntry,
+  SubRunStartedTraceEntry,
+  SubRunCompletedTraceEntry,
+  FanoutStartedTraceEntry,
+  FanoutBranchStartedTraceEntry,
+  FanoutBranchCompletedTraceEntry,
+  FanoutJoinedTraceEntry,
+  StepCompletedTraceEntry,
+  StepAbortedTraceEntry,
+  RunClosedTraceEntry
+]).superRefine((ev, ctx) => {
+  if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
+    return;
+  if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolved_from", "role"],
+      message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
+    });
+  }
+});
+
+// dist/runtime/trace/trace-store.js
 var TraceStore = class {
   runDir;
   options;
@@ -17612,7 +16855,7 @@ function isWaitingCheckpointStepOutcome(outcome) {
 }
 
 // dist/runtime/executors/checkpoint.js
-import { readFileSync as readFileSync14 } from "node:fs";
+import { readFileSync as readFileSync11 } from "node:fs";
 
 // dist/shared/recovery-route.js
 var RECOVERY_ROUTE_PRIORITY = [
@@ -17723,7 +16966,7 @@ async function executeCheckpoint(step, context) {
         responsePath: response.path
       });
       await context.files.writeJson(report, body);
-      checkpointReportSha256 = sha256Hex(readFileSync14(context.files.resolve(report), "utf8"));
+      checkpointReportSha256 = sha256Hex(readFileSync11(context.files.resolve(report), "utf8"));
       await context.trace.append({
         run_id: context.runId,
         kind: "step.report_written",
@@ -17739,7 +16982,7 @@ async function executeCheckpoint(step, context) {
       ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
     });
     await context.files.writeJson(request, requestBody);
-    const requestText = readFileSync14(context.files.resolve(request), "utf8");
+    const requestText = readFileSync11(context.files.resolve(request), "utf8");
     await context.trace.append({
       run_id: context.runId,
       kind: "checkpoint.requested",
@@ -17814,7 +17057,7 @@ async function executeCheckpoint(step, context) {
 }
 
 // dist/runtime/executors/compose.js
-import { readFileSync as readFileSync15 } from "node:fs";
+import { readFileSync as readFileSync12 } from "node:fs";
 
 // dist/flows/registries/close-writers/registry.js
 var REGISTRY2 = buildCloseRegistry(flowPackages);
@@ -17863,7 +17106,17 @@ function resolveComposeReadPaths(builder, flow, step) {
 
 // dist/runtime/executors/compose.js
 function readJsonReport(context, path) {
-  return JSON.parse(readFileSync15(context.files.resolve(path), "utf8"));
+  return JSON.parse(readFileSync12(context.files.resolve(path), "utf8"));
+}
+function readOptionalJsonReport(context, path, required) {
+  try {
+    return readJsonReport(context, path);
+  } catch (error) {
+    if (!required && error.code === "ENOENT") {
+      return void 0;
+    }
+    throw error;
+  }
 }
 async function writeRegisteredComposeReport(step, context) {
   const report = step.writes?.report;
@@ -17894,8 +17147,9 @@ async function writeRegisteredComposeReport(step, context) {
   if (closeBuilder !== void 0) {
     const readPaths = resolveCloseReadPaths(closeBuilder, flow, compiledStep);
     const inputs = {};
-    for (const [name, path] of Object.entries(readPaths)) {
-      inputs[name] = path === void 0 ? void 0 : readJsonReport(context, path);
+    for (const descriptor of closeBuilder.reads) {
+      const path = readPaths[descriptor.name];
+      inputs[descriptor.name] = path === void 0 ? void 0 : readOptionalJsonReport(context, path, descriptor.required);
     }
     const body = closeBuilder.build({
       runFolder: context.runDir,
@@ -18100,6 +17354,21 @@ function parseReport(schemaName, resultBody) {
   return { kind: "ok" };
 }
 
+// dist/schemas/result.js
+var RunResult = external_exports.object({
+  schema_version: external_exports.literal(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  goal: external_exports.string().min(1),
+  outcome: RunClosedOutcome,
+  summary: external_exports.string().min(1),
+  closed_at: external_exports.string().datetime(),
+  trace_entries_observed: external_exports.number().int().nonnegative(),
+  manifest_hash: external_exports.string().min(1),
+  reason: external_exports.string().min(1).optional(),
+  verdict: external_exports.string().min(1).optional()
+}).strict();
+
 // dist/runtime/executors/relay.js
 import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -18208,17 +17477,20 @@ function buildClaudeCodeArgs(input) {
     assertClaudeCodeEffort(effort);
     args.push("--effort", effort);
   }
-  if (input.responseSchema !== void 0) {
+  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
     args.push("--json-schema", JSON.stringify(input.responseSchema));
   }
   args.push(input.prompt);
   return args;
 }
+function isClaudeCodeStructuredOutputCompatible(schema) {
+  return schema.type === "object";
+}
 async function relayClaudeCode(input) {
   const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const args = buildClaudeCodeArgs(input);
   const start = performance.now();
-  return await new Promise((resolve13, reject) => {
+  return await new Promise((resolve12, reject) => {
     let child;
     try {
       child = spawn(CLAUDE_CODE_EXECUTABLE, args, {
@@ -18307,7 +17579,9 @@ async function relayClaudeCode(input) {
         return;
       }
       if (code !== 0) {
-        reject(new Error(`claude-code subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ""}; stderr[:500]=${stderr.slice(0, 500)}`));
+        const stdoutSuffix = stdoutCapped ? " [stdout capped]" : "";
+        const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
+        reject(new Error(`claude-code subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ""}; stdout[:500]=${stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${stderr.slice(0, 500)}${stderrSuffix}`));
         return;
       }
       if (stdoutCapped) {
@@ -18315,7 +17589,7 @@ async function relayClaudeCode(input) {
         return;
       }
       try {
-        resolve13(parseClaudeCodeStdout(stdout, input.prompt, duration_ms));
+        resolve12(parseClaudeCodeStdout(stdout, input.prompt, duration_ms));
       } catch (err) {
         const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
         reject(new Error(`claude-code subprocess: ${err.message}; stdout[:500]=${stdout.slice(0, 500)}; stderr[:200]=${stderr.slice(0, 200)}${stderrSuffix}`));
@@ -18558,7 +17832,7 @@ async function relayCodex(input) {
     }
     const args = buildCodexArgs(input, schemaPath);
     const start = performance2.now();
-    return await new Promise((resolve13, reject) => {
+    return await new Promise((resolve12, reject) => {
       let child;
       try {
         child = spawn2(CODEX_EXECUTABLE, args, {
@@ -18648,7 +17922,7 @@ async function relayCodex(input) {
           return;
         }
         try {
-          resolve13(parseCodexStdout(stdout, input.prompt, duration_ms, cli_version));
+          resolve12(parseCodexStdout(stdout, input.prompt, duration_ms, cli_version));
         } catch (err) {
           const stderrSuffix = stderrCapped ? " [stderr capped]" : "";
           reject(new Error(`codex subprocess: ${err.message}; stdout[:500]=${stdout.slice(0, 500)}; stderr[:200]=${stderr.slice(0, 200)}${stderrSuffix}`));
@@ -18805,7 +18079,7 @@ async function relayCustom(input) {
   const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
   const start = performance3.now();
   try {
-    return await new Promise((resolve13, reject) => {
+    return await new Promise((resolve12, reject) => {
       let child;
       try {
         child = spawn3(executable, args, {
@@ -18884,7 +18158,7 @@ async function relayCustom(input) {
           }
           try {
             const extracted = await extractConfiguredOutput(descriptor, outputFile);
-            resolve13({
+            resolve12({
               request_payload: input.prompt,
               receipt_id: extracted.receiptId,
               result_body: extracted.resultBody,
@@ -19095,7 +18369,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync5, readFileSync as readFileSync16 } from "node:fs";
+import { existsSync as existsSync4, readFileSync as readFileSync13 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -19172,10 +18446,10 @@ function selectedSkillsSection(skills) {
 function composeRelayPrompt(step, runFolder, loadedSkills = []) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
-    if (!existsSync5(abs))
+    if (!existsSync4(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync16(abs, "utf8")}`;
+${readFileSync13(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   return [
@@ -19195,9 +18469,9 @@ ${readFileSync16(abs, "utf8")}`;
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync6, readFileSync as readFileSync17, readdirSync } from "node:fs";
+import { existsSync as existsSync5, readFileSync as readFileSync14, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join as join4, resolve as resolve5 } from "node:path";
+import { join as join4, resolve as resolve4 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
 var UserSkillFrontmatter = UserSkillEntry.pick({
   name: true,
@@ -19239,8 +18513,8 @@ function parseSkillMarkdown(text, skillPath) {
 function discoverCandidates(roots) {
   const candidates = /* @__PURE__ */ new Map();
   for (const root of roots) {
-    const rootAbs = resolve5(root);
-    if (!existsSync6(rootAbs))
+    const rootAbs = resolve4(root);
+    if (!existsSync5(rootAbs))
       continue;
     for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
       if (!entry.isDirectory())
@@ -19252,7 +18526,7 @@ function discoverCandidates(roots) {
       if (candidates.has(key))
         continue;
       const skillPath = join4(rootAbs, entry.name, "SKILL.md");
-      if (!existsSync6(skillPath))
+      if (!existsSync5(skillPath))
         continue;
       candidates.set(key, {
         id: id.data,
@@ -19266,7 +18540,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync17(candidate.path, "utf8");
+    text = readFileSync14(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -19284,7 +18558,7 @@ function loadCandidate(candidate) {
 function createUserSkillRegistry(options = {}) {
   const roots = options.roots ?? defaultUserSkillRoots(options.homeDir);
   const candidates = discoverCandidates(roots);
-  const searchedRoots = roots.map((root) => resolve5(root));
+  const searchedRoots = roots.map((root) => resolve4(root));
   return {
     roots: searchedRoots,
     list() {
@@ -21136,6 +20410,9 @@ async function executeProductionRelay(step, context) {
   const compiledStep = requireCompiledStep(context, step, "relay");
   const relayAttempt = await executeProductionRelayAttempt({ step, context, compiledStep });
   if (relayAttempt.kind === "connector_failed") {
+    if (Object.hasOwn(step.routes, "connector-failed")) {
+      return { route: "connector-failed", details: { reason: relayAttempt.reason } };
+    }
     const recoveryRoute2 = recoveryRouteForExecutableStep(step);
     if (recoveryRoute2 !== void 0)
       return { route: recoveryRoute2, details: { reason: relayAttempt.reason } };
@@ -22076,8 +21353,8 @@ async function executeSubRun(step, context) {
 
 // dist/runtime/executors/verification.js
 import { spawnSync as spawnSync3 } from "node:child_process";
-import { existsSync as existsSync7, lstatSync as lstatSync4, readFileSync as readFileSync18, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve6 } from "node:path";
+import { existsSync as existsSync6, lstatSync as lstatSync4, readFileSync as readFileSync15, realpathSync as realpathSync3 } from "node:fs";
+import { isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve5 } from "node:path";
 
 // dist/flows/registries/verification-writers/registry.js
 var REGISTRY6 = buildVerificationRegistry(flowPackages);
@@ -22099,12 +21376,12 @@ function isInsideOrSame2(root, target) {
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute4(fromRoot);
 }
 function resolveProjectRelativeCwd(projectRoot, cwd) {
-  const rootAbs = resolve6(projectRoot);
-  const targetAbs = resolve6(rootAbs, cwd);
+  const rootAbs = resolve5(projectRoot);
+  const targetAbs = resolve5(rootAbs, cwd);
   if (!isInsideOrSame2(rootAbs, targetAbs)) {
     throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} escapes project root`);
   }
-  if (!existsSync7(rootAbs)) {
+  if (!existsSync6(rootAbs)) {
     throw new ProofPlanBlockedError(`verification project root rejected: ${rootAbs} does not exist`);
   }
   const rootReal = realpathSync3.native(rootAbs);
@@ -22112,8 +21389,8 @@ function resolveProjectRelativeCwd(projectRoot, cwd) {
   for (const segment of cwd.split("/")) {
     if (segment === ".")
       continue;
-    cursor = resolve6(cursor, segment);
-    if (!existsSync7(cursor)) {
+    cursor = resolve5(cursor, segment);
+    if (!existsSync6(cursor)) {
       throw new ProofPlanBlockedError(`verification cwd rejected: ${JSON.stringify(cwd)} does not exist`);
     }
     const stat2 = lstatSync4(cursor);
@@ -22174,12 +21451,12 @@ function preflightPackageScript(command, cwdAbs) {
   if (script === void 0)
     return;
   const packageJsonPath = join7(cwdAbs, "package.json");
-  if (!existsSync7(packageJsonPath)) {
+  if (!existsSync6(packageJsonPath)) {
     throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' requires package.json at cwd ${JSON.stringify(command.cwd)}.`);
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync18(packageJsonPath, "utf8"));
+    parsed = JSON.parse(readFileSync15(packageJsonPath, "utf8"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' could not parse package.json at cwd ${JSON.stringify(command.cwd)}: ${message}.`);
@@ -22350,7 +21627,7 @@ function createDefaultExecutors(options = {}) {
 }
 
 // dist/runtime/projections/progress.js
-import { readFileSync as readFileSync20 } from "node:fs";
+import { readFileSync as readFileSync17 } from "node:fs";
 import { join as join10 } from "node:path";
 
 // dist/schemas/progress-event.js
@@ -22622,7 +21899,7 @@ function runResultPath(runFolder) {
 }
 
 // dist/shared/write-capable-worker-disclosure.js
-var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix", "migrate", "sweep"]);
+var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix"]);
 var WRITE_CAPABLE_WORKER_DISCLOSURE = "A worker can edit this checkout.";
 function flowMayInvokeWriteCapableWorker(flowId) {
   return WRITE_CAPABLE_FLOW_IDS.has(flowId);
@@ -22632,7 +21909,7 @@ function compiledFlowMayInvokeWriteCapableWorker(flow) {
 }
 
 // dist/runtime/projections/tournament-checkpoint-context.js
-import { readFileSync as readFileSync19 } from "node:fs";
+import { readFileSync as readFileSync16 } from "node:fs";
 import { join as join9 } from "node:path";
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -22644,7 +21921,7 @@ function boundedText(value, max) {
 }
 function readJson2(runDir, path) {
   try {
-    return JSON.parse(readFileSync19(join9(runDir, path), "utf8"));
+    return JSON.parse(readFileSync16(join9(runDir, path), "utf8"));
   } catch {
     return void 0;
   }
@@ -22830,7 +22107,7 @@ function reportTaskListProgress(input) {
   });
 }
 function readJsonReport2(runDir, reportPath) {
-  return JSON.parse(readFileSync20(join10(runDir, reportPath), "utf8"));
+  return JSON.parse(readFileSync17(join10(runDir, reportPath), "utf8"));
 }
 function warningRecordsFromReport(body) {
   if (body === null || typeof body !== "object" || Array.isArray(body))
@@ -22921,7 +22198,7 @@ function stringArray(value) {
 }
 function checkpointPrompt(requestPath) {
   try {
-    const raw = JSON.parse(readFileSync20(requestPath, "utf8"));
+    const raw = JSON.parse(readFileSync17(requestPath, "utf8"));
     if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
       const prompt = raw.prompt;
       if (typeof prompt === "string" && prompt.length > 0)
@@ -23582,6 +22859,38 @@ function latestAdmittedVerdict(context) {
 function isRecoveryRoute(route) {
   return route !== void 0 && RECOVERY_ROUTE_LABELS.has(route);
 }
+function canReachStepViaNonRecoveryRoutes(input) {
+  if (input.fromStepId === input.targetStepId)
+    return true;
+  const seen = /* @__PURE__ */ new Set();
+  const queue = [input.fromStepId];
+  for (let index = 0; index < queue.length; index += 1) {
+    const stepId = queue[index];
+    if (stepId === void 0 || seen.has(stepId))
+      continue;
+    seen.add(stepId);
+    const step = input.steps.get(stepId);
+    if (step === void 0)
+      continue;
+    for (const [route, target] of Object.entries(step.routes)) {
+      if (isRecoveryRoute(route) || target.kind !== "step")
+        continue;
+      if (target.stepId === input.targetStepId)
+        return true;
+      queue.push(target.stepId);
+    }
+  }
+  return false;
+}
+function isRecoveryReturnCorridor(input) {
+  if (input.activeRecovery === void 0 || isRecoveryRoute(input.route))
+    return false;
+  return canReachStepViaNonRecoveryRoutes({
+    steps: input.steps,
+    fromStepId: input.stepId,
+    targetStepId: input.activeRecovery.originStepId
+  });
+}
 function configuredMaxAttempts(step) {
   const budgets = step.budgets;
   if (budgets === void 0 || budgets === null || typeof budgets !== "object")
@@ -23777,7 +23086,12 @@ async function executeExecutableFlowWithWaiting(flow, options) {
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
     const maxAttempts = maxAttemptsForRoute(step, incomingRouteTaken);
-    const isRecoveryOriginReentry = activeRecovery !== void 0 && activeRecovery.originStepId === step.id && !isRecoveryRoute(incomingRouteTaken);
+    const isRecoveryOriginReentry = isRecoveryReturnCorridor({
+      steps,
+      activeRecovery,
+      stepId: step.id,
+      route: incomingRouteTaken
+    });
     const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
     if (!isResumedCheckpoint && completedCount > 0 && !isRecoveryOriginReentry && (!isRecoveryRoute(incomingRouteTaken) || completedCount >= maxAttempts)) {
       const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
@@ -23860,7 +23174,12 @@ async function executeExecutableFlowWithWaiting(flow, options) {
     if (target.kind === "step") {
       const targetCompletedCount = completedStepCounts.get(target.stepId) ?? 0;
       const targetStep = steps.get(target.stepId);
-      const isRecoveryReturnToOrigin = activeRecovery !== void 0 && activeRecovery.originStepId === target.stepId && !isRecoveryRoute(route);
+      const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
+        steps,
+        activeRecovery,
+        stepId: target.stepId,
+        route
+      });
       const targetMaxAttempts = targetStep === void 0 ? maxAttemptsForRoute(step, route) : maxAttemptsForRoute(targetStep, route);
       if (targetCompletedCount > 0 && !isRecoveryReturnToOrigin && (!isRecoveryRoute(route) || targetCompletedCount >= targetMaxAttempts)) {
         const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
@@ -24030,7 +23349,7 @@ function declaredCheckpointRequestPath(step) {
 }
 function readCheckpointRequestContext(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
-  const requestText = readFileSync21(requestAbs, "utf8");
+  const requestText = readFileSync18(requestAbs, "utf8");
   if (sha256Hex(requestText) !== input.expectedRequestHash) {
     throw new Error("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
@@ -24217,27 +23536,6 @@ function classifyPlanExecutionRequest(taskText) {
       inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
     };
   }
-  if (/\b(?:migrate|migration|port|rewrite|replace|transition|framework\s+swap)\b/.test(lower)) {
-    return {
-      flowName: "migrate",
-      source: "classifier",
-      matched_signal: "plan-execution",
-      reason: "matched plan-execution request; selected Migrate for the first migration slice",
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched migration-oriented plan execution; selected deep migration thoroughness"
-    };
-  }
-  if (/\b(?:cleanup|clean\s+up|sweep|dead\s+code|quality|coverage|overnight)\b/.test(lower)) {
-    const autonomous = /\bovernight\b/.test(lower);
-    return {
-      flowName: "sweep",
-      source: "classifier",
-      matched_signal: "plan-execution",
-      reason: "matched plan-execution request; selected Sweep for the first cleanup slice",
-      inferredEntryModeName: autonomous ? "autonomous" : "default",
-      inferredEntryModeReason: autonomous ? "matched overnight plan execution; selected autonomous Sweep thoroughness" : "matched cleanup-oriented plan execution; selected default Sweep thoroughness"
-    };
-  }
   if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
     return {
       flowName: "fix",
@@ -24263,26 +23561,6 @@ function inferEntryMode(flowName, taskText) {
       inferredEntryModeName: "default",
       inferredEntryModeReason: "matched develop intent; selected default Build thoroughness"
     };
-  }
-  if (flowName === "migrate" && /^\s*migrate\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched migrate intent; selected deep migration thoroughness"
-    };
-  }
-  if (flowName === "sweep") {
-    if (/^\s*overnight\s*:/i.test(taskText)) {
-      return {
-        inferredEntryModeName: "autonomous",
-        inferredEntryModeReason: "matched overnight cleanup intent; selected autonomous Sweep thoroughness"
-      };
-    }
-    if (/^\s*cleanup\s*:/i.test(taskText)) {
-      return {
-        inferredEntryModeName: "default",
-        inferredEntryModeReason: "matched cleanup intent; selected default Sweep thoroughness"
-      };
-    }
   }
   if (flowName === "explore" && /^\s*decide\s*:/i.test(taskText)) {
     return {
@@ -24350,9 +23628,9 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync8, readFileSync as readFileSync22 } from "node:fs";
+import { existsSync as existsSync7, readFileSync as readFileSync19 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join12, resolve as resolve7 } from "node:path";
+import { join as join12, resolve as resolve6 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit-next", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
@@ -24369,10 +23647,10 @@ function parseConfigYaml(text, sourcePath) {
   }
 }
 function loadConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve7(sourcePath);
-  if (!existsSync8(abs))
+  const abs = resolve6(sourcePath);
+  if (!existsSync7(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync22(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync19(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -24651,7 +23929,7 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync10, mkdirSync, readFileSync as readFileSync24, rmSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync9, mkdirSync, readFileSync as readFileSync21, rmSync, writeFileSync } from "node:fs";
 import { dirname as dirname6, join as join13 } from "node:path";
 
 // dist/schemas/operator-summary.js
@@ -24969,15 +24247,15 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync9, readFileSync as readFileSync23 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync20 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync9(path))
+  if (!existsSync8(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync23(path, "utf8"));
+  const parsed = JSON.parse(readFileSync20(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -25041,7 +24319,7 @@ function friendlyRunNote(flowId, summary) {
   return summary;
 }
 function friendlyResultSummary(summary) {
-  return summary.replace(/^(?:Build|Fix|Migrate|Review|Explore|Sweep) result for .+?:\s*/, "").replace(/^Explore '[\s\S]*?':\s*/, "").replace(/^Explore .+?:\s*/, "");
+  return summary.replace(/^(?:Build|Fix|Review|Explore) result for .+?:\s*/, "").replace(/^Explore '[\s\S]*?':\s*/, "").replace(/^Explore .+?:\s*/, "");
 }
 function friendlyReviewStatus(status) {
   if (status === "accept")
@@ -25321,7 +24599,7 @@ var reviewProjector = ({ flowReport }) => {
     details
   };
 };
-function buildFixMigrateDetails(flowReport) {
+function buildFixDetails(flowReport) {
   const details = [];
   const summaryDetail = flowSummaryDetail(flowReport);
   if (summaryDetail !== void 0)
@@ -25352,7 +24630,7 @@ var buildProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
     }
     return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   })();
-  return { headline, details: buildFixMigrateDetails(flowReport) };
+  return { headline, details: buildFixDetails(flowReport) };
 };
 var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
@@ -25361,26 +24639,7 @@ var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const headline = `Circuit: ${capitalized(friendlyFixOutcome(outcome))}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   return {
     headline,
-    details: buildFixMigrateDetails(flowReport)
-  };
-};
-var migrateProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
-  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
-  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
-  const review = stringField2(flowReport, "review_verdict") ?? "unknown";
-  return {
-    headline: `Circuit: Migrate finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`,
-    details: buildFixMigrateDetails(flowReport)
-  };
-};
-var sweepProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
-  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
-  const deferred = numberField(flowReport, "deferred_count");
-  const headline = deferred === void 0 ? `Circuit: Sweep finished with outcome ${outcome}.` : `Circuit: Sweep finished with outcome ${outcome}. Deferred: ${plural(deferred, "item")}.`;
-  const summaryDetail = flowSummaryDetail(flowReport);
-  return {
-    headline,
-    details: summaryDetail === void 0 ? [] : [summaryDetail]
+    details: buildFixDetails(flowReport)
   };
 };
 var defaultProjector = ({ resultSummary: resultSummary2 }) => ({
@@ -25391,9 +24650,7 @@ var SUMMARY_PROJECTORS = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
-  migrate: migrateProjector,
-  review: reviewProjector,
-  sweep: sweepProjector
+  review: reviewProjector
 };
 function projectSummary(input) {
   const projector = SUMMARY_PROJECTORS[input.flowId] ?? defaultProjector;
@@ -25403,10 +24660,10 @@ function projectSummary(input) {
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
   const path = join13(runFolder, "reports", "operator-summary.json");
-  if (!existsSync10(path))
+  if (!existsSync9(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync24(path, "utf8"));
+    const raw = JSON.parse(readFileSync21(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -25423,9 +24680,7 @@ var FLOW_RESULT_PATHS = {
   build: "reports/build-result.json",
   explore: "reports/explore-result.json",
   fix: "reports/fix-result.json",
-  migrate: "reports/migrate-result.json",
-  review: "reports/review-result.json",
-  sweep: "reports/sweep-result.json"
+  review: "reports/review-result.json"
 };
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
@@ -25549,14 +24804,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync10(candidateHtmlPath))
+    if (existsSync9(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
       writeFileSync(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync10(candidateHtmlPath))
+      if (existsSync9(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -25638,13 +24893,13 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync11, mkdirSync as mkdirSync2, readFileSync as readFileSync26, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync10, mkdirSync as mkdirSync2, readFileSync as readFileSync23, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname8, join as join14, resolve as resolve9 } from "node:path";
+import { dirname as dirname8, join as join14, resolve as resolve8 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync25 } from "node:fs";
-import { dirname as dirname7, relative as relative5, resolve as resolve8 } from "node:path";
+import { readFileSync as readFileSync22 } from "node:fs";
+import { dirname as dirname7, relative as relative5, resolve as resolve7 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -25661,8 +24916,8 @@ function pathIsInside(parent, child) {
 function fixtureEligibleForRuntime(input) {
   if (input.args.fixturePath === void 0 && input.args.flowRoot === void 0)
     return true;
-  const fixturePath = resolve8(input.fixturePath);
-  if (pathIsInside(resolve8(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
+  const fixturePath = resolve7(input.fixturePath);
+  if (pathIsInside(resolve7(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
     return true;
   }
   if (input.args.flowRoot !== void 0 && publishedCustomFlowMatches(input.args.flowRoot, fixturePath)) {
@@ -25672,12 +24927,12 @@ function fixtureEligibleForRuntime(input) {
   if (mirrorRoot === void 0 || mirrorRoot.length === 0 || input.args.flowRoot === void 0) {
     return false;
   }
-  const trustedMirrorRoot = resolve8(mirrorRoot);
-  return resolve8(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
+  const trustedMirrorRoot = resolve7(mirrorRoot);
+  return resolve7(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync25(resolve8(dirname7(resolve8(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync22(resolve7(dirname7(resolve7(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -25688,7 +24943,7 @@ function publishedCustomFlowMatches(flowRoot2, fixturePath) {
         return false;
       }
       const flowPath = candidate.flow_path;
-      return typeof flowPath === "string" && resolve8(flowPath) === fixturePath;
+      return typeof flowPath === "string" && resolve7(flowPath) === fixturePath;
     });
   } catch {
     return false;
@@ -25750,16 +25005,7 @@ function utilityProgress(input) {
 }
 
 // dist/cli/create.js
-var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set([
-  "build",
-  "explore",
-  "fix",
-  "handoff",
-  "migrate",
-  "review",
-  "run",
-  "sweep"
-]);
+var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set(["build", "explore", "fix", "handoff", "review", "run"]);
 function usage() {
   return [
     'usage: circuit-next create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
@@ -25858,7 +25104,7 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve9(args.home ?? join14(homedir3(), ".config", "circuit-next", "custom"));
+  return resolve8(args.home ?? join14(homedir3(), ".config", "circuit-next", "custom"));
 }
 function draftRoot(home, slug) {
   return join14(home, "drafts", slug);
@@ -25906,13 +25152,13 @@ function validateCustomFlow(slug, flow, source) {
 }
 function candidateTemplatePaths(args) {
   const roots = [args.templateFlowRoot, "generated/flows", "plugins/circuit/flows"].filter((root) => root !== void 0);
-  return roots.map((root) => resolve9(root, "build", "circuit.json"));
+  return roots.map((root) => resolve8(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync11(candidate))
+    if (!existsSync10(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync26(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync23(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -25991,8 +25237,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync11(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync26(manifestPath(input.home), "utf8"));
+  if (existsSync10(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync23(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -26036,23 +25282,23 @@ function writeDraft(input) {
 }
 function loadDraftFlow(home, slug) {
   const path = join14(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync26(path, "utf8")));
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync23(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync11(join14(draft, "SKILL.md"))) {
+  if (!existsSync10(join14(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
   const customFlowRoot = join14(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join14(skillRoot, "SKILL.md"), readFileSync26(join14(draft, "SKILL.md"), "utf8"));
-  writeText(join14(skillRoot, "circuit.yaml"), readFileSync26(join14(draft, "circuit.yaml"), "utf8"));
-  writeText(join14(customFlowRoot, "circuit.json"), readFileSync26(join14(draft, "circuit.json"), "utf8"));
-  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync26(join14(draft, "command.md"), "utf8"));
+  writeText(join14(skillRoot, "SKILL.md"), readFileSync23(join14(draft, "SKILL.md"), "utf8"));
+  writeText(join14(skillRoot, "circuit.yaml"), readFileSync23(join14(draft, "circuit.yaml"), "utf8"));
+  writeText(join14(customFlowRoot, "circuit.json"), readFileSync23(join14(draft, "circuit.json"), "utf8"));
+  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync23(join14(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -26116,11 +25362,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync11(join14(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync10(join14(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync11(join14(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync10(join14(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -26186,23 +25432,23 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3, readFileSync as readFileSync26, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname9, join as join18, resolve as resolve11 } from "node:path";
+import { dirname as dirname9, join as join18, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/project-run-folder.js
 import { constants, accessSync, statSync } from "node:fs";
-import { resolve as resolve10 } from "node:path";
+import { resolve as resolve9 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync27, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync24, writeFileSync as writeFileSync3 } from "node:fs";
 import { join as join15 } from "node:path";
 function manifestSnapshotPath(runFolder) {
   return join15(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync27(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync24(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -26211,7 +25457,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync12 } from "node:fs";
+import { existsSync as existsSync11 } from "node:fs";
 import { join as join16 } from "node:path";
 
 // dist/schemas/run-status.js
@@ -26373,9 +25619,9 @@ function optionalReportPaths(runFolder) {
   const operatorSummary = join16(runFolder, "reports", "operator-summary.json");
   const operatorSummaryMarkdown = join16(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync12(result) ? { result_path: result } : {},
-    ...existsSync12(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync12(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync11(result) ? { result_path: result } : {},
+    ...existsSync11(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync11(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -26390,14 +25636,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync28 } from "node:fs";
+import { readFileSync as readFileSync25 } from "node:fs";
 import { join as join17 } from "node:path";
 function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
   const tracePath = join17(runFolder, "trace.ndjson");
-  const text = readFileSync28(tracePath, "utf8");
+  const text = readFileSync25(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -26582,7 +25828,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync28(requestAbs, "utf8");
+    requestText = readFileSync25(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -26841,7 +26087,7 @@ function assertReadableRunFolder(runFolder) {
   }
 }
 function projectRunStatusFromRunFolder(runFolder) {
-  const resolvedRunFolder = resolve10(runFolder);
+  const resolvedRunFolder = resolve9(runFolder);
   assertReadableRunFolder(resolvedRunFolder);
   let manifest;
   try {
@@ -27152,15 +26398,15 @@ function parseArgs2(argv) {
   };
 }
 function resolveProjectRootArg(args) {
-  return resolve11(args.projectRoot ?? process.cwd());
+  return resolve10(args.projectRoot ?? process.cwd());
 }
 function resolveControlPlaneArg(args) {
   if (args.controlPlane !== void 0)
-    return resolve11(args.controlPlane);
-  return resolve11(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
+    return resolve10(args.controlPlane);
+  return resolve10(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
 }
 function continuityRoot(controlPlane) {
-  return resolve11(controlPlane, "continuity");
+  return resolve10(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
   return join18(continuityRoot(controlPlane), "records");
@@ -27299,23 +26545,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync13(indexAbs))
+  if (!existsSync12(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync29(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync26(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync13(recordAbs)) {
+  if (!existsSync12(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record;
   try {
-    record = ContinuityRecord.parse(JSON.parse(readFileSync29(recordAbs, "utf8")));
+    record = ContinuityRecord.parse(JSON.parse(readFileSync26(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -27348,7 +26594,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync29(0, "utf8");
+  const raw = readFileSync26(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -27412,14 +26658,14 @@ function runHandoffHook(args) {
   return 0;
 }
 function defaultCodexHooksFile() {
-  const codexHome = process.env.CODEX_HOME ?? resolve11(homedir4(), ".codex");
-  return resolve11(codexHome, "hooks.json");
+  const codexHome = process.env.CODEX_HOME ?? resolve10(homedir4(), ".codex");
+  return resolve10(codexHome, "hooks.json");
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve11(pluginRoot, "scripts/circuit-next.mjs");
+    return resolve10(pluginRoot, "scripts/circuit-next.mjs");
   }
-  return resolve11(moduleDir, "../..", "bin/circuit-next");
+  return resolve10(moduleDir, "../..", "bin/circuit-next");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
@@ -27437,11 +26683,11 @@ function parseCodexHooksHost(args) {
   throw new Error("handoff hooks requires --host codex");
 }
 function resolveHooksFileArg(args) {
-  return resolve11(args.hooksFile ?? defaultCodexHooksFile());
+  return resolve10(args.hooksFile ?? defaultCodexHooksFile());
 }
 function resolveLauncherArg(args) {
-  const launcher = resolve11(args.launcher ?? defaultLauncherPath());
-  if (!existsSync13(launcher)) {
+  const launcher = resolve10(args.launcher ?? defaultLauncherPath());
+  if (!existsSync12(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -27467,9 +26713,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync13(path))
+  if (!existsSync12(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync29(path, "utf8"));
+  const parsed = JSON.parse(readFileSync26(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -27579,9 +26825,9 @@ function launcherPathFromCircuitHookCommand(command) {
 function writeHooksConfig(path, config) {
   mkdirSync3(dirname9(path), { recursive: true });
   let backupPath;
-  if (existsSync13(path)) {
+  if (existsSync12(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync13(candidate)) {
+    if (!existsSync12(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
@@ -27632,7 +26878,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync13(hooksPath)) {
+  if (!existsSync12(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -27671,7 +26917,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync13(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync12(hooksPath), detail: hooksPath });
   let config;
   try {
     config = readHooksConfig(hooksPath);
@@ -27702,7 +26948,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync13(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync12(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -27726,7 +26972,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync13(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync12(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -27822,7 +27068,7 @@ function buildRecord(args, now) {
       }
     });
   }
-  const runFolder = resolve11(args.runFolder);
+  const runFolder = resolve10(args.runFolder);
   const { snapshot, currentStage } = loadRunBackedSnapshot(runFolder);
   if (snapshot.current_step === void 0) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
@@ -27924,7 +27170,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync29(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync26(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -27950,7 +27196,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync13(indexAbs)) {
+  if (!existsSync12(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -27988,7 +27234,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync13(recordAbs)) {
+  if (!existsSync12(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -28251,17 +27497,6 @@ var RUNTIME_SUPPORT_MATRIX = {
     { entryModeName: "deep", depth: "deep" },
     { entryModeName: "autonomous", depth: "autonomous" },
     { entryModeName: "tournament", depth: "tournament" }
-  ],
-  migrate: [
-    { entryModeName: "default", depth: "standard" },
-    { entryModeName: "deep", depth: "deep" },
-    { entryModeName: "autonomous", depth: "autonomous" }
-  ],
-  sweep: [
-    { entryModeName: "default", depth: "standard" },
-    { entryModeName: "lite", depth: "lite" },
-    { entryModeName: "deep", depth: "deep" },
-    { entryModeName: "autonomous", depth: "autonomous" }
   ]
 };
 function usage3() {
@@ -28275,9 +27510,9 @@ function usage3() {
     "",
     "`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.",
     "",
-    "`--mode` and `--depth` name the same thoroughness level under two flag names. The aliases are: `default` <-> `standard`, `lite` <-> `lite`, `deep` <-> `deep`, `autonomous` <-> `autonomous`, `tournament` <-> `tournament`. Supply only one \u2014 the other is inferred. If you supply both, they must be the matching pair (e.g., `--mode deep --depth deep`); mismatched pairs like `--mode deep --depth standard` are rejected. Levels are gated per flow: every flow supports `default/standard` (the default if you supply neither). Other levels vary per flow \u2014 most support `lite`, `deep`, and `autonomous`; Migrate omits `lite`; Review supports only `default`; Explore adds `tournament`. If a flow does not support a given level the rejection lists the supported levels.",
+    "`--mode` and `--depth` name the same thoroughness level under two flag names. The aliases are: `default` <-> `standard`, `lite` <-> `lite`, `deep` <-> `deep`, `autonomous` <-> `autonomous`, `tournament` <-> `tournament`. Supply only one \u2014 the other is inferred. If you supply both, they must be the matching pair (e.g., `--mode deep --depth deep`); mismatched pairs like `--mode deep --depth standard` are rejected. Levels are gated per flow: every flow supports `default/standard` (the default if you supply neither). Other levels vary per flow \u2014 most support `lite`, `deep`, and `autonomous`; Review supports only `default`; Explore adds `tournament`. If a flow does not support a given level the rejection lists the supported levels.",
     "",
-    "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/migrate/sweep flows and then composes the runtime boundary using the configured relay connector.",
+    "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build flows and then composes the runtime boundary using the configured relay connector.",
     "",
     "Config: if present, loads ~/.config/circuit-next/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.",
     "",
@@ -28292,12 +27527,12 @@ function readSourceVersion() {
   if (true)
     return "0.1.0-alpha.6";
   const candidates = [
-    resolve12(dirname10(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
-    resolve12(process.cwd(), "plugins/version.json")
+    resolve11(dirname10(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
+    resolve11(process.cwd(), "plugins/version.json")
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync30(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync27(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -28516,14 +27751,14 @@ function parseArgs3(argv) {
 }
 function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   if (override !== void 0)
-    return resolve12(override);
-  const root = resolve12(flowRoot2 ?? "generated/flows");
+    return resolve11(override);
+  const root = resolve11(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
-    const perMode = resolve12(root, flowName, `${modeName}.json`);
-    if (existsSync14(perMode))
+    const perMode = resolve11(root, flowName, `${modeName}.json`);
+    if (existsSync13(perMode))
       return perMode;
   }
-  return resolve12(root, flowName, "circuit.json");
+  return resolve11(root, flowName, "circuit.json");
 }
 function progressReporter(enabled) {
   if (!enabled)
@@ -28605,10 +27840,10 @@ function validateFlowDepth(args, route) {
   throw new Error(`--depth ${args.depth} is not supported by flow '${route.flowName}'. ${route.flowName} supports depths: ${allowedDepths}`);
 }
 function loadFixture(fixturePath) {
-  if (!existsSync14(fixturePath)) {
+  if (!existsSync13(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync30(fixturePath);
+  const bytes = readFileSync27(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -28651,8 +27886,8 @@ function customFlowArchetype(input) {
   if (input.args.flowRoot === void 0 || input.args.fixturePath !== void 0)
     return void 0;
   try {
-    const flowRoot2 = resolve12(input.args.flowRoot);
-    const manifest = JSON.parse(readFileSync30(resolve12(dirname10(flowRoot2), "manifest.json"), "utf8"));
+    const flowRoot2 = resolve11(input.args.flowRoot);
+    const manifest = JSON.parse(readFileSync27(resolve11(dirname10(flowRoot2), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) {
       return void 0;
     }
@@ -28660,14 +27895,14 @@ function customFlowArchetype(input) {
     if (!Array.isArray(customFlows))
       return void 0;
     const flowId = input.flow.id;
-    const fixturePath = resolve12(input.fixturePath);
+    const fixturePath = resolve11(input.fixturePath);
     for (const candidate of customFlows) {
       if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate))
         continue;
       const entry = candidate;
       if (entry.id !== flowId)
         continue;
-      if (typeof entry.flow_path !== "string" || resolve12(entry.flow_path) !== fixturePath)
+      if (typeof entry.flow_path !== "string" || resolve11(entry.flow_path) !== fixturePath)
         continue;
       return typeof entry.archetype === "string" && entry.archetype.length > 0 ? entry.archetype : void 0;
     }
@@ -28755,7 +27990,7 @@ async function main(argv, options = {}) {
     return 2;
   }
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder2 = resolve12(args.runFolder);
+    const runFolder2 = resolve11(args.runFolder);
     const progress2 = progressReporter(args.progress === "jsonl");
     if (await isRuntimeRunFolder(runFolder2)) {
       const runtimeResult = await resumeCompiledFlow({
@@ -28767,7 +28002,7 @@ async function main(argv, options = {}) {
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress2 === void 0 ? {} : { progress: progress2 }
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync30(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -28837,12 +28072,12 @@ async function main(argv, options = {}) {
     ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName },
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
-  const runFolder = resolve12(args.runFolder ?? `${DEFAULT_RUNS_BASE}/${runId}`);
+  const runFolder = resolve11(args.runFolder ?? `${DEFAULT_RUNS_BASE}/${runId}`);
   const selectionConfigLayers = discoverConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
-  const projectRoot = resolve12(options.configCwd ?? process.cwd());
+  const projectRoot = resolve11(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({ flow, args, entryModeSelection, fixturePath });
   const runtimeDecisionDiagnostics = showRuntimeDecision();
   const defaultRuntimeSupport = applyComposeWriterPolicy(applyFixturePolicy(runtimeSupport, {
@@ -28918,7 +28153,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync30(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync27(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

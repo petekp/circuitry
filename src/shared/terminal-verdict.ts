@@ -14,7 +14,7 @@ import type { RunClosedOutcome, TraceEntry } from '../schemas/trace-entry.js';
 // Why walk backward instead of using "the closing step's verdict":
 //   Every flow we ship has a non-verdict-bearing close step. A
 //   "closing step's verdict" semantic would return undefined for every
-//   Build / Migrate / Sweep / Review / Fix run. Authors place the
+//   Build / Review / Fix run. Authors place the
 //   verdict-bearing step ahead of close, and expect the latest such
 //   admission to surface.
 //

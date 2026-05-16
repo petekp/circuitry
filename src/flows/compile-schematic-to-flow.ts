@@ -377,9 +377,9 @@ function compileItem(
       // path as writes.result. The child's result.json IS the typed
       // report for downstream consumers — no separate materialization
       // is needed (the sub-run handler short-circuits the v0 abort when
-      // report.path equals result path). This lets close-writers
-      // resolve `migrate.batch@v1` (or any sub-run output schema) via
-      // reportPathForSchemaInCompiledFlow without special-casing sub-run.
+      // report.path equals result path). This lets close-writers resolve
+      // sub-run output schemas via reportPathForSchemaInCompiledFlow
+      // without special-casing sub-run.
       return {
         ...stepBase,
         executor: 'orchestrator',

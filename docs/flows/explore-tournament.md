@@ -306,7 +306,7 @@ Minimum fields:
 - `follow_up_workflow`
 
 `follow_up_workflow` should be explicit when the decision naturally starts
-Build, Fix, Migrate, Sweep, or another Explore run.
+Build, Fix, Review, or another Explore run.
 
 ### 8. Close With Result
 

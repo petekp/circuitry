@@ -2,10 +2,11 @@
 //
 // Runtime-owned regression proof. Reads the brief's regression_test contract.
 // If the brief declared a real `failing-before-fix` command, the runtime runs
-// it before fix-act and records what actually happened. If the test failed as
-// expected, the proof is 'proved' and the flow continues. If it unexpectedly
-// passed, the proof is 'not-proved' and the verification executor routes to
-// recovery — the diagnosis was wrong about how the bug reproduces. If the
+// it before any specialist relay can mutate the checkout and records what
+// actually happened. If the test failed as expected, the proof is 'proved' and
+// the flow continues. If it unexpectedly passed, the proof is 'not-proved' and
+// the verification executor routes to recovery — the brief selected the wrong
+// pre-fix proof command or the bug no longer reproduces. If the
 // brief deferred the regression test entirely, no command runs and the proof
 // records 'deferred' so fix-close can refuse to claim outcome 'fixed' on a
 // deferred proof.
@@ -74,7 +75,7 @@ export const fixRegressionBaselineWriter: VerificationBuilder = {
       status: 'not-proved',
       overall_status: 'failed',
       reason:
-        'Brief claimed the regression test fails before the fix, but the runtime observed it pass. Diagnosis is wrong about how the bug reproduces.',
+        'Brief claimed the regression test fails before the fix, but the runtime observed it pass. The brief selected the wrong pre-fix proof command or the bug no longer reproduces.',
       baseline,
     });
   },

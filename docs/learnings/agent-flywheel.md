@@ -58,7 +58,7 @@ context.
 We already do hostile fresh-context review post-commit (the
 adversarial subagent batch). Adding the same review on the plan side,
 before code gets written, is a phase-ordering tweak inside Build and
-Migrate. No new infra. The cost ratio above justifies it: catching a
+Fix. No new infra. The cost ratio above justifies it: catching a
 plan defect at 1x is much cheaper than catching the same defect at
 25x in code review.
 
@@ -116,7 +116,7 @@ roles that become bottlenecks. Crash recovery is automatic because
 any agent can pick up any bead.
 
 circuit-next's design is the opposite: we have specialized adapters
-(agent vs codex), specialized circuits (Build vs Repair vs Migrate),
+(agent vs codex), specialized flows (Build vs Fix vs Review),
 specialized rigor profiles, and dispatch routing that picks the right
 runtime for the shape of the work.
 

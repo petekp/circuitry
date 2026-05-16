@@ -100,9 +100,7 @@ const FLOW_RESULT_PATHS: Record<string, string> = {
   build: 'reports/build-result.json',
   explore: 'reports/explore-result.json',
   fix: 'reports/fix-result.json',
-  migrate: 'reports/migrate-result.json',
   review: 'reports/review-result.json',
-  sweep: 'reports/sweep-result.json',
 };
 
 // Label used when listing the HTML artifact in report_paths. Not load-bearing

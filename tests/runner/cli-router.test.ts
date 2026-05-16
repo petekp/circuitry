@@ -180,81 +180,6 @@ function tournamentRelayer(): RelayFn {
   };
 }
 
-function migrateCliRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      if (input.prompt.includes('Step: inventory-step')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-migrate-inventory',
-          result_body: JSON.stringify({
-            verdict: 'accept',
-            summary: 'One legacy API site found for the CLI proof.',
-            items: [
-              {
-                id: 'item-1',
-                path: 'src/legacy-api.ts',
-                category: 'import-site',
-                description: 'Legacy API import site.',
-              },
-            ],
-            batches: [
-              {
-                id: 'batch-1',
-                title: 'Replace the legacy API import',
-                item_ids: ['item-1'],
-                rationale: 'Single safe batch for the CLI proof.',
-              },
-            ],
-          }),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      if (
-        input.prompt.includes('Step: review-step') &&
-        input.prompt.includes('Accepted verdicts: release-approved, release-with-followups')
-      ) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-migrate-review',
-          result_body: JSON.stringify({
-            verdict: 'release-approved',
-            summary: 'Release approved for the synthetic migration.',
-            findings: [],
-          }),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      if (input.prompt.includes('Step: act-step')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-build-act',
-          result_body: BUILD_IMPLEMENTATION_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      if (input.prompt.includes('Step: review-step') && input.prompt.includes('build.review@v1')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-build-review',
-          result_body: BUILD_REVIEW_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      throw new Error(`unexpected migrate CLI relay prompt: ${input.prompt.slice(0, 240)}`);
-    },
-  };
-}
-
 function traceEntryLog(runFolder: string): Array<Record<string, unknown>> {
   return readFileSync(join(runFolder, 'trace.ndjson'), 'utf8')
     .trim()
@@ -706,32 +631,6 @@ describe('CLI router', () => {
     const markdown = readFileSync(output.operator_summary_markdown_path as string, 'utf8');
     expect(markdown).toContain('Checkpoint options: React (option-1); Vue (option-2)');
   });
-
-  it('resolves sub-run child flows through the public CLI', async () => {
-    const runFolder = join(runFolderBase, 'migrate-cli-sub-run');
-    const projectRoot = createProofProject('migrate-cli-sub-run-project');
-    const output = await runMainJsonWithRelayer(
-      ['migrate', '--goal', 'migrate a tiny legacy API', '--run-folder', runFolder],
-      migrateCliRelayer(),
-      { configCwd: projectRoot },
-    );
-
-    const trace_entries = traceEntryLog(runFolder);
-    expect(output.flow_id).toBe('migrate');
-    expect(output.selected_flow).toBe('migrate');
-    expect(output.outcome).toBe('complete');
-    expect(output.result_path).toBe(join(runFolder, 'reports/result.json'));
-    expect(trace_entries).toContainEqual(
-      expect.objectContaining({
-        kind: 'sub_run.started',
-        step_id: 'batch-step',
-        child_flow_id: 'build',
-        child_entry_mode: 'default',
-      }),
-    );
-    expect(existsSync(join(runFolder, 'reports/migrate/batch-result.json'))).toBe(true);
-    expect(existsSync(join(runFolder, 'reports/migrate-result.json'))).toBe(true);
-  }, 180_000);
 
   it('passes explicit untracked-content opt-in to Review evidence intake', async () => {
     const projectRoot = join(runFolderBase, 'review-untracked-cli-project');
@@ -1466,7 +1365,7 @@ describe('CLI router', () => {
 
   it('keeps CLI help text aligned with the router-supported flow set', () => {
     const source = readFileSync(join(process.cwd(), 'src/cli/circuit.ts'), 'utf-8');
-    expect(source).toContain('registered explore/review/fix/build/migrate/sweep flows');
+    expect(source).toContain('registered explore/review/fix/build flows');
     expect(source).not.toContain('registered explore/review/build flows');
     expect(source).not.toContain('registered explore/review flows');
   });

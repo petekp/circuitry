@@ -12,7 +12,7 @@ A host adapter is the surface that lets an orchestrator drive Circuit from a
 normal project checkout. Keep three concepts separate:
 
 - host/orchestrator: `generic-shell`, `codex`, or `claude-code`
-- flow: `explore`, `review`, `migrate`, `fix`, `build`, or a custom flow
+- flow: `explore`, `review`, `fix`, `build`, or a custom flow
 - worker connector: `claude-code`, `codex`, or a custom connector
 
 The host is not the worker connector. The host starts Circuit, reads its JSON
@@ -41,7 +41,7 @@ Every host adapter MUST support:
 
 Host plugins may let the host model choose a flow before calling Circuit.
 For example, Claude Code `/circuit:run` can select Fix, Review, Build,
-Explore, Migrate, or Sweep and then invoke `circuit-next run <flow> --goal
+or Explore and then invoke `circuit-next run <flow> --goal
 "<task>"`. Codex may choose a bundled Circuit flow skill from the user's
 natural-language request.
 

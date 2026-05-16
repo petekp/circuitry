@@ -25,7 +25,7 @@ function usage() {
     --task-id <id> \\
     --prompt-file <path> \\
     [--provider codex|claude-code] \\
-    [--flow auto|explore|review|build|fix|migrate|sweep] \\
+    [--flow auto|explore|review|build|fix] \\
     [--model <model-id>] \\
     [--effort low] \\
     [--timeout-ms 1200000] \\
@@ -111,7 +111,7 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.timeoutMs) || args.timeoutMs <= 0) {
     throw new Error('--timeout-ms must be a positive integer');
   }
-  if (!['auto', 'explore', 'review', 'build', 'fix', 'migrate', 'sweep'].includes(args.flow)) {
+  if (!['auto', 'explore', 'review', 'build', 'fix'].includes(args.flow)) {
     throw new Error(`unsupported --flow '${args.flow}'`);
   }
   if (!SUPPORTED_PROVIDERS.includes(args.provider)) {

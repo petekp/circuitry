@@ -443,10 +443,10 @@ describe('catalog-derivations: real catalog invariants', () => {
     // builder methods directly).
     const { flowPackages } = await import('../../src/flows/catalog.js');
 
-    // Floor: at least 6 packages and at least one writer overall, so
+    // Floor: at least 5 packages and at least one writer overall, so
     // the for-loop body must execute. Without this the test would
     // pass vacuously against an emptied catalog or empty writer arrays.
-    expect(flowPackages.length).toBeGreaterThanOrEqual(6);
+    expect(flowPackages.length).toBeGreaterThanOrEqual(5);
     const totalWriters = flowPackages.reduce(
       (n, pkg) =>
         n +

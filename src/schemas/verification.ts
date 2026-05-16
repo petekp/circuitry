@@ -1,5 +1,5 @@
 // Verification scalars — engine-shared schemas for command-list
-// verification reports. Used by Build/Fix/Migrate/Sweep verification
+// verification reports. Used by Build/Fix verification
 // outputs, by Build's checkpoint policy template, and by any future
 // flow that runs a budgeted command list. Lifted out of Build's
 // report module so the same shape isn't owned by one flow that

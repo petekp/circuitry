@@ -147,7 +147,7 @@ honestly, would most steer the project.
    real design exercise, not a thought experiment. Sketch the verify
    surface end-to-end and see what survives.
 2. What's the right grain of delegation for an individual practitioner?
-   Today: Fix/Build/Sweep/etc. Could the atom be "one verifiable
+   Today: Fix/Build/etc. Could the atom be "one verifiable
    change," with feature work emerging by composition? Or the opposite —
    "ship this whole PR end-to-end"?
 

@@ -10,7 +10,7 @@ stdout:
   "flow_root": "<repo>/plugins/circuit/flows",
   "runtime_source": "bundled",
   "runtime_path": "<repo>/plugins/circuit/runtime/circuit-next.js",
-  "runtime_version": "0.1.0-alpha.4",
+  "runtime_version": "0.1.0-alpha.6",
   "checks": [
     {
       "name": "plugin_manifest_exists",
@@ -45,7 +45,7 @@ stdout:
     },
     {
       "name": "codex_hooks_feature_flag_visible",
-      "ok": true,
+      "ok": false,
       "detail": "Codex SessionStart hooks require codex_hooks to be enabled or stable",
       "severity": "warning"
     },
@@ -63,7 +63,7 @@ stdout:
     {
       "name": "skills_present",
       "ok": true,
-      "detail": "9 skills"
+      "detail": "7 skills"
     },
     {
       "name": "skill_name_build",
@@ -91,11 +91,6 @@ stdout:
       "detail": "name=handoff"
     },
     {
-      "name": "skill_name_migrate",
-      "ok": true,
-      "detail": "name=migrate"
-    },
-    {
       "name": "skill_name_review",
       "ok": true,
       "detail": "name=review"
@@ -104,11 +99,6 @@ stdout:
       "name": "skill_name_run",
       "ok": true,
       "detail": "name=run"
-    },
-    {
-      "name": "skill_name_sweep",
-      "ok": true,
-      "detail": "name=sweep"
     },
     {
       "name": "wrapper_exists",
@@ -136,19 +126,9 @@ stdout:
       "detail": "<repo>/plugins/circuit/flows/fix/circuit.json"
     },
     {
-      "name": "packaged_flow_migrate",
-      "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/migrate/circuit.json"
-    },
-    {
       "name": "packaged_flow_review",
       "ok": true,
       "detail": "<repo>/plugins/circuit/flows/review/circuit.json"
-    },
-    {
-      "name": "packaged_flow_sweep",
-      "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/sweep/circuit.json"
     },
     {
       "name": "commands_directory_exists",
@@ -181,11 +161,6 @@ stdout:
       "detail": "<repo>/plugins/circuit/commands/handoff.md"
     },
     {
-      "name": "command_migrate.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/migrate.md"
-    },
-    {
       "name": "command_review.md_uses_wrapper",
       "ok": true,
       "detail": "<repo>/plugins/circuit/commands/review.md"
@@ -194,11 +169,6 @@ stdout:
       "name": "command_run.md_uses_wrapper",
       "ok": true,
       "detail": "<repo>/plugins/circuit/commands/run.md"
-    },
-    {
-      "name": "command_sweep.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/sweep.md"
     },
     {
       "name": "node_version_supported",
@@ -223,7 +193,7 @@ stdout:
     {
       "name": "temp_repo_review_smoke",
       "ok": true,
-      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"3461ceb5-2678-4c1c-b0c4-f70628eded95\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-10T19:34:53.691Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"3461ceb5-2678-4c1c-b0c4-f70628eded95\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
+      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"b0a53c79-2ba1-4189-b9ad-ec74da594045\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-16T01:01:36.040Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"b0a53c79-2ba1-4189-b9ad-ec74da594045\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
     },
     {
       "name": "temp_repo_review_progress",

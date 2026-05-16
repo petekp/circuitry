@@ -426,7 +426,7 @@ This contract is reopened if any of:
    concrete Zod schemas, this contract amends the report id section with
    schema file pointers and the report round-trip invariant.
 4. **CompiledFlow-kind concept introduced.** If the base CompiledFlow schema
-   gains a `kind` field, EXPLORE-I1 and the deferred properties migrate
+   gains a `kind` field, EXPLORE-I1 and the deferred properties move
    into that layer as kind-specific checks, and this contract becomes a
    pointer to the kind schema.
 5. **Deferred properties land enforcement** (Codex flag). If the

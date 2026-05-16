@@ -112,7 +112,7 @@ export type ResultVerdictCheck = z.infer<typeof ResultVerdictCheck>;
 //   first child whose closed outcome is 'complete' AND whose verdict appears
 //   first in `verdicts.admit` (admit order = preference order). Winning
 //   child's worktree merges into parent's tree; siblings are discarded.
-// disjoint-merge: Migrate shape. ALL children must close 'complete' with an
+// disjoint-merge: batch shape. ALL children must close 'complete' with an
 //   admitted verdict. Runtime validates per-child worktree changes are
 //   pairwise file-disjoint, then merges all into the parent tree.
 // aggregate-only: Crucible shape. No worktree merge. Children's result

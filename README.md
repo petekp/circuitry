@@ -67,8 +67,8 @@ you already know what you want.
 
 **Core Flows:**
 
-These flows ship with the plugin. Build, Fix, Explore, Review, Migrate,
-and Sweep can all be selected by the host model or invoked explicitly.
+These flows ship with the plugin. Build, Fix, Explore, and Review can all
+be selected by the host model or invoked explicitly.
 
 | Flow | Purpose |
 |----------|-------------|
@@ -76,8 +76,6 @@ and Sweep can all be selected by the host model or invoked explicitly.
 | **Build** | Features, refactors, docs, tests, mixed changes |
 | **Fix** | Bugs, regressions, flaky behavior |
 | **Review** | Audit-only review, no implementation |
-| **Migrate** | Framework swaps, dependency replacements, architecture transitions |
-| **Sweep** | Cleanup, quality passes, coverage improvements |
 
 **Modes:**
 
@@ -138,8 +136,6 @@ holds.
 | Claude Code | `/circuit:review current diff` | Runs Review directly. |
 | Claude Code | `/circuit:build add billing settings` | Runs Build directly. |
 | Claude Code | `/circuit:explore compare auth providers` | Runs Explore directly. |
-| Claude Code | `/circuit:migrate move from the old SDK` | Runs Migrate directly. |
-| Claude Code | `/circuit:sweep remove safe dead code` | Runs Sweep directly. |
 | Codex | Invoke the specific Circuit flow skill directly. | Runs that flow through the Codex plugin wrapper. |
 | CLI | `./bin/circuit-next run fix --goal "checkout total is wrong"` | Runs Fix directly. |
 
@@ -150,9 +146,8 @@ you want to override the mode's depth pairing.
 **Advanced compatibility:**
 
 The deterministic CLI router still understands old intent prefixes such as
-`fix:`, `review:`, `develop:`, `migrate:`, `cleanup:`, `overnight:`, and
-`decide:`. They are kept for scripts and older habits, not as the normal user
-experience.
+`fix:`, `review:`, `develop:`, and `decide:`. They are kept for scripts and
+older habits, not as the normal user experience.
 
 Review collects untracked file paths and sizes by default, but not untracked
 file contents. If you explicitly want Review to send untracked file contents
@@ -293,7 +288,7 @@ Built-in connectors:
 not a current config value; use `codex` for read-only Codex relays or
 `claude-code` for trusted same-workspace writes.
 
-Before a Build, Fix, Migrate, or Sweep run invokes an implementer, Circuit
+Before a Build or Fix run invokes an implementer, Circuit
 discloses the write-capable worker path:
 
 > This flow may invoke a write-capable Claude Code worker. Circuit will verify

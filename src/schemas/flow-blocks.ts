@@ -23,6 +23,7 @@ export type FlowBlockId = z.infer<typeof FlowBlockId>;
 
 export const FlowRoute = z.enum([
   'continue',
+  'connector-failed',
   'retry',
   'revise',
   'ask',

@@ -2,7 +2,7 @@
   "schema_version": "1",
   "id": "fix",
   "title": "Fix Schematic",
-  "purpose": "Fix flow: capture problem boundary, gather context, diagnose, apply a focused change, verify, review (in standard depth), and close with evidence. Lite mode skips the review relay and closes immediately after verification via the fix-verify route_overrides.continue.lite override. fix-no-repro-decision and fix-handoff remain in the schematic as authoring intent for future ask/handoff routing in the runtime; they are unreachable at compile and do not appear in the emitted compiled flows.",
+  "purpose": "Fix flow: capture problem boundary, prove the pre-fix regression before any specialist relay can edit the checkout, gather context, diagnose, apply a focused change, verify, review (in standard depth), and close with evidence. If the standard reviewer connector is unavailable after proof passes, Fix closes with the proof artifacts and marks review skipped. Lite mode skips the review relay and closes immediately after verification via the fix-verify route_overrides.continue.lite override. fix-no-repro-decision and fix-handoff remain in the schematic as authoring intent for future ask/handoff routing in the runtime; they are unreachable at compile and do not appear in the emitted compiled flows.",
   "status": "active",
   "version": "0.1.0",
   "starts_at": "fix-frame",
@@ -156,7 +156,7 @@
         "required": ["problem_statement", "scope", "regression_contract", "success_criteria"]
       },
       "routes": {
-        "continue": "fix-gather-context",
+        "continue": "fix-regression-baseline",
         "revise": "fix-frame",
         "ask": "@stop",
         "stop": "@stop"
@@ -225,7 +225,7 @@
         "pass": ["accept"]
       },
       "routes": {
-        "continue": "fix-regression-baseline",
+        "continue": "fix-act",
         "retry": "fix-gather-context",
         "ask": "fix-no-repro-decision",
         "stop": "@stop"
@@ -270,7 +270,7 @@
         "safe_autonomous_choice": "continue"
       },
       "routes": {
-        "continue": "fix-regression-baseline",
+        "continue": "fix-act",
         "revise": "fix-diagnose",
         "stop": "@stop",
         "handoff": "fix-handoff",
@@ -284,8 +284,7 @@
       "stage": "verify",
       "input": {
         "proof": "verification.plan@v1",
-        "brief": "fix.brief@v1",
-        "diagnosis": "fix.diagnosis@v1"
+        "brief": "fix.brief@v1"
       },
       "output": "fix.regression-proof@v1",
       "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
@@ -301,7 +300,7 @@
       },
       "routes": {
         "continue": "fix-baseline-snapshot",
-        "retry": "fix-diagnose",
+        "retry": "fix-frame",
         "stop": "@stop"
       },
       "block": "run-verification"
@@ -326,7 +325,7 @@
         "required": ["overall_status", "head_sha"]
       },
       "routes": {
-        "continue": "fix-act",
+        "continue": "fix-gather-context",
         "stop": "@stop"
       },
       "block": "run-verification"
@@ -480,6 +479,7 @@
       },
       "routes": {
         "continue": "fix-close",
+        "connector-failed": "fix-close",
         "retry": "fix-act",
         "revise": "fix-act",
         "ask": "fix-no-repro-decision",
@@ -563,7 +563,6 @@
           "regression_status",
           "change_set_status",
           "review_status",
-          "review_verdict",
           "evidence_links"
         ]
       },

@@ -132,7 +132,7 @@ describe('engine ↔ flow boundary', () => {
     expect(
       flowsInspected,
       'flow-package walk inspected unexpectedly few packages — discovery loop is likely broken',
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(5);
     expect(
       offenders,
       `cross-flow imports detected:\n${offenders

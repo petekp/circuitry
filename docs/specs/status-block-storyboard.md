@@ -43,15 +43,12 @@ The current proof runs already cover these cases:
 | `docs/release/proofs/runs/abort/progress.jsonl` | retry exhaustion and abort |
 | `docs/release/proofs/runs/customization/progress.jsonl` | short `create` utility command |
 | `docs/release/proofs/runs/handoff/progress.jsonl` | sequential run ids in one proof capture |
-| `docs/release/proofs/runs/migrate/progress.jsonl` | parent flow with a child Build run |
 | `docs/release/proofs/runs/explore-decision/progress.jsonl` | tournament fanout and checkpoint |
 
 The proof runs show three pressure points:
 
 - Multiple sequential blocks are real: the handoff proof contains a Build run,
   a handoff save run, and a handoff resume run in one capture.
-- Child runs are real: the Migrate proof enters a child Build run before
-  returning to Migrate.
 - Fanout can be noisy: the Explore tournament proof emits repeated relay start
   and completion events for option branches.
 
@@ -244,48 +241,6 @@ Why this shape works:
 - Separate invocations should use separate `Circuit` blocks.
 - A blank line between blocks prevents orphaned `⎿` lines.
 
-### Migrate With Child Build Run
-
-Source: `docs/release/proofs/runs/migrate/progress.jsonl`
-
-```text
-Circuit
-⎿ Chose migrate.
-⎿ This flow may invoke a write-capable Claude Code worker.
-⎿ Framing the work...
-⎿ Checking the context...
-⎿ Asking the implementer to draft the migration plan...
-⎿ Planning the migration...
-⎿ Starting Build sub-run.
-  ⎿ This flow may invoke a write-capable Claude Code worker.
-  ⎿ Framing the work...
-  ⎿ Planning the work...
-  ⎿ Making the change...
-  ⎿ Checking the work...
-  ⎿ Asking the reviewer to check the result...
-  ⎿ Build complete.
-⎿ Checking the migration...
-⎿ Asking the reviewer to check the release...
-⎿ Migrate complete. Verification passed. Review approved for release.
-```
-
-Why this shape is the main nesting candidate:
-
-- The proof stream contains a parent Migrate run and a child Build run.
-- Flat lines would make it hard to tell when Circuit temporarily entered Build.
-- Nested status lines are useful here, but they need reliable child-run
-  metadata. If the stream cannot identify parent and child runs cleanly, the
-  fallback should be explicit flat lines:
-
-```text
-Circuit
-⎿ Starting Build sub-run.
-⎿ Build: framing the work...
-⎿ Build: planning the work...
-⎿ Build complete.
-⎿ Returned to migrate.
-```
-
 ### Explore Tournament
 
 Source: `docs/release/proofs/runs/explore-decision/progress.jsonl`
@@ -338,7 +293,7 @@ Use nested `⎿` lines only when the nesting improves orientation.
 
 Good nesting candidates:
 
-- child flow runs, such as Migrate delegating to Build;
+- child flow runs, when a future flow delegates to Build;
 - explicit fanout summaries if the UI expands branches;
 - future native task surfaces where each step has expandable child activity.
 

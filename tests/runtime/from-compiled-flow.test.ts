@@ -24,8 +24,6 @@ describe('fromCompiledFlow', () => {
     'generated/flows/review/circuit.json',
     'generated/flows/fix/circuit.json',
     'generated/flows/build/circuit.json',
-    'generated/flows/migrate/circuit.json',
-    'generated/flows/sweep/circuit.json',
     'generated/flows/explore/tournament.json',
   ] as const;
 
@@ -49,9 +47,7 @@ describe('fromCompiledFlow', () => {
     const allKinds = new Set(
       converted.flatMap(({ manifest }) => manifest.steps.map((step) => step.kind)),
     );
-    expect(allKinds).toEqual(
-      new Set(['compose', 'verification', 'checkpoint', 'relay', 'sub-run', 'fanout']),
-    );
+    expect(allKinds).toEqual(new Set(['compose', 'verification', 'checkpoint', 'relay', 'fanout']));
   });
 
   it('preserves entry modes, stages, routes, reads, writes, and report refs', () => {
@@ -163,7 +159,7 @@ describe('fromCompiledFlow', () => {
     expect(checkpoint.kind).toBe('checkpoint');
     if (checkpoint.kind !== 'checkpoint') throw new Error('expected checkpoint');
     expect(checkpoint.choices).toEqual(['continue']);
-    expect(checkpoint.routes.pass).toEqual({ kind: 'step', stepId: 'fix-regression-baseline' });
+    expect(checkpoint.routes.pass).toEqual({ kind: 'step', stepId: 'fix-act' });
     expect(checkpoint.routes).toMatchObject({
       revise: { kind: 'step', stepId: 'fix-diagnose' },
       handoff: { kind: 'step', stepId: 'fix-handoff' },
@@ -172,21 +168,6 @@ describe('fromCompiledFlow', () => {
     });
     expect(checkpoint.policy).toMatchObject({
       prompt: expect.any(String),
-    });
-  });
-
-  it('preserves sub-run configuration and run-file paths', () => {
-    const manifest = fromCompiledFlow(loadCompiledFlow('generated/flows/migrate/circuit.json'));
-    const subRun = stepById(manifest, 'batch-step');
-
-    expect(subRun.kind).toBe('sub-run');
-    if (subRun.kind !== 'sub-run') throw new Error('expected sub-run');
-    expect(subRun.flowRef).toBe('build');
-    expect(subRun.entryMode).toBe('default');
-    expect(subRun.depth).toBe('standard');
-    expect(subRun.writes).toMatchObject({
-      result: { path: 'reports/migrate/batch-result.json' },
-      report: { path: 'reports/migrate/batch-result.json', schema: 'migrate.batch@v1' },
     });
   });
 

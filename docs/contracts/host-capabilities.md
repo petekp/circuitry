@@ -41,7 +41,7 @@ steps.
 
 | Worker connector | Current status | Filesystem posture | First-run wording |
 | --- | --- | --- | --- |
-| `claude-code` | Supported and the auto default | Trusted same-workspace writes with `bypassPermissions` | Disclose before Build, Fix, Migrate, or Sweep can run an implementer step. |
+| `claude-code` | Supported and the auto default | Trusted same-workspace writes with `bypassPermissions` | Disclose before Build or Fix can run an implementer step. |
 | `codex` | Supported for read-only relays | Codex CLI read-only sandbox; cannot run implementer steps | Safe to present as the read-only Codex worker. |
 | custom connector | Supported for read-only registered wrappers | Trusted local process; Circuit only routes it to read-only roles | Say it inherits cwd/env and is not an OS sandbox. |
 

@@ -161,11 +161,25 @@ describe('flow schematic schema — active Fix schematic', () => {
     expect(verify.routes.continue).toBe('fix-change-set');
     expect(changeSet.routes.continue).toBe('fix-regression-rerun');
     expect(regressionRerun.routes.continue).toBe('fix-review');
+    const review = schematic.items.find((item) => (item.id as unknown as string) === 'fix-review');
+    if (review === undefined) throw new Error('fix-review missing');
+    expect(review.routes['connector-failed']).toBe('fix-close');
     expect(regressionRerun.route_overrides).toEqual({
       continue: {
         lite: 'fix-close-lite',
       },
     });
+  });
+
+  it('captures the pre-fix proof before any specialist relay can edit the checkout', () => {
+    const schematic = parseFixSchematic();
+    const byId = new Map(schematic.items.map((item) => [item.id as unknown as string, item]));
+
+    expect(byId.get('fix-frame')?.routes.continue).toBe('fix-regression-baseline');
+    expect(byId.get('fix-regression-baseline')?.routes.continue).toBe('fix-baseline-snapshot');
+    expect(byId.get('fix-baseline-snapshot')?.routes.continue).toBe('fix-gather-context');
+    expect(byId.get('fix-diagnose')?.routes.continue).toBe('fix-act');
+    expect(byId.get('fix-no-repro-decision')?.routes.continue).toBe('fix-act');
   });
 
   it('rejects an unknown route target at parse time', () => {

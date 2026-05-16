@@ -29,7 +29,7 @@
 // the right pattern or write a one-line justification.
 
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,7 +40,10 @@ export const SAFETY_PATTERN =
 
 function listSrcFiles() {
   const out = execSync('git ls-files src', { cwd: REPO_ROOT, encoding: 'utf8' });
-  return out.split('\n').filter((line) => line.endsWith('.ts') && !line.endsWith('.d.ts'));
+  return out
+    .split('\n')
+    .filter((line) => line.endsWith('.ts') && !line.endsWith('.d.ts'))
+    .filter((line) => existsSync(resolve(REPO_ROOT, line)));
 }
 
 export function auditText(text, relPath = '<inline>') {

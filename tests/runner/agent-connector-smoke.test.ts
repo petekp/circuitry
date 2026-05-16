@@ -89,6 +89,35 @@ describe('claude-code connector smoke (capability boundary)', () => {
     }
   });
 
+  it('nonzero failures include bounded stdout diagnostics from the subprocess', async () => {
+    const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
+    const fakeClaudePath = join(fakeBinDir, 'claude');
+    const script = [
+      '#!/bin/sh',
+      "printf '%s\\n' 'schema diagnostics on stdout'",
+      "printf '%s\\n' 'quiet stderr detail' >&2",
+      'exit 7',
+    ].join('\n');
+    const originalPath = process.env.PATH;
+
+    await writeFile(fakeClaudePath, script, 'utf8');
+    await chmod(fakeClaudePath, 0o755);
+    process.env.PATH = `${fakeBinDir}:${originalPath ?? ''}`;
+    try {
+      await expect(
+        relayClaudeCode({
+          prompt: 'fail after printing useful stdout',
+          timeoutMs: 10_000,
+        }),
+      ).rejects.toThrow(
+        /claude-code subprocess exited with code 7; stdout\[:500\]=schema diagnostics on stdout.*stderr\[:500\]=quiet stderr detail/s,
+      );
+    } finally {
+      process.env.PATH = originalPath;
+      await rm(fakeBinDir, { recursive: true, force: true });
+    }
+  });
+
   // AGENT_SMOKE-checkd real-subprocess path. Skipped when the env var is
   // not set so CI (and developer-local runs without auth) stay green.
   (AGENT_SMOKE ? it : it.skip)(

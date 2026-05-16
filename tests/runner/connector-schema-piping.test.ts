@@ -14,7 +14,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildClaudeCodeArgs } from '../../src/connectors/claude-code.js';
+import {
+  buildClaudeCodeArgs,
+  isClaudeCodeStructuredOutputCompatible,
+} from '../../src/connectors/claude-code.js';
 import { assertCodexSpawnArgvBoundary, buildCodexArgs } from '../../src/connectors/codex.js';
 
 describe('claude-code argv', () => {
@@ -44,6 +47,19 @@ describe('claude-code argv', () => {
     const flagIndex = args.indexOf('--json-schema');
     const promptIndex = args.indexOf('hi');
     expect(flagIndex).toBeLessThan(promptIndex);
+  });
+
+  it('skips --json-schema for top-level anyOf schemas and relies on runtime validation', () => {
+    const schema = {
+      anyOf: [
+        { type: 'object', properties: { verdict: { const: 'accept' } } },
+        { type: 'object', properties: { verdict: { const: 'reject' } } },
+      ],
+    };
+    expect(isClaudeCodeStructuredOutputCompatible(schema)).toBe(false);
+    const args = buildClaudeCodeArgs({ prompt: 'hi', responseSchema: schema });
+    expect(args).not.toContain('--json-schema');
+    expect(args.at(-1)).toBe('hi');
   });
 });
 

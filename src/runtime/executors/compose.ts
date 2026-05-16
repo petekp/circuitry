@@ -16,6 +16,17 @@ function readJsonReport(context: RunContext, path: string): unknown {
   return JSON.parse(readFileSync(context.files.resolve(path), 'utf8')) as unknown;
 }
 
+function readOptionalJsonReport(context: RunContext, path: string, required: boolean): unknown {
+  try {
+    return readJsonReport(context, path);
+  } catch (error) {
+    if (!required && (error as { readonly code?: unknown }).code === 'ENOENT') {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 async function writeRegisteredComposeReport(
   step: ComposeStep,
   context: RunContext,
@@ -49,8 +60,10 @@ async function writeRegisteredComposeReport(
   if (closeBuilder !== undefined) {
     const readPaths = resolveCloseReadPaths(closeBuilder, flow, compiledStep);
     const inputs: Record<string, unknown | undefined> = {};
-    for (const [name, path] of Object.entries(readPaths)) {
-      inputs[name] = path === undefined ? undefined : readJsonReport(context, path);
+    for (const descriptor of closeBuilder.reads) {
+      const path = readPaths[descriptor.name];
+      inputs[descriptor.name] =
+        path === undefined ? undefined : readOptionalJsonReport(context, path, descriptor.required);
     }
     const body = closeBuilder.build({
       runFolder: context.runDir,

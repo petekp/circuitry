@@ -1,7 +1,7 @@
 # 3-axis spec: Rigor × Tournament × Autonomous (v1)
 
 Status: draft, awaiting operator sign-off.
-Scope: cross-cutting. Every flow (Review, Fix, Build, Explore, Migrate, Sweep) reconciles to this spec.
+Scope: cross-cutting. Every flow (Review, Fix, Build, Explore) reconciles to this spec.
 
 ## 0. Why this spec exists
 
@@ -96,7 +96,7 @@ Each flow's schematic carries:
 
 Axis-level defaults (used when a flow omits `default`): `rigor=standard`, `tournament=false`, `autonomous=false`, `tournament_n=3`.
 
-**Starting allow-lists for the six existing flows** (mirroring today's `RUNTIME_SUPPORT_MATRIX`; per-flow specs can revise):
+**Starting allow-lists for the existing flows** (mirroring today's `RUNTIME_SUPPORT_MATRIX`; per-flow specs can revise):
 
 | Flow | allowed_rigors | supports_tournament | supports_autonomous |
 |---|---|---|---|
@@ -104,8 +104,6 @@ Axis-level defaults (used when a flow omits `default`): `rigor=standard`, `tourn
 | Fix | `[lite, standard, deep]` | no | yes |
 | Build | `[lite, standard, deep]` | no | yes |
 | Explore | `[lite, standard, deep]` | **yes** | yes |
-| Migrate | `[standard, deep]` | no | yes |
-| Sweep | `[lite, standard, deep]` | no | yes |
 
 ---
 
@@ -127,7 +125,7 @@ circuit-next explore --goal "..."                                         # defa
 circuit-next explore --goal "..." --rigor deep                            # deep, no tournament, not autonomous
 circuit-next explore --goal "..." --tournament                            # tournament, N=3
 circuit-next explore --goal "..." --tournament --tournament-n 4 --rigor deep
-circuit-next migrate --goal "..." --autonomous
+circuit-next build --goal "..." --autonomous
 ```
 
 `--mode` is **removed**. The alias validators (`entryModeForDepth`, `depthForEntryMode`, `validateModeDepthAliasConsistency`) and `RUNTIME_SUPPORT_MATRIX` go with it.
@@ -281,9 +279,9 @@ Sliced, Proof-Carrying-Fix style. Each slice ships independently with full tests
 - Update CLI router and `cli-router.test.ts`.
 - **No fixture regeneration yet.** Compiled fixtures still carry the old `entry_modes` shape; this slice adds a transitional reader that maps old shape to allow-list at load. Reader is removed in Slice 4.
 
-### Slice 3 — per-flow schematic + fixture migrations
+### Slice 3 — per-flow schematic + fixture updates
 
-For each of Review, Fix, Build, Explore, Migrate, Sweep, in that order:
+For each of Review, Fix, Build, and Explore, in that order:
 
 - Rewrite `src/flows/<flow>/schematic.json`: remove `entry_modes`, add the `axes` block.
 - Regenerate `generated/flows/<flow>/circuit.json`.
@@ -299,7 +297,7 @@ For each of Review, Fix, Build, Explore, Migrate, Sweep, in that order:
 - Drop `entry_modes` from `CompiledFlow` schema.
 - Drop tests pinning the old alias behavior.
 
-### Migration of historical data
+### Historical data
 
 Hard break. Old run folders are not parseable by new code. Old fixtures regenerated in Slice 3. No migration tooling for run folders.
 

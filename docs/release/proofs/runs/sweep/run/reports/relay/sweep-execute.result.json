@@ -1,1 +1,0 @@
-{"verdict":"accept","summary":"Acted on the safe cleanup candidate and deferred the risky one.","changed_files":["src/example.ts"],"items":[{"candidate_id":"cand-1","status":"acted","evidence":"Removed the unused helper function in the synthetic proof."}]}

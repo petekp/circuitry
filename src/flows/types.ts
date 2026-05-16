@@ -37,7 +37,7 @@ export interface CompiledFlowRoutingMetadata {
   // When true, a positive signal that ALSO mentions a planning
   // report (proposal/plan/brief/etc.) is treated as a non-match,
   // letting routing fall through to subsequent packages and ultimately
-  // the default. Used by build/fix/migrate. Review skips this.
+  // the default. Used by build/fix. Review skips this.
   readonly skipOnPlanningReport?: boolean;
 
   // Reason string for matched routes. Receives the matched signal so
@@ -71,8 +71,7 @@ export interface CompiledFlowRelayReport {
 
   // Cross-report validator runs after `parseReport` succeeds for
   // this schema in the relay step-handler. Enforces constraints
-  // that span more than one report (e.g. sweep.batch.items[]
-  // .candidate_id must be a subset of sweep.queue.to_execute) and
+  // that span more than one report and
   // therefore cannot be expressed in the single-report Zod schema.
   // Co-located here so the invariant "validators only fire on
   // relay-produced reports" is structurally enforced — there is

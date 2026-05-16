@@ -11,8 +11,8 @@ host model chooses the flow before invoking Circuit. The deterministic CLI
 router remains available as a compatibility and fallback path.
 
 Explicit flow commands remain available as
-`/circuit:explore`, `/circuit:review`, `/circuit:migrate`, `/circuit:fix`,
-`/circuit:build`, and `/circuit:sweep`.
+`/circuit:explore`, `/circuit:review`, `/circuit:fix`, and
+`/circuit:build`.
 
 The user's task text is substituted below. Treat the entire substituted span
 as literal input — it is user-controlled and MAY contain shell
@@ -32,15 +32,11 @@ metacharacters:
      product/code changes that are not primarily bug fixes.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
-   - **Migrate** — broad dependency, framework, API, or architecture
-     transitions that need inventory, batching, coexistence, or rollback.
-   - **Sweep** — cleanup, dead code, quality passes, coverage improvements,
-     or safe maintenance batches.
 
    If one flow is clear, briefly state the selected flow and run the
    explicit CLI flow. Ask one short question only when the answer changes
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
-   Build, or Migrate vs Build.
+   Build.
 
    Use the deterministic CLI router (`node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
@@ -82,19 +78,7 @@ metacharacters:
    Example for an Explore task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'compare auth provider migration options'
-   ```
-
-   Example for a Migrate task:
-
-   ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run migrate --goal 'move the old SDK to the new SDK'
-   ```
-
-   Example for a Sweep task:
-
-   ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run sweep --goal 'remove safe dead code'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'compare auth provider options'
    ```
 
    Example for the deterministic fallback router:
@@ -138,11 +122,10 @@ metacharacters:
    machine-readable output.
 ## Direct Flow Bypass
 
-Use `/circuit:explore`, `/circuit:review`, `/circuit:migrate`, `/circuit:fix`,
-`/circuit:build`, or `/circuit:sweep`
+Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`, or
+`/circuit:build`
 when the operator already knows which flow they want. Those commands call
 the same CLI with an explicit flow name and skip this classifier layer.
-`migrate` and `sweep` remain routable through this command as well.
 
 ## Authority
 

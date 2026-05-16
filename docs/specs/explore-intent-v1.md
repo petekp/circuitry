@@ -53,9 +53,8 @@ clarity *before* the operator can pick an action flow.
 **Deliverable:** clarity, not code. If Explore produces code or modifies
 the codebase, it has overstepped.
 
-If the operator already knows what they want done and just needs it
-built/fixed/migrated, Explore is the wrong flow — they reach for the
-action flow directly.
+If the operator already knows what they want done and just needs it built or
+fixed, Explore is the wrong flow — they reach for the action flow directly.
 
 ---
 
@@ -336,7 +335,7 @@ The rubric tests for *fakery*, not *honest limits*. These pass:
 - Invent findings without evidence
 - Give a Recommendation when the prompt is asking for understanding
 - Proceed past Frame on a too-vague prompt
-- Chain into action flows (Build/Fix/Migrate/etc.) on its own
+- Chain into action flows (Build/Fix/etc.) on its own
 
 ### Positive obligations (Explore MUST always)
 
@@ -381,7 +380,7 @@ Recommendation includes a structured `next_action` field:
     "confidence": "medium",
     "next_action": {
       "flow": "build",
-      "goal": "implement the migrate-inventory dispatch step using the codex adapter",
+      "goal": "implement the inventory dispatch step using the codex adapter",
       "depth_hint": "standard",
       "tournament_hint": false
     }
@@ -528,7 +527,7 @@ code.
 6. **Quality rubric.** Review today scores against `explore.review-verdict@v1`.
    Replace with 8-dimension per-dim scoring + computed verdict.
 7. **Run folder organization.** Today flat under `.circuit-next/runs/<run-id>`.
-   Migrate to flow + date + timestamp+slug structure.
+   Move to flow + date + timestamp+slug structure.
 8. **Tournament default N.** Confirm today's default; set to 3.
 9. **--web flag.** Remove if present; web becomes implicit via host tools.
 10. **`evidence_refs` structure.** Today may be loose strings; tighten to

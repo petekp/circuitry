@@ -27,7 +27,7 @@ import { FlowSchematic } from '../../src/schemas/flow-schematic.js';
 import type { SelectionOverride } from '../../src/schemas/selection-policy.js';
 
 const WORKFLOWS_ROOT = 'src/flows';
-const DIRECT_COMMANDS = ['create', 'handoff', 'migrate', 'run', 'sweep'] as const;
+const DIRECT_COMMANDS = ['create', 'handoff', 'run'] as const;
 
 // Entries at the flows root that are NOT flow-package directories
 // (catalog, router/compiler, types, and shared flow infrastructure).
@@ -77,20 +77,20 @@ function concreteSkillsFrom(selection: SelectionOverride | undefined): readonly 
 describe('flow catalog completeness', () => {
   // Anti-vacuity floor — guards every "every package has X" assertion
   // below from passing vacuously if `flowPackages` is silently
-  // empty (e.g. a refactor that broke catalog imports). Six packages
-  // live today: build, explore, fix, migrate, review, sweep.
+  // empty (e.g. a refactor that broke catalog imports). Four public
+  // packages plus the internal runtime proof package live today.
   it('catalog has the expected non-zero flow package count', () => {
     expect(
       flowPackages.length,
       'flowPackages is unexpectedly small — catalog discovery is likely broken',
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(5);
   });
 
   it('classifies user-visible and internal flow packages explicitly', () => {
     const visibilityById = new Map(flowPackages.map((pkg) => [pkg.id, pkg.visibility]));
 
     expect(visibilityById.get('runtime-proof')).toBe('internal');
-    for (const flow of ['build', 'explore', 'fix', 'migrate', 'review', 'sweep']) {
+    for (const flow of ['build', 'explore', 'fix', 'review']) {
       expect(visibilityById.get(flow), `${flow} should be host-visible`).toBe('public');
     }
   });
@@ -140,7 +140,7 @@ describe('flow catalog completeness', () => {
     expect(
       entries.length,
       'src/flows/ has unexpectedly few entries — discovery loop is likely broken',
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(5);
     const offenders: string[] = [];
     for (const entry of entries) {
       const path = join(WORKFLOWS_ROOT, entry);
@@ -345,10 +345,8 @@ describe('flow catalog completeness', () => {
   // test became structurally vestigial after co-locating
   // `crossReportValidate` on `CompiledFlowRelayReport` itself —
   // the schemaName is now read off the report that owns the
-  // validator, so the cross-reference cannot drift. Runtime regressions
-  // (validator stops firing for sweep.batch@v1) are caught by
-  // `tests/runner/cross-report-validators.test.ts` via the registry's
-  // lookup-keyed-by-schemaName behavior.
+  // validator, so the cross-reference cannot drift. Runtime regressions are
+  // caught by registry coverage keyed by schemaName behavior.
 
   it('writer resultSchemaName values are unique across all packages and writer slots', () => {
     // Each writer is registered into a per-slot map keyed by

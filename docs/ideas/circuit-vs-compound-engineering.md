@@ -22,8 +22,8 @@ packs. Backed by Every's content team and distribution.
 **Circuit.** A runtime engine that walks typed schematics. Each step has
 typed inputs and outputs (Zod-defined contracts), writes a structured
 report, and the engine derives registries from a single flow catalog.
-Seven built-in flows (build, explore, fix, migrate, review,
-runtime-proof, sweep) plus create/handoff. Hosts: Claude + Codex,
+Four public flows (build, explore, fix, review) plus an internal runtime
+proof flow and create/handoff utilities. Hosts: Claude + Codex,
 generated from one source. Solo-dev, pre-1.0.
 
 Same problem (more reliable agent-assisted engineering), opposite bets
@@ -99,7 +99,7 @@ last. Without it, "compounding" is a name we can't claim.
 
 ### 3. An upstream story
 
-Circuit's flows are mostly midstream (Review, Migrate, Fix, Build). CE
+Circuit's flows are mostly midstream (Review, Fix, Build). CE
 is strongest *upstream* — turning a vague idea into a right-sized
 requirements doc before any code work. Circuit has no
 Brainstorm/Ideate equivalent. That's where agent work most often goes
@@ -132,7 +132,7 @@ The thing missing from Circuit that would most change what developers
 can do isn't borrowed from CE directly — it's the *upstream + compound
 loop combined*.
 
-Today Circuit can run a Review or a Migrate reliably. It can't yet
+Today Circuit can run Review, Fix, or Build reliably. It can't yet
 take "I want to add feature X" → brainstorm → plan → execute → review →
 durably remember what was learned, all as one replayable, resumable,
 typed pipeline.

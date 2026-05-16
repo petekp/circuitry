@@ -35,7 +35,7 @@ export function friendlyRunNote(flowId: string, summary: string): string {
 
 export function friendlyResultSummary(summary: string): string {
   return summary
-    .replace(/^(?:Build|Fix|Migrate|Review|Explore|Sweep) result for .+?:\s*/, '')
+    .replace(/^(?:Build|Fix|Review|Explore) result for .+?:\s*/, '')
     .replace(/^Explore '[\s\S]*?':\s*/, '')
     .replace(/^Explore .+?:\s*/, '');
 }

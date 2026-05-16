@@ -290,26 +290,19 @@ describe('Fix report schemas', () => {
     expect(parsed.evidence).toEqual(['src/example.ts:32 — guard runs before the type-check']);
   });
 
-  it('still enforces residual_uncertainty for non-reproduced diagnoses even when evidence is coerced', () => {
-    expect(
-      FixDiagnosis.safeParse({
-        verdict: 'accept',
-        reproduction_status: 'not-reproduced',
-        cause_summary: 'no local repro',
-        confidence: 'low',
-        evidence: 'a single-string evidence body',
-        residual_uncertainty: [],
-      }).success,
-    ).toBe(false);
+  it('fills residual_uncertainty for non-reproduced diagnoses even when evidence is coerced', () => {
     const parsed = FixDiagnosis.parse({
       verdict: 'accept',
       reproduction_status: 'not-reproduced',
       cause_summary: 'no local repro',
       confidence: 'low',
       evidence: 'a single-string evidence body',
-      residual_uncertainty: ['unable to reproduce on macOS arm64'],
+      residual_uncertainty: [],
     });
     expect(parsed.evidence).toEqual(['a single-string evidence body']);
+    expect(parsed.residual_uncertainty).toEqual([
+      'Diagnosis did not cleanly reproduce the bug before the runtime baseline proof.',
+    ]);
   });
 
   it('still rejects null and number evidence values', () => {
@@ -347,17 +340,16 @@ describe('Fix report schemas', () => {
     ).toBe(false);
   });
 
-  it('requires uncertainty when the problem is not cleanly reproduced', () => {
-    expect(
-      FixDiagnosis.safeParse({
-        verdict: 'accept',
-        reproduction_status: 'not-reproduced',
-        cause_summary: 'No local reproduction was observed',
-        confidence: 'low',
-        evidence: ['The available command passed locally'],
-        residual_uncertainty: [],
-      }).success,
-    ).toBe(false);
+  it('preserves explicit uncertainty when the problem is not cleanly reproduced', () => {
+    const parsed = FixDiagnosis.parse({
+      verdict: 'accept',
+      reproduction_status: 'not-reproduced',
+      cause_summary: 'No local reproduction was observed',
+      confidence: 'low',
+      evidence: ['The available command passed locally'],
+      residual_uncertainty: ['unable to reproduce on macOS arm64'],
+    });
+    expect(parsed.residual_uncertainty).toEqual(['unable to reproduce on macOS arm64']);
   });
 
   it('requires a failing-before-fix regression test when repro evidence exists', () => {

@@ -124,17 +124,23 @@ export function buildClaudeCodeArgs(input: ClaudeCodeRelayInput): string[] {
     assertClaudeCodeEffort(effort);
     args.push('--effort', effort);
   }
-  // Structured-output enforcement at the CLI layer. When a report schema
-  // is available, claude-code returns a final result that already matches
-  // the schema; the runtime Zod check downstream becomes a sanity check
-  // rather than a frequent failure mode. The prose shape hint in the
-  // prompt is retained as a belt-and-suspenders fallback in case the CLI
-  // ever drops or changes this flag.
-  if (input.responseSchema !== undefined) {
+  // Structured-output enforcement at the CLI layer. Claude Code's
+  // --json-schema path is reliable for plain object roots; top-level
+  // anyOf/oneOf schemas can make the CLI exit before returning a receipt.
+  // For those shapes, fall back to the prompt shape hint and let the runtime
+  // Zod parse remain the authoritative validator.
+  if (
+    input.responseSchema !== undefined &&
+    isClaudeCodeStructuredOutputCompatible(input.responseSchema)
+  ) {
     args.push('--json-schema', JSON.stringify(input.responseSchema));
   }
   args.push(input.prompt);
   return args;
+}
+
+export function isClaudeCodeStructuredOutputCompatible(schema: Record<string, unknown>): boolean {
+  return schema.type === 'object';
 }
 
 export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<RelayResult> {
@@ -255,9 +261,11 @@ export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<Rela
         return;
       }
       if (code !== 0) {
+        const stdoutSuffix = stdoutCapped ? ' [stdout capped]' : '';
+        const stderrSuffix = stderrCapped ? ' [stderr capped]' : '';
         reject(
           new Error(
-            `claude-code subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ''}; stderr[:500]=${stderr.slice(0, 500)}`,
+            `claude-code subprocess exited with code ${code}${signal ? ` (signal ${signal})` : ''}; stdout[:500]=${stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${stderr.slice(0, 500)}${stderrSuffix}`,
           ),
         );
         return;

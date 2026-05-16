@@ -34,25 +34,7 @@ import {
   FixReview,
   FixVerification,
 } from '../../src/flows/fix/reports.js';
-import {
-  MigrateBatch,
-  MigrateBrief,
-  MigrateCoexistence,
-  MigrateInventory,
-  MigrateResult,
-  MigrateReview,
-  MigrateVerification,
-} from '../../src/flows/migrate/reports.js';
 import { ReviewIntake, ReviewRelayResult, ReviewResult } from '../../src/flows/review/reports.js';
-import {
-  SweepAnalysis,
-  SweepBatch,
-  SweepBrief,
-  SweepQueue,
-  SweepResult,
-  SweepReview,
-  SweepVerification,
-} from '../../src/flows/sweep/reports.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import type { RelayConnector } from '../../src/runtime/executors/relay.js';
 import type { ExecutableStep } from '../../src/runtime/manifest/executable-flow.js';
@@ -516,7 +498,7 @@ function reportBody(
       return ExploreCompose.parse({
         verdict: 'accept',
         subject: goal,
-        recommendation: 'Proceed with the current migration slice.',
+        recommendation: 'Proceed with the current transition slice.',
         success_condition_alignment: 'The simple path reaches the close step.',
         supporting_aspects: [
           {
@@ -540,10 +522,10 @@ function reportBody(
           {
             id: 'option-1',
             label: 'Proceed',
-            summary: 'Continue the migration slice.',
+            summary: 'Continue the transition slice.',
             best_case_prompt: 'Argue for proceeding.',
             evidence_refs: ['generated fixture'],
-            tradeoffs: ['Keeps the migration moving.'],
+            tradeoffs: ['Keeps the transition moving.'],
           },
           {
             id: 'option-2',
@@ -607,7 +589,7 @@ function reportBody(
       return ExploreTournamentReview.parse({
         verdict: 'recommend',
         recommended_option_id: 'option-1',
-        comparison: 'Proceed has the clearer migration path.',
+        comparison: 'Proceed has the clearer transition path.',
         objections: [],
         missing_evidence: [],
         tradeoff_question: 'Is another review needed before proceeding?',
@@ -619,7 +601,7 @@ function reportBody(
         decision_question: 'Which runtime path should proceed?',
         selected_option_id: 'option-1',
         selected_option_label: 'Proceed',
-        decision: 'Continue the migration slice.',
+        decision: 'Continue the transition slice.',
         rationale: 'The parity fixture passed its checks.',
         rejected_options: [{ option_id: 'option-2', reason: 'More review is not needed here.' }],
         evidence_links: ['reports/tournament-aggregate.json'],
@@ -707,190 +689,6 @@ function reportBody(
             },
       );
     }
-    case 'migrate.brief@v1':
-      return MigrateBrief.parse({
-        objective: goal,
-        source: 'old system',
-        target: 'new system',
-        scope: 'runtime parity scope',
-        success_criteria: ['The run reaches the close step.'],
-        coexistence_appetite: 'short-window',
-        rollback_plan: 'Use the existing runtime path.',
-        verification_command_candidates: [commandSpec],
-      });
-    case 'migrate.inventory@v1':
-      return MigrateInventory.parse({
-        verdict: 'accept',
-        summary: 'Inventory is small for the parity fixture.',
-        items: [
-          {
-            id: 'item-1',
-            path: 'src/example.ts',
-            category: 'code',
-            description: 'Example migration target.',
-          },
-        ],
-        batches: [
-          {
-            id: 'batch-1',
-            title: 'Example batch',
-            item_ids: ['item-1'],
-            rationale: 'Single deterministic parity batch.',
-          },
-        ],
-      });
-    case 'migrate.coexistence@v1':
-      return MigrateCoexistence.parse({
-        strategy: 'Keep old and new paths available until validation passes.',
-        switchover_criteria: ['Validation passes.'],
-        health_signals: ['Tests are green.'],
-        rollback_path: 'Route back to the unsupported runtime.',
-        risks: [],
-      });
-    case 'migrate.batch@v1':
-      return MigrateBatch.parse({
-        schema_version: 1,
-        run_id: 'migrate-child-run',
-        flow_id: 'build',
-        goal,
-        outcome: 'complete',
-        summary: 'Child build batch completed.',
-        closed_at: new Date(0).toISOString(),
-        trace_entries_observed: 1,
-        manifest_hash: 'child-manifest-hash',
-        verdict: 'accept',
-      });
-    case 'migrate.verification@v1':
-      return MigrateVerification.parse({
-        overall_status: 'passed',
-        commands: [commandResult],
-      });
-    case 'migrate.review@v1':
-      return MigrateReview.parse({
-        verdict: 'release-approved',
-        summary: 'No blocking migration issues.',
-        findings: [],
-      });
-    case 'migrate.result@v1':
-      return MigrateResult.parse({
-        summary: 'The migrate flow completed in runtime.',
-        outcome: 'complete',
-        verification_status: 'passed',
-        review_verdict: 'release-approved',
-        batch_count: 1,
-        evidence_links: [
-          {
-            report_id: 'migrate.brief',
-            path: 'reports/migrate/brief.json',
-            schema: 'migrate.brief@v1',
-          },
-          {
-            report_id: 'migrate.inventory',
-            path: 'reports/migrate/inventory.json',
-            schema: 'migrate.inventory@v1',
-          },
-          {
-            report_id: 'migrate.coexistence',
-            path: 'reports/migrate/coexistence.json',
-            schema: 'migrate.coexistence@v1',
-          },
-          {
-            report_id: 'migrate.batch',
-            path: 'reports/migrate/batch-result.json',
-            schema: 'migrate.batch@v1',
-          },
-          {
-            report_id: 'migrate.verification',
-            path: 'reports/migrate/verification.json',
-            schema: 'migrate.verification@v1',
-          },
-          {
-            report_id: 'migrate.review',
-            path: 'reports/migrate/review.json',
-            schema: 'migrate.review@v1',
-          },
-        ],
-      });
-    case 'sweep.brief@v1':
-      return SweepBrief.parse({
-        objective: goal,
-        sweep_type: 'cleanup',
-        scope: 'runtime parity scope',
-        success_criteria: ['The run reaches the close step.'],
-        scope_exclusions: [],
-        out_of_scope: [],
-        high_risk_boundaries: [],
-        verification_command_candidates: [commandSpec],
-      });
-    case 'sweep.analysis@v1':
-      return SweepAnalysis.parse({
-        verdict: 'accept',
-        summary: 'One candidate is available for the parity fixture.',
-        candidates: [
-          {
-            id: 'candidate-1',
-            category: 'cleanup',
-            path: 'src/example.ts',
-            description: 'Example cleanup target.',
-            confidence: 'high',
-            risk: 'low',
-          },
-        ],
-      });
-    case 'sweep.queue@v1':
-      return SweepQueue.parse({
-        classified: [
-          { candidate_id: 'candidate-1', action: 'act', rationale: 'Safe deterministic item.' },
-        ],
-        to_execute: ['candidate-1'],
-        deferred: [],
-      });
-    case 'sweep.batch@v1':
-      return SweepBatch.parse({
-        verdict: 'accept',
-        summary: 'Applied the sweep fixture batch.',
-        changed_files: ['src/example.ts'],
-        items: [{ candidate_id: 'candidate-1', status: 'acted', evidence: 'Updated example.' }],
-      });
-    case 'sweep.verification@v1':
-      return SweepVerification.parse({
-        overall_status: 'passed',
-        commands: [commandResult],
-      });
-    case 'sweep.review@v1':
-      return SweepReview.parse({
-        verdict: 'clean',
-        summary: 'No injected issues.',
-        findings: [],
-      });
-    case 'sweep.result@v1':
-      return SweepResult.parse({
-        summary: 'The sweep flow completed in runtime.',
-        outcome: 'complete',
-        verification_status: 'passed',
-        review_verdict: 'clean',
-        deferred_count: 0,
-        evidence_links: [
-          { report_id: 'sweep.brief', path: 'reports/sweep/brief.json', schema: 'sweep.brief@v1' },
-          {
-            report_id: 'sweep.analysis',
-            path: 'reports/sweep/analysis.json',
-            schema: 'sweep.analysis@v1',
-          },
-          { report_id: 'sweep.queue', path: 'reports/sweep/queue.json', schema: 'sweep.queue@v1' },
-          { report_id: 'sweep.batch', path: 'reports/sweep/batch.json', schema: 'sweep.batch@v1' },
-          {
-            report_id: 'sweep.verification',
-            path: 'reports/sweep/verification.json',
-            schema: 'sweep.verification@v1',
-          },
-          {
-            report_id: 'sweep.review',
-            path: 'reports/sweep/review.json',
-            schema: 'sweep.review@v1',
-          },
-        ],
-      });
     default:
       return { step_id: step.id, schema: schema ?? 'none', ok: true };
   }

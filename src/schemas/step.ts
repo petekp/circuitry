@@ -151,8 +151,8 @@ export type RelayStep = z.infer<typeof RelayStep>;
 // `flow_ref` points to a registered schematic by id + entry mode. Inline
 // child flow definitions are intentionally out of scope — they would
 // require recursive CompiledFlow schema, schematic-loader changes, and
-// manifest rescoping. Sibling references cover Migrate (Build as inner
-// executor), tournament (parallel attempts at one flow), and crucible
+// manifest rescoping. Sibling references cover recursive Build-style
+// execution, tournament (parallel attempts at one flow), and crucible
 // patterns.
 //
 // Child depth is independent of parent depth — a deep parent can run a
@@ -194,7 +194,7 @@ export const SubRunStep = StepBase.extend({
 export type SubRunStep = z.infer<typeof SubRunStep>;
 
 // Fanout: N parallel branches. Branches can either run complete child
-// flows in ephemeral git worktrees (Migrate-style batch execution) or
+// flows in ephemeral git worktrees (batch execution) or
 // send independent relay requests and collect their typed reports
 // (Explore-style tournaments). The worktree strategy remains attached
 // only to sub-run branches; relay branches prove their provenance
@@ -316,7 +316,7 @@ export const FanoutBranchesDynamic = z
     // Runtime expands the template per item at fanout.start time and
     // re-parses each expansion through FanoutBranch (strict regex).
     //
-    // Used by Migrate where batch count is determined by inventory.
+    // Used when batch count is determined by an upstream inventory report.
     source_report: RunRelativePath,
     items_path: z.string().min(1),
     template: FanoutBranchTemplate,
@@ -345,7 +345,7 @@ export const FanoutConcurrency = z.discriminatedUnion('kind', [
 export type FanoutConcurrency = z.infer<typeof FanoutConcurrency>;
 
 // `abort-all` mirrors test-runner default — first child failure stops the
-// rest. `continue-others` lets Migrate-style fanouts complete what batches
+// rest. `continue-others` lets batch fanouts complete what work
 // they can and surface a partial-failure aggregate.
 export const FanoutFailurePolicy = z.enum(['abort-all', 'continue-others']);
 export type FanoutFailurePolicy = z.infer<typeof FanoutFailurePolicy>;

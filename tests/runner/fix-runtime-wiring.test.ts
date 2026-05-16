@@ -17,16 +17,24 @@ import {
   FixBaselineSnapshot,
   FixBrief,
   FixChangeSet,
+  FixRegressionProof,
+  FixRegressionRerun,
   FixResult,
 } from '../../src/flows/fix/reports.js';
 import { executeCompose } from '../../src/runtime/executors/compose.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { executeVerification } from '../../src/runtime/executors/verification.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
+const FIX_DEFAULT_FIXTURE_PATH = resolve('generated/flows/fix/circuit.json');
 const FIX_LITE_FIXTURE_PATH = resolve('generated/flows/fix/lite.json');
+
+function loadDefaultFixture(): { bytes: Buffer } {
+  return { bytes: readFileSync(FIX_DEFAULT_FIXTURE_PATH) };
+}
 
 function loadLiteFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIX_LITE_FIXTURE_PATH) };
@@ -53,6 +61,39 @@ function deterministicNow(startMs: number): () => Date {
 function fixVerificationOverride(): ExecutorRegistry['verification'] {
   return async (step, context) => {
     if (step.kind !== 'verification') throw new Error('expected verification step');
+    if (step.id === 'fix-regression-baseline') {
+      const report = step.writes?.report;
+      if (report === undefined) {
+        throw new Error('fix-regression-baseline step missing writes.report');
+      }
+      const regression = FixRegressionProof.parse({
+        status: 'proved',
+        overall_status: 'passed',
+        baseline: {
+          command_id: 'fix-regression',
+          cwd: '.',
+          argv: [process.execPath, '-e', 'process.exit(1)'],
+          timeout_ms: 30_000,
+          max_output_bytes: 200_000,
+          env: {},
+          exit_code: 1,
+          command_status: 'failed',
+          duration_ms: 1,
+          stdout_summary: '',
+          stderr_summary: '',
+        },
+      });
+      await context.files.writeJson(report, regression);
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'step.report_written',
+        step_id: step.id,
+        attempt: context.activeStepAttempt ?? 1,
+        report_path: report.path,
+        ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+      });
+      return { route: 'pass', details: { stub: 'regression-baseline' } };
+    }
     if (step.id === 'fix-baseline-snapshot') {
       const report = step.writes?.report;
       if (report === undefined) {
@@ -102,6 +143,39 @@ function fixVerificationOverride(): ExecutorRegistry['verification'] {
         ...(report.schema === undefined ? {} : { report_schema: report.schema }),
       });
       return { route: 'pass', details: { stub: 'change-set' } };
+    }
+    if (step.id === 'fix-regression-rerun') {
+      const report = step.writes?.report;
+      if (report === undefined) {
+        throw new Error('fix-regression-rerun step missing writes.report');
+      }
+      const rerun = FixRegressionRerun.parse({
+        status: 'cleared',
+        overall_status: 'passed',
+        rerun: {
+          command_id: 'fix-regression',
+          cwd: '.',
+          argv: [process.execPath, '-e', 'process.exit(1)'],
+          timeout_ms: 30_000,
+          max_output_bytes: 200_000,
+          env: {},
+          exit_code: 0,
+          command_status: 'passed',
+          duration_ms: 1,
+          stdout_summary: '',
+          stderr_summary: '',
+        },
+      });
+      await context.files.writeJson(report, rerun);
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'step.report_written',
+        step_id: step.id,
+        attempt: context.activeStepAttempt ?? 1,
+        report_path: report.path,
+        ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+      });
+      return { route: 'pass', details: { stub: 'regression-rerun' } };
     }
     return await executeVerification(step, context);
   };
@@ -208,6 +282,18 @@ function relayer(): RelayFn {
   };
 }
 
+function relayerWithUnavailableReview(): RelayFn {
+  return {
+    connectorName: 'claude-code',
+    relay: async (input): Promise<RelayResult> => {
+      if (input.prompt.includes('Step: fix-review')) {
+        throw new Error('reviewer connector unavailable');
+      }
+      return relayer().relay(input);
+    },
+  };
+}
+
 let runFolderBase: string;
 
 beforeEach(() => {
@@ -267,5 +353,66 @@ describe('Lite Fix runtime wiring', () => {
       'fix.regression-rerun',
       'fix.change-set',
     ]);
+  });
+});
+
+describe('Standard Fix review-unavailable wiring', () => {
+  it('closes with proof evidence when the reviewer connector fails after verification passes', async () => {
+    const { bytes } = loadDefaultFixture();
+    const runFolder = join(runFolderBase, 'review-unavailable-complete');
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: 'f1000000-0000-0000-0000-000000000001',
+      goal: 'fix off-by-one in pagination',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 26, 11, 0, 0)),
+      relayer: relayerWithUnavailableReview(),
+      executors: frameOverrideExecutors(),
+      projectRoot: resolve('.'),
+    });
+
+    if (outcome.outcome !== 'complete') {
+      throw new Error(
+        `standard Fix run did not complete: outcome=${outcome.outcome} reason=${outcome.reason ?? '<none>'}`,
+      );
+    }
+    expect(outcome.outcome).toBe('complete');
+
+    const result = FixResult.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports/fix-result.json'), 'utf8')),
+    );
+    expect(result.outcome).toBe('fixed');
+    expect(result.review_status).toBe('skipped');
+    expect(result.review_skip_reason).toMatch(/Reviewer connector failed after proof passed/);
+    expect(result.verification_status).toBe('passed');
+    expect(result.regression_status).toBe('proved');
+    expect(result.regression_rerun_status).toBe('cleared');
+    expect(result.change_set_status).toBe('pass');
+    expect(result.evidence_links.map((p) => p.report_id)).not.toContain('fix.review');
+
+    const traceEntries = await new TraceStore(runFolder).load();
+    const reviewFailure = traceEntries.find(
+      (entry) => entry.kind === 'relay.failed' && entry.step_id === 'fix-review',
+    );
+    if (reviewFailure?.kind !== 'relay.failed') throw new Error('expected review relay failure');
+    expect(reviewFailure.reason).toContain('reviewer connector unavailable');
+
+    const reviewCompletion = traceEntries.find(
+      (entry) => entry.kind === 'step.completed' && entry.step_id === 'fix-review',
+    );
+    if (reviewCompletion?.kind !== 'step.completed') {
+      throw new Error('expected review step completion');
+    }
+    expect(reviewCompletion.route_taken).toBe('connector-failed');
+
+    const closeCompletion = traceEntries.find(
+      (entry) => entry.kind === 'step.completed' && entry.step_id === 'fix-close',
+    );
+    if (closeCompletion?.kind !== 'step.completed') {
+      throw new Error('expected close completion');
+    }
+    expect(closeCompletion.route_taken).toBe('pass');
   });
 });

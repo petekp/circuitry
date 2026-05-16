@@ -3,7 +3,7 @@
   "evidence": {
     "kind": "git-working-tree",
     "project_root": "<repo>",
-    "status_short": " M docs/release/proofs/runs/checkpoint/progress.jsonl\n M docs/release/proofs/runs/checkpoint/run/reports/build/verification.json\n M docs/release/proofs/runs/checkpoint/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/checkpoint/run/trace.ndjson\n M docs/release/proofs/runs/customization/progress.jsonl\n M docs/release/proofs/runs/doctor/output.txt\n M docs/release/proofs/runs/explore-decision/progress.jsonl\n M docs/release/proofs/runs/explore-decision/run/reports/relay/tournament-review.request.json\n M docs/release/proofs/runs/explore-decision/run/reports/tournament-aggregate.json\n M docs/release/proofs/runs/explore-decision/run/trace.ndjson\n M docs/release/proofs/runs/fix/operator-summary.md\n M docs/release/proofs/runs/fix/progress.jsonl\n M docs/release/proofs/runs/fix/result.json\n M docs/release/proofs/runs/fix/run/manifest.snapshot.json\n D docs/release/proofs/runs/fix/run/reports/fix-result.json\n D docs/release/proofs/runs/fix/run/reports/fix/baseline-snapshot.json\n D docs/release/proofs/runs/fix/run/reports/fix/change-set.json\n D docs/release/proofs/runs/fix/run/reports/fix/change.json\n D docs/release/proofs/runs/fix/run/reports/fix/verification.json\n M docs/release/proofs/runs/fix/run/reports/operator-summary.json\n M docs/release/proofs/runs/fix/run/reports/operator-summary.md\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.receipt.txt\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.request.json\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.result.json\n M docs/release/proofs/runs/fix/run/reports/result.json\n M docs/release/proofs/runs/fix/run/trace.ndjson\n M docs/release/proofs/runs/handoff/progress.jsonl\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/manifest.snapshot.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build-result.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build/brief.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build/implementation.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build/plan.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build/review.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/build/verification.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/checkpoints/frame-step-request.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/checkpoints/frame-step-response.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-act.receipt.txt\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-act.request.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-act.result.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-review.receipt.txt\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-review.request.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/relay/build-review.result.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/reports/result.json\n D docs/release/proofs/runs/migrate/ef0847d8-db17-4c14-8b80-b2288af695f8/trace.ndjson\n M docs/release/proofs/runs/migrate/progress.jsonl\n M docs/release/proofs/runs/migrate/run/reports/migrate/batch-result.json\n M docs/release/proofs/runs/migrate/run/reports/migrate/verification.json\n M docs/release/proofs/runs/migrate/run/reports/relay/migrate-review.request.json\n M docs/release/proofs/runs/migrate/run/trace.ndjson\n M docs/release/proofs/runs/plan-execution/progress.jsonl\n M docs/release/proofs/runs/plan-execution/run/reports/build/verification.json\n M docs/release/proofs/runs/plan-execution/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/plan-execution/run/trace.ndjson\n M docs/release/proofs/runs/review/operator-summary.md\n M docs/release/proofs/runs/review/progress.jsonl\n M docs/release/proofs/runs/review/run/reports/operator-summary.json\n M docs/release/proofs/runs/review/run/reports/operator-summary.md\n M docs/release/proofs/runs/review/run/reports/relay/review.request.json\n M docs/release/proofs/runs/review/run/reports/review-intake.json\n M docs/release/proofs/runs/review/run/reports/review-result.json\n M docs/release/proofs/runs/review/run/trace.ndjson\n M docs/release/proofs/runs/routed-build/run/reports/build/verification.json\n M docs/release/proofs/runs/routed-build/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/routed-build/run/trace.ndjson\n M docs/release/proofs/runs/sweep/progress.jsonl\n M docs/release/proofs/runs/sweep/run/reports/relay/sweep-review.request.json\n M docs/release/proofs/runs/sweep/run/reports/sweep/verification.json\n M docs/release/proofs/runs/sweep/run/trace.ndjson\n M evals/false-done-fix/README.md\n M generated/flows/fix/circuit.json\n M generated/flows/fix/lite.json\n M plugins/circuit/flows/fix/circuit.json\n M plugins/circuit/flows/fix/lite.json\n M plugins/circuit/runtime/circuit-next.js\n M plugins/claude/runtime/circuit-next.js\n M plugins/claude/skills/fix/circuit.json\n M plugins/claude/skills/fix/lite.json\n M scripts/release/capture-golden-run-proofs.ts\n M src/flows/fix/index.ts\n M src/flows/fix/reports.ts\n M src/flows/fix/schematic.json\n M src/flows/fix/writers/baseline-snapshot.ts\n M src/flows/fix/writers/change-set.ts\n M src/flows/fix/writers/close.ts\n M tests/contracts/fix-change-set.test.ts\n M tests/contracts/fix-report-schemas.test.ts\n M tests/contracts/flow-schematic.test.ts\n M tests/integration/fix-false-done-bar.test.ts\n M tests/parity/fix.test.ts\n M tests/parity/runtime-parity-helpers.ts\n M tests/runner/fix-change-set-writer.test.ts\n M tests/runner/fix-runtime-wiring.test.ts\n?? docs/release/proofs/runs/review/\n?? docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/\n?? evals/false-done-fix/tasks/06-regression-still-failing.md\n?? src/flows/fix/writers/git-state.mjs\n?? src/flows/fix/writers/regression-rerun.ts\n?? tests/integration/fix-false-done-bar-live.test.ts\n?? tests/runner/fix-regression-rerun-writer.test.ts\n",
+    "status_short": " M docs/release/proofs/runs/checkpoint/progress.jsonl\n M docs/release/proofs/runs/checkpoint/run/reports/build/verification.json\n M docs/release/proofs/runs/checkpoint/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/checkpoint/run/trace.ndjson\n M docs/release/proofs/runs/customization/progress.jsonl\n M docs/release/proofs/runs/doctor/output.txt\n M docs/release/proofs/runs/explore-decision/progress.jsonl\n M docs/release/proofs/runs/explore-decision/run/reports/relay/tournament-review.request.json\n M docs/release/proofs/runs/explore-decision/run/reports/tournament-aggregate.json\n M docs/release/proofs/runs/explore-decision/run/trace.ndjson\n M docs/release/proofs/runs/fix/operator-summary.md\n M docs/release/proofs/runs/fix/progress.jsonl\n M docs/release/proofs/runs/fix/result.json\n M docs/release/proofs/runs/fix/run/manifest.snapshot.json\n D docs/release/proofs/runs/fix/run/reports/fix-result.json\n D docs/release/proofs/runs/fix/run/reports/fix/baseline-snapshot.json\n D docs/release/proofs/runs/fix/run/reports/fix/change-set.json\n D docs/release/proofs/runs/fix/run/reports/fix/change.json\n D docs/release/proofs/runs/fix/run/reports/fix/verification.json\n M docs/release/proofs/runs/fix/run/reports/operator-summary.json\n M docs/release/proofs/runs/fix/run/reports/operator-summary.md\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.receipt.txt\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.request.json\n D docs/release/proofs/runs/fix/run/reports/relay/fix-act.result.json\n M docs/release/proofs/runs/fix/run/reports/result.json\n M docs/release/proofs/runs/fix/run/trace.ndjson\n M docs/release/proofs/runs/handoff/progress.jsonl\n M docs/release/proofs/runs/plan-execution/progress.jsonl\n M docs/release/proofs/runs/plan-execution/run/reports/build/verification.json\n M docs/release/proofs/runs/plan-execution/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/plan-execution/run/trace.ndjson\n M docs/release/proofs/runs/review/operator-summary.md\n M docs/release/proofs/runs/review/progress.jsonl\n M docs/release/proofs/runs/review/run/reports/operator-summary.json\n M docs/release/proofs/runs/review/run/reports/operator-summary.md\n M docs/release/proofs/runs/review/run/reports/relay/review.request.json\n M docs/release/proofs/runs/review/run/reports/review-intake.json\n M docs/release/proofs/runs/review/run/reports/review-result.json\n M docs/release/proofs/runs/review/run/trace.ndjson\n M docs/release/proofs/runs/routed-build/run/reports/build/verification.json\n M docs/release/proofs/runs/routed-build/run/reports/relay/build-review.request.json\n M docs/release/proofs/runs/routed-build/run/trace.ndjson\n M evals/false-done-fix/README.md\n M generated/flows/fix/circuit.json\n M generated/flows/fix/lite.json\n M plugins/circuit/flows/fix/circuit.json\n M plugins/circuit/flows/fix/lite.json\n M plugins/circuit/runtime/circuit-next.js\n M plugins/claude/runtime/circuit-next.js\n M plugins/claude/skills/fix/circuit.json\n M plugins/claude/skills/fix/lite.json\n M scripts/release/capture-golden-run-proofs.ts\n M src/flows/fix/index.ts\n M src/flows/fix/reports.ts\n M src/flows/fix/schematic.json\n M src/flows/fix/writers/baseline-snapshot.ts\n M src/flows/fix/writers/change-set.ts\n M src/flows/fix/writers/close.ts\n M tests/contracts/fix-change-set.test.ts\n M tests/contracts/fix-report-schemas.test.ts\n M tests/contracts/flow-schematic.test.ts\n M tests/integration/fix-false-done-bar.test.ts\n M tests/parity/fix.test.ts\n M tests/parity/runtime-parity-helpers.ts\n M tests/runner/fix-change-set-writer.test.ts\n M tests/runner/fix-runtime-wiring.test.ts\n?? docs/release/proofs/runs/review/\n?? evals/false-done-fix/tasks/06-regression-still-failing.md\n?? src/flows/fix/writers/git-state.mjs\n?? src/flows/fix/writers/regression-rerun.ts\n?? tests/integration/fix-false-done-bar-live.test.ts\n?? tests/runner/fix-regression-rerun-writer.test.ts\n",
     "staged_diff": {
       "text": "",
       "truncated": false
@@ -24,74 +24,6 @@
       {
         "path": "docs/release/proofs/runs/review/run/trace.ndjson",
         "byte_length": 743
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/manifest.snapshot.json",
-        "byte_length": 11098
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build-result.json",
-        "byte_length": 925
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build/brief.json",
-        "byte_length": 774
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build/implementation.json",
-        "byte_length": 202
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build/plan.json",
-        "byte_length": 660
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build/review.json",
-        "byte_length": 114
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/build/verification.json",
-        "byte_length": 366
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/checkpoints/frame-step-request.json",
-        "byte_length": 436
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/checkpoints/frame-step-response.json",
-        "byte_length": 119
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-act.receipt.txt",
-        "byte_length": 15
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-act.request.json",
-        "byte_length": 2495
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-act.result.json",
-        "byte_length": 168
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-review.receipt.txt",
-        "byte_length": 18
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-review.request.json",
-        "byte_length": 3309
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/relay/build-review.result.json",
-        "byte_length": 100
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/reports/result.json",
-        "byte_length": 457
-      },
-      {
-        "path": "docs/release/proofs/runs/migrate/8caf8080-f27a-440f-bb96-833e1255d6a3/trace.ndjson",
-        "byte_length": 8718
       },
       {
         "path": "evals/false-done-fix/tasks/06-regression-still-failing.md",

@@ -7,7 +7,7 @@ prose, operator docs, contracts, and flow authoring notes.
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Flow** | A named kind of work Circuit can run, such as Build, Fix, Explore, Review, Migrate, or Sweep. | Workflow, pipeline, CompiledFlow |
+| **Flow** | A named kind of work Circuit can run, such as Build, Fix, Explore, or Review. | Workflow, pipeline, CompiledFlow |
 | **Schematic** | The authored definition of a flow. | Recipe, flow YAML |
 | **Block** | A reusable kind of work that can appear in a schematic. | Primitive, task type |
 | **Stage** | A grouped part of a flow, such as Frame, Analyze, Plan, Act, Verify, Review, or Close. | Phase, lane |

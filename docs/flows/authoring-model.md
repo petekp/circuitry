@@ -119,6 +119,7 @@ Routes should represent product outcomes, not clever control flow.
 Common authored outcomes:
 
 - continue
+- connector-failed
 - retry
 - revise
 - ask
