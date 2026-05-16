@@ -22637,7 +22637,7 @@ function runResultPath(runFolder) {
 }
 
 // dist/shared/write-capable-worker-disclosure.js
-var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix"]);
+var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix", "pursue"]);
 var WRITE_CAPABLE_WORKER_DISCLOSURE = "A worker can edit this checkout.";
 function flowMayInvokeWriteCapableWorker(flowId) {
   return WRITE_CAPABLE_FLOW_IDS.has(flowId);
@@ -25057,7 +25057,7 @@ function friendlyRunNote(flowId, summary) {
   return summary;
 }
 function friendlyResultSummary(summary) {
-  return summary.replace(/^(?:Build|Fix|Review|Explore) result for .+?:\s*/, "").replace(/^Explore '[\s\S]*?':\s*/, "").replace(/^Explore .+?:\s*/, "");
+  return summary.replace(/^(?:Build|Fix|Review|Explore|Pursuits?) result for .+?:\s*/, "").replace(/^Explore '[\s\S]*?':\s*/, "").replace(/^Explore .+?:\s*/, "");
 }
 function friendlyReviewStatus(status) {
   if (status === "accept")
@@ -25441,6 +25441,7 @@ var FLOW_RESULT_PATHS = {
   build: "reports/build-result.json",
   explore: "reports/explore-result.json",
   fix: "reports/fix-result.json",
+  pursue: "reports/pursuit-result.json",
   review: "reports/review-result.json"
 };
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
@@ -28258,6 +28259,10 @@ var RUNTIME_SUPPORT_MATRIX = {
     { entryModeName: "deep", depth: "deep" },
     { entryModeName: "autonomous", depth: "autonomous" },
     { entryModeName: "tournament", depth: "tournament" }
+  ],
+  pursue: [
+    { entryModeName: "default", depth: "standard" },
+    { entryModeName: "autonomous", depth: "autonomous" }
   ]
 };
 function usage3() {
@@ -28271,9 +28276,9 @@ function usage3() {
     "",
     "`--mode` is the friendly alias for `--entry-mode`; supplying both forms of that option is an error.",
     "",
-    "`--mode` and `--depth` name the same thoroughness level under two flag names. The aliases are: `default` <-> `standard`, `lite` <-> `lite`, `deep` <-> `deep`, `autonomous` <-> `autonomous`, `tournament` <-> `tournament`. Supply only one \u2014 the other is inferred. If you supply both, they must be the matching pair (e.g., `--mode deep --depth deep`); mismatched pairs like `--mode deep --depth standard` are rejected. Levels are gated per flow: every flow supports `default/standard` (the default if you supply neither). Other levels vary per flow \u2014 most support `lite`, `deep`, and `autonomous`; Review supports only `default`; Explore adds `tournament`. If a flow does not support a given level the rejection lists the supported levels.",
+    "`--mode` and `--depth` name the same thoroughness level under two flag names. The aliases are: `default` <-> `standard`, `lite` <-> `lite`, `deep` <-> `deep`, `autonomous` <-> `autonomous`, `tournament` <-> `tournament`. Supply only one \u2014 the other is inferred. If you supply both, they must be the matching pair (e.g., `--mode deep --depth deep`); mismatched pairs like `--mode deep --depth standard` are rejected. Levels are gated per flow: every flow supports `default/standard` (the default if you supply neither). Other levels vary per flow \u2014 Build and Fix support `lite`, `deep`, and `autonomous`; Pursue supports `default` and `autonomous`; Review supports only `default`; Explore adds `tournament`. If a flow does not support a given level the rejection lists the supported levels.",
     "",
-    "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build flows and then composes the runtime boundary using the configured relay connector.",
+    "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/pursue flows and then composes the runtime boundary using the configured relay connector.",
     "",
     "Config: if present, loads ~/.config/circuit-next/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.",
     "",

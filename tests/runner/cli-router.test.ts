@@ -44,6 +44,36 @@ const BUILD_REVIEW_BODY = JSON.stringify({
   findings: [],
 });
 
+const PURSUIT_BATCH_BODY = JSON.stringify({
+  verdict: 'accept',
+  summary: 'Completed the pursuit serially',
+  serialized_execution: true,
+  completed: [
+    {
+      pursuit_id: 'pursuit-1',
+      status: 'completed',
+      summary: 'Applied the requested pursuit',
+      evidence: ['stub pursuit implementation completed'],
+    },
+  ],
+  skipped: [],
+  blocked: [],
+  failed: [],
+  actual_touch_set: {
+    paths: ['README.md'],
+    symbols: [],
+    commands: ['npm run verify'],
+    generated_outputs: [],
+  },
+  proof_evidence: ['npm run verify passed'],
+});
+
+const PURSUIT_REVIEW_BODY = JSON.stringify({
+  verdict: 'clean',
+  summary: 'No coordination issues found',
+  findings: [],
+});
+
 // Stub Review relay payload used across CLI router tests. The schema requires
 // reviewer prose on every verdict, so a bare `{verdict, findings}` body would
 // fail validation and abort the run.
@@ -176,6 +206,35 @@ function tournamentRelayer(): RelayFn {
         duration_ms: 1,
         cli_version: '0.0.0-stub',
       };
+    },
+  };
+}
+
+function pursueCliRelayer(): RelayFn {
+  return {
+    connectorName: 'claude-code',
+    relay: async (input: RelayInput): Promise<RelayResult> => {
+      if (input.prompt.includes('Step: batch-step')) {
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'stub-cli-pursuit-batch',
+          result_body: PURSUIT_BATCH_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      }
+
+      if (input.prompt.includes('Step: review-step')) {
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'stub-cli-pursuit-review',
+          result_body: PURSUIT_REVIEW_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      }
+
+      throw new Error(`unexpected pursue CLI relay prompt: ${input.prompt.slice(0, 240)}`);
     },
   };
 }
@@ -921,6 +980,45 @@ describe('CLI router', () => {
     expect(output.routed_by).toBe('explicit');
   });
 
+  it('runs explicit Pursue through the runtime support matrix', async () => {
+    const runFolder = join(runFolderBase, 'run-explicit-pursue');
+    const output = await withStrictruntime(() =>
+      runMainJsonWithRelayer(
+        ['run', 'pursue', '--goal', 'pursue: update README.md', '--run-folder', runFolder],
+        pursueCliRelayer(),
+        { configCwd: createProofProject('pursue-proof-project') },
+      ),
+    );
+
+    expect(output.flow_id).toBe('pursue');
+    expect(output.routed_by).toBe('explicit');
+    expect(output.outcome).toBe('complete');
+    expect(output.runtime_reason).toMatch(/runtime supports fresh pursue/i);
+  });
+
+  it('run --goal can classify Pursue through the runtime support matrix', async () => {
+    const runFolder = join(runFolderBase, 'run-classified-pursue');
+    const output = await withStrictruntime(() =>
+      runMainJsonWithRelayer(
+        [
+          'run',
+          '--goal',
+          'pursue: update README.md and verification notes without collisions',
+          '--run-folder',
+          runFolder,
+        ],
+        pursueCliRelayer(),
+        { configCwd: createProofProject('pursue-classified-proof-project') },
+      ),
+    );
+
+    expect(output.flow_id).toBe('pursue');
+    expect(output.routed_by).toBe('classifier');
+    expect(output.router_signal).toBeDefined();
+    expect(output.outcome).toBe('complete');
+    expect(output.runtime_reason).toMatch(/runtime supports fresh pursue/i);
+  });
+
   it('uses classifier-inferred Fix lite mode only for explicit quick Fix intent', async () => {
     const runFolder = join(runFolderBase, 'fix-lite-inferred');
 
@@ -1365,7 +1463,7 @@ describe('CLI router', () => {
 
   it('keeps CLI help text aligned with the router-supported flow set', () => {
     const source = readFileSync(join(process.cwd(), 'src/cli/circuit.ts'), 'utf-8');
-    expect(source).toContain('registered explore/review/fix/build flows');
+    expect(source).toContain('registered explore/review/fix/build/pursue flows');
     expect(source).not.toContain('registered explore/review/build flows');
     expect(source).not.toContain('registered explore/review flows');
   });

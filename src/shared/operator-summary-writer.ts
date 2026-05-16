@@ -100,6 +100,7 @@ const FLOW_RESULT_PATHS: Record<string, string> = {
   build: 'reports/build-result.json',
   explore: 'reports/explore-result.json',
   fix: 'reports/fix-result.json',
+  pursue: 'reports/pursuit-result.json',
   review: 'reports/review-result.json',
 };
 

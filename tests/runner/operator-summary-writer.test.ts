@@ -392,6 +392,32 @@ describe('operator summary writer', () => {
         },
         expected: 'Circuit: Fix complete. Verification: passed. Review: accepted.',
       },
+      {
+        flow: 'pursue',
+        label: 'Pursue',
+        relPath: 'reports/pursuit-result.json',
+        body: {
+          summary: 'Pursuits result for README update: completed serially',
+          outcome: 'complete',
+          verification_status: 'passed',
+          review_verdict: 'clean',
+          total_pursuits: 1,
+          completed_count: 1,
+          skipped_count: 0,
+          blocked_count: 0,
+          failed_count: 0,
+          serial_code_writes: true,
+          evidence_links: [
+            {
+              report_id: 'pursuit.review',
+              path: 'reports/pursuit/review.json',
+              schema: 'pursuit.review@v1',
+            },
+          ],
+        },
+        expected:
+          'Circuit: Pursue finished with outcome complete. 1/1 pursuit completed. Verification: passed.',
+      },
     ];
 
     for (const entry of cases) {
