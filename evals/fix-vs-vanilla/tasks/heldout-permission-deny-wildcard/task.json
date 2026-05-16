@@ -1,0 +1,33 @@
+{
+  "id": "heldout-permission-deny-wildcard",
+  "split": "held-out",
+  "prompt": "Fix the permission helper. Matching deny rules must override matching allow rules regardless of order. `*` matches any action. Resource patterns either match exactly or, when they end in `/*`, match that slash-delimited resource subtree only. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused.",
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": [
+        "npm",
+        "test"
+      ]
+    },
+    {
+      "id": "prefix-edge",
+      "argv": [
+        "npm",
+        "run",
+        "prefix-edge"
+      ]
+    },
+    {
+      "id": "action-edge",
+      "argv": [
+        "npm",
+        "run",
+        "action-edge"
+      ]
+    }
+  ],
+  "allowed_changed_files": [
+    "src/permissions.mjs"
+  ]
+}

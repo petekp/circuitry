@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "heldout-rate-limit-boundary",
+  "split": "regression",
+  "title": "Rate limit window keeps expired boundary events",
+  "allowed_changed_files": [
+    "src/rate-limit.mjs",
+    "tests/rate-limit.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the rate-limit helper. Events exactly at the start boundary of the rolling window are expired and must not count against the current request. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

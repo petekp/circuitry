@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "fix-vs-vanilla",
+  "status": "pilot-internal",
+  "purpose": "Measure whether Circuit Fix reduces operator babysitting versus a strong vanilla coding-agent prompt on reproducible bug-fix tasks.",
+  "primary_metric": "false_fixed_rate",
+  "secondary_metrics": [
+    "objective_fixed_rate",
+    "regression_proof_quality",
+    "verification_pass_rate",
+    "diff_scope",
+    "wallclock_ms"
+  ],
+  "default_provider": "claude-code",
+  "default_model": "claude-haiku-4-5-20251001",
+  "default_effort": "medium",
+  "default_timeout_ms": 900000,
+  "claim_rule": "Circuit only gets a positive claim when it has a lower false-fixed rate than vanilla on held-out tasks and at least matches vanilla's objective fixed rate.",
+  "sets": {
+    "discovery": [
+      "discovery-slug-trailing",
+      "discovery-window-average",
+      "discovery-discount-stacking"
+    ],
+    "regression": [
+      "regression-query-plus",
+      "regression-pagination-zero",
+      "heldout-rate-limit-boundary",
+      "heldout-csv-escaped-quote",
+      "heldout-markdown-nested-url",
+      "heldout-inventory-reservation",
+      "regression-money-negative",
+      "heldout-token-expiry-units",
+      "heldout-user-display-name",
+      "heldout-shipping-fee-rules"
+    ],
+    "held-out": [
+      "heldout-tax-line-rounding",
+      "heldout-permission-deny-wildcard",
+      "heldout-json-pointer-escapes",
+      "heldout-cidr-prefix-zero",
+      "heldout-template-escaping"
+    ]
+  }
+}

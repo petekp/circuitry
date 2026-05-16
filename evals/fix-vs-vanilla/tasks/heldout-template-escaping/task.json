@@ -1,0 +1,33 @@
+{
+  "id": "heldout-template-escaping",
+  "split": "held-out",
+  "prompt": "Fix the template renderer. It should replace unescaped `{{ path }}` placeholders with nested data values, render falsey values such as `0` and `false`, leave missing placeholders unchanged, and treat a backslash immediately before `{{` as an escape that emits the placeholder literally without the backslash. Replacements are one pass: inserted values are not rendered again. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused.",
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": [
+        "npm",
+        "test"
+      ]
+    },
+    {
+      "id": "escape-edge",
+      "argv": [
+        "npm",
+        "run",
+        "escape-edge"
+      ]
+    },
+    {
+      "id": "one-pass-edge",
+      "argv": [
+        "npm",
+        "run",
+        "one-pass-edge"
+      ]
+    }
+  ],
+  "allowed_changed_files": [
+    "src/template.mjs"
+  ]
+}

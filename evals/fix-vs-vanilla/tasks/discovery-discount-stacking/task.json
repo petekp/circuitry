@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "discovery-discount-stacking",
+  "split": "discovery",
+  "title": "Discount calculator misses inclusive tiers and coupon stacking",
+  "allowed_changed_files": [
+    "src/discount.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    },
+    {
+      "id": "tier-edge",
+      "argv": ["npm", "run", "tier-edge"]
+    },
+    {
+      "id": "coupon-edge",
+      "argv": ["npm", "run", "coupon-edge"]
+    }
+  ],
+  "prompt": "Fix the discount calculator. Tier thresholds are inclusive: 10000 cents gets 10% off and 20000 cents or more gets 15% off. Coupons apply after the tier discount, not by adding percentages together. Keep the change focused. The regression command is `npm test`; it should fail before the fix and pass after the fix."
+}

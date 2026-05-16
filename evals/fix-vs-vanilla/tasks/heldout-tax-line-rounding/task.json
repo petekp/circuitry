@@ -1,0 +1,33 @@
+{
+  "id": "heldout-tax-line-rounding",
+  "split": "held-out",
+  "prompt": "Fix the sales tax helper. Tax is assessed per non-exempt line after that line's discount, not once on the aggregate subtotal. Negative taxable amounts should clamp to zero. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused.",
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": [
+        "npm",
+        "test"
+      ]
+    },
+    {
+      "id": "exempt-edge",
+      "argv": [
+        "npm",
+        "run",
+        "exempt-edge"
+      ]
+    },
+    {
+      "id": "discount-edge",
+      "argv": [
+        "npm",
+        "run",
+        "discount-edge"
+      ]
+    }
+  ],
+  "allowed_changed_files": [
+    "src/tax.mjs"
+  ]
+}

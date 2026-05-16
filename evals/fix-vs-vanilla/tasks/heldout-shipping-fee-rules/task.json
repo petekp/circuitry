@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "heldout-shipping-fee-rules",
+  "split": "regression",
+  "title": "Shipping fee helper applies domestic free-shipping rules to international orders",
+  "allowed_changed_files": [
+    "src/shipping.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    },
+    {
+      "id": "intl-edge",
+      "argv": ["npm", "run", "intl-edge"]
+    },
+    {
+      "id": "expedited-edge",
+      "argv": ["npm", "run", "expedited-edge"]
+    }
+  ],
+  "prompt": "Fix the shipping fee helper. Domestic standard shipping is free at 5000 cents or more, inclusive. International standard shipping is never free: it is 1599 cents below 10000 cents and 799 cents at 10000 cents or more. Expedited shipping adds 899 cents for domestic orders and 1299 cents for international orders after the base shipping fee is chosen. Keep the change focused. The regression command is `npm test`; it should fail before the fix and pass after the fix."
+}

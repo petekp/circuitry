@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "heldout-inventory-reservation",
+  "split": "regression",
+  "title": "Inventory availability double-counts expired reservations",
+  "allowed_changed_files": [
+    "src/inventory.mjs",
+    "tests/inventory.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the inventory availability helper. Expired reservations must not reduce available stock, but active reservations still must. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

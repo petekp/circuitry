@@ -1,0 +1,10 @@
+{
+  "name": "heldout-permission-deny-wildcard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/permissions.test.mjs",
+    "prefix-edge": "node tests/permissions.prefix-edge.test.mjs",
+    "action-edge": "node tests/permissions.action-edge.test.mjs"
+  }
+}

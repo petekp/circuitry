@@ -1,0 +1,33 @@
+{
+  "id": "heldout-json-pointer-escapes",
+  "split": "held-out",
+  "prompt": "Fix the JSON Pointer helper. It should follow JSON Pointer token escaping, including the escape-order case where `~01` resolves to the literal key text `~1`, not `/`. Empty pointer returns the whole document. Array tokens must be strict non-negative decimal indexes with no leading zeroes except `0`; invalid or missing paths return `undefined`. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused.",
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": [
+        "npm",
+        "test"
+      ]
+    },
+    {
+      "id": "slash-edge",
+      "argv": [
+        "npm",
+        "run",
+        "slash-edge"
+      ]
+    },
+    {
+      "id": "array-edge",
+      "argv": [
+        "npm",
+        "run",
+        "array-edge"
+      ]
+    }
+  ],
+  "allowed_changed_files": [
+    "src/pointer.mjs"
+  ]
+}

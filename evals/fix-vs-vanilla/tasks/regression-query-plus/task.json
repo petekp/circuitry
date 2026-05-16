@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "regression-query-plus",
+  "split": "regression",
+  "title": "Query parser leaves plus signs literal",
+  "allowed_changed_files": [
+    "src/query.mjs",
+    "tests/query.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the query-string parser so `+` decodes as a space in query parameter names and values. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

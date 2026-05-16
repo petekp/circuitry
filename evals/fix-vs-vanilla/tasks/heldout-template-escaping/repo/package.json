@@ -1,0 +1,10 @@
+{
+  "name": "heldout-template-escaping",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/template.test.mjs",
+    "escape-edge": "node tests/template.escape-edge.test.mjs",
+    "one-pass-edge": "node tests/template.one-pass-edge.test.mjs"
+  }
+}

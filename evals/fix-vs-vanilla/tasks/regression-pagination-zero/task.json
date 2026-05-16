@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "regression-pagination-zero",
+  "split": "regression",
+  "title": "Pagination treats zero-based pages as one-based",
+  "allowed_changed_files": [
+    "src/pagination.mjs",
+    "tests/pagination.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the pagination helper. Pages are zero-based, so page 0 with page size 3 must return the first three items. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

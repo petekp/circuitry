@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/tokens.test.mjs",
+    "edge": "node --test tests/tokens.edge.test.mjs"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "heldout-cidr-prefix-zero",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/cidr.test.mjs",
+    "strict-ip-edge": "node tests/cidr.strict-ip-edge.test.mjs",
+    "high-bit-edge": "node tests/cidr.high-bit-edge.test.mjs"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "discovery-window-average",
+  "split": "discovery",
+  "title": "Moving average skips the first complete window",
+  "allowed_changed_files": [
+    "src/moving-average.mjs",
+    "tests/moving-average.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the moving average helper so it includes the first complete window. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

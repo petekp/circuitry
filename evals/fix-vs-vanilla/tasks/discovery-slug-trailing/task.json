@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "discovery-slug-trailing",
+  "split": "discovery",
+  "title": "Slug helper leaves edge hyphens",
+  "allowed_changed_files": [
+    "src/slug.mjs",
+    "tests/slug.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the slug helper so punctuation and whitespace never leave leading, trailing, or repeated hyphens. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

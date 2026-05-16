@@ -1,0 +1,10 @@
+{
+  "name": "heldout-json-pointer-escapes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/pointer.test.mjs",
+    "slash-edge": "node tests/pointer.slash-edge.test.mjs",
+    "array-edge": "node tests/pointer.array-edge.test.mjs"
+  }
+}

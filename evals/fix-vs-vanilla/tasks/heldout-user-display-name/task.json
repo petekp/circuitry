@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "heldout-user-display-name",
+  "split": "regression",
+  "title": "Display name helper leaks null fields and misses fallbacks",
+  "allowed_changed_files": [
+    "src/display-name.mjs",
+    "tests/display-name.test.mjs",
+    "tests/display-name.edge.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    },
+    {
+      "id": "edge-test",
+      "argv": ["npm", "run", "edge"]
+    }
+  ],
+  "prompt": "Fix the user display name helper. It should prefer `preferredName`, otherwise join present first and last names without leaking null-like values, otherwise use the email local part. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

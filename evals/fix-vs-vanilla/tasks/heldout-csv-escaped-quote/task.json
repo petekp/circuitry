@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "heldout-csv-escaped-quote",
+  "split": "regression",
+  "title": "CSV parser drops escaped quotes",
+  "allowed_changed_files": [
+    "src/csv.mjs",
+    "tests/csv.test.mjs"
+  ],
+  "checks": [
+    {
+      "id": "node-test",
+      "argv": ["npm", "test"]
+    }
+  ],
+  "prompt": "Fix the CSV line parser so doubled quotes inside a quoted field decode to one literal quote. The regression command is `npm test`; it should fail before the fix and pass after the fix. Keep the change focused."
+}

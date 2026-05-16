@@ -1,0 +1,10 @@
+{
+  "name": "heldout-shipping-fee-rules",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/shipping.test.mjs",
+    "intl-edge": "node tests/shipping.intl-edge.test.mjs",
+    "expedited-edge": "node tests/shipping.expedited-edge.test.mjs"
+  }
+}

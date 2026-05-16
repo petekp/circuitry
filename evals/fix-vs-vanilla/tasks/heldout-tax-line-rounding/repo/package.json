@@ -1,0 +1,10 @@
+{
+  "name": "heldout-tax-line-rounding",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/tax.test.mjs",
+    "exempt-edge": "node tests/tax.exempt-edge.test.mjs",
+    "discount-edge": "node tests/tax.discount-edge.test.mjs"
+  }
+}

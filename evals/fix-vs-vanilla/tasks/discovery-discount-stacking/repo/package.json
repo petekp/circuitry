@@ -1,0 +1,10 @@
+{
+  "name": "discovery-discount-stacking",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/discount.test.mjs",
+    "tier-edge": "node tests/discount.tier-edge.test.mjs",
+    "coupon-edge": "node tests/discount.coupon-edge.test.mjs"
+  }
+}
