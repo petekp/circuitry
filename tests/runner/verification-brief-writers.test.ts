@@ -51,12 +51,22 @@ describe('verification brief writers', () => {
       responsePath: 'reports/checkpoints/frame-step-response.json',
       step: {
         id: 'frame-step',
+        title: 'Frame - confirm Build brief',
         kind: 'checkpoint',
+        protocol: 'build-frame@v1',
+        reads: [],
+        routes: { continue: 'plan-step' },
+        check: {
+          kind: 'checkpoint_selection',
+          allow: ['continue'],
+        },
         writes: {
           request: 'reports/checkpoints/frame-step-request.json',
           response: 'reports/checkpoints/frame-step-response.json',
+          report: { path: 'reports/build/brief.json', schema: 'build.brief@v1' },
         },
         policy: {
+          prompt: 'Confirm the Build brief before implementation starts.',
           choices: [{ id: 'continue' }],
           report_template: {
             scope: 'Make the smallest safe change.',

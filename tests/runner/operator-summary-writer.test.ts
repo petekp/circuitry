@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { OperatorSummary } from '../../src/schemas/operator-summary.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { readPriorRoute, writeOperatorSummary } from '../../src/shared/operator-summary-writer.js';
@@ -36,6 +37,84 @@ function baseResult(flowId: string): RunResult {
     trace_entries_observed: 3,
     manifest_hash: 'abc123',
   });
+}
+
+function buildVerificationCommand() {
+  return {
+    id: 'build-verify',
+    cwd: '.',
+    argv: ['npm', 'run', 'verify'],
+    timeout_ms: 120_000,
+    max_output_bytes: 200_000,
+    env: {},
+  };
+}
+
+function buildCheckpointPacket(overrides: Record<string, unknown> = {}) {
+  return {
+    kind: 'build.checkpoint_packet@v1',
+    salience: {
+      summary: 'Confirm the Build brief before write-capable work starts.',
+      why_now: ['The next route can edit the checkout.'],
+      hidden_routine_work: ['Routine status and raw traces stay behind evidence links.'],
+    },
+    decision: {
+      question: 'Confirm the Build brief before implementation starts.',
+      operator_judgment: 'Decide whether this is the right scope and proof plan.',
+    },
+    recommendation: {
+      choice_id: 'continue',
+      label: 'Continue',
+      rationale: 'The scope is bounded and the proof plan is explicit.',
+    },
+    artifact: {
+      title: 'Build brief',
+      preview: 'Objective: Add checkpoint HTML',
+      scope: 'Touch Build checkpoint presentation only',
+      success_criteria: ['Waiting checkpoint emits useful HTML'],
+    },
+    proof: {
+      status: 'planned',
+      summary: 'Circuit will verify with npm run verify.',
+      commands: [buildVerificationCommand()],
+      evidence: ['No implementation proof has been collected before the checkpoint.'],
+    },
+    risk: {
+      summary: 'Scope mismatch is the meaningful risk.',
+      tradeoffs: ['Too narrow misses intent.', 'Too broad touches unrelated files.'],
+    },
+    choices: [
+      {
+        id: 'continue',
+        label: 'Continue',
+        description: 'Proceed on the recommended executable route.',
+        route: { key: 'continue', target: 'plan-step' },
+      },
+    ],
+    internal: {
+      request_path: 'reports/checkpoints/frame-step-request.json',
+      response_path: 'reports/checkpoints/frame-step-response.json',
+      report_path: 'reports/build/brief.json',
+      raw_evidence: ['reports/build/brief.json'],
+    },
+    ...overrides,
+  };
+}
+
+function buildBrief(overrides: Record<string, unknown> = {}) {
+  return {
+    objective: 'Add checkpoint HTML',
+    scope: 'Touch Build checkpoint presentation only',
+    success_criteria: ['Waiting checkpoint emits useful HTML'],
+    verification_command_candidates: [buildVerificationCommand()],
+    checkpoint: {
+      request_path: 'reports/checkpoints/frame-step-request.json',
+      response_path: 'reports/checkpoints/frame-step-response.json',
+      allowed_choices: ['continue'],
+    },
+    checkpoint_packet: buildCheckpointPacket(),
+    ...overrides,
+  };
 }
 
 describe('operator summary writer', () => {
@@ -882,6 +961,94 @@ describe('operator summary writer', () => {
 
     const markdown = readFileSync(written.markdownPath, 'utf8');
     expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
+  });
+
+  it('emits operator-summary.html for Build waiting checkpoints and links it from JSON and Markdown', () => {
+    writeReport('reports/build/brief.json', buildBrief());
+    const requestPath = join(runFolder, 'reports/checkpoints/frame-step-request.json');
+    writeReport('reports/checkpoints/frame-step-request.json', {
+      schema_version: 1,
+      step_id: 'frame-step',
+      prompt: 'Confirm the Build brief before implementation starts.',
+      allowed_choices: ['continue'],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000008'),
+        flow_id: CompiledFlowId.parse('build'),
+        goal: 'Add checkpoint HTML',
+        outcome: 'checkpoint_waiting',
+        summary: "checkpoint 'frame-step' is waiting for an operator choice.",
+        trace_entries_observed: 3,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'frame-step',
+          request_path: requestPath,
+          allowed_choices: ['continue'],
+        },
+      },
+      route: { selectedFlow: 'build' },
+    });
+
+    expect(written.htmlPath).toBe(join(runFolder, 'reports', 'operator-summary.html'));
+    expect(existsSync(written.htmlPath as string)).toBe(true);
+    expect(written.summary.html_path).toBe(written.htmlPath);
+    expect(written.summary.report_paths.map((report) => report.label)).toEqual([
+      'Operator summary (HTML)',
+      'Checkpoint request',
+    ]);
+    expect(written.summary.checkpoint).toEqual({
+      step_id: 'frame-step',
+      request_path: requestPath,
+      allowed_choices: ['continue'],
+    });
+
+    const html = readFileSync(written.htmlPath as string, 'utf8');
+    expect(html).toContain('Add checkpoint HTML');
+    expect(html).toContain('The scope is bounded and the proof plan is explicit.');
+    expect(html).toContain('Touch Build checkpoint presentation only');
+    expect(html).toContain('Copy resume command');
+
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
+    expect(markdown).toContain('Choices: continue');
+  });
+
+  it('removes stale Build checkpoint HTML when the waiting packet is malformed', () => {
+    const stalePath = join(runFolder, 'reports', 'operator-summary.html');
+    writeFileSync(stalePath, '<!doctype html><body>stale build checkpoint</body>');
+    const malformed = { ...buildBrief(), checkpoint_packet: undefined };
+    writeReport('reports/build/brief.json', malformed);
+    const requestPath = join(runFolder, 'reports/checkpoints/frame-step-request.json');
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000009'),
+        flow_id: CompiledFlowId.parse('build'),
+        goal: 'Add checkpoint HTML',
+        outcome: 'checkpoint_waiting',
+        summary: "checkpoint 'frame-step' is waiting for an operator choice.",
+        trace_entries_observed: 3,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'frame-step',
+          request_path: requestPath,
+          allowed_choices: ['continue'],
+        },
+      },
+      route: { selectedFlow: 'build' },
+    });
+
+    expect(written.htmlPath).toBeUndefined();
+    expect(existsSync(stalePath)).toBe(false);
+    expect(written.summary.report_paths.map((report) => report.label)).not.toContain(
+      'Operator summary (HTML)',
+    );
   });
 
   it('skips HTML emission when tournament-review.json is malformed', () => {

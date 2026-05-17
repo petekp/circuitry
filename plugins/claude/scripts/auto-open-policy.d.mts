@@ -9,3 +9,4 @@ export interface AutoOpenEnv {
 
 export function shouldSkipAutoOpen(env: AutoOpenEnv): boolean;
 export function isAutoOpenPathSafe(path: unknown, platform: string): boolean;
+export function shouldAutoOpenPath(path: unknown, env: AutoOpenEnv): boolean;

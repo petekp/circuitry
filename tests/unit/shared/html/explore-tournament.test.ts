@@ -12,6 +12,7 @@ function buildContext(overrides: {
     runFolder: '/tmp/run-folder',
     runId: 'run-test',
     flowId: 'explore',
+    runOutcome: 'complete',
     flowReport: overrides.flowReport,
     readJsonRunRelative: () => undefined,
     readEvidenceReportById: (id) => evidence[id],

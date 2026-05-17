@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isAutoOpenPathSafe,
+  shouldAutoOpenPath,
   shouldSkipAutoOpen,
 } from '../../plugins/claude/scripts/auto-open-policy.mjs';
 
@@ -120,5 +121,38 @@ describe('isAutoOpenPathSafe — win32', () => {
     expect(
       isAutoOpenPathSafe('C:\\Users\\Pete Petrash\\runs\\reports\\summary.html', 'win32'),
     ).toBe(true);
+  });
+});
+
+describe('shouldAutoOpenPath', () => {
+  function baseEnv(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      CIRCUIT_NO_AUTO_OPEN: undefined,
+      CI: undefined,
+      DISPLAY: ':0',
+      WAYLAND_DISPLAY: undefined,
+      isTTY: true,
+      platform: 'darwin',
+      ...overrides,
+    };
+  }
+
+  it('allows an absolute HTML summary in an interactive host', () => {
+    expect(shouldAutoOpenPath('/tmp/run/reports/operator-summary.html', baseEnv())).toBe(true);
+  });
+
+  it('rejects missing and unsafe checkpoint HTML paths', () => {
+    expect(shouldAutoOpenPath(undefined, baseEnv())).toBe(false);
+    expect(shouldAutoOpenPath('reports/operator-summary.html', baseEnv())).toBe(false);
+    expect(shouldAutoOpenPath('/tmp/run/reports/operator-summary.txt', baseEnv())).toBe(false);
+  });
+
+  it('skips otherwise safe paths when the host opted out', () => {
+    expect(
+      shouldAutoOpenPath(
+        '/tmp/run/reports/operator-summary.html',
+        baseEnv({ CIRCUIT_NO_AUTO_OPEN: '1' }),
+      ),
+    ).toBe(false);
   });
 });

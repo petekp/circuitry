@@ -44,3 +44,8 @@ export function isAutoOpenPathSafe(path, platform) {
   }
   return true;
 }
+
+export function shouldAutoOpenPath(path, env) {
+  if (shouldSkipAutoOpen(env)) return false;
+  return isAutoOpenPathSafe(path, env.platform);
+}

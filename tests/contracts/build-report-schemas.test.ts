@@ -52,6 +52,69 @@ function verificationCommand(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function checkpointPacket(overrides: Record<string, unknown> = {}) {
+  return {
+    kind: 'build.checkpoint_packet@v1',
+    salience: {
+      summary: 'Confirm the Build brief before implementation starts.',
+      why_now: ['The next route can edit the checkout.'],
+      hidden_routine_work: ['Routine implementation chores stay inside the Build flow.'],
+    },
+    decision: {
+      question: 'Confirm the Build brief before implementation starts.',
+      operator_judgment: 'Decide whether this scope and proof plan should proceed.',
+    },
+    recommendation: {
+      choice_id: 'proceed',
+      label: 'Proceed',
+      rationale: 'The scope is bounded and the verification plan is explicit.',
+    },
+    artifact: {
+      title: 'Build brief',
+      preview: 'Objective: Add a small feature',
+      scope: 'Touch the CLI and tests only',
+      success_criteria: ['The requested behavior works', 'Verification passes'],
+    },
+    proof: {
+      status: 'planned',
+      summary: 'Circuit will verify with npm run verify.',
+      commands: [verificationCommand()],
+      evidence: ['No implementation proof has been collected before the checkpoint.'],
+    },
+    risk: {
+      summary: 'Scope mismatch is the meaningful risk.',
+      tradeoffs: ['Too narrow misses intent.', 'Too broad touches unrelated files.'],
+    },
+    choices: [
+      {
+        id: 'proceed',
+        label: 'Proceed',
+        description: 'Proceed on the executable Build route.',
+        route: { key: 'proceed', target: 'plan-step' },
+      },
+      {
+        id: 'revise',
+        label: 'Revise',
+        description: 'Resume with the revise route.',
+        route: { key: 'revise', target: 'frame-step' },
+      },
+      {
+        id: 'abort',
+        label: 'Abort',
+        description: 'Stop this checkpoint.',
+        route: { key: 'abort', target: '@stop' },
+      },
+    ],
+    internal: {
+      request_path: 'reports/checkpoints/frame-request.json',
+      response_path: 'reports/checkpoints/frame-response.json',
+      report_path: 'reports/build/brief.json',
+      raw_evidence: ['reports/build/brief.json', 'reports/checkpoints/frame-request.json'],
+    },
+    ...overrides,
+  };
+}
+
 function resultPointers() {
   return [
     BuildResultReportPointer.parse({
@@ -115,6 +178,7 @@ describe('Build report schemas', () => {
         response_path: 'reports/checkpoints/frame-response.json',
         allowed_choices: ['proceed', 'revise', 'abort'],
       },
+      checkpoint_packet: checkpointPacket(),
     });
     const unstamped = BuildBrief.parse({
       objective: 'Add a small feature',
@@ -125,10 +189,61 @@ describe('Build report schemas', () => {
         request_path: 'reports/checkpoints/frame-request.json',
         allowed_choices: ['proceed', 'revise', 'abort'],
       },
+      checkpoint_packet: checkpointPacket(),
     });
 
     expect(stamped.checkpoint.response_path).toBe('reports/checkpoints/frame-response.json');
     expect(unstamped.checkpoint.response_path).toBeUndefined();
+  });
+
+  it('accepts a typed Build checkpoint decision packet whose recommendation maps to a choice', () => {
+    const parsed = BuildBrief.parse({
+      objective: 'Add a small feature',
+      scope: 'Touch the CLI and tests only',
+      success_criteria: ['The requested behavior works', 'Verification passes'],
+      verification_command_candidates: [verificationCommand()],
+      checkpoint: {
+        request_path: 'reports/checkpoints/frame-request.json',
+        response_path: 'reports/checkpoints/frame-response.json',
+        allowed_choices: ['proceed', 'revise', 'abort'],
+      },
+      checkpoint_packet: checkpointPacket(),
+    });
+
+    const packet = parsed.checkpoint_packet;
+    expect(packet).toBeDefined();
+    if (packet === undefined) throw new Error('expected checkpoint packet');
+    expect(packet.kind).toBe('build.checkpoint_packet@v1');
+    expect(packet.recommendation.choice_id).toBe('proceed');
+    expect(packet.artifact.success_criteria).toContain('The requested behavior works');
+    expect(
+      BuildBrief.safeParse({
+        ...parsed,
+        checkpoint_packet: checkpointPacket({
+          recommendation: {
+            choice_id: 'decorative-only',
+            label: 'Decorative',
+            rationale: 'This choice is not executable.',
+          },
+        }),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('keeps legacy build.brief@v1 objects parse-compatible for existing waiting checkpoints', () => {
+    const legacy = BuildBrief.parse({
+      objective: 'Add a small feature',
+      scope: 'Touch the CLI and tests only',
+      success_criteria: ['The requested behavior works', 'Verification passes'],
+      verification_command_candidates: [verificationCommand()],
+      checkpoint: {
+        request_path: 'reports/checkpoints/frame-request.json',
+        response_path: 'reports/checkpoints/frame-response.json',
+        allowed_choices: ['proceed', 'revise', 'abort'],
+      },
+    });
+
+    expect(legacy.checkpoint_packet).toBeUndefined();
   });
 
   it('accepts minimal valid objects for all six Build reports', () => {

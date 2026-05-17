@@ -241,6 +241,10 @@ export function writeOperatorSummary(input: {
         runFolder: input.runFolder,
         runId: input.runResult.run_id as unknown as string,
         flowId,
+        runOutcome: input.runResult.outcome,
+        ...(input.runResult.outcome === 'checkpoint_waiting'
+          ? { checkpoint: input.runResult.checkpoint }
+          : {}),
         flowReport,
         readJsonRunRelative: (relPath) => readJsonIfPresent(input.runFolder, relPath),
         readEvidenceReportById: (reportId) =>

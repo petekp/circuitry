@@ -569,6 +569,12 @@ describe('Build checkpoint execution substrate', () => {
       response_path: 'reports/checkpoints/frame-step-response.json',
       allowed_choices: ['continue', 'revise'],
     });
+    const packet = brief.checkpoint_packet;
+    expect(packet).toBeDefined();
+    if (packet === undefined) throw new Error('expected checkpoint packet');
+    expect(packet.kind).toBe('build.checkpoint_packet@v1');
+    expect(packet.recommendation.choice_id).toBe('continue');
+    expect(packet.choices.map((choice) => choice.id)).toEqual(['continue', 'revise']);
     const resolved = outcome.trace_entries.find(
       (trace_entry) => trace_entry.kind === 'checkpoint.resolved',
     );
@@ -617,6 +623,20 @@ describe('Build checkpoint execution substrate', () => {
     // resolves to step.writes.response, even before operator selection.
     // The response file itself is created only at resolution.
     expect(brief.checkpoint.response_path).toBe('reports/checkpoints/frame-step-response.json');
+    const packet = brief.checkpoint_packet;
+    expect(packet).toBeDefined();
+    if (packet === undefined) throw new Error('expected checkpoint packet');
+    expect(packet.recommendation).toMatchObject({
+      choice_id: 'continue',
+      label: 'Continue',
+    });
+    expect(packet.choices[0]).toMatchObject({
+      id: 'continue',
+      route: { key: 'pass', target: '@complete' },
+    });
+    expect(packet.proof.status).toBe('planned');
+    expect(packet.salience.hidden_routine_work.join('\n')).toContain('test execution');
+    expect(packet.risk.summary).toContain('scope mismatch');
   });
 
   it('resumes a paused-open checkpoint through an operator selection', async () => {

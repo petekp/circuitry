@@ -14522,6 +14522,64 @@ var BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   "build.review": "build.review@v1"
 };
 var NonEmptyStringArray = external_exports.array(external_exports.string().min(1)).min(1);
+var BuildCheckpointPacketChoice = external_exports.object({
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1),
+  description: external_exports.string().min(1),
+  route: external_exports.object({
+    key: external_exports.string().min(1),
+    target: external_exports.string().min(1)
+  }).strict()
+}).strict();
+var BuildCheckpointPacket = external_exports.object({
+  kind: external_exports.literal("build.checkpoint_packet@v1"),
+  salience: external_exports.object({
+    summary: external_exports.string().min(1),
+    why_now: NonEmptyStringArray,
+    hidden_routine_work: NonEmptyStringArray
+  }).strict(),
+  decision: external_exports.object({
+    question: external_exports.string().min(1),
+    operator_judgment: external_exports.string().min(1)
+  }).strict(),
+  recommendation: external_exports.object({
+    choice_id: external_exports.string().min(1),
+    label: external_exports.string().min(1),
+    rationale: external_exports.string().min(1)
+  }).strict(),
+  artifact: external_exports.object({
+    title: external_exports.string().min(1),
+    preview: external_exports.string().min(1),
+    scope: external_exports.string().min(1),
+    success_criteria: NonEmptyStringArray
+  }).strict(),
+  proof: external_exports.object({
+    status: external_exports.enum(["planned", "collected", "missing"]),
+    summary: external_exports.string().min(1),
+    commands: external_exports.array(VerificationCommand).min(1),
+    evidence: NonEmptyStringArray
+  }).strict(),
+  risk: external_exports.object({
+    summary: external_exports.string().min(1),
+    tradeoffs: NonEmptyStringArray
+  }).strict(),
+  choices: external_exports.array(BuildCheckpointPacketChoice).min(1),
+  internal: external_exports.object({
+    request_path: external_exports.string().min(1),
+    response_path: external_exports.string().min(1),
+    report_path: external_exports.string().min(1),
+    raw_evidence: NonEmptyStringArray
+  }).strict()
+}).strict().superRefine((packet, ctx) => {
+  const choiceIds = new Set(packet.choices.map((choice) => choice.id));
+  if (!choiceIds.has(packet.recommendation.choice_id)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["recommendation", "choice_id"],
+      message: "recommendation.choice_id must reference a declared checkpoint choice"
+    });
+  }
+});
 var BuildCheckpointPointer = external_exports.object({
   request_path: external_exports.string().min(1),
   response_path: external_exports.string().min(1).optional(),
@@ -14532,7 +14590,8 @@ var BuildBrief = external_exports.object({
   scope: external_exports.string().min(1),
   success_criteria: NonEmptyStringArray,
   verification_command_candidates: external_exports.array(VerificationCommand).min(1),
-  checkpoint: BuildCheckpointPointer
+  checkpoint: BuildCheckpointPointer,
+  checkpoint_packet: BuildCheckpointPacket.optional()
 }).strict();
 var BuildPlan = external_exports.object({
   objective: external_exports.string().min(1),
@@ -15012,6 +15071,107 @@ var BuildBriefReportTemplate = external_exports.object({
   success_criteria: external_exports.array(external_exports.string().min(1)).min(1),
   verification_command_candidates: external_exports.array(VerificationCommand).min(1).optional()
 }).strict();
+function titleCaseChoice(id) {
+  return id.split(/[-_\s]+/).filter((part) => part.length > 0).map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`).join(" ");
+}
+function routeForChoice(step, choiceId) {
+  const direct = step.routes[choiceId];
+  if (direct !== void 0)
+    return { key: choiceId, target: direct };
+  const fallback = step.routes.pass;
+  if (fallback !== void 0)
+    return { key: "pass", target: fallback };
+  return void 0;
+}
+function recommendedChoiceId(step) {
+  const allowed = new Set(checkpointChoiceIds(step));
+  const safeDefault = step.policy.safe_default_choice;
+  if (safeDefault !== void 0 && allowed.has(safeDefault))
+    return safeDefault;
+  const safeAutonomous = step.policy.safe_autonomous_choice;
+  if (safeAutonomous !== void 0 && allowed.has(safeAutonomous))
+    return safeAutonomous;
+  return checkpointChoiceIds(step)[0] ?? "continue";
+}
+function buildCheckpointPacket(input) {
+  const allowedChoices = checkpointChoiceIds(input.context.step);
+  const recommendationId = recommendedChoiceId(input.context.step);
+  const choices = input.context.step.policy.choices.filter((choice) => allowedChoices.includes(choice.id)).flatMap((choice) => {
+    const route = routeForChoice(input.context.step, choice.id);
+    if (route === void 0)
+      return [];
+    return [
+      {
+        id: choice.id,
+        label: choice.label ?? titleCaseChoice(choice.id),
+        description: choice.description ?? (choice.id === recommendationId ? "Proceed on the recommended executable route." : `Resume the Build flow with checkpoint choice '${choice.id}'.`),
+        route
+      }
+    ];
+  });
+  const recommendedChoice = choices.find((choice) => choice.id === recommendationId) ?? choices[0];
+  if (recommendedChoice === void 0) {
+    throw new Error(`checkpoint step '${input.context.step.id}' has no executable checkpoint choices`);
+  }
+  const verificationCommandText = input.verificationCommands.map((command) => command.argv.join(" ")).join("; ");
+  return {
+    kind: "build.checkpoint_packet@v1",
+    salience: {
+      summary: "Confirm the Build brief before Circuit starts write-capable implementation work.",
+      why_now: [
+        "The next route can edit the checkout.",
+        `The requested objective is: ${input.context.goal}`,
+        "This is the last low-cost point to correct scope before implementation begins."
+      ],
+      hidden_routine_work: [
+        "Formatting, test execution, and ordinary implementation chores stay inside the Build flow after approval.",
+        "Raw traces and request files are linked as evidence instead of dominating the decision surface."
+      ]
+    },
+    decision: {
+      question: input.context.step.policy.prompt,
+      operator_judgment: "Decide whether this scope, success bar, and proof plan are good enough for Circuit to proceed."
+    },
+    recommendation: {
+      choice_id: recommendedChoice.id,
+      label: recommendedChoice.label,
+      rationale: `${recommendedChoice.label} is recommended because the packet has a bounded scope, explicit success criteria, and a concrete verification plan.`
+    },
+    artifact: {
+      title: "Build brief",
+      preview: `Objective: ${input.context.goal}`,
+      scope: input.template.scope,
+      success_criteria: input.template.success_criteria
+    },
+    proof: {
+      status: "planned",
+      summary: `Circuit will verify the implementation with: ${verificationCommandText}.`,
+      commands: [...input.verificationCommands],
+      evidence: [
+        "Verification is planned before implementation begins; no implementation proof has been collected yet.",
+        "The final Build close report must carry the actual verification and review evidence after resume."
+      ]
+    },
+    risk: {
+      summary: "The meaningful risk is scope mismatch: continuing spends implementation effort on this exact brief.",
+      tradeoffs: [
+        "If the brief is too narrow, the implementation may satisfy tests while missing the operator intent.",
+        "If the brief is too broad, the worker may touch more surface area than this request warrants."
+      ]
+    },
+    choices,
+    internal: {
+      request_path: input.context.step.writes.request,
+      response_path: input.context.responsePath,
+      report_path: input.context.step.writes.report?.path ?? "reports/build/brief.json",
+      raw_evidence: [
+        input.context.step.writes.request,
+        input.context.responsePath,
+        input.context.step.writes.report?.path ?? "reports/build/brief.json"
+      ]
+    }
+  };
+}
 var buildBriefCheckpointBuilder = {
   resultSchemaName: "build.brief@v1",
   build(context) {
@@ -15037,7 +15197,12 @@ var buildBriefCheckpointBuilder = {
         request_path: context.step.writes.request,
         response_path: context.responsePath,
         allowed_choices: checkpointChoiceIds(context.step)
-      }
+      },
+      checkpoint_packet: buildCheckpointPacket({
+        context,
+        template,
+        verificationCommands
+      })
     });
   },
   validateResumeContext(context) {
@@ -30713,6 +30878,195 @@ function verdictBanner(input) {
   </div>`;
 }
 
+// dist/shared/html/build-checkpoint.js
+var BUILD_BRIEF_PATH = "reports/build/brief.json";
+function bulletList(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function renderCommandChips(commands) {
+  return `<div class="evidence">
+          ${commands.map((command) => chip(commandText(command))).join("\n          ")}
+        </div>`;
+}
+function choiceIntent(choiceId, recommendedId) {
+  return choiceId === recommendedId ? "positive" : "neutral";
+}
+function shellSingleQuote(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice(runFolder, choiceId) {
+  return `circuit-next resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
+}
+function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
+  const isRecommended = choice.id === recommendedChoiceId2;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div>
+        <p class="section-label">Executable route</p>
+        <div class="evidence">
+          ${chip(`${choice.route.key} -> ${choice.route.target}`)}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: choiceIntent(choice.id, recommendedChoiceId2),
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function renderArtifactCard(brief, packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.artifact.preview)}</p>
+      <div>
+        <p class="section-label">Scope</p>
+        <p class="summary">${escapeHtml(packet.artifact.scope)}</p>
+      </div>
+      <div>
+        <p class="section-label">Success bar</p>
+        ${bulletList(packet.artifact.success_criteria)}
+      </div>`;
+  return card({
+    intent: "info",
+    eyebrow: packet.artifact.title,
+    title: brief.objective,
+    bodyHtml
+  });
+}
+function renderProofCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.proof.summary)}</p>
+      <div>
+        <p class="section-label">Planned checks</p>
+        ${renderCommandChips(packet.proof.commands)}
+      </div>
+      <div>
+        <p class="section-label">Proof state</p>
+        ${bulletList(packet.proof.evidence)}
+      </div>`;
+  return card({
+    intent: packet.proof.status === "missing" ? "attention" : "neutral",
+    eyebrow: packet.proof.status,
+    title: "Proof",
+    bodyHtml
+  });
+}
+function renderRiskCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.risk.summary)}</p>
+      <div>
+        <p class="section-label">Tradeoffs</p>
+        ${bulletList(packet.risk.tradeoffs)}
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "manager judgment",
+    title: "Risk",
+    bodyHtml
+  });
+}
+function renderSalienceCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.salience.summary)}</p>
+      <div>
+        <p class="section-label">Why now</p>
+        ${bulletList(packet.salience.why_now)}
+      </div>
+      <div>
+        <p class="section-label">Stays internal</p>
+        ${bulletList(packet.salience.hidden_routine_work)}
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "salience",
+    title: "Why this needs you",
+    bodyHtml
+  });
+}
+function filteredChoices(packetChoices, allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return packetChoices.filter((choice) => allowed.has(choice.id));
+}
+function loadBrief(readJsonRunRelative) {
+  const raw = readJsonRunRelative(BUILD_BRIEF_PATH);
+  const parsed = BuildBrief.safeParse(raw);
+  return parsed.success ? parsed.data : void 0;
+}
+var buildCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "build" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint === void 0)
+    return void 0;
+  const brief = loadBrief(ctx.readJsonRunRelative);
+  if (brief === void 0)
+    return void 0;
+  const packet = brief.checkpoint_packet;
+  if (packet === void 0)
+    return void 0;
+  const choices = filteredChoices(packet.choices, ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const resumeCommand = `circuit-next resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Recommended",
+    mainHtml: `<strong>${escapeHtml(packet.recommendation.label)}</strong> &mdash; ${escapeHtml(packet.recommendation.rationale)}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoiceCard(choice, recommendedChoice.id, ctx.runFolder)).join("\n\n");
+  const rawEvidence = [
+    BUILD_BRIEF_PATH,
+    packet.internal.request_path,
+    packet.internal.response_path,
+    ...packet.internal.raw_evidence,
+    ctx.checkpoint.request_path
+  ];
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard(brief, packet)}
+
+${renderSalienceCard(packet)}
+
+${renderRiskCard(packet)}
+
+${renderProofCard(packet)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Decision.</strong> ${escapeHtml(packet.decision.question)}</p>
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${rawEvidence.map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} \xB7 Circuit Build checkpoint`,
+    metaLine: `Build checkpoint \xB7 ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle,
+    bodyHtml,
+    footerLeft: `circuit \xB7 build \xB7 ${ctx.runId}`,
+    footerRight: BUILD_BRIEF_PATH
+  });
+};
+
 // dist/shared/html/explore-tournament.js
 function stringField(report, key) {
   const value = report?.[key];
@@ -30858,6 +31212,7 @@ ${cards}
 
 // dist/shared/html/index.js
 var HTML_PROJECTORS = {
+  build: buildCheckpointProjector,
   explore: exploreTournamentProjector
 };
 
@@ -31422,6 +31777,8 @@ function writeOperatorSummary(input) {
         runFolder: input.runFolder,
         runId: input.runResult.run_id,
         flowId,
+        runOutcome: input.runResult.outcome,
+        ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {},
         flowReport,
         readJsonRunRelative: (relPath) => readJsonIfPresent(input.runFolder, relPath),
         readEvidenceReportById: (reportId) => evidenceReportById(input.runFolder, flowReport, reportId)

@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isAutoOpenPathSafe, shouldSkipAutoOpen } from './auto-open-policy.mjs';
+import { shouldAutoOpenPath } from './auto-open-policy.mjs';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
@@ -307,6 +307,11 @@ function renderCheckpointFromResult(result) {
       renderLine(`- ${choiceLabel(choice)}: ${choice}`);
     }
   }
+  const htmlPath = stringField(result, 'operator_summary_html_path');
+  if (htmlPath !== undefined) {
+    renderLine('');
+    renderLine(`Rich summary: ${htmlPath}`);
+  }
   const runFolder = stringField(result, 'run_folder');
   if (runFolder !== undefined) {
     renderLine('');
@@ -340,8 +345,7 @@ function autoOpenEnv() {
 }
 
 function tryOpenInBrowser(path) {
-  if (shouldSkipAutoOpen(autoOpenEnv())) return;
-  if (!isAutoOpenPathSafe(path, process.platform)) return;
+  if (!shouldAutoOpenPath(path, autoOpenEnv())) return;
   let command;
   let args;
   if (process.platform === 'darwin') {
@@ -411,6 +415,12 @@ function renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks) {
 
   if (outcome === 'checkpoint_waiting') {
     if (!checkpointWasRendered) renderCheckpointFromResult(result);
+    const htmlPath = stringField(result, 'operator_summary_html_path');
+    if (htmlPath !== undefined && existsSync(htmlPath)) tryOpenInBrowser(htmlPath);
+    if (checkpointWasRendered && htmlPath !== undefined) {
+      renderLine('');
+      renderLine(`Rich summary: ${htmlPath}`);
+    }
     const runFolder = stringField(result, 'run_folder');
     if (checkpointWasRendered && runFolder !== undefined) {
       renderLine('');

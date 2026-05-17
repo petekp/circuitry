@@ -637,6 +637,70 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
+  it('present mode surfaces checkpoint HTML and still prints the resume command when auto-open is skipped', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-checkpoint-html-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const runFolder = join(tempDir, 'run');
+      const requestPath = join(runFolder, 'reports/checkpoints/frame-step-request.json');
+      const htmlPath = join(runFolder, 'reports/operator-summary.html');
+      const fakeBin = join(binDir, 'circuit-next');
+      mkdirSync(binDir, { recursive: true });
+      mkdirSync(join(requestPath, '..'), { recursive: true });
+      writeFileSync(requestPath, JSON.stringify({ prompt: 'Confirm the Build brief.' }));
+      writeFileSync(htmlPath, '<!doctype html><body>checkpoint</body>');
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'checkpoint_waiting',
+              run_folder: runFolder,
+              operator_summary_html_path: htmlPath,
+              checkpoint: {
+                step_id: 'frame-step',
+                request_path: requestPath,
+                allowed_choices: ['continue'],
+              },
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          'present',
+          'run',
+          'build',
+          '--goal',
+          'needs checkpoint',
+        ],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: envWithOverride(fakeBin, { CIRCUIT_NO_AUTO_OPEN: '1' }),
+        },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('Confirm the Build brief.');
+      expect(result.stdout).toContain(`Rich summary: ${htmlPath}`);
+      expect(result.stdout).toContain(
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+      );
+      expect(result.stdout).not.toContain('checkpoint_waiting');
+      expect(result.stdout).not.toContain('{"');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('present mode suppresses progress JSONL and prints only a short stderr diagnostic on failure', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-failure-'));
     try {

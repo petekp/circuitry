@@ -282,6 +282,62 @@ function seedBuildRoleReport(runFolder: string, schema: string): void {
           request_path: 'reports/checkpoints/frame-request.json',
           allowed_choices: ['proceed'],
         },
+        checkpoint_packet: {
+          kind: 'build.checkpoint_packet@v1',
+          salience: {
+            summary: 'Confirm the Build brief before implementation starts.',
+            why_now: ['The next route can edit the checkout.'],
+            hidden_routine_work: ['Routine implementation chores stay inside the Build flow.'],
+          },
+          decision: {
+            question: 'Confirm the Build brief before implementation starts.',
+            operator_judgment: 'Decide whether this scope and proof plan should proceed.',
+          },
+          recommendation: {
+            choice_id: 'proceed',
+            label: 'Proceed',
+            rationale: 'The scope is bounded and the verification plan is explicit.',
+          },
+          artifact: {
+            title: 'Build brief',
+            preview: 'Objective: Add a small feature',
+            scope: 'Runtime writer test',
+            success_criteria: ['Build result parses'],
+          },
+          proof: {
+            status: 'planned',
+            summary: 'Circuit will verify with npm run verify.',
+            commands: [
+              {
+                id: 'npm-verify',
+                cwd: '.',
+                argv: ['npm', 'run', 'verify'],
+                timeout_ms: 120_000,
+                max_output_bytes: 200_000,
+                env: {},
+              },
+            ],
+            evidence: ['No implementation proof has been collected before the checkpoint.'],
+          },
+          risk: {
+            summary: 'Scope mismatch is the meaningful risk.',
+            tradeoffs: ['Too narrow misses intent.', 'Too broad touches unrelated files.'],
+          },
+          choices: [
+            {
+              id: 'proceed',
+              label: 'Proceed',
+              description: 'Proceed on the executable Build route.',
+              route: { key: 'proceed', target: 'plan-step' },
+            },
+          ],
+          internal: {
+            request_path: 'reports/checkpoints/frame-request.json',
+            response_path: 'reports/checkpoints/frame-response.json',
+            report_path: 'reports/build/brief.json',
+            raw_evidence: ['reports/build/brief.json', 'reports/checkpoints/frame-request.json'],
+          },
+        },
       }),
     );
     return;

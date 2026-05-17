@@ -10,6 +10,14 @@ export type HtmlProjectorContext = {
   readonly runFolder: string;
   readonly runId: string;
   readonly flowId: string;
+  readonly runOutcome: string;
+  readonly checkpoint?:
+    | {
+        readonly step_id: string;
+        readonly request_path: string;
+        readonly allowed_choices: readonly string[];
+      }
+    | undefined;
   readonly flowReport: JsonObject | undefined;
   readonly readJsonRunRelative: (relPath: string) => JsonObject | undefined;
   readonly readEvidenceReportById: (reportId: string) => JsonObject | undefined;

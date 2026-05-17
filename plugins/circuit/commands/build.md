@@ -90,13 +90,15 @@ metacharacters:
    available; otherwise ask in-thread and resume with the selected option's
    `checkpoint_choice`.
 5. **Parse the CLI's final JSON output.** Always surface `flow_id`, `outcome`,
-   `run_folder`, `trace_entries_observed`, `operator_summary_path`, and
-   `operator_summary_markdown_path`.
+   `run_folder`, `trace_entries_observed`, `operator_summary_path`,
+   `operator_summary_markdown_path`, and `operator_summary_html_path` when
+   present.
 6. **If `outcome === "checkpoint_waiting"`, do not read or claim
-   `result_path`.** Instead surface the waiting checkpoint details:
-   `checkpoint.step_id`, `checkpoint.request_path`,
+   `result_path`.** If `operator_summary_html_path` is present, surface it as
+   the rich checkpoint summary first. Then surface the waiting checkpoint
+   details: `checkpoint.step_id`, `checkpoint.request_path`,
    `checkpoint.allowed_choices`, the `user_input.requested` question/options,
-   and the exact resume command:
+   and the exact resume command as the fallback:
 
    ```bash
    node '<plugin root>/scripts/circuit-next.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl

@@ -15,6 +15,89 @@ const BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
 
 const NonEmptyStringArray = z.array(z.string().min(1)).min(1);
 
+export const BuildCheckpointPacketChoice = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    description: z.string().min(1),
+    route: z
+      .object({
+        key: z.string().min(1),
+        target: z.string().min(1),
+      })
+      .strict(),
+  })
+  .strict();
+export type BuildCheckpointPacketChoice = z.infer<typeof BuildCheckpointPacketChoice>;
+
+export const BuildCheckpointPacket = z
+  .object({
+    kind: z.literal('build.checkpoint_packet@v1'),
+    salience: z
+      .object({
+        summary: z.string().min(1),
+        why_now: NonEmptyStringArray,
+        hidden_routine_work: NonEmptyStringArray,
+      })
+      .strict(),
+    decision: z
+      .object({
+        question: z.string().min(1),
+        operator_judgment: z.string().min(1),
+      })
+      .strict(),
+    recommendation: z
+      .object({
+        choice_id: z.string().min(1),
+        label: z.string().min(1),
+        rationale: z.string().min(1),
+      })
+      .strict(),
+    artifact: z
+      .object({
+        title: z.string().min(1),
+        preview: z.string().min(1),
+        scope: z.string().min(1),
+        success_criteria: NonEmptyStringArray,
+      })
+      .strict(),
+    proof: z
+      .object({
+        status: z.enum(['planned', 'collected', 'missing']),
+        summary: z.string().min(1),
+        commands: z.array(VerificationCommand).min(1),
+        evidence: NonEmptyStringArray,
+      })
+      .strict(),
+    risk: z
+      .object({
+        summary: z.string().min(1),
+        tradeoffs: NonEmptyStringArray,
+      })
+      .strict(),
+    choices: z.array(BuildCheckpointPacketChoice).min(1),
+    internal: z
+      .object({
+        request_path: z.string().min(1),
+        response_path: z.string().min(1),
+        report_path: z.string().min(1),
+        raw_evidence: NonEmptyStringArray,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((packet, ctx) => {
+    const choiceIds = new Set(packet.choices.map((choice) => choice.id));
+    if (!choiceIds.has(packet.recommendation.choice_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recommendation', 'choice_id'],
+        message: 'recommendation.choice_id must reference a declared checkpoint choice',
+      });
+    }
+  });
+export type BuildCheckpointPacket = z.infer<typeof BuildCheckpointPacket>;
+
 const BuildCheckpointPointer = z
   .object({
     request_path: z.string().min(1),
@@ -30,6 +113,7 @@ export const BuildBrief = z
     success_criteria: NonEmptyStringArray,
     verification_command_candidates: z.array(VerificationCommand).min(1),
     checkpoint: BuildCheckpointPointer,
+    checkpoint_packet: BuildCheckpointPacket.optional(),
   })
   .strict();
 export type BuildBrief = z.infer<typeof BuildBrief>;

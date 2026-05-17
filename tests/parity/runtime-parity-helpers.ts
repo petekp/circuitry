@@ -423,6 +423,53 @@ function reportBody(
           response_path: step.writes?.response?.path,
           allowed_choices: step.kind === 'checkpoint' ? [...step.choices] : ['continue'],
         },
+        checkpoint_packet: {
+          kind: 'build.checkpoint_packet@v1',
+          salience: {
+            summary: 'Confirm the Build brief before implementation starts.',
+            why_now: ['The next route can edit the checkout.'],
+            hidden_routine_work: ['Routine implementation chores stay inside the Build flow.'],
+          },
+          decision: {
+            question: 'Confirm the Build brief before implementation starts.',
+            operator_judgment: 'Decide whether this scope and proof plan should proceed.',
+          },
+          recommendation: {
+            choice_id: step.kind === 'checkpoint' ? (step.choices[0] ?? 'continue') : 'continue',
+            label: 'Continue',
+            rationale: 'The scope is bounded and the verification plan is explicit.',
+          },
+          artifact: {
+            title: 'Build brief',
+            preview: `Objective: ${goal}`,
+            scope: 'runtime parity scope',
+            success_criteria: ['The run reaches the close step.'],
+          },
+          proof: {
+            status: 'planned',
+            summary: 'Circuit will verify with the parity command.',
+            commands: [commandSpec],
+            evidence: ['No implementation proof has been collected before the checkpoint.'],
+          },
+          risk: {
+            summary: 'Scope mismatch is the meaningful risk.',
+            tradeoffs: ['Too narrow misses intent.', 'Too broad touches unrelated files.'],
+          },
+          choices: [
+            {
+              id: step.kind === 'checkpoint' ? (step.choices[0] ?? 'continue') : 'continue',
+              label: 'Continue',
+              description: 'Proceed on the executable Build route.',
+              route: { key: 'pass', target: '@complete' },
+            },
+          ],
+          internal: {
+            request_path: step.writes?.request?.path ?? 'reports/checkpoints/request.json',
+            response_path: step.writes?.response?.path ?? 'reports/checkpoints/response.json',
+            report_path: 'reports/build/brief.json',
+            raw_evidence: ['reports/build/brief.json'],
+          },
+        },
       });
     case 'build.plan@v1':
       return BuildPlan.parse({
