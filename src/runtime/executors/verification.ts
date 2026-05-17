@@ -1,12 +1,13 @@
+import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import { findVerificationWriter } from '../../flows/registries/verification-writers/registry.js';
 import {
   ProofPlanBlockedError,
   isProofPlanBlockedError,
   runProofPlanCommand,
 } from '../../shared/proof-plan.js';
+import { recoveryRouteForStep } from '../../shared/recovery-route.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { VerificationStep } from '../manifest/executable-flow.js';
-import { recoveryRouteForExecutableStep, requireRuntimeStep } from '../run/route-compat.js';
 import type { RunContext } from '../run/run-context.js';
 
 function verificationFailureReason(stepId: string, error: unknown): string {
@@ -37,7 +38,7 @@ export async function executeVerification(
       );
     }
     const projectRoot = context.projectRoot;
-    const indexedStep = requireRuntimeStep(context, step, 'verification');
+    const indexedStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'verification');
     const builder = findVerificationWriter(reportSchema);
     if (builder === undefined) {
       throw new Error(`verification step '${step.id}' has unsupported report schema`);
@@ -101,7 +102,7 @@ export async function executeVerification(
     outcome: 'fail',
     reason,
   });
-  const recoveryRoute = recoveryRouteForExecutableStep(step);
+  const recoveryRoute = recoveryRouteForStep(step);
   if (recoveryRoute !== undefined) {
     return { route: recoveryRoute, details: { reason } };
   }

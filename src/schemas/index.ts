@@ -23,7 +23,6 @@ export * from './skill.js';
 export * from './snapshot.js';
 export * from './step.js';
 export * from './verification.js';
-export * from './compiled-flow-compat.js';
 export * from './compiled-flow.js';
 export * from './flow-block-definitions.js';
 export * from './flow-blocks.js';

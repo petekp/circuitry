@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { recoveryRouteForExecutableStep } from '../../src/runtime/run/route-compat.js';
 import { RECOVERY_ROUTE_PRIORITY, recoveryRouteForStep } from '../../src/shared/recovery-route.js';
 
 describe('recovery route selection', () => {
-  it('uses the shared priority order for kept and runtime route selection', () => {
+  it('uses the shared priority order for runtime route selection', () => {
     const step = {
       routes: {
         revise: 'revise-step',
@@ -22,11 +21,6 @@ describe('recovery route selection', () => {
       'escalate',
     ]);
     expect(recoveryRouteForStep(step)).toBe('retry');
-    expect(
-      recoveryRouteForExecutableStep(
-        step as unknown as Parameters<typeof recoveryRouteForExecutableStep>[0],
-      ),
-    ).toBe('retry');
   });
 
   it('honors an allowed-route subset without changing the canonical order', () => {

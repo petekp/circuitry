@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ChangeKind } from './change-kind.js';
-import { normalizeCompiledFlowCompatibility } from './compiled-flow-compat.js';
 import { Depth } from './depth.js';
 import { CompiledFlowId, StepId } from './ids.js';
 import { RUNTIME_SUCCESS_ROUTE } from './route-policy.js';
@@ -333,5 +332,5 @@ const CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
     }
   }
 });
-export const CompiledFlow = z.preprocess(normalizeCompiledFlowCompatibility, CompiledFlowStrict);
+export const CompiledFlow = CompiledFlowStrict;
 export type CompiledFlow = z.infer<typeof CompiledFlow>;

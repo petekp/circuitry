@@ -22,10 +22,11 @@ Use it with:
 
 This document is hand-authored because it explains intent and boundaries.
 Do not hand-maintain current flow inventories here. Current flow facts come from
-`src/flows/<id>/flow.ts`, generated compatibility schematics under
-`src/flows/<id>/schematic.json`, generated compiled outputs under
+`src/flows/<id>/facts.ts`; `src/flows/<id>/flow.ts` binds those facts to routing,
+schemas, writers, and hints. Generated compatibility schematics live under
+`src/flows/<id>/schematic.json`, generated compiled outputs live under
 `generated/flows/<id>/`, and generated release surfaces such as
-`docs/release/parity-matrix.generated.md`.
+`docs/release/parity-matrix.generated.md` are derived.
 
 ## Short Version
 
@@ -52,11 +53,11 @@ Circuit keeps four layers separate.
 | Layer | Meaning | Source |
 | --- | --- | --- |
 | Block | Reusable kind of work. | `src/schemas/flow-block-definitions.ts` |
-| Flow definition step | Flow-specific use of a block. | `src/flows/<id>/flow.ts` |
+| Flow fact step | Flow-specific use of a block. | `src/flows/<id>/facts.ts` |
 | Report schema | Typed fact written or consumed by a step. | `src/flows/<id>/reports.ts` |
 | Route policy | Named outcomes and targets. | schematic routes plus route policy constants |
 
-The block is reusable. The flow step is the flow-specific use of that
+The block is reusable. The flow fact step is the flow-specific use of that
 block.
 
 ## Block Model
@@ -219,10 +220,10 @@ of scope unless the public naming model is explicitly reopened.
 
 ## Adding A Flow
 
-1. Create `src/flows/<id>/flow.ts`.
+1. Create `src/flows/<id>/facts.ts` for the flow facts and `src/flows/<id>/flow.ts` for the adapter.
 2. Define per-flow report schemas in `src/flows/<id>/reports.ts`.
-3. Declare contract aliases in the definition.
-4. Wire definition steps to schemas through `input` and `output`.
+3. Declare contract aliases in the facts.
+4. Wire fact steps to schemas through `inputKey` facts and step `output`.
 5. Add writers and relay hints owned by the flow package.
 6. Add the definition to `flowDefinitions` in `src/flows/catalog.ts`.
 7. Run `npm run build && node scripts/emit-flows.ts` and then `npm run verify`.

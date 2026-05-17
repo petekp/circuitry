@@ -343,7 +343,7 @@ describe('flow catalog completeness', () => {
 
     for (const pkg of flowPackages) {
       expect(generatedSurfaceMap).toContain(
-        `| \`${pkg.id}\` | \`${pkg.visibility ?? 'public'}\` | \`src/flows/${pkg.id}/flow.ts\`<br>generates \`${pkg.paths.schematic}\` |`,
+        `| \`${pkg.id}\` | \`${pkg.visibility ?? 'public'}\` | \`src/flows/${pkg.id}/facts.ts\`<br>\`src/flows/${pkg.id}/flow.ts\`<br>generates \`${pkg.paths.schematic}\` |`,
       );
       if (pkg.paths.command === undefined) continue;
       expect(generatedSurfaceMap).toContain(`\`${pkg.paths.command}\``);

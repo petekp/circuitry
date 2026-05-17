@@ -7,9 +7,9 @@ import {
   findComposeBuilder,
   resolveComposeReadPaths,
 } from '../../flows/registries/compose-writers/registry.js';
+import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { ComposeStep } from '../manifest/executable-flow.js';
-import { requireRuntimeStep } from '../run/route-compat.js';
 import type { RunContext } from '../run/run-context.js';
 
 function readJsonReport(context: RunContext, path: string): unknown {
@@ -35,7 +35,7 @@ async function writeRegisteredComposeReport(
   if (report?.schema === undefined) return false;
 
   const flow = context.packageIndex.flow;
-  const indexedStep = requireRuntimeStep(context, step, 'compose');
+  const indexedStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'compose');
   const composeBuilder = findComposeBuilder(report.schema);
   if (composeBuilder !== undefined) {
     const readPaths = resolveComposeReadPaths(composeBuilder, flow, indexedStep);

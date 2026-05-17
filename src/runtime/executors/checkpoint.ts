@@ -6,10 +6,10 @@
 // resume path, not here.
 import { readFileSync } from 'node:fs';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
+import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { CheckpointStep } from '../manifest/executable-flow.js';
-import { requireRuntimeStep } from '../run/route-compat.js';
 import type { RunContext } from '../run/run-context.js';
 
 type CheckpointResolution =
@@ -97,7 +97,7 @@ export async function executeCheckpoint(
   if (request === undefined || response === undefined) {
     throw new Error(`checkpoint step '${step.id}' requires writes.request and writes.response`);
   }
-  const indexedStep = requireRuntimeStep(context, step, 'checkpoint');
+  const indexedStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'checkpoint');
 
   let checkpointReportSha256: string | undefined;
   const report = step.writes?.report;

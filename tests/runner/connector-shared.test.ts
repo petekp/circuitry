@@ -24,7 +24,7 @@ import { materializeRelay as neutralMaterializeRelay } from '../../src/connector
 import { sha256Hex as neutralSha256Hex } from '../../src/connectors/shared.js';
 import { sha256Hex as sharedSha256Hex } from '../../src/shared/connector-relay.js';
 
-describe('connector shared compatibility wrapper', () => {
+describe('connector shared relay surface', () => {
   it('keeps sha256Hex identical through the shared and neutral paths', () => {
     const payload = 'circuit-next connector relay payload';
 

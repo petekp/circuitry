@@ -262,8 +262,8 @@ function fixVerificationOverride(scenario: ScenarioConfig): ExecutorRegistry['ve
       });
       // Verification step routing: 'pass' when status='pass', 'retry' on fail.
       // Setting overall_status='failed' would normally trigger retry routing
-      // via recoveryRouteForExecutableStep; we mirror that here so the run
-      // reaches the right end state.
+      // through the shared recovery-route policy; we mirror that here so the
+      // run reaches the right end state.
       if (status === 'fail') {
         return { route: 'retry', details: { reason } };
       }

@@ -51,7 +51,7 @@ Checked:
   `src/runtime/manifest/from-compiled-flow.ts`.
 - Runtime execution path: `src/runtime/run/compiled-flow-runner.ts`,
   `src/runtime/run/graph-runner.ts`, `src/runtime/run/run-context.ts`,
-  `src/runtime/run/route-compat.ts`, runtime executors.
+  runtime executors.
 - Flow package path: `src/flows/types.ts`, `src/flows/catalog.ts`,
   `src/flows/catalog-derivations.ts`, package indexes, selected schematics.
 - Operator surface path: `src/runtime/projections/progress.ts`,
@@ -95,7 +95,7 @@ Main locations:
 
 - `src/runtime/run/compiled-flow-runner.ts`
 - `src/runtime/run/run-context.ts`
-- `src/runtime/run/route-compat.ts`
+- runtime executors
 - `src/runtime/manifest/from-compiled-flow.ts`
 - `src/runtime/manifest/validate-executable-flow.ts`
 - `src/schemas/compiled-flow.ts`
@@ -110,8 +110,9 @@ Evidence:
   the graph runner (`src/runtime/run/compiled-flow-runner.ts:80-100`).
 - `RunContext` stores both `flow: ExecutableFlow` and
   `compiledFlow?: CompiledFlow` (`src/runtime/run/run-context.ts:20-22`).
-- `requireCompiledFlow` and `requireCompiledStep` throw unless the production
-  compiled-flow side channel is present (`src/runtime/run/route-compat.ts:6-30`).
+- Runtime executors still read package-index metadata while executing an
+  `ExecutableFlow`, so the broader dual-authority concern remains even without
+  a separate route compatibility wrapper.
 - `fromCompiledFlow` builds an `ExecutableFlow` and validates it
   (`src/runtime/manifest/from-compiled-flow.ts:135-176`).
 - `validateExecutableFlow` repeats graph checks for step ids, stage ids, entry

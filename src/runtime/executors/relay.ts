@@ -5,6 +5,7 @@ import { relayCodex } from '../../connectors/codex.js';
 import { relayCustom } from '../../connectors/custom.js';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
 import { findReportZodSchema, parseReport } from '../../flows/registries/report-schemas.js';
+import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { CompiledFlowId } from '../../schemas/ids.js';
@@ -12,6 +13,7 @@ import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import type { SkillSlot } from '../../schemas/skill.js';
 import { RelayRole } from '../../schemas/step.js';
 import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
+import { recoveryRouteForStep } from '../../shared/recovery-route.js';
 import { deriveResolvedSelection } from '../../shared/relay-selection.js';
 import {
   type CheckEvaluation,
@@ -28,7 +30,6 @@ import {
 } from '../connectors/resolver.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
-import { recoveryRouteForExecutableStep, requireRuntimeStep } from '../run/route-compat.js';
 import type { RunContext } from '../run/run-context.js';
 
 export interface RelayRequest {
@@ -584,13 +585,13 @@ export async function executeRelay(
 }
 
 async function executeProductionRelay(step: RelayStep, context: RunContext): Promise<StepOutcome> {
-  const compiledStep = requireRuntimeStep(context, step, 'relay');
+  const compiledStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'relay');
   const relayAttempt = await executeProductionRelayAttempt({ step, context, compiledStep });
   if (relayAttempt.kind === 'connector_failed') {
     if (Object.hasOwn(step.routes, 'connector-failed')) {
       return { route: 'connector-failed', details: { reason: relayAttempt.reason } };
     }
-    const recoveryRoute = recoveryRouteForExecutableStep(step);
+    const recoveryRoute = recoveryRouteForStep(step);
     if (recoveryRoute !== undefined)
       return { route: recoveryRoute, details: { reason: relayAttempt.reason } };
     throw new Error(relayAttempt.reason);
@@ -600,7 +601,7 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   if (evaluation.kind === 'pass')
     return { route: 'pass', details: { verdict: evaluation.verdict } };
 
-  const recoveryRoute = recoveryRouteForExecutableStep(step);
+  const recoveryRoute = recoveryRouteForStep(step);
   if (recoveryRoute !== undefined)
     return { route: recoveryRoute, details: { reason: evaluation.reason } };
   throw new Error(evaluation.reason);

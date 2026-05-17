@@ -87,15 +87,16 @@ and which review steps fire.
 | **Default** | Plan, act, verify, independent review where the flow includes one. |
 | **Lite** | Skips the review relay where the flow allows it. Use for small, low-risk changes. |
 | **Deep** | More thorough analysis and review. Pauses for input at architecture-class checkpoints. |
-| **Tournament** | Competing proposals with adversarial evaluation. Available on Explore and Review. |
+| **Tournament** | Competing proposals with adversarial evaluation. Available on Explore. |
 | **Autonomous** | Checkpoints auto-resolve to safe defaults. Useful for unattended runs. |
 
 Pass a mode with `--entry-mode <lite|deep|autonomous>` (or `--mode`, the
 shorter alias). Tournament is a depth-level option exposed through
 `--depth tournament` on the flows that support it. Mode availability varies
 by flow; see each flow's `src/flows/<id>/schematic.json` for the
-generated compatibility schematic, or `src/flows/<id>/flow.ts` for the
-authoritative typed definition.
+generated compatibility schematic, `src/flows/<id>/facts.ts` for the
+authoritative flow facts, and `src/flows/<id>/flow.ts` for the adapter that
+binds those facts to routing, schemas, writers, and hints.
 
 Every flow is built from a fixed set of stages: **Frame, Analyze, Plan, Act,
 Verify, Review, Close**. Not every flow runs every stage, but the order

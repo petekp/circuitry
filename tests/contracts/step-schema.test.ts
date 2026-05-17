@@ -1,7 +1,7 @@
 // Step discriminated-union schema — see docs/contracts/step.md.
 
 import { describe, expect, it } from 'vitest';
-import { CompiledFlow, Step } from '../../src/index.js';
+import { Step } from '../../src/index.js';
 import { expectSchemaRejects } from '../helpers/failure-message.js';
 
 describe('Step discriminated union', () => {
@@ -371,66 +371,7 @@ describe('Step discriminated union', () => {
     expect(withTemplate.success).toBe(true);
   });
 
-  it('normalizes old Build checkpoint build_brief templates before compiled-flow parse', () => {
-    const oldBuildBrief = {
-      scope: 'Make the smallest safe change.',
-      success_criteria: ['Verification passes'],
-      verification_command_candidates: [
-        {
-          id: 'verify',
-          cwd: '.',
-          argv: ['node', '--version'],
-          timeout_ms: 1_000,
-          max_output_bytes: 20_000,
-          env: {},
-        },
-      ],
-    };
-    const parsed = CompiledFlow.parse({
-      schema_version: '2',
-      id: 'build',
-      version: '2026-04-18',
-      purpose: 'Build features.',
-      entry: {
-        signals: { include: ['feature'], exclude: ['bug'] },
-        intent_prefixes: ['develop:'],
-      },
-      entry_modes: [
-        { name: 'default', start_at: 'frame', depth: 'standard', description: 'Standard.' },
-      ],
-      stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame'] }],
-      stage_path_policy: {
-        mode: 'partial',
-        omits: ['analyze', 'plan', 'act', 'verify', 'review', 'close'],
-        rationale: 'minimal test fixture isolating the frame stage',
-      },
-      steps: [
-        {
-          ...baseCompose,
-          kind: 'checkpoint',
-          policy: { ...checkpointPolicy(['continue']), build_brief: oldBuildBrief },
-          writes: {
-            request: 'req.json',
-            response: 'resp.json',
-            report: { path: 'reports/build/brief.json', schema: 'build.brief@v1' },
-          },
-          check: {
-            kind: 'checkpoint_selection',
-            source: { kind: 'checkpoint_response', ref: 'response' },
-            allow: ['continue'],
-          },
-        },
-      ],
-    });
-
-    const step = parsed.steps[0];
-    expect(step?.kind).toBe('checkpoint');
-    if (step?.kind !== 'checkpoint') return;
-    expect(step.policy.report_template).toEqual(oldBuildBrief);
-    expect(Object.hasOwn(step.policy, 'build_brief')).toBe(false);
-  });
-
-  it('rejects conflicting old build_brief and new report_template policy fields', () => {
+  it('rejects old build_brief checkpoint policy fields', () => {
     const oldBuildBrief = {
       scope: 'Make the smallest safe change.',
       success_criteria: ['Verification passes'],
@@ -451,7 +392,6 @@ describe('Step discriminated union', () => {
       policy: {
         ...checkpointPolicy(['continue']),
         build_brief: oldBuildBrief,
-        report_template: oldBuildBrief,
       },
       writes: {
         request: 'req.json',

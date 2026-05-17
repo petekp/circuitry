@@ -82,8 +82,9 @@ These must remain true through any migration slice derived from this spec.
   through direct imports of individual flow packages.
 - Connector security policy is not loosened or hidden behind a generic effect
   abstraction.
-- `migrate` and `sweep` keep direct command ownership unless command ownership
-  is reopened explicitly.
+- The retained production flow set stays `review`, `fix`, `pursue`,
+  `runtime-proof`, `build`, and `explore` unless a separate versioned migration
+  reopens it.
 - Semantic writer, validator, relay-hint, and helper code remains source code.
 - Generated compatibility artifacts are regenerated and drift-checked, not
   edited by hand.
@@ -94,9 +95,9 @@ These must remain true through any migration slice derived from this spec.
 
 | Claim | Status | Evidence |
 | --- | --- | --- |
-| Built-in flows are now authored from `src/flows/<id>/flow.ts`. | Confirmed | `src/flows/catalog.ts` imports `buildFlowDefinition`, `exploreFlowDefinition`, `fixFlowDefinition`, `migrateFlowDefinition`, `reviewFlowDefinition`, `runtimeProofFlowDefinition`, and `sweepFlowDefinition`, then compiles `flowDefinitions`. |
-| The current `FlowDefinition` still embeds a schematic-shaped value. | Confirmed | `src/flows/flow-definition.ts` defines `FlowDefinitionInput.schematic` as `z.input<typeof FlowSchematic>` and `defineFlow()` parses it with `FlowSchematic.parse`. |
-| Build is a good first proving flow for authoring compression. | Confirmed | `src/flows/build/flow.ts` contains checkpoint, compose, relay, verification, close, runtime progress, relay hints, writer registration, and the `bindsExecutionDepthToRelaySelection` engine flag. |
+| Retained built-in flows are fact-owned. | Confirmed | `src/flows/catalog.ts` imports `reviewFlowDefinition`, `fixFlowDefinition`, `pursueFlowDefinition`, `runtimeProofFlowDefinition`, `buildFlowDefinition`, and `exploreFlowDefinition`; each flow adapter calls `defineFlowFromFacts()` with `src/flows/<id>/facts.ts`. |
+| The current `FlowDefinition` still embeds a schematic-shaped value after fact projection. | Confirmed | `src/flows/flow-definition.ts` defines `FlowDefinitionInput.schematic` as `z.input<typeof FlowSchematic>` and `defineFlowFromFacts()` projects facts into that value before `defineFlow()` parses it with `FlowSchematic.parse`. |
+| Build is a good proving flow for fact-owned authoring. | Confirmed | `src/flows/build/facts.ts` owns checkpoint, compose, relay, verification, close, runtime progress, and the `bindsExecutionDepthToRelaySelection` engine flag; `src/flows/build/flow.ts` binds those facts to relay hints, schemas, and writers. |
 | Active schematics already fail early on many structural mistakes. | Confirmed | `src/schemas/flow-schematic.ts` validates routes, route overrides, duplicate ids, active required fields, execution/write/check shape, stages, and block-catalog compatibility helpers. |
 | Schematic-to-manifest compilation is mostly pure but throws for expected compile failures. | Confirmed | `src/flows/compile-schematic-to-flow.ts` computes reachability, read paths, per-mode manifests, and throws `FlowSchematicCompileError` through `fail()`. |
 | Registry derivation is already value-oriented, but also throws. | Confirmed | `src/flows/catalog-derivations.ts` builds writer, report, hint, validator, runtime-surface, and routing indexes from packages. Duplicate detection throws. |
@@ -104,7 +105,7 @@ These must remain true through any migration slice derived from this spec.
 | Runtime effects are still concrete classes and functions in the core context. | Confirmed | `src/runtime/run/run-context.ts` threads `RunFileStore`, `TraceStore`, relayer, connector, child-runner, worktree runner, progress reporter, and clock together. |
 | Progress display no longer has to infer every label from prose titles, but it still has fallback heuristics. | Confirmed | `src/runtime/projections/progress.ts` consumes `CompiledFlowProgressSurface`, while `stepDisplay()` falls back to step titles if metadata is absent. Contract tests require public flows to own progress metadata. |
 | Runtime support and progress metadata are package-owned. | Confirmed | `src/flows/runtime-surface.ts` derives a runtime-surface map from `flowPackages`; `src/cli/circuit.ts` reads that metadata for depth support and progress. |
-| Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/emit-flows.ts --check` as the drift check. |
+| Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/facts.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/emit-flows.ts --check` as the drift check. |
 | Connector sharing is intentionally narrow. | Confirmed | `src/connectors/shared.ts` exposes neutral relay/hash types only; `src/connectors/subprocess.ts` owns subprocess lifecycle. `tests/contracts/architecture-boundaries.test.ts` ratchets this boundary. |
 | Verification command execution is behind a shared proof-plan boundary. | Confirmed | `src/runtime/executors/verification.ts` calls `runProofPlanCommand()`; `src/shared/proof-plan.ts` owns cwd checks, script preflight, env allowlist, timeout, and output caps. |
 | Current tests already describe many migration safety gates. | Confirmed | `tests/runner/flow-definition-compiler.test.ts`, `tests/contracts/catalog-completeness.test.ts`, `tests/contracts/flow-schematic.test.ts`, `tests/contracts/runtime-context-boundary.test.ts`, `tests/contracts/architecture-boundaries.test.ts`, `tests/runtime/progress-projection.test.ts`, `tests/unit/proof-plan.test.ts`, and `tests/runner/connector-subprocess.test.ts`. |
@@ -114,8 +115,8 @@ These must remain true through any migration slice derived from this spec.
 
 | Concern | Current Owner | Problem | Target Owner |
 | --- | --- | --- | --- |
-| Flow identity, visibility, paths | `src/flows/<id>/flow.ts` through `defineFlow()` | Paths and visibility are close to the graph, but still package-shaped. | Flow definition metadata value. |
-| Step graph | `FlowDefinitionInput.schematic.items` | Authors still spell low-level schematic fields. | Compact step values that compile to schematic items. |
+| Flow identity, visibility, paths | `src/flows/<id>/facts.ts` projected through `defineFlowFromFacts()` | Paths and visibility are close to the graph, but still package-shaped. | Flow fact metadata value. |
+| Step graph | `src/flows/<id>/facts.ts` projected through `projectSchematicFromFacts()` | Authors still spell low-level schematic fields as facts. | Compact step values that compile to schematic items. |
 | Blocks | `src/schemas/flow-block-definitions.ts`, `docs/flows/block-catalog.json`, `src/schemas/flow-schematic-policy.ts` | Block meaning and execution/stage policy are split. | Typed block definitions own default evidence, legal stages, legal execution kinds, and default checks. |
 | Report schemas | `src/flows/<id>/reports.ts` plus package arrays | Schema values are source, but registration is repeated. | Report declarations bind schema, schema name, path, role, writer, relay hint, and primary-result metadata. |
 | Writers | `src/flows/<id>/writers/*` plus package writer arrays | Semantic code is good; array registration is mechanical. | Writer functions remain code; registration derives from report declarations. |
@@ -622,8 +623,8 @@ source-backed answer.
 - Public-flow progress metadata remains complete; missing metadata is a
   validation failure, not a prose fallback.
 - Public CLI behavior, report schemas, generated host surfaces,
-  engine-to-flow import boundaries, connector security policy, and direct
-  command ownership for `migrate` and `sweep` remain unchanged.
+  engine-to-flow import boundaries, connector security policy, and the retained
+  production flow set remain unchanged.
 
 ## Disqualifiers
 
@@ -646,17 +647,15 @@ Stop the migration design if any of these becomes necessary:
 
 1. Compress Build authoring and prove parity.
 2. Compress Review or Runtime Proof to prove the small-flow path.
-3. Compress Migrate and Sweep to prove direct command ownership, sub-run, and
-   cross-report validation.
-4. Compress Explore to prove tournament/fanout paths.
-5. Compress Fix last to prove the largest flow and preserve semantic helper
+3. Compress Explore to prove tournament/fanout paths.
+4. Compress Fix last to prove the largest flow and preserve semantic helper
    code.
-6. Mark generated schematic compatibility JSON as generated, or stop committing
+5. Mark generated schematic compatibility JSON as generated, or stop committing
    it only after a versioned migration.
-7. Convert compiler expected failures from throws to typed validation values.
-8. Introduce runtime capability interfaces around current concrete stores and
+6. Convert compiler expected failures from throws to typed validation values.
+7. Introduce runtime capability interfaces around current concrete stores and
    subprocess helpers.
-9. Consider Effect only after capability interfaces and compatibility adapters
+8. Consider Effect only after capability interfaces and compatibility adapters
    exist.
 
 ## What This Spec Does Not Do

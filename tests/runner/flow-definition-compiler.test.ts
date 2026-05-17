@@ -7,10 +7,12 @@ import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
 import { compileSchematicToCompiledFlow } from '../../src/flows/compile-schematic-to-flow.js';
 import {
   type FlowDefinition,
+  type FlowFact,
   compileFlowDefinition,
   compileFlowDefinitions,
   defineFlow,
   schematicForFlowDefinition,
+  validateFlowFacts,
 } from '../../src/flows/flow-definition.js';
 import type { ComposeBuilder } from '../../src/flows/registries/compose-writers/types.js';
 import type { CompiledFlowPackage } from '../../src/flows/types.js';
@@ -202,6 +204,89 @@ function minimalDefinition(id: string) {
   });
 }
 
+function minimalFacts(): FlowFact[] {
+  return [
+    {
+      kind: 'flow',
+      flowId: 'fact-test',
+      title: 'Fact test flow',
+      purpose: 'Fact test purpose.',
+      status: 'active',
+      version: '0.1.0',
+      visibility: 'public',
+      startsAt: 'compose-step',
+      stagePathPolicy: {
+        mode: 'partial',
+        omits: ['frame', 'analyze', 'act', 'verify', 'review', 'close'],
+        rationale: 'Only the plan stage is needed for this fact validation test.',
+      },
+    },
+    {
+      kind: 'path',
+      flowId: 'fact-test',
+      pathKind: 'schematic',
+      path: 'src/flows/fact-test/schematic.json',
+    },
+    {
+      kind: 'entry',
+      flowId: 'fact-test',
+      include: ['fact-test'],
+      exclude: [],
+      intentPrefixes: ['fact-test'],
+    },
+    {
+      kind: 'mode',
+      flowId: 'fact-test',
+      name: 'default',
+      depth: 'standard',
+      description: 'Default fact test mode.',
+    },
+    { kind: 'stage', flowId: 'fact-test', stageId: 'plan-stage', canonical: 'plan', title: 'Plan' },
+    {
+      kind: 'step',
+      flowId: 'fact-test',
+      stepId: 'compose-step',
+      title: 'Compose fact report',
+      stage: 'plan',
+      block: 'plan',
+      output: 'plan.strategy@v1',
+      evidenceRequirements: ['ordered steps'],
+      execution: { kind: 'compose' },
+      protocol: 'fact-test-compose@v1',
+      writes: { report_path: 'reports/fact-test/result.json' },
+      check: { required: ['ok'] },
+    },
+    {
+      kind: 'route',
+      flowId: 'fact-test',
+      fromStepId: 'compose-step',
+      outcome: 'continue',
+      to: '@complete',
+    },
+    {
+      kind: 'progress',
+      flowId: 'fact-test',
+      stepId: 'compose-step',
+      taskTitle: 'Compose fact report',
+      activeText: 'Composing fact report',
+    },
+    {
+      kind: 'primary-result',
+      flowId: 'fact-test',
+      schemaName: 'plan.strategy@v1',
+      path: 'reports/fact-test/result.json',
+      label: 'Fact test result',
+    },
+  ];
+}
+
+function expectFactErrors(facts: readonly FlowFact[]) {
+  const result = validateFlowFacts(facts);
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error('expected invalid facts');
+  return result.errors;
+}
+
 describe('FlowDefinition compiler', () => {
   it('projects default package fields and runtime support from entry modes', () => {
     const definition = minimalDefinition('definition-test');
@@ -270,6 +355,63 @@ describe('FlowDefinition compiler', () => {
         },
       }),
     ).toThrow(/is not a schematic item/);
+  });
+
+  it('fails closed when flow facts point at missing or foreign authoring surfaces', () => {
+    expect(
+      expectFactErrors([
+        ...minimalFacts(),
+        {
+          kind: 'progress',
+          flowId: 'other-flow',
+          stepId: 'compose-step',
+          taskTitle: 'Wrong flow',
+          activeText: 'Wrong flow',
+        },
+      ]),
+    ).toContainEqual({
+      kind: 'mixed-flow-fact',
+      expectedFlowId: 'fact-test',
+      actualFlowId: 'other-flow',
+    });
+
+    expect(
+      expectFactErrors([
+        ...minimalFacts(),
+        {
+          kind: 'route',
+          flowId: 'fact-test',
+          fromStepId: 'missing-step',
+          outcome: 'continue',
+          to: '@complete',
+        },
+      ]),
+    ).toContainEqual({ kind: 'unknown-route-source', flowId: 'fact-test', stepId: 'missing-step' });
+
+    expect(
+      expectFactErrors([
+        ...minimalFacts(),
+        {
+          kind: 'input-key',
+          flowId: 'fact-test',
+          stepId: 'missing-step',
+          key: 'brief',
+          schemaName: 'flow.brief@v1',
+        },
+      ]),
+    ).toContainEqual({ kind: 'unknown-input-step', flowId: 'fact-test', stepId: 'missing-step' });
+
+    expect(
+      expectFactErrors([
+        ...minimalFacts(),
+        {
+          kind: 'path',
+          flowId: 'fact-test',
+          pathKind: 'schematic',
+          path: 'src/flows/fact-test/other-schematic.json',
+        },
+      ]),
+    ).toContainEqual({ kind: 'duplicate-path', flowId: 'fact-test', pathKind: 'schematic' });
   });
 
   it('keeps every built-in definition in parity with package and generated manifest surfaces', () => {
