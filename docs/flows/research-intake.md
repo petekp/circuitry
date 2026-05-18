@@ -118,6 +118,13 @@ Treat these as hypotheses to test against the research, not settled doctrine.
 | Connector capability matrix | Claude, Codex, and other hosts should expose their strengths cleanly. | Prior art shows the matrix becomes harder than a smaller shared abstraction. |
 | Custom flows after block stability | Users should author against stable building blocks. | Prior art shows early custom-flow use is the best way to discover blocks. |
 
+## Captured Research Notes
+
+- [Cloudflare Project Glasswing - public confirmation of the harness bet](../learnings/cloudflare-glasswing-harness-confirmation.md)
+  records why Cloudflare's Mythos vulnerability-discovery harness is a public
+  confirmation of Circuit's narrow-block, proof, review, and structured-report
+  direction.
+
 ## Prior-Art Buckets To Compare
 
 ### Durable Flow Engines
