@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="assets/circuit.png" alt="Circuit" width="100%" />
+</p>
+<br />
+
 # circuit
 
 **Structured flows for coding agents.**
