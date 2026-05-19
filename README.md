@@ -3,17 +3,29 @@
 </p>
 <br />
 
-# Circuit
-
 **Flow orchestration for coding agents.**
 
-Circuit gives coding agents a structured path through real work. Give it a
-task, and it chooses or runs the right flow, moves through each step in order,
-checks outputs before continuing, and leaves behind a trace, reports, and
-evidence.
+Circuit gives coding agents repeatable, structured paths for completing complex, multi-step workflows.
 
-Use Circuit when you want a repeatable path for bug fixes, implementation,
-reviews, architecture choices, or a broad goal that needs ordered work.
+Go from this:
+- Prompt the agent with a skill
+- Ask the agent to make a plan
+- Ask the agent to review the plan and update it
+- Ask the agent to execute the plan
+- Ask the agent to review its work using a skill
+- Ask the agent to use another skill for a different part of the code
+- and so on, all the while feeling a sense of unease if the agent drifted or missed any crucial details
+
+To this:
+- `/circuit:run build the thing`
+
+Circuit automates all the tedium and produces sounder results:
+- Chooses the right built-in or custom multi-step flow
+- Moves through each step in sequence
+- Applies your preferred skills at specific steps
+- Uses your preferred model(s) for specific steps
+- Uses the appropriate amount of thinking power for specific steps
+- Checks the outputs of each step before continuing, providing traces, reports, and evidence that the work was complete
 
 ## Current Alpha
 
