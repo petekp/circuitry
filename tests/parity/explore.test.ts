@@ -153,7 +153,7 @@ describe('explore runtime parity', () => {
     },
   );
 
-  it('runs the generated explore tournament fanout through runtime aggregate-only join', async () => {
+  it('runs the generated explore tournament fanout through runtime survivor join', async () => {
     const bytes = await loadTournamentFixture();
     const relayConnector: RelayConnector = {
       async relay(request) {

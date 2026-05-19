@@ -1,5 +1,5 @@
-// Property tests for the three fanout join policies — pick-winner,
-// disjoint-merge, aggregate-only — driven through the pure
+// Property tests for the fanout join policies — pick-winner,
+// disjoint-merge, aggregate-only, aggregate-survivors — driven through the pure
 // `evaluateFanoutJoinPolicy` helper in src/shared/fanout-join-policy.ts.
 //
 // The example-based tests in tests/runtime/fanout.test.ts
@@ -16,6 +16,8 @@
 //                       lists are pairwise disjoint.
 //   aggregate-only    : the join passes iff every branch reached a
 //                       terminal child outcome AND every branch closed
+//                       'complete' with a parseable result body.
+//   aggregate-survivors: the join passes iff at least two branches closed
 //                       'complete' with a parseable result body.
 //
 // Refactor note (2026-04-27): the join logic was extracted from
@@ -357,5 +359,64 @@ describe('evaluateFanoutJoinPolicy — aggregate-only', () => {
 
     expect(acceptedAll, 'no all-clean accept cases').toBeGreaterThan(20);
     expect(rejectedNotParseable, 'no not-parseable reject cases').toBeGreaterThan(20);
+  });
+});
+
+describe('evaluateFanoutJoinPolicy — aggregate-survivors', () => {
+  // Property: pass iff at least two branches closed 'complete' with a
+  // parseable result body. Failed or unparseable siblings do not block
+  // the survivor join as long as two usable strands remain.
+  it('passes iff at least two complete branches have parseable bodies', () => {
+    const rng = mulberry32(0xfa1c05);
+    const stepId = 'fanout-survivors';
+    let acceptedEnoughSurvivors = 0;
+    let rejectedCollapsed = 0;
+
+    for (let i = 0; i < 300; i++) {
+      const forceEnoughSurvivors = nextBool(rng);
+      const branchCount = forceEnoughSurvivors ? 2 + nextInt(rng, 4) : 1 + nextInt(rng, 5);
+      const outcomes: FanoutJoinOutcome[] = [];
+      let parseableSurvivorCount = 0;
+
+      for (let b = 0; b < branchCount; b++) {
+        const branchId = `branch-${b}`;
+        const forcedSurvivor = forceEnoughSurvivors && b < 2;
+        const childOutcome = forcedSurvivor ? 'complete' : pick(rng, CHILD_OUTCOMES);
+        const includeBody = forcedSurvivor || (childOutcome === 'complete' && nextBool(rng));
+        if (includeBody) parseableSurvivorCount += 1;
+        outcomes.push({
+          branch_id: branchId,
+          child_outcome: childOutcome,
+          verdict: includeBody ? 'accept' : 'whatever',
+          admitted: includeBody,
+          ...(includeBody ? { result_body: { verdict: 'accept' } } : {}),
+        });
+      }
+
+      const result = evaluateFanoutJoinPolicy({
+        policy: 'aggregate-survivors',
+        stepId,
+        admitOrder: ['accept'],
+        outcomes,
+      });
+
+      if (parseableSurvivorCount >= 2) {
+        acceptedEnoughSurvivors++;
+        expect(
+          result.joinedSuccessfully,
+          `case ${i}: expected accept with ${parseableSurvivorCount} parseable survivors`,
+        ).toBe(true);
+      } else {
+        rejectedCollapsed++;
+        expect(
+          result.joinedSuccessfully,
+          `case ${i}: expected collapse with ${parseableSurvivorCount} parseable survivors`,
+        ).toBe(false);
+        expect(result.failureReason ?? '').toContain('tournament collapsed:');
+      }
+    }
+
+    expect(acceptedEnoughSurvivors, 'no enough-survivor accept cases').toBeGreaterThan(20);
+    expect(rejectedCollapsed, 'no collapsed reject cases').toBeGreaterThan(20);
   });
 });

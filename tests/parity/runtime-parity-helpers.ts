@@ -623,7 +623,7 @@ function reportBody(
     case 'explore.tournament-aggregate@v1':
       return ExploreTournamentAggregate.parse({
         schema_version: 1,
-        join_policy: 'aggregate-only',
+        join_policy: 'aggregate-survivors',
         branch_count: 2,
         branches: [
           {

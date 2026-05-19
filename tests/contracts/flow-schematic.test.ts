@@ -480,6 +480,78 @@ describe('flow schematic compiler-required metadata', () => {
     };
   }
 
+  function tournamentFanoutItemWith(fanout: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: 'a-fanout',
+      block: 'act',
+      title: 'Fanout',
+      stage: 'act',
+      input: { brief: 'flow.brief@v1' },
+      output: 'change.evidence@v1',
+      evidence_requirements: ['changed files', 'change rationale', 'declared follow-up proof'],
+      execution: { kind: 'fanout' },
+      routes: { continue: '@complete' },
+      protocol: 'demo-fanout@v1',
+      writes: {
+        report_path: 'reports/aggregate.json',
+        branches_dir_path: 'reports/branches',
+      },
+      check: { pass: ['accept'] },
+      fanout,
+    };
+  }
+
+  function activeTournamentSchematic(fanout: Record<string, unknown>): Record<string, unknown> {
+    const frame = frameItemWithExtras({
+      protocol: 'demo-frame@v1',
+      writes: { report_path: 'reports/brief.json' },
+      check: { required: ['scope'] },
+      routes: { continue: 'a-fanout' },
+    });
+    return {
+      ...activeSchematic([frame, tournamentFanoutItemWith(fanout)]),
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: true,
+        supports_autonomous: false,
+        tournament_fan_out_stage: 'act-stage',
+      },
+      stage_path_policy: {
+        mode: 'partial',
+        omits: ['analyze', 'plan', 'verify', 'review', 'close'],
+        rationale: 'demo tournament schematic for fanout policy validation',
+      },
+      stages: [
+        { canonical: 'frame', id: 'frame-stage', title: 'Frame' },
+        { canonical: 'act', id: 'act-stage', title: 'Act' },
+      ],
+    };
+  }
+
+  function validTournamentFanout(): Record<string, unknown> {
+    return {
+      branches: {
+        kind: 'dynamic',
+        source_report: 'reports/options.json',
+        items_path: 'options',
+        template: {
+          branch_id: '$item.id',
+          execution: {
+            kind: 'relay',
+            role: 'researcher',
+            goal: '$item.prompt',
+            report_schema: 'runtime-proof-canonical@v1',
+          },
+        },
+        max_branches: { kind: 'axis', axis: 'tournament_n' },
+        required_count: { kind: 'axis', axis: 'tournament_n' },
+      },
+      concurrency: { kind: 'bounded', max: 2 },
+      on_child_failure: 'continue-others',
+      join: { policy: 'aggregate-survivors' },
+    };
+  }
+
   it('keeps candidate draft schematics parseable without compiler metadata', () => {
     const result = FlowSchematic.safeParse(baseSchematic([frameItemWithExtras({})]));
     expect(result.success).toBe(true);
@@ -724,6 +796,26 @@ describe('flow schematic compiler-required metadata', () => {
       expect(result.error.message).toMatch(
         /tournament_fan_out_stage references unknown stage id: missing-stage/,
       );
+    }
+  });
+
+  it('rejects tournament fanout metadata without continue-others plus aggregate-survivors', () => {
+    for (const invalid of ['abort-all', 'aggregate-only'] as const) {
+      const fanout = validTournamentFanout();
+      if (invalid === 'abort-all') {
+        fanout.on_child_failure = 'abort-all';
+      } else {
+        fanout.join = { policy: 'aggregate-only' };
+      }
+
+      const result = FlowSchematic.safeParse(activeTournamentSchematic(fanout));
+
+      expect(result.success, invalid).toBe(false);
+      if (!result.success) {
+        expect(result.error.message, invalid).toMatch(
+          /tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors/,
+        );
+      }
     }
   });
 

@@ -167,8 +167,9 @@ describe('fromCompiledFlow', () => {
         path: 'reports/tournament-aggregate.json',
         schema: 'explore.tournament-aggregate@v1',
       },
-      on_child_failure: 'abort-all',
+      on_child_failure: 'continue-others',
     });
+    expect(fanout.check).toMatchObject({ join: { policy: 'aggregate-survivors' } });
   });
 
   it('fails validation when an adapted route target is unknown', () => {

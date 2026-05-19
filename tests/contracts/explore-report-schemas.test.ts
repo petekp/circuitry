@@ -345,7 +345,7 @@ describe('explore report schemas', () => {
   it('accepts tournament aggregates with one RubricResult per completed option', () => {
     const aggregate = ExploreTournamentAggregate.parse({
       schema_version: 1,
-      join_policy: 'aggregate-only',
+      join_policy: 'aggregate-survivors',
       branch_count: 1,
       branches: [
         {
@@ -383,7 +383,7 @@ describe('explore report schemas', () => {
     expect(
       ExploreTournamentAggregate.safeParse({
         schema_version: 1,
-        join_policy: 'aggregate-only',
+        join_policy: 'aggregate-survivors',
         branch_count: 1,
         branches: [
           {

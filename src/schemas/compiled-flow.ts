@@ -43,8 +43,15 @@ const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: strin
   ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
 };
 
+const TOURNAMENT_FANOUT_CONTRACT_MESSAGE =
+  'tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors';
+
 const CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
   const stepIds = new Set<string>();
+  const stepById = new Map<
+    string,
+    { readonly step: (typeof wf.steps)[number]; readonly index: number }
+  >();
   for (let i = 0; i < wf.steps.length; i++) {
     const step = wf.steps[i];
     if (step === undefined) continue;
@@ -52,6 +59,7 @@ const CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
       issueAt(ctx, ['steps', i, 'id'], `duplicate step id: ${step.id}`);
     } else {
       stepIds.add(step.id as unknown as string);
+      stepById.set(step.id as unknown as string, { step, index: i });
     }
   }
 
@@ -75,6 +83,31 @@ const CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 
   if (!stepIds.has(wf.starts_at as unknown as string)) {
     issueAt(ctx, ['starts_at'], `starts_at references unknown step: ${wf.starts_at}`);
+  }
+
+  if (wf.axes.supports_tournament && wf.axes.tournament_fan_out_stage !== undefined) {
+    const fanOutStageId = wf.axes.tournament_fan_out_stage as unknown as string;
+    const fanOutStage = wf.stages.find(
+      (stage) => (stage.id as unknown as string) === fanOutStageId,
+    );
+    if (fanOutStage === undefined) {
+      issueAt(
+        ctx,
+        ['axes', 'tournament_fan_out_stage'],
+        `tournament_fan_out_stage references unknown stage id: ${fanOutStageId}`,
+      );
+    } else {
+      for (const stepId of fanOutStage.steps) {
+        const entry = stepById.get(stepId as unknown as string);
+        if (entry === undefined || entry.step.kind !== 'fanout') continue;
+        if (
+          entry.step.on_child_failure !== 'continue-others' ||
+          entry.step.check.join.policy !== 'aggregate-survivors'
+        ) {
+          issueAt(ctx, ['steps', entry.index, 'check', 'join'], TOURNAMENT_FANOUT_CONTRACT_MESSAGE);
+        }
+      }
+    }
   }
 
   for (let i = 0; i < wf.steps.length; i++) {

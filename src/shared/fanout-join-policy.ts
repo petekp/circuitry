@@ -87,12 +87,25 @@ export function evaluateFanoutJoinPolicy(input: FanoutJoinInput): FanoutJoinResu
     return { joinedSuccessfully: true };
   }
 
+  const parseableSurvivors = outcomes.filter(
+    (outcome) => outcome.child_outcome === 'complete' && outcome.result_body !== undefined,
+  );
+
+  if (policy === 'aggregate-survivors') {
+    if (parseableSurvivors.length >= 2) return { joinedSuccessfully: true };
+    const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== undefined);
+    const detail =
+      failedOutcome?.failure_reason === undefined ? '' : ` (${failedOutcome.failure_reason})`;
+    return {
+      joinedSuccessfully: false,
+      failureReason: `tournament collapsed: fanout step '${stepId}' had ${parseableSurvivors.length} parseable survivor(s), need at least 2${detail}`,
+    };
+  }
+
   const allClosed = outcomes.every((outcome) =>
     ['complete', 'aborted', 'handoff', 'stopped', 'escalated'].includes(outcome.child_outcome),
   );
-  const allParseable = outcomes.every(
-    (outcome) => outcome.child_outcome === 'complete' && outcome.result_body !== undefined,
-  );
+  const allParseable = parseableSurvivors.length === outcomes.length;
   if (!allClosed) {
     return {
       joinedSuccessfully: false,

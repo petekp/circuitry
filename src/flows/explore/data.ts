@@ -333,9 +333,9 @@ export const exploreFlowData = {
             kind: 'bounded',
             max: 2,
           },
-          on_child_failure: 'abort-all',
+          on_child_failure: 'continue-others',
           join: {
-            policy: 'aggregate-only',
+            policy: 'aggregate-survivors',
           },
           rubric: {
             model_judgments_path: 'rubric_model_judgments',

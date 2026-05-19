@@ -343,8 +343,13 @@ function fanoutChildOutcome(
 
 function fanoutPolicy(
   value: unknown,
-): 'pick-winner' | 'disjoint-merge' | 'aggregate-only' | undefined {
-  if (value === 'pick-winner' || value === 'disjoint-merge' || value === 'aggregate-only') {
+): 'pick-winner' | 'disjoint-merge' | 'aggregate-only' | 'aggregate-survivors' | undefined {
+  if (
+    value === 'pick-winner' ||
+    value === 'disjoint-merge' ||
+    value === 'aggregate-only' ||
+    value === 'aggregate-survivors'
+  ) {
     return value;
   }
   return undefined;

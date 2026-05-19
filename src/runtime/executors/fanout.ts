@@ -38,7 +38,12 @@ function branchesDir(step: FanoutStep): string {
 
 function joinPolicy(step: FanoutStep): FanoutJoinPolicy {
   const policy = (step.check as { readonly join?: { readonly policy?: unknown } }).join?.policy;
-  if (policy === 'pick-winner' || policy === 'disjoint-merge' || policy === 'aggregate-only') {
+  if (
+    policy === 'pick-winner' ||
+    policy === 'disjoint-merge' ||
+    policy === 'aggregate-only' ||
+    policy === 'aggregate-survivors'
+  ) {
     return policy;
   }
   throw new Error(`fanout step '${step.id}' has unsupported join policy`);

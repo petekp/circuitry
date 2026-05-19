@@ -116,10 +116,11 @@ export type ResultVerdictCheck = z.infer<typeof ResultVerdictCheck>;
 // because the check's pass/fail decision is meaningless without the policy
 // that defines it.
 //
-// pick-winner: tournament shape. Children compete; the runtime selects the
-//   first child whose closed outcome is 'complete' AND whose verdict appears
-//   first in `verdicts.admit` (admit order = preference order). Winning
-//   child's worktree merges into parent's tree; siblings are discarded.
+// pick-winner: child-selection shape. Children compete; the runtime selects
+//   the first child whose closed outcome is 'complete' AND whose verdict
+//   appears first in `verdicts.admit` (admit order = preference order).
+//   Winning child's worktree merges into parent's tree; siblings are
+//   discarded.
 // disjoint-merge: batch shape. ALL children must close 'complete' with an
 //   admitted verdict. Runtime validates per-child worktree changes are
 //   pairwise file-disjoint, then merges all into the parent tree.
@@ -127,6 +128,10 @@ export type ResultVerdictCheck = z.infer<typeof ResultVerdictCheck>;
 //   bodies are gathered into the parent's `aggregate` report for
 //   downstream consumption. Check passes iff every child reached a closed
 //   outcome (any outcome) and produced a parseable result body.
+// aggregate-survivors: Tournament shape. No worktree merge. Children's
+//   result bodies are gathered into the parent's `aggregate` report for
+//   downstream consumption. Check passes iff at least two children reached
+//   'complete' and produced parseable result bodies.
 export const PickWinnerJoin = z
   .object({
     policy: z.literal('pick-winner'),
@@ -148,10 +153,18 @@ export const AggregateOnlyJoin = z
   .strict();
 export type AggregateOnlyJoin = z.infer<typeof AggregateOnlyJoin>;
 
+export const AggregateSurvivorsJoin = z
+  .object({
+    policy: z.literal('aggregate-survivors'),
+  })
+  .strict();
+export type AggregateSurvivorsJoin = z.infer<typeof AggregateSurvivorsJoin>;
+
 export const FanoutJoinPolicy = z.discriminatedUnion('policy', [
   PickWinnerJoin,
   DisjointMergeJoin,
   AggregateOnlyJoin,
+  AggregateSurvivorsJoin,
 ]);
 export type FanoutJoinPolicy = z.infer<typeof FanoutJoinPolicy>;
 

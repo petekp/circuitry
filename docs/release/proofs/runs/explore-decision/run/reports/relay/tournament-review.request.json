@@ -63,12 +63,12 @@ Context (from reads):
 --- reports/tournament-aggregate.json ---
 {
   "schema_version": 1,
-  "join_policy": "aggregate-only",
+  "join_policy": "aggregate-survivors",
   "branch_count": 3,
   "branches": [
     {
       "branch_id": "option-1",
-      "child_run_id": "cdce70b0-08a9-462c-9207-654cc79d6320",
+      "child_run_id": "561c2c94-83d6-41d8-a3b2-770181b19c8e",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,
@@ -178,7 +178,7 @@ Context (from reads):
     },
     {
       "branch_id": "option-2",
-      "child_run_id": "90135b79-d4ac-4451-ac35-88f6929897e6",
+      "child_run_id": "aa69d653-014c-4bce-b2f1-8558c87ba7b0",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,
@@ -288,12 +288,12 @@ Context (from reads):
     },
     {
       "branch_id": "option-3",
-      "child_run_id": "35bc26b7-a763-4ea4-92fa-c338f16c4a65",
+      "child_run_id": "55bb0ae2-84bb-40d9-a21f-f8c205591a61",
       "child_outcome": "complete",
       "verdict": "accept",
       "admitted": true,
       "result_path": "reports/tournament-branches/option-3/report.json",
-      "duration_ms": 2,
+      "duration_ms": 3,
       "result_body": {
         "verdict": "accept",
         "option_id": "option-3",

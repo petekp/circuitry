@@ -21,6 +21,10 @@ function loadTournamentFixture(): { flow: CompiledFlow; bytes: Buffer } {
   return { flow: CompiledFlow.parse(raw), bytes };
 }
 
+function loadTournamentFixtureRaw(): Record<string, unknown> {
+  return JSON.parse(readFileSync(TOURNAMENT_FIXTURE_PATH, 'utf8')) as Record<string, unknown>;
+}
+
 function readJson(runFolder: string, path: string): unknown {
   return JSON.parse(readFileSync(join(runFolder, path), 'utf8'));
 }
@@ -156,6 +160,30 @@ afterEach(() => {
 });
 
 describe('explore tournament runtime', () => {
+  it('rejects tournament fanout fixtures without the survivor failure contract', () => {
+    for (const invalid of ['abort-all', 'aggregate-only'] as const) {
+      const raw = loadTournamentFixtureRaw();
+      const steps = raw.steps as Array<Record<string, unknown>>;
+      const fanout = steps.find((step) => step.id === 'proposal-fanout-step');
+      if (fanout === undefined) throw new Error('proposal-fanout-step missing');
+      if (invalid === 'abort-all') {
+        fanout.on_child_failure = 'abort-all';
+      } else {
+        const check = fanout.check as { join: { policy: string } };
+        check.join.policy = 'aggregate-only';
+      }
+
+      const result = CompiledFlow.safeParse(raw);
+
+      expect(result.success, invalid).toBe(false);
+      if (!result.success) {
+        expect(result.error.message, invalid).toContain(
+          'tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors',
+        );
+      }
+    }
+  });
+
   it('keeps tournament review inside the Decision stage and not as canonical Review', () => {
     const { flow } = loadTournamentFixture();
     expect(flow.stages.map((stage) => stage.canonical)).toEqual([
@@ -383,7 +411,7 @@ describe('explore tournament runtime', () => {
     },
   );
 
-  it('rejects a proposal branch whose report option_id does not match the branch id', async () => {
+  it('rejects a mismatched proposal branch while continuing with two survivors', async () => {
     const { bytes } = loadTournamentFixture();
     const runFolder = join(runFolderBase, 'mismatched-proposal-run');
     const relayer = tournamentRelayer();
@@ -414,11 +442,10 @@ describe('explore tournament runtime', () => {
       },
     });
 
-    expect(outcome.outcome).toBe('aborted');
-    if (isGraphCheckpointWaitingResult(outcome) || outcome.outcome !== 'aborted') {
-      throw new Error('expected aborted');
+    expect(outcome.outcome).toBe('checkpoint_waiting');
+    if (!isGraphCheckpointWaitingResult(outcome)) {
+      throw new Error('expected checkpoint_waiting');
     }
-    expect(outcome.reason).toContain("report field 'option_id' must equal branch_id 'option-1'");
     const traceEntries = await new TraceStore(runFolder).load();
     const failedCheck = traceEntries.find(
       (entry) =>
@@ -429,5 +456,14 @@ describe('explore tournament runtime', () => {
     expect(failedCheck).toMatchObject({
       reason: expect.stringContaining("field 'option_id' must equal branch_id 'option-1'"),
     });
+    expect(traceEntries).toContainEqual(
+      expect.objectContaining({
+        kind: 'fanout.joined',
+        step_id: 'proposal-fanout-step',
+        policy: 'aggregate-survivors',
+        branches_completed: 2,
+        branches_failed: 1,
+      }),
+    );
   });
 });

@@ -210,7 +210,7 @@ export type ExploreTournamentAggregateBranch = z.infer<typeof ExploreTournamentA
 export const ExploreTournamentAggregate = z
   .object({
     schema_version: z.literal(1),
-    join_policy: z.literal('aggregate-only'),
+    join_policy: z.literal('aggregate-survivors'),
     branch_count: z.number().int().positive(),
     branches: z.array(ExploreTournamentAggregateBranch).min(1),
   })

@@ -182,7 +182,7 @@
         "kind": "bounded",
         "max": 2
       },
-      "on_child_failure": "abort-all",
+      "on_child_failure": "continue-others",
       "rubric": {
         "model_judgments_path": "rubric_model_judgments",
         "ordered_dims": [
@@ -244,7 +244,7 @@
           "ref": "aggregate"
         },
         "join": {
-          "policy": "aggregate-only"
+          "policy": "aggregate-survivors"
         },
         "verdicts": {
           "admit": ["accept"]

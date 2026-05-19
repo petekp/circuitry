@@ -55,7 +55,12 @@ function dynamicRelayFanoutFlow(
   options: {
     readonly role?: string;
     readonly selection?: unknown;
-    readonly joinPolicy?: 'aggregate-only' | 'disjoint-merge' | 'pick-winner';
+    readonly joinPolicy?:
+      | 'aggregate-only'
+      | 'aggregate-survivors'
+      | 'disjoint-merge'
+      | 'pick-winner';
+    readonly onChildFailure?: 'abort-all' | 'continue-others';
   } = {},
 ): ExecutableFlow {
   return {
@@ -101,7 +106,7 @@ function dynamicRelayFanoutFlow(
           max_branches: 4,
         },
         concurrency: { kind: 'bounded', max: 2 },
-        onChildFailure: 'abort-all',
+        onChildFailure: options.onChildFailure ?? 'abort-all',
         join: { aggregate: { path: 'reports/aggregate.json' } },
         check: {
           kind: 'fanout_aggregate',
@@ -153,7 +158,7 @@ function compiledRelayFanoutFlow(
     rubric: TEST_FANOUT_RUBRIC,
     writes: {
       branches_dir: 'reports/branches',
-      aggregate: { path: 'reports/aggregate.json', schema: 'explore.tournament-aggregate@v1' },
+      aggregate: { path: 'reports/aggregate.json', schema: 'fanout-aggregate@v1' },
     },
     check: {
       kind: 'fanout_aggregate',
@@ -571,6 +576,154 @@ describe('runtime fanout executor', () => {
     const entries = await trace(runDir);
     expect(entries.filter((entry) => entry.kind === 'fanout.branch_completed')).toHaveLength(2);
     expect(entries.find((entry) => entry.kind === 'fanout.joined')?.branches_completed).toBe(2);
+  });
+
+  it('continues aggregate-survivors fanout when one branch fails and two branches are parseable', async () => {
+    const runDir = join(baseDir, 'dynamic-survivors-one-failure-run');
+    const relayCalls: string[] = [];
+    const relayConnector: RelayConnector = {
+      async relay(request) {
+        relayCalls.push(request.stepId);
+        if (request.stepId.endsWith('option-2')) return 'not-json{{{';
+        const optionId = request.stepId.endsWith('option-1') ? 'option-1' : 'option-3';
+        return {
+          verdict: 'accept',
+          option_id: optionId,
+          option_label: optionId === 'option-1' ? 'Option 1' : 'Option 3',
+          case_summary: request.prompt,
+          assumptions: [],
+          evidence_refs: ['fanout fixture'],
+          risks: [],
+          next_action: 'Continue',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+        };
+      },
+    };
+
+    const result = await executeExecutableFlow(
+      dynamicRelayFanoutFlow({
+        joinPolicy: 'aggregate-survivors',
+        onChildFailure: 'continue-others',
+      }),
+      {
+        runDir,
+        runId: randomUUID(),
+        goal: 'fanout goal',
+        relayConnector,
+        executors: {
+          compose: async (_step, context) => {
+            await context.files.writeJson('reports/options.json', {
+              options: [
+                { id: 'option-1', prompt: 'argue for option one' },
+                { id: 'option-2', prompt: 'argue for option two' },
+                { id: 'option-3', prompt: 'argue for option three' },
+              ],
+            });
+            return { route: 'pass' };
+          },
+        },
+        now: () => new Date('2026-05-03T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.outcome).toBe('complete');
+    expect(relayCalls).toHaveLength(3);
+    const aggregate = JSON.parse(await readFile(join(runDir, 'reports', 'aggregate.json'), 'utf8'));
+    expect(aggregate).toMatchObject({ join_policy: 'aggregate-survivors', branch_count: 3 });
+    expect(aggregate.branches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ branch_id: 'option-1', child_outcome: 'complete' }),
+        expect.objectContaining({ branch_id: 'option-2', child_outcome: 'aborted' }),
+        expect.objectContaining({ branch_id: 'option-3', child_outcome: 'complete' }),
+      ]),
+    );
+    const entries = await trace(runDir);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'fanout.started',
+        step_id: 'fanout',
+        on_child_failure: 'continue-others',
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'fanout.joined',
+        step_id: 'fanout',
+        policy: 'aggregate-survivors',
+        branches_completed: 2,
+        branches_failed: 1,
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'check.evaluated',
+        step_id: 'fanout',
+        outcome: 'pass',
+      }),
+    );
+  });
+
+  it('collapses aggregate-survivors fanout when fewer than two branches are parseable', async () => {
+    const runDir = join(baseDir, 'dynamic-survivors-collapse-run');
+    let relayCalls = 0;
+    const relayConnector: RelayConnector = {
+      async relay(request) {
+        relayCalls += 1;
+        if (!request.stepId.endsWith('option-3')) return 'not-json{{{';
+        return {
+          verdict: 'accept',
+          option_id: 'option-3',
+          option_label: 'Option 3',
+          case_summary: request.prompt,
+          assumptions: [],
+          evidence_refs: ['fanout fixture'],
+          risks: [],
+          next_action: 'Continue',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+        };
+      },
+    };
+
+    const result = await executeExecutableFlow(
+      dynamicRelayFanoutFlow({
+        joinPolicy: 'aggregate-survivors',
+        onChildFailure: 'continue-others',
+      }),
+      {
+        runDir,
+        runId: randomUUID(),
+        goal: 'fanout goal',
+        relayConnector,
+        executors: {
+          compose: async (_step, context) => {
+            await context.files.writeJson('reports/options.json', {
+              options: [
+                { id: 'option-1', prompt: 'argue for option one' },
+                { id: 'option-2', prompt: 'argue for option two' },
+                { id: 'option-3', prompt: 'argue for option three' },
+              ],
+            });
+            return { route: 'pass' };
+          },
+        },
+        now: () => new Date('2026-05-03T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain('tournament collapsed:');
+    expect(relayCalls).toBe(3);
+    const aggregate = JSON.parse(await readFile(join(runDir, 'reports', 'aggregate.json'), 'utf8'));
+    expect(aggregate).toMatchObject({ join_policy: 'aggregate-survivors', branch_count: 3 });
+    const entries = await trace(runDir);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'check.evaluated',
+        step_id: 'fanout',
+        outcome: 'fail',
+        reason: expect.stringContaining('tournament collapsed:'),
+      }),
+    );
   });
 
   it('aborts before fanout start when dynamic branch expansion fails', async () => {

@@ -483,6 +483,9 @@ export const FlowSchematicEntry = z
   .strict();
 export type FlowSchematicEntry = z.infer<typeof FlowSchematicEntry>;
 
+const TOURNAMENT_FANOUT_CONTRACT_MESSAGE =
+  'tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors';
+
 export const FlowSchematic = z
   .object({
     schema_version: z.literal('1'),
@@ -604,14 +607,31 @@ export const FlowSchematic = z
     }
 
     if (schematic.axes?.tournament_fan_out_stage !== undefined && schematic.stages !== undefined) {
-      const stageIds = new Set(schematic.stages.map((stage) => stage.id as unknown as string));
+      const stageById = new Map(
+        schematic.stages.map((stage) => [stage.id as unknown as string, stage]),
+      );
       const fanOutStage = schematic.axes.tournament_fan_out_stage as unknown as string;
-      if (!stageIds.has(fanOutStage)) {
+      const stage = stageById.get(fanOutStage);
+      if (stage === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['axes', 'tournament_fan_out_stage'],
           message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`,
         });
+      } else {
+        for (const [index, item] of schematic.items.entries()) {
+          if (item.stage !== stage.canonical || item.execution.kind !== 'fanout') continue;
+          if (
+            item.fanout?.on_child_failure !== 'continue-others' ||
+            item.fanout.join.policy !== 'aggregate-survivors'
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['items', index, 'fanout'],
+              message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE,
+            });
+          }
+        }
       }
     }
 

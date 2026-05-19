@@ -11672,10 +11672,14 @@ var DisjointMergeJoin = external_exports.object({
 var AggregateOnlyJoin = external_exports.object({
   policy: external_exports.literal("aggregate-only")
 }).strict();
+var AggregateSurvivorsJoin = external_exports.object({
+  policy: external_exports.literal("aggregate-survivors")
+}).strict();
 var FanoutJoinPolicy = external_exports.discriminatedUnion("policy", [
   PickWinnerJoin,
   DisjointMergeJoin,
-  AggregateOnlyJoin
+  AggregateOnlyJoin,
+  AggregateSurvivorsJoin
 ]);
 var FanoutAggregateCheck = external_exports.object({
   kind: external_exports.literal("fanout_aggregate"),
@@ -13471,6 +13475,7 @@ var FlowSchematicEntry = external_exports.object({
   }).strict(),
   intent_prefixes: external_exports.array(external_exports.string()).default([])
 }).strict();
+var TOURNAMENT_FANOUT_CONTRACT_MESSAGE = "tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors";
 var FlowSchematic = external_exports.object({
   schema_version: external_exports.literal("1"),
   id: CompiledFlowId,
@@ -13580,14 +13585,27 @@ var FlowSchematic = external_exports.object({
     }
   }
   if (schematic.axes?.tournament_fan_out_stage !== void 0 && schematic.stages !== void 0) {
-    const stageIds = new Set(schematic.stages.map((stage) => stage.id));
+    const stageById = new Map(schematic.stages.map((stage2) => [stage2.id, stage2]));
     const fanOutStage = schematic.axes.tournament_fan_out_stage;
-    if (!stageIds.has(fanOutStage)) {
+    const stage = stageById.get(fanOutStage);
+    if (stage === void 0) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["axes", "tournament_fan_out_stage"],
         message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`
       });
+    } else {
+      for (const [index, item] of schematic.items.entries()) {
+        if (item.stage !== stage.canonical || item.execution.kind !== "fanout")
+          continue;
+        if (item.fanout?.on_child_failure !== "continue-others" || item.fanout.join.policy !== "aggregate-survivors") {
+          ctx.addIssue({
+            code: external_exports.ZodIssueCode.custom,
+            path: ["items", index, "fanout"],
+            message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE
+          });
+        }
+      }
     }
   }
   if (schematic.stage_path_policy !== void 0 && schematic.stage_path_policy.mode === "partial") {
@@ -15727,7 +15745,7 @@ var ExploreTournamentAggregateBranch = external_exports.object({
 }).strict();
 var ExploreTournamentAggregate = external_exports.object({
   schema_version: external_exports.literal(1),
-  join_policy: external_exports.literal("aggregate-only"),
+  join_policy: external_exports.literal("aggregate-survivors"),
   branch_count: external_exports.number().int().positive(),
   branches: external_exports.array(ExploreTournamentAggregateBranch).min(1)
 }).strict().superRefine((aggregate, ctx) => {
@@ -16574,9 +16592,9 @@ var exploreFlowData = {
             kind: "bounded",
             max: 2
           },
-          on_child_failure: "abort-all",
+          on_child_failure: "continue-others",
           join: {
-            policy: "aggregate-only"
+            policy: "aggregate-survivors"
           },
           rubric: {
             model_judgments_path: "rubric_model_judgments",
@@ -21842,7 +21860,7 @@ var FanoutJoinedTraceEntry = TraceEntryBase.extend({
   // The join policy that ran; mirrors the FanoutAggregateCheck.join.policy
   // field but echoed into the trace_entry so the audit log is self-contained
   // (no need to cross-reference the schematic to interpret outcomes).
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
   // For pick-winner: the selected branch_id. Absent for the other policies.
   selected_branch_id: external_exports.string().min(1).optional(),
   // Path to the runtime-built aggregate report.
@@ -22012,8 +22030,10 @@ var CompiledFlowBody = external_exports.object({
 var issueAt3 = (ctx, path, message) => {
   ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
 };
+var TOURNAMENT_FANOUT_CONTRACT_MESSAGE2 = "tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors";
 var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
   const stepIds = /* @__PURE__ */ new Set();
+  const stepById = /* @__PURE__ */ new Map();
   for (let i = 0; i < wf.steps.length; i++) {
     const step = wf.steps[i];
     if (step === void 0)
@@ -22022,6 +22042,7 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
       issueAt3(ctx, ["steps", i, "id"], `duplicate step id: ${step.id}`);
     } else {
       stepIds.add(step.id);
+      stepById.set(step.id, { step, index: i });
     }
   }
   const stageIds = /* @__PURE__ */ new Set();
@@ -22045,6 +22066,22 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
   }
   if (!stepIds.has(wf.starts_at)) {
     issueAt3(ctx, ["starts_at"], `starts_at references unknown step: ${wf.starts_at}`);
+  }
+  if (wf.axes.supports_tournament && wf.axes.tournament_fan_out_stage !== void 0) {
+    const fanOutStageId = wf.axes.tournament_fan_out_stage;
+    const fanOutStage = wf.stages.find((stage) => stage.id === fanOutStageId);
+    if (fanOutStage === void 0) {
+      issueAt3(ctx, ["axes", "tournament_fan_out_stage"], `tournament_fan_out_stage references unknown stage id: ${fanOutStageId}`);
+    } else {
+      for (const stepId of fanOutStage.steps) {
+        const entry = stepById.get(stepId);
+        if (entry === void 0 || entry.step.kind !== "fanout")
+          continue;
+        if (entry.step.on_child_failure !== "continue-others" || entry.step.check.join.policy !== "aggregate-survivors") {
+          issueAt3(ctx, ["steps", entry.index, "check", "join"], TOURNAMENT_FANOUT_CONTRACT_MESSAGE2);
+        }
+      }
+    }
   }
   for (let i = 0; i < wf.steps.length; i++) {
     const step = wf.steps[i];
@@ -22911,8 +22948,19 @@ function evaluateFanoutJoinPolicy(input) {
     }
     return { joinedSuccessfully: true };
   }
+  const parseableSurvivors = outcomes.filter((outcome) => outcome.child_outcome === "complete" && outcome.result_body !== void 0);
+  if (policy2 === "aggregate-survivors") {
+    if (parseableSurvivors.length >= 2)
+      return { joinedSuccessfully: true };
+    const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== void 0);
+    const detail = failedOutcome?.failure_reason === void 0 ? "" : ` (${failedOutcome.failure_reason})`;
+    return {
+      joinedSuccessfully: false,
+      failureReason: `tournament collapsed: fanout step '${stepId}' had ${parseableSurvivors.length} parseable survivor(s), need at least 2${detail}`
+    };
+  }
   const allClosed = outcomes.every((outcome) => ["complete", "aborted", "handoff", "stopped", "escalated"].includes(outcome.child_outcome));
-  const allParseable = outcomes.every((outcome) => outcome.child_outcome === "complete" && outcome.result_body !== void 0);
+  const allParseable = parseableSurvivors.length === outcomes.length;
   if (!allClosed) {
     return {
       joinedSuccessfully: false,
@@ -22959,7 +23007,7 @@ var FanoutAggregateFixtureBranchShape = external_exports.object({
 }).passthrough();
 var FanoutAggregateFixtureShape = external_exports.object({
   schema_version: external_exports.literal(1),
-  join_policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  join_policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
   branch_count: external_exports.number().int().nonnegative(),
   winner_branch_id: external_exports.string().min(1).optional(),
   branches: external_exports.array(FanoutAggregateFixtureBranchShape)
@@ -26559,7 +26607,7 @@ function branchesDir(step) {
 }
 function joinPolicy(step) {
   const policy2 = step.check.join?.policy;
-  if (policy2 === "pick-winner" || policy2 === "disjoint-merge" || policy2 === "aggregate-only") {
+  if (policy2 === "pick-winner" || policy2 === "disjoint-merge" || policy2 === "aggregate-only" || policy2 === "aggregate-survivors") {
     return policy2;
   }
   throw new Error(`fanout step '${step.id}' has unsupported join policy`);
@@ -27367,7 +27415,7 @@ var FanoutJoinedProgressEvent = ProgressEventBase.extend({
   type: external_exports.literal("fanout.joined"),
   step_id: StepId,
   step_title: external_exports.string().min(1),
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
   aggregate_path: external_exports.string().min(1),
   branches_completed: external_exports.number().int().nonnegative(),
   branches_failed: external_exports.number().int().nonnegative(),
@@ -27754,7 +27802,7 @@ function fanoutChildOutcome(value) {
   return void 0;
 }
 function fanoutPolicy(value) {
-  if (value === "pick-winner" || value === "disjoint-merge" || value === "aggregate-only") {
+  if (value === "pick-winner" || value === "disjoint-merge" || value === "aggregate-only" || value === "aggregate-survivors") {
     return value;
   }
   return void 0;
@@ -28237,7 +28285,7 @@ var FanoutAggregateFixtureBranchShape2 = external_exports.object({
 }).passthrough();
 var FanoutAggregateFixtureShape2 = external_exports.object({
   schema_version: external_exports.literal(1),
-  join_policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only"]),
+  join_policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
   branch_count: external_exports.number().int().nonnegative(),
   winner_branch_id: external_exports.string().min(1).optional(),
   branches: external_exports.array(FanoutAggregateFixtureBranchShape2)
