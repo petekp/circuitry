@@ -154,12 +154,6 @@ export function FlowGlyph({
             key={i}
             transform={`translate(${col * cellSize}, ${row * cellSize})`}
           >
-            <rect
-              width={cellSize}
-              height={cellSize}
-              rx={radius}
-              fill={ghost}
-            />
             <ShapeElement
               shape={shape}
               fill={`url(#${gradId})`}

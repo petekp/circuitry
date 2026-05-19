@@ -17,9 +17,9 @@ const flows: Flow[] = [
     color: "#00B8D4",
     ghost: "#FF6B6B",
     shapes: [
-      "empty", "ht", "empty",
+      "qbr", "ht", "qbl",
       "hl", "dot", "hr",
-      "empty", "hb", "empty",
+      "qtr", "hb", "qtl",
     ],
     summary:
       "Investigate, compare options, and shape a plan before you commit code.",
@@ -30,7 +30,7 @@ const flows: Flow[] = [
     color: "#FF6B1A",
     ghost: "#1AB8FF",
     shapes: [
-      "empty", "outline", "empty",
+      "outline", "outline", "outline",
       "outline", "square", "outline",
       "square", "square", "square",
     ],
@@ -43,9 +43,9 @@ const flows: Flow[] = [
     color: "#E91E63",
     ghost: "#1AFFB8",
     shapes: [
-      "empty", "hb", "empty",
+      "qtl", "hb", "qtr",
       "hr", "square", "hl",
-      "empty", "ht", "empty",
+      "qbl", "ht", "qbr",
     ],
     summary:
       "Reproduce the bug, fix it, and produce a proof the regression is gone.",
@@ -68,9 +68,9 @@ const flows: Flow[] = [
     color: "#7C4DFF",
     ghost: "#FFC107",
     shapes: [
-      "empty", "empty", "tur",
-      "empty", "tur", "empty",
-      "tur", "empty", "empty",
+      "outline", "outline", "tur",
+      "outline", "tur", "outline",
+      "tur", "outline", "outline",
     ],
     summary:
       "Describe a task in plain English. Circuit picks the right flow.",
