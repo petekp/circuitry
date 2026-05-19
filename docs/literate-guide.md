@@ -980,7 +980,7 @@ export const flowPackages: readonly CompiledFlowPackage[] =
 
 Adding a flow is therefore a four-step process: create the folder, author
 `data.ts` and the thin `flow.ts` adapter, add the definition to the catalog,
-run `npm run build && node scripts/emit-flows.ts` to regenerate the
+run `npm run build && node scripts/flows/emit.ts` to regenerate the
 schematic, compiled JSON, and host plugin mirrors. No engine edit. The
 repository's `AGENTS.md` says the rule explicitly: *if you find yourself
 editing engine files to add a flow, the boundary is being violated.*
@@ -1101,12 +1101,12 @@ The Claude Code plugin contains:
   they instruct the model to pick a flow and then invoke the CLI.
 - `skills/<id>/circuit.json` — compiled flow JSON for public flows,
   mirrored from `generated/flows/`.
-- `hooks/session-start.mjs` — a hook that injects a Circuit handoff
+- `hooks/session-start.ts` — a hook that injects a Circuit handoff
   context into the start of a session if a continuity record is present.
 - `.claude-plugin/plugin.json` — the plugin manifest.
 
 The Codex plugin (`plugins/circuit/`) is shaped slightly differently —
-flows live under `flows/<id>/` and are loaded by a `scripts/circuit.mjs`
+flows live under `flows/<id>/` and are loaded by a `scripts/circuit.ts`
 launcher that injects `--flow-root` so Circuit reads the packaged flows
 rather than the operator's checkout.
 

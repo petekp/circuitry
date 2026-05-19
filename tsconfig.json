@@ -24,8 +24,14 @@
     "src/**/*.ts",
     "tests/**/*.ts",
     "scripts/**/*.ts",
-    "scripts/**/*.d.mts",
-    "plugins/claude/scripts/**/*.d.mts"
+    "plugins/claude/scripts/**/*.ts",
+    "plugins/claude/hooks/**/*.ts",
+    "plugins/claude/runtime/**/*.ts",
+    "plugins/circuit/scripts/**/*.ts",
+    "plugins/circuit/hooks/**/*.ts",
+    "plugins/circuit/runtime/**/*.ts",
+    "evals/circuit-vs-vanilla/**/*.ts",
+    "evals/fix-vs-vanilla/*.ts"
   ],
-  "exclude": ["node_modules", "dist", "bootstrap", "evals"]
+  "exclude": ["node_modules", "dist", "bootstrap", "evals/fix-vs-vanilla/tasks", "evals/**/results"]
 }

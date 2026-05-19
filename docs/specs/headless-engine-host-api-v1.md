@@ -324,7 +324,7 @@ Purpose: prove a non-Circuit host can supervise a run.
 Build:
 
 ```bash
-scripts/dev/circuit-watch.mjs <run-folder>
+scripts/dev/circuit-watch.ts <run-folder>
 ```
 
 Behavior:

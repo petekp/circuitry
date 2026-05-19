@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const RUNNER = resolve('evals/circuit-vs-vanilla/run-comparison.mjs');
+const RUNNER = resolve('evals/circuit-vs-vanilla/run-comparison.ts');
 
 let workDir: string;
 

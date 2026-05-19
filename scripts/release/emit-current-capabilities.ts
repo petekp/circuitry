@@ -17,7 +17,7 @@ import {
   readJson,
   stableJson,
   writeOrCheck,
-} from './lib.mjs';
+} from './shared.ts';
 
 type FlowPackage = CatalogModule.CompiledFlowPackage;
 type RouterClassify = (typeof RouterModule)['classifyCompiledFlowTask'];
@@ -660,7 +660,7 @@ function hostRecords(): HostRecord[] {
       evidence: [
         'plugins/claude/.claude-plugin/plugin.json',
         'plugins/claude/commands/run.md',
-        'plugins/claude/scripts/circuit.mjs',
+        'plugins/claude/scripts/circuit.ts',
       ],
       readiness_refs: ['REL-014'],
     },
@@ -668,10 +668,7 @@ function hostRecords(): HostRecord[] {
       id: 'codex-plugin',
       status: fileIsPresent('plugins/circuit/.codex-plugin/plugin.json') ? 'partial' : 'missing',
       summary: 'Codex plugin files exist and are model-mediated until native support lands.',
-      evidence: [
-        'plugins/circuit/.codex-plugin/plugin.json',
-        'plugins/circuit/scripts/circuit.mjs',
-      ],
+      evidence: ['plugins/circuit/.codex-plugin/plugin.json', 'plugins/circuit/scripts/circuit.ts'],
       readiness_refs: ['REL-014'],
     },
     {
@@ -970,8 +967,8 @@ async function main(): Promise<void> {
     ...routerCapabilities(routerIntents),
     ...claudeCommands.map((id) => commandCapability(id, 'claude-code', true)),
     ...['create', 'handoff']
-      .filter((id) => !claudeCommands.includes(id))
-      .map((id) => commandCapability(id, 'claude-code', false)),
+      .filter((id: string) => !claudeCommands.includes(id))
+      .map((id: string) => commandCapability(id, 'claude-code', false)),
     ...connectorCapabilities(connectors),
     ...hostCapabilities(hosts),
     ...supportCapabilities(claudeCommands, proofAxesByCapability, proofs, routerIntents),

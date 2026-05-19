@@ -20,7 +20,7 @@ const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/claude');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const EXPECTED_CLAUDE_COMMANDS = ['build', 'create', 'explore', 'fix', 'handoff', 'review', 'run'];
 const RAW_PROGRESS_INVOCATION =
-  /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.mjs" (?!present\b)[^\n]*--progress jsonl/;
+  /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.ts" (?!present\b)[^\n]*--progress jsonl/;
 
 const PluginManifest = z
   .object({
@@ -77,8 +77,8 @@ describe('Claude Code host plugin package', () => {
     expect(manifest.description).toContain('/circuit:run');
     expect(manifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(true);
-    expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.mjs'))).toBe(true);
-    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'))).toBe(true);
+    expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.ts'))).toBe(true);
+    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts'))).toBe(true);
     expect(existsSync(resolve(REPO_ROOT, 'hooks'))).toBe(false);
     expect(existsSync(resolve(REPO_ROOT, 'commands'))).toBe(false);
   });
@@ -109,7 +109,7 @@ describe('Claude Code host plugin package', () => {
       expect(existsSync(commandPath)).toBe(true);
       const commandMarkdown = readFileSync(commandPath, 'utf8');
 
-      expect(commandMarkdown).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"');
+      expect(commandMarkdown).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts"');
       expect(commandMarkdown).toContain(' present ');
       expect(commandMarkdown).not.toMatch(RAW_PROGRESS_INVOCATION);
       expect(commandMarkdown).not.toContain('Parse the final JSON');
@@ -143,7 +143,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -187,7 +187,7 @@ describe('Claude Code host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -211,16 +211,16 @@ describe('Claude Code host plugin package', () => {
       const tempPluginRoot = join(tempDir, 'plugin');
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
-      const wrapperPath = join(scriptsDir, 'circuit.mjs');
+      const wrapperPath = join(scriptsDir, 'circuit.ts');
       const fakeBin = join(binDir, 'circuit');
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
-      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs')));
-      // The wrapper imports ./auto-open-policy.mjs at top-level — copy it so
+      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts')));
+      // The wrapper imports ./auto-open-policy.ts at top-level — copy it so
       // the fixture script can load.
       writeFileSync(
-        join(scriptsDir, 'auto-open-policy.mjs'),
-        readFileSync(resolve(PLUGIN_ROOT, 'scripts/auto-open-policy.mjs')),
+        join(scriptsDir, 'auto-open-policy.ts'),
+        readFileSync(resolve(PLUGIN_ROOT, 'scripts/auto-open-policy.ts')),
       );
       writeFileSync(
         fakeBin,
@@ -276,7 +276,7 @@ describe('Claude Code host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'run', 'review', '--goal', 'outside repo'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'run', 'review', '--goal', 'outside repo'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -327,13 +327,7 @@ describe('Claude Code host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
-          'run',
-          'explore',
-          '--goal',
-          'stream handling',
-        ],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'run', 'explore', '--goal', 'stream handling'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -382,7 +376,7 @@ describe('Claude Code host plugin package', () => {
       child = spawn(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'explore',
@@ -486,7 +480,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'review',
@@ -548,7 +542,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'explore',
@@ -603,7 +597,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'explore',
@@ -622,7 +616,7 @@ describe('Claude Code host plugin package', () => {
       expect(result.stdout).toContain('Option 1');
       expect(result.stdout).toContain('Option 2');
       expect(result.stdout).toContain(
-        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
       );
       expect(result.stdout).not.toContain('checkpoint_waiting');
       expect(result.stdout).not.toContain('{"');
@@ -668,7 +662,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'build',
@@ -686,7 +680,7 @@ describe('Claude Code host plugin package', () => {
       expect(result.stdout).toContain('Confirm the Build brief.');
       expect(result.stdout).toContain(`Rich summary: ${htmlPath}`);
       expect(result.stdout).toContain(
-        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
       );
       expect(result.stdout).not.toContain('checkpoint_waiting');
       expect(result.stdout).not.toContain('{"');
@@ -719,7 +713,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'present',
           'run',
           'explore',
@@ -764,7 +758,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'handoff',
           'save',
           '--goal',
@@ -807,7 +801,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'doctor'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'doctor'],
         {
           cwd: tempDir,
           encoding: 'utf8',

@@ -15,7 +15,7 @@
       ],
       "default_command": [
         "node",
-        "evals/fix-vs-vanilla/run-fix-comparison.mjs",
+        "evals/fix-vs-vanilla/run-fix-comparison.ts",
         "--set",
         "held-out"
       ],
@@ -55,7 +55,7 @@
       ],
       "default_command": [
         "node",
-        "evals/circuit-vs-vanilla/run-comparison.mjs",
+        "evals/circuit-vs-vanilla/run-comparison.ts",
         "--task-id",
         "review-generated-surface-drift",
         "--prompt-file",

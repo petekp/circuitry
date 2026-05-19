@@ -68,7 +68,7 @@ disabled slash commands, empty settings, and no session persistence.
 
 | Requirement | Current evidence |
 | --- | --- |
-| Strong vanilla baseline | `run-fix-comparison.mjs` gives vanilla a process prompt requiring read-before-edit, failing baseline, focused fix, rerun proof, and final JSON claim. |
+| Strong vanilla baseline | `run-fix-comparison.ts` gives vanilla a process prompt requiring read-before-edit, failing baseline, focused fix, rerun proof, and final JSON claim. |
 | Equal model and tool conditions | `summary.json` records the shared provider/model/effort/timeout; the runner's `claude` wrapper injects the same model and effort for both arms; the Claude connector and vanilla arm use the same permission/MCP/slash/session constraints. |
 | Discovery, regression, and held-out split | `manifest.json` defines `discovery`, `regression`, and `held-out` sets. |
 | Discovery used only for tuning | Earlier discovery runs were used to fix runner/Fix blockers; the claim rule excludes discovery and regression tasks. |

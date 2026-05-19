@@ -105,7 +105,7 @@ These must remain true through any migration slice derived from this spec.
 | Runtime effects are still concrete classes and functions in the core context. | Confirmed | `src/runtime/run/run-context.ts` threads `RunFileStore`, `TraceStore`, relayer, connector, child-runner, worktree runner, progress reporter, and clock together. |
 | Progress display no longer has to infer every label from prose titles, but it still has fallback heuristics. | Confirmed | `src/runtime/projections/progress.ts` consumes `CompiledFlowProgressSurface`, while `stepDisplay()` falls back to step titles if metadata is absent. Contract tests require public flows to own progress metadata. |
 | Runtime support and progress metadata are package-owned. | Confirmed | `src/flows/runtime-surface.ts` derives a runtime-surface map from `flowPackages`; `src/cli/circuit.ts` reads that metadata for depth support and progress. |
-| Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/data.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/emit-flows.ts --check` as the drift check. |
+| Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/data.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/flows/emit.ts --check` as the drift check. |
 | Connector sharing is intentionally narrow. | Confirmed | `src/connectors/shared.ts` exposes neutral relay/hash types only; `src/connectors/subprocess.ts` owns subprocess lifecycle. `tests/contracts/architecture-boundaries.test.ts` ratchets this boundary. |
 | Verification command execution is behind a shared proof-plan boundary. | Confirmed | `src/runtime/executors/verification.ts` calls `runProofPlanCommand()`; `src/shared/proof-plan.ts` owns cwd checks, script preflight, env allowlist, timeout, and output caps. |
 | Current tests already describe many migration safety checks. | Confirmed | `tests/runner/flow-definition-compiler.test.ts`, `tests/contracts/catalog-completeness.test.ts`, `tests/contracts/flow-schematic.test.ts`, `tests/contracts/runtime-context-boundary.test.ts`, `tests/contracts/architecture-boundaries.test.ts`, `tests/runtime/progress-projection.test.ts`, `tests/unit/proof-plan.test.ts`, and `tests/runner/connector-subprocess.test.ts`. |
@@ -588,7 +588,7 @@ Focused verification:
 ```bash
 npm run check
 npm run test:fast -- tests/runner/flow-definition-compiler.test.ts tests/contracts/catalog-completeness.test.ts tests/contracts/flow-schematic.test.ts tests/runtime/progress-projection.test.ts
-node scripts/emit-flows.ts --check
+node scripts/flows/emit.ts --check
 ```
 
 Broaden after the slice:

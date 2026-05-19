@@ -1,6 +1,6 @@
 # Adversarial Review — Planted Defects
 
-Comparison harness: `evals/circuit-vs-vanilla/run-comparison.mjs` with `--provider claude-code --flow review`. Two runs to date: haiku-4.5 low (Run 1) and sonnet-4-6 medium (Run 2).
+Comparison harness: `evals/circuit-vs-vanilla/run-comparison.ts` with `--provider claude-code --flow review`. Two runs to date: haiku-4.5 low (Run 1) and sonnet-4-6 medium (Run 2).
 
 ## Run 1 — claude-haiku-4-5 low effort
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-// @ts-expect-error — .mjs without type declarations
-import { SAFETY_PATTERN, auditText } from '../../scripts/release/audit-marketplace-safe-paths.mjs';
+import { SAFETY_PATTERN, auditText } from '../../scripts/release/audit-marketplace-safe-paths.ts';
 
 interface Finding {
   file: string;

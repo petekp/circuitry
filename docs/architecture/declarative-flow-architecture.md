@@ -43,7 +43,7 @@ Confirmed current source:
   adapters, generated schematic parity, and production flow definitions.
 - `docs/generated-surfaces.md` marks schematic JSON, compiled manifests, host
   mirrors, command mirrors, and Codex skill mirrors as generated surfaces.
-- `node scripts/emit-flows.ts --check` is the generated-surface drift check.
+- `node scripts/flows/emit.ts --check` is the generated-surface drift check.
 
 ## What Landed
 
@@ -148,15 +148,15 @@ npm run lint
 npm run test:fast
 npm run test -- tests/runner/cli-router.test.ts
 npm run check-evals
-node scripts/emit-flows.ts --check
+node scripts/flows/emit.ts --check
 node scripts/release/emit-current-capabilities.ts --check
-node scripts/release/check-parity.mjs
-node scripts/release/check-public-claims.mjs
-node scripts/release/check-proof-coverage.mjs
-node scripts/release/render-parity-matrix.mjs --check
-node scripts/release/render-readiness-report.mjs --check
-node scripts/release/audit-public-docs.mjs
-node scripts/release/audit-marketplace-safe-paths.mjs
+node scripts/release/check-parity.ts
+node scripts/release/check-public-claims.ts
+node scripts/release/check-proof-coverage.ts
+node scripts/release/render-parity-matrix.ts --check
+node scripts/release/render-readiness-report.ts --check
+node scripts/release/audit-public-docs.ts
+node scripts/release/audit-marketplace-safe-paths.ts
 ```
 
 `npm run verify` remains the canonical implementation check before commit. For a

@@ -104,7 +104,7 @@ terminology migration in progress.
 2. Export a tiny `index.ts` compatibility projection if callers need the
    `<id>CompiledFlowPackage` name.
 3. Add the definition to `flowDefinitions` in `src/flows/catalog.ts`.
-3. `npm run build && node scripts/emit-flows.ts` to regenerate
+3. `npm run build && node scripts/flows/emit.ts` to regenerate
    `schematic.json`, command mirrors, and public host flow output.
 4. `npm run verify`.
 

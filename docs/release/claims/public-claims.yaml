@@ -115,7 +115,7 @@ claims:
         - proof:customization
         - proof:doctor-first-run
         - proof:plan-execution
-      script_checks: [scripts/release/check-proof-coverage.mjs]
+      script_checks: [scripts/release/check-proof-coverage.ts]
     user_risk: Circuit will look like a prompt wrapper without durable examples that show the operator system working.
     readiness_refs: [REL-011, REL-023]
   - id: CLAIM-FIRST-RUN-DOCTOR

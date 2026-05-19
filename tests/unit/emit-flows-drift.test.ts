@@ -1,4 +1,4 @@
-// Tests for the stale-sibling guard in scripts/emit-flows.ts.
+// Tests for the stale-sibling guard in scripts/flows/emit.ts.
 //
 // The CLI loader at src/cli/circuit.ts prefers `<mode>.json` over
 // `circuit.json` when an axis selection is requested, so a stale per-selection
@@ -14,7 +14,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const projectRoot = resolve(__dirname, '../..');
-const emitScript = resolve(projectRoot, 'scripts/emit-flows.ts');
+const emitScript = resolve(projectRoot, 'scripts/flows/emit.ts');
 const buildSkillDir = resolve(projectRoot, 'generated/flows/build');
 const stalePath = resolve(buildSkillDir, 'never-a-mode.json');
 const claudeBuildSkillDir = resolve(projectRoot, 'plugins/claude/skills/build');

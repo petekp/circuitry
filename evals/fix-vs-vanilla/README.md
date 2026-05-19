@@ -46,13 +46,13 @@ match `manifest.json`, and held-out tasks must keep `tuning_used: false`.
 Dry-run the held-out measurement plan:
 
 ```bash
-node evals/fix-vs-vanilla/run-fix-comparison.mjs --set held-out --dry-run
+node evals/fix-vs-vanilla/run-fix-comparison.ts --set held-out --dry-run
 ```
 
 Run held-out measurement:
 
 ```bash
-node evals/fix-vs-vanilla/run-fix-comparison.mjs \
+node evals/fix-vs-vanilla/run-fix-comparison.ts \
   --set held-out \
   --provider claude-code \
   --model claude-haiku-4-5-20251001 \
@@ -92,7 +92,7 @@ fix rate, proof quality, diff scope, and wallclock on a named task set.
 The matrix runner is the outer loop:
 
 ```bash
-node scripts/evals/run-fix-matrix.mjs --dry-run
+node scripts/evals/fix-matrix.ts --dry-run
 ```
 
 V1 has one enabled model row, so it proves matrix plumbing only. A matrix-level

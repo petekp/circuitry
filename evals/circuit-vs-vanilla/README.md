@@ -33,7 +33,7 @@ $EDITOR evals/circuit-vs-vanilla/tasks/review-generated-surface-drift/prompt.md
 Run the comparison with a cheap Codex model:
 
 ```bash
-node evals/circuit-vs-vanilla/run-comparison.mjs \
+node evals/circuit-vs-vanilla/run-comparison.ts \
   --task-id review-generated-surface-drift \
   --prompt-file evals/circuit-vs-vanilla/tasks/review-generated-surface-drift/prompt.md \
   --model gpt-5.4-mini \
@@ -43,7 +43,7 @@ node evals/circuit-vs-vanilla/run-comparison.mjs \
 By default, Circuit chooses the flow. To force Explore:
 
 ```bash
-node evals/circuit-vs-vanilla/run-comparison.mjs \
+node evals/circuit-vs-vanilla/run-comparison.ts \
   --task-id review-generated-surface-drift \
   --prompt-file evals/circuit-vs-vanilla/tasks/review-generated-surface-drift/prompt.md \
   --flow explore \

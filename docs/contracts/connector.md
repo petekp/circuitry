@@ -183,7 +183,7 @@ invariant; tested in `tests/contracts/connector-schema.test.ts` and
       echo-reviewer:
         kind: custom
         name: echo-reviewer
-        command: [node, ./scripts/echo-reviewer.mjs]
+        command: [node, ./scripts/echo-reviewer.ts]
         prompt_transport: prompt-file
         output: { kind: output-file }
         capabilities:
@@ -192,7 +192,7 @@ invariant; tested in `tests/contracts/connector-schema.test.ts` and
   ```
 
   ```js
-  // scripts/echo-reviewer.mjs
+  // scripts/echo-reviewer.ts
   import { readFileSync, writeFileSync } from 'node:fs';
 
   const [, , promptFile, outputFile] = process.argv;

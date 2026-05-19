@@ -84,10 +84,10 @@ resume-time validator, and existing checkpoint runtime coverage.
   `src/cli/circuit.ts:877-885`.
 - The Claude wrapper auto-opens HTML for `complete` outcomes, but the
   `checkpoint_waiting` branch currently renders the checkpoint/resume command
-  without opening HTML. See `plugins/claude/scripts/circuit.mjs:387-424`.
+  without opening HTML. See `plugins/claude/scripts/circuit.ts:387-424`.
 - Auto-open safety is centralized in pure policy helpers that reject unsafe
   paths and skip non-interactive environments. See
-  `plugins/claude/scripts/auto-open-policy.mjs:1-46`.
+  `plugins/claude/scripts/auto-open-policy.ts:1-46`.
 - Progress projection already emits `checkpoint.waiting` and
   `user_input.requested` events with a native question shape and resume command.
   See `src/runtime/projections/progress.ts:658-733`.
@@ -232,7 +232,7 @@ Verify:
 
 Implement:
 
-- update `plugins/claude/scripts/circuit.mjs` so
+- update `plugins/claude/scripts/circuit.ts` so
   `checkpoint_waiting` outcomes also safe-open `operator_summary_html_path`
   when present;
 - keep the inline checkpoint/resume command as the fallback and source of truth;
@@ -351,7 +351,7 @@ npm run test -- tests/unit/shared/html/explore-tournament.test.ts
 npm run test -- tests/unit/shared/html/build-checkpoint.test.ts
 npm run test -- tests/unit/auto-open-policy.test.ts
 npm run build
-node scripts/emit-flows.ts --check
+node scripts/flows/emit.ts --check
 npm run verify
 ```
 

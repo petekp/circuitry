@@ -37,31 +37,31 @@ metacharacters:
    Default Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'add a focused feature' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'add a focused feature' --progress jsonl
    ```
 
    Lite Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'make a small change' --rigor lite --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'make a small change' --rigor lite --progress jsonl
    ```
 
    Deep Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'make the focused change' --rigor deep --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Autonomous Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'ship the requested fix' --autonomous --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'ship the requested fix' --autonomous --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'can'\''t ship' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'can'\''t ship' --progress jsonl
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -97,7 +97,7 @@ metacharacters:
    and the exact resume command as the fallback:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 7. **If `outcome === "complete"`, render Circuit's final summary.** Read

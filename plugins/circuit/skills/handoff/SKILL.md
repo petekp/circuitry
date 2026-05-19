@@ -34,7 +34,7 @@ as literal user-controlled text when constructing shell commands.
    current conversation. Then run:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>' --progress jsonl
    ```
 
    If there is an active Circuit run folder that should anchor the handoff, add
@@ -42,19 +42,19 @@ as literal user-controlled text when constructing shell commands.
 4. **Resume mode.** Run:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' handoff resume --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' handoff resume --progress jsonl
    ```
 
 5. **Done mode.** Run:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' handoff done --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' handoff done --progress jsonl
    ```
 
 6. **Brief mode.** Run:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' handoff brief --json
+   node '<plugin root>/scripts/circuit.ts' handoff brief --json
    ```
 
    Use this only as read-only host context. Do not treat it as an explicit
@@ -63,7 +63,7 @@ as literal user-controlled text when constructing shell commands.
    `hooks uninstall --host codex`, or `hooks doctor --host codex`, run:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' handoff <exact hooks request>
+   node '<plugin root>/scripts/circuit.ts' handoff <exact hooks request>
    ```
 
    Render the JSON result. Hook setup is host configuration, not a resume

@@ -35,13 +35,13 @@ metacharacters:
    Example:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run review --goal 'review the latest change' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run review --goal 'review the latest change' --progress jsonl
    ```
 
    Example with an apostrophe:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run review --goal 'can'\''t regress runtime safety' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run review --goal 'can'\''t regress runtime safety' --progress jsonl
    ```
 
 3. **Handle untracked file contents deliberately.** Review collects untracked

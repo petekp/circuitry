@@ -21,7 +21,7 @@ claude --plugin-dir ./plugins/claude
   script.
 - `runtime/circuit.js` — **generated** bundled Circuit runtime. Normal
   installs use this file; no separate `circuit` binary is required.
-- `scripts/circuit.mjs` — plugin-local wrapper that injects this
+- `scripts/circuit.ts` — plugin-local wrapper that injects this
   package's generated flow root before launching the bundled runtime. For
   development only, `CIRCUIT_CLI=/absolute/path/to/bin/circuit`
   overrides the bundle and `CIRCUIT_DEV=1` allows repo-local or `PATH`

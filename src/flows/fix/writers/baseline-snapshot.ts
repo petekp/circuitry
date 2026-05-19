@@ -5,7 +5,7 @@
 // what counts as "before the fix" — anything that becomes dirty between this
 // snapshot and the change-set step is owned by fix-act.
 //
-// One command runs: `node src/flows/fix/writers/git-state.mjs` from the
+// One command runs: `node src/flows/fix/writers/git-state.ts` from the
 // project root. The helper wraps git rev-parse + git status (porcelain v1
 // with -z and --untracked-files=all) + per-dirty-path `git hash-object` +
 // `git ls-files -v` (for assume-unchanged / skip-worktree detection) and
@@ -31,15 +31,15 @@ import { FixBaselineSnapshot } from '../reports.js';
 const GIT_TIMEOUT_MS = 60_000;
 const GIT_MAX_OUTPUT_BYTES = 5_000_000;
 
-// Marketplace-safe by build-pipeline emission: git-state.mjs runs as a
+// Marketplace-safe by build-pipeline emission: git-state.ts runs as a
 // child process, so it has to live as a real file on disk next to the
-// bundled CLI. scripts/build-plugin-runtime.ts emits the helper as a
-// sidecar to every bundle target (plugins/<host>/runtime/git-state.mjs,
-// dist/flows/fix/writers/git-state.mjs) and --check mode fails if any
+// bundled CLI. scripts/plugins/runtime-bundle.ts emits the helper as a
+// sidecar to every bundle target (plugins/<host>/runtime/git-state.ts,
+// dist/flows/fix/writers/git-state.ts) and --check mode fails if any
 // sidecar is missing or drifts from src/. Sibling-of-bundle resolution
 // is correct in every layout because the build pipeline puts a sibling
 // there.
-const GIT_STATE_HELPER_PATH = fileURLToPath(new URL('./git-state.mjs', import.meta.url));
+const GIT_STATE_HELPER_PATH = fileURLToPath(new URL('./git-state.ts', import.meta.url));
 
 // Shape of the helper's stdout JSON. Validated before we trust it to build a
 // FixBaselineSnapshot — a corrupt helper observation should fail fast with a
