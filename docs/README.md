@@ -8,12 +8,13 @@ Start here when you need repo truth without reading every historical note.
 2. `AGENTS.md` - repo operating rules for agents working in this checkout.
 3. `UBIQUITOUS_LANGUAGE.md` - canonical vocabulary for product-facing prose.
 4. `docs/generated-surfaces.md` - generated-file ownership and drift checks.
-5. `docs/architecture/runtime.md` and
+5. `docs/script-inventory.md` - script ownership, inventory, and migration map.
+6. `docs/architecture/runtime.md` and
    `docs/architecture/declarative-flow-architecture.md` - current runtime and
    flow authoring architecture.
-6. `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, and the specific
+7. `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, and the specific
    flow guide you are changing.
-7. `docs/contracts/` - contract details when code, tests, or generated surfaces
+8. `docs/contracts/` - contract details when code, tests, or generated surfaces
    depend on an invariant.
 
 When docs disagree, prefer code, tests, generated surfaces, and release checks
@@ -24,7 +25,7 @@ over dated plans or audits.
 | Class | Paths | Use as |
 | --- | --- | --- |
 | Canonical | `README.md`, `AGENTS.md`, `CLAUDE.md`, `UBIQUITOUS_LANGUAGE.md`, this file | Entry points and vocabulary. `CLAUDE.md` is only a compatibility pointer. |
-| Canonical | `docs/architecture/runtime.md`, `docs/architecture/declarative-flow-architecture.md`, `docs/contracts/**`, `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, `docs/flows/pursue.md`, `docs/flows/explore-tournament.md` | Current architecture, flow authoring, block, flow, and contract guidance. |
+| Canonical | `docs/architecture/runtime.md`, `docs/architecture/declarative-flow-architecture.md`, `docs/contracts/**`, `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, `docs/flows/pursue.md`, `docs/flows/explore-tournament.md`, `docs/script-inventory.md` | Current architecture, flow authoring, block, flow, contract, and script ownership guidance. |
 | Canonical | `docs/first-run.md`, `docs/host-trial-checklist.md`, `docs/positioning-and-strategy.md` | Operator onboarding, host testing, and strategy notes. Check code and release evidence before turning strategy copy into product claims. |
 | Generated/evidence | `docs/generated-surfaces.md`, `docs/flows/block-catalog.json`, `generated/**`, `docs/release/**`, `plugins/**` generated mirrors | Generated truth, release truth, or proof evidence. Do not hand-edit generated mirrors. |
 | Research note | `docs/ideas/**`, `docs/learnings/**`, `docs/flows/research-intake.md`, `docs/flows/cloudflare-glasswing-block-review.md` | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |
