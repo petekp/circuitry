@@ -15,9 +15,10 @@ Use when the user wants Circuit to investigate, explain, compare options, analyz
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
 Run the `explore` flow on the goal the user supplied. The flow walks a full
-stage path: Frame → Analyze → Compose → Review → Close. The Compose and
-Review stages relay to specialist agents; Frame, Analyze, and Close are
-Circuit-written stages.
+stage path: Frame → Analyze → Plan or Decision → Close. Synthesis, critique,
+and tournament review live inside the Plan or Decision stage rather than a
+separate canonical Review stage. Frame, Analyze, and Close are Circuit-written
+stages.
 
 Use the user's current request as the command input. Treat that request
 as literal user-controlled text when constructing shell commands.

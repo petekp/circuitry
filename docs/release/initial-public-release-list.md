@@ -46,6 +46,37 @@ publication.
 | REL-PUB-009 | Add a tiny release-notes page that links the exact proof and check commands used for this alpha. | The release truth exists across generated reports, claims, proofs, and plugin publish output, but there is no single reader-facing release note yet. | Draft release notes after blockers are fixed, with links to proof scenarios and the final command transcript. |
 | REL-PUB-010 | Refresh installed Codex cache after the final release diff, if using a local dogfood install. | `docs/contracts/host-adapter.md` documents `npm run sync:codex-plugin-cache` and `npm run check:codex-plugin-cache`; local caches can drift. | Run the sync/check pair only for local dogfooding. Do not treat it as marketplace publication. |
 
+## Gap-Audit Acceptance Additions
+
+These are the extra proof points from the execution-plan gap review:
+
+- `REL-PUB-001`: split verification into a negative check for retired names
+  (`migrate`, `sweep`) and a positive check for the current commands plus Pursue
+  wording.
+- `REL-PUB-004`: host-trial evidence must include setup evidence from
+  `docs/host-trial-checklist.md`: regenerated host output, Codex cache refresh
+  when Codex local dogfooding is used, Codex doctor from a normal temp repo, and
+  confirmation that `circuit` on `PATH` points at the intended checkout. Smoke
+  scripts may return `pass`, `fail`, or `skip`; skipped prerequisites must be
+  named.
+- `REL-PUB-006`: record the proof-refresh decision. If the release diff only
+  changes manifest or command prose without changing command semantics, flow
+  behavior, progress, summaries, reports, checkpoints, or scenarios, note that
+  proof recapture is not required.
+- `REL-PUB-009`: release notes must use
+  `docs/release/claims/public-claims.yaml` as the public-claim checklist. Any
+  claim they make needs either the listed source/proof backing or explicit
+  non-shipping wording.
+- `REL-PUB-010`: if a local Codex host trial is part of `REL-PUB-004`, run the
+  Codex cache sync/check pair after the final generated diff and before that
+  trial.
+- Final `publish:plugins:check`: inspect the fresh
+  `.circuit/release/plugin-publish-report.json` for `status`, version alignment,
+  and warnings/errors instead of treating command success alone as sufficient.
+  Inspect cache-target evidence from `sync:codex-plugin-cache` or
+  `check:codex-plugin-cache` when local Codex dogfooding is part of the release
+  pass.
+
 ## Intentionally Deferred
 
 | ID | Deferred item | Why it is not in the initial release |
@@ -65,3 +96,6 @@ Before public announcement or marketplace publication:
 3. Re-run `npm run publish:plugins:check`.
 4. If any source command, generated host surface, proof, or release truth file changed, run the focused drift check named by that source owner.
 5. Review final public copy against the intentionally deferred list above.
+6. Review the fresh plugin publish report for status, versions, and
+   warnings/errors; review cache-target evidence when local Codex dogfooding is
+   part of the release pass.
