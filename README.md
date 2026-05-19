@@ -3,7 +3,7 @@
 </p>
 <br />
 
-**Flow orchestration for coding agents.**
+**Powerful, configurable flow orchestration for coding agents.**
 
 Circuit gives coding agents repeatable, structured paths for completing complex, multi-step workflows.
 
