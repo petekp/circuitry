@@ -20,7 +20,7 @@ To this:
 - `/circuit:run build the thing`
 
 Circuit automates all the tedium and produces sounder results:
-- Chooses the right built-in or custom multi-step flow
+- Chooses the right built-in, custom, or dynamically determined multi-step flow
 - Moves through each step in sequence and/or parallelizes non-dependent steps
 - Applies your preferred skills at the appropriate steps
 - Uses your preferred model(s) and thinking power for particular steps
