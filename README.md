@@ -5,7 +5,7 @@
 
 **Powerful, configurable workflow orchestration for coding agents.**
 
-Circuit gives your coding agent tools for completing complex, multi-step workflows.
+Circuit gives your coding agent tools for orchestrating complex, multi-step workflows to produce more consistent and reliable results, with less babysitting.
 
 Go from this:
 - Prompt the agent with a skill
