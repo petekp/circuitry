@@ -19,7 +19,7 @@ metacharacters:
 ## Instructions
 
 1. **Confirm working directory.** The CLI is a repo-local launcher
-   (`./bin/circuit-next`), not a globally installed binary. If the user
+   (`./bin/circuit`), not a globally installed binary. If the user
    invoked this command outside a Circuit repo checkout, tell them so
    and ask them to `cd` into one.
 2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
@@ -35,13 +35,13 @@ metacharacters:
    Example:
 
    ```bash
-   ./bin/circuit-next run review --goal 'review the latest change' --progress jsonl
+   ./bin/circuit run review --goal 'review the latest change' --progress jsonl
    ```
 
    Example with an apostrophe:
 
    ```bash
-   ./bin/circuit-next run review --goal 'can'\''t regress runtime safety' --progress jsonl
+   ./bin/circuit run review --goal 'can'\''t regress runtime safety' --progress jsonl
    ```
 
 3. **Handle untracked file contents deliberately.** Review collects untracked

@@ -133,7 +133,7 @@ function writeSkill(id: string): void {
 }
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-relay-provenance-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-relay-provenance-'));
   homeDir = join(runFolderBase, 'home');
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;
@@ -631,7 +631,7 @@ describe("materializer fails closed when resolved_from.role does not match the r
       duration_ms: 1,
       cli_version: '0',
     };
-    const runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-relay-provenance-throw-'));
+    const runFolder = mkdtempSync(join(tmpdir(), 'circuit-relay-provenance-throw-'));
     try {
       expect(() =>
         materializeRelay({

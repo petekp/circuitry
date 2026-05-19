@@ -28,7 +28,7 @@ const REVIEW_RELAY_BODY = JSON.stringify({
 
 function writeUserConfig(text: string): void {
   const path = userGlobalConfigPath(homeDir);
-  mkdirSync(join(homeDir, '.config', 'circuit-next'), { recursive: true });
+  mkdirSync(join(homeDir, '.config', 'circuit'), { recursive: true });
   writeFileSync(path, text);
 }
 
@@ -65,7 +65,7 @@ function captureStdout(): { restore: () => void; text: () => string } {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'circuit-next-config-loader-'));
+  root = mkdtempSync(join(tmpdir(), 'circuit-config-loader-'));
   homeDir = join(root, 'home');
   cwdDir = join(root, 'cwd');
 });

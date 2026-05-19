@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'flows');
-const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit-next.js');
+const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit.js');
 const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 const CODEX_FEATURES_TIMEOUT_MS = 5_000;
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
@@ -26,7 +26,7 @@ const PLUGIN_ROOT_ENV = 'CIRCUIT_PLUGIN_ROOT';
 const MIN_NODE_VERSION = '22.18.0';
 
 function findLocalLauncher() {
-  const candidate = resolve(process.cwd(), 'bin/circuit-next');
+  const candidate = resolve(process.cwd(), 'bin/circuit');
   if (existsSync(candidate)) return candidate;
   return undefined;
 }
@@ -72,13 +72,13 @@ function runtimeResolution(runtime) {
 }
 
 function resolveRuntimeCommand() {
-  const override = process.env.CIRCUIT_NEXT_CLI;
+  const override = process.env.CIRCUIT_CLI;
   if (override !== undefined && override.length > 0) {
     if (!isAbsolute(override)) {
-      return runtimeResolutionError('CIRCUIT_NEXT_CLI must be an absolute path');
+      return runtimeResolutionError('CIRCUIT_CLI must be an absolute path');
     }
     if (!existsSync(override)) {
-      return runtimeResolutionError(`CIRCUIT_NEXT_CLI does not exist: ${override}`);
+      return runtimeResolutionError(`CIRCUIT_CLI does not exist: ${override}`);
     }
     return runtimeResolution({
       source: 'override',
@@ -97,7 +97,7 @@ function resolveRuntimeCommand() {
     });
   }
 
-  if (process.env.CIRCUIT_NEXT_DEV === '1') {
+  if (process.env.CIRCUIT_DEV === '1') {
     const localLauncher = findLocalLauncher();
     if (localLauncher !== undefined) {
       return runtimeResolution({
@@ -107,7 +107,7 @@ function resolveRuntimeCommand() {
         argsPrefix: [],
       });
     }
-    const pathLauncher = findPathCommand('circuit-next');
+    const pathLauncher = findPathCommand('circuit');
     if (pathLauncher !== undefined) {
       return runtimeResolution({
         source: 'dev-fallback',
@@ -242,7 +242,7 @@ function runDoctor() {
     warningCheck(
       'codex_bundled_handoff_hooks_unregistered',
       manifest?.hooks === undefined,
-      'Codex bundled plugin hooks are not registered in V1; use circuit-next handoff hooks install --host codex',
+      'Codex bundled plugin hooks are not registered in V1; use circuit handoff hooks install --host codex',
     ),
   );
 
@@ -268,7 +268,7 @@ function runDoctor() {
     warningCheck(
       'codex_user_handoff_hook_installed',
       codexUserHandoffHookInstalled(),
-      `Install with: circuit-next handoff hooks install --host codex (checks ${codexUserHooksPath()})`,
+      `Install with: circuit handoff hooks install --host codex (checks ${codexUserHooksPath()})`,
     ),
   );
 
@@ -290,7 +290,7 @@ function runDoctor() {
     );
   }
 
-  const wrapperPath = resolve(scriptDir, 'circuit-next.mjs');
+  const wrapperPath = resolve(scriptDir, 'circuit.mjs');
   checks.push(check('wrapper_exists', existsSync(wrapperPath), wrapperPath));
   checks.push(check('packaged_flow_root_exists', existsSync(packagedFlowRoot), packagedFlowRoot));
   for (const flow of ['build', 'explore', 'fix', 'review']) {
@@ -306,8 +306,8 @@ function runDoctor() {
     checks.push(
       check(
         `command_${name}_uses_wrapper`,
-        text.includes("node '<plugin root>/scripts/circuit-next.mjs'") &&
-          !text.includes('./bin/circuit-next') &&
+        text.includes("node '<plugin root>/scripts/circuit.mjs'") &&
+          !text.includes('./bin/circuit') &&
           text.includes('--progress jsonl') &&
           text.includes('task_list.updated') &&
           text.includes('user_input.requested'),
@@ -635,7 +635,7 @@ const result = spawnSync(runtime.command, runtimeArgs(runtime, forwardedArgs), {
 });
 
 if (result.error) {
-  process.stderr.write(`error: failed to start circuit-next: ${result.error.message}\n`);
+  process.stderr.write(`error: failed to start circuit: ${result.error.message}\n`);
   process.exit(1);
 }
 

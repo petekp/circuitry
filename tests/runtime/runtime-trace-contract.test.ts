@@ -46,7 +46,7 @@ function readTrace(runFolder: string): unknown[] {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-runtime-trace-contract-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-runtime-trace-contract-${randomUUID()}`);
   mkdirSync(runFolderBase, { recursive: true });
 });
 

@@ -3,7 +3,7 @@
 Start with doctor before the first useful run:
 
 ```bash
-node plugins/circuit/scripts/circuit-next.mjs doctor
+node plugins/circuit/scripts/circuit.mjs doctor
 ```
 
 Doctor checks the packaged plugin files, command wrapper, generated flows, and
@@ -14,7 +14,7 @@ packaged runtime and not a local `PATH` binary.
 For the safest first real run, use Review. Review is read-only:
 
 ```bash
-./bin/circuit-next run review --goal 'review this checkout for obvious release blockers'
+./bin/circuit run review --goal 'review this checkout for obvious release blockers'
 ```
 
 Build and Fix may invoke a write-capable Claude Code worker:

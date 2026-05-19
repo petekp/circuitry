@@ -41,7 +41,7 @@ function shellSingleQuote(value: string): string {
 }
 
 function resumeCommandForChoice(runFolder: string, choiceId: string): string {
-  return `circuit-next resume --run-folder ${shellSingleQuote(
+  return `circuit resume --run-folder ${shellSingleQuote(
     runFolder,
   )} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
 }
@@ -171,7 +171,7 @@ export const buildCheckpointProjector: HtmlProjector = (ctx) => {
     choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
   if (recommendedChoice === undefined) return undefined;
 
-  const resumeCommand = `circuit-next resume --run-folder ${shellSingleQuote(
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(
     ctx.runFolder,
   )} --checkpoint-choice '<choice>'`;
   const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;

@@ -27,5 +27,5 @@ and should return typed errors as values. See
 
 The CLI routes supported fresh invocations directly through this runtime.
 Published custom flows carry a manifest entry that maps the custom slug to a
-supported archetype, so the normal `circuit-next run <slug> --flow-root <root>`
+supported archetype, so the normal `circuit run <slug> --flow-root <root>`
 command uses the same foundation as generated flows.

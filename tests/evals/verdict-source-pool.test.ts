@@ -23,7 +23,7 @@ describe('verdict-correctness source pool reporting', () => {
       {
         case: {
           source_run_id: 'run-a',
-          source_request_path: '.circuit-next/runs/run-a/reports/relay/review.request.json',
+          source_request_path: '.circuit/runs/run-a/reports/relay/review.request.json',
           source_subject: 'Explore prompt tuning',
           defect_id: 'control',
           prompt: 'prompt',
@@ -35,7 +35,7 @@ describe('verdict-correctness source pool reporting', () => {
       {
         case: {
           source_run_id: 'run-b',
-          source_request_path: '.circuit-next/runs/run-b/reports/relay/review.request.json',
+          source_request_path: '.circuit/runs/run-b/reports/relay/review.request.json',
           defect_id: 'control',
           prompt: 'prompt',
           mutation_summary: 'old result without source subject',

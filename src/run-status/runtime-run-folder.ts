@@ -1,6 +1,6 @@
 // Runtime run-folder projection.
 //
-// `circuit-next runs show --json` reads saved run folders through this tolerant
+// `circuit runs show --json` reads saved run folders through this tolerant
 // projection. Return a structured invalid status for damaged runtime state when
 // possible, while reserving thrown folder errors for unreadable or missing
 // directories.

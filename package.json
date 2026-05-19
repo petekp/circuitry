@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Claude Code plugin that automates common developer flows with per-step configurability (model, effort, skills), grounded in evidence-based prompting research and contract-first + architecture-first + tiny-step-ratcheting methodology.",
   "bin": {
-    "circuit-next": "./bin/circuit-next"
+    "circuit": "./bin/circuit"
   },
   "engines": {
     "node": ">=22.18.0"
@@ -45,7 +45,7 @@
     "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit",
     "verify": "npm run check && npm run lint && npm run build && npm run test && npm run check-evals && node scripts/emit-flows.ts --check && npm run check-plugin-runtime && npm run check-release-infra",
     "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && npm run check-evals && node scripts/emit-flows.ts --check && npm run check-plugin-runtime",
-    "circuit:run": "./bin/circuit-next"
+    "circuit:run": "./bin/circuit"
   },
   "dependencies": {
     "yaml": "^2.8.3",

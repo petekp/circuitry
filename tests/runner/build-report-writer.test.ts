@@ -455,7 +455,7 @@ function seedThenDefaultWriter(
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-build-reports-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-build-reports-${randomUUID()}`);
   mkdirSync(runFolderBase, { recursive: true });
 });
 

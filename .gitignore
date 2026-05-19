@@ -13,7 +13,6 @@
 coverage/
 .vitest-cache/
 .turbo/
-.circuit-next/
 .claude/projects/
 .claude/worktrees/
 # Runtime lock from the Claude Code harness (sessionId/pid/acquiredAt). Not

@@ -95,7 +95,7 @@ async function runConnectorIdentityCase(input: {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-connector-identity-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-connector-identity-'));
 });
 
 afterEach(() => {

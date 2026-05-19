@@ -208,7 +208,7 @@ ${task.allowed_changed_files.map((file) => `- ${file}`).join('\n')}`;
 function vanillaPrompt(task) {
   return `You are the vanilla coding-agent arm in a fair Circuit Fix benchmark.
 
-Use the same repo and tools as the Circuit arm, but do not invoke Circuit, /circuit commands, bin/circuit-next, or any Circuit runtime.
+Use the same repo and tools as the Circuit arm, but do not invoke Circuit, /circuit commands, bin/circuit, or any Circuit runtime.
 
 Strong process:
 1. Inspect the relevant files before editing.
@@ -313,7 +313,7 @@ async function runTask({ task, args, wrapper, resultRoot }) {
   const baselineVanilla = runChecks(vanillaRepo, task.checks, vanillaDir, 'baseline');
 
   const circuitArgs = [
-    resolve(REPO_ROOT, 'bin/circuit-next'),
+    resolve(REPO_ROOT, 'bin/circuit'),
     'run',
     'fix',
     '--goal',
@@ -483,7 +483,7 @@ async function main() {
     task_ids: taskIds,
     dry_run: args.dryRun,
     commands: {
-      circuit: ['node', '<repo>/bin/circuit-next', 'run', 'fix', ...circuitModeArgs(args.circuitMode)],
+      circuit: ['node', '<repo>/bin/circuit', 'run', 'fix', ...circuitModeArgs(args.circuitMode)],
       vanilla: ['claude', ...vanillaClaudeArgs('<strong vanilla prompt>')],
     },
   };

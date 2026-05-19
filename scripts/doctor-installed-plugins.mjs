@@ -24,8 +24,8 @@ function noAmbientCliEnv(extra = {}) {
   return {
     ...process.env,
     PATH: noAmbientCliPath(),
-    CIRCUIT_NEXT_CLI: undefined,
-    CIRCUIT_NEXT_DEV: undefined,
+    CIRCUIT_CLI: undefined,
+    CIRCUIT_DEV: undefined,
     ...extra,
   };
 }
@@ -204,7 +204,7 @@ function codexHookSummary(codexHome) {
 
 function pluginStatus(sourceRoot, installedRoot, env) {
   const packageTree = packageTreeStatus(sourceRoot, installedRoot);
-  const doctor = runDoctor(resolve(installedRoot, 'scripts/circuit-next.mjs'), env);
+  const doctor = runDoctor(resolve(installedRoot, 'scripts/circuit.mjs'), env);
   return {
     installed_root: installedRoot,
     package_tree: packageTree,
@@ -224,11 +224,7 @@ try {
   const home = process.env.HOME ?? homedir();
   const codexHome = process.env.CODEX_HOME ?? resolve(home, '.codex');
   const claudeInstalledRoot = resolve(home, '.claude/plugins/cache/circuit/circuit', version);
-  const codexInstalledRoot = resolve(
-    codexHome,
-    'plugins/cache/circuit-next-local/circuit',
-    version,
-  );
+  const codexInstalledRoot = resolve(codexHome, 'plugins/cache/circuit-local/circuit', version);
   const claude = pluginStatus(resolve(repoRoot, 'plugins/claude'), claudeInstalledRoot, {
     HOME: home,
   });

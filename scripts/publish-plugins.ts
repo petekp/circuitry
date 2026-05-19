@@ -141,8 +141,8 @@ function noAmbientCliPath(): string {
 function noAmbientCliEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return {
     PATH: noAmbientCliPath(),
-    CIRCUIT_NEXT_CLI: undefined,
-    CIRCUIT_NEXT_DEV: undefined,
+    CIRCUIT_CLI: undefined,
+    CIRCUIT_DEV: undefined,
     ...extra,
   };
 }
@@ -392,7 +392,7 @@ export function runPublish(
   }
 
   function defaultCodexCacheTarget(): string {
-    return resolve(codexHome, 'plugins/cache/circuit-next-local/circuit', report.versions.source);
+    return resolve(codexHome, 'plugins/cache/circuit-local/circuit', report.versions.source);
   }
 
   function claudeUserEnv(): NodeJS.ProcessEnv | undefined {
@@ -637,13 +637,13 @@ export function runPublish(
       runCommand('claude_validate_plugin', ['claude', 'plugin', 'validate', 'plugins/claude']);
       const claudeDoctor = runCommand(
         'claude_doctor',
-        [process.execPath, 'plugins/claude/scripts/circuit-next.mjs', 'doctor'],
+        [process.execPath, 'plugins/claude/scripts/circuit.mjs', 'doctor'],
         { env: noAmbientCliEnv() },
       );
       assertBundledDoctor('claude_doctor', claudeDoctor);
       const codexDoctor = runCommand(
         'codex_doctor',
-        [process.execPath, 'plugins/circuit/scripts/circuit-next.mjs', 'doctor'],
+        [process.execPath, 'plugins/circuit/scripts/circuit.mjs', 'doctor'],
         { env: noAmbientCliEnv() },
       );
       assertBundledDoctor('codex_doctor', codexDoctor);
@@ -680,7 +680,7 @@ export function runPublish(
     );
     const installedDoctor = runCommand(
       'claude_install_smoke_doctor',
-      [process.execPath, resolve(installedPluginRoot, 'scripts/circuit-next.mjs'), 'doctor'],
+      [process.execPath, resolve(installedPluginRoot, 'scripts/circuit.mjs'), 'doctor'],
       {
         cwd: claudeSmokeProject,
         env: noAmbientCliEnv({
@@ -749,7 +749,7 @@ export function runPublish(
     const codexSourceRoot = resolve(repoRoot, 'plugins/circuit');
     const claudeSourceRoot = resolve(repoRoot, 'plugins/claude');
     const codexTarget = defaultCodexCacheTarget();
-    const codexLauncher = resolve(codexTarget, 'scripts/circuit-next.mjs');
+    const codexLauncher = resolve(codexTarget, 'scripts/circuit.mjs');
     const claudeEnv = claudeUserEnv();
     const codexEnv = codexUserEnv();
 
@@ -844,7 +844,7 @@ export function runPublish(
 
     const claudeInstalledDoctor = runCommand(
       'claude_installed_doctor',
-      [process.execPath, resolve(claudeRoot, 'scripts/circuit-next.mjs'), 'doctor'],
+      [process.execPath, resolve(claudeRoot, 'scripts/circuit.mjs'), 'doctor'],
       {
         env: noAmbientCliEnv({
           HOME: home,
@@ -873,7 +873,7 @@ export function runPublish(
 
     const codexInstalledDoctor = runCommand(
       'codex_installed_doctor',
-      [process.execPath, resolve(checkedTarget, 'scripts/circuit-next.mjs'), 'doctor'],
+      [process.execPath, resolve(checkedTarget, 'scripts/circuit.mjs'), 'doctor'],
       {
         env: noAmbientCliEnv({
           CODEX_HOME: codexHome,
@@ -883,7 +883,7 @@ export function runPublish(
     assertBundledDoctor('codex_installed_doctor', codexInstalledDoctor);
 
     if (args.installCodexHook) {
-      const launcher = resolve(checkedTarget, 'scripts/circuit-next.mjs');
+      const launcher = resolve(checkedTarget, 'scripts/circuit.mjs');
       runCommand(
         'codex_handoff_hook_install',
         [
@@ -963,7 +963,7 @@ export function runPublish(
     if (claudeSmokeProject !== undefined) {
       rmSync(claudeSmokeProject, { recursive: true, force: true });
     }
-    writeJson(resolve(repoRoot, '.circuit-next/release/plugin-publish-report.json'), report);
+    writeJson(resolve(repoRoot, '.circuit/release/plugin-publish-report.json'), report);
   }
 
   return report;
@@ -981,7 +981,7 @@ function printHumanSummary(report: PublishReport): void {
     for (const error of report.errors) console.log(`- ${error}`);
   }
   console.log(
-    `\nReport: ${resolve(report.repo_root, '.circuit-next/release/plugin-publish-report.json')}`,
+    `\nReport: ${resolve(report.repo_root, '.circuit/release/plugin-publish-report.json')}`,
   );
 }
 

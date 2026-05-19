@@ -74,14 +74,14 @@ function noAmbientCliPath(): string {
 
 function cleanPluginEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  env.CIRCUIT_NEXT_CLI = undefined;
-  env.CIRCUIT_NEXT_DEV = undefined;
+  env.CIRCUIT_CLI = undefined;
+  env.CIRCUIT_DEV = undefined;
   env.PATH = noAmbientCliPath();
   return { ...env, ...extra };
 }
 
 function envWithOverride(fakeBin: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  return cleanPluginEnv({ ...extra, CIRCUIT_NEXT_CLI: fakeBin });
+  return cleanPluginEnv({ ...extra, CIRCUIT_CLI: fakeBin });
 }
 
 function sourceCommandPath(command: string): string {
@@ -146,7 +146,7 @@ describe('Codex host plugin package', () => {
     try {
       const cachePath = join(
         tempDir,
-        `plugins/cache/circuit-next-local/circuit/${versionManifest.version}`,
+        `plugins/cache/circuit-local/circuit/${versionManifest.version}`,
       );
       const syncResult = spawnSync(
         process.execPath,
@@ -194,8 +194,8 @@ describe('Codex host plugin package', () => {
 
       for (const unsafePath of [
         tempDir,
-        join(tempDir, 'plugins/cache/circuit-next-local'),
-        join(tempDir, 'plugins/cache/circuit-next-local/circuit/wrong-version'),
+        join(tempDir, 'plugins/cache/circuit-local'),
+        join(tempDir, 'plugins/cache/circuit-local/circuit/wrong-version'),
         REPO_ROOT,
       ]) {
         const unsafeSync = spawnSync(
@@ -219,7 +219,7 @@ describe('Codex host plugin package', () => {
     expect(contract).toContain('contract: host-adapter');
     expect(contract).toContain('Routed runs');
     expect(contract).toContain('--progress jsonl');
-    expect(contract).toContain("node '<plugin root>/scripts/circuit-next.mjs' doctor");
+    expect(contract).toContain("node '<plugin root>/scripts/circuit.mjs' doctor");
     expect(contract).toContain('final user-facing answer');
     expect(contract).toContain('report paths, trace ids');
     expect(rendering).toContain('contract: host-rendering');
@@ -229,7 +229,7 @@ describe('Codex host plugin package', () => {
   });
 
   it('exposes Codex skill and command surfaces backed by the Circuit CLI protocol', () => {
-    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'))).toBe(true);
+    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'))).toBe(true);
 
     for (const command of EXPECTED_CODEX_COMMANDS) {
       expect(existsSync(resolve(PLUGIN_ROOT, `commands/${command}.md`))).toBe(true);
@@ -244,8 +244,8 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain(
       'Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits',
     );
-    expect(skill).toContain("node '<plugin root>/scripts/circuit-next.mjs' run --goal");
-    expect(skill).toContain("node '<plugin root>/scripts/circuit-next.mjs' run fix --goal");
+    expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs' run --goal");
+    expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs' run fix --goal");
     expect(skill).toContain('--progress jsonl');
     expect(skill).toContain('display.text');
     expect(skill).toContain('task_list.updated');
@@ -257,9 +257,9 @@ describe('Codex host plugin package', () => {
     expect(skill).not.toContain('/circuit:');
     expect(skill).not.toMatch(/\bslash command\b/i);
     expect(skill).not.toContain('slash-command');
-    expect(skill).not.toContain('node plugins/circuit/scripts/circuit-next.mjs');
+    expect(skill).not.toContain('node plugins/circuit/scripts/circuit.mjs');
     expect(skill).toContain(
-      "node '<plugin root>/scripts/circuit-next.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>'",
+      "node '<plugin root>/scripts/circuit.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>'",
     );
   });
 
@@ -282,12 +282,12 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('wrapper uses the bundled runtime when PATH has no circuit-next binary', () => {
+  it('wrapper uses the bundled runtime when PATH has no circuit binary', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-host-bundled-'));
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -302,7 +302,7 @@ describe('Codex host plugin package', () => {
         version: string;
       };
       expect(output.runtime_source).toBe('bundled');
-      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit.js'));
       expect(output.version).toBe(
         VersionManifest.parse(
           JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
@@ -313,11 +313,11 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('wrapper reports CIRCUIT_NEXT_CLI as an explicit override', () => {
+  it('wrapper reports CIRCUIT_CLI as an explicit override', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-host-override-'));
     try {
       const binDir = join(tempDir, 'bin');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -331,7 +331,7 @@ describe('Codex host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -349,17 +349,17 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('wrapper refuses PATH fallback unless CIRCUIT_NEXT_DEV is set', () => {
+  it('wrapper refuses PATH fallback unless CIRCUIT_DEV is set', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-host-path-fallback-'));
     try {
       const tempPluginRoot = join(tempDir, 'plugin');
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
-      const wrapperPath = join(scriptsDir, 'circuit-next.mjs');
-      const fakeBin = join(binDir, 'circuit-next');
+      const wrapperPath = join(scriptsDir, 'circuit.mjs');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
-      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs')));
+      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs')));
       writeFileSync(
         fakeBin,
         [
@@ -384,7 +384,7 @@ describe('Codex host plugin package', () => {
         encoding: 'utf8',
         env: cleanPluginEnv({
           PATH: `${binDir}${delimiter}${noAmbientCliPath()}`,
-          CIRCUIT_NEXT_DEV: '1',
+          CIRCUIT_DEV: '1',
         }),
       });
       expect(withDev.status, withDev.stderr).toBe(0);
@@ -403,7 +403,7 @@ describe('Codex host plugin package', () => {
       const binDir = join(tempDir, 'bin');
       mkdirSync(binDir, { recursive: true });
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       writeFileSync(
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
@@ -414,13 +414,7 @@ describe('Codex host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
-          'run',
-          'review',
-          '--goal',
-          'outside repo',
-        ],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'run', 'review', '--goal', 'outside repo'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -456,7 +450,7 @@ describe('Codex host plugin package', () => {
       const customRoot = join(tempDir, 'custom-flows');
       mkdirSync(binDir, { recursive: true });
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       writeFileSync(
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
@@ -468,7 +462,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'run',
           'review',
           '--goal',
@@ -510,7 +504,7 @@ describe('Codex host plugin package', () => {
       const binDir = join(tempDir, 'bin');
       mkdirSync(binDir, { recursive: true });
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       writeFileSync(
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
@@ -522,7 +516,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'resume',
           '--run-folder',
           '/tmp/run',
@@ -562,7 +556,7 @@ describe('Codex host plugin package', () => {
       const binDir = join(tempDir, 'bin');
       mkdirSync(binDir, { recursive: true });
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       writeFileSync(
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
@@ -574,7 +568,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'handoff',
           'save',
           '--goal',
@@ -615,7 +609,7 @@ describe('Codex host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'doctor'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'doctor'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -632,7 +626,7 @@ describe('Codex host plugin package', () => {
       };
       expect(output.status).toBe('ok');
       expect(output.runtime_source).toBe('bundled');
-      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit.js'));
       expect(output.checks).toContainEqual(
         expect.objectContaining({ name: 'bundled_hooks_config_absent', ok: true }),
       );
@@ -756,24 +750,24 @@ describe('Codex host plugin package', () => {
     for (const command of EXPECTED_CODEX_COMMANDS) {
       const source = readFileSync(sourceCommandPath(command), 'utf8');
       const codex = readFileSync(resolve(PLUGIN_ROOT, `commands/${command}.md`), 'utf8');
-      expect(source).toContain('./bin/circuit-next');
+      expect(source).toContain('./bin/circuit');
       expect(source).toContain('--progress jsonl');
       expect(source).toContain('presentation');
       expect(source).toContain('display.text');
       expect(source).toContain('task_list.updated');
       expect(source).toContain('user_input.requested');
       expect(source).toContain('operator_summary_markdown_path');
-      expect(source).not.toContain("node '<plugin root>/scripts/circuit-next.mjs'");
-      expect(codex).toContain("node '<plugin root>/scripts/circuit-next.mjs'");
+      expect(source).not.toContain("node '<plugin root>/scripts/circuit.mjs'");
+      expect(codex).toContain("node '<plugin root>/scripts/circuit.mjs'");
       expect(codex).toContain('--progress jsonl');
       expect(codex).toContain('presentation');
       expect(codex).toContain('display.text');
       expect(codex).toContain('task_list.updated');
       expect(codex).toContain('user_input.requested');
       expect(codex).toContain('operator_summary_markdown_path');
-      expect(codex).not.toContain('./bin/circuit-next');
+      expect(codex).not.toContain('./bin/circuit');
       expect(codex).not.toContain('repo-local launcher');
-      expect(codex).not.toContain('invokes `circuit-next`');
+      expect(codex).not.toContain('invokes `circuit`');
     }
   });
 
@@ -788,15 +782,15 @@ describe('Codex host plugin package', () => {
       expect(skill).toMatch(
         /description: "Use when the user wants Circuit|description: "Use when the user asks Circuit/,
       );
-      expect(skill).toContain("node '<plugin root>/scripts/circuit-next.mjs'");
+      expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs'");
       expect(skill).toContain('--progress jsonl');
       expect(skill).toContain('presentation');
       expect(skill).toContain('display.text');
       expect(skill).toContain('task_list.updated');
       expect(skill).toContain('user_input.requested');
       expect(skill).toContain('operator_summary_markdown_path');
-      expect(skill).not.toContain('./bin/circuit-next');
-      expect(skill).not.toContain('invokes `circuit-next`');
+      expect(skill).not.toContain('./bin/circuit');
+      expect(skill).not.toContain('invokes `circuit`');
       expect(skill).not.toContain('argument-hint:');
       expect(skill).not.toContain('$ARGUMENTS');
       expect(skill).not.toContain('substituted below');
@@ -805,7 +799,7 @@ describe('Codex host plugin package', () => {
       expect(skill).not.toMatch(/\bslash command\b/i);
       expect(skill).not.toContain('slash-command');
       expect(skill).toContain("Use the user's current request as the command input.");
-      expect(commandMarkdown).toContain("node '<plugin root>/scripts/circuit-next.mjs'");
+      expect(commandMarkdown).toContain("node '<plugin root>/scripts/circuit.mjs'");
     }
   });
 

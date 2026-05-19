@@ -11,8 +11,8 @@
       "cwd": ".",
       "exit_code": 0,
       "status": "passed",
-      "duration_ms": 2874,
-      "stdout_summary": "\n> circuit-next@0.0.1 check\n> tsc --noEmit\n\n",
+      "duration_ms": 2967,
+      "stdout_summary": "\n> circuit@0.0.1 check\n> tsc --noEmit\n\n",
       "stderr_summary": ""
     }
   ]

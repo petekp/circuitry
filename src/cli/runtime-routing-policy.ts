@@ -26,7 +26,7 @@ export const RUNTIME_POLICY_REASONS = {
 } as const;
 
 export const CUSTOM_FLOW_ROOT_RUNTIME_POLICY =
-  'Custom roots created by `circuit-next create` publish a normal runnable flow command.';
+  'Custom roots created by `circuit create` publish a normal runnable flow command.';
 
 export const CLI_RUNTIME_ROUTING_POLICY =
   'Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.';

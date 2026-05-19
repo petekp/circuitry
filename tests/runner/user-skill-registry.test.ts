@@ -17,7 +17,7 @@ function writeSkill(base: string, id: string, body: string): void {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'circuit-next-user-skills-'));
+  root = mkdtempSync(join(tmpdir(), 'circuit-user-skills-'));
   agentsRoot = join(root, '.agents', 'skills');
   claudeRoot = join(root, '.claude', 'skills');
 });

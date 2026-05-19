@@ -43,9 +43,9 @@ describe('claude-code connector smoke (capability boundary)', () => {
     // per src/schemas/trace-entry.ts). A regression in the hash shape would
     // silently produce trace_entries that fail to round-trip through
     // TraceEntry.parse() at write time.
-    const digest = sha256Hex('circuit-next');
+    const digest = sha256Hex('circuit');
     expect(digest).toMatch(/^[0-9a-f]{64}$/);
-    expect(digest).toBe(createHash('sha256').update('circuit-next', 'utf8').digest('hex'));
+    expect(digest).toBe(createHash('sha256').update('circuit', 'utf8').digest('hex'));
   });
 
   it('timeout failures include bounded stdout diagnostics from the subprocess', async () => {

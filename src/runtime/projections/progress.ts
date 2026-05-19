@@ -769,7 +769,7 @@ export function createProgressProjector(input: {
           resume: {
             run_folder: input.runDir,
             checkpoint_choice_arg: '<choice>',
-            command: `circuit-next resume --run-folder ${input.runDir} --checkpoint-choice <choice>`,
+            command: `circuit resume --run-folder ${input.runDir} --checkpoint-choice <choice>`,
           },
         });
         reportTaskListProgress({

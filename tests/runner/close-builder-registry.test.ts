@@ -117,7 +117,7 @@ function syntheticCloseCompiledFlow(): CompiledFlow {
 let runFolder: string;
 
 beforeEach(() => {
-  runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-close-registry-'));
+  runFolder = mkdtempSync(join(tmpdir(), 'circuit-close-registry-'));
 });
 
 afterEach(() => {

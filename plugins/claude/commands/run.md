@@ -44,7 +44,7 @@ metacharacters:
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
    Build.
 
-   Use the deterministic CLI router (`node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal ...`) only
+   Use the deterministic CLI router (`node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
@@ -66,55 +66,55 @@ metacharacters:
    Example for a Fix task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'the checkout total is wrong when discounts and tax both apply'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'the checkout total is wrong when discounts and tax both apply'
    ```
 
    Example for a Review task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'review the current diff for safety problems'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run review --goal 'review the current diff for safety problems'
    ```
 
    Example for a Build task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'add a focused feature'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'add a focused feature'
    ```
 
    Example for an Explore task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'compare auth provider options'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run explore --goal 'compare auth provider options'
    ```
 
    Example for a Pursue task:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run pursue --goal 'coordinate these cleanup goals'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run pursue --goal 'coordinate these cleanup goals'
    ```
 
    Example for the deterministic fallback router:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal 'choose the right Circuit flow for this task'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run --goal 'choose the right Circuit flow for this task'
    ```
 
    Example for a Build task using Deep mode:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --rigor deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'make the focused change' --rigor deep
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --rigor lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'fix the missing-token edge case' --rigor lite
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'can'\''t ship'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'can'\''t ship'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper

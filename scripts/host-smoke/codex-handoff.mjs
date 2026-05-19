@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
-const CIRCUIT_BIN = resolve(REPO_ROOT, 'bin/circuit-next');
+const CIRCUIT_BIN = resolve(REPO_ROOT, 'bin/circuit');
 const LIVE_FLAG = '--use-real-user-hooks';
 const TIMEOUT_MS = 120_000;
 
@@ -83,21 +83,22 @@ function codexHooksFeatureVisible(codexPath) {
   if (
     result.error === undefined &&
     result.status === 0 &&
-    /\bcodex_hooks\b[^\n]*\btrue\b/.test(result.stdout)
+    (/\bhooks\b[^\n]*\btrue\b/.test(result.stdout) ||
+      /\bcodex_hooks\b[^\n]*\btrue\b/.test(result.stdout))
   ) {
     return {
       ok: true,
-      detail: 'codex features list reports codex_hooks true',
+      detail: 'codex features list reports hooks true',
     };
   }
 
   const configPath = resolve(codexHome(), 'config.toml');
   if (existsSync(configPath)) {
     const text = readFileSync(configPath, 'utf8');
-    if (/^\s*codex_hooks\s*=\s*true\s*$/m.test(text)) {
+    if (/^\s*(?:hooks|codex_hooks)\s*=\s*true\s*$/m.test(text)) {
       return {
         ok: true,
-        detail: `${configPath} contains codex_hooks = true`,
+        detail: `${configPath} enables Codex hooks`,
       };
     }
   }
@@ -106,7 +107,7 @@ function codexHooksFeatureVisible(codexPath) {
     ok: false,
     detail:
       result.error?.message ??
-      `codex_hooks not visible; stdout=${result.stdout.slice(0, 300)} stderr=${result.stderr.slice(0, 300)}`,
+      `Codex hooks not visible; stdout=${result.stdout.slice(0, 300)} stderr=${result.stderr.slice(0, 300)}`,
   };
 }
 
@@ -232,8 +233,6 @@ function main() {
       '--ephemeral',
       '--sandbox',
       'read-only',
-      '--ask-for-approval',
-      'never',
       '--output-last-message',
       outputPath,
       prompt,

@@ -112,7 +112,7 @@ function makeVerificationProjectRoot(checkScript = 'node -e "process.exit(0)"'):
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-build-runtime-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-build-runtime-'));
 });
 
 afterEach(() => {

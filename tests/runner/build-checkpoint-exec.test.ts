@@ -473,7 +473,7 @@ function writeSkill(id: string): void {
 }
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-build-checkpoint-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-build-checkpoint-${randomUUID()}`);
   homeDir = join(runFolderBase, 'home');
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;

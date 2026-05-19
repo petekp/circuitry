@@ -1,5 +1,5 @@
-const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"';
-const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit-next.mjs'";
+const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"';
+const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit.mjs'";
 
 const CODEX_SKILL_METADATA: Record<string, { title: string; description: string }> = {
   build: {
@@ -90,7 +90,7 @@ export function renderClaudeHostCommand(sourceContent: string): string {
   return renderClaudePresentationInstructions(
     renderClaudePresentationInvocations(
       stripMarkdownComments(sourceContent)
-        .replaceAll('./bin/circuit-next', CLAUDE_PLUGIN_WRAPPER_COMMAND)
+        .replaceAll('./bin/circuit', CLAUDE_PLUGIN_WRAPPER_COMMAND)
         .replace(
           /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
           [
@@ -101,7 +101,7 @@ export function renderClaudeHostCommand(sourceContent: string): string {
           ].join('\n'),
         )
         .replace(
-          /Use the Bash tool to execute the constructed command\. `node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs"`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
+          /Use the Bash tool to execute the constructed command\. `node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.mjs"`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
           [
             'Use the Bash tool to execute the constructed command. The wrapper',
             '   lives in the installed Claude Code plugin directory, injects the',
@@ -114,7 +114,7 @@ export function renderClaudeHostCommand(sourceContent: string): string {
 
 export function renderCodexHostCommand(sourceContent: string): string {
   return stripMarkdownComments(sourceContent)
-    .replaceAll('./bin/circuit-next', CODEX_PLUGIN_WRAPPER_COMMAND)
+    .replaceAll('./bin/circuit', CODEX_PLUGIN_WRAPPER_COMMAND)
     .replace(
       /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
       [
@@ -126,7 +126,7 @@ export function renderCodexHostCommand(sourceContent: string): string {
       ].join('\n'),
     )
     .replace(
-      /Use the Bash tool to execute the constructed command\. `node '<plugin root>\/scripts\/circuit-next\.mjs'`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
+      /Use the Bash tool to execute the constructed command\. `node '<plugin root>\/scripts\/circuit\.mjs'`\n\s+is the .*?`dist\/cli\/circuit\.js`\./gs,
       [
         'Use the Bash tool to execute the constructed command. The wrapper',
         "   lives in the installed Circuit plugin directory and injects the plugin's",

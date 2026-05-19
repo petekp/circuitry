@@ -38,34 +38,34 @@ metacharacters:
    Default Fix (standard depth, full review pass):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the foo bug' --progress jsonl
+   ./bin/circuit run fix --goal 'fix the foo bug' --progress jsonl
    ```
 
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
+   ./bin/circuit run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Deep Fix:
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the failing pipeline' --rigor deep --progress jsonl
+   ./bin/circuit run fix --goal 'fix the failing pipeline' --rigor deep --progress jsonl
    ```
 
    Autonomous Fix:
 
    ```bash
-   ./bin/circuit-next run fix --goal 'diagnose and patch the crash' --autonomous --progress jsonl
+   ./bin/circuit run fix --goal 'diagnose and patch the crash' --autonomous --progress jsonl
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'can'\''t reproduce' --progress jsonl
+   ./bin/circuit run fix --goal 'can'\''t reproduce' --progress jsonl
    ```
 
-   Use the Bash tool to execute the constructed command. `./bin/circuit-next`
+   Use the Bash tool to execute the constructed command. `./bin/circuit`
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.
@@ -101,7 +101,7 @@ metacharacters:
    and the exact resume command:
 
    ```bash
-   ./bin/circuit-next resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   ./bin/circuit resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 8. **If `outcome === "complete"`, render Circuit's final summary.** Read

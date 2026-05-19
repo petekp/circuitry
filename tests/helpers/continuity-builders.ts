@@ -4,7 +4,7 @@
 export const CONT_RUN = '0191d2f0-cccc-7fff-8aaa-000000000030' as const;
 
 export const CONT_NARRATIVE = {
-  goal: 'Resume circuit-next work',
+  goal: 'Resume circuit work',
   next: 'Read PROJECT_STATE.md',
   state_markdown: '- state',
   debt_markdown: '- debt',

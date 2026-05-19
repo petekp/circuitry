@@ -297,7 +297,7 @@ function relayerWithUnavailableReview(): RelayFn {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-fix-runtime-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-fix-runtime-'));
 });
 
 afterEach(() => {

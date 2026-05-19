@@ -156,7 +156,7 @@ const CASES: Array<{
 ];
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-review-runtime-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-review-runtime-'));
 });
 
 afterEach(() => {

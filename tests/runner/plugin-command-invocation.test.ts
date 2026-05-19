@@ -30,7 +30,7 @@ const RUN_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'run.md');
 const REVIEW_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'review.md');
 const BUILD_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'build.md');
 const MANIFEST_PATH = resolve(REPO_ROOT, 'plugins/claude/.claude-plugin/plugin.json');
-const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit-next\.mjs"`;
+const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit\.mjs"`;
 
 // Extract fenced ```bash ... ``` blocks from a markdown body. Returns an
 // array of block contents (without the fence markers). Multiple blocks per
@@ -53,7 +53,7 @@ function extractBashBlocks(body: string): string[] {
 function hasExecutableCompiledFlowInvocation(body: string, flow: string): boolean {
   const blocks = extractBashBlocks(body);
   const flowPattern = flow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const binInvocation = new RegExp(`^\\s*\\.\\/bin\\/circuit-next run ${flowPattern}(?:\\s|$)`);
+  const binInvocation = new RegExp(`^\\s*\\.\\/bin\\/circuit run ${flowPattern}(?:\\s|$)`);
   const nodeInvocation = new RegExp(
     `^\\s*node dist\\/cli\\/circuit\\.js run ${flowPattern}(?:\\s|$)`,
   );
@@ -85,7 +85,7 @@ function hasExecutableBuildInvocation(body: string): boolean {
 
 function hasExecutableRouterInvocation(body: string): boolean {
   const blocks = extractBashBlocks(body);
-  const binInvocation = /^\s*\.\/bin\/circuit-next run --goal(?:\s|$)/;
+  const binInvocation = /^\s*\.\/bin\/circuit run --goal(?:\s|$)/;
   const nodeInvocation = /^\s*node dist\/cli\/circuit\.js run --goal(?:\s|$)/;
   const claudePluginInvocation = new RegExp(
     `^\\s*${CLAUDE_WRAPPER_PATTERN} present run --goal(?:\\s|$)`,
@@ -129,8 +129,8 @@ describe('plugin command invocation binding', () => {
 
     it('command bodies use the installed Claude plugin wrapper, not the repo-local launcher', () => {
       for (const body of [exploreBody, runBody, reviewBody, buildBody]) {
-        expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"');
-        expect(body).not.toMatch(/\.\/bin\/circuit-next/);
+        expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"');
+        expect(body).not.toMatch(/\.\/bin\/circuit/);
         expect(body).not.toMatch(/npm run circuit:run/);
         expect(body).not.toMatch(/dist\/cli\/runtime-proof\.js/);
       }
@@ -169,7 +169,7 @@ describe('plugin command invocation binding', () => {
     it('all fenced bash invocation blocks in plugins/claude/commands/run.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(runBody).filter(
         (b) =>
-          /(?:\.\/bin\/circuit-next|node dist\/cli\/circuit\.js|node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs")/.test(
+          /(?:\.\/bin\/circuit|node dist\/cli\/circuit\.js|node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.mjs")/.test(
             b,
           ) && /--goal/.test(b),
       );
@@ -220,7 +220,7 @@ name: circuit:explore
 description: stub
 ---
 
-The CLI ./bin/circuit-next is documented somewhere else; this body does not invoke it.
+The CLI ./bin/circuit is documented somewhere else; this body does not invoke it.
 `;
       expect(hasExecutableExploreInvocation(proseOnly)).toBe(false);
     });
@@ -258,7 +258,7 @@ description: stub
 ---
 
 \`\`\`bash
-./bin/circuit-next explore --goal 'review the latest change'
+./bin/circuit explore --goal 'review the latest change'
 \`\`\`
 `;
       expect(hasExecutableReviewInvocation(wrongCompiledFlow)).toBe(false);
@@ -271,7 +271,7 @@ description: stub
 ---
 
 \`\`\`bash
-./bin/circuit-next run explore --goal 'find deprecated APIs'
+./bin/circuit run explore --goal 'find deprecated APIs'
 \`\`\`
 `;
       expect(hasExecutableExploreInvocation(goodBody)).toBe(true);

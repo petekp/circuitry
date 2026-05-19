@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { Config, type Config as ConfigValue, LayeredConfig } from '../schemas/config.js';
 
-const USER_GLOBAL_CONFIG_RELATIVE_PATH = ['.config', 'circuit-next', 'config.yaml'] as const;
+const USER_GLOBAL_CONFIG_RELATIVE_PATH = ['.config', 'circuit', 'config.yaml'] as const;
 const PROJECT_CONFIG_RELATIVE_PATH = ['.circuit', 'config.yaml'] as const;
 
 interface DiscoverConfigLayersOptions {

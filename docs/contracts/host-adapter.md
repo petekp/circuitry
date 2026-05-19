@@ -25,9 +25,9 @@ Support claims for each host adapter are governed by
 
 Every host adapter MUST support:
 
-- Routed runs: `circuit-next run --goal "<task>"`.
-- Explicit runs: `circuit-next run <flow> --goal "<task>"`.
-- Checkpoint resume: `circuit-next resume --run-folder <path> --checkpoint-choice <choice>`.
+- Routed runs: `circuit run --goal "<task>"`.
+- Explicit runs: `circuit run <flow> --goal "<task>"`.
+- Checkpoint resume: `circuit resume --run-folder <path> --checkpoint-choice <choice>`.
 - Stable final JSON parsing from stdout.
 - Progress JSONL parsing from stderr when invoked with `--progress jsonl`.
 - Task-list rendering from `task_list.updated` progress events.
@@ -41,12 +41,12 @@ Every host adapter MUST support:
 
 Host plugins may let the host model choose a flow before calling Circuit.
 For example, Claude Code `/circuit:run` can select Fix, Review, Build,
-Explore, or Pursue and then invoke `circuit-next run <flow> --goal
+Explore, or Pursue and then invoke `circuit run <flow> --goal
 "<task>"`. Codex may choose a bundled Circuit flow skill or the router skill
 from the user's natural-language request.
 
 The deterministic router remains the CLI authority when a host calls
-`circuit-next run --goal "<task>"` without an explicit flow. Public docs must
+`circuit run --goal "<task>"` without an explicit flow. Public docs must
 keep these two paths separate: host-orchestrated flow selection is not the
 same thing as deterministic CLI routing.
 
@@ -59,7 +59,7 @@ root when invoking `run`.
 For the Codex plugin, the wrapper command is:
 
 ```bash
-node '<plugin root>/scripts/circuit-next.mjs' run --goal '<task>'
+node '<plugin root>/scripts/circuit.mjs' run --goal '<task>'
 ```
 
 The wrapper injects:
@@ -97,7 +97,7 @@ pass that value explicitly to Circuit as `--project-root`. Hook scripts MUST NOT
 use `process.cwd()` as the project authority because hosts may run hooks from a
 plugin cache, a project directory, or another implementation-defined location.
 
-Hooks should invoke packaged launchers, not bare `circuit-next`, so installed
+Hooks should invoke packaged launchers, not bare `circuit`, so installed
 plugins do not depend on the operator's shell `PATH`. Hooks should inject only
 Circuit-authored context, and they should fail soft: no saved state, invalid
 state, missing launchers, or parse errors must not block the host session.
@@ -109,14 +109,14 @@ plugin-root resolution for bundled Codex hook commands. Install the supported
 Codex path with:
 
 ```bash
-circuit-next handoff hooks install --host codex
+circuit handoff hooks install --host codex
 ```
 
 That command writes an absolute launcher command into `~/.codex/hooks.json`.
 The installed hook calls:
 
 ```bash
-circuit-next handoff hook --host codex
+circuit handoff hook --host codex
 ```
 
 The hook entrypoint reads Codex stdin, extracts `cwd`, and renders the same
@@ -162,7 +162,7 @@ Local development caches can drift from this repo package. Prefer the official
 refresh path when it is available:
 
 ```bash
-codex plugin marketplace upgrade circuit-next-local
+codex plugin marketplace upgrade circuit-local
 ```
 
 For local-package development, this repo also provides a deterministic cache
@@ -187,7 +187,7 @@ npm run check:codex-plugin-cache
 The Codex plugin wrapper MUST support:
 
 ```bash
-node '<plugin root>/scripts/circuit-next.mjs' doctor
+node '<plugin root>/scripts/circuit.mjs' doctor
 ```
 
 The doctor returns JSON on stdout and checks:
@@ -196,7 +196,7 @@ The doctor returns JSON on stdout and checks:
 - skill names resolve locally, for example `Circuit:run`
 - wrapper and packaged flow root exist
 - core packaged flow files exist
-- command files invoke the installed plugin wrapper, not `./bin/circuit-next`
+- command files invoke the installed plugin wrapper, not `./bin/circuit`
 - command files request `--progress jsonl`
 - command files explain `task_list.updated` and `user_input.requested`
 - bundled Codex `hooks/hooks.json` is absent
@@ -225,5 +225,5 @@ folders, report paths, trace ids, or other evidence links by default.
 Checkpoint results should surface the allowed choices, `user_input.requested`
 question, and exact resume shape.
 
-The stable CLI namespace stays `circuit-next run <flow>` so user-defined flow
+The stable CLI namespace stays `circuit run <flow>` so user-defined flow
 names cannot collide with future top-level CLI commands.

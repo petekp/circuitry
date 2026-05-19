@@ -127,7 +127,7 @@ function firstTraceEntry(runFolder: string): Record<string, unknown> {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-cli-runtime-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-cli-runtime-${randomUUID()}`);
   mkdirSync(runFolderBase, { recursive: true });
 });
 

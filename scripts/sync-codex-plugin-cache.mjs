@@ -14,7 +14,7 @@ const pluginRoot = resolve(repoRoot, 'plugins/circuit');
 function parseArgs(argv) {
   const parsed = {
     check: false,
-    marketplace: 'circuit-next-local',
+    marketplace: 'circuit-local',
     cachePath: undefined,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -41,7 +41,7 @@ function printHelp() {
 Copies the repo-local Codex plugin package into Codex's local plugin cache.
 
 Defaults:
-  marketplace: circuit-next-local
+  marketplace: circuit-local
   cache root:  $CODEX_HOME/plugins/cache or ~/.codex/plugins/cache
 
 Options:
@@ -113,7 +113,7 @@ function summary(status, target, tree) {
     package_tree: tree,
     check_command: 'npm run check:codex-plugin-cache',
     local_sync_command: 'npm run sync:codex-plugin-cache',
-    git_marketplace_refresh: 'codex plugin marketplace upgrade circuit-next-local',
+    git_marketplace_refresh: 'codex plugin marketplace upgrade circuit-local',
     commands: listCommandIds(pluginRoot),
     skills: listPackageDirs(pluginRoot, 'skills'),
   };

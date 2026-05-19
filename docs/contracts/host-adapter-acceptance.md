@@ -87,7 +87,7 @@ hook commands from the session working directory. Circuit therefore keeps the
 supported Codex path on the user-level hook installed by:
 
 ```bash
-circuit-next handoff hooks install --host codex
+circuit handoff hooks install --host codex
 ```
 
 Real installed-host injection remains `experimental` for both Claude Code and

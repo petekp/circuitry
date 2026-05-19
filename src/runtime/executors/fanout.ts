@@ -163,7 +163,7 @@ async function executeFanoutInternal(
         }
         const worktreePath = joinPath(
           context.projectRoot,
-          '.circuit-next',
+          '.circuit',
           'worktrees',
           context.runId,
           step.id,

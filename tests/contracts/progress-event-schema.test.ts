@@ -177,7 +177,7 @@ describe('progress event schema', () => {
           run_folder: '/tmp/run',
           checkpoint_choice_arg: '<choice>',
           command:
-            "circuit-next resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
+            "circuit resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
         },
       },
       { ...BASE, type: 'run.completed', outcome: 'complete', result_path: '/tmp/run/result.json' },
@@ -269,7 +269,7 @@ describe('progress event schema', () => {
           run_folder: '/tmp/run',
           checkpoint_choice_arg: '<choice>',
           command:
-            "circuit-next resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
+            "circuit resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
         },
       }).success,
     ).toBe(false);
@@ -299,7 +299,7 @@ describe('progress event schema', () => {
           run_folder: '/tmp/run',
           checkpoint_choice_arg: '<choice>',
           command:
-            "circuit-next resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
+            "circuit resume --run-folder '/tmp/run' --checkpoint-choice '<choice>' --progress jsonl",
         },
       }).success,
     ).toBe(false);

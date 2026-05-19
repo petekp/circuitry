@@ -111,11 +111,11 @@ function createFixture(options: FixtureOptions = {}): string {
   writeText(join(root, 'plugins/claude/README.md'), 'Claude Circuit plugin\n');
   writeText(join(root, 'plugins/claude/commands/run.md'), '# Run\n');
   writeText(join(root, 'plugins/claude/skills/run/SKILL.md'), '# Run skill\n');
-  writeText(join(root, 'plugins/claude/scripts/circuit-next.mjs'), '#!/usr/bin/env node\n');
+  writeText(join(root, 'plugins/claude/scripts/circuit.mjs'), '#!/usr/bin/env node\n');
   writeText(join(root, 'plugins/circuit/README.md'), 'Codex Circuit plugin\n');
   writeText(join(root, 'plugins/circuit/commands/run.md'), '# Run\n');
   writeText(join(root, 'plugins/circuit/skills/run/SKILL.md'), '# Run skill\n');
-  writeText(join(root, 'plugins/circuit/scripts/circuit-next.mjs'), '#!/usr/bin/env node\n');
+  writeText(join(root, 'plugins/circuit/scripts/circuit.mjs'), '#!/usr/bin/env node\n');
 
   return root;
 }
@@ -126,7 +126,7 @@ function localInstallRoots(root: string, homeDir: string, codexHome: string) {
   };
   return {
     claude: join(homeDir, '.claude/plugins/cache/circuit/circuit', version.version),
-    codex: join(codexHome, 'plugins/cache/circuit-next-local/circuit', version.version),
+    codex: join(codexHome, 'plugins/cache/circuit-local/circuit', version.version),
   };
 }
 
@@ -180,7 +180,7 @@ function createRunner(git: GitFixture = {}, options: RunnerOptions = {}) {
             stdout: `${JSON.stringify({
               status: 'ok',
               runtime_source: 'bundled',
-              runtime_path: '/tmp/plugin/runtime/circuit-next.js',
+              runtime_path: '/tmp/plugin/runtime/circuit.js',
             })}\n`,
             stderr: '',
           };
@@ -359,7 +359,7 @@ describe('plugin publish automation', () => {
       },
       {
         name: 'local marketplace name',
-        args: ['--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit-next-local'],
+        args: ['--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit-local'],
         error: 'must not end in -local',
       },
       {
@@ -377,9 +377,7 @@ describe('plugin publish automation', () => {
 
     for (const testCase of cases) {
       const root = createFixture({
-        marketplaceName: testCase.args?.includes('circuit-next-local')
-          ? 'circuit-next-local'
-          : 'circuit',
+        marketplaceName: testCase.args?.includes('circuit-local') ? 'circuit-local' : 'circuit',
       });
       const { calls, runner } = createRunner(testCase.git);
       try {
@@ -757,7 +755,7 @@ describe('plugin publish automation', () => {
         callIds.indexOf('codex_cache_check'),
       );
       const hook = explicit.calls.find((call) => call.id === 'codex_handoff_hook_install');
-      expect(hook?.argv).toContain(join(installed.codex, 'scripts/circuit-next.mjs'));
+      expect(hook?.argv).toContain(join(installed.codex, 'scripts/circuit.mjs'));
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(installed.homeDir, { recursive: true, force: true });
@@ -836,7 +834,7 @@ describe('plugin publish automation', () => {
           stdout: `${JSON.stringify({
             status: 'ok',
             runtime_source: 'dev-fallback',
-            runtime_path: '/tmp/bin/circuit-next',
+            runtime_path: '/tmp/bin/circuit',
           })}\n`,
           stderr: '',
         };
@@ -850,8 +848,8 @@ describe('plugin publish automation', () => {
       expect(report.errors.join('\n')).toContain('must use bundled runtime');
       const doctor = calls.find((call) => call.id === 'codex_doctor');
       expect(doctor?.env?.PATH).not.toContain('.local/bin');
-      expect(doctor?.env?.CIRCUIT_NEXT_CLI).toBeUndefined();
-      expect(doctor?.env?.CIRCUIT_NEXT_DEV).toBeUndefined();
+      expect(doctor?.env?.CIRCUIT_CLI).toBeUndefined();
+      expect(doctor?.env?.CIRCUIT_DEV).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -898,7 +896,7 @@ describe('plugin publish automation', () => {
     const { runner } = createRunner();
     try {
       const report = runPublish(['check'], { repoRoot: root, runner });
-      const reportPath = join(root, '.circuit-next/release/plugin-publish-report.json');
+      const reportPath = join(root, '.circuit/release/plugin-publish-report.json');
 
       expect(report.status).toBe('passed');
       expect(existsSync(reportPath)).toBe(true);
@@ -919,7 +917,7 @@ describe('plugin publish automation', () => {
       writeText(join(source, '.codex-plugin/plugin.json'), '{"name":"circuit"}\n');
       writeText(join(source, 'commands/run.md'), '# Run\n');
       writeText(join(source, 'skills/run/SKILL.md'), '# Run skill\n');
-      writeText(join(source, 'scripts/circuit-next.mjs'), '#!/usr/bin/env node\n');
+      writeText(join(source, 'scripts/circuit.mjs'), '#!/usr/bin/env node\n');
       writeText(join(source, 'README.md'), 'Read me\n');
 
       expect(packageTreeStatus(source, target)).toMatchObject({ status: 'missing' });

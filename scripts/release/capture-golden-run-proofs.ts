@@ -669,8 +669,43 @@ type Scenario = {
   runId: string;
   startMs: number;
   resumeChoice?: string;
+  prepareProject?: (projectRoot: string) => void;
   runtimeExecutors?: RuntimeExecutorsOption;
 };
+
+function runProofGit(cwd: string, args: readonly string[]): void {
+  const result = spawnSync('git', [...args], {
+    cwd,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `proof git ${args.join(' ')} failed: ${result.stderr || result.stdout || 'no output'}`,
+    );
+  }
+}
+
+function prepareReviewProofProject(root: string): void {
+  mkdirSync(join(root, 'src'), { recursive: true });
+  writeFileSync(join(root, 'package.json'), '{"name":"review-proof-fixture","private":true}\n');
+  writeFileSync(join(root, 'src', 'example.ts'), 'export const answer = 42;\n');
+  runProofGit(root, ['init']);
+  runProofGit(root, ['add', '.']);
+  runProofGit(root, [
+    '-c',
+    'user.name=Circuit Proof',
+    '-c',
+    'user.email=circuit-proof@example.test',
+    '-c',
+    'commit.gpgsign=false',
+    'commit',
+    '-m',
+    'initial review proof fixture',
+  ]);
+  writeFileSync(join(root, 'src', 'example.ts'), 'export const answer = 43;\n');
+  writeFileSync(join(root, 'notes.md'), 'Untracked review note.\n');
+  runProofGit(root, ['add', 'src/example.ts']);
+}
 
 async function captureCliScenario(scenario: Scenario): Promise<void> {
   const proofDirRel = `${proofRunsRootRel}/${scenario.slug}`;
@@ -679,9 +714,16 @@ async function captureCliScenario(scenario: Scenario): Promise<void> {
   const stagingProofDir = resolve(projectRoot, stagingProofDirRel);
   const runFolderRel = `${stagingProofDirRel}/run`;
   const runFolder = resolve(projectRoot, runFolderRel);
+  const scenarioProjectRel = `${stagingProofDirRel}/project`;
+  const scenarioProjectRoot =
+    scenario.prepareProject === undefined ? projectRoot : resolve(projectRoot, scenarioProjectRel);
   const pathAliases = [{ fromRel: stagingProofDirRel, toRel: proofDirRel }];
   rmSync(stagingProofDir, { recursive: true, force: true });
   mkdirSync(stagingProofDir, { recursive: true });
+  if (scenario.prepareProject !== undefined) {
+    mkdirSync(scenarioProjectRoot, { recursive: true });
+    scenario.prepareProject(scenarioProjectRoot);
+  }
 
   try {
     const now = deterministicNow(scenario.startMs);
@@ -692,7 +734,7 @@ async function captureCliScenario(scenario: Scenario): Promise<void> {
         : { runtimeExecutors: scenario.runtimeExecutors }),
       runId: scenario.runId,
       now,
-      configCwd: projectRoot,
+      configCwd: scenarioProjectRoot,
     });
 
     let finalStdout = run.stdout;
@@ -712,7 +754,7 @@ async function captureCliScenario(scenario: Scenario): Promise<void> {
         {
           relayer: scenario.relayer,
           now,
-          configCwd: projectRoot,
+          configCwd: scenarioProjectRoot,
         },
       );
       finalStdout = resume.stdout;
@@ -726,6 +768,9 @@ async function captureCliScenario(scenario: Scenario): Promise<void> {
       readFileSync(join(runFolder, 'reports', 'operator-summary.md'), 'utf8'),
       pathAliases,
     );
+    if (scenario.prepareProject !== undefined) {
+      rmSync(scenarioProjectRoot, { recursive: true, force: true });
+    }
     scrubProofTree(stagingProofDir, pathAliases);
     rmSync(proofDir, { recursive: true, force: true });
     renameSync(stagingProofDir, proofDir);
@@ -741,19 +786,15 @@ function captureDoctor(): void {
   const proofDir = resolve(projectRoot, proofDirRel);
   rmSync(proofDir, { recursive: true, force: true });
   mkdirSync(proofDir, { recursive: true });
-  const result = spawnSync(
-    process.execPath,
-    ['plugins/circuit/scripts/circuit-next.mjs', 'doctor'],
-    {
-      cwd: projectRoot,
-      encoding: 'utf8',
-      timeout: 180_000,
-    },
-  );
+  const result = spawnSync(process.execPath, ['plugins/circuit/scripts/circuit.mjs', 'doctor'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    timeout: 180_000,
+  });
   writeScrubbed(
     `${proofDirRel}/output.txt`,
     [
-      '$ node plugins/circuit/scripts/circuit-next.mjs doctor',
+      '$ node plugins/circuit/scripts/circuit.mjs doctor',
       `exit: ${result.status ?? 1}`,
       '',
       'stdout:',
@@ -930,6 +971,7 @@ const scenarios: Scenario[] = [
     slug: 'review',
     argv: ['run', 'review', '--goal', 'review this change'],
     relayer: reviewRelayer(),
+    prepareProject: prepareReviewProofProject,
     runId: '44444444-4444-4444-4444-444444444404',
     startMs: Date.UTC(2026, 3, 29, 19, 0, 0),
   },

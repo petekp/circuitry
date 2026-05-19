@@ -160,7 +160,7 @@ describe('host adapter acceptance contract', () => {
     expect(claudeManifest).not.toHaveProperty('hooks');
     expect(claudeHooks).toContain('SessionStart');
     expect(claudeHooks).toContain('${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs');
-    expect(claudeHookScript).toContain('scripts/circuit-next.mjs');
+    expect(claudeHookScript).toContain('scripts/circuit.mjs');
 
     expect(codexManifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/hooks.json'))).toBe(false);

@@ -19,7 +19,7 @@ metacharacters:
 ## Instructions
 
 1. **Confirm working directory.** The CLI is a repo-local launcher
-   (`./bin/circuit-next`), not a globally installed binary. If the user
+   (`./bin/circuit`), not a globally installed binary. If the user
    invoked this command outside a Circuit repo checkout, tell them so
    and ask them to `cd` into one.
 2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
@@ -46,17 +46,17 @@ metacharacters:
    and the full Bash command becomes:
 
    ```bash
-   ./bin/circuit-next run explore --goal 'can'\''t go' --progress jsonl
+   ./bin/circuit run explore --goal 'can'\''t go' --progress jsonl
    ```
 
    For a goal with no special characters (e.g., `find deprecated APIs`),
    the straightforward single-quoted form is sufficient:
 
    ```bash
-   ./bin/circuit-next run explore --goal 'find deprecated APIs' --progress jsonl
+   ./bin/circuit run explore --goal 'find deprecated APIs' --progress jsonl
    ```
 
-   Use the Bash tool to execute the constructed command. `./bin/circuit-next`
+   Use the Bash tool to execute the constructed command. `./bin/circuit`
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.

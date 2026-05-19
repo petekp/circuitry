@@ -17,7 +17,7 @@ import { shouldAutoOpenPath } from './auto-open-policy.mjs';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'skills');
-const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit-next.js');
+const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit.js');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const RUNTIME_SOURCE_ENV = 'CIRCUIT_RUNTIME_SOURCE';
 const RUNTIME_PATH_ENV = 'CIRCUIT_RUNTIME_PATH';
@@ -30,7 +30,7 @@ function projectRoot() {
 }
 
 function findLocalLauncher() {
-  const candidate = resolve(projectRoot(), 'bin/circuit-next');
+  const candidate = resolve(projectRoot(), 'bin/circuit');
   if (existsSync(candidate)) return candidate;
   return undefined;
 }
@@ -76,13 +76,13 @@ function runtimeResolution(runtime) {
 }
 
 function resolveRuntimeCommand() {
-  const override = process.env.CIRCUIT_NEXT_CLI;
+  const override = process.env.CIRCUIT_CLI;
   if (override !== undefined && override.length > 0) {
     if (!isAbsolute(override)) {
-      return runtimeResolutionError('CIRCUIT_NEXT_CLI must be an absolute path');
+      return runtimeResolutionError('CIRCUIT_CLI must be an absolute path');
     }
     if (!existsSync(override)) {
-      return runtimeResolutionError(`CIRCUIT_NEXT_CLI does not exist: ${override}`);
+      return runtimeResolutionError(`CIRCUIT_CLI does not exist: ${override}`);
     }
     return runtimeResolution({
       source: 'override',
@@ -101,7 +101,7 @@ function resolveRuntimeCommand() {
     });
   }
 
-  if (process.env.CIRCUIT_NEXT_DEV === '1') {
+  if (process.env.CIRCUIT_DEV === '1') {
     const localLauncher = findLocalLauncher();
     if (localLauncher !== undefined) {
       return runtimeResolution({
@@ -111,7 +111,7 @@ function resolveRuntimeCommand() {
         argsPrefix: [],
       });
     }
-    const pathLauncher = findPathCommand('circuit-next');
+    const pathLauncher = findPathCommand('circuit');
     if (pathLauncher !== undefined) {
       return runtimeResolution({
         source: 'dev-fallback',
@@ -317,7 +317,7 @@ function renderCheckpointFromResult(result) {
     renderLine('');
     renderLine('Resume with:');
     renderLine(
-      `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder ${shellSingleQuote(
+      `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder ${shellSingleQuote(
         runFolder,
       )} --checkpoint-choice '<choice>'`,
     );
@@ -426,7 +426,7 @@ function renderFinalResult(stdoutText, checkpointWasRendered, statusBlocks) {
       renderLine('');
       renderLine('Resume with:');
       renderLine(
-        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder ${shellSingleQuote(
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder ${shellSingleQuote(
           runFolder,
         )} --checkpoint-choice '<choice>'`,
       );
@@ -520,8 +520,8 @@ function runDoctor() {
     checks.push(
       check(
         `command_${name}_uses_wrapper`,
-        text.includes('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"') &&
-          !text.includes('./bin/circuit-next') &&
+        text.includes('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"') &&
+          !text.includes('./bin/circuit') &&
           text.includes(' present '),
         commandPath,
       ),
@@ -805,7 +805,7 @@ if (rawArgs[0] === 'present') {
   });
 
   child.on('error', (err) => {
-    process.stderr.write(`error: failed to start circuit-next: ${err.message}\n`);
+    process.stderr.write(`error: failed to start circuit: ${err.message}\n`);
     process.exit(1);
   });
 
@@ -867,7 +867,7 @@ if (rawArgs[0] === 'present') {
   }
 
   if (result.error) {
-    process.stderr.write(`error: failed to start circuit-next: ${result.error.message}\n`);
+    process.stderr.write(`error: failed to start circuit: ${result.error.message}\n`);
     process.exit(1);
   }
 

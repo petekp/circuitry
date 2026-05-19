@@ -49,7 +49,7 @@ describe('comparison runner dry-run', () => {
     const metadata = JSON.parse(stdout.split('\nDry run only.')[0] ?? stdout);
     expect(metadata.provider).toBe('codex');
     expect(metadata.arms['circuit-codex'].command).toEqual(
-      expect.arrayContaining(['node', 'bin/circuit-next', 'run', 'review']),
+      expect.arrayContaining(['node', 'bin/circuit', 'run', 'review']),
     );
     expect(metadata.arms['vanilla-codex'].command[0]).toBe('codex');
     expect(metadata.arms['vanilla-codex'].command).toContain('exec');
@@ -71,10 +71,10 @@ describe('comparison runner dry-run', () => {
     expect(metadata.provider).toBe('claude-code');
     expect(metadata.model).toBe('claude-haiku-4-5-20251001');
     expect(metadata.effort).toBe('low');
-    // Circuit arm still routes through bin/circuit-next; the wrapper on PATH
+    // Circuit arm still routes through bin/circuit; the wrapper on PATH
     // intercepts the claude-code connector subprocess and pins the model.
     expect(metadata.arms['circuit-claude-code'].command).toEqual(
-      expect.arrayContaining(['node', 'bin/circuit-next', 'run', 'review']),
+      expect.arrayContaining(['node', 'bin/circuit', 'run', 'review']),
     );
     expect(metadata.arms['circuit-claude-code'].run_folder).toContain('circuit-claude-code/run');
     // Vanilla arm calls claude directly with the same dispatch flags Circuit's

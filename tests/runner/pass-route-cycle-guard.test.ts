@@ -68,7 +68,7 @@ function flowWithRecoveryCorridor(): ExecutableFlow {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-pass-cycle-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-pass-cycle-'));
 });
 
 afterEach(() => {

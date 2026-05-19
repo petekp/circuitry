@@ -41,7 +41,7 @@ async function writeBootstrap(trace: TraceStore) {
     run_id: RUN_ID,
     kind: 'run.bootstrapped',
     flow_id: FLOW_ID,
-    goal: 'prove circuit-next can close one run',
+    goal: 'prove circuit can close one run',
     depth: 'standard',
     change_kind,
     manifest_hash: computeManifestHash(MANIFEST_BODY),
@@ -51,7 +51,7 @@ async function writeBootstrap(trace: TraceStore) {
 let runFolder: string;
 
 beforeEach(() => {
-  runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-runtime-event-log-'));
+  runFolder = mkdtempSync(join(tmpdir(), 'circuit-runtime-event-log-'));
 });
 
 afterEach(() => {

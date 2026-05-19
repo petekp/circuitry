@@ -27,7 +27,7 @@ text:
    current conversation. Then run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>'
    ```
 
    If there is an active Circuit run folder that should anchor the handoff, add
@@ -35,19 +35,19 @@ text:
 4. **Resume mode.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present handoff resume
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present handoff resume
    ```
 
 5. **Done mode.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present handoff done
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present handoff done
    ```
 
 6. **Brief mode.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" handoff brief --json
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" handoff brief --json
    ```
 
    Use this only as read-only host context. Do not treat it as an explicit
@@ -56,7 +56,7 @@ text:
    `hooks uninstall --host codex`, or `hooks doctor --host codex`, run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" handoff <exact hooks request>
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" handoff <exact hooks request>
    ```
 
    Render the JSON result. Hook setup is host configuration, not a resume

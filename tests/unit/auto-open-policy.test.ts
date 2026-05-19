@@ -62,10 +62,7 @@ describe('shouldSkipAutoOpen', () => {
 describe('isAutoOpenPathSafe — POSIX (darwin/linux)', () => {
   it('accepts canonical absolute .html paths', () => {
     expect(
-      isAutoOpenPathSafe(
-        '/Users/me/.circuit-next/runs/abc/reports/operator-summary.html',
-        'darwin',
-      ),
+      isAutoOpenPathSafe('/Users/me/.circuit/runs/abc/reports/operator-summary.html', 'darwin'),
     ).toBe(true);
     expect(isAutoOpenPathSafe('/home/dev/runs/run-id/reports/operator-summary.html', 'linux')).toBe(
       true,

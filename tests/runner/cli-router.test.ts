@@ -449,7 +449,7 @@ async function withStrictruntime<T>(operation: () => Promise<T>): Promise<T> {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-cli-router-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-cli-router-'));
 });
 
 afterEach(() => {

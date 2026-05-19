@@ -164,15 +164,15 @@ describe('utility CLI commands', () => {
     expect(existsSync(output.operator_summary_markdown_path)).toBe(true);
     const summary = readFileSync(output.operator_summary_markdown_path, 'utf8');
     expect(summary).toContain(CUSTOM_FLOW_ROOT_RUNTIME_POLICY);
-    expect(summary).toContain('circuit-next run release-note-flow');
+    expect(summary).toContain('circuit run release-note-flow');
     expect(existsSync(join(home, 'skills/release-note-flow/SKILL.md'))).toBe(true);
     expect(existsSync(join(home, 'skills/release-note-flow/circuit.yaml'))).toBe(true);
     expect(existsSync(join(home, 'commands/release-note-flow.md'))).toBe(true);
     expect(readFileSync(join(home, 'skills/release-note-flow/SKILL.md'), 'utf8')).toContain(
-      'circuit-next run release-note-flow',
+      'circuit run release-note-flow',
     );
     expect(readFileSync(join(home, 'commands/release-note-flow.md'), 'utf8')).toContain(
-      'circuit-next run release-note-flow',
+      'circuit run release-note-flow',
     );
     expect(CompiledFlow.parse(JSON.parse(readFileSync(output.flow_path, 'utf8'))).id).toBe(
       'release-note-flow',
@@ -411,7 +411,7 @@ describe('utility CLI commands', () => {
 
   it('returns invalid envelope on resume when the index points at a missing record', async () => {
     const projectRoot = tempRoot('circuit-handoff-resume-missing-');
-    const controlPlane = join(projectRoot, '.circuit-next');
+    const controlPlane = join(projectRoot, '.circuit');
     const continuityRoot = join(controlPlane, 'continuity');
     mkdirSync(continuityRoot, { recursive: true });
     writeFileSync(
@@ -444,7 +444,7 @@ describe('utility CLI commands', () => {
 
   it('returns invalid envelope on resume when the index kind disagrees with the record', async () => {
     const projectRoot = tempRoot('circuit-handoff-resume-mismatch-');
-    const controlPlane = join(projectRoot, '.circuit-next');
+    const controlPlane = join(projectRoot, '.circuit');
     const continuityRoot = join(controlPlane, 'continuity');
     const recordsDir = join(continuityRoot, 'records');
     mkdirSync(recordsDir, { recursive: true });
@@ -505,7 +505,7 @@ describe('utility CLI commands', () => {
 
   it('returns invalid envelope on resume when the index is unparseable', async () => {
     const projectRoot = tempRoot('circuit-handoff-resume-corrupt-');
-    const controlPlane = join(projectRoot, '.circuit-next');
+    const controlPlane = join(projectRoot, '.circuit');
     const continuityRoot = join(controlPlane, 'continuity');
     mkdirSync(continuityRoot, { recursive: true });
     writeFileSync(join(continuityRoot, 'index.json'), '{not-json');
@@ -521,7 +521,7 @@ describe('utility CLI commands', () => {
 
   it('renders a read-only handoff brief for host injection', async () => {
     const projectRoot = tempRoot('circuit-handoff-brief-project-');
-    const controlPlane = join(projectRoot, '.circuit-next');
+    const controlPlane = join(projectRoot, '.circuit');
     const save = await captureMain([
       'handoff',
       'save',
@@ -661,7 +661,7 @@ describe('utility CLI commands', () => {
       status: 'empty',
       reason: 'no_index',
     });
-    expect(existsSync(join(projectRoot, '.circuit-next'))).toBe(false);
+    expect(existsSync(join(projectRoot, '.circuit'))).toBe(false);
 
     const done = await captureMain(['handoff', 'done', '--project-root', projectRoot]);
     expect(done.code, done.stderr).toBe(0);
@@ -682,7 +682,7 @@ describe('utility CLI commands', () => {
 
   it('returns invalid for corrupt or dangling handoff state', async () => {
     const projectRoot = tempRoot('circuit-handoff-brief-invalid-');
-    const controlPlane = join(projectRoot, '.circuit-next');
+    const controlPlane = join(projectRoot, '.circuit');
     const continuityRoot = join(controlPlane, 'continuity');
     mkdirSync(continuityRoot, { recursive: true });
     writeFileSync(join(continuityRoot, 'index.json'), '{not-json');
@@ -759,7 +759,7 @@ describe('utility CLI commands', () => {
   it('installs and removes the Codex user-level handoff hook without clobbering existing hooks', async () => {
     const root = tempRoot('circuit-handoff-hooks-');
     const hooksFile = join(root, 'codex/hooks.json');
-    const launcher = join(root, 'bin/circuit-next');
+    const launcher = join(root, 'bin/circuit');
     mkdirSync(join(root, 'codex'), { recursive: true });
     mkdirSync(join(root, 'bin'), { recursive: true });
     writeFileSync(launcher, '#!/usr/bin/env node\n');
@@ -865,7 +865,7 @@ describe('utility CLI commands', () => {
   it('resolves default launcher from CIRCUIT_PLUGIN_ROOT when the wrapper has set it', () => {
     const pluginRoot = tempRoot('circuit-launcher-plugin-root-');
     mkdirSync(join(pluginRoot, 'scripts'), { recursive: true });
-    const wrapper = join(pluginRoot, 'scripts/circuit-next.mjs');
+    const wrapper = join(pluginRoot, 'scripts/circuit.mjs');
     writeFileSync(wrapper, '#!/usr/bin/env node\n');
 
     // moduleDir is irrelevant when CIRCUIT_PLUGIN_ROOT is set — the env var
@@ -874,10 +874,10 @@ describe('utility CLI commands', () => {
     expect(resolveDefaultLauncher(pluginRoot, '/nonexistent/module/dir')).toBe(wrapper);
   });
 
-  it('falls back to source-tree bin/circuit-next when CIRCUIT_PLUGIN_ROOT is absent', () => {
+  it('falls back to source-tree bin/circuit when CIRCUIT_PLUGIN_ROOT is absent', () => {
     const root = tempRoot('circuit-launcher-source-');
     const moduleDir = join(root, 'src/cli');
-    const bin = join(root, 'bin/circuit-next');
+    const bin = join(root, 'bin/circuit');
     mkdirSync(moduleDir, { recursive: true });
     mkdirSync(join(root, 'bin'), { recursive: true });
     writeFileSync(bin, '#!/usr/bin/env node\n');
@@ -891,13 +891,13 @@ describe('utility CLI commands', () => {
     const moduleDir = join(root, 'plugins/circuit/runtime');
 
     const fallback = resolveDefaultLauncher(undefined, moduleDir);
-    expect(fallback).toBe(resolve(root, 'plugins/bin/circuit-next'));
+    expect(fallback).toBe(resolve(root, 'plugins/bin/circuit'));
     expect(existsSync(fallback)).toBe(false);
 
     const message = missingDefaultLauncherMessage(fallback);
     expect(message).toContain('CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected');
     expect(message).toContain('set CIRCUIT_PLUGIN_ROOT');
-    expect(message).toContain('invoke through plugins/<host>/scripts/circuit-next.mjs');
+    expect(message).toContain('invoke through plugins/<host>/scripts/circuit.mjs');
     expect(message).toContain(fallback);
   });
 
@@ -907,7 +907,7 @@ describe('utility CLI commands', () => {
     mkdirSync(moduleDir, { recursive: true });
 
     const fallback = resolveDefaultLauncher(undefined, moduleDir);
-    expect(fallback).toBe(resolve(moduleDir, '../..', 'bin/circuit-next'));
+    expect(fallback).toBe(resolve(moduleDir, '../..', 'bin/circuit'));
     expect(existsSync(fallback)).toBe(false);
 
     const hooksFile = join(root, 'codex/hooks.json');
@@ -995,7 +995,7 @@ describe('utility CLI commands', () => {
   it('reports invalid when duplicate Codex Circuit handoff hooks are installed', async () => {
     const root = tempRoot('circuit-handoff-hooks-duplicate-');
     const hooksFile = join(root, 'codex/hooks.json');
-    const launcher = join(root, 'bin/circuit-next');
+    const launcher = join(root, 'bin/circuit');
     mkdirSync(join(root, 'codex'), { recursive: true });
     mkdirSync(join(root, 'bin'), { recursive: true });
     writeFileSync(launcher, '#!/usr/bin/env node\n');
@@ -1047,7 +1047,7 @@ describe('utility CLI commands', () => {
   it('marks an installed Codex handoff hook invalid when the launcher is missing', async () => {
     const root = tempRoot('circuit-handoff-hooks-stale-launcher-');
     const hooksFile = join(root, 'codex/hooks.json');
-    const launcher = join(root, 'bin/circuit-next');
+    const launcher = join(root, 'bin/circuit');
     mkdirSync(join(root, 'bin'), { recursive: true });
     writeFileSync(launcher, '#!/usr/bin/env node\n');
 

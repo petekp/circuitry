@@ -461,7 +461,7 @@ Per cross-cutting spec semantics. Explore-specific behaviors:
 ### Organization (in scope for MVP)
 
 ```
-.circuit-next/runs/
+.circuit/runs/
   explore/
     2026-05-08/
       T1432-auth-session-investigation/
@@ -487,7 +487,7 @@ organization+naming alone is the minimum-viable improvement.
 
 ### Constraints
 
-- Run folders are gitignored (`.circuit-next/` is in `.gitignore`)
+- Run folders are gitignored (`.circuit/` is in `.gitignore`)
 - Per-machine; not multi-machine
 - Never mutated after a run completes (re-explore is a fresh run, not an
   in-place reopen)
@@ -529,7 +529,7 @@ code.
    structured `summary + must_answer` shape. Add to schema.
 6. **Quality rubric.** Review today scores against `explore.review-verdict@v1`.
    Replace with 8-dimension per-dim scoring + computed verdict.
-7. **Run folder organization.** Today flat under `.circuit-next/runs/<run-id>`.
+7. **Run folder organization.** Today flat under `.circuit/runs/<run-id>`.
    Move to flow + date + timestamp+slug structure.
 8. **Tournament default N.** Confirm today's default; set to 3.
 9. **--web flag.** Remove if present; web becomes implicit via host tools.

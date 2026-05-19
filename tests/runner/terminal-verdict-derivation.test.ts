@@ -92,7 +92,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-verdict-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-verdict-'));
 });
 
 afterEach(() => {

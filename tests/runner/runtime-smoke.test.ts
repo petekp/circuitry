@@ -15,7 +15,7 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 // Runner smoke test exercising one compose + one relay step
 // end-to-end via the dry-run claude-code connector. The test reads the
 // production runtime-proof flow fixture — the same JSON a user
-// invocation of `./bin/circuit-next runtime-proof ...` would load — and
+// invocation of `./bin/circuit runtime-proof ...` would load — and
 // composes the runtime boundary via `runCompiledFlow`.
 //
 // Two-run acceptance: same fixture, two different goals, two different
@@ -99,7 +99,7 @@ async function readTrace(runFolder: string) {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-runtime-smoke-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-runtime-smoke-'));
 });
 
 afterEach(() => {
@@ -114,7 +114,7 @@ describe('runtime-proof runner smoke', () => {
       runDir: runFolder,
       flowBytes: bytes,
       runId: '11111111-1111-1111-1111-111111111111',
-      goal: 'prove circuit-next can close one run',
+      goal: 'prove circuit can close one run',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 20, 12, 0, 0)),
       relayer: stubRelayer(),
@@ -152,7 +152,7 @@ describe('runtime-proof runner smoke', () => {
     );
     expect(result.run_id).toBe(outcome.run_id);
     expect(result.flow_id).toBe('runtime-proof');
-    expect(result.goal).toBe('prove circuit-next can close one run');
+    expect(result.goal).toBe('prove circuit can close one run');
     expect(result.outcome).toBe('complete');
     expect(result.trace_entries_observed).toBe(log.length);
   });
@@ -227,7 +227,7 @@ describe('runtime-proof runner smoke', () => {
       runDir: runAFolder,
       flowBytes: bytes,
       runId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      goal: 'prove circuit-next can close one run',
+      goal: 'prove circuit can close one run',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 20, 12, 0, 0)),
       relayer: stubRelayer(),
@@ -237,7 +237,7 @@ describe('runtime-proof runner smoke', () => {
       runDir: runBFolder,
       flowBytes: bytes,
       runId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-      goal: 'prove circuit-next can close a SECOND run with a different goal',
+      goal: 'prove circuit can close a SECOND run with a different goal',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 20, 13, 0, 0)),
       relayer: stubRelayer(),
@@ -319,14 +319,14 @@ describe('runtime-proof runner smoke', () => {
   // statically without spawning a subprocess.
   //
   // Direct-launcher cleanup: the public test path now goes through
-  // ./bin/circuit-next, which invokes dist/cli/circuit.js directly
+  // ./bin/circuit, which invokes dist/cli/circuit.js directly
   // instead of surfacing npm-script or runtime-proof.js names to plugin users.
   it("package.json's circuit:run script delegates to the direct Circuit launcher", () => {
     const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
       scripts?: Record<string, string>;
       bin?: Record<string, string>;
     };
-    expect(pkg.scripts?.['circuit:run']).toBe('./bin/circuit-next');
-    expect(pkg.bin?.['circuit-next']).toBe('./bin/circuit-next');
+    expect(pkg.scripts?.['circuit:run']).toBe('./bin/circuit');
+    expect(pkg.bin?.circuit).toBe('./bin/circuit');
   });
 });

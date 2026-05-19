@@ -20,7 +20,7 @@ const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/claude');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const EXPECTED_CLAUDE_COMMANDS = ['build', 'create', 'explore', 'fix', 'handoff', 'review', 'run'];
 const RAW_PROGRESS_INVOCATION =
-  /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit-next\.mjs" (?!present\b)[^\n]*--progress jsonl/;
+  /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.mjs" (?!present\b)[^\n]*--progress jsonl/;
 
 const PluginManifest = z
   .object({
@@ -59,14 +59,14 @@ function noAmbientCliPath(): string {
 
 function cleanPluginEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  env.CIRCUIT_NEXT_CLI = undefined;
-  env.CIRCUIT_NEXT_DEV = undefined;
+  env.CIRCUIT_CLI = undefined;
+  env.CIRCUIT_DEV = undefined;
   env.PATH = noAmbientCliPath();
   return { ...env, ...extra };
 }
 
 function envWithOverride(fakeBin: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  return cleanPluginEnv({ ...extra, CIRCUIT_NEXT_CLI: fakeBin });
+  return cleanPluginEnv({ ...extra, CIRCUIT_CLI: fakeBin });
 }
 
 describe('Claude Code host plugin package', () => {
@@ -78,7 +78,7 @@ describe('Claude Code host plugin package', () => {
     expect(manifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(true);
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.mjs'))).toBe(true);
-    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'))).toBe(true);
+    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'))).toBe(true);
     expect(existsSync(resolve(REPO_ROOT, 'hooks'))).toBe(false);
     expect(existsSync(resolve(REPO_ROOT, 'commands'))).toBe(false);
   });
@@ -109,14 +109,14 @@ describe('Claude Code host plugin package', () => {
       expect(existsSync(commandPath)).toBe(true);
       const commandMarkdown = readFileSync(commandPath, 'utf8');
 
-      expect(commandMarkdown).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs"');
+      expect(commandMarkdown).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"');
       expect(commandMarkdown).toContain(' present ');
       expect(commandMarkdown).not.toMatch(RAW_PROGRESS_INVOCATION);
       expect(commandMarkdown).not.toContain('Parse the final JSON');
       expect(commandMarkdown).not.toContain("Parse the CLI's final JSON");
-      expect(commandMarkdown).not.toContain('./bin/circuit-next');
+      expect(commandMarkdown).not.toContain('./bin/circuit');
       expect(commandMarkdown).not.toContain('repo-local launcher');
-      expect(commandMarkdown).not.toContain('invokes `circuit-next`');
+      expect(commandMarkdown).not.toContain('invokes `circuit`');
     }
   });
 
@@ -138,12 +138,12 @@ describe('Claude Code host plugin package', () => {
     expect(existsSync(resolve(PLUGIN_ROOT, 'skills/runtime-proof'))).toBe(false);
   });
 
-  it('wrapper uses the bundled runtime when PATH has no circuit-next binary', () => {
+  it('wrapper uses the bundled runtime when PATH has no circuit binary', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-bundled-'));
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -158,7 +158,7 @@ describe('Claude Code host plugin package', () => {
         version: string;
       };
       expect(output.runtime_source).toBe('bundled');
-      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit.js'));
       expect(output.version).toBe(
         VersionManifest.parse(
           JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
@@ -169,11 +169,11 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
-  it('wrapper reports CIRCUIT_NEXT_CLI as an explicit override', () => {
+  it('wrapper reports CIRCUIT_CLI as an explicit override', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-override-'));
     try {
       const binDir = join(tempDir, 'bin');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -187,7 +187,7 @@ describe('Claude Code host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -205,17 +205,17 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
-  it('wrapper refuses PATH fallback unless CIRCUIT_NEXT_DEV is set', () => {
+  it('wrapper refuses PATH fallback unless CIRCUIT_DEV is set', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-path-fallback-'));
     try {
       const tempPluginRoot = join(tempDir, 'plugin');
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
-      const wrapperPath = join(scriptsDir, 'circuit-next.mjs');
-      const fakeBin = join(binDir, 'circuit-next');
+      const wrapperPath = join(scriptsDir, 'circuit.mjs');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
-      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs')));
+      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs')));
       // The wrapper imports ./auto-open-policy.mjs at top-level — copy it so
       // the fixture script can load.
       writeFileSync(
@@ -246,7 +246,7 @@ describe('Claude Code host plugin package', () => {
         encoding: 'utf8',
         env: cleanPluginEnv({
           PATH: `${binDir}${delimiter}${noAmbientCliPath()}`,
-          CIRCUIT_NEXT_DEV: '1',
+          CIRCUIT_DEV: '1',
         }),
       });
       expect(withDev.status, withDev.stderr).toBe(0);
@@ -264,7 +264,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const binDir = join(tempDir, 'bin');
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -276,13 +276,7 @@ describe('Claude Code host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
-          'run',
-          'review',
-          '--goal',
-          'outside repo',
-        ],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'run', 'review', '--goal', 'outside repo'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -317,7 +311,7 @@ describe('Claude Code host plugin package', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-streams-'));
     try {
       const binDir = join(tempDir, 'bin');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -334,7 +328,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'run',
           'explore',
           '--goal',
@@ -361,7 +355,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const binDir = join(tempDir, 'bin');
       const summaryPath = join(tempDir, 'summary.md');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       const finalJson = JSON.stringify({
         schema_version: 1,
         outcome: 'complete',
@@ -388,7 +382,7 @@ describe('Claude Code host plugin package', () => {
       child = spawn(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'explore',
@@ -441,7 +435,7 @@ describe('Claude Code host plugin package', () => {
       const binDir = join(tempDir, 'bin');
       const summaryPath = join(tempDir, 'operator-summary.md');
       const summaryJsonPath = join(tempDir, 'operator-summary.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       const runId = '87000000-0000-0000-0000-000000000001';
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
@@ -492,7 +486,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'review',
@@ -531,7 +525,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const binDir = join(tempDir, 'bin');
       const summaryPath = join(tempDir, 'summary.md');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(summaryPath, '# Clean Summary\n\n- Recommendation: keep it short.\n');
       writeFileSync(
@@ -554,7 +548,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'explore',
@@ -581,7 +575,7 @@ describe('Claude Code host plugin package', () => {
       const binDir = join(tempDir, 'bin');
       const runFolder = join(tempDir, 'run');
       const requestPath = join(runFolder, 'reports/checkpoints/tradeoff-request.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       mkdirSync(join(requestPath, '..'), { recursive: true });
       writeFileSync(requestPath, JSON.stringify({ prompt: 'Choose the best tradeoff.' }));
@@ -609,7 +603,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'explore',
@@ -628,7 +622,7 @@ describe('Claude Code host plugin package', () => {
       expect(result.stdout).toContain('Option 1');
       expect(result.stdout).toContain('Option 2');
       expect(result.stdout).toContain(
-        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
       );
       expect(result.stdout).not.toContain('checkpoint_waiting');
       expect(result.stdout).not.toContain('{"');
@@ -644,7 +638,7 @@ describe('Claude Code host plugin package', () => {
       const runFolder = join(tempDir, 'run');
       const requestPath = join(runFolder, 'reports/checkpoints/frame-step-request.json');
       const htmlPath = join(runFolder, 'reports/operator-summary.html');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       mkdirSync(join(requestPath, '..'), { recursive: true });
       writeFileSync(requestPath, JSON.stringify({ prompt: 'Confirm the Build brief.' }));
@@ -674,7 +668,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'build',
@@ -692,7 +686,7 @@ describe('Claude Code host plugin package', () => {
       expect(result.stdout).toContain('Confirm the Build brief.');
       expect(result.stdout).toContain(`Rich summary: ${htmlPath}`);
       expect(result.stdout).toContain(
-        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
+        `node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present resume --run-folder '${runFolder}' --checkpoint-choice '<choice>'`,
       );
       expect(result.stdout).not.toContain('checkpoint_waiting');
       expect(result.stdout).not.toContain('{"');
@@ -705,7 +699,7 @@ describe('Claude Code host plugin package', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-failure-'));
     try {
       const binDir = join(tempDir, 'bin');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -725,7 +719,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'present',
           'run',
           'explore',
@@ -757,7 +751,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const binDir = join(tempDir, 'bin');
       const argvPath = join(tempDir, 'argv.json');
-      const fakeBin = join(binDir, 'circuit-next');
+      const fakeBin = join(binDir, 'circuit');
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
@@ -770,7 +764,7 @@ describe('Claude Code host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
           'handoff',
           'save',
           '--goal',
@@ -813,7 +807,7 @@ describe('Claude Code host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit-next.mjs'), 'doctor'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'doctor'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -830,7 +824,7 @@ describe('Claude Code host plugin package', () => {
       };
       expect(output.status).toBe('ok');
       expect(output.runtime_source).toBe('bundled');
-      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit-next.js'));
+      expect(output.runtime_path).toBe(resolve(PLUGIN_ROOT, 'runtime/circuit.js'));
       expect(output.checks).toContainEqual(
         expect.objectContaining({ name: 'plugin_manifest_shape', ok: true }),
       );

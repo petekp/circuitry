@@ -27,7 +27,7 @@ text:
    current conversation. Then run:
 
    ```bash
-   ./bin/circuit-next handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>' --progress jsonl
+   ./bin/circuit handoff save --goal '<goal>' --next '<next action>' --state-markdown '<state bullets>' --debt-markdown '<debt bullets>' --progress jsonl
    ```
 
    If there is an active Circuit run folder that should anchor the handoff, add
@@ -35,19 +35,19 @@ text:
 4. **Resume mode.** Run:
 
    ```bash
-   ./bin/circuit-next handoff resume --progress jsonl
+   ./bin/circuit handoff resume --progress jsonl
    ```
 
 5. **Done mode.** Run:
 
    ```bash
-   ./bin/circuit-next handoff done --progress jsonl
+   ./bin/circuit handoff done --progress jsonl
    ```
 
 6. **Brief mode.** Run:
 
    ```bash
-   ./bin/circuit-next handoff brief --json
+   ./bin/circuit handoff brief --json
    ```
 
    Use this only as read-only host context. Do not treat it as an explicit
@@ -56,7 +56,7 @@ text:
    `hooks uninstall --host codex`, or `hooks doctor --host codex`, run:
 
    ```bash
-   ./bin/circuit-next handoff <exact hooks request>
+   ./bin/circuit handoff <exact hooks request>
    ```
 
    Render the JSON result. Hook setup is host configuration, not a resume

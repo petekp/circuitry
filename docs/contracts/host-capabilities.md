@@ -55,7 +55,7 @@ tested.
 
 - `progress`: `fallback` JSONL on stderr for external parsers.
 - `task_list`: `fallback` via `task_list.updated` JSONL events.
-- `ask_user`: `fallback` via `circuit-next resume --run-folder ...`.
+- `ask_user`: `fallback` via `circuit resume --run-folder ...`.
 - `final_summary`: read and render `operator_summary_markdown_path` verbatim.
 - `deep_links`: read paths from stdout JSON or the operator summary.
 - `debug`: inspect reports and trace files directly.

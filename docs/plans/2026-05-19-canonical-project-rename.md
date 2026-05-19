@@ -3,7 +3,9 @@
 Date: 2026-05-19
 
 Archive note: this completed rename note is historical evidence. Use current
-repo paths, remotes, code, and `docs/README.md` for live guidance.
+repo paths, remotes, code, and `docs/README.md` for live guidance. The
+reference audit policy near the end is superseded by the later hard cutover:
+old-name support is not a live compatibility promise.
 
 ## Goal
 
@@ -102,9 +104,13 @@ Focused checks after identity edits:
 - Remote archive branches `archive/circuit-v1-main-20260519` and `archive/circuit-v1-working-tree-20260519` remained present after takeover.
 - Final local status after takeover: promoted `/Users/petepetrash/Code/circuit` clean on `main`; preserved `/Users/petepetrash/Code/circuit-v1` clean on `main` tracking `origin/archive/circuit-v1-main-20260519`.
 
-## Reference audit policy
+## Superseded Reference Audit Policy
 
-Allowed remaining `circuit-next` references:
+The policy below describes the intermediate project-path rename only. It is
+archived for historical traceability and does not authorize any live
+compatibility path after the hard cutover.
+
+Previously allowed remaining `circuit-next` references:
 
 - Runtime CLI binary and command examples: `bin/circuit-next`,
   `./bin/circuit-next`, `scripts/circuit-next.mjs`, and the user-facing

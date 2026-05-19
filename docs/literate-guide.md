@@ -439,7 +439,7 @@ the snapshot is just a mirror.
 Each run gets its own directory:
 
 ```
-.circuit-next/runs/<run-id>/
+.circuit/runs/<run-id>/
 ├── trace.ndjson                   # the log (§9)
 ├── manifest.json                  # the saved CompiledFlow bytes
 ├── result.json                    # written at run.closed
@@ -705,7 +705,7 @@ resolution that produces those decisions, with provenance.
 The order is fixed:
 
 1. Defaults (compiled in).
-2. User-global config — `~/.config/circuit-next/config.yaml`.
+2. User-global config — `~/.config/circuit/config.yaml`.
 3. Project config — `./.circuit/config.yaml`.
 4. Flow defaults — `default_selection` from the schematic.
 5. Stage selection — per-stage overrides in the flow.
@@ -820,7 +820,7 @@ reads both back and uses them to reconstruct the run.
 A run that pauses at a checkpoint can be resumed in another session:
 
 ```bash
-./bin/circuit-next resume --run-folder <path> --checkpoint-choice <choice>
+./bin/circuit resume --run-folder <path> --checkpoint-choice <choice>
 ```
 
 The resume path does not generate fresh files. It reads the manifest
@@ -860,7 +860,7 @@ not nice-to-haves; they are the only mechanism that keeps replay honest
 when files on disk are mutable.
 
 This same pattern — the trace is the world, files are projections —
-shows up in the broader handoff CLI (`circuit-next handoff save | resume |
+shows up in the broader handoff CLI (`circuit handoff save | resume |
 done`). A handoff is a cross-session continuity record, useful when
 you want to stop work for the day and have the next session pick up
 the right run with the right context. The continuity record contains
@@ -878,10 +878,10 @@ take pains to keep them separate.
 the slash command's prompt instructs the host model to pick a flow
 before invoking the CLI. The Claude Code plugin's `run.md` contains
 the rubric the model uses. The decision is the host model's; Circuit
-just sees an explicit `circuit-next run <flow> --goal "…"`.
+just sees an explicit `circuit run <flow> --goal "…"`.
 
 **The CLI router.** When the CLI is invoked without an explicit flow —
-`circuit-next run --goal "…"` — Circuit's deterministic classifier picks
+`circuit run --goal "…"` — Circuit's deterministic classifier picks
 one. That is `src/flows/router.ts`, a regex-and-rule classifier that
 walks the flow packages in priority order:
 
@@ -921,7 +921,7 @@ imperative phrasings — "execute this plan", "carry out this checklist"
 "Decide between options" routes to Explore in tournament mode. These are conveniences for habits
 the operator already has; they are not the canonical front door.
 
-**Explicit flow names.** `circuit-next run build --goal "…"` skips
+**Explicit flow names.** `circuit run build --goal "…"` skips
 routing entirely. The host plugin's per-flow commands
 (`/circuit:build`, `/circuit:fix`, …) take this path.
 
@@ -1106,7 +1106,7 @@ The Claude Code plugin contains:
 - `.claude-plugin/plugin.json` — the plugin manifest.
 
 The Codex plugin (`plugins/circuit/`) is shaped slightly differently —
-flows live under `flows/<id>/` and are loaded by a `scripts/circuit-next.mjs`
+flows live under `flows/<id>/` and are loaded by a `scripts/circuit.mjs`
 launcher that injects `--flow-root` so Circuit reads the packaged flows
 rather than the operator's checkout.
 

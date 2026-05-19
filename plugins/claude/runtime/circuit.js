@@ -26700,7 +26700,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     };
   }
   try {
-    const branchName = `circuit-next/${context.runId}/${step.id}/${branch.branch_id}`;
+    const branchName = `circuit/${context.runId}/${step.id}/${branch.branch_id}`;
     await Promise.resolve(worktreeRunner.add({ worktreePath, baseRef: "HEAD", branchName }));
     const resolved = await context.childCompiledFlowResolver({
       flowId: branch.flowRef,
@@ -26987,7 +26987,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
         if (context.projectRoot === void 0) {
           throw new Error(`fanout step '${step.id}': projectRoot is required to anchor per-branch worktrees`);
         }
-        const worktreePath = joinPath2(context.projectRoot, ".circuit-next", "worktrees", context.runId, step.id, branch.branch_id);
+        const worktreePath = joinPath2(context.projectRoot, ".circuit", "worktrees", context.runId, step.id, branch.branch_id);
         if (branchNeedsWorktree(branch))
           provisioned.push(worktreePath);
         outcome = await executeSubRunFanoutBranch(step, context, branch, worktreeRunner, branchDirRel, worktreePath);
@@ -28443,7 +28443,7 @@ function createProgressProjector(input) {
           resume: {
             run_folder: input.runDir,
             checkpoint_choice_arg: "<choice>",
-            command: `circuit-next resume --run-folder ${input.runDir} --checkpoint-choice <choice>`
+            command: `circuit resume --run-folder ${input.runDir} --checkpoint-choice <choice>`
           }
         });
         reportTaskListProgress({
@@ -29669,7 +29669,7 @@ var import_yaml2 = __toESM(require_dist(), 1);
 import { existsSync as existsSync7, readFileSync as readFileSync17 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join11, resolve as resolve6 } from "node:path";
-var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit-next", "config.yaml"];
+var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
   return join11(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
@@ -30162,7 +30162,7 @@ function shellSingleQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 function resumeCommandForChoice(runFolder, choiceId) {
-  return `circuit-next resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
+  return `circuit resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
 }
 function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
   const isRecommended = choice.id === recommendedChoiceId2;
@@ -30274,7 +30274,7 @@ var buildCheckpointProjector = (ctx) => {
   const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
   if (recommendedChoice === void 0)
     return void 0;
-  const resumeCommand = `circuit-next resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
   const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
   const banner = verdictBanner({
     intent: "positive",
@@ -31249,7 +31249,7 @@ var RUNTIME_POLICY_REASONS = {
   composeWriter: COMPOSE_WRITER_UNSUPPORTED_REASON,
   checkpointResume: "checkpoint resume follows the saved run folder engine marker"
 };
-var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit-next create` publish a normal runnable flow command.";
+var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit create` publish a normal runnable flow command.";
 var CLI_RUNTIME_ROUTING_POLICY = "Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.";
 function pathIsInside(parent, child) {
   const rel = relative6(parent, child);
@@ -31350,7 +31350,7 @@ function utilityProgress(input) {
 var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set(["build", "explore", "fix", "handoff", "review", "run"]);
 function usage() {
   return [
-    'usage: circuit-next create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
+    'usage: circuit create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
     "",
     "Drafts a user-global custom flow package. Without --publish it only writes a draft; with --publish --yes it promotes the draft into the user-global flow root."
   ].join("\n");
@@ -31446,7 +31446,7 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve8(args.home ?? join13(homedir3(), ".config", "circuit-next", "custom"));
+  return resolve8(args.home ?? join13(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
   return join13(home, "drafts", slug);
@@ -31458,7 +31458,7 @@ function flowRoot(home) {
   return join13(home, "flows");
 }
 function customFlowInvocation(slug, home) {
-  return `circuit-next run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
+  return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
   return join13(home, "commands");
@@ -32589,7 +32589,7 @@ var indexOwnPropertyGuard = external_exports.custom((raw) => {
 var ContinuityIndex = indexOwnPropertyGuard.pipe(ContinuityIndexBody);
 
 // dist/cli/handoff.js
-var DEFAULT_CONTROL_PLANE = ".circuit-next";
+var DEFAULT_CONTROL_PLANE = ".circuit";
 var HANDOFF_BRIEF_API_VERSION = "handoff-brief-v1";
 var HANDOFF_BRIEF_SCHEMA_VERSION = 1;
 var HANDOFF_BRIEF_MAX_CHARS = 3e3;
@@ -32598,12 +32598,12 @@ var HANDOFF_HOOKS_SCHEMA_VERSION = 1;
 var CIRCUIT_HOOK_MARKER = "CIRCUIT_HANDOFF_HOOK=1";
 function usage2() {
   return [
-    'usage: circuit-next handoff [save] --goal "<goal>" --next "<next>" [--state-markdown <md>] [--debt-markdown <md>] [--run-folder <path>] [--control-plane <path>] [--record-id <stem>] [--progress jsonl]',
-    "       circuit-next handoff resume [--control-plane <path>] [--progress jsonl]",
-    "       circuit-next handoff done [--control-plane <path>] [--progress jsonl]",
-    "       circuit-next handoff brief --json [--control-plane <path>] [--project-root <path>]",
-    "       circuit-next handoff hook --host codex [--project-root <path>]",
-    "       circuit-next handoff hooks install|uninstall|doctor --host codex [--hooks-file <path>] [--launcher <path>]"
+    'usage: circuit handoff [save] --goal "<goal>" --next "<next>" [--state-markdown <md>] [--debt-markdown <md>] [--run-folder <path>] [--control-plane <path>] [--record-id <stem>] [--progress jsonl]',
+    "       circuit handoff resume [--control-plane <path>] [--progress jsonl]",
+    "       circuit handoff done [--control-plane <path>] [--progress jsonl]",
+    "       circuit handoff brief --json [--control-plane <path>] [--project-root <path>]",
+    "       circuit handoff hook --host codex [--project-root <path>]",
+    "       circuit handoff hooks install|uninstall|doctor --host codex [--hooks-file <path>] [--launcher <path>]"
   ].join("\n");
 }
 function takeValue2(argv, index, flag) {
@@ -33011,14 +33011,14 @@ function defaultCodexHooksFile() {
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve10(pluginRoot, "scripts/circuit-next.mjs");
+    return resolve10(pluginRoot, "scripts/circuit.mjs");
   }
-  return resolve10(moduleDir, "../..", "bin/circuit-next");
+  return resolve10(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
     "CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected.",
-    "Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit-next.mjs.",
+    "Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit.mjs.",
     `Tried source-tree fallback launcher: ${launcher}`
   ].join(" ");
 }
@@ -33844,22 +33844,22 @@ async function runRunsCommand(argv) {
 }
 
 // dist/cli/circuit.js
-var DEFAULT_RUNS_BASE = ".circuit-next/runs";
+var DEFAULT_RUNS_BASE = ".circuit/runs";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
 function usage3() {
   return [
-    'usage: circuit-next run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
-    "       circuit-next resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]",
-    "       circuit-next runs show --run-folder <path> --json",
-    "       circuit-next handoff [save|resume|done] [options]",
-    '       circuit-next create --description "<flow idea>" [--name <slug>] [--publish --yes]',
-    "       circuit-next version [--json]",
+    'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
+    "       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]",
+    "       circuit runs show --run-folder <path> --json",
+    "       circuit handoff [save|resume|done] [options]",
+    '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
+    "       circuit version [--json]",
     "",
     "Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` asks the flow to auto-resolve supported checkpoints. Unsupported tuples are rejected per flow with the flow allow-list.",
     "",
     "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/pursue flows and then composes the runtime boundary using the configured relay connector.",
     "",
-    "Config: if present, loads ~/.config/circuit-next/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.",
+    "Config: if present, loads ~/.config/circuit/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.",
     "",
     "Note: `--dry-run` is not implemented and is rejected. An earlier version silently invoked the real connector while reporting dry_run:true, which is a safety bug; the flag stays rejected until real dry-run support lands.",
     "",
@@ -33888,7 +33888,7 @@ function readSourceVersion() {
 function versionInfo() {
   return {
     schema_version: 1,
-    name: "circuit-next",
+    name: "circuit",
     version: readSourceVersion(),
     node_version: process.versions.node,
     runtime_source: process.env.CIRCUIT_RUNTIME_SOURCE ?? "direct",
@@ -33907,7 +33907,7 @@ function runVersionCommand(argv) {
 `);
     return 0;
   }
-  process.stderr.write("error: usage: circuit-next version [--json]\n");
+  process.stderr.write("error: usage: circuit version [--json]\n");
   return 2;
 }
 function parseArgs3(argv) {

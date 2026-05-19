@@ -532,7 +532,7 @@ describe('release truth infrastructure', () => {
     expect(summary).toContain('Rich summary:');
     for (const file of filesUnder('docs/release/proofs/runs/explore-decision')) {
       const text = readFileSync(file, 'utf8');
-      expect(text).not.toMatch(/\/Users\/petepetrash|Code\/circuit-next|\/private|\/var\/folders/);
+      expect(text).not.toMatch(/\/Users\/petepetrash|Code\/circuit|\/private|\/var\/folders/);
     }
   });
 
@@ -696,7 +696,7 @@ describe('release truth infrastructure', () => {
     for (const file of filesUnder('docs/release/proofs/runs')) {
       const text = readFileSync(file, 'utf8');
       expect(text).not.toMatch(
-        /\/Users\/petepetrash|Code\/circuit-next|\/private|\/var\/folders|\/tmp\//,
+        /\/Users\/petepetrash|Code\/circuit|\/private|\/var\/folders|\/tmp\//,
       );
     }
   });

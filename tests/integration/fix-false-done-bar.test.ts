@@ -276,7 +276,7 @@ function fixVerificationOverride(scenario: ScenarioConfig): ExecutorRegistry['ve
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-false-done-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-false-done-'));
 });
 
 afterEach(() => {

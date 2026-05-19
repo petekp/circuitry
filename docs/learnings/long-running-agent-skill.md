@@ -71,7 +71,7 @@ intend to run unattended.
 load-bearing. Every implementer subagent reads it before writing
 code. It's the team's quality bar made portable.
 
-Circuit-next has nothing equivalent at the relay layer. A typed
+Circuit has nothing equivalent at the relay layer. A typed
 standards report, written once at flow start and threaded into every
 relay step's input set, would do the same job — and would be enforced
 by the schema rather than relying on the worker to faithfully read a

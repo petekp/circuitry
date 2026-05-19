@@ -203,7 +203,7 @@ Purpose: expose projection without creating a second implementation.
 Command:
 
 ```bash
-circuit-next runs show --run-folder <path> --json
+circuit runs show --run-folder <path> --json
 ```
 
 Rules:
@@ -236,12 +236,12 @@ Split this stage.
 Command:
 
 ```bash
-circuit-next runs list --project-root <path> --json
+circuit runs list --project-root <path> --json
 ```
 
 Rules:
 
-- scan `<project-root>/.circuit-next/runs/*`
+- scan `<project-root>/.circuit/runs/*`
 - call the same projection function for each run folder
 - skip non-directories
 - include per-run projection failures without failing the whole list
@@ -253,7 +253,7 @@ Rules:
 Command:
 
 ```bash
-circuit-next status --project-root <path> --json
+circuit status --project-root <path> --json
 ```
 
 V1 `status` may only summarize counts and return projections. It must not
@@ -269,7 +269,7 @@ Purpose: make host control easier without inventing global state.
 Command:
 
 ```bash
-circuit-next resume \
+circuit resume \
   --project-root <path> \
   --run-id <id> \
   --checkpoint-choice <value> \
@@ -329,7 +329,7 @@ scripts/dev/circuit-watch.mjs <run-folder>
 
 Behavior:
 
-- calls `circuit-next runs show --run-folder <path> --json`
+- calls `circuit runs show --run-folder <path> --json`
 - prints state
 - prints checkpoint choices when present
 - accepts one checkpoint choice

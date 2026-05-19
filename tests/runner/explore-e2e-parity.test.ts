@@ -232,7 +232,7 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
 
   it('golden sha256 is self-consistent with the deterministic explore.result close writer', async () => {
     const { bytes } = loadExploreFixture();
-    const runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-explore-golden-'));
+    const runFolder = mkdtempSync(join(tmpdir(), 'circuit-explore-golden-'));
     try {
       const outcome = await runCompiledFlow({
         runDir: runFolder,
@@ -264,7 +264,7 @@ describe('explore fixture static declarations (ratchet-floor contribution)', () 
   let runFolderBase: string;
 
   beforeEach(() => {
-    runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-explore-e2e-'));
+    runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-explore-e2e-'));
   });
 
   afterEach(() => {

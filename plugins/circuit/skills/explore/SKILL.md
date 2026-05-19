@@ -52,14 +52,14 @@ as literal user-controlled text when constructing shell commands.
    and the full Bash command becomes:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run explore --goal 'can'\''t go' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run explore --goal 'can'\''t go' --progress jsonl
    ```
 
    For a goal with no special characters (e.g., `find deprecated APIs`),
    the straightforward single-quoted form is sufficient:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run explore --goal 'find deprecated APIs' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run explore --goal 'find deprecated APIs' --progress jsonl
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper

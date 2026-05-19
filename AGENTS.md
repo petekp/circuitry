@@ -78,7 +78,7 @@ changes need `check-release-infra`.
 | Direct command sources | `src/commands/<id>.md` |
 | Flow-owned command sources | `src/flows/<id>/command.md` |
 | Generated surface source map | `docs/generated-surfaces.md` |
-| CLI entrypoint | `bin/circuit-next` |
+| CLI entrypoint | `bin/circuit` |
 | Engine source | `src/runtime/`, `src/cli/`, `src/schemas/` |
 | Flow packages | `src/flows/<id>/` (FlowData, schematic, output schemas, command, contract, writers, relay hints) |
 | Flow catalog | `src/flows/catalog.ts` (single source of truth the engine derives from) |

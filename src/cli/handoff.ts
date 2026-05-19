@@ -44,7 +44,7 @@ interface HandoffMainOptions {
   readonly now?: () => Date;
 }
 
-const DEFAULT_CONTROL_PLANE = '.circuit-next';
+const DEFAULT_CONTROL_PLANE = '.circuit';
 const HANDOFF_BRIEF_API_VERSION = 'handoff-brief-v1';
 const HANDOFF_BRIEF_SCHEMA_VERSION = 1;
 const HANDOFF_BRIEF_MAX_CHARS = 3000;
@@ -58,12 +58,12 @@ type HandoffBriefRenderResult =
 
 function usage(): string {
   return [
-    'usage: circuit-next handoff [save] --goal "<goal>" --next "<next>" [--state-markdown <md>] [--debt-markdown <md>] [--run-folder <path>] [--control-plane <path>] [--record-id <stem>] [--progress jsonl]',
-    '       circuit-next handoff resume [--control-plane <path>] [--progress jsonl]',
-    '       circuit-next handoff done [--control-plane <path>] [--progress jsonl]',
-    '       circuit-next handoff brief --json [--control-plane <path>] [--project-root <path>]',
-    '       circuit-next handoff hook --host codex [--project-root <path>]',
-    '       circuit-next handoff hooks install|uninstall|doctor --host codex [--hooks-file <path>] [--launcher <path>]',
+    'usage: circuit handoff [save] --goal "<goal>" --next "<next>" [--state-markdown <md>] [--debt-markdown <md>] [--run-folder <path>] [--control-plane <path>] [--record-id <stem>] [--progress jsonl]',
+    '       circuit handoff resume [--control-plane <path>] [--progress jsonl]',
+    '       circuit handoff done [--control-plane <path>] [--progress jsonl]',
+    '       circuit handoff brief --json [--control-plane <path>] [--project-root <path>]',
+    '       circuit handoff hook --host codex [--project-root <path>]',
+    '       circuit handoff hooks install|uninstall|doctor --host codex [--hooks-file <path>] [--launcher <path>]',
   ].join('\n');
 }
 
@@ -541,19 +541,19 @@ function defaultCodexHooksFile(): string {
 // into the hook config" because it survives every install layout (Claude
 // marketplace, Codex cache, source-tree dev with the wrapper). We only
 // fall back to computing a path from import.meta.url when the env var is
-// absent — i.e., running bin/circuit-next directly from a source-tree
+// absent — i.e., running bin/circuit directly from a source-tree
 // checkout without the wrapper in the chain.
 export function resolveDefaultLauncher(pluginRoot: string | undefined, moduleDir: string): string {
   if (pluginRoot !== undefined && pluginRoot.length > 0) {
-    return resolve(pluginRoot, 'scripts/circuit-next.mjs');
+    return resolve(pluginRoot, 'scripts/circuit.mjs');
   }
-  return resolve(moduleDir, '../..', 'bin/circuit-next');
+  return resolve(moduleDir, '../..', 'bin/circuit');
 }
 
 export function missingDefaultLauncherMessage(launcher: string): string {
   return [
     'CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected.',
-    'Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit-next.mjs.',
+    'Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit.mjs.',
     `Tried source-tree fallback launcher: ${launcher}`,
   ].join(' ');
 }
@@ -563,7 +563,7 @@ function defaultLauncherPath(): string {
   // the fileURLToPath argument is only consulted in the source-tree
   // fallback branch of resolveDefaultLauncher when the env var is unset.
   // Marketplace-safe by source-tree fallback: the fallback resolves to
-  // <repo>/bin/circuit-next, which exists only in the dev checkout.
+  // <repo>/bin/circuit, which exists only in the dev checkout.
   return resolveDefaultLauncher(
     process.env.CIRCUIT_PLUGIN_ROOT,
     dirname(fileURLToPath(import.meta.url)),

@@ -422,7 +422,7 @@ export async function executeSubRunFanoutBranch(
   }
 
   try {
-    const branchName = `circuit-next/${context.runId}/${step.id}/${branch.branch_id}`;
+    const branchName = `circuit/${context.runId}/${step.id}/${branch.branch_id}`;
     await Promise.resolve(worktreeRunner.add({ worktreePath, baseRef: 'HEAD', branchName }));
     const resolved = await context.childCompiledFlowResolver({
       flowId: branch.flowRef,

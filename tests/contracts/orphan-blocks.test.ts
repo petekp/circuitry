@@ -148,7 +148,7 @@ function schematicShell(overrides: {
 let runFolder: string;
 
 beforeEach(() => {
-  runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-orphan-'));
+  runFolder = mkdtempSync(join(tmpdir(), 'circuit-orphan-'));
 });
 
 afterEach(() => {

@@ -161,7 +161,7 @@ describe('buildCheckpointProjector — rendering', () => {
       buildContext({ runFolder: "/tmp/circuit run's" }),
     ) as string;
     expect(html).toContain(
-      'data-prompt="circuit-next resume --run-folder &#39;/tmp/circuit run&#39;\\&#39;&#39;s&#39; --checkpoint-choice &#39;continue&#39;"',
+      'data-prompt="circuit resume --run-folder &#39;/tmp/circuit run&#39;\\&#39;&#39;s&#39; --checkpoint-choice &#39;continue&#39;"',
     );
   });
 

@@ -41,7 +41,7 @@ function stubRelayer(): RelayFn {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-push-authority-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-push-authority-'));
 });
 
 afterEach(() => {

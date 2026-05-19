@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
-const defaultLauncher = resolve(pluginRoot, 'scripts/circuit-next.mjs');
+const defaultLauncher = resolve(pluginRoot, 'scripts/circuit.mjs');
 const launcher = process.env.CIRCUIT_HANDOFF_HOOK_LAUNCHER ?? defaultLauncher;
 const debug = process.env.CIRCUIT_HANDOFF_HOOK_DEBUG === '1';
 const DEFAULT_BRIEF_TIMEOUT_MS = 3000;

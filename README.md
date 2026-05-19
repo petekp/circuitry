@@ -11,7 +11,7 @@ Circuit is an orchestration layer for structured, resumable, multi-stage
 developer flows. Ask Circuit to handle a task in natural language. In
 Claude Code, `/circuit:run` selects the right flow before it starts. In
 Codex, `@Circuit` lets Codex choose the best bundled Circuit skill. In the
-local CLI, `circuit-next run --goal` keeps the deterministic router path.
+local CLI, `circuit run --goal` keeps the deterministic router path.
 
 Once a flow is selected, Circuit runs the same headless engine in every
 host and checks each step's output against a contract before moving on.
@@ -41,7 +41,7 @@ Then ask Circuit to choose a flow:
 ```
 
 The installed plugin is self-contained. Normal users do not need to clone this
-repo, run `npm install`, install a `circuit-next` binary, or create a symlink.
+repo, run `npm install`, install a `circuit` binary, or create a symlink.
 The plugin wrapper launches the bundled runtime that ships with the plugin.
 
 For local development from this checkout:
@@ -51,7 +51,7 @@ git clone https://github.com/petekp/circuit.git
 cd circuit
 npm install
 npm run build
-./bin/circuit-next run --goal '<your task>'
+./bin/circuit run --goal '<your task>'
 ```
 
 To use Circuit from Codex, install or refresh the Codex plugin package and ask
@@ -59,7 +59,7 @@ Codex to use `@Circuit`. Codex can choose the best bundled Circuit flow
 skill from your natural-language request.
 
 Optional but recommended: drop a personal config at
-`~/.config/circuit-next/config.yaml` to set defaults (model, reasoning effort,
+`~/.config/circuit/config.yaml` to set defaults (model, reasoning effort,
 local skills, connector routing) across every project. A repo-local
 `./.circuit/config.yaml` overrides those defaults per project. See
 [User-Space Configuration](#user-space-configuration) for details.
@@ -132,7 +132,7 @@ holds.
 |----------|-------------|-------------|
 | Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host model selects an explicit Circuit flow. |
 | Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex chooses the best bundled Circuit flow skill. |
-| CLI | `./bin/circuit-next run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
+| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
 
 **Direct flow control:**
 
@@ -143,8 +143,8 @@ holds.
 | Claude Code | `/circuit:build add billing settings` | Runs Build directly. |
 | Claude Code | `/circuit:explore compare auth providers` | Runs Explore directly. |
 | Codex | Invoke the specific Circuit flow skill directly. | Runs that flow through the Codex plugin wrapper. |
-| CLI | `./bin/circuit-next run fix --goal "checkout total is wrong"` | Runs Fix directly. |
-| CLI | `./bin/circuit-next run pursue --goal "coordinate these cleanup goals"` | Runs Pursue directly. |
+| CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Runs Fix directly. |
+| CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Runs Pursue directly. |
 
 The host commands wrap the underlying CLI. Each flow accepts a `--goal`; direct
 CLI runs can also pass `--rigor`, `--tournament`, `--tournament-n`, and
@@ -231,7 +231,7 @@ SHA-256, and byte count.
 
 Circuit reads configuration from two layered files:
 
-1. `~/.config/circuit-next/config.yaml` for your personal defaults across
+1. `~/.config/circuit/config.yaml` for your personal defaults across
    projects.
 2. `./.circuit/config.yaml` at a repo root for project-specific overrides.
 
@@ -346,12 +346,12 @@ check on every push.
 `"runtime_source": "bundled"`:
 
 ```bash
-node '<plugin root>/scripts/circuit-next.mjs' doctor
+node '<plugin root>/scripts/circuit.mjs' doctor
 ```
 
 **Develop against a local CLI.** The plugin ignores ambient `PATH` binaries by
-default. Use `CIRCUIT_NEXT_CLI=/absolute/path/to/bin/circuit-next` for an
-explicit override, or set `CIRCUIT_NEXT_DEV=1` to allow repo-local and `PATH`
+default. Use `CIRCUIT_CLI=/absolute/path/to/bin/circuit` for an
+explicit override, or set `CIRCUIT_DEV=1` to allow repo-local and `PATH`
 fallbacks during development only.
 
 **Node version failure.** The bundled runtime requires Node.js 22.18.0 or
@@ -362,11 +362,11 @@ connector works without Codex. Install Codex only if you want a separate
 read-only Codex worker process per relay.
 
 **A run resumed from the wrong step.** Each run's state lives in its run
-folder under `.circuit-next/runs/`. To resume a specific run with an explicit
+folder under `.circuit/runs/`. To resume a specific run with an explicit
 checkpoint choice:
 
 ```bash
-./bin/circuit-next resume \
+./bin/circuit resume \
   --run-folder '<run_folder>' \
   --checkpoint-choice '<choice>'
 ```

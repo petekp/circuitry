@@ -82,9 +82,7 @@ describe('host experience docs', () => {
 
     expect(doc).toContain('/circuit:run — flow selector');
     expect(doc).toContain('Select the flow before invoking the CLI');
-    expect(doc).toContain(
-      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run --goal',
-    );
+    expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run --goal');
     expect(doc).not.toContain('Do not classify the task yourself');
     expect(doc).toContain('Let the presentation wrapper render output');
   });

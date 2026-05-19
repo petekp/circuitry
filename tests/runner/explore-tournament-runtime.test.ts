@@ -156,7 +156,7 @@ function tournamentRelayer(): RelayFn {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-explore-tournament-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-explore-tournament-'));
 });
 
 afterEach(() => {

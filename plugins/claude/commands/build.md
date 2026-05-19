@@ -37,31 +37,31 @@ metacharacters:
    Default Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'add a focused feature'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'add a focused feature'
    ```
 
    Lite Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make a small change' --rigor lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'make a small change' --rigor lite
    ```
 
    Deep Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --rigor deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'make the focused change' --rigor deep
    ```
 
    Autonomous Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'ship the requested fix' --autonomous
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'ship the requested fix' --autonomous
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'can'\''t ship'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run build --goal 'can'\''t ship'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper

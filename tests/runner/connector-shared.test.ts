@@ -26,7 +26,7 @@ import { sha256Hex as sharedSha256Hex } from '../../src/shared/connector-relay.j
 
 describe('connector shared relay surface', () => {
   it('keeps sha256Hex identical through the shared and neutral paths', () => {
-    const payload = 'circuit-next connector relay payload';
+    const payload = 'circuit connector relay payload';
 
     expect(sharedSha256Hex(payload)).toBe(neutralSha256Hex(payload));
     expect(sharedSha256Hex(payload)).toMatch(/^[0-9a-f]{64}$/);

@@ -110,7 +110,7 @@ function checkpointFlow(
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-executor-result-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-executor-result-'));
 });
 
 afterEach(() => {

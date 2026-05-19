@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
-const CIRCUIT_BIN = resolve(REPO_ROOT, 'bin/circuit-next');
+const CIRCUIT_BIN = resolve(REPO_ROOT, 'bin/circuit');
 const TIMEOUT_MS = 120_000;
 
 class SmokeResult extends Error {

@@ -84,7 +84,7 @@ function syntheticComposeCompiledFlow(): CompiledFlow {
 let runFolder: string;
 
 beforeEach(() => {
-  runFolder = mkdtempSync(join(tmpdir(), 'circuit-next-compose-registry-'));
+  runFolder = mkdtempSync(join(tmpdir(), 'circuit-compose-registry-'));
 });
 
 afterEach(() => {

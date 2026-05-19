@@ -51,7 +51,7 @@ async function runHandlerThrowCase(input: {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-handler-throw-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-handler-throw-'));
 });
 
 afterEach(() => {

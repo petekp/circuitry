@@ -45,7 +45,7 @@ Known gaps:
 - Claude and Codex plugin manifests share `plugins/version.json` as the checked
   version source.
 - Codex local cache refresh is automated through the local cache name
-  `circuit-next-local`.
+  `circuit-local`.
 - the checked-in Codex marketplace is named `circuit` for release.
 - `scripts/publish-plugins.ts` validates, tags, pushes, and reports both host
   package outcomes together.
@@ -159,7 +159,7 @@ Checks:
 - Codex manifest name is `circuit`
 - Codex marketplace points at `./plugins/circuit`
 - checked-in Codex marketplace name is `circuit`
-- local Codex cache defaults may still use `circuit-next-local`
+- local Codex cache defaults may still use `circuit-local`
 - versions match for `release`
 - version mismatch is reported but does not block `check` or `local`
 - release Codex source is remote; `./`, absolute paths, and local file URLs are
@@ -215,12 +215,12 @@ npm run verify
 npm run check-release-ready
 claude plugin validate .
 claude plugin validate plugins/claude
-node plugins/claude/scripts/circuit-next.mjs doctor # with PATH scrubbed of circuit-next
-node plugins/circuit/scripts/circuit-next.mjs doctor # with PATH scrubbed of circuit-next
+node plugins/claude/scripts/circuit.mjs doctor # with PATH scrubbed of circuit
+node plugins/circuit/scripts/circuit.mjs doctor # with PATH scrubbed of circuit
 ```
 
 Both doctors must report `runtime_source: bundled`. Validation fails if either
-wrapper uses `CIRCUIT_NEXT_CLI`, a repo-local launcher, or a `PATH` fallback.
+wrapper uses `CIRCUIT_CLI`, a repo-local launcher, or a `PATH` fallback.
 The Claude install smoke also runs the installed cache copy's doctor with the
 same no-ambient-CLI environment.
 
@@ -293,7 +293,7 @@ Rules:
 - if same-version Claude bytes stay stale, local publish uses uninstall with
   `--keep-data --yes` and installs again
 - stale Codex cache after sync is a hard failure
-- local publish syncs the Codex `circuit-next-local` cache before checking it
+- local publish syncs the Codex `circuit-local` cache before checking it
 - local publish installs no Codex hooks unless `--install-codex-hook` is present
 - hook install preserves non-Circuit hooks and leaves exactly one Circuit hook
 - local publish does not create git tags
@@ -374,14 +374,14 @@ The current `.agents/plugins/marketplace.json` is the public repo marketplace:
 }
 ```
 
-The local cache script still defaults to `circuit-next-local` so local
+The local cache script still defaults to `circuit-local` so local
 development refreshes do not collide with the public marketplace name.
 
 Rules:
 
 - `release` must fail if the resolved Codex marketplace name ends in `-local`.
 - `--codex-marketplace` must match the resolved marketplace name.
-- `local` may continue to use `circuit-next-local` for the local cache.
+- `local` may continue to use `circuit-local` for the local cache.
 - public Codex release must be proven against a remote source, not the local
   checkout.
 
@@ -485,7 +485,7 @@ It does not publish, tag, push, or choose a version automatically.
 Write a local report to:
 
 ```text
-.circuit-next/release/plugin-publish-report.json
+.circuit/release/plugin-publish-report.json
 ```
 
 `generated/release/plugin-publish-report.json` is reserved for a future

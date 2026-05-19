@@ -130,7 +130,7 @@ async function runMaterializerCase(input: {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-materializer-schema-parse-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-materializer-schema-parse-'));
 });
 
 afterEach(() => {

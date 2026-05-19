@@ -11,13 +11,10 @@ const repoRoot = resolve(scriptDir, '..');
 const checkMode = process.argv.includes('--check');
 const entryPoint = resolve(repoRoot, 'dist/cli/circuit.js');
 const versionManifestPath = resolve(repoRoot, 'plugins/version.json');
-const outputPaths = [
-  'plugins/claude/runtime/circuit-next.js',
-  'plugins/circuit/runtime/circuit-next.js',
-];
+const outputPaths = ['plugins/claude/runtime/circuit.js', 'plugins/circuit/runtime/circuit.js'];
 
 // The bundled CLI resolves git-state.mjs via `new URL('./git-state.mjs',
-// import.meta.url)`, so the helper must live next to circuit-next.js in
+// import.meta.url)`, so the helper must live next to circuit.js in
 // every plugin runtime directory. tsc -p tsconfig.build.json does not copy
 // .mjs assets, so we also mirror the helper into dist/ so source-tree CLI
 // runs (used by npm test and by `node dist/cli/circuit.js`) find it.
@@ -46,7 +43,7 @@ async function buildRuntimeBundle(): Promise<string> {
   }
 
   const tempDir = mkdtempSync(join(tmpdir(), 'circuit-plugin-runtime-'));
-  const tempFile = resolve(tempDir, 'circuit-next.js');
+  const tempFile = resolve(tempDir, 'circuit.js');
   try {
     await build({
       entryPoints: [entryPoint],
@@ -66,7 +63,7 @@ async function buildRuntimeBundle(): Promise<string> {
         ].join('\n'),
       },
       define: {
-        'process.env.CIRCUIT_NEXT_VERSION': JSON.stringify(readVersion()),
+        'process.env.CIRCUIT_VERSION': JSON.stringify(readVersion()),
       },
     });
     return readFileSync(tempFile, 'utf8');

@@ -27,7 +27,7 @@ const RESERVED_FLOW_IDS = new Set(['build', 'explore', 'fix', 'handoff', 'review
 
 function usage(): string {
   return [
-    'usage: circuit-next create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
+    'usage: circuit create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
     '',
     'Drafts a user-global custom flow package. Without --publish it only writes a draft; with --publish --yes it promotes the draft into the user-global flow root.',
   ].join('\n');
@@ -131,7 +131,7 @@ function assertValidSlug(slug: string): void {
 }
 
 function customHome(args: CreateArgs): string {
-  return resolve(args.home ?? join(homedir(), '.config', 'circuit-next', 'custom'));
+  return resolve(args.home ?? join(homedir(), '.config', 'circuit', 'custom'));
 }
 
 function draftRoot(home: string, slug: string): string {
@@ -147,7 +147,7 @@ function flowRoot(home: string): string {
 }
 
 function customFlowInvocation(slug: string, home: string): string {
-  return `circuit-next run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
+  return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 
 function commandRoot(home: string): string {

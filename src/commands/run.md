@@ -51,7 +51,7 @@ metacharacters:
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
    Build.
 
-   Use the deterministic CLI router (`./bin/circuit-next run --goal ...`) only
+   Use the deterministic CLI router (`./bin/circuit run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
@@ -73,58 +73,58 @@ metacharacters:
    Example for a Fix task:
 
    ```bash
-   ./bin/circuit-next run fix --goal 'the checkout total is wrong when discounts and tax both apply' --progress jsonl
+   ./bin/circuit run fix --goal 'the checkout total is wrong when discounts and tax both apply' --progress jsonl
    ```
 
    Example for a Review task:
 
    ```bash
-   ./bin/circuit-next run review --goal 'review the current diff for safety problems' --progress jsonl
+   ./bin/circuit run review --goal 'review the current diff for safety problems' --progress jsonl
    ```
 
    Example for a Build task:
 
    ```bash
-   ./bin/circuit-next run build --goal 'add a focused feature' --progress jsonl
+   ./bin/circuit run build --goal 'add a focused feature' --progress jsonl
    ```
 
    Example for an Explore task:
 
    ```bash
-   ./bin/circuit-next run explore --goal 'compare auth provider options' --progress jsonl
+   ./bin/circuit run explore --goal 'compare auth provider options' --progress jsonl
    ```
 
    Example for a Pursue task:
 
    ```bash
-   ./bin/circuit-next run pursue --goal 'coordinate these cleanup goals' --progress jsonl
+   ./bin/circuit run pursue --goal 'coordinate these cleanup goals' --progress jsonl
    ```
 
    Example for the deterministic fallback router:
 
    ```bash
-   ./bin/circuit-next run --goal 'choose the right Circuit flow for this task' --progress jsonl
+   ./bin/circuit run --goal 'choose the right Circuit flow for this task' --progress jsonl
    ```
 
    Example for a Build task using Deep mode:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make the focused change' --rigor deep --progress jsonl
+   ./bin/circuit run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
+   ./bin/circuit run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   ./bin/circuit-next run build --goal 'can'\''t ship' --progress jsonl
+   ./bin/circuit run build --goal 'can'\''t ship' --progress jsonl
    ```
 
-   Use the Bash tool to execute the constructed command. `./bin/circuit-next`
+   Use the Bash tool to execute the constructed command. `./bin/circuit`
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.
@@ -184,7 +184,7 @@ metacharacters:
    command:
 
    ```bash
-   ./bin/circuit-next resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   ./bin/circuit resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 8. **If `outcome === "aborted"`, read `reports/result.json` at

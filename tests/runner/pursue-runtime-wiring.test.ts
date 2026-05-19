@@ -122,7 +122,7 @@ async function readTraceEntries(runFolder: string) {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-pursue-runtime-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-pursue-runtime-'));
 });
 
 afterEach(() => {

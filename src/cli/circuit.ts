@@ -40,7 +40,7 @@ import {
   showRuntimeDecision,
 } from './runtime-routing-policy.js';
 
-// Runtime CLI entry point — invoked through ./bin/circuit-next.
+// Runtime CLI entry point — invoked through ./bin/circuit.
 //
 // Loads the named flow fixture at generated/flows/<flow-name>/circuit.json,
 // parses it through the CompiledFlow schema, validates kind-canonical
@@ -57,7 +57,7 @@ import {
 // no-op while still spawning the real connector — a safety bug. The
 // flag stays rejected until real dry-run support lands.
 
-const DEFAULT_RUNS_BASE = '.circuit-next/runs';
+const DEFAULT_RUNS_BASE = '.circuit/runs';
 const DEFAULT_DEV_VERSION = '0.0.0-dev';
 
 interface ParsedArgs {
@@ -110,18 +110,18 @@ export interface CliMainOptions {
 
 export function usage(): string {
   return [
-    'usage: circuit-next run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
-    '       circuit-next resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]',
-    '       circuit-next runs show --run-folder <path> --json',
-    '       circuit-next handoff [save|resume|done] [options]',
-    '       circuit-next create --description "<flow idea>" [--name <slug>] [--publish --yes]',
-    '       circuit-next version [--json]',
+    'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
+    '       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]',
+    '       circuit runs show --run-folder <path> --json',
+    '       circuit handoff [save|resume|done] [options]',
+    '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
+    '       circuit version [--json]',
     '',
     'Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` asks the flow to auto-resolve supported checkpoints. Unsupported tuples are rejected per flow with the flow allow-list.',
     '',
     'With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/pursue flows and then composes the runtime boundary using the configured relay connector.',
     '',
-    'Config: if present, loads ~/.config/circuit-next/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.',
+    'Config: if present, loads ~/.config/circuit/config.yaml and ./.circuit/config.yaml from the current working directory into the selection resolver before relay.',
     '',
     'Note: `--dry-run` is not implemented and is rejected. An earlier version silently invoked the real connector while reporting dry_run:true, which is a safety bug; the flag stays rejected until real dry-run support lands.',
     '',
@@ -133,12 +133,12 @@ export function usage(): string {
 
 function readSourceVersion(): string {
   // Marketplace-safe by build-time replacement: build-plugin-runtime.ts
-  // emits the bundled CLI with CIRCUIT_NEXT_VERSION inlined as a literal,
+  // emits the bundled CLI with CIRCUIT_VERSION inlined as a literal,
   // so this function returns the build-time version in every marketplace
   // install and never reaches the path-resolution branches below. The
   // fileURLToPath candidate is only ever exercised in a source-tree
   // checkout where the env var is unset.
-  if (process.env.CIRCUIT_NEXT_VERSION !== undefined) return process.env.CIRCUIT_NEXT_VERSION;
+  if (process.env.CIRCUIT_VERSION !== undefined) return process.env.CIRCUIT_VERSION;
   const candidates = [
     resolve(dirname(fileURLToPath(import.meta.url)), '../../plugins/version.json'),
     resolve(process.cwd(), 'plugins/version.json'),
@@ -157,7 +157,7 @@ function readSourceVersion(): string {
 function versionInfo(): Record<string, unknown> {
   return {
     schema_version: 1,
-    name: 'circuit-next',
+    name: 'circuit',
     version: readSourceVersion(),
     node_version: process.versions.node,
     runtime_source: process.env.CIRCUIT_RUNTIME_SOURCE ?? 'direct',
@@ -179,7 +179,7 @@ function runVersionCommand(argv: readonly string[]): number {
     process.stdout.write(`${JSON.stringify(versionInfo(), null, 2)}\n`);
     return 0;
   }
-  process.stderr.write('error: usage: circuit-next version [--json]\n');
+  process.stderr.write('error: usage: circuit version [--json]\n');
   return 2;
 }
 

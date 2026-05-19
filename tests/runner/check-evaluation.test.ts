@@ -109,7 +109,7 @@ async function runCheckCase(input: {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-check-eval-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-check-eval-'));
 });
 
 afterEach(() => {

@@ -63,7 +63,7 @@ async function runFailureCase(input: {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-relay-failure-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-relay-failure-'));
 });
 
 afterEach(() => {

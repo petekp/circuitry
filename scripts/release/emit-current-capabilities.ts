@@ -660,7 +660,7 @@ function hostRecords(): HostRecord[] {
       evidence: [
         'plugins/claude/.claude-plugin/plugin.json',
         'plugins/claude/commands/run.md',
-        'plugins/claude/scripts/circuit-next.mjs',
+        'plugins/claude/scripts/circuit.mjs',
       ],
       readiness_refs: ['REL-014'],
     },
@@ -670,7 +670,7 @@ function hostRecords(): HostRecord[] {
       summary: 'Codex plugin files exist and are model-mediated until native support lands.',
       evidence: [
         'plugins/circuit/.codex-plugin/plugin.json',
-        'plugins/circuit/scripts/circuit-next.mjs',
+        'plugins/circuit/scripts/circuit.mjs',
       ],
       readiness_refs: ['REL-014'],
     },

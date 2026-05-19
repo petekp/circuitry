@@ -43,31 +43,31 @@ as literal user-controlled text when constructing shell commands.
    Default Fix (standard depth, full review pass):
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run fix --goal 'fix the foo bug' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'fix the foo bug' --progress jsonl
    ```
 
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Deep Fix:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run fix --goal 'fix the failing pipeline' --rigor deep --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'fix the failing pipeline' --rigor deep --progress jsonl
    ```
 
    Autonomous Fix:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run fix --goal 'diagnose and patch the crash' --autonomous --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'diagnose and patch the crash' --autonomous --progress jsonl
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run fix --goal 'can'\''t reproduce' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'can'\''t reproduce' --progress jsonl
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -105,7 +105,7 @@ as literal user-controlled text when constructing shell commands.
    and the exact resume command:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 8. **If `outcome === "complete"`, render Circuit's final summary.** Read

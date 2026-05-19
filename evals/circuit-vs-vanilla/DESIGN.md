@@ -31,7 +31,7 @@ The initial pilot has two arms only.
 | Arm ID | Definition |
 | --- | --- |
 | `circuit-codex` | Circuit flow run through Codex with normal Circuit plugin behavior. The user task is given as the flow goal. Circuit may use its normal flow selection, prompt decomposition, relay hints, reports, and operator-summary behavior. |
-| `vanilla-codex` | Same Codex CLI and model, same repo snapshot, same `AGENTS.md`, same tool permissions, same time budget, and same user task prompt, but no Circuit flow wrapper and no Circuit-generated prompt decomposition. This arm must not invoke `/circuit:*`, `bin/circuit-next`, or the Circuit plugin runtime. It may inspect files and run ordinary shell/tool commands. |
+| `vanilla-codex` | Same Codex CLI and model, same repo snapshot, same `AGENTS.md`, same tool permissions, same time budget, and same user task prompt, but no Circuit flow wrapper and no Circuit-generated prompt decomposition. This arm must not invoke `/circuit:*`, `bin/circuit`, or the Circuit plugin runtime. It may inspect files and run ordinary shell/tool commands. |
 
 Claude Code arms are deferred until the Codex-only pilot is stable. The future
 Claude comparison should be added as a new design revision, not quietly mixed

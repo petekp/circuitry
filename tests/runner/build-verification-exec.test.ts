@@ -154,7 +154,7 @@ function planWriter(plan: unknown): Pick<ExecutorRegistry, 'compose'> {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-build-verification-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-build-verification-${randomUUID()}`);
   mkdirSync(runFolderBase, { recursive: true });
 });
 
@@ -484,8 +484,8 @@ describe('Build verification command execution', () => {
   it('uses an explicit environment policy instead of inheriting arbitrary parent env', async () => {
     const { bytes } = verificationCompiledFlow();
     const runFolder = join(runFolderBase, 'env');
-    const priorParent = process.env.CIRCUIT_NEXT_PARENT_ONLY_SECRET;
-    process.env.CIRCUIT_NEXT_PARENT_ONLY_SECRET = 'leaked';
+    const priorParent = process.env.CIRCUIT_PARENT_ONLY_SECRET;
+    process.env.CIRCUIT_PARENT_ONLY_SECRET = 'leaked';
     try {
       const outcome = await runCompiledFlow({
         runDir: runFolder,
@@ -500,9 +500,9 @@ describe('Build verification command execution', () => {
             argv: [
               process.execPath,
               '-e',
-              "process.stdout.write(`parent=${process.env.CIRCUIT_NEXT_PARENT_ONLY_SECRET ?? ''};explicit=${process.env.CIRCUIT_NEXT_EXPLICIT ?? ''}`)",
+              "process.stdout.write(`parent=${process.env.CIRCUIT_PARENT_ONLY_SECRET ?? ''};explicit=${process.env.CIRCUIT_EXPLICIT ?? ''}`)",
             ],
-            env: { CIRCUIT_NEXT_EXPLICIT: 'present' },
+            env: { CIRCUIT_EXPLICIT: 'present' },
           }),
         ),
       });
@@ -514,9 +514,9 @@ describe('Build verification command execution', () => {
       expect(verification.commands[0]?.stdout_summary).toBe('parent=;explicit=present');
     } finally {
       if (priorParent === undefined) {
-        Reflect.deleteProperty(process.env, 'CIRCUIT_NEXT_PARENT_ONLY_SECRET');
+        Reflect.deleteProperty(process.env, 'CIRCUIT_PARENT_ONLY_SECRET');
       } else {
-        process.env.CIRCUIT_NEXT_PARENT_ONLY_SECRET = priorParent;
+        process.env.CIRCUIT_PARENT_ONLY_SECRET = priorParent;
       }
     }
   });

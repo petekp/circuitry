@@ -158,7 +158,7 @@ function writeSkill(id: string): void {
 }
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-model-effort-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-model-effort-'));
   homeDir = join(runFolderBase, 'home');
   originalHome = process.env.HOME;
   process.env.HOME = homeDir;

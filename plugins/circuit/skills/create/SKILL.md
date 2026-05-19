@@ -31,7 +31,7 @@ as literal user-controlled text when constructing shell commands.
 3. **Draft and validate first.** Run:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' create --name '<slug>' --description '<flow idea>' --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' create --name '<slug>' --description '<flow idea>' --progress jsonl
    ```
 
 4. **Wait for publish confirmation.** Present the generated summary. Publish
@@ -39,7 +39,7 @@ as literal user-controlled text when constructing shell commands.
 5. **Publish after confirmation.** Run:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' create --name '<slug>' --description '<flow idea>' --publish --yes --progress jsonl
+   node '<plugin root>/scripts/circuit.mjs' create --name '<slug>' --description '<flow idea>' --publish --yes --progress jsonl
    ```
 
 6. **Render progress while active.** For progress JSONL, render

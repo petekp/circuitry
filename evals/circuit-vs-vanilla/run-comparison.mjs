@@ -46,7 +46,7 @@ function usage() {
     [--dry-run]
 
 Runs two arms with the same prompt and same provider model:
-  1. circuit-<provider>: node bin/circuit-next run ...
+  1. circuit-<provider>: node bin/circuit run ...
   2. vanilla-<provider>: <provider CLI> ...
 
 Default provider is 'codex' for back-compatibility. With --provider claude-code,
@@ -238,12 +238,12 @@ async function main() {
 
   const repo = repoMetadata(REPO_ROOT);
   const providerVersion = commandOutput(realProviderPath, ['--version']);
-  const circuitVersion = commandOutput('node', ['bin/circuit-next', 'version', '--json'], 'unavailable', {
+  const circuitVersion = commandOutput('node', ['bin/circuit', 'version', '--json'], 'unavailable', {
     cwd: REPO_ROOT,
   });
 
   const circuitArgs = [
-    'bin/circuit-next',
+    'bin/circuit',
     'run',
     ...(args.flow === 'auto' ? [] : [args.flow]),
     '--goal',

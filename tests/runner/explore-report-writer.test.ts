@@ -242,7 +242,7 @@ function incompleteComposeRelayer(): RelayFn {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-explore-reports-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-explore-reports-'));
 });
 
 afterEach(() => {

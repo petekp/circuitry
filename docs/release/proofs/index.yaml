@@ -3,7 +3,7 @@ scenarios:
   - id: proof:routed-build
     title: Routed Build
     category: doing-work
-    command: './bin/circuit-next run --goal "develop: add a small safe change" --progress jsonl'
+    command: './bin/circuit run --goal "develop: add a small safe change" --progress jsonl'
     expected_flow: build
     expected_outcome: complete or needs_attention
     summary_contract: Summary states selected work type, changes, verification, review, risk, and next action.
@@ -29,7 +29,7 @@ scenarios:
   - id: proof:explicit-build
     title: Explicit Build
     category: doing-work
-    command: ./bin/circuit-next run build --goal "add a focused change" --rigor deep --progress jsonl
+    command: ./bin/circuit run build --goal "add a focused change" --rigor deep --progress jsonl
     expected_flow: build
     expected_outcome: complete or checkpoint_waiting
     summary_contract: Summary explains explicit Build selection, checkpoint/verification state, and next action.
@@ -47,7 +47,7 @@ scenarios:
   - id: proof:review
     title: Standalone Review
     category: doing-work
-    command: ./bin/circuit-next run review --goal "review this change" --progress jsonl
+    command: ./bin/circuit run review --goal "review this change" --progress jsonl
     expected_flow: review
     expected_outcome: complete or needs_attention
     summary_contract: Summary lists review verdict, findings, evidence policy, and next action.
@@ -67,7 +67,7 @@ scenarios:
   - id: proof:checkpoint-resume
     title: Checkpoint And Resume
     category: continuity
-    command: ./bin/circuit-next run build --goal "deep change that asks for scope" --rigor deep --progress jsonl
+    command: ./bin/circuit run build --goal "deep change that asks for scope" --rigor deep --progress jsonl
     expected_flow: build
     expected_outcome: checkpoint_waiting then complete after resume
     summary_contract: Summary gives the checkpoint question, allowed choices, resume command, and final outcome.
@@ -88,7 +88,7 @@ scenarios:
   - id: proof:abort-failure
     title: Abort And Failure Summary
     category: failure
-    command: ./bin/circuit-next run build --goal "simulate connector failure" --progress jsonl
+    command: ./bin/circuit run build --goal "simulate connector failure" --progress jsonl
     expected_flow: build
     expected_outcome: aborted
     summary_contract: Summary explains what failed, whether any files may have changed, and the exact next action.
@@ -108,7 +108,7 @@ scenarios:
   - id: proof:fix
     title: Fix
     category: doing-work
-    command: './bin/circuit-next run --goal "fix: restore the failing login test" --progress jsonl'
+    command: './bin/circuit run --goal "fix: restore the failing login test" --progress jsonl'
     expected_flow: fix
     expected_outcome: complete or needs_attention
     summary_contract: Summary shows repro/diagnosis, fix, verification, review policy, and next action.
@@ -133,7 +133,7 @@ scenarios:
   - id: proof:explore-decision
     title: Explore Decision Or Tournament
     category: deciding
-    command: './bin/circuit-next run --goal "decide: React vs Vue" --run-folder docs/release/proofs/runs/explore-decision/run --progress jsonl; ./bin/circuit-next resume --run-folder docs/release/proofs/runs/explore-decision/run --checkpoint-choice option-2 --progress jsonl'
+    command: './bin/circuit run --goal "decide: React vs Vue" --run-folder docs/release/proofs/runs/explore-decision/run --progress jsonl; ./bin/circuit resume --run-folder docs/release/proofs/runs/explore-decision/run --checkpoint-choice option-2 --progress jsonl'
     expected_flow: explore
     expected_outcome: checkpoint_waiting, then complete after resume
     summary_contract: Summary states options, decision, evidence, tradeoff, risk, and next action.
@@ -160,7 +160,7 @@ scenarios:
   - id: proof:explore-autonomous-decision
     title: Explore Autonomous Decision
     category: deciding
-    command: './bin/circuit-next run explore --goal "decide: React vs Vue" --tournament --tournament-n 2 --autonomous --run-folder docs/release/proofs/runs/explore-autonomous-decision/run --progress jsonl'
+    command: './bin/circuit run explore --goal "decide: React vs Vue" --tournament --tournament-n 2 --autonomous --run-folder docs/release/proofs/runs/explore-autonomous-decision/run --progress jsonl'
     expected_flow: explore
     expected_outcome: complete
     summary_contract: Summary states the highest-score auto-resolution, selected winner, rubric evidence, runtime veto, and next action.
@@ -189,7 +189,7 @@ scenarios:
   - id: proof:handoff
     title: Handoff Continuity
     category: continuity
-    command: './bin/circuit-next handoff save --run-folder docs/release/proofs/runs/handoff/run --progress jsonl; ./bin/circuit-next handoff resume --progress jsonl'
+    command: './bin/circuit handoff save --run-folder docs/release/proofs/runs/handoff/run --progress jsonl; ./bin/circuit handoff resume --progress jsonl'
     expected_outcome: resumed
     summary_contract: Summary explains saved state, next work, blockers, and resume/clear command.
     redaction_policy: Continuity payload excludes secrets and irrelevant chat history.
@@ -211,7 +211,7 @@ scenarios:
   - id: proof:customization
     title: Custom Creation Or Connector
     category: customization
-    command: './bin/circuit-next create --name release-note-flow --description "Draft release notes from a change summary." --publish --yes --progress jsonl'
+    command: './bin/circuit create --name release-note-flow --description "Draft release notes from a change summary." --publish --yes --progress jsonl'
     expected_outcome: published
     summary_contract: Summary states what was created, validation result, publish/usage command, and next action.
     redaction_policy: Example uses temporary user config and synthetic prompt data.
@@ -235,7 +235,7 @@ scenarios:
   - id: proof:doctor-first-run
     title: Doctor First Run
     category: first-run
-    command: ./bin/circuit-next doctor
+    command: ./bin/circuit doctor
     expected_outcome: pass or actionable failure
     summary_contract: Doctor explains install health, missing dependencies, supported host path, and next command.
     redaction_policy: Does not include local secrets or full environment dumps.
@@ -249,7 +249,7 @@ scenarios:
   - id: proof:plan-execution
     title: Plan Execution Campaign Start
     category: plan-execution
-    command: './bin/circuit-next run --goal "Execute this plan: ./docs/specs/headless-engine-host-api-v1.md" --progress jsonl'
+    command: './bin/circuit run --goal "Execute this plan: ./docs/specs/headless-engine-host-api-v1.md" --progress jsonl'
     expected_flow: build
     expected_outcome: complete or needs_attention
     summary_contract: Summary identifies plan execution, the selected flow, verification, review, risk, and next action.

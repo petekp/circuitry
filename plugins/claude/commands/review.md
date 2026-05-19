@@ -34,13 +34,13 @@ metacharacters:
    Example:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'review the latest change'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run review --goal 'review the latest change'
    ```
 
    Example with an apostrophe:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run review --goal 'can'\''t regress runtime safety'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run review --goal 'can'\''t regress runtime safety'
    ```
 
 3. **Handle untracked file contents deliberately.** Review collects untracked

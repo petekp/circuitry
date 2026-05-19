@@ -48,7 +48,7 @@ It does NOT cover:
   composition for non-selection fields (e.g. merging two layers'
   `relay.roles` maps) is reserved for v0.2 with an explicit ADR.
 - **Discovery and load semantics** beyond the canonical runtime path.
-  Slice 86 adds the product loader for `~/.config/circuit-next/
+  Slice 86 adds the product loader for `~/.config/circuit/
   config.yaml` and current-working-directory `.circuit/config.yaml`, but this
   contract still governs the parsed shape after load. Broader discovery
   policy (alternate filenames, upward project-root search, TOML/JSON

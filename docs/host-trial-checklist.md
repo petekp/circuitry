@@ -8,7 +8,7 @@ ready for broader use.
 - Refresh generated host output.
 - Refresh the installed Codex plugin cache.
 - Run Codex doctor from a normal temp repo.
-- Confirm `circuit-next` on PATH is the expected checkout.
+- Confirm `circuit` on PATH is the expected checkout.
 
 ## Codex Scenarios
 

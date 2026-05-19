@@ -91,7 +91,7 @@ function persistentRunBytes(runFolder: string): ReadonlyMap<string, string> {
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-next-fresh-root-'));
+  runFolderBase = mkdtempSync(join(tmpdir(), 'circuit-fresh-root-'));
 });
 
 afterEach(() => {

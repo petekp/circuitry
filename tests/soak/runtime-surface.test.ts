@@ -109,7 +109,7 @@ function progressEvents(stderr: string): readonly ReturnType<typeof ProgressEven
 let runFolderBase: string;
 
 beforeEach(() => {
-  runFolderBase = join(tmpdir(), `circuit-next-runtime-soak-${randomUUID()}`);
+  runFolderBase = join(tmpdir(), `circuit-runtime-soak-${randomUUID()}`);
   mkdirSync(runFolderBase, { recursive: true });
 });
 

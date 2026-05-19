@@ -12,5 +12,5 @@ Draft release notes from a change summary.
 This custom flow is already routed when invoked directly. Do not bounce it through `/circuit:run`.
 
 ```bash
-circuit-next run release-note-flow --flow-root '<repo>/docs/release/proofs/runs/customization/custom-home/flows' --goal '<task>' --progress jsonl
+circuit run release-note-flow --flow-root '<repo>/docs/release/proofs/runs/customization/custom-home/flows' --goal '<task>' --progress jsonl
 ```

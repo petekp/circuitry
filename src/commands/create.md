@@ -24,7 +24,7 @@ text:
 3. **Draft and validate first.** Run:
 
    ```bash
-   ./bin/circuit-next create --name '<slug>' --description '<flow idea>' --progress jsonl
+   ./bin/circuit create --name '<slug>' --description '<flow idea>' --progress jsonl
    ```
 
 4. **Wait for publish confirmation.** Present the generated summary. Publish
@@ -32,7 +32,7 @@ text:
 5. **Publish after confirmation.** Run:
 
    ```bash
-   ./bin/circuit-next create --name '<slug>' --description '<flow idea>' --publish --yes --progress jsonl
+   ./bin/circuit create --name '<slug>' --description '<flow idea>' --publish --yes --progress jsonl
    ```
 
 6. **Render progress while active.** For progress JSONL, render

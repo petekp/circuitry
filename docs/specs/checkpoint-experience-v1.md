@@ -84,7 +84,7 @@ resume-time validator, and existing checkpoint runtime coverage.
   `src/cli/circuit.ts:877-885`.
 - The Claude wrapper auto-opens HTML for `complete` outcomes, but the
   `checkpoint_waiting` branch currently renders the checkpoint/resume command
-  without opening HTML. See `plugins/claude/scripts/circuit-next.mjs:387-424`.
+  without opening HTML. See `plugins/claude/scripts/circuit.mjs:387-424`.
 - Auto-open safety is centralized in pure policy helpers that reject unsafe
   paths and skip non-interactive environments. See
   `plugins/claude/scripts/auto-open-policy.mjs:1-46`.
@@ -232,7 +232,7 @@ Verify:
 
 Implement:
 
-- update `plugins/claude/scripts/circuit-next.mjs` so
+- update `plugins/claude/scripts/circuit.mjs` so
   `checkpoint_waiting` outcomes also safe-open `operator_summary_html_path`
   when present;
 - keep the inline checkpoint/resume command as the fallback and source of truth;

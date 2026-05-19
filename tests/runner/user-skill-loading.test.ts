@@ -128,7 +128,7 @@ async function readTrace() {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'circuit-next-skill-loading-'));
+  root = mkdtempSync(join(tmpdir(), 'circuit-skill-loading-'));
   homeDir = join(root, 'home');
   runDir = join(root, 'run');
   originalHome = process.env.HOME;

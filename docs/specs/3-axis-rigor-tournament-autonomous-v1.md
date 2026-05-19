@@ -158,11 +158,11 @@ The target CLI has three flags, one per axis.
 Examples:
 
 ```
-circuit-next explore --goal "..."                                         # defaults
-circuit-next explore --goal "..." --rigor deep                            # deep, no tournament, not autonomous
-circuit-next explore --goal "..." --tournament                            # tournament, N=3
-circuit-next explore --goal "..." --tournament --tournament-n 4 --rigor deep
-circuit-next build --goal "..." --autonomous
+circuit explore --goal "..."                                         # defaults
+circuit explore --goal "..." --rigor deep                            # deep, no tournament, not autonomous
+circuit explore --goal "..." --tournament                            # tournament, N=3
+circuit explore --goal "..." --tournament --tournament-n 4 --rigor deep
+circuit build --goal "..." --autonomous
 ```
 
 `--mode` is **removed**. The alias validators (`entryModeForDepth`, `depthForEntryMode`, `validateModeDepthAliasConsistency`) and mode/depth runtime support rows go with it.

@@ -37,34 +37,34 @@ metacharacters:
    Default Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'add a focused feature' --progress jsonl
+   ./bin/circuit run build --goal 'add a focused feature' --progress jsonl
    ```
 
    Lite Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make a small change' --rigor lite --progress jsonl
+   ./bin/circuit run build --goal 'make a small change' --rigor lite --progress jsonl
    ```
 
    Deep Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make the focused change' --rigor deep --progress jsonl
+   ./bin/circuit run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Autonomous Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'ship the requested fix' --autonomous --progress jsonl
+   ./bin/circuit run build --goal 'ship the requested fix' --autonomous --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   ./bin/circuit-next run build --goal 'can'\''t ship' --progress jsonl
+   ./bin/circuit run build --goal 'can'\''t ship' --progress jsonl
    ```
 
-   Use the Bash tool to execute the constructed command. `./bin/circuit-next`
+   Use the Bash tool to execute the constructed command. `./bin/circuit`
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.
@@ -98,7 +98,7 @@ metacharacters:
    and the exact resume command as the fallback:
 
    ```bash
-   ./bin/circuit-next resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   ./bin/circuit resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 7. **If `outcome === "complete"`, render Circuit's final summary.** Read

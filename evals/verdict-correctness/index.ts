@@ -15,7 +15,7 @@ const SUPPORTED_JUDGES: readonly JudgeId[] = ['codex', 'claude-code'];
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '../..');
-const RUNS_ROOT = resolve(REPO_ROOT, '.circuit-next/runs');
+const RUNS_ROOT = resolve(REPO_ROOT, '.circuit/runs');
 
 interface CliArgs {
   readonly maxComposes: number;
@@ -289,7 +289,7 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const requestPaths = findReviewRequests(args.maxComposes);
   if (requestPaths.length === 0) {
-    throw new Error('no review.request.json files found under .circuit-next/runs');
+    throw new Error('no review.request.json files found under .circuit/runs');
   }
   const cases = buildCases({
     requestPaths,
