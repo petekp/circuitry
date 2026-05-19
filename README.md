@@ -14,7 +14,7 @@ Go from this:
 - Ask the agent to execute the plan
 - Ask the agent to review its work using a skill
 - Ask the agent to use another skill for a different part of the code
-- and so on, all the while feeling a sense of unease if the agent drifted or missed any crucial details
+- ...and so on, all the while feeling a sense of unease if the agent drifted or missed any crucial details
 
 To this:
 - `/circuit:run build the thing`
