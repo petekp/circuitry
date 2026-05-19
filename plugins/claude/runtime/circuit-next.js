@@ -11615,6 +11615,18 @@ var Check = external_exports.discriminatedUnion("kind", [
   FanoutAggregateCheck
 ]);
 
+// dist/schemas/rigor.js
+var Rigor = external_exports.enum(["lite", "standard", "deep"]);
+
+// dist/schemas/axes.js
+var TournamentN = external_exports.number().int().min(2).max(4);
+var Axes = external_exports.object({
+  rigor: Rigor.default("standard"),
+  tournament: external_exports.boolean().default(false),
+  tournament_n: TournamentN.default(3),
+  autonomous: external_exports.boolean().default(false)
+}).strict();
+
 // dist/schemas/depth.js
 var Depth = external_exports.enum(["lite", "standard", "deep", "tournament", "autonomous"]);
 
