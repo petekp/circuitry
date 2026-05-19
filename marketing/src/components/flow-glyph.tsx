@@ -17,7 +17,7 @@ export type Shape =
   | "dot"
   | "empty";
 
-function Cell({
+function ShapeElement({
   shape,
   fill,
   size,
@@ -53,31 +53,19 @@ function Cell({
     }
     case "qtl":
       return (
-        <path
-          d={`M 0 0 L ${s} 0 A ${s} ${s} 0 0 1 0 ${s} Z`}
-          fill={fill}
-        />
+        <path d={`M 0 0 L ${s} 0 A ${s} ${s} 0 0 1 0 ${s} Z`} fill={fill} />
       );
     case "qtr":
       return (
-        <path
-          d={`M ${s} 0 L ${s} ${s} A ${s} ${s} 0 0 1 0 0 Z`}
-          fill={fill}
-        />
+        <path d={`M ${s} 0 L ${s} ${s} A ${s} ${s} 0 0 1 0 0 Z`} fill={fill} />
       );
     case "qbl":
       return (
-        <path
-          d={`M 0 ${s} L 0 0 A ${s} ${s} 0 0 1 ${s} ${s} Z`}
-          fill={fill}
-        />
+        <path d={`M 0 ${s} L 0 0 A ${s} ${s} 0 0 1 ${s} ${s} Z`} fill={fill} />
       );
     case "qbr":
       return (
-        <path
-          d={`M ${s} ${s} L 0 ${s} A ${s} ${s} 0 0 1 ${s} 0 Z`}
-          fill={fill}
-        />
+        <path d={`M ${s} ${s} L 0 ${s} A ${s} ${s} 0 0 1 ${s} 0 Z`} fill={fill} />
       );
     case "ht":
       return (
@@ -158,6 +146,7 @@ export function FlowGlyph({
         </linearGradient>
       </defs>
       {shapes.map((shape, i) => {
+        if (shape === "empty") return null;
         const row = Math.floor(i / grid);
         const col = i % grid;
         return (
@@ -165,7 +154,13 @@ export function FlowGlyph({
             key={i}
             transform={`translate(${col * cellSize}, ${row * cellSize})`}
           >
-            <Cell
+            <rect
+              width={cellSize}
+              height={cellSize}
+              rx={radius}
+              fill={ghost}
+            />
+            <ShapeElement
               shape={shape}
               fill={`url(#${gradId})`}
               size={cellSize}
