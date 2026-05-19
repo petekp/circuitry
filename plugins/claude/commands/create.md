@@ -24,7 +24,7 @@ text:
 3. **Draft and validate first.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present create --name '<slug>' --description '<flow idea>'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present create --name '<slug>' --description '<flow idea>'
    ```
 
 4. **Wait for publish confirmation.** Present the generated summary. Publish
@@ -32,7 +32,7 @@ text:
 5. **Publish after confirmation.** Run:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present create --name '<slug>' --description '<flow idea>' --publish --yes
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present create --name '<slug>' --description '<flow idea>' --publish --yes
    ```
 
 6. **Let the presentation wrapper render output.** `present` streams

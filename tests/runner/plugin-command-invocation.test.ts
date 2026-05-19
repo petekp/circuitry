@@ -30,7 +30,7 @@ const RUN_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'run.md');
 const REVIEW_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'review.md');
 const BUILD_COMMAND_PATH = resolve(CLAUDE_COMMAND_ROOT, 'build.md');
 const MANIFEST_PATH = resolve(REPO_ROOT, 'plugins/claude/.claude-plugin/plugin.json');
-const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit\.mjs"`;
+const CLAUDE_WRAPPER_PATTERN = String.raw`node "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/circuit\.ts"`;
 
 // Extract fenced ```bash ... ``` blocks from a markdown body. Returns an
 // array of block contents (without the fence markers). Multiple blocks per
@@ -129,7 +129,7 @@ describe('plugin command invocation binding', () => {
 
     it('command bodies use the installed Claude plugin wrapper, not the repo-local launcher', () => {
       for (const body of [exploreBody, runBody, reviewBody, buildBody]) {
-        expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"');
+        expect(body).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts"');
         expect(body).not.toMatch(/\.\/bin\/circuit/);
         expect(body).not.toMatch(/npm run circuit:run/);
         expect(body).not.toMatch(/dist\/cli\/runtime-proof\.js/);
@@ -169,7 +169,7 @@ describe('plugin command invocation binding', () => {
     it('all fenced bash invocation blocks in plugins/claude/commands/run.md use single-quoted --goal values', () => {
       const blocks = extractBashBlocks(runBody).filter(
         (b) =>
-          /(?:\.\/bin\/circuit|node dist\/cli\/circuit\.js|node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.mjs")/.test(
+          /(?:\.\/bin\/circuit|node dist\/cli\/circuit\.js|node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.ts")/.test(
             b,
           ) && /--goal/.test(b),
       );

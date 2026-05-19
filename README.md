@@ -346,7 +346,7 @@ check on every push.
 `"runtime_source": "bundled"`:
 
 ```bash
-node '<plugin root>/scripts/circuit.mjs' doctor
+node '<plugin root>/scripts/circuit.ts' doctor
 ```
 
 **Develop against a local CLI.** The plugin ignores ambient `PATH` binaries by

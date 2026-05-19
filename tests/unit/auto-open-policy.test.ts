@@ -4,7 +4,7 @@ import {
   isAutoOpenPathSafe,
   shouldAutoOpenPath,
   shouldSkipAutoOpen,
-} from '../../plugins/claude/scripts/auto-open-policy.mjs';
+} from '../../plugins/claude/scripts/auto-open-policy.ts';
 
 describe('shouldSkipAutoOpen', () => {
   function baseEnv(overrides: Record<string, unknown> = {}): Record<string, unknown> {

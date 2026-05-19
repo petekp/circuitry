@@ -315,7 +315,7 @@
       "evidence": [
         "plugins/claude/.claude-plugin/plugin.json",
         "plugins/claude/commands/run.md",
-        "plugins/claude/scripts/circuit.mjs"
+        "plugins/claude/scripts/circuit.ts"
       ],
       "readiness_refs": ["REL-014"]
     },
@@ -325,7 +325,7 @@
       "summary": "Codex plugin files exist and are model-mediated until native support lands.",
       "evidence": [
         "plugins/circuit/.codex-plugin/plugin.json",
-        "plugins/circuit/scripts/circuit.mjs"
+        "plugins/circuit/scripts/circuit.ts"
       ],
       "readiness_refs": ["REL-014"]
     },
@@ -694,7 +694,7 @@
       "evidence": [
         "plugins/claude/.claude-plugin/plugin.json",
         "plugins/claude/commands/run.md",
-        "plugins/claude/scripts/circuit.mjs"
+        "plugins/claude/scripts/circuit.ts"
       ],
       "readiness_refs": ["REL-014"],
       "axes": {
@@ -712,7 +712,7 @@
       "summary": "Codex plugin files exist and are model-mediated until native support lands.",
       "evidence": [
         "plugins/circuit/.codex-plugin/plugin.json",
-        "plugins/circuit/scripts/circuit.mjs"
+        "plugins/circuit/scripts/circuit.ts"
       ],
       "readiness_refs": ["REL-014"],
       "axes": {

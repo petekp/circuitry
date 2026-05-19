@@ -412,7 +412,7 @@ describe('flow catalog completeness', () => {
 
   it('command surface ownership is documented and matches emit-flows', () => {
     const generatedSurfaceMap = readFileSync('docs/generated-surfaces.md', 'utf8');
-    const emitScript = readFileSync('scripts/emit-flows.ts', 'utf8');
+    const emitScript = readFileSync('scripts/flows/emit.ts', 'utf8');
     const routerMatch = /const HOST_DIRECT_COMMANDS = \[([^\]]+)\]/.exec(emitScript);
     expect(
       routerMatch,

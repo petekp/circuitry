@@ -225,7 +225,7 @@ of scope unless the public naming model is explicitly reopened.
 4. Wire steps to schemas through step `input` and `output`.
 5. Add writers and relay hints owned by the flow package.
 6. Add the definition to `flowDefinitions` in `src/flows/catalog.ts`.
-7. Run `npm run build && node scripts/emit-flows.ts` and then `npm run verify`.
+7. Run `npm run build && node scripts/flows/emit.ts` and then `npm run verify`.
 
 The runtime should not import the new flow directly. Runtime registries derive
 from the catalog.

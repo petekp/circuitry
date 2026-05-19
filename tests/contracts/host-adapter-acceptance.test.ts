@@ -145,7 +145,7 @@ describe('host adapter acceptance contract', () => {
     ) as { hooks?: string };
     const claudeHooks = readFileSync(resolve(REPO_ROOT, 'plugins/claude/hooks/hooks.json'), 'utf8');
     const claudeHookScript = readFileSync(
-      resolve(REPO_ROOT, 'plugins/claude/hooks/session-start.mjs'),
+      resolve(REPO_ROOT, 'plugins/claude/hooks/session-start.ts'),
       'utf8',
     );
     const codexManifest = JSON.parse(
@@ -159,12 +159,12 @@ describe('host adapter acceptance contract', () => {
 
     expect(claudeManifest).not.toHaveProperty('hooks');
     expect(claudeHooks).toContain('SessionStart');
-    expect(claudeHooks).toContain('${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs');
-    expect(claudeHookScript).toContain('scripts/circuit.mjs');
+    expect(claudeHooks).toContain('${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ts');
+    expect(claudeHookScript).toContain('scripts/circuit.ts');
 
     expect(codexManifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/hooks.json'))).toBe(false);
-    expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/session-start.mjs'))).toBe(true);
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/session-start.ts'))).toBe(true);
   });
 
   it('keeps real-host smoke scripts opt-in and outside verify', () => {
@@ -172,19 +172,19 @@ describe('host adapter acceptance contract', () => {
       scripts: Record<string, string>;
     };
     const codexSmoke = readFileSync(
-      resolve(REPO_ROOT, 'scripts/host-smoke/codex-handoff.mjs'),
+      resolve(REPO_ROOT, 'scripts/hosts/smoke/codex-handoff.ts'),
       'utf8',
     );
     const claudeSmoke = readFileSync(
-      resolve(REPO_ROOT, 'scripts/host-smoke/claude-handoff.mjs'),
+      resolve(REPO_ROOT, 'scripts/hosts/smoke/claude-handoff.ts'),
       'utf8',
     );
 
     expect(packageJson.scripts['smoke:host:codex']).toBe(
-      'node scripts/host-smoke/codex-handoff.mjs',
+      'node scripts/hosts/smoke/codex-handoff.ts',
     );
     expect(packageJson.scripts['smoke:host:claude']).toBe(
-      'node scripts/host-smoke/claude-handoff.mjs',
+      'node scripts/hosts/smoke/claude-handoff.ts',
     );
     expect(packageJson.scripts.verify).not.toContain('smoke:host');
 

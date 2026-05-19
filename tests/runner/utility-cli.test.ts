@@ -865,7 +865,7 @@ describe('utility CLI commands', () => {
   it('resolves default launcher from CIRCUIT_PLUGIN_ROOT when the wrapper has set it', () => {
     const pluginRoot = tempRoot('circuit-launcher-plugin-root-');
     mkdirSync(join(pluginRoot, 'scripts'), { recursive: true });
-    const wrapper = join(pluginRoot, 'scripts/circuit.mjs');
+    const wrapper = join(pluginRoot, 'scripts/circuit.ts');
     writeFileSync(wrapper, '#!/usr/bin/env node\n');
 
     // moduleDir is irrelevant when CIRCUIT_PLUGIN_ROOT is set — the env var
@@ -897,7 +897,7 @@ describe('utility CLI commands', () => {
     const message = missingDefaultLauncherMessage(fallback);
     expect(message).toContain('CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected');
     expect(message).toContain('set CIRCUIT_PLUGIN_ROOT');
-    expect(message).toContain('invoke through plugins/<host>/scripts/circuit.mjs');
+    expect(message).toContain('invoke through plugins/<host>/scripts/circuit.ts');
     expect(message).toContain(fallback);
   });
 

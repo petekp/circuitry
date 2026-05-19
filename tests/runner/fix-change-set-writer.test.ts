@@ -188,7 +188,7 @@ describe('fixChangeSetWriter.loadCommands', () => {
     // argv[0] is the runtime's node binary (process.execPath); argv[1] is
     // the helper script path. We don't pin the binary, but we do pin the
     // helper script name.
-    expect(command.argv[1]).toMatch(/git-state\.mjs$/);
+    expect(command.argv[1]).toMatch(/git-state\.ts$/);
     expect(command.cwd).toBe('.');
   });
 

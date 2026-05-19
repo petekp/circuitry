@@ -131,7 +131,7 @@ Objective check commands:
 - npm run edge
 
 Allowed changed files:
-- src/parser.mjs`,
+- src/parser.ts`,
     );
 
     expect(brief.verification_command_candidates.map((command) => command.argv)).toEqual([
@@ -152,15 +152,15 @@ Allowed changed files:
 
 Objective check commands:
 - npm run edge -- --case "name with spaces"
-- node ./scripts/check.mjs 'email local part'
+- node ./scripts/check.ts 'email local part'
 
 Allowed changed files:
-- src/parser.mjs`,
+- src/parser.ts`,
     );
 
     expect(brief.verification_command_candidates.map((command) => command.argv)).toEqual([
       ['npm', 'run', 'edge', '--', '--case', 'name with spaces'],
-      ['node', './scripts/check.mjs', 'email local part'],
+      ['node', './scripts/check.ts', 'email local part'],
     ]);
   });
 

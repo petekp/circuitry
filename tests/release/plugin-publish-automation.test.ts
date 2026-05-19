@@ -10,8 +10,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { packageTreeStatus } from '../../scripts/plugin-package-tree.mjs';
-import { type CommandInvocation, runPublish } from '../../scripts/publish-plugins.ts';
+import { packageTreeStatus } from '../../scripts/plugins/package-tree.ts';
+import { type CommandInvocation, runPublish } from '../../scripts/plugins/publish.ts';
 
 const REPO_ROOT = resolve('.');
 
@@ -55,13 +55,13 @@ function createFixture(options: FixtureOptions = {}): string {
 
   writeJson(join(root, 'package.json'), {
     scripts: {
-      'publish:plugins': 'node scripts/publish-plugins.ts check',
-      'publish:plugins:bump': 'node scripts/publish-plugins.ts bump',
-      'publish:plugins:check': 'node scripts/publish-plugins.ts check',
-      'publish:plugins:local': 'node scripts/publish-plugins.ts local',
+      'publish:plugins': 'node scripts/plugins/publish.ts check',
+      'publish:plugins:bump': 'node scripts/plugins/publish.ts bump',
+      'publish:plugins:check': 'node scripts/plugins/publish.ts check',
+      'publish:plugins:local': 'node scripts/plugins/publish.ts local',
       'publish:plugins:release':
-        'node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit',
-      'doctor:plugins:installed': 'node scripts/doctor-installed-plugins.mjs',
+        'node scripts/plugins/publish.ts release --codex-source petekp/circuit --codex-marketplace circuit',
+      'doctor:plugins:installed': 'node scripts/plugins/installed-doctor.ts',
     },
   });
   writeJson(join(root, 'plugins/version.json'), { version });
@@ -111,11 +111,11 @@ function createFixture(options: FixtureOptions = {}): string {
   writeText(join(root, 'plugins/claude/README.md'), 'Claude Circuit plugin\n');
   writeText(join(root, 'plugins/claude/commands/run.md'), '# Run\n');
   writeText(join(root, 'plugins/claude/skills/run/SKILL.md'), '# Run skill\n');
-  writeText(join(root, 'plugins/claude/scripts/circuit.mjs'), '#!/usr/bin/env node\n');
+  writeText(join(root, 'plugins/claude/scripts/circuit.ts'), '#!/usr/bin/env node\n');
   writeText(join(root, 'plugins/circuit/README.md'), 'Codex Circuit plugin\n');
   writeText(join(root, 'plugins/circuit/commands/run.md'), '# Run\n');
   writeText(join(root, 'plugins/circuit/skills/run/SKILL.md'), '# Run skill\n');
-  writeText(join(root, 'plugins/circuit/scripts/circuit.mjs'), '#!/usr/bin/env node\n');
+  writeText(join(root, 'plugins/circuit/scripts/circuit.ts'), '#!/usr/bin/env node\n');
 
   return root;
 }
@@ -229,15 +229,15 @@ describe('plugin publish automation', () => {
       scripts: Record<string, string>;
     };
 
-    expect(pkg.scripts['publish:plugins']).toBe('node scripts/publish-plugins.ts check');
-    expect(pkg.scripts['publish:plugins:bump']).toBe('node scripts/publish-plugins.ts bump');
-    expect(pkg.scripts['publish:plugins:check']).toBe('node scripts/publish-plugins.ts check');
-    expect(pkg.scripts['publish:plugins:local']).toBe('node scripts/publish-plugins.ts local');
+    expect(pkg.scripts['publish:plugins']).toBe('node scripts/plugins/publish.ts check');
+    expect(pkg.scripts['publish:plugins:bump']).toBe('node scripts/plugins/publish.ts bump');
+    expect(pkg.scripts['publish:plugins:check']).toBe('node scripts/plugins/publish.ts check');
+    expect(pkg.scripts['publish:plugins:local']).toBe('node scripts/plugins/publish.ts local');
     expect(pkg.scripts['publish:plugins:release']).toBe(
-      'node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit',
+      'node scripts/plugins/publish.ts release --codex-source petekp/circuit --codex-marketplace circuit',
     );
     expect(pkg.scripts['doctor:plugins:installed']).toBe(
-      'node scripts/doctor-installed-plugins.mjs',
+      'node scripts/plugins/installed-doctor.ts',
     );
   });
 
@@ -755,7 +755,7 @@ describe('plugin publish automation', () => {
         callIds.indexOf('codex_cache_check'),
       );
       const hook = explicit.calls.find((call) => call.id === 'codex_handoff_hook_install');
-      expect(hook?.argv).toContain(join(installed.codex, 'scripts/circuit.mjs'));
+      expect(hook?.argv).toContain(join(installed.codex, 'scripts/circuit.ts'));
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(installed.homeDir, { recursive: true, force: true });
@@ -917,7 +917,7 @@ describe('plugin publish automation', () => {
       writeText(join(source, '.codex-plugin/plugin.json'), '{"name":"circuit"}\n');
       writeText(join(source, 'commands/run.md'), '# Run\n');
       writeText(join(source, 'skills/run/SKILL.md'), '# Run skill\n');
-      writeText(join(source, 'scripts/circuit.mjs'), '#!/usr/bin/env node\n');
+      writeText(join(source, 'scripts/circuit.ts'), '#!/usr/bin/env node\n');
       writeText(join(source, 'README.md'), 'Read me\n');
 
       expect(packageTreeStatus(source, target)).toMatchObject({ status: 'missing' });

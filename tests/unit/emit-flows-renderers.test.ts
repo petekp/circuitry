@@ -4,7 +4,7 @@ import {
   renderClaudeHostCommand,
   renderCodexHostCommand,
   renderCodexHostSkill,
-} from '../../scripts/emit-flows/host-renderers.ts';
+} from '../../scripts/flows/host-renderers.ts';
 
 const commandSource = `---
 description: Use when the user wants Circuit to run a sample flow.
@@ -27,7 +27,7 @@ The user's request is passed as the command input.
 ./bin/circuit run --goal 'sample' --progress jsonl
 \`\`\`
 
-Use the Bash tool to execute the constructed command. \`node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs"\`
+Use the Bash tool to execute the constructed command. \`node "\${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts"\`
    is the installed wrapper for \`dist/cli/circuit.js\`.
 
 3. **Render progress** from stderr and parse final JSON from stdout.
@@ -44,7 +44,7 @@ describe('emit-flows host renderers', () => {
     expect(rendered).not.toContain('generated-only note');
     expect(rendered).toContain('Resolve plugin root');
     expect(rendered).toContain(
-      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run --goal',
+      'node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run --goal',
     );
     expect(rendered).not.toContain('--progress jsonl');
     expect(rendered).toContain('Let the presentation wrapper render output');
@@ -55,7 +55,7 @@ describe('emit-flows host renderers', () => {
 
     expect(rendered).not.toContain('generated-only note');
     expect(rendered).toContain('Resolve plugin root');
-    expect(rendered).toContain("node '<plugin root>/scripts/circuit.mjs' run --goal");
+    expect(rendered).toContain("node '<plugin root>/scripts/circuit.ts' run --goal");
     expect(rendered).toContain('--progress jsonl');
   });
 

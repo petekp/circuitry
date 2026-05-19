@@ -38,31 +38,31 @@ metacharacters:
    Default Fix (standard depth, full review pass):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'fix the foo bug'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run fix --goal 'fix the foo bug'
    ```
 
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'fix the missing-token edge case' --rigor lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run fix --goal 'fix the missing-token edge case' --rigor lite
    ```
 
    Deep Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'fix the failing pipeline' --rigor deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run fix --goal 'fix the failing pipeline' --rigor deep
    ```
 
    Autonomous Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'diagnose and patch the crash' --autonomous
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run fix --goal 'diagnose and patch the crash' --autonomous
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.mjs" present run fix --goal 'can'\''t reproduce'
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run fix --goal 'can'\''t reproduce'
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper

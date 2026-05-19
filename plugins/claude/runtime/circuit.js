@@ -17921,7 +17921,7 @@ var fixReviewShapeHint = {
 import { fileURLToPath } from "node:url";
 var GIT_TIMEOUT_MS = 6e4;
 var GIT_MAX_OUTPUT_BYTES = 5e6;
-var GIT_STATE_HELPER_PATH = fileURLToPath(new URL("./git-state.mjs", import.meta.url));
+var GIT_STATE_HELPER_PATH = fileURLToPath(new URL("./git-state.ts", import.meta.url));
 var GitStateHelperOutput = external_exports.object({
   head_sha: external_exports.string().min(1),
   entries: external_exports.array(external_exports.object({
@@ -33011,14 +33011,14 @@ function defaultCodexHooksFile() {
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve10(pluginRoot, "scripts/circuit.mjs");
+    return resolve10(pluginRoot, "scripts/circuit.ts");
   }
   return resolve10(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
     "CIRCUIT_PLUGIN_ROOT is unset and no wrapper was detected.",
-    "Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit.mjs.",
+    "Either set CIRCUIT_PLUGIN_ROOT or invoke through plugins/<host>/scripts/circuit.ts.",
     `Tried source-tree fallback launcher: ${launcher}`
   ].join(" ");
 }

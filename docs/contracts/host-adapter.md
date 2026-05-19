@@ -59,7 +59,7 @@ root when invoking `run`.
 For the Codex plugin, the wrapper command is:
 
 ```bash
-node '<plugin root>/scripts/circuit.mjs' run --goal '<task>'
+node '<plugin root>/scripts/circuit.ts' run --goal '<task>'
 ```
 
 The wrapper injects:
@@ -151,7 +151,7 @@ Current adapters:
 
 The generated surface source map at `docs/generated-surfaces.md` is the
 source of truth for command sources, compiled flow outputs, host mirrors, and
-edit rules. `scripts/emit-flows.ts --check` drift-checks that map alongside
+edit rules. `scripts/flows/emit.ts --check` drift-checks that map alongside
 the generated files it describes.
 
 Generated Codex skills MUST translate slash-command placeholders into
@@ -187,7 +187,7 @@ npm run check:codex-plugin-cache
 The Codex plugin wrapper MUST support:
 
 ```bash
-node '<plugin root>/scripts/circuit.mjs' doctor
+node '<plugin root>/scripts/circuit.ts' doctor
 ```
 
 The doctor returns JSON on stdout and checks:

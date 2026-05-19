@@ -150,7 +150,7 @@ describe('Codex host plugin package', () => {
       );
       const syncResult = spawnSync(
         process.execPath,
-        [resolve(REPO_ROOT, 'scripts/sync-codex-plugin-cache.mjs'), '--cache-path', cachePath],
+        [resolve(REPO_ROOT, 'scripts/plugins/sync-codex-cache.ts'), '--cache-path', cachePath],
         { cwd: REPO_ROOT, encoding: 'utf8' },
       );
       expect(syncResult.status, syncResult.stderr).toBe(0);
@@ -168,7 +168,7 @@ describe('Codex host plugin package', () => {
       const cleanCheck = spawnSync(
         process.execPath,
         [
-          resolve(REPO_ROOT, 'scripts/sync-codex-plugin-cache.mjs'),
+          resolve(REPO_ROOT, 'scripts/plugins/sync-codex-cache.ts'),
           '--check',
           '--cache-path',
           cachePath,
@@ -182,7 +182,7 @@ describe('Codex host plugin package', () => {
       const staleCheck = spawnSync(
         process.execPath,
         [
-          resolve(REPO_ROOT, 'scripts/sync-codex-plugin-cache.mjs'),
+          resolve(REPO_ROOT, 'scripts/plugins/sync-codex-cache.ts'),
           '--check',
           '--cache-path',
           cachePath,
@@ -200,7 +200,7 @@ describe('Codex host plugin package', () => {
       ]) {
         const unsafeSync = spawnSync(
           process.execPath,
-          [resolve(REPO_ROOT, 'scripts/sync-codex-plugin-cache.mjs'), '--cache-path', unsafePath],
+          [resolve(REPO_ROOT, 'scripts/plugins/sync-codex-cache.ts'), '--cache-path', unsafePath],
           { cwd: REPO_ROOT, encoding: 'utf8' },
         );
 
@@ -219,7 +219,7 @@ describe('Codex host plugin package', () => {
     expect(contract).toContain('contract: host-adapter');
     expect(contract).toContain('Routed runs');
     expect(contract).toContain('--progress jsonl');
-    expect(contract).toContain("node '<plugin root>/scripts/circuit.mjs' doctor");
+    expect(contract).toContain("node '<plugin root>/scripts/circuit.ts' doctor");
     expect(contract).toContain('final user-facing answer');
     expect(contract).toContain('report paths, trace ids');
     expect(rendering).toContain('contract: host-rendering');
@@ -229,7 +229,7 @@ describe('Codex host plugin package', () => {
   });
 
   it('exposes Codex skill and command surfaces backed by the Circuit CLI protocol', () => {
-    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'))).toBe(true);
+    expect(existsSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts'))).toBe(true);
 
     for (const command of EXPECTED_CODEX_COMMANDS) {
       expect(existsSync(resolve(PLUGIN_ROOT, `commands/${command}.md`))).toBe(true);
@@ -244,8 +244,8 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain(
       'Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits',
     );
-    expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs' run --goal");
-    expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs' run fix --goal");
+    expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run --goal");
+    expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run fix --goal");
     expect(skill).toContain('--progress jsonl');
     expect(skill).toContain('display.text');
     expect(skill).toContain('task_list.updated');
@@ -257,9 +257,9 @@ describe('Codex host plugin package', () => {
     expect(skill).not.toContain('/circuit:');
     expect(skill).not.toMatch(/\bslash command\b/i);
     expect(skill).not.toContain('slash-command');
-    expect(skill).not.toContain('node plugins/circuit/scripts/circuit.mjs');
+    expect(skill).not.toContain('node plugins/circuit/scripts/circuit.ts');
     expect(skill).toContain(
-      "node '<plugin root>/scripts/circuit.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>'",
+      "node '<plugin root>/scripts/circuit.ts' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>'",
     );
   });
 
@@ -287,7 +287,7 @@ describe('Codex host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -331,7 +331,7 @@ describe('Codex host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'version', '--json'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'version', '--json'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -355,11 +355,11 @@ describe('Codex host plugin package', () => {
       const tempPluginRoot = join(tempDir, 'plugin');
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
-      const wrapperPath = join(scriptsDir, 'circuit.mjs');
+      const wrapperPath = join(scriptsDir, 'circuit.ts');
       const fakeBin = join(binDir, 'circuit');
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
-      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.mjs')));
+      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts')));
       writeFileSync(
         fakeBin,
         [
@@ -414,7 +414,7 @@ describe('Codex host plugin package', () => {
 
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'run', 'review', '--goal', 'outside repo'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'run', 'review', '--goal', 'outside repo'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -462,7 +462,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'run',
           'review',
           '--goal',
@@ -516,7 +516,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'resume',
           '--run-folder',
           '/tmp/run',
@@ -568,7 +568,7 @@ describe('Codex host plugin package', () => {
       const result = spawnSync(
         process.execPath,
         [
-          resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'),
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
           'handoff',
           'save',
           '--goal',
@@ -609,7 +609,7 @@ describe('Codex host plugin package', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve(PLUGIN_ROOT, 'scripts/circuit.mjs'), 'doctor'],
+        [resolve(PLUGIN_ROOT, 'scripts/circuit.ts'), 'doctor'],
         {
           cwd: tempDir,
           encoding: 'utf8',
@@ -757,8 +757,8 @@ describe('Codex host plugin package', () => {
       expect(source).toContain('task_list.updated');
       expect(source).toContain('user_input.requested');
       expect(source).toContain('operator_summary_markdown_path');
-      expect(source).not.toContain("node '<plugin root>/scripts/circuit.mjs'");
-      expect(codex).toContain("node '<plugin root>/scripts/circuit.mjs'");
+      expect(source).not.toContain("node '<plugin root>/scripts/circuit.ts'");
+      expect(codex).toContain("node '<plugin root>/scripts/circuit.ts'");
       expect(codex).toContain('--progress jsonl');
       expect(codex).toContain('presentation');
       expect(codex).toContain('display.text');
@@ -782,7 +782,7 @@ describe('Codex host plugin package', () => {
       expect(skill).toMatch(
         /description: "Use when the user wants Circuit|description: "Use when the user asks Circuit/,
       );
-      expect(skill).toContain("node '<plugin root>/scripts/circuit.mjs'");
+      expect(skill).toContain("node '<plugin root>/scripts/circuit.ts'");
       expect(skill).toContain('--progress jsonl');
       expect(skill).toContain('presentation');
       expect(skill).toContain('display.text');
@@ -799,7 +799,7 @@ describe('Codex host plugin package', () => {
       expect(skill).not.toMatch(/\bslash command\b/i);
       expect(skill).not.toContain('slash-command');
       expect(skill).toContain("Use the user's current request as the command input.");
-      expect(commandMarkdown).toContain("node '<plugin root>/scripts/circuit.mjs'");
+      expect(commandMarkdown).toContain("node '<plugin root>/scripts/circuit.ts'");
     }
   });
 

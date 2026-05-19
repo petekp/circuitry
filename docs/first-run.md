@@ -3,7 +3,7 @@
 Start with doctor before the first useful run:
 
 ```bash
-node plugins/circuit/scripts/circuit.mjs doctor
+node plugins/circuit/scripts/circuit.ts doctor
 ```
 
 Doctor checks the packaged plugin files, command wrapper, generated flows, and

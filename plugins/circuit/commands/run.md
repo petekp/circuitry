@@ -44,7 +44,7 @@ metacharacters:
    safety or mutation behavior, especially Review vs Build/Fix, Explore vs
    Build.
 
-   Use the deterministic CLI router (`node '<plugin root>/scripts/circuit.mjs' run --goal ...`) only
+   Use the deterministic CLI router (`node '<plugin root>/scripts/circuit.ts' run --goal ...`) only
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
@@ -66,55 +66,55 @@ metacharacters:
    Example for a Fix task:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'the checkout total is wrong when discounts and tax both apply' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run fix --goal 'the checkout total is wrong when discounts and tax both apply' --progress jsonl
    ```
 
    Example for a Review task:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run review --goal 'review the current diff for safety problems' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run review --goal 'review the current diff for safety problems' --progress jsonl
    ```
 
    Example for a Build task:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'add a focused feature' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'add a focused feature' --progress jsonl
    ```
 
    Example for an Explore task:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run explore --goal 'compare auth provider options' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run explore --goal 'compare auth provider options' --progress jsonl
    ```
 
    Example for a Pursue task:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run pursue --goal 'coordinate these cleanup goals' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run pursue --goal 'coordinate these cleanup goals' --progress jsonl
    ```
 
    Example for the deterministic fallback router:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run --goal 'choose the right Circuit flow for this task' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run --goal 'choose the right Circuit flow for this task' --progress jsonl
    ```
 
    Example for a Build task using Deep mode:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'make the focused change' --rigor deep --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' run build --goal 'can'\''t ship' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' run build --goal 'can'\''t ship' --progress jsonl
    ```
 
    Use the Bash tool to execute the constructed command. The wrapper
@@ -176,7 +176,7 @@ metacharacters:
    command:
 
    ```bash
-   node '<plugin root>/scripts/circuit.mjs' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
+   node '<plugin root>/scripts/circuit.ts' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
    ```
 
 8. **If `outcome === "aborted"`, read `reports/result.json` at

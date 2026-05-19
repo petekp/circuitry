@@ -64,7 +64,7 @@ which enforces `/^[a-z0-9][a-z0-9._-]*$/`, rejects `.` / `..` / parent-
 traversal sequences, and forbids `/` and `\` path separators. Authority
 graph entries with `path_derived_fields` MUST cite `ControlPlaneFileStem`
 by name (ADR-0003 §Machine enforcement; verified by
-`scripts/audit.mjs`).
+`scripts/audit.ts`).
 
 The same scalar is used by `ContinuityIndex.pending_record.record_id`
 (the index-side pointer), so the index→record join is type-aligned.
