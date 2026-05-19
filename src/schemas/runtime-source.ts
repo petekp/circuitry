@@ -17,11 +17,23 @@ export const RuntimeNumberSource = z.discriminatedUnion('kind', [
 ]);
 export type RuntimeNumberSource = z.infer<typeof RuntimeNumberSource>;
 
+export const ReportItemsFilter = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('path_equals'),
+      path: z.string().min(1),
+      value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
+    })
+    .strict(),
+]);
+export type ReportItemsFilter = z.infer<typeof ReportItemsFilter>;
+
 export const ReportItemsSource = z
   .object({
     kind: z.literal('report_items'),
     source_report: RunRelativePath,
     items_path: z.string().min(1),
+    filter: ReportItemsFilter.optional(),
     required_count: RuntimeNumberSource.optional(),
   })
   .strict();

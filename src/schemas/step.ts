@@ -67,11 +67,20 @@ export const VerificationStep = StepBase.extend({
 }).strict();
 export type VerificationStep = z.infer<typeof VerificationStep>;
 
-export const AutoResolutionPolicy = z
-  .object({
-    policy: z.enum(['accept-as-is', 'highest-score', 'first-acceptable', 'refuse']),
-  })
-  .passthrough();
+export const AutoResolutionPolicy = z.discriminatedUnion('policy', [
+  z.object({ policy: z.literal('accept-as-is') }).strict(),
+  z
+    .object({
+      policy: z.literal('highest-score'),
+      source_report: RunRelativePath,
+      branches_path: z.string().min(1).default('branches'),
+      id_path: z.string().min(1).default('branch_id'),
+      rubric_result_path: z.string().min(1).default('rubric_result'),
+    })
+    .strict(),
+  z.object({ policy: z.literal('first-acceptable') }).strict(),
+  z.object({ policy: z.literal('refuse') }).strict(),
+]);
 export type AutoResolutionPolicy = z.infer<typeof AutoResolutionPolicy>;
 
 export const CheckpointPolicy = z

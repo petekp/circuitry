@@ -36,12 +36,13 @@ export async function resolveReportItemsSource(input: {
   readonly owner: string;
 }): Promise<readonly unknown[]> {
   const sourceRaw = await input.files.readJson(input.source.source_report);
-  const items = resolveDottedPath(sourceRaw, input.source.items_path);
-  if (!Array.isArray(items)) {
+  const rawItems = resolveDottedPath(sourceRaw, input.source.items_path);
+  if (!Array.isArray(rawItems)) {
     throw new Error(
-      `${input.owner}: items_path '${input.source.items_path}' did not resolve to an array (got ${typeof items})`,
+      `${input.owner}: items_path '${input.source.items_path}' did not resolve to an array (got ${typeof rawItems})`,
     );
   }
+  const items = filterItems(rawItems, input.source.filter);
   if (input.source.required_count !== undefined) {
     const expected = resolveRuntimeNumberSource(input.source.required_count, input.axes);
     if (items.length !== expected) {
@@ -49,6 +50,17 @@ export async function resolveReportItemsSource(input: {
         `${input.owner}: expected ${expected} items from ${input.source.source_report}.${input.source.items_path} (${resolvedCountLabel(input.source.required_count)}) but found ${items.length}`,
       );
     }
+  }
+  return items;
+}
+
+function filterItems(
+  items: readonly unknown[],
+  filter: ReportItemsSource['filter'] | undefined,
+): readonly unknown[] {
+  if (filter === undefined) return items;
+  if (filter.kind === 'path_equals') {
+    return items.filter((item) => resolveDottedPath(item, filter.path) === filter.value);
   }
   return items;
 }

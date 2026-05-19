@@ -16,6 +16,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { findFlowRuntimeSurfaceById } from '../flows/runtime-surface.js';
 import {
+  OperatorAutoResolution,
+  type OperatorAutoResolution as OperatorAutoResolutionValue,
   OperatorSummary,
   type OperatorSummaryReportLink,
   type OperatorSummaryWarning,
@@ -159,6 +161,53 @@ function evidenceLinks(
   });
 }
 
+function readAutoResolutions(runFolder: string): OperatorAutoResolutionValue[] {
+  const tracePath = join(runFolder, 'trace.ndjson');
+  if (!existsSync(tracePath)) return [];
+  const records: OperatorAutoResolutionValue[] = [];
+  for (const line of readFileSync(tracePath, 'utf8').split(/\r?\n/)) {
+    if (line.trim().length === 0) continue;
+    let entry: unknown;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!isObject(entry)) continue;
+    if (entry.kind !== 'checkpoint.resolved' || entry.auto_resolved !== true) continue;
+    const responsePath = stringField(entry, 'response_path');
+    if (responsePath === undefined) continue;
+    const response = readJsonIfPresent(runFolder, responsePath);
+    const autoResolution = isObject(response) ? response.auto_resolution : undefined;
+    const parsed = OperatorAutoResolution.safeParse(autoResolution);
+    if (parsed.success) records.push(parsed.data);
+  }
+  return records;
+}
+
+function formatScore(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'n/a';
+  return value.toFixed(3).replace(/\.?0+$/, '');
+}
+
+function formatSignedScore(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'n/a';
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${formatScore(value)}`;
+}
+
+export function autoResolutionSummaryLine(record: OperatorAutoResolutionValue): string {
+  const label = record.checkpoint_label ?? record.checkpoint_id;
+  if (record.policy === 'highest-score') {
+    const vetoText =
+      record.runtime_veto_effect === undefined || record.runtime_veto_effect === 'none'
+        ? 'no runtime vetoes'
+        : record.runtime_veto_effect;
+    return `${label}: ${record.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore(record.winning_score)}; margin ${formatSignedScore(record.margin)} over runner-up; ${vetoText}).`;
+  }
+  return `${label}: ${record.resolved_value} selected by policy \`${record.policy}\`.`;
+}
+
 function checkpointOptionDetails(runFolder: string, allowedChoices: readonly string[]): string[] {
   const optionsReport = readJsonIfPresent(runFolder, 'reports/decision-options.json');
   const labelsById = new Map<string, string>();
@@ -183,6 +232,13 @@ function renderMarkdown(summary: OperatorSummary): string {
     lines.push(`- Step: \`${summary.checkpoint.step_id}\``);
     lines.push(`- Request: ${summary.checkpoint.request_path}`);
     lines.push(`- Choices: ${summary.checkpoint.allowed_choices.join(', ')}`);
+  }
+
+  if (summary.auto_resolutions !== undefined && summary.auto_resolutions.length > 0) {
+    lines.push('', '## Auto-resolutions', '');
+    for (const resolution of summary.auto_resolutions) {
+      lines.push(`- ${autoResolutionSummaryLine(resolution)}`);
+    }
   }
 
   const visibleDetails = summary.details.filter((detail) => !detail.startsWith('Run note:'));
@@ -222,6 +278,7 @@ export function writeOperatorSummary(input: {
     input.runResult.outcome === 'checkpoint_waiting'
       ? undefined
       : resolveRunRelative(input.runFolder, resultRelPath);
+  const autoResolutions = readAutoResolutions(input.runFolder);
 
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
@@ -249,6 +306,7 @@ export function writeOperatorSummary(input: {
         readJsonRunRelative: (relPath) => readJsonIfPresent(input.runFolder, relPath),
         readEvidenceReportById: (reportId) =>
           evidenceReportById(input.runFolder, flowReport, reportId),
+        autoResolutions,
       };
       renderedHtml = projector(ctx);
     } catch (err) {
@@ -357,6 +415,7 @@ export function writeOperatorSummary(input: {
     ...(resultPath === undefined ? {} : { result_path: resultPath }),
     ...(outHtmlPath === undefined ? {} : { html_path: outHtmlPath }),
     report_paths: reportPaths,
+    ...(autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions }),
     ...(input.runResult.outcome === 'checkpoint_waiting'
       ? { checkpoint: input.runResult.checkpoint }
       : {}),

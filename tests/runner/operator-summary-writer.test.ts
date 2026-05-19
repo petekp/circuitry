@@ -7,6 +7,7 @@ import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { OperatorSummary } from '../../src/schemas/operator-summary.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { readPriorRoute, writeOperatorSummary } from '../../src/shared/operator-summary-writer.js';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER, combineRubricResult } from '../../src/shared/rubric.js';
 
 let runFolder: string;
 
@@ -25,6 +26,13 @@ function writeReport(relPath: string, body: unknown): void {
   writeFileSync(path, `${JSON.stringify(body, null, 2)}\n`);
 }
 
+function writeTrace(entries: readonly unknown[]): void {
+  writeFileSync(
+    join(runFolder, 'trace.ndjson'),
+    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
+  );
+}
+
 function baseResult(flowId: string): RunResult {
   return RunResult.parse({
     schema_version: 1,
@@ -37,6 +45,65 @@ function baseResult(flowId: string): RunResult {
     trace_entries_observed: 3,
     manifest_hash: 'abc123',
   });
+}
+
+function passingRubricResult() {
+  return combineRubricResult({
+    dims: Object.fromEntries(
+      THREE_AXIS_RUBRIC_TIE_BREAK_ORDER.map((dim) => [
+        dim,
+        { runtime_signal: 'met', model_judgment: 'pass' },
+      ]),
+    ),
+    orderedDims: THREE_AXIS_RUBRIC_TIE_BREAK_ORDER,
+  });
+}
+
+function writeHighestScoreAutoResolution(): void {
+  const record = {
+    checkpoint_id: 'tradeoff-checkpoint-step',
+    checkpoint_label: 'Decision - tradeoff checkpoint',
+    policy: 'highest-score',
+    resolved_value: 'option-2',
+    alternatives_available: ['option-1'],
+    scores: {
+      'option-1': { aggregate_score: 0.875, runtime_veto_count: 1 },
+      'option-2': { aggregate_score: 1, runtime_veto_count: 0 },
+    },
+    rubric_results: {
+      'option-2': passingRubricResult(),
+    },
+    winning_score: 1,
+    runner_up_score: 0.875,
+    margin: 0.125,
+    tie_break: 'aggregate_score',
+    runtime_veto_effect:
+      'option-1 evidence_rigor runtime_signal=missing forced final_score=fail and dim_score=0',
+    runtime_or_model: 'runtime',
+    resolved_at: '2026-05-19T12:00:00.000Z',
+  };
+  writeReport('reports/checkpoints/tradeoff-response.json', {
+    schema_version: 1,
+    step_id: 'tradeoff-checkpoint-step',
+    selection: 'option-2',
+    resolution_source: 'safe-autonomous',
+    auto_resolution: record,
+  });
+  writeTrace([
+    {
+      schema_version: 1,
+      sequence: 1,
+      recorded_at: '2026-05-19T12:00:00.000Z',
+      run_id: '87000000-0000-0000-0000-000000000001',
+      kind: 'checkpoint.resolved',
+      step_id: 'tradeoff-checkpoint-step',
+      attempt: 1,
+      selection: 'option-2',
+      auto_resolved: true,
+      resolution_source: 'safe-autonomous',
+      response_path: 'reports/checkpoints/tradeoff-response.json',
+    },
+  ]);
 }
 
 function buildVerificationCommand() {
@@ -890,6 +957,7 @@ describe('operator summary writer', () => {
   });
 
   it('emits operator-summary.html for Explore tournament runs with recommended highlight and XSS escaping', () => {
+    writeHighestScoreAutoResolution();
     writeReport('reports/decision-options.json', {
       decision_question: 'Which framework <should> we pick?',
       recommendation_basis: 'tournament-aggregate@v1 + tournament-review@v1',
@@ -985,6 +1053,21 @@ describe('operator summary writer', () => {
     expect(written.summary.report_paths.map((report) => report.label)).toContain(
       'Operator summary (HTML)',
     );
+    expect(written.summary.auto_resolutions).toHaveLength(1);
+    expect(written.summary.auto_resolutions?.[0]).toMatchObject({
+      checkpoint_id: 'tradeoff-checkpoint-step',
+      policy: 'highest-score',
+      resolved_value: 'option-2',
+      winning_score: 1,
+      runner_up_score: 0.875,
+      margin: 0.125,
+      tie_break: 'aggregate_score',
+    });
+    const [autoResolution] = written.summary.auto_resolutions ?? [];
+    if (autoResolution === undefined || autoResolution.rubric_results === undefined) {
+      throw new Error('expected auto-resolution rubric results');
+    }
+    expect(autoResolution.rubric_results['option-2']?.aggregate_score).toBe(1);
 
     const html = readFileSync(written.htmlPath as string, 'utf8');
     expect(html).toContain('<!doctype html>');
@@ -994,9 +1077,16 @@ describe('operator summary writer', () => {
     expect(html).toContain('Vue &lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('high confidence');
+    expect(html).toContain('Auto-resolutions');
+    expect(html).toContain('option-2 selected by policy');
+    expect(html).toContain('margin +0.125 over runner-up');
 
     const markdown = readFileSync(written.markdownPath, 'utf8');
     expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
+    expect(markdown).toContain('Auto-resolutions');
+    expect(markdown).toContain(
+      'Decision - tradeoff checkpoint: option-2 selected by policy `highest-score`',
+    );
   });
 
   it('emits operator-summary.html for Build waiting checkpoints and links it from JSON and Markdown', () => {

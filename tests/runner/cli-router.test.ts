@@ -1296,14 +1296,25 @@ describe('CLI router', () => {
     expect(output.flow_id).toBe('explore');
     expect(output.entry_mode).toBe('autonomous');
     expect(output.entry_mode_source).toBe('explicit');
-    expect(output.outcome).toBe('aborted');
+    expect(output.outcome).toBe('complete');
     expect(trace.map((entry) => entry.step_id)).toContain('proposal-fanout-step');
     expect(trace).toContainEqual(
       expect.objectContaining({
-        kind: 'step.aborted',
+        kind: 'checkpoint.resolved',
         step_id: 'tradeoff-checkpoint-step',
+        auto_resolved: true,
+        selection: 'option-1',
+        resolution_source: 'safe-autonomous',
       }),
     );
+    const response = JSON.parse(
+      readFileSync(join(runFolder, 'reports/checkpoints/tradeoff-response.json'), 'utf8'),
+    ) as { auto_resolution: { policy: string; resolved_value: string; tie_break: string } };
+    expect(response.auto_resolution).toMatchObject({
+      policy: 'highest-score',
+      resolved_value: 'option-1',
+      tie_break: 'original_ordinal',
+    });
   });
 
   it('accepts the lower tournament N bound', async () => {

@@ -49,6 +49,10 @@ function tournamentAxes(n: 2 | 3 | 4): Axes {
   return { rigor: 'standard', tournament: true, tournament_n: n, autonomous: false };
 }
 
+function autonomousTournamentAxes(n: 2 | 3 | 4): Axes {
+  return { rigor: 'standard', tournament: true, tournament_n: n, autonomous: true };
+}
+
 function tournamentRelayer(): RelayFn {
   return {
     connectorName: 'claude-code',
@@ -353,6 +357,87 @@ describe('explore tournament runtime', () => {
     },
   );
 
+  it('auto-resolves autonomous tournaments with highest-score provenance', async () => {
+    const { bytes } = loadTournamentFixture();
+    const runFolder = join(runFolderBase, 'autonomous-tournament-run');
+    const baseRelayer = tournamentRelayer();
+
+    const outcome = await runCompiledFlowWithWaiting({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '33333333-3333-3333-3333-333333333336',
+      goal: 'decide: React vs Vue',
+      depth: 'autonomous',
+      entryModeName: 'autonomous',
+      axes: autonomousTournamentAxes(2),
+      now: deterministicNow(Date.UTC(2026, 3, 29, 19, 0, 0)),
+      relayer: {
+        connectorName: baseRelayer.connectorName,
+        relay: async (input) => {
+          const result = await baseRelayer.relay(input);
+          const resultBody = JSON.parse(result.result_body) as Record<string, unknown>;
+          if (resultBody.option_id === 'option-1') {
+            return {
+              ...result,
+              result_body: JSON.stringify({
+                ...resultBody,
+                rubric_model_judgments: {
+                  ...PASSING_RUBRIC_MODEL_JUDGMENTS,
+                  evidence_rigor: 'concern',
+                },
+              }),
+            };
+          }
+          return result;
+        },
+      },
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const response = readJson(runFolder, 'reports/checkpoints/tradeoff-response.json') as {
+      selection: string;
+      resolution_source: string;
+      auto_resolution: {
+        policy: string;
+        resolved_value: string;
+        winning_score: number;
+        runner_up_score: number;
+        margin: number;
+        tie_break: string;
+        scores: Record<string, { aggregate_score: number; runtime_veto_count: number }>;
+        rubric_results: Record<string, { aggregate_score: number }>;
+      };
+    };
+    expect(response).toMatchObject({
+      selection: 'option-2',
+      resolution_source: 'safe-autonomous',
+      auto_resolution: {
+        policy: 'highest-score',
+        resolved_value: 'option-2',
+        winning_score: 1,
+        runner_up_score: 0.938,
+        margin: 0.062,
+        tie_break: 'aggregate_score',
+      },
+    });
+    expect(response.auto_resolution.scores['option-1']).toEqual({
+      aggregate_score: 0.938,
+      runtime_veto_count: 0,
+    });
+    expect(response.auto_resolution.rubric_results['option-2']?.aggregate_score).toBe(1);
+
+    const traceEntries = await new TraceStore(runFolder).load();
+    expect(traceEntries).toContainEqual(
+      expect.objectContaining({
+        kind: 'checkpoint.resolved',
+        step_id: 'tradeoff-checkpoint-step',
+        selection: 'option-2',
+        auto_resolved: true,
+        resolution_source: 'safe-autonomous',
+      }),
+    );
+  });
+
   it.each([
     { generated: 2, expected: 3 },
     { generated: 4, expected: 3 },
@@ -446,6 +531,7 @@ describe('explore tournament runtime', () => {
     if (!isGraphCheckpointWaitingResult(outcome)) {
       throw new Error('expected checkpoint_waiting');
     }
+    expect(outcome.checkpoint.allowedChoices).toEqual(['option-2', 'option-3']);
     const traceEntries = await new TraceStore(runFolder).load();
     const failedCheck = traceEntries.find(
       (entry) =>

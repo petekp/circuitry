@@ -12732,10 +12732,18 @@ var RuntimeNumberSource = external_exports.discriminatedUnion("kind", [
     axis: external_exports.literal("tournament_n")
   }).strict()
 ]);
+var ReportItemsFilter = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("path_equals"),
+    path: external_exports.string().min(1),
+    value: external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean(), external_exports.null()])
+  }).strict()
+]);
 var ReportItemsSource = external_exports.object({
   kind: external_exports.literal("report_items"),
   source_report: RunRelativePath,
   items_path: external_exports.string().min(1),
+  filter: ReportItemsFilter.optional(),
   required_count: RuntimeNumberSource.optional()
 }).strict();
 var CheckpointChoiceSource = ReportItemsSource.extend({
@@ -12781,9 +12789,18 @@ var VerificationStep = StepBase.extend({
   }).strict(),
   check: SchemaSectionsCheck
 }).strict();
-var AutoResolutionPolicy = external_exports.object({
-  policy: external_exports.enum(["accept-as-is", "highest-score", "first-acceptable", "refuse"])
-}).passthrough();
+var AutoResolutionPolicy = external_exports.discriminatedUnion("policy", [
+  external_exports.object({ policy: external_exports.literal("accept-as-is") }).strict(),
+  external_exports.object({
+    policy: external_exports.literal("highest-score"),
+    source_report: RunRelativePath,
+    branches_path: external_exports.string().min(1).default("branches"),
+    id_path: external_exports.string().min(1).default("branch_id"),
+    rubric_result_path: external_exports.string().min(1).default("rubric_result")
+  }).strict(),
+  external_exports.object({ policy: external_exports.literal("first-acceptable") }).strict(),
+  external_exports.object({ policy: external_exports.literal("refuse") }).strict()
+]);
 var CheckpointPolicy = external_exports.object({
   prompt: external_exports.string().min(1),
   choices: external_exports.array(external_exports.object({
@@ -15556,6 +15573,96 @@ function combineRubricResult(input) {
     }
   });
 }
+function rankRubricCandidates(candidates, orderedDims = THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
+  if (candidates.length === 0) {
+    throw new Error("rankRubricCandidates requires at least one candidate");
+  }
+  if (orderedDims.length === 0) {
+    throw new Error("rankRubricCandidates requires at least one tie-break dim");
+  }
+  const seenDims = /* @__PURE__ */ new Set();
+  for (const dimId of orderedDims) {
+    if (seenDims.has(dimId)) {
+      throw new Error(`rankRubricCandidates received duplicate tie-break dim '${dimId}'`);
+    }
+    seenDims.add(dimId);
+  }
+  const seenCandidateIds = /* @__PURE__ */ new Set();
+  const seenOriginalOrdinals = /* @__PURE__ */ new Set();
+  for (const candidate of candidates) {
+    if (seenCandidateIds.has(candidate.id)) {
+      throw new Error(`duplicate rubric candidate id '${candidate.id}'`);
+    }
+    seenCandidateIds.add(candidate.id);
+    if (!Number.isInteger(candidate.original_ordinal) || candidate.original_ordinal < 1) {
+      throw new Error(`candidate '${candidate.id}' must have a positive original_ordinal`);
+    }
+    if (seenOriginalOrdinals.has(candidate.original_ordinal)) {
+      throw new Error(`duplicate original_ordinal ${candidate.original_ordinal}`);
+    }
+    seenOriginalOrdinals.add(candidate.original_ordinal);
+    for (const dimId of orderedDims) {
+      if (candidate.result.dims[dimId] === void 0) {
+        throw new Error(`candidate '${candidate.id}' is missing tie-break dim '${dimId}'`);
+      }
+    }
+  }
+  const ranked = [...candidates].sort((a, b) => compareRubricCandidates(a, b, orderedDims));
+  const winner = ranked[0];
+  if (winner === void 0) {
+    throw new Error("rankRubricCandidates received no candidates");
+  }
+  const runnerUp = ranked[1];
+  const finalReason = runnerUp === void 0 ? "single_candidate" : tieBreakReason(winner, runnerUp, orderedDims);
+  return {
+    winner,
+    ...runnerUp === void 0 ? {} : { runner_up: runnerUp },
+    ranked,
+    margin: runnerUp === void 0 ? null : roundedRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
+    tie_break: RubricTieBreak.parse({
+      ordered_dims: [...orderedDims],
+      final_reason: finalReason
+    })
+  };
+}
+function compareRubricCandidates(a, b, orderedDims) {
+  if (a.result.aggregate_score !== b.result.aggregate_score) {
+    return b.result.aggregate_score - a.result.aggregate_score;
+  }
+  if (a.result.runtime_veto_count !== b.result.runtime_veto_count) {
+    return a.result.runtime_veto_count - b.result.runtime_veto_count;
+  }
+  for (const dimId of orderedDims) {
+    const aDim = a.result.dims[dimId];
+    const bDim = b.result.dims[dimId];
+    if (aDim === void 0 || bDim === void 0) {
+      throw new Error(`missing tie-break dim '${dimId}'`);
+    }
+    if (aDim.dim_score !== bDim.dim_score) {
+      return bDim.dim_score - aDim.dim_score;
+    }
+  }
+  return a.original_ordinal - b.original_ordinal;
+}
+function tieBreakReason(winner, runnerUp, orderedDims) {
+  if (winner.result.aggregate_score !== runnerUp.result.aggregate_score) {
+    return "aggregate_score";
+  }
+  if (winner.result.runtime_veto_count !== runnerUp.result.runtime_veto_count) {
+    return "runtime_veto_count";
+  }
+  for (const dimId of orderedDims) {
+    const winnerDim = winner.result.dims[dimId];
+    const runnerUpDim = runnerUp.result.dims[dimId];
+    if (winnerDim === void 0 || runnerUpDim === void 0) {
+      throw new Error(`missing tie-break dim '${dimId}'`);
+    }
+    if (winnerDim.dim_score !== runnerUpDim.dim_score) {
+      return `dim_score:${dimId}`;
+    }
+  }
+  return "original_ordinal";
+}
 function roundedRubricScore(value) {
   return Number(value.toFixed(3));
 }
@@ -16663,14 +16770,25 @@ var exploreFlowData = {
           prompt: "Choose the option Circuit should close with. This checkpoint only supports final option choices; ask-for-more-evidence and stop routes are intentionally not encoded until the runtime has executable route semantics for them.",
           choices_from: {
             kind: "report_items",
-            source_report: "reports/decision-options.json",
-            items_path: "options",
-            id_path: "id",
-            label_path: "label",
-            description_path: "summary",
-            required_count: { kind: "axis", axis: "tournament_n" }
+            source_report: "reports/tournament-aggregate.json",
+            items_path: "branches",
+            filter: {
+              kind: "path_equals",
+              path: "child_outcome",
+              value: "complete"
+            },
+            id_path: "branch_id",
+            label_path: "result_body.option_label",
+            description_path: "result_body.case_summary"
           },
-          safe_default_choice: "option-1"
+          safe_default_choice: "option-1",
+          auto_resolution: {
+            policy: "highest-score",
+            source_report: "reports/tournament-aggregate.json",
+            branches_path: "branches",
+            id_path: "branch_id",
+            rubric_result_path: "rubric_result"
+          }
         },
         routes: {
           continue: "decision-step",
@@ -22350,6 +22468,74 @@ function expandTemplate(template, item) {
   return out;
 }
 
+// dist/shared/checkpoint-auto-resolution.js
+function resolveHighestScoreAutoResolution(input) {
+  const choiceIds = new Set(input.choices);
+  if (choiceIds.size !== input.choices.length) {
+    throw new Error(`checkpoint '${input.checkpointId}' highest-score choices must be unique`);
+  }
+  const candidates = input.branches.flatMap((branch, index) => {
+    const id = resolveDottedPath(branch, input.idPath);
+    if (typeof id !== "string" || id.length === 0) {
+      throw new Error(`checkpoint '${input.checkpointId}' highest-score branch ${index + 1} is missing id '${input.idPath}'`);
+    }
+    const rawRubric = resolveDottedPath(branch, input.rubricResultPath);
+    if (rawRubric === void 0)
+      return [];
+    if (!choiceIds.has(id)) {
+      throw new Error(`checkpoint '${input.checkpointId}' highest-score rubric row '${id}' is not an allowed choice`);
+    }
+    return [
+      {
+        id,
+        original_ordinal: index + 1,
+        result: RubricResult.parse(rawRubric)
+      }
+    ];
+  });
+  const candidateIds = new Set(candidates.map((candidate) => candidate.id));
+  const missingRubricRows = input.choices.filter((choice) => !candidateIds.has(choice));
+  if (missingRubricRows.length > 0) {
+    throw new Error(`checkpoint '${input.checkpointId}' highest-score missing rubric rows for choices: ${missingRubricRows.join(", ")}`);
+  }
+  const ranking = rankRubricCandidates(candidates);
+  const scores = Object.fromEntries(ranking.ranked.map((candidate) => [
+    candidate.id,
+    {
+      aggregate_score: candidate.result.aggregate_score,
+      runtime_veto_count: candidate.result.runtime_veto_count
+    }
+  ]));
+  const rubricResults = Object.fromEntries(ranking.ranked.map((candidate) => [candidate.id, candidate.result]));
+  const record = {
+    checkpoint_id: input.checkpointId,
+    ...input.checkpointLabel === void 0 ? {} : { checkpoint_label: input.checkpointLabel },
+    policy: "highest-score",
+    resolved_value: ranking.winner.id,
+    alternatives_available: ranking.ranked.filter((candidate) => candidate.id !== ranking.winner.id).map((candidate) => candidate.id),
+    scores,
+    rubric_results: rubricResults,
+    winning_score: ranking.winner.result.aggregate_score,
+    ...ranking.runner_up === void 0 ? {} : { runner_up_score: ranking.runner_up.result.aggregate_score },
+    margin: ranking.margin,
+    tie_break: ranking.tie_break.final_reason,
+    runtime_veto_effect: runtimeVetoEffect(ranking.ranked),
+    runtime_or_model: "runtime",
+    resolved_at: input.resolvedAt
+  };
+  return { selection: ranking.winner.id, record };
+}
+function runtimeVetoEffect(candidates) {
+  for (const candidate of candidates) {
+    for (const [dimId, dim] of Object.entries(candidate.result.dims)) {
+      if (!dim.runtime_vetoed)
+        continue;
+      return `${candidate.id} ${dimId} runtime_signal=missing forced final_score=fail and dim_score=0`;
+    }
+  }
+  return "none";
+}
+
 // dist/shared/runtime-source.js
 function resolveRuntimeNumberSource(source, axes = DEFAULT_AXES) {
   if (source.kind === "constant")
@@ -22363,15 +22549,24 @@ function resolvedCountLabel(source) {
 }
 async function resolveReportItemsSource(input) {
   const sourceRaw = await input.files.readJson(input.source.source_report);
-  const items = resolveDottedPath(sourceRaw, input.source.items_path);
-  if (!Array.isArray(items)) {
-    throw new Error(`${input.owner}: items_path '${input.source.items_path}' did not resolve to an array (got ${typeof items})`);
+  const rawItems = resolveDottedPath(sourceRaw, input.source.items_path);
+  if (!Array.isArray(rawItems)) {
+    throw new Error(`${input.owner}: items_path '${input.source.items_path}' did not resolve to an array (got ${typeof rawItems})`);
   }
+  const items = filterItems(rawItems, input.source.filter);
   if (input.source.required_count !== void 0) {
     const expected = resolveRuntimeNumberSource(input.source.required_count, input.axes);
     if (items.length !== expected) {
       throw new Error(`${input.owner}: expected ${expected} items from ${input.source.source_report}.${input.source.items_path} (${resolvedCountLabel(input.source.required_count)}) but found ${items.length}`);
     }
+  }
+  return items;
+}
+function filterItems(items, filter) {
+  if (filter === void 0)
+    return items;
+  if (filter.kind === "path_equals") {
+    return items.filter((item) => resolveDottedPath(item, filter.path) === filter.value);
   }
   return items;
 }
@@ -22453,14 +22648,20 @@ async function materializePolicy(step, context) {
     prompt: stepPolicy.prompt,
     choices,
     ...stepPolicy.safe_default_choice === void 0 ? {} : { safe_default_choice: stepPolicy.safe_default_choice },
-    ...stepPolicy.safe_autonomous_choice === void 0 ? {} : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice }
+    ...stepPolicy.safe_autonomous_choice === void 0 ? {} : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice },
+    ...stepPolicy.auto_resolution === void 0 ? {} : { auto_resolution: stepPolicy.auto_resolution }
   };
 }
-function resolveCheckpoint(step, depth, stepPolicy) {
+async function resolveCheckpoint(step, context, depth, stepPolicy) {
   const effectiveDepth = depth ?? "standard";
-  if (effectiveDepth === "deep" || effectiveDepth === "tournament")
+  const autonomous = context.axes?.autonomous === true || effectiveDepth === "autonomous";
+  if (!autonomous && (effectiveDepth === "deep" || effectiveDepth === "tournament")) {
     return { kind: "waiting" };
-  if (effectiveDepth === "autonomous") {
+  }
+  if (autonomous) {
+    if (stepPolicy.auto_resolution !== void 0) {
+      return await resolveAutoResolution(step, context, stepPolicy, stepPolicy.auto_resolution);
+    }
     const selection2 = stepPolicy.safe_autonomous_choice;
     if (selection2 === void 0) {
       return {
@@ -22478,6 +22679,97 @@ function resolveCheckpoint(step, depth, stepPolicy) {
     };
   }
   return { kind: "resolved", selection, resolutionSource: "safe-default", autoResolved: true };
+}
+async function resolveAutoResolution(step, context, stepPolicy, autoResolution) {
+  if (autoResolution.policy === "refuse") {
+    return {
+      kind: "failed",
+      reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth because policy is refuse`
+    };
+  }
+  if (autoResolution.policy === "first-acceptable") {
+    const selection = stepPolicy.choices[0]?.id;
+    if (selection === void 0) {
+      return { kind: "failed", reason: `checkpoint step '${step.id}' has no executable choices` };
+    }
+    return {
+      kind: "resolved",
+      selection,
+      resolutionSource: "safe-autonomous",
+      autoResolved: true,
+      autoResolution: simpleAutoResolutionRecord({
+        step,
+        context,
+        stepPolicy,
+        policy: autoResolution.policy,
+        selection
+      })
+    };
+  }
+  if (autoResolution.policy === "accept-as-is") {
+    const selection = stepPolicy.safe_autonomous_choice ?? stepPolicy.safe_default_choice;
+    if (selection === void 0) {
+      return {
+        kind: "failed",
+        reason: `checkpoint step '${step.id}' accept-as-is requires safe_autonomous_choice or safe_default_choice`
+      };
+    }
+    return {
+      kind: "resolved",
+      selection,
+      resolutionSource: "safe-autonomous",
+      autoResolved: true,
+      autoResolution: simpleAutoResolutionRecord({
+        step,
+        context,
+        stepPolicy,
+        policy: autoResolution.policy,
+        selection
+      })
+    };
+  }
+  const sourceRaw = await context.files.readJson(autoResolution.source_report);
+  const branches = resolveDottedPath(sourceRaw, autoResolution.branches_path);
+  if (!Array.isArray(branches)) {
+    return {
+      kind: "failed",
+      reason: `checkpoint step '${step.id}' highest-score source '${autoResolution.source_report}.${autoResolution.branches_path}' did not resolve to an array`
+    };
+  }
+  try {
+    const highestScore = resolveHighestScoreAutoResolution({
+      checkpointId: step.id,
+      ...step.title === void 0 ? {} : { checkpointLabel: step.title },
+      choices: stepPolicy.choices.map((choice) => choice.id),
+      resolvedAt: context.now().toISOString(),
+      branches,
+      idPath: autoResolution.id_path,
+      rubricResultPath: autoResolution.rubric_result_path
+    });
+    return {
+      kind: "resolved",
+      selection: highestScore.selection,
+      resolutionSource: "safe-autonomous",
+      autoResolved: true,
+      autoResolution: highestScore.record
+    };
+  } catch (error) {
+    return {
+      kind: "failed",
+      reason: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+function simpleAutoResolutionRecord(input) {
+  return {
+    checkpoint_id: input.step.id,
+    ...input.step.title === void 0 ? {} : { checkpoint_label: input.step.title },
+    policy: input.policy,
+    resolved_value: input.selection,
+    alternatives_available: input.stepPolicy.choices.filter((choice) => choice.id !== input.selection).map((choice) => choice.id),
+    runtime_or_model: "runtime",
+    resolved_at: input.context.now().toISOString()
+  };
 }
 function checkpointRequestBody(input) {
   const stepPolicy = input.stepPolicy;
@@ -22509,7 +22801,7 @@ async function executeCheckpointResult(step, context) {
     let checkpointReportSha256;
     const report = step.writes?.report;
     const resumedSelection = context.resumeCheckpoint?.stepId === step.id ? context.resumeCheckpoint.selection : void 0;
-    const resolution = resolveCheckpoint(step, context.depth, stepPolicy);
+    const resolution = await resolveCheckpoint(step, context, context.depth, stepPolicy);
     if (resumedSelection === void 0) {
       if (report !== void 0) {
         const builder = report.schema === void 0 ? void 0 : findCheckpointBriefBuilder(report.schema);
@@ -22591,7 +22883,8 @@ async function executeCheckpointResult(step, context) {
       schema_version: 1,
       step_id: step.id,
       selection: effectiveResolution.selection,
-      resolution_source: effectiveResolution.resolutionSource
+      resolution_source: effectiveResolution.resolutionSource,
+      ...effectiveResolution.autoResolution === void 0 ? {} : { auto_resolution: effectiveResolution.autoResolution }
     });
     await context.trace.append({
       run_id: context.runId,
@@ -26625,6 +26918,13 @@ function concurrencyLimit(step) {
   }
   return 4;
 }
+function outcomesInBranchOrder(outcomes, branchIds) {
+  const byId = new Map(outcomes.map((outcome) => [outcome.branch_id, outcome]));
+  return branchIds.flatMap((branchId) => {
+    const outcome = byId.get(branchId);
+    return outcome === void 0 ? [] : [outcome];
+  });
+}
 async function runWithConcurrency(items, limit, worker) {
   const abortSignal = { value: false };
   if (limit === "unbounded") {
@@ -26716,11 +27016,12 @@ async function executeFanoutInternal(step, context, relayConnector) {
       }
     }
   }
+  const orderedOutcomes = outcomesInBranchOrder(outcomes, branchIds);
   const joinResult = evaluateFanoutJoinPolicy({
     policy: policy2,
     stepId: step.id,
     admitOrder: admitOrder(step),
-    outcomes: outcomes.map((outcome) => ({
+    outcomes: orderedOutcomes.map((outcome) => ({
       branch_id: outcome.branch_id,
       child_outcome: outcome.child_outcome,
       verdict: outcome.verdict,
@@ -26731,7 +27032,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
     ...branchFiles === void 0 ? {} : { branchFiles },
     ...branchFilesError === void 0 ? {} : { branchFilesError }
   });
-  await context.files.writeJson(aggregate, buildFanoutAggregate(policy2, outcomes, joinResult.winnerBranchId, step.rubric));
+  await context.files.writeJson(aggregate, buildFanoutAggregate(policy2, orderedOutcomes, joinResult.winnerBranchId, step.rubric));
   await context.trace.append({
     run_id: context.runId,
     kind: "step.report_written",
@@ -26740,7 +27041,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
     report_path: aggregate.path,
     report_schema: aggregate.schema ?? "fanout-aggregate@v1"
   });
-  const branchesCompleted = outcomes.filter((outcome) => outcome.child_outcome === "complete").length;
+  const branchesCompleted = orderedOutcomes.filter((outcome) => outcome.child_outcome === "complete").length;
   await context.trace.append({
     run_id: context.runId,
     kind: "fanout.joined",
@@ -26750,7 +27051,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
     ...joinResult.winnerBranchId === void 0 ? {} : { selected_branch_id: joinResult.winnerBranchId },
     aggregate_path: aggregate.path,
     branches_completed: branchesCompleted,
-    branches_failed: outcomes.length - branchesCompleted
+    branches_failed: orderedOutcomes.length - branchesCompleted
   });
   if (joinResult.joinedSuccessfully) {
     await context.trace.append({
@@ -29675,6 +29976,25 @@ var OperatorBriefSlots = external_exports.object({
   cautions: external_exports.array(external_exports.string().min(1)),
   nextStep: external_exports.string().min(1).optional()
 }).strict();
+var OperatorAutoResolution = external_exports.object({
+  checkpoint_id: external_exports.string().min(1),
+  checkpoint_label: external_exports.string().min(1).optional(),
+  policy: external_exports.enum(["accept-as-is", "highest-score", "first-acceptable", "refuse"]),
+  resolved_value: external_exports.string().min(1),
+  alternatives_available: external_exports.array(external_exports.string().min(1)),
+  scores: external_exports.record(external_exports.string().min(1), external_exports.object({
+    aggregate_score: external_exports.number().min(0).max(1),
+    runtime_veto_count: external_exports.number().int().nonnegative()
+  }).strict()).optional(),
+  rubric_results: external_exports.record(external_exports.string().min(1), RubricResult).optional(),
+  winning_score: external_exports.number().min(0).max(1).optional(),
+  runner_up_score: external_exports.number().min(0).max(1).optional(),
+  margin: external_exports.number().nullable().optional(),
+  tie_break: external_exports.string().min(1).optional(),
+  runtime_veto_effect: external_exports.string().min(1).optional(),
+  runtime_or_model: external_exports.enum(["runtime", "model"]),
+  resolved_at: external_exports.string().min(1)
+}).strict();
 var OperatorSummary = external_exports.object({
   schema_version: external_exports.literal(1),
   run_id: RunId,
@@ -29692,6 +30012,7 @@ var OperatorSummary = external_exports.object({
   result_path: external_exports.string().min(1).optional(),
   html_path: external_exports.string().min(1).optional(),
   report_paths: external_exports.array(OperatorSummaryReportLink),
+  auto_resolutions: external_exports.array(OperatorAutoResolution).optional(),
   checkpoint: external_exports.object({
     step_id: external_exports.string().min(1),
     request_path: external_exports.string().min(1),
@@ -30095,6 +30416,36 @@ function renderTournamentDetails(review, decision2) {
   sections.push(`<p><strong>Next action.</strong> ${escapeHtml(decision2.next_action)}</p>`);
   return sections.join("\n      ");
 }
+function formatScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  return value.toFixed(3).replace(/\.?0+$/, "");
+}
+function formatSignedScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${formatScore(value)}`;
+}
+function autoResolutionLine(record) {
+  const label = record.checkpoint_label ?? record.checkpoint_id;
+  if (record.policy === "highest-score") {
+    const vetoText = record.runtime_veto_effect === void 0 || record.runtime_veto_effect === "none" ? "no runtime vetoes" : record.runtime_veto_effect;
+    return `${label}: ${record.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record.winning_score)}; margin ${formatSignedScore(record.margin)} over runner-up; ${vetoText}).`;
+  }
+  return `${label}: ${record.resolved_value} selected by policy ${record.policy}.`;
+}
+function renderAutoResolutions(records) {
+  if (records === void 0 || records.length === 0)
+    return "";
+  const items = records.map((record) => `<li>${escapeHtml(autoResolutionLine(record))}</li>`).join("");
+  return `
+  <section>
+    <h2>Auto-resolutions</h2>
+    <ul>${items}</ul>
+  </section>
+`;
+}
 function loadHtmlPayload(flowReport, readEvidenceReportById) {
   const snapshot = isObject(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
   if (stringField(snapshot, "decision_verdict") !== "decided")
@@ -30127,11 +30478,14 @@ var exploreTournamentProjector = (ctx) => {
   const cards = decisionOptions.options.map((option) => renderOptionCard(option, option.id === recommendedId, option.id === selectedId)).join("\n\n");
   const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision2);
   const detailsBody = renderTournamentDetails(tournamentReview, decision2);
+  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
   const bodyHtml = `${banner}
 
   <div class="grid">
 ${cards}
   </div>
+
+${autoResolutions}
 
   <details>
     <summary>Tournament reasoning &middot; why this recommendation?</summary>
@@ -30655,6 +31009,54 @@ function evidenceLinks(runFolder, report) {
     }
   });
 }
+function readAutoResolutions(runFolder) {
+  const tracePath = join12(runFolder, "trace.ndjson");
+  if (!existsSync9(tracePath))
+    return [];
+  const records = [];
+  for (const line of readFileSync19(tracePath, "utf8").split(/\r?\n/)) {
+    if (line.trim().length === 0)
+      continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!isObject2(entry))
+      continue;
+    if (entry.kind !== "checkpoint.resolved" || entry.auto_resolved !== true)
+      continue;
+    const responsePath = stringField2(entry, "response_path");
+    if (responsePath === void 0)
+      continue;
+    const response = readJsonIfPresent(runFolder, responsePath);
+    const autoResolution = isObject2(response) ? response.auto_resolution : void 0;
+    const parsed = OperatorAutoResolution.safeParse(autoResolution);
+    if (parsed.success)
+      records.push(parsed.data);
+  }
+  return records;
+}
+function formatScore2(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  return value.toFixed(3).replace(/\.?0+$/, "");
+}
+function formatSignedScore2(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${formatScore2(value)}`;
+}
+function autoResolutionSummaryLine(record) {
+  const label = record.checkpoint_label ?? record.checkpoint_id;
+  if (record.policy === "highest-score") {
+    const vetoText = record.runtime_veto_effect === void 0 || record.runtime_veto_effect === "none" ? "no runtime vetoes" : record.runtime_veto_effect;
+    return `${label}: ${record.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore2(record.winning_score)}; margin ${formatSignedScore2(record.margin)} over runner-up; ${vetoText}).`;
+  }
+  return `${label}: ${record.resolved_value} selected by policy \`${record.policy}\`.`;
+}
 function checkpointOptionDetails(runFolder, allowedChoices) {
   const optionsReport = readJsonIfPresent(runFolder, "reports/decision-options.json");
   const labelsById = /* @__PURE__ */ new Map();
@@ -30679,6 +31081,12 @@ function renderMarkdown(summary) {
     lines.push(`- Step: \`${summary.checkpoint.step_id}\``);
     lines.push(`- Request: ${summary.checkpoint.request_path}`);
     lines.push(`- Choices: ${summary.checkpoint.allowed_choices.join(", ")}`);
+  }
+  if (summary.auto_resolutions !== void 0 && summary.auto_resolutions.length > 0) {
+    lines.push("", "## Auto-resolutions", "");
+    for (const resolution of summary.auto_resolutions) {
+      lines.push(`- ${autoResolutionSummaryLine(resolution)}`);
+    }
   }
   const visibleDetails = summary.details.filter((detail) => !detail.startsWith("Run note:"));
   if (visibleDetails.length > 0) {
@@ -30705,6 +31113,7 @@ function writeOperatorSummary(input) {
   const flowReport = flowResultRelPath === void 0 ? void 0 : readJsonIfPresent(input.runFolder, flowResultRelPath);
   const resultRelPath = RUN_RESULT_RELATIVE_PATH;
   const resultPath2 = input.runResult.outcome === "checkpoint_waiting" ? void 0 : resolveRunRelative(input.runFolder, resultRelPath);
+  const autoResolutions = readAutoResolutions(input.runFolder);
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
   mkdirSync(dirname5(outJsonPath), { recursive: true });
@@ -30723,7 +31132,8 @@ function writeOperatorSummary(input) {
         ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {},
         flowReport,
         readJsonRunRelative: (relPath) => readJsonIfPresent(input.runFolder, relPath),
-        readEvidenceReportById: (reportId) => evidenceReportById(input.runFolder, flowReport, reportId)
+        readEvidenceReportById: (reportId) => evidenceReportById(input.runFolder, flowReport, reportId),
+        autoResolutions
       };
       renderedHtml = projector(ctx);
     } catch (err) {
@@ -30809,6 +31219,7 @@ function writeOperatorSummary(input) {
     ...resultPath2 === void 0 ? {} : { result_path: resultPath2 },
     ...outHtmlPath === void 0 ? {} : { html_path: outHtmlPath },
     report_paths: reportPaths,
+    ...autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions },
     ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {}
   });
   writeFileSync(outJsonPath, `${JSON.stringify(candidate, null, 2)}
