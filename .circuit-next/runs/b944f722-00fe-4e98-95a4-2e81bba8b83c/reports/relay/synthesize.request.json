@@ -1,0 +1,53 @@
+Step: synthesize-step
+Title: Synthesize — produce explore.compose (connector-bound relay)
+Role: implementer
+Accepted verdicts: accept
+
+Context (from reads):
+--- reports/brief.json ---
+{
+  "subject": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "task": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "success_condition": "Answer the Explore goal with evidence-backed findings: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do? Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+}
+
+
+--- reports/analysis.json ---
+{
+  "subject": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "aspects": [
+    {
+      "name": "task-framing",
+      "summary": "Frame the concrete question, decision shape, and useful answer boundary for: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Answer the Explore goal with evidence-backed findings: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do? Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+        }
+      ]
+    },
+    {
+      "name": "evidence-targets",
+      "summary": "Identify the repo files, reports, commands, or run evidence that would prove the answer, and call out any evidence still missing.",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Evidence target: cite inspected files, reports, commands, or run evidence before treating claims as confirmed."
+        }
+      ]
+    },
+    {
+      "name": "risk-and-constraints",
+      "summary": "Separate confirmed facts from assumptions, then name likely risk areas, constraints, and follow-up proof needed before execution.",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Constraint target: preserve uncertainty when direct proof is unavailable, stale, or outside the current run evidence."
+        }
+      ]
+    }
+  ]
+}
+
+
+Respond with a single raw JSON object whose top-level shape is exactly: { "verdict": "<one-of-accepted-verdicts>", "subject": "<subject investigated>", "recommendation": "<primary conclusion or recommendation>", "success_condition_alignment": "<how the recommendation satisfies the brief success condition>", "supporting_aspects": [{ "aspect": "<analysis aspect name>", "contribution": "<how this aspect supports the recommendation>", "evidence_refs": ["<report path or file:line reference that supports this contribution>"] }] } Ground claims in the provided reports or files you inspect. If the evidence is thin, say so in the recommendation instead of inventing certainty. When asked to score or grade, include the rubric in the recommendation and cite the evidence refs behind the score. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against explore.compose@v1 before writing reports/compose.json.

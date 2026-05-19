@@ -1,0 +1,40 @@
+{
+  "summary": "Explore 'Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?': The documented happy path is a 4-step flow in README.md L17-30: (1) `/plugin marketplace add petekp/circuit`, (2) `/plugin install circuit@petekp`, (3) `/reload-plugins`, (4) `/circuit:run {{task}}`. An optional 5th step is dropping `~/.claude/circuit.config.yaml` from `circuit.config.example.yaml` (README L39-43). Confirmed facts: the marketplace-install path is stated up front and `/reload-plugins` is explicitly noted to obviate a session restart (README L25); `/circuit:run` is the single front-door entry point. Confirmed friction (from prior survey at .circuit/circuit-runs/ux-issues-opportunities/phases/survey-install-setup/reports/install-setup-findings.md): (a) Node 20+ is listed as a prerequisite but no version check is enforced, so Node 18 users only fail at runtime (High confidence); (b) outdated 'relay templates' terminology at README L236 conflicts with current 'prompt contracts' / surface-manifest.json vocabulary (High); (c) config setup is buried 4 paragraphs deep and is silently optional, so first runs may use suboptimal defaults (Medium); (d) 'start a new Claude Code session' phrasing is ambiguous against `/reload-plugins` (Medium); (e) Troubleshooting cites a `reap-legacy-handoffs.sh` path that mismatches actual location (Low). Assumptions still requiring proof: that the marketplace handle `petekp/circuit` resolves cleanly in current Claude Code plugin UX, and that `/reload-plugins` reliably surfaces Circuit slash commands without a fresh session — neither was exercised end-to-end in this run. Trustworthiness proof needed: a clean-machine walkthrough running the four commands verbatim and capturing where a new user would first stall (likely the Node prereq with no guardrail, or the silent config skip). Rubric: weight High-confidence findings as actionable now, Medium as worth fixing once verified by a real first-run trial, Low as polish.",
+  "verdict_snapshot": {
+    "compose_verdict": "accept",
+    "review_verdict": "accept-with-fold-ins",
+    "objection_count": 0,
+    "missed_angle_count": 3
+  },
+  "review_fold_ins": {
+    "overall_assessment": "Subject matches the brief tightly (install/setup UX from a GitHub-landing first-time user). Evidence is grounded in real paths (README.md sections and the prior install-setup survey report) and the recommendation cleanly separates confirmed friction (Node guardrail, stale 'relay templates' terminology, buried config, ambiguous 'new session', mispathed troubleshooting script) from explicit assumptions (marketplace handle resolution, /reload-plugins end-to-end). Confidence labels (High/Medium/Low) carry over from the cited survey rather than being invented. The success_condition_alignment field is specific and not formulaic — it names inspected files, distinguishes confirmed vs assumed, and identifies the missing clean-machine trial as the trustworthiness proof. Minor fold-ins below would tighten the answer to the literal 'what do you do?' framing.",
+    "objections": [],
+    "missed_angles": [
+      "Pre-README GitHub-landing experience: the brief starts at the repo page, but the compose jumps straight to README L17-30 commands without acknowledging the repo description, top-of-README hook, or how a visitor decides to scroll to the install block in the first place.",
+      "Assumed prerequisite: the user must already have Claude Code installed and know what /plugin marketplace add does — README does not bootstrap that, and a true first-time end user may stall before step 1.",
+      "Front-door command discoverability: memory notes a /circuit front door alongside /circuit:run, but the compose only surfaces /circuit:run; worth checking whether the README presents both consistently for a new user."
+    ]
+  },
+  "evidence_links": [
+    {
+      "report_id": "explore.brief",
+      "path": "reports/brief.json",
+      "schema": "explore.brief@v1"
+    },
+    {
+      "report_id": "explore.analysis",
+      "path": "reports/analysis.json",
+      "schema": "explore.analysis@v1"
+    },
+    {
+      "report_id": "explore.compose",
+      "path": "reports/compose.json",
+      "schema": "explore.compose@v1"
+    },
+    {
+      "report_id": "explore.review-verdict",
+      "path": "reports/review-verdict.json",
+      "schema": "explore.review-verdict@v1"
+    }
+  ]
+}

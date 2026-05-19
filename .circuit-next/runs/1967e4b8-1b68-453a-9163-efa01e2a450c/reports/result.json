@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "run_id": "1967e4b8-1b68-453a-9163-efa01e2a450c",
+  "flow_id": "explore",
+  "goal": "Explore Circuit installation/setup UX options now that the Claude Code plugin may delegate to an external circuit-next binary. Compare self-contained plugin, plugin plus separate CLI install, npm-packaged CLI dependency, bootstrap installer, and development-only wrapper paths. Weigh tradeoffs for first-run success, maintenance, release/versioning, host compatibility, and long-term product shape. Recommend a path.",
+  "outcome": "complete",
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-05-08T16:29:20.329Z",
+  "trace_entries_observed": 27,
+  "manifest_hash": "6aef4307071aa0ab8f302765eef828af442a3dea8b18d4fcc1339745f2526da7",
+  "verdict": "accept"
+}

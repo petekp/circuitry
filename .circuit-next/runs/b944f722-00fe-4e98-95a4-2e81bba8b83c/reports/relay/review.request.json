@@ -1,0 +1,92 @@
+Step: review-step
+Title: Review — adversarial pass over compose (connector-bound relay)
+Role: reviewer
+Accepted verdicts: accept, accept-with-fold-ins
+
+Context (from reads):
+--- reports/brief.json ---
+{
+  "subject": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "task": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "success_condition": "Answer the Explore goal with evidence-backed findings: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do? Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+}
+
+
+--- reports/analysis.json ---
+{
+  "subject": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "aspects": [
+    {
+      "name": "task-framing",
+      "summary": "Frame the concrete question, decision shape, and useful answer boundary for: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Answer the Explore goal with evidence-backed findings: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do? Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+        }
+      ]
+    },
+    {
+      "name": "evidence-targets",
+      "summary": "Identify the repo files, reports, commands, or run evidence that would prove the answer, and call out any evidence still missing.",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Evidence target: cite inspected files, reports, commands, or run evidence before treating claims as confirmed."
+        }
+      ]
+    },
+    {
+      "name": "risk-and-constraints",
+      "summary": "Separate confirmed facts from assumptions, then name likely risk areas, constraints, and follow-up proof needed before execution.",
+      "evidence": [
+        {
+          "source": "reports/brief.json",
+          "summary": "Constraint target: preserve uncertainty when direct proof is unavailable, stale, or outside the current run evidence."
+        }
+      ]
+    }
+  ]
+}
+
+
+--- reports/compose.json ---
+{
+  "verdict": "accept",
+  "subject": "Circuit installation/setup UX from a first-time end user landing on the GitHub repo wanting to try it in Claude Code",
+  "recommendation": "The documented happy path is a 4-step flow in README.md L17-30: (1) `/plugin marketplace add petekp/circuit`, (2) `/plugin install circuit@petekp`, (3) `/reload-plugins`, (4) `/circuit:run {{task}}`. An optional 5th step is dropping `~/.claude/circuit.config.yaml` from `circuit.config.example.yaml` (README L39-43). Confirmed facts: the marketplace-install path is stated up front and `/reload-plugins` is explicitly noted to obviate a session restart (README L25); `/circuit:run` is the single front-door entry point. Confirmed friction (from prior survey at .circuit/circuit-runs/ux-issues-opportunities/phases/survey-install-setup/reports/install-setup-findings.md): (a) Node 20+ is listed as a prerequisite but no version check is enforced, so Node 18 users only fail at runtime (High confidence); (b) outdated 'relay templates' terminology at README L236 conflicts with current 'prompt contracts' / surface-manifest.json vocabulary (High); (c) config setup is buried 4 paragraphs deep and is silently optional, so first runs may use suboptimal defaults (Medium); (d) 'start a new Claude Code session' phrasing is ambiguous against `/reload-plugins` (Medium); (e) Troubleshooting cites a `reap-legacy-handoffs.sh` path that mismatches actual location (Low). Assumptions still requiring proof: that the marketplace handle `petekp/circuit` resolves cleanly in current Claude Code plugin UX, and that `/reload-plugins` reliably surfaces Circuit slash commands without a fresh session — neither was exercised end-to-end in this run. Trustworthiness proof needed: a clean-machine walkthrough running the four commands verbatim and capturing where a new user would first stall (likely the Node prereq with no guardrail, or the silent config skip). Rubric: weight High-confidence findings as actionable now, Medium as worth fixing once verified by a real first-run trial, Low as polish.",
+  "success_condition_alignment": "Names the inspected evidence (README.md L17-43 for the install flow, prior install-setup-findings.md survey for friction points), separates confirmed facts (the documented commands and the surveyed High-confidence findings) from assumptions (marketplace handle resolution and `/reload-plugins` end-to-end behavior were not exercised), and identifies the proof that would make the recommendation trustworthy (a clean-machine walkthrough capturing first-stall points).",
+  "supporting_aspects": [
+    {
+      "aspect": "task-framing",
+      "contribution": "Frames the user journey as the literal command sequence a GitHub visitor would copy from the README, bounding the answer to the install + first-run window rather than deep workflow usage.",
+      "evidence_refs": [
+        "reports/brief.json",
+        "README.md:17-30"
+      ]
+    },
+    {
+      "aspect": "evidence-targets",
+      "contribution": "Cites the README install section and a prior survey report as the inspected sources, and calls out the missing proof: an actual clean-machine first-run trial.",
+      "evidence_refs": [
+        "README.md:15-43",
+        "README.md:221",
+        "README.md:236",
+        "README.md:265",
+        ".circuit/circuit-runs/ux-issues-opportunities/phases/survey-install-setup/reports/install-setup-findings.md"
+      ]
+    },
+    {
+      "aspect": "risk-and-constraints",
+      "contribution": "Separates confirmed friction (Node version unenforced, outdated terminology, buried config guidance, ambiguous 'new session' wording, mispathed troubleshooting script) from assumptions (marketplace handle resolution, `/reload-plugins` behavior end-to-end), preserving uncertainty where direct run evidence is absent.",
+      "evidence_refs": [
+        ".circuit/circuit-runs/ux-issues-opportunities/phases/survey-install-setup/reports/install-setup-findings.md",
+        "README.md:25",
+        "README.md:39-43"
+      ]
+    }
+  ]
+}
+
+
+Respond with a single raw JSON object whose top-level shape is exactly: { "verdict": "<one-of-accepted-verdicts>", "overall_assessment": "<review summary>", "objections": ["<blocking or follow-up objection>"], "missed_angles": ["<important angle not covered>"] } Use empty arrays when there are no objections or missed angles. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. Audit the compose against the brief on these axes before deciding the verdict. Subject fidelity: the subject must match the brief; flag if it includes unrelated topics. Evidence groundedness: every evidence_ref must be a real path in the run; flag fabricated, missing, or unresolvable references. Internal consistency: the recommendation and supporting_aspects must not contradict each other or the verdict; flag self-negating or contradictory sentences. Epistemic calibration: confidence must match the evidence; flag overclaiming, false certainty, or assertions unsupported by the cited reports. Success-condition alignment: the success_condition_alignment field must substantively explain how the recommendation satisfies the brief's success condition with specifics from the analysis; flag if it is generic, formulaic, vacuous, merely restates the brief, or could be pasted into any other compose unchanged ("This satisfies the brief." is the canonical failure). The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against explore.review-verdict@v1 before writing reports/review-verdict.json.

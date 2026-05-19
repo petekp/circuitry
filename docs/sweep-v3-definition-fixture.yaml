@@ -1,0 +1,376 @@
+# Experimental fixture only. This file is not consumed by the current runtime.
+# It is a constrained v3 authoring-definition candidate used to test whether
+# Sweep can become more legible without making dynamic work units look static.
+
+schema_version: "3-experimental"
+circuit:
+  id: sweep
+  version: "2026-04-17"
+  purpose: >
+    Systematic codebase sweeps: cleanup, quality passes, coverage improvements,
+    and docs-sync with evidence-gated action and deferred ambiguous work.
+
+  entry:
+    signals:
+      include: [dead_code, stale_docs, cleanup, quality, coverage, overnight]
+      exclude: [feature, architecture_decision, migration]
+
+  artifacts:
+    brief:
+      path: artifacts/brief.md
+      schema: brief-sweep@v1
+      public: true
+    analysis:
+      path: artifacts/analysis.md
+      schema: analysis-sweep@v1
+      public: true
+    queue:
+      path: artifacts/queue.md
+      schema: queue@v1
+      public: true
+    batch_results:
+      path: artifacts/batch-results.md
+      schema: batch-results@v1
+      public: false
+    review:
+      path: artifacts/review.md
+      schema: review@v1
+      public: true
+    deferred:
+      path: artifacts/deferred.md
+      schema: deferred@v1
+      public: true
+    result:
+      path: artifacts/result.md
+      schema: result@v1
+      public: true
+
+  modes:
+    default:
+      rigor: Standard
+      starts_at: frame
+      default: true
+      description: Standard sweep. Pauses only at high-risk boundaries.
+    lite:
+      rigor: Lite
+      starts_at: frame
+      description: Quick scan, high-confidence items only.
+      phase_overrides:
+        survey:
+          behavior: inline
+          evidence_floor: high_confidence_only
+          enforcement: prompt_guidance
+        triage:
+          behavior: run
+          note: Only high-confidence low-risk items should proceed.
+          enforcement: prompt_guidance
+    deep:
+      rigor: Deep
+      starts_at: frame
+      description: Standard plus evidence adjudication with 9-point checklist.
+      phase_overrides:
+        triage:
+          behavior: run
+          evidence_floor: prove_before_act
+          enforcement: prompt_guidance
+        execute:
+          behavior: require_confirmation
+          note: Confirm every batch and prefer deferral over risky removal.
+          enforcement: prompt_guidance
+    autonomous:
+      rigor: Autonomous
+      starts_at: frame
+      description: Unattended sweep with evidence-gated auto-approval.
+      phase_overrides:
+        triage:
+          behavior: auto_continue
+          note: Auto-approve by confidence x risk table; log deferrals.
+          enforcement: receipt_audited
+        execute:
+          behavior: run
+          stop_after:
+            max_batches: 3
+            enforcement: adapter_enforced
+          enforcement: adapter_enforced
+        verify:
+          behavior: run
+          note: Include injection check before Deferred Review.
+          enforcement: prompt_guidance
+
+  phases:
+    - id: frame
+      title: Frame
+      purpose: Define sweep objective, type, scope, commands, and high-risk boundaries.
+      kind: checkpoint
+      reads: [user_task, repo_snapshot]
+      writes: [brief]
+      checkpoint:
+        kind: sweep_frame
+        options: [continue]
+        materialize_artifact: true
+        ask_policy:
+          default: auto_continue
+          deep: ask
+          autonomous: auto_continue
+          enforcement: prompt_guidance
+      gate:
+        kind: schema_sections
+        source: brief
+        required_sections: [Objective, Sweep Type, Build Command, Test Command]
+        enforcement: runtime_enforced
+      routes:
+        continue: survey
+
+    - id: survey
+      title: Survey
+      purpose: Discover candidate items across the category set for the selected sweep type.
+      kind: dispatch
+      reads: [brief]
+      writes: [analysis]
+      work:
+        pattern: parameterized_fanout
+        completion: all
+        cardinality:
+          source: sweep_type_categories
+          max: 5
+          enforcement: resolver_enforced
+        unit_template:
+          id: survey-category
+          id_template: "survey.{category}"
+          role: researcher
+          intent:
+            purpose: scan
+            consequence: medium
+            context: repo
+            mutation: read_only
+            latency: balanced
+          skills:
+            domain:
+              kind: select_up_to
+              max: 2
+            forbidden: [workers]
+            enforcement: resolver_enforced
+          prompt:
+            template: research
+            header_contract: sweep-survey-category@v1
+            include_artifacts: [brief]
+            output_contract: sweep-category-findings@v1
+            enforcement: resolver_enforced
+          compute:
+            default_profile: scan-fast
+            floor_profile: scan-fast
+            allowed_profiles: [scan-fast, research-standard, research-high]
+            enforcement: resolver_enforced
+          outputs:
+            report: "phases/survey-{category}/reports/{category}-findings.md"
+          output_contract: sweep-category-findings@v1
+          receipt_contract: work-unit-instance@v1
+          prose_anchor: skills/sweep/SKILL.md#phase-survey-analyze
+      gate:
+        kind: result_verdict
+        pass: [outputs_ready]
+        enforcement: runtime_enforced
+      routes:
+        pass: triage
+
+    - id: triage
+      title: Queue/Triage
+      purpose: Classify candidates by confidence x risk and decide ACT, PROVE, or DEFER.
+      kind: synthesis
+      reads: [brief, analysis]
+      writes: [queue]
+      work:
+        pattern: parameterized_fanout
+        note: >
+          PROVE adjudication is runtime-derived from queue.md. The actual proof
+          workers are receipt-visible first; they are not static runtime graph
+          nodes in the first v3 slice.
+        completion: all
+        cardinality:
+          source: artifact_table_rows
+          max: 20
+          enforcement: receipt_audited
+        unit_template:
+          id: prove-item
+          id_template: "prove.{item_id}"
+          role: researcher
+          intent:
+            purpose: audit
+            consequence: high
+            context: repo
+            mutation: read_only
+            independence: fresh_context
+          prompt:
+            template: review
+            header_contract: sweep-prove-item@v1
+            include_artifacts: [brief, analysis, queue]
+            output_contract: sweep-proof@v1
+            enforcement: prompt_guidance
+          compute:
+            default_profile: research-standard
+            floor_profile: research-standard
+            allowed_profiles: [research-standard, research-high]
+            enforcement: resolver_enforced
+          outputs:
+            report: "phases/prove-{item_id}/reports/proof.md"
+          output_contract: sweep-proof@v1
+          receipt_contract: work-unit-instance@v1
+          prose_anchor: skills/sweep/SKILL.md#evidence-adjudication-deep-standard-with-prove-items
+      gate:
+        kind: schema_sections
+        source: queue
+        required_sections: [Classified Items, Batch Assignment]
+        enforcement: runtime_enforced
+      routes:
+        pass: execute
+
+    - id: execute
+      title: Batch Execute
+      purpose: Execute approved batches in risk order through the workers adapter.
+      kind: dispatch
+      reads: [queue, brief]
+      writes: [batch_results]
+      work:
+        pattern: workers_adapter
+        adapter: workers
+        owns_inner_loop: true
+        child_cardinality:
+          source: queue_batches
+          max: 3
+          enforcement: adapter_enforced
+        parent_readable_outputs:
+          - "jobs/{step_id}-{attempt}.request.json"
+          - "jobs/{step_id}-{attempt}.receipt.json"
+          - "jobs/{step_id}-{attempt}.result.json"
+          - reports/report-converge.md
+          - "reports/report-{slice_id}.md"
+        parent_unit:
+          id: execute-batches
+          role: implementer
+          intent:
+            purpose: code
+            consequence: medium
+            context: repo
+            mutation: safe_edit
+          safety:
+            mutation: safe_edit
+            checkpoint_on: [public_api, ffi, published_package, destructive_cleanup]
+            enforcement: prompt_guidance
+          compute:
+            default_profile: code-standard
+            floor_profile: code-fast
+            allowed_profiles: [code-fast, code-standard, code-high]
+            enforcement: resolver_enforced
+          budget:
+            max_attempts: 3
+            on_cap_exceeded: defer
+            enforcement: runtime_enforced
+          outputs:
+            artifact: batch_results
+            result: "jobs/{step_id}-{attempt}.result.json"
+          output_contract: workers-execute@v1
+          receipt_contract: workers-loop-instance@v1
+          prose_anchor: skills/sweep/SKILL.md#phase-batch-execute-act
+      gate:
+        kind: result_verdict
+        pass: [complete_and_hardened, partial]
+        enforcement: runtime_enforced
+      routes:
+        pass: verify
+
+    - id: verify
+      title: Verify
+      purpose: Run independent audit, verification rerun, and Autonomous injection check.
+      kind: dispatch
+      reads: [queue, brief]
+      writes: [review]
+      work:
+        pattern: review_audit
+        diagnose_only: true
+        fresh_context: true
+        enforcement: resolver_enforced
+        unit:
+          id: sweep-independent-audit
+          role: reviewer
+          intent:
+            purpose: audit
+            consequence: high
+            context: repo
+            mutation: diagnose_only
+            independence: fresh_context
+            latency: thorough
+          prompt:
+            template: ship-review
+            header_contract: sweep-independent-audit@v1
+            include_artifacts: [brief, queue, batch_results]
+            output_contract: review@v1
+            enforcement: resolver_enforced
+          compute:
+            default_profile: review-high
+            floor_profile: review-high
+            allowed_profiles: [review-high, review-critical]
+            enforcement: resolver_enforced
+          budget:
+            max_attempts: 2
+            on_cap_exceeded: checkpoint
+            enforcement: resolver_enforced
+          outputs:
+            artifact: review
+            report: phases/verify/reports/report-review.md
+          output_contract: review@v1
+          receipt_contract: work-unit-instance@v1
+          prose_anchor: skills/sweep/SKILL.md#phase-verify
+      gate:
+        kind: result_verdict
+        pass: [clean, ship_ready]
+        enforcement: runtime_enforced
+      routes:
+        pass: deferred
+
+    - id: deferred
+      title: Deferred Review
+      purpose: Preserve deferred items, reverted batches, audit findings, and Autonomous decisions.
+      kind: synthesis
+      reads: [queue, review]
+      writes: [deferred]
+      gate:
+        kind: schema_sections
+        source: deferred
+        required_sections: [Summary, Items]
+        enforcement: runtime_enforced
+      routes:
+        pass: close
+
+    - id: close
+      title: Close
+      purpose: Summarize delivered scope, verification, deferred items, and residual risk.
+      kind: synthesis
+      reads: [brief, queue, deferred, optional:review]
+      writes: [result]
+      gate:
+        kind: schema_sections
+        source: result
+        required_sections: [Summary, Verification]
+        enforcement: runtime_enforced
+      routes:
+        pass: "@complete"
+
+compile_expectations:
+  runtime_manifest:
+    schema_version: "2"
+    target: circuit.manifest.yaml
+    note: >
+      The first compiler proof should emit the current v2 outer graph only.
+      Runtime-derived survey categories, PROVE rows, and queue batches should
+      be recorded in receipts rather than promoted to runtime-core state.
+  work_policy_index:
+    target: work-policy.index.json
+    entries:
+      - phase: survey
+        pattern: parameterized_fanout
+      - phase: triage
+        pattern: parameterized_fanout
+      - phase: execute
+        pattern: workers_adapter
+      - phase: verify
+        pattern: review_audit

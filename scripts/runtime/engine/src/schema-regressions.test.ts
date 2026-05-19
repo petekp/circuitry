@@ -329,6 +329,55 @@ describe("schema regressions", () => {
     expect(validate(eventSchema, completedWithoutVerdict)).toEqual([]);
   });
 
+  it("accepts transport-neutral dispatch receipt observations while preserving legacy receipts", () => {
+    const eventSchema = loadJsonSchema("schemas/event.schema.json");
+    const base = {
+      schema_version: "1",
+      occurred_at: "2026-04-09T12:00:03.000Z",
+      event_type: "dispatch_received",
+      run_id: "run-002",
+      step_id: "act",
+    };
+
+    expect(
+      validate(eventSchema, {
+        ...base,
+        event_id: "evt-neutral-dispatch-receipt",
+        payload: {
+          attempt: 1,
+          exchange_id: "act-1",
+          receipt_path: "phases/implement/jobs/act-1.receipt.json",
+        },
+      }),
+    ).toEqual([]);
+
+    expect(
+      validate(eventSchema, {
+        ...base,
+        event_id: "evt-legacy-dispatch-receipt",
+        payload: {
+          adapter: "codex",
+          attempt: 1,
+          job_id: "act-1",
+          receipt_path: "phases/implement/jobs/act-1.receipt.json",
+          resolved_from: "dispatch.default",
+          transport: "process",
+        },
+      }),
+    ).toEqual([]);
+
+    expect(
+      validate(eventSchema, {
+        ...base,
+        event_id: "evt-invalid-dispatch-receipt",
+        payload: {
+          attempt: 1,
+          receipt_path: "phases/implement/jobs/act-1.receipt.json",
+        },
+      }).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("rejects legacy invalidation events", () => {
     const eventSchema = loadJsonSchema("schemas/event.schema.json");
 

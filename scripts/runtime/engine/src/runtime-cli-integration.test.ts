@@ -1316,6 +1316,8 @@ describe("runtime CLI integration", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("All checks passed");
   });
 
+  // Copying the full repo and running verify-install can exceed the default
+  // per-test timeout when heavy integration tests run concurrently.
   it("verify-install succeeds from a copied repo root in repo mode", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));
     const repoRoot = resolve(tempRoot, "repo-root");
@@ -1354,7 +1356,7 @@ describe("runtime CLI integration", () => {
     expect(result.status).toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain("Selected mode: repo");
     expect(`${result.stdout}\n${result.stderr}`).toContain("All checks passed");
-  }, 20000);
+  }, 90000);
 
   it("verify-install fails in repo mode when engine sources do not typecheck", () => {
     const tempRoot = mkdtempSync(resolve(tmpdir(), "circuit-cli-int-"));

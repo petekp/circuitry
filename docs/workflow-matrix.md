@@ -55,19 +55,18 @@ begins. All current modes start at `frame`, so the engine walks the same graph
 regardless of profile.
 
 Profile-specific behavior (which steps to skip, how to execute a step
-differently) is specified in SKILL.md prose. For example, Build Lite skips the
-Review phase because the Build SKILL says "**Skipped at Lite rigor.** Lite
-goes directly from Verify to Close." The manifest topology still includes a
-`review` step, but the orchestrating session follows the SKILL instructions
-for the selected profile.
+differently) is specified in SKILL.md prose. For example, Repair Lite skips the
+Review phase, while current Build Lite stays on Build's fixed graph and still
+runs Review. The manifest topology can include a `review` step even when a
+workflow-specific Lite profile skips it.
 
 The `entry_mode.description` in `circuit.yaml` documents intended profile
 behavior. It is not read by the engine. The SKILL is the execution contract;
 descriptions exist for documentation and test-parity validation.
 
 This keeps manifests simple: one graph per workflow, with SKILL prose governing
-profile variations. The manifest close step uses `optional:` read annotations
-for artifacts that lighter profiles may skip (e.g., `optional:artifacts/review.md`).
+profile variations. Close steps use `optional:` read annotations for artifacts
+that a supported profile may skip.
 
 ## 3. Canonical Artifacts
 
@@ -148,9 +147,9 @@ Features, scoped refactors, docs, tests, mixed code+docs+tests changes.
 
 | Rigor | Build Behavior |
 |-------|---------------|
-| Lite | Plan -> Act -> Verify -> Close. No independent review. Self-verify. |
+| Lite | Plan -> Act -> Verify -> Review (fresh context) -> Close. Faster fixed-graph build; Review still runs. |
 | Standard | Plan -> Act -> Verify -> Review (fresh context) -> Close. 1 fix/review loop. |
-| Deep | Same as Standard + seam proof before Act. Transfers to Explore if architecture uncertainty. |
+| Deep | Same as Standard + seam proof folded into Plan. Stops and restarts through Explore if architecture uncertainty appears. |
 | Autonomous | Standard with auto-resolved checkpoints. Independent review still runs. |
 
 ### Repair
@@ -195,8 +194,8 @@ Framework swaps, dependency replacements, architecture transitions, incremental 
 | Rigor | Migrate Behavior |
 |-------|-----------------|
 | Standard | Standard migration. Coexistence-plan checkpoint only. |
-| Deep | Default profile (`default` entry mode). Deep migration with steering checkpoints. |
-| Autonomous | Unattended migration. Auto-resolve checkpoints except the coexistence-plan checkpoint. |
+| Deep | Direct invocation default. Deep migration posture; coexistence plan remains the named steering checkpoint. |
+| Autonomous | Unattended migration. Auto-continue only when the coexistence plan is concrete and follows an established pattern; hold for human review when coexistence is novel or underspecified. |
 
 ### Sweep
 
@@ -297,9 +296,9 @@ Router may say "this is trivial, do it inline" when:
 2. Select rigor profile (from signals or default)
 3. If classification is confident: proceed immediately, show one-line summary
 4. If genuinely ambiguous: ask ONE sharp question that changes the workflow
-5. Write active-run.md, dispatch to workflow
+5. Bootstrap through the runtime engine, then dispatch to the selected workflow
 
-**No triage artifact tax.** The old triage-result.md + probe + wait-for-confirmation pattern is removed for the default path. The router writes active-run.md directly.
+**No triage artifact tax.** The old triage-result.md + probe + wait-for-confirmation pattern is removed for the default path. The runtime engine materializes `active-run.md` from ledger state; the router does not maintain a separate dashboard authority.
 
 ### Bootstrap Contract
 
@@ -308,11 +307,11 @@ bootstrap state:
 
 1. Bootstrap through `.circuit/bin/circuit-engine bootstrap`
 2. Let the engine materialize the run root and update indexed `current_run` attachment
-3. Write initial `active-run.md` with Workflow, Rigor, Current Phase, Goal
+3. Let the engine render initial `active-run.md` from the ledger projection
 
-The router may write additional dashboard fields (Next Step, Verification
-Commands, Active Worktrees, Blockers, Last Updated) during dispatch, but these
-are populated during the Frame phase, not required at bootstrap.
+The router must not edit `active-run.md` as command input or hidden state. Extra
+dashboard context comes from later ledger-backed runtime commands and ordinary
+artifact enrichment during materialization.
 
 Direct specialist commands (`/circuit:build`, `/circuit:explore`, etc.) check for
 an existing run root first. If the router already bootstrapped one, the specialist
@@ -321,14 +320,16 @@ specialist creates one using the same minimum contract.
 
 ## 8. Workflow Transfer
 
-Workflows can transfer to another workflow within the same run. The run root,
-artifacts, and indexed attachment stay intact. Transfers are internal: the
-agent loads the target workflow skill and continues.
+Runtime-level workflow transfer is not ledger-backed yet. Treat transfers as
+handoff or restart guidance, not as engine-controlled same-run topology. The run
+root, artifacts, and indexed attachment can provide context, but a future
+runtime-level transfer feature must add explicit ledger events before agents rely
+on transfers across sessions.
 
-| Transfer | Trigger | Mechanism |
-|----------|---------|-----------|
-| Build -> Explore | Architecture uncertainty during Plan | Build writes transfer record to active-run.md, loads Explore from Frame |
-| Explore -> Build | Plan ready for execution (plan.md with Slices) | Explore writes transfer record, loads Build from Plan (validates existing plan.md) |
+| Transfer | Trigger | Current Mechanism |
+|----------|---------|-------------------|
+| Build -> Explore | Architecture uncertainty during Plan | Build stops, records the reason, and tells the user to restart via Explore |
+| Explore -> Build | Plan ready for execution (plan.md with Slices) | The agent validates `plan.md`; direct Build invocation or router bootstrap starts the build path |
 
 **Transfer record in active-run.md:**
 ```markdown
@@ -338,8 +339,10 @@ to: <target workflow>
 reason: <why the transfer happened>
 ```
 
-The transfer record is informational. SessionStart uses Workflow and Current Phase
-to determine where to resume. Direct specialist commands (`/circuit:build`,
+The transfer record is informational only and must not be command input.
+SessionStart and runtime resume derive current position from the continuity
+index plus the run ledger, not from the Workflow or Current Phase text in
+`active-run.md`. Direct specialist commands (`/circuit:build`,
 `/circuit:explore`) remain available for users who want to start a fresh run.
 
 ## 9. Circuit Breakers (Universal)
@@ -349,7 +352,7 @@ to determine where to resume. Direct specialist commands (`/circuit:build`,
 | Dispatch step fails twice | Escalate with failure output and options |
 | Review says ISSUES FOUND with critical findings after 2 fix loops | Escalate |
 | Workers: impl_attempts > 3 or impl_attempts + review_rejections > 5 | Escalate |
-| Architecture uncertainty during Build | Transfer to Explore (see Workflow Transfer) |
+| Architecture uncertainty during Build | Stop and restart through Explore with the uncertainty recorded |
 | No reproducible signal during Repair after bounded search | Escalate with hypotheses |
 | Regression detected during Sweep batch | Revert batch, continue next |
 | Batch failure during Migrate | Retry within execute budget; reroute to Plan if coexistence is invalidated |

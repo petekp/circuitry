@@ -102,15 +102,20 @@
         "properties": {
           "payload": {
             "type": "object",
-            "required": ["receipt_path", "adapter", "transport", "resolved_from", "job_id", "attempt"],
+            "required": ["receipt_path", "attempt"],
             "properties": {
               "receipt_path": { "$ref": "#/$defs/safeRelativeJsonPath" },
+              "exchange_id": { "type": "string", "minLength": 1 },
               "adapter": { "type": "string", "minLength": 1 },
               "transport": { "enum": ["agent", "process"] },
               "resolved_from": { "type": "string", "minLength": 1 },
               "job_id": { "type": "string", "minLength": 1 },
               "attempt": { "type": "integer", "minimum": 1 }
-            }
+            },
+            "anyOf": [
+              { "required": ["exchange_id"] },
+              { "required": ["adapter", "transport", "resolved_from", "job_id"] }
+            ]
           }
         }
       }

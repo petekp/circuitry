@@ -1,0 +1,5 @@
+{
+  "subject": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "task": "Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do?",
+  "success_condition": "Answer the Explore goal with evidence-backed findings: Need your help figuring out the Circuit installation/setup UX. Assume you're an end user who visits the Circuit github repo and wants to try it in Claude Code. What do you do? Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+}

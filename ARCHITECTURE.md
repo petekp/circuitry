@@ -91,12 +91,14 @@ where the last one left off. The runtime engine algorithm:
 1. Read the circuit manifest and event log.
 2. Derive the current state from recorded events.
 3. Determine the next step based on the last completed step and its routes.
-4. For `workers` steps, inspect child state (`jobs/{step_id}-{attempt}.result.json`) before
-   deciding to rerun.
+4. For worker steps, use ledger-recorded worker exchange observations to explain
+   whether the step is waiting, retryable, rerouted, or complete.
 
-**Relay state takes precedence over artifact presence.** A
-step might have produced its artifact but left child workers in an inconsistent
-state. Resume must check the step-local state before blindly re-executing.
+**Ledger state takes precedence over artifact presence.** A step might have
+produced an artifact or a worker result file, but resume must not advance from
+uncommitted local files. Runtime commands observe those local exchange files,
+commit the corresponding ledger events, and then derive resume state from the
+ledger.
 
 ### Artifact vs. Worker Report
 
@@ -382,7 +384,7 @@ Universal circuit breakers:
 - A dispatch step fails twice (no valid output after 2 attempts)
 - Workers: `impl_attempts > 3` or `impl_attempts + review_rejections > 5`
 - Review says ISSUES FOUND with critical findings after 2 fix loops
-- Architecture uncertainty during Build (transfers to Explore)
+- Architecture uncertainty during Build (stop and restart through Explore)
 - No reproducible signal during Repair after bounded search
 
 ---
@@ -691,7 +693,7 @@ entry_modes:
     description: Standard build. Pauses only on ambiguity or irreversibility.
   lite:
     start_at: frame
-    description: Quick build, no independent review.
+    description: Faster build inside the fixed graph. Review still runs.
   deep:
     start_at: frame
     description: Standard plus seam proof.
@@ -702,12 +704,11 @@ one graph per workflow. The engine reads only `entry_mode.start_at` to determine
 the starting step. All current modes start at `frame`.
 
 Profile-specific behavior (which steps to skip, how to execute a step
-differently) is specified in SKILL.md prose. For example, the Build SKILL says
-"**Skipped at Lite rigor.** Lite goes directly from Verify to Close." The
-manifest topology still includes a `review` step, but the orchestrating session
-follows the SKILL instructions for the selected profile. The close step uses
-`optional:artifacts/review.md` in its reads list so the gate does not fail when
-Review is skipped.
+differently) is specified in SKILL.md prose. For example, Repair Lite skips the
+Review phase, while current Build Lite stays on Build's fixed graph and still
+runs Review. The manifest topology can include a `review` step even when a
+workflow-specific Lite profile skips it. Close steps use `optional:` read
+annotations for artifacts that a supported profile may skip.
 
 The `entry_mode.description` documents intended profile behavior for human
 readers. It is not read by the engine at runtime.

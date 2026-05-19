@@ -4,6 +4,11 @@ Rigor profiles are a shared vocabulary that controls budget, checkpoints, and re
 depth. Each workflow supports the profiles that match its task shape. Every workflow
 has a default rigor; the router or user can override.
 
+These are defaults, not phase-skipping law. A workflow-specific contract can
+override them. Current Build Lite still runs Review because Build uses a fixed
+graph; Sweep writes `review.md` during Verify rather than through a separate
+Review phase.
+
 ## Profile Definitions
 
 ### Lite
@@ -12,9 +17,11 @@ has a default rigor; the router or user can override.
 
 **Checkpoints:** 0. Route and proceed.
 
-**Review:** Self-verify only (re-run verification commands, check output).
+**Review:** Default is self-verify only (re-run verification commands, check
+output). Workflow-specific contracts may still run an independent audit.
 
-**Phases skipped:** Analyze (unless workflow requires it), Review.
+**Phases skipped:** By default, Analyze (unless workflow requires it) and Review
+(unless the workflow keeps Review load-bearing for that mode).
 
 **When:** Clear task, known approach, < 6 files. The "just do it" path.
 
@@ -54,11 +61,13 @@ router detects that a wrong decision here is expensive.
 
 ### Tournament
 
-**Budget:** 3 proposals (max), 1 adversarial round, 1 synthesis round,
-1 pre-mortem. Bounded. Do not let it run forever.
+**Budget:** 3 proposals max, 1 adversarial review round, 1 revision round,
+1 stress-test round, 1 convergence/pre-mortem. Bounded. Do not let it run
+forever.
 
-**Ceiling:** 3 proposals, each reviewed once, 1 stress-test pass, 1 convergence
-+ pre-mortem. Total: ~7 dispatch steps.
+**Ceiling:** 4 dispatched child-worker rounds in Explore Tournament: 3 diverge
+workers, 3 adversarial reviewers, 3 revision workers, and 3 stress-test workers.
+Then the orchestrator converges and writes the pre-mortem.
 
 **Checkpoints:** 1 (tradeoff decision after decision packet).
 
@@ -121,7 +130,9 @@ User can override: `/circuit:build --rigor deep <task>`.
 
 Workflows can escalate rigor mid-run:
 
-- Build at Lite discovers complexity -> escalate to Standard (add Review phase).
-- Build at Standard discovers architecture uncertainty -> transfer to Explore.
+- Build at Lite discovers complexity -> escalate the quality bar without adding
+  Review; current Build Lite already runs Review.
+- Build at Standard discovers architecture uncertainty -> stop and restart
+  through Explore.
 - Repair at Lite hits 3 hypotheses without repro -> escalate to Standard.
 - Any workflow at any rigor hits circuit breaker -> escalate to user.

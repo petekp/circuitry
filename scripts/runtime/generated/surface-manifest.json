@@ -209,7 +209,7 @@
     {
       "executable": false,
       "path": "schemas/event.schema.json",
-      "sha256": "535ae131bb1e01e7b2421a1dbcc7ecf1d50ff642103dc550c2e950092323467d"
+      "sha256": "61404e1633fa8b81093409657fc35fe455715fd7ec942b66faf2c4e91d594f9d"
     },
     {
       "executable": false,
@@ -429,7 +429,7 @@
     {
       "executable": false,
       "path": "skills/run/references/rigor-profiles.md",
-      "sha256": "67039e006c4c00d25e4498bf82c69d650fcedb4005a16eeeaa1d6670a6fca650"
+      "sha256": "a02986eef7320047be0b7723b3a7609b18aea5f85ec627d3684c53d4ef03bad7"
     },
     {
       "executable": false,
