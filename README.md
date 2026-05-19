@@ -3,9 +3,9 @@
 </p>
 <br />
 
-**Powerful, configurable flow orchestration for coding agents.**
+**Powerful, configurable workflow orchestration for coding agents.**
 
-Circuit gives coding agents repeatable, structured paths for completing complex, multi-step workflows.
+Circuit gives your coding agent tools for completing complex, multi-step workflows.
 
 Go from this:
 - Prompt the agent with a skill
@@ -21,10 +21,9 @@ To this:
 
 Circuit automates all the tedium and produces sounder results:
 - Chooses the right built-in or custom multi-step flow
-- Moves through each step in sequence
-- Applies your preferred skills at specific steps
-- Uses your preferred model(s) for specific steps
-- Uses the appropriate amount of thinking power for specific steps
+- Moves through each step in sequence and/or parallelizes non-dependent steps
+- Applies your preferred skills at the appropriate steps
+- Uses your preferred model(s) and thinking power for particular steps
 - Checks the outputs of each step before continuing, providing traces, reports, and evidence that the work was complete
 
 ## Current Alpha
@@ -35,7 +34,7 @@ users install a host plugin instead of installing a global npm package.
 
 This alpha ships:
 
-- Public flows: Build, Explore, Fix, Pursue, and Review.
+- Core flows: Build, Explore, Fix, Pursue, and Review.
 - Claude Code commands: `/circuit:run`, `/circuit:explore`,
   `/circuit:review`, `/circuit:fix`, `/circuit:build`, `/circuit:create`, and
   `/circuit:handoff`.
