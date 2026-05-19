@@ -203,14 +203,12 @@ function checkpointCompiledFlow(options: {
     version: '0.1.0',
     purpose: 'test Build checkpoint execution',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-step',
     stages: [
       {
         id: 'frame-stage',
@@ -281,14 +279,12 @@ function checkpointToRelayCompiledFlow(): { flow: CompiledFlow; bytes: Buffer } 
     version: '0.1.0',
     purpose: 'test checkpoint resume context for relay',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-step',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { id: 'act-stage', title: 'Act', canonical: 'act', steps: ['relay-step'] },
@@ -373,14 +369,12 @@ function checkpointToVerificationCompiledFlow(commandCwd = '.'): {
     version: '0.1.0',
     purpose: 'test checkpoint resume context for verification',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-step',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { id: 'plan-stage', title: 'Plan', canonical: 'plan', steps: ['plan-step'] },

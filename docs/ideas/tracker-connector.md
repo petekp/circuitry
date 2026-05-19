@@ -1,6 +1,6 @@
-# Tracker connector — emit workflow output as tracked issues
+# Tracker connector — emit flow output as tracked issues
 
-Idea for letting Circuit workflows write their structured output into
+Idea for letting Circuit flows write their structured output into
 whatever issue tracker the operator already uses (beads, Linear, GitHub
 Issues, plain markdown). Captured 2026-05-07 from a conversation about
 beads (https://github.com/gastownhall/beads) and whether Circuit should
@@ -13,13 +13,13 @@ Beads is a graph-structured task store for coding agents — issues with
 returns unblocked work. The natural question was "should Circuit
 support beads as a plugin?"
 
-The honest read: not as a primitive, because beads wants to be the
+The honest read: not as a core block, because beads wants to be the
 source of truth for agent task state and Circuit already has its own
 continuity / handoff system. Two systems both claiming "where the
 session lives" creates user confusion about which one to trust.
 
-But there is a real fit at a different layer. Circuit workflows
-already produce structured artifacts at Close — Explore drops a
+But there is a real fit at a different layer. Circuit flows
+already produce structured reports at Close — Explore drops a
 report, Build can produce implementation follow-ups, and larger
 transition plans can produce dependency-linked work. Those outputs are exactly the shape
 a tracker stores natively: items with edges. Right now they live as
@@ -27,13 +27,13 @@ prose in the run record, where nothing can query them.
 
 ## The shape that fits Circuit
 
-A **tracker connector** — a small adapter interface that workflows can
+A **tracker connector** — a small adapter interface that flows can
 optionally emit into at Close. Beads is one implementation, Linear and
 GitHub Issues are others, and a plain-markdown file is the trivial
 fallback so the abstraction works without any external tool installed.
 
 This mirrors the existing adapter pattern (agent vs codex). The
-operator picks their tracker in user-global config; recipes don't
+operator picks their tracker in user-global config; schematics don't
 hardcode one.
 
 The flow is **boundary-only**: Circuit reads the tracker on Frame to
@@ -53,7 +53,7 @@ wired in, `/circuit:run` with no argument can ask the tracker for the
 top of the ready queue. The tracker returns one or more unblocked
 issues; Circuit takes the title and body as the task description,
 runs its router (Explore / Build / Repair / Review), and
-dispatches.
+starts the selected flow.
 
 This is the bigger of the two. It changes the *unit of work entry*
 from "operator types a prompt" to "agent picks the next unblocked
@@ -61,8 +61,8 @@ item." For a long-horizon project where the operator has filed 30
 follow-ups across sessions, that's the difference between "I have to
 remember what to ask for" and "the agent already knows what's next."
 
-**Close sink — "what came out of this run?"** Workflows already
-produce structured artifacts at Close: Build's follow-ups,
+**Close sink — "what came out of this run?"** Flows already
+produce structured reports at Close: Build's follow-ups,
 Review's findings, Explore's option graph, and Repair's follow-ups. Those have natural
 graph shape (issues + edges). Today they live as prose in the run
 record, where nothing can query them. With the connector, Close shows
@@ -97,11 +97,11 @@ both Circuit and a beads-backed connector:
    `in_progress` and assignee is set. Atomic: if a parallel agent
    tried the same issue, only one wins.
 3. Circuit takes the issue title + body as the task description,
-   runs the router (probably Build), dispatches.
-4. The workflow runs normally. Claude Code's task list tracks
+   runs the router (probably Build), relays.
+4. The flow runs normally. Claude Code's task list tracks
    in-session steps. Continuity / handoff records work as today.
    The connector is silent.
-5. Close. Workflow produces 6 follow-up batches with `blocks` edges
+5. Close. Flow produces 6 follow-up batches with `blocks` edges
    between them. The connector previews: "close bd-a3f8 with
    resolution X, create 6 new issues with this edge graph,
    `relates_to bd-a3f8`." Operator confirms. Beads gets the writes.
@@ -119,7 +119,7 @@ guess.
 
 ## Connector interface (sketch)
 
-Minimal surface — enough to express what Circuit workflows actually
+Minimal surface — enough to express what Circuit flows actually
 produce, no more:
 
 ```ts
@@ -127,7 +127,7 @@ interface TrackerConnector {
   // --- Source side (called by Frame) ---
 
   // Top of the unblocked queue. Returns one or more candidates; the
-  // workflow picks one (usually the first).
+  // flow picks one (usually the first).
   ready(limit?: number): Promise<TrackerIssue[]>;
 
   // Look up a specific issue by ID. Used by /circuit:run --link <id>.
@@ -190,8 +190,8 @@ Implementations:
 
 ## User-global config (sketch)
 
-The operator picks the connector and which workflows participate at
-which boundary. Per-workflow because not every workflow type benefits
+The operator picks the connector and which flows participate at
+which boundary. Per-flow because not every flow type benefits
 from queue-driven entry — Explore is naturally prompt-driven (an
 investigation question), while Repair can use the tracker as a bug queue.
 The defaults below reflect that:
@@ -206,9 +206,9 @@ tracker:
   # integration entirely.
   connector: beads          # markdown | beads | linear | github
 
-  # Per-workflow source/sink wiring. Both sides default to "off" so
+  # Per-flow source/sink wiring. Both sides default to "off" so
   # tracker integration is opt-in.
-  workflows:
+  flows:
     explore:
       source: prompt        # investigations are operator-initiated
       sink: tracker         # findings can become issues
@@ -229,7 +229,7 @@ The `source` values and what they mean:
 
 - `prompt` — current behavior. `/circuit:run <task>` required.
 - `tracker` — `/circuit:run` with no args calls `connector.ready()`.
-  If the queue is empty, the workflow asks the operator for a
+  If the queue is empty, the flow asks the operator for a
   prompt instead.
 - `prefer-tracker` — `/circuit:run` with no args tries the tracker
   first; if no claim succeeds within a timeout, falls back to
@@ -250,14 +250,14 @@ Per-run override on the command line:
 
 ## Design constraints to get right
 
-**Opt-in per run, not per workflow type.** Not every Build run wants
+**Opt-in per run, not per flow type.** Not every Build run wants
 to populate a tracker. The default should be "don't emit" with an
-explicit flag (or workflow config) to turn it on. Otherwise routine
+explicit flag (or flow config) to turn it on. Otherwise routine
 work pollutes the backlog.
 
 **Preview before commit.** Mirrors the same rule as the
 self-improving-circuit idea and auto-memory: never auto-apply at a
-boundary the operator should see. The Close phase shows "here are the
+boundary the operator should see. The Close stage shows "here are the
 N issues I'd create with these edges, confirm?" Operator says yes /
 no / edit.
 
@@ -274,7 +274,7 @@ map to its native equivalents. Document the mappings; don't pretend
 they're equivalent.
 
 **Reads happen at Frame, writes at Close, nothing in between.**
-Mid-run, the connector is silent. If a workflow ever wants "what's
+Mid-run, the connector is silent. If a flow ever wants "what's
 already in the tracker" as input partway through a run, that's a
 different feature with different tradeoffs (sync direction, conflict
 handling, what to do when the tracker contradicts in-session state)
@@ -310,7 +310,7 @@ Leave them independent — both are operator-private; no value in
 unifying. Cross-pollination at the level of *what to remember* is
 fine; cross-pollination at the level of *where it lives* is not.
 
-The principle: integrate at workflow boundaries (Frame and Close),
+The principle: integrate at flow boundaries (Frame and Close),
 nowhere else. Mid-run, the two systems should be invisible to each
 other.
 
@@ -318,16 +318,16 @@ other.
 
 This adds surface area Circuit does not need today. No operator has
 asked for it. The lighter move that captures most of the value on
-the **sink side**: a documented recipe pattern that pipes Close
+the **sink side**: a documented schematic pattern that pipes Close
 output through a shell step into `bd create`, with no code changes.
 That validates Close-side demand before building the abstraction.
 
-Note the recipe-pattern path only covers Close. The Frame-source
+Note the schematic-pattern path only covers Close. The Frame-source
 side (`/circuit:run` reading from the tracker) cannot be done with a
 shell step — it requires `circuit:run` itself to know about the
 connector before it has a task to act on. So if the value the
 operator wants is "agent picks the next thing from my backlog," the
-recipe pattern does not deliver it; the connector has to be real
+schematic pattern does not deliver it; the connector has to be real
 code. That asymmetry is worth weighing: the sink is cheap to fake,
 the source is not.
 
@@ -335,13 +335,13 @@ Building the connector layer makes sense only when one of these is
 true:
 
 - An operator actually says "I want my Build plan in my tracker."
-- Multiple workflows are independently inventing ad-hoc emission and
+- Multiple flows are independently inventing ad-hoc emission and
   the duplication is becoming a maintenance cost.
 - Circuit's marketplace story benefits from advertising
   tracker-native output (plausible — "Circuit emits into your existing
   Linear / GitHub Issues / beads" is a clear value prop).
 
-Until one of those lands, document the recipe-pattern path and treat
+Until one of those lands, document the schematic-pattern path and treat
 the connector layer as deferred.
 
 ## What to prototype (when the time comes)
@@ -355,7 +355,7 @@ side second** (Frame ingestion) — it changes the shape of
 Sink-first sequence:
 
 1. Define the canonical emission plan (issue list + edges) as a typed
-   artifact one flow already produces. A Build implementation plan is
+   report one flow already produces. A Build implementation plan is
    the strongest current candidate — it has natural dependencies between
    tasks.
 2. Ship the **markdown** connector with sink-side methods only
@@ -372,7 +372,7 @@ Source side, after the sink has a few weeks of real use:
 
 4. Add `ready()`, `show()`, `claim()` to both connectors.
 5. Wire `/circuit:run` (no args) to call `connector.ready()` when
-   `source: tracker` is configured for the routed workflow.
+   `source: tracker` is configured for the routed flow.
 6. Add the `--link <id>` and `--no-tracker` flags.
 
 Linear / GitHub Issues connectors come later, only after a real ask.
@@ -380,7 +380,7 @@ Linear / GitHub Issues connectors come later, only after a real ask.
 ## Open questions
 
 - Where does the run record store the "already emitted" hash for
-  idempotency — auto-memory, the run artifact, or a sidecar file the
+  idempotency — auto-memory, the run report, or a sidecar file the
   connector owns?
 - For trackers that assign their own IDs (beads, Linear), how does
   Circuit reference an emitted issue in later prose? Round-trip the

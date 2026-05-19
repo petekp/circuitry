@@ -90,49 +90,6 @@ describe('build runtime parity', () => {
     });
   });
 
-  it('starts from a named entry mode and records the selected depth', async () => {
-    const fixture = await loadCompiledFlowFixture('build');
-    const raw = JSON.parse(fixture.bytes.toString('utf8')) as Record<string, unknown> & {
-      entry_modes: unknown[];
-    };
-    raw.entry_modes = [
-      ...raw.entry_modes,
-      {
-        name: 'act-only',
-        start_at: 'act-step',
-        depth: 'deep',
-        description: 'Synthetic runtime parity entry mode.',
-      },
-    ];
-    const bytes = Buffer.from(JSON.stringify(raw));
-    const flow = CompiledFlowSchema.parse(raw);
-
-    await withTempRun(async (runDir) => {
-      const result = await runSimpleCompiledFlow({
-        flowBytes: bytes,
-        runDir,
-        runId: '66666666-6666-4666-8666-666666666666',
-        goal: 'build with an alternate entry mode',
-        entryModeName: 'act-only',
-      });
-
-      expect(result).toMatchObject({
-        flow_id: 'build',
-        outcome: 'complete',
-      });
-      expect(await completedStepIds(runDir)).toEqual(expectedPassStepIds(flow, 'act-only'));
-      const trace = await readTrace(runDir);
-      expect(trace[0]).toMatchObject({
-        kind: 'run.bootstrapped',
-        depth: 'deep',
-      });
-      expect(trace.find((entry) => entry.kind === 'step.entered')).toMatchObject({
-        step_id: 'act-step',
-        attempt: 1,
-      });
-    });
-  });
-
   it('starts from the generated autonomous entry mode and records autonomous depth', async () => {
     const fixture = await loadCompiledFlowFixture('build');
     const flow = CompiledFlowSchema.parse(JSON.parse(fixture.bytes.toString('utf8')));

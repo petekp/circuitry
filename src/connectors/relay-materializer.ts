@@ -78,7 +78,7 @@ export interface RelayMaterializeOutput {
 // Write the returned transcript slots + the validated report file if
 // `writes.report` is declared. Then produce the relay completion
 // sequence. Callers may pre-write the request slot and append
-// `relay.started` / `relay.request` before awaiting an connector; in
+// `relay.started` / `relay.request` before awaiting a connector; in
 // that case `priorStart` carries the already-durable request hash and this
 // materializer emits only receipt/result/completed trace_entries.
 // Caller is responsible for appending the trace_entries through the current

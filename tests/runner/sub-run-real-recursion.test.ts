@@ -62,14 +62,12 @@ function buildChildCompiledFlow(): CompiledFlow {
     purpose:
       'real-recursion test child — single relay step admits an accept verdict via the fake relayer.',
     entry: { signals: { include: ['child'], exclude: [] }, intent_prefixes: ['child'] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'child-relay',
-        depth: 'standard',
-        description: 'Default child entry mode.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'child-relay',
     stages: [{ id: 'act-stage', title: 'Act', canonical: 'act', steps: ['child-relay'] }],
     stage_path_policy: {
       mode: 'partial',
@@ -109,14 +107,12 @@ function buildParentCompiledFlow(): CompiledFlow {
     purpose:
       'real-recursion test parent — single sub-run step recurses into the child via real runCompiledFlow.',
     entry: { signals: { include: ['parent'], exclude: [] }, intent_prefixes: ['parent'] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'sub-run-step',
-        depth: 'standard',
-        description: 'Default parent entry mode.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'sub-run-step',
     stages: [{ id: 'act-stage', title: 'Act', canonical: 'act', steps: ['sub-run-step'] }],
     stage_path_policy: {
       mode: 'partial',

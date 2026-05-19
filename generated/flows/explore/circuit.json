@@ -10,32 +10,19 @@
     },
     "intent_prefixes": ["explore", "investigate", "decide"]
   },
-  "entry_modes": [
-    {
-      "name": "default",
-      "start_at": "frame-step",
-      "depth": "standard",
-      "description": "Default explore entry mode — seeds the run at Frame at standard depth."
+  "axes": {
+    "allowed_rigors": ["lite", "standard", "deep"],
+    "supports_tournament": true,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
     },
-    {
-      "name": "lite",
-      "start_at": "frame-step",
-      "depth": "lite",
-      "description": "Lite Explore entry mode — frames, analyzes, and closes with a compact Plan/Decision pass."
-    },
-    {
-      "name": "deep",
-      "start_at": "frame-step",
-      "depth": "deep",
-      "description": "Deep Explore entry mode — frames, analyzes, and spends more effort on Plan/Decision evidence and seam proof."
-    },
-    {
-      "name": "autonomous",
-      "start_at": "frame-step",
-      "depth": "autonomous",
-      "description": "Autonomous Explore entry mode — carries ambiguity forward when no safe checkpoint answer is available."
-    }
-  ],
+    "tournament_fan_out_stage": "decision-stage"
+  },
+  "starts_at": "frame-step",
   "stages": [
     {
       "id": "frame-stage",

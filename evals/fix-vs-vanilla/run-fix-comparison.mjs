@@ -287,6 +287,12 @@ function fixRunMetadata(metadataBase) {
   return metadata;
 }
 
+function circuitModeArgs(mode) {
+  if (mode === 'default') return [];
+  if (mode === 'autonomous') return ['--autonomous'];
+  return ['--rigor', mode];
+}
+
 async function runTask({ task, args, wrapper, resultRoot }) {
   const taskDir = resolve(resultRoot, 'tasks', task.id);
   const circuitDir = resolve(taskDir, 'circuit-claude-code');
@@ -312,8 +318,7 @@ async function runTask({ task, args, wrapper, resultRoot }) {
     'fix',
     '--goal',
     taskGoal(task),
-    '--mode',
-    args.circuitMode,
+    ...circuitModeArgs(args.circuitMode),
     '--run-folder',
     circuitRunFolder,
     '--flow-root',
@@ -478,7 +483,7 @@ async function main() {
     task_ids: taskIds,
     dry_run: args.dryRun,
     commands: {
-      circuit: ['node', '<repo>/bin/circuit-next', 'run', 'fix', '--mode', args.circuitMode],
+      circuit: ['node', '<repo>/bin/circuit-next', 'run', 'fix', ...circuitModeArgs(args.circuitMode)],
       vanilla: ['claude', ...vanillaClaudeArgs('<strong vanilla prompt>')],
     },
   };

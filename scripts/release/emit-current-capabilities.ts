@@ -42,7 +42,7 @@ type HostRecord = {
 type FlowGeneratedFile = {
   rel: string;
   json: {
-    entry_modes?: Array<{ name: string }>;
+    axes?: FlowAxisSupport;
     stages?: Array<{ id?: string; canonical?: string; title?: string }>;
     steps?: Array<{
       kind?: string;
@@ -53,6 +53,18 @@ type FlowGeneratedFile = {
       };
     }>;
   };
+};
+type FlowAxisSupport = {
+  allowed_rigors: string[];
+  supports_tournament: boolean;
+  supports_autonomous: boolean;
+  default: {
+    rigor: string;
+    tournament: boolean;
+    tournament_n: number;
+    autonomous: boolean;
+  };
+  tournament_fan_out_stage?: string;
 };
 type FlowRecord = {
   id: string;
@@ -66,7 +78,7 @@ type FlowRecord = {
     signal_labels: string[];
     default_reason?: string;
   };
-  entry_modes: string[];
+  axis_support: FlowAxisSupport;
   stages: string[];
   reports: string[];
   writers: {
@@ -120,14 +132,44 @@ function readGeneratedFlowFiles(id: string): FlowGeneratedFile[] {
     }));
 }
 
-function entryModesFor(id: string): string[] {
-  const modes = new Map<string, { name: string }>();
+function stableAxisSupportKey(axes: FlowAxisSupport): string {
+  return JSON.stringify({
+    allowed_rigors: axes.allowed_rigors,
+    supports_tournament: axes.supports_tournament,
+    supports_autonomous: axes.supports_autonomous,
+    default: axes.default,
+    ...(axes.tournament_fan_out_stage === undefined
+      ? {}
+      : { tournament_fan_out_stage: axes.tournament_fan_out_stage }),
+  });
+}
+
+function axisSupportFor(id: string): FlowAxisSupport {
+  let support: FlowAxisSupport | undefined;
+  let supportKey: string | undefined;
   for (const file of readGeneratedFlowFiles(id)) {
-    for (const mode of file.json.entry_modes ?? []) {
-      modes.set(mode.name, mode);
+    if (file.json.axes === undefined) continue;
+    const key = stableAxisSupportKey(file.json.axes);
+    if (supportKey !== undefined && supportKey !== key) {
+      throw new Error(`${file.rel} declares axis support that differs from other ${id} fixtures`);
     }
+    support = file.json.axes;
+    supportKey = key;
   }
-  return [...modes.keys()].sort();
+  if (support === undefined) {
+    throw new Error(`generated flow ${id} has no axes block`);
+  }
+  return support;
+}
+
+function axisSelectionsFor(axes: FlowAxisSupport): string[] {
+  const selections = new Set<string>();
+  if (axes.allowed_rigors.includes('standard')) selections.add('default');
+  if (axes.allowed_rigors.includes('lite')) selections.add('lite');
+  if (axes.allowed_rigors.includes('deep')) selections.add('deep');
+  if (axes.supports_tournament) selections.add('tournament');
+  if (axes.supports_autonomous) selections.add('autonomous');
+  return [...selections].sort();
 }
 
 function stageAxisLabel(
@@ -290,7 +332,7 @@ function flowRecord(pkg: FlowPackage): FlowRecord {
       signal_labels: routing?.signals.map((signal) => signal.label).sort() ?? [],
       ...(routing?.defaultReason === undefined ? {} : { default_reason: routing.defaultReason }),
     },
-    entry_modes: entryModesFor(pkg.id),
+    axis_support: axisSupportFor(pkg.id),
     stages: stagesFor(pkg.id),
     reports: reportsFor(pkg),
     writers: {
@@ -445,7 +487,7 @@ function capabilityFromFlow(
     evidence: [record.source, `generated/flows/${record.id}/circuit.json`],
     axes: {
       intent_hints: intentHints,
-      modes: record.entry_modes,
+      modes: axisSelectionsFor(record.axis_support),
       stage_path: record.stages,
       outputs: semanticOutputs.length > 0 ? semanticOutputs : record.reports,
       ...behaviorAxes,
@@ -455,12 +497,12 @@ function capabilityFromFlow(
 }
 
 function modeCapabilities(record: FlowRecord) {
-  return record.entry_modes.map((mode) => ({
+  return axisSelectionsFor(record.axis_support).map((mode) => ({
     id: `mode:${record.id}:${mode}`,
     kind: 'mode',
     title: `${record.id} ${mode}`,
     status: 'implemented',
-    summary: `${record.id} declares entry mode ${mode}.`,
+    summary: `${record.id} supports the ${mode} axis selection.`,
     evidence: [`generated/flows/${record.id}`],
   }));
 }

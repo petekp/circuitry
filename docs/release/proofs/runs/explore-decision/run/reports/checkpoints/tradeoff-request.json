@@ -5,11 +5,16 @@
   "allowed_choices": [
     "option-1",
     "option-2",
-    "option-3",
-    "option-4"
+    "option-3"
   ],
   "safe_default_choice": "option-1",
   "execution_context": {
+    "axes": {
+      "rigor": "standard",
+      "tournament": true,
+      "tournament_n": 3,
+      "autonomous": false
+    },
     "project_root": "<repo>",
     "selection_config_layers": []
   }

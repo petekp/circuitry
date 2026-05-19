@@ -129,13 +129,11 @@ function schematicShell(overrides: {
     items: overrides.items,
     version: '0.0.1',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        depth: 'standard',
-        description: `Default exerciser entry mode for ${overrides.id}.`,
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
     stage_path_policy: {
       mode: 'partial',
       omits: overrides.stage_path_omits,

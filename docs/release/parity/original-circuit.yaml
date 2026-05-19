@@ -2,10 +2,10 @@ schema_version: 1
 sources:
   - id: legacy-readme
     path: /Users/petepetrash/Code/circuit/README.md
-    note: Lists the public product promise, core workflows, utilities, commands, and rigor profiles.
+    note: Lists the public product promise, core flows, utilities, commands, and depth profiles.
   - id: legacy-circuits
     path: /Users/petepetrash/Code/circuit/CIRCUITS.md
-    note: Lists workflow phase shapes, artifacts, entry modes, and behavior tables.
+    note: Lists flow stage shapes, reports, entry modes, and behavior tables.
   - id: legacy-run-command
     path: /Users/petepetrash/Code/circuit/commands/run.md
     note: Defines router intent prefixes and the action-first bootstrap contract.
@@ -155,6 +155,6 @@ capabilities:
     summary: A planning run should transfer into work, ask the blocking question, or leave one exact next action.
     axes:
       invocation: "/circuit:run Execute this plan:<path>"
-      worker_handoff: Selects the first executable workflow slice from plan content.
+      worker_handoff: Selects the first executable flow slice from plan content.
       proof: Plan-execution campaign-start proof.
     source_refs: [legacy-circuits, legacy-run-command]

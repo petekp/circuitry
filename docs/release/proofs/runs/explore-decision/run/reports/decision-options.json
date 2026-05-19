@@ -39,19 +39,6 @@
         "Can move the decision forward now",
         "May blur ownership of the final direction"
       ]
-    },
-    {
-      "id": "option-4",
-      "label": "Defer pending evidence",
-      "summary": "Pause the final choice for decide: React vs Vue until the missing evidence is gathered.",
-      "best_case_prompt": "Make the strongest case for deferring decide: React vs Vue until the missing evidence is gathered.",
-      "evidence_refs": [
-        "reports/brief.json"
-      ],
-      "tradeoffs": [
-        "Reduces decision risk",
-        "May miss strengths from another option"
-      ]
     }
   ],
   "recommendation_basis": "Compare the named options and bounded fallback choices against the available evidence."

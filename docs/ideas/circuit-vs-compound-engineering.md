@@ -138,7 +138,7 @@ durably remember what was learned, all as one replayable, resumable,
 typed pipeline.
 
 If it could, that's the real capability unlock: the first plugin where
-the engineering loop is itself a programmable, learning artifact —
+the engineering loop is itself a programmable, learning system —
 not a chat session re-narrated every time.
 
 That is the version of Circuit worth building toward. CE is useful as a

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "step_id": "tradeoff-checkpoint-step",
+  "prompt": "Choose the option Circuit should close with. This checkpoint only supports final option choices; ask-for-more-evidence and stop routes are intentionally not encoded until the runtime has executable route semantics for them.",
+  "allowed_choices": [
+    "option-1",
+    "option-2"
+  ],
+  "safe_default_choice": "option-1",
+  "execution_context": {
+    "axes": {
+      "rigor": "standard",
+      "tournament": true,
+      "tournament_n": 2,
+      "autonomous": true
+    },
+    "project_root": "<repo>",
+    "selection_config_layers": []
+  }
+}

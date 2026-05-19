@@ -35,7 +35,7 @@ describe('fromCompiledFlow', () => {
 
     for (const { manifest } of converted) {
       expect(validateExecutableFlow(manifest)).toEqual({ ok: true, issues: [] });
-      expect(manifest.entryModes?.length).toBeGreaterThan(0);
+      expect(manifest.entry).toEqual(expect.any(String));
       expect(manifest.stages.length).toBeGreaterThan(0);
       expect(manifest.steps.length).toBeGreaterThan(0);
       expect(manifest.metadata).toMatchObject({
@@ -50,16 +50,11 @@ describe('fromCompiledFlow', () => {
     expect(allKinds).toEqual(new Set(['compose', 'verification', 'checkpoint', 'relay', 'fanout']));
   });
 
-  it('preserves entry modes, stages, routes, reads, writes, and report refs', () => {
+  it('preserves starts_at, stages, routes, reads, writes, and report refs', () => {
     const manifest = fromCompiledFlow(loadCompiledFlow('generated/flows/build/circuit.json'));
 
     expect(manifest.entry).toBe('frame-step');
-    expect(manifest.entryModes?.map((mode) => mode.name)).toEqual([
-      'default',
-      'lite',
-      'deep',
-      'autonomous',
-    ]);
+    expect(manifest.entryModes).toBeUndefined();
     expect(manifest.stages.map((stage) => stage.id)).toEqual([
       'frame-stage',
       'plan-stage',
@@ -89,28 +84,14 @@ describe('fromCompiledFlow', () => {
     });
   });
 
-  it('uses the first v1 entry mode as the default executable entry', () => {
+  it('uses compiled starts_at as the executable entry', () => {
     const raw = loadJson('generated/flows/review/circuit.json') as {
-      entry_modes: Array<{
-        name: string;
-        start_at: string;
-        depth: string;
-        description: string;
-      }>;
+      starts_at: string;
     };
-    raw.entry_modes = [
-      {
-        name: 'relay-first',
-        start_at: 'audit-step',
-        depth: 'standard',
-        description: 'Synthetic first entry mode.',
-      },
-      ...raw.entry_modes,
-    ];
 
     const manifest = fromCompiledFlow(CompiledFlow.parse(raw));
 
-    expect(manifest.entry).toBe('audit-step');
+    expect(manifest.entry).toBe(raw.starts_at);
   });
 
   it('preserves v1 selection field names at the adapter boundary', () => {
@@ -186,8 +167,9 @@ describe('fromCompiledFlow', () => {
         path: 'reports/tournament-aggregate.json',
         schema: 'explore.tournament-aggregate@v1',
       },
-      on_child_failure: 'abort-all',
+      on_child_failure: 'continue-others',
     });
+    expect(fanout.check).toMatchObject({ join: { policy: 'aggregate-survivors' } });
   });
 
   it('fails validation when an adapted route target is unknown', () => {
@@ -218,7 +200,7 @@ describe('fromCompiledFlow', () => {
     );
   });
 
-  it('validates stage membership, checkpoint choice uniqueness, and entry modes', () => {
+  it('validates stage membership, checkpoint choice uniqueness, and optional executable entry modes', () => {
     const manifest = fromCompiledFlow(loadCompiledFlow('generated/flows/build/circuit.json'));
     const missingMembership: ExecutableFlow = {
       ...manifest,
@@ -259,7 +241,12 @@ describe('fromCompiledFlow', () => {
     const duplicateEntryMode: ExecutableFlow = {
       ...manifest,
       entryModes: [
-        ...(manifest.entryModes ?? []),
+        {
+          name: 'default',
+          startAt: 'frame-step',
+          depth: 'standard',
+          description: 'Default mode',
+        },
         {
           name: 'default',
           startAt: 'missing-step',

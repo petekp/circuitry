@@ -60,7 +60,7 @@ during iterative loops; run full `verify` before claiming a change is
 done. Both must pass before commit on changes to `src/`, `tests/`, or
 generated host packages.
 
-Choose focused proof before the final gate: flow authoring changes need the
+Choose focused proof before the final check: flow authoring changes need the
 `tests/runner/flow-facts.test.ts` and catalog completeness tests plus
 `check-flow-drift`; runtime path changes need runtime-context and runtime
 tests; generated host package changes need `check-flow-drift`; release-surface

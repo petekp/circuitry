@@ -15,7 +15,7 @@
 // dynamic loop to fingerprint each dirty path.
 //
 // overall_status is always 'passed' — the snapshot's job is to record state,
-// not to gate routing. Failures (git missing, not a repo, etc.) abort via
+// not to block routing. Failures (git missing, not a repo, etc.) abort via
 // the runner's own error path because the helper exits non-zero.
 
 import { fileURLToPath } from 'node:url';

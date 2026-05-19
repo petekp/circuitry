@@ -139,14 +139,24 @@ function renderOtherRows(original, currentById, exceptionByCapability, behaviora
   );
 }
 
+function axisSelectionsFor(axes) {
+  const selections = new Set();
+  if (axes.allowed_rigors.includes('standard')) selections.add('default');
+  if (axes.allowed_rigors.includes('lite')) selections.add('lite');
+  if (axes.allowed_rigors.includes('deep')) selections.add('deep');
+  if (axes.supports_tournament) selections.add('tournament');
+  if (axes.supports_autonomous) selections.add('autonomous');
+  return [...selections].sort();
+}
+
 function renderCurrentModeRows(current) {
   const rows = current.flows.map((flow) => [
     flow.id,
-    flow.entry_modes.join(', '),
+    axisSelectionsFor(flow.axis_support).join(', '),
     flow.route_outcomes.join(', '),
     flow.unsupported_route_outcomes.join(', '),
   ]);
-  return table(['Current Flow', 'Entry Modes', 'Declared Routes', 'Unsupported Routes'], rows);
+  return table(['Current Flow', 'Axis Selections', 'Declared Routes', 'Unsupported Routes'], rows);
 }
 
 function table(headers, rows) {
@@ -195,7 +205,7 @@ async function main() {
     '',
     renderOtherRows(original, currentById, exceptionByCapability, checks.behavioralAxisMismatches),
     '',
-    '## Current Route And Mode Inventory',
+    '## Current Route And Axis Inventory',
     '',
     renderCurrentModeRows(current),
     '',

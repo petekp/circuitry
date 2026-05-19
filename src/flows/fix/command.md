@@ -44,19 +44,19 @@ metacharacters:
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --entry-mode lite --progress jsonl
+   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Deep Fix:
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the failing pipeline' --entry-mode deep --progress jsonl
+   ./bin/circuit-next run fix --goal 'fix the failing pipeline' --rigor deep --progress jsonl
    ```
 
    Autonomous Fix:
 
    ```bash
-   ./bin/circuit-next run fix --goal 'diagnose and patch the crash' --entry-mode autonomous --progress jsonl
+   ./bin/circuit-next run fix --goal 'diagnose and patch the crash' --autonomous --progress jsonl
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
@@ -69,18 +69,14 @@ metacharacters:
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.
-2. **Only add `--entry-mode` when the operator explicitly asks for a Fix
-   mode.** Map Lite Fix to `--entry-mode lite`, Deep Fix to
-   `--entry-mode deep`, and Autonomous Fix to `--entry-mode autonomous`.
-   Omit `--entry-mode` for default Fix.
-3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
-   an explicit depth level, pass it with `--depth`. A single command may carry
-   both flags.
-4. **Per-mode flow files.** When `--entry-mode lite` is supplied, the CLI
+2. **Only add axis flags when the operator explicitly asks for them.** Map
+   Lite Fix to `--rigor lite`, Deep Fix to `--rigor deep`, and Autonomous Fix
+   to `--autonomous`. Omit axis flags for default Fix.
+3. **Per-mode flow files.** When `--rigor lite` is supplied, the CLI
    prefers `generated/flows/fix/lite.json` over `circuit.json` because
    the Fix schematic emits a Lite-only compiled flow that skips the review
    relay. Other modes (default/deep/autonomous) load `circuit.json`.
-5. **Render progress while the run is active.** `--progress jsonl` writes
+4. **Render progress while the run is active.** `--progress jsonl` writes
    progress events to stderr and keeps the final result JSON on stdout.
    Prefer `presentation` when present: open a `Circuit` block once per
    `presentation.block_id`, render visible status lines as

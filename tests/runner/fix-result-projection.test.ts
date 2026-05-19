@@ -1,6 +1,6 @@
 // Unit tests for the Fix result projector (claims-as-VIEW).
 //
-// The projector is the single source of truth for how proof artifacts project
+// The projector is the single source of truth for how proof reports project
 // into the FixResult shape. These tests exercise the projection corners
 // directly without booting the runtime, so any drift in the outcome rules
 // fails here long before it shows up in the live false-done bar.
@@ -415,7 +415,7 @@ describe('projectFixResult', () => {
 // hand-constructed FixResult that claims an outcome inconsistent with its
 // pillar fields must be rejected at the schema boundary even if it bypasses
 // the projector. This proves the "claim must match evidence" invariant lives
-// in two independent places (projector gates + schema superRefine) and one
+// in two independent places (projector checks + schema superRefine) and one
 // cannot silently drift past the other.
 describe('FixResultSchema rejects tampered claims', () => {
   it("rejects outcome='fixed' with verification_status='failed'", async () => {

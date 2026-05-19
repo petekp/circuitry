@@ -201,11 +201,11 @@ Pursue can close as:
 A `complete` outcome requires passed verification, a clean review, and
 no skipped, blocked, or failed pursuits.
 
-## Entry Modes
+## Axis Support
 
-Pursue currently declares two entry modes:
+Pursue supports standard interactive runs and autonomous runs:
 
-| Mode | Depth | Meaning |
+| Axis selection | Runtime depth | Meaning |
 | --- | --- | --- |
 | `default` | `standard` | Normal Pursue behavior. |
 | `autonomous` | `autonomous` | Same serial-write safety policy, with autonomous depth. |

@@ -1,9 +1,9 @@
-# Dynamic workflow synthesis as a ratchet for coding agents
+# Dynamic flow composition as a ratchet for coding agents
 
-Idea seed for runtime-generated workflows in Circuit and the longer-term
+Idea seed for runtime-generated flows in Circuit and the longer-term
 mechanism by which they could compound into durably better agents.
 Captured 2026-05-07 from a conversation that started with "is it
-possible for Circuit to dynamically create workflows at runtime?" and
+possible for Circuit to dynamically create flows at runtime?" and
 intentionally widened to "what would the long-term implications of that
 capability be?"
 
@@ -56,7 +56,7 @@ demonstrates the shape (a relay that emits `plan.strategy@v1`-aliased
 output that a downstream dynamic fanout consumes). No new step type is
 required for the planner.
 
-The genuinely new primitives are downstream of the planner:
+The genuinely new blocks are downstream of the planner:
 
 **1. Heterogeneous fanout (smaller change).** Today's `fanout.template`
 has a fixed `report_schema` and `role`; every branch is the same shape,
@@ -66,7 +66,7 @@ emitting `evidence@v1` while branch 2 is a writer emitting
 `compose@v1`. This is a real schema/runtime change to fanout but it's
 a generalization of what exists, not a new execution kind.
 
-**2. A loop / react primitive (bigger change).** Existing kinds are
+**2. A loop / react block (bigger change).** Existing kinds are
 all one-shot. "Decide next steps as it progresses, based on results of
 prior steps" is plan→act→observe→re-plan. Fanout commits to the whole
 plan up front and runs branches in parallel; a loop lets the planner
@@ -93,7 +93,7 @@ Static schematics are a frozen answer to #4. The flow author hand-encodes
 "for build tasks, do plan→implement→verify→compose." That answer never
 improves on its own; every operator session is the first session.
 
-A dynamic planner moves #4 from "frozen artifact" to "policy that runs
+A dynamic planner moves #4 from "frozen policy" to "policy that runs
 every time." That's a *prerequisite* for ratcheting, but it doesn't
 ratchet by itself — every run is still a snowflake unless something
 carries forward between runs.
@@ -167,13 +167,13 @@ from scratch.
 ## Honest tradeoffs
 
 **The Bitter Lesson tension.** Static schematics are hand-tuned
-heuristics; dynamic workflows are general methods. Sutton's lesson
+heuristics; dynamic flows are general methods. Sutton's lesson
 suggests the general method wins given enough scale. But the lesson
 doesn't apply 1:1 to a product agent system because we're not
 optimizing a benchmark — we're optimizing operator trust and replay-
 ability. Typed contracts aren't heuristics, they're invariants. The
-two-tier endpoint (dynamic synthesis + static crystallization) is the
-honest synthesis: keep the general method available for novel shapes,
+two-tier endpoint (dynamic composition + static crystallization) is the
+honest blend: keep the general method available for novel shapes,
 fossilize the patterns that work into static flows.
 
 **The plateau-at-stage-1 failure mode.** Ship `circuit:smart`, never
@@ -191,7 +191,7 @@ not free.
 
 ## The strategic question
 
-The question is not "do we want dynamic workflows" — it is **"are we
+The question is not "do we want dynamic flows" — it is **"are we
 committing to stages 2 and 3, with the discipline of preserved typed
 contracts, or are we just building a flexible flow?"** Those are very
 different products.
@@ -211,7 +211,7 @@ constraints from day one — not afterthoughts.
   items, but the `depends_on` semantics need thought (DAG vs sequence
   vs conditional).
 - Is stage 1 best built as a `loop` step, or as heterogeneous fanout
-  with a re-entry edge, or as a sub-run dispatch loop in
+  with a re-entry edge, or as a sub-run relay loop in
   `src/runtime/executors/sub-run.ts`? Each has different replay
   implications.
 - What's the storage shape for the run corpus that stage 2 reads from?
@@ -226,7 +226,7 @@ constraints from day one — not afterthoughts.
   proposed `circuit:create` invocation, or is it a different code
   path?
 - This idea overlaps with `self-improving-circuit.md` (doc-update as a
-  learning channel) and `per-step-validation-gate.md` (machine-checked
+  learning channel) and `per-step-validation-check.md` (machine-checked
   acceptance criteria as a precondition for long autonomous runs). The
   three together describe a coherent program; it's worth a follow-up
   pass to figure out whether they should be unified into one design or

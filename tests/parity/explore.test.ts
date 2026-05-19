@@ -46,6 +46,17 @@ function relayResult(input: RelayInput, receiptId: string, body: unknown): Relay
   };
 }
 
+const PASSING_RUBRIC_MODEL_JUDGMENTS = {
+  evidence_rigor: 'pass',
+  actionability: 'pass',
+  coverage_adequacy: 'pass',
+  scope_discipline: 'pass',
+  honest_calibration: 'pass',
+  project_specificity: 'pass',
+  insight_density: 'pass',
+  branch_distinctness: 'pass',
+} as const;
+
 function tournamentRelayer(): RelayFn {
   return {
     connectorName: 'claude-code',
@@ -60,6 +71,7 @@ function tournamentRelayer(): RelayFn {
           evidence_refs: ['reports/decision-options.json'],
           risks: ['The larger ecosystem may add dependency sprawl.'],
           next_action: 'Run a Build plan for a React prototype.',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         });
       }
       if (input.prompt.includes('Step: proposal-fanout-step-option-2')) {
@@ -72,6 +84,7 @@ function tournamentRelayer(): RelayFn {
           evidence_refs: ['reports/decision-options.json'],
           risks: ['Team familiarity may be thinner.'],
           next_action: 'Run a Build plan for a Vue prototype.',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         });
       }
       if (input.prompt.includes('Step: proposal-fanout-step-option-3')) {
@@ -84,6 +97,7 @@ function tournamentRelayer(): RelayFn {
           evidence_refs: ['reports/decision-options.json'],
           risks: ['The decision takes longer.'],
           next_action: 'Run a short Explore follow-up with prototype criteria.',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         });
       }
       if (input.prompt.includes('Step: proposal-fanout-step-option-4')) {
@@ -96,6 +110,7 @@ function tournamentRelayer(): RelayFn {
           evidence_refs: ['reports/decision-options.json'],
           risks: ['The project loses momentum.'],
           next_action: 'Collect the missing constraints and rerun the decision.',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         });
       }
       expect(input.prompt).toContain('Step: stress-proposals-step');
@@ -138,7 +153,7 @@ describe('explore runtime parity', () => {
     },
   );
 
-  it('runs the generated explore tournament fanout through runtime aggregate-only join', async () => {
+  it('runs the generated explore tournament fanout through runtime survivor join', async () => {
     const bytes = await loadTournamentFixture();
     const relayConnector: RelayConnector = {
       async relay(request) {
@@ -156,6 +171,7 @@ describe('explore runtime parity', () => {
           evidence_refs: ['generated fixture'],
           risks: [],
           next_action: 'Continue the parity run.',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         };
       },
     };
@@ -222,7 +238,7 @@ describe('explore runtime parity', () => {
       }
       expect(waiting.checkpoint).toMatchObject({
         stepId: 'tradeoff-checkpoint-step',
-        allowedChoices: ['option-1', 'option-2', 'option-3', 'option-4'],
+        allowedChoices: ['option-1', 'option-2', 'option-3'],
       });
       expect(existsSync(join(runDir, 'reports/checkpoints/tradeoff-response.json'))).toBe(false);
 
@@ -233,10 +249,9 @@ describe('explore runtime parity', () => {
         'React',
         'Vue',
         'Hybrid path',
-        'Defer pending evidence',
       ]);
 
-      for (const branch of ['option-1', 'option-2', 'option-3', 'option-4']) {
+      for (const branch of ['option-1', 'option-2', 'option-3']) {
         const branchDir = join(runDir, 'reports', 'tournament-branches', branch);
         expect(existsSync(join(branchDir, 'request.txt'))).toBe(true);
         expect(existsSync(join(branchDir, 'request.json'))).toBe(false);
@@ -252,12 +267,11 @@ describe('explore runtime parity', () => {
         branch_count: number;
         branches: ReadonlyArray<{ branch_id: string; result_body?: { option_id: string } }>;
       };
-      expect(aggregate.branch_count).toBe(4);
+      expect(aggregate.branch_count).toBe(3);
       expect(aggregate.branches.map((branch) => branch.branch_id).sort()).toEqual([
         'option-1',
         'option-2',
         'option-3',
-        'option-4',
       ]);
       for (const branch of aggregate.branches) {
         expect(branch.result_body?.option_id).toBe(branch.branch_id);
@@ -288,7 +302,6 @@ describe('explore runtime parity', () => {
         { label: 'React', checkpoint_choice: 'option-1' },
         { label: 'Vue', checkpoint_choice: 'option-2' },
         { label: 'Hybrid path', checkpoint_choice: 'option-3' },
-        { label: 'Defer pending evidence', checkpoint_choice: 'option-4' },
       ]);
 
       const status = projectRunStatusFromRunFolder(runDir);
@@ -300,7 +313,6 @@ describe('explore runtime parity', () => {
             { id: 'option-1', label: 'React', value: 'option-1' },
             { id: 'option-2', label: 'Vue', value: 'option-2' },
             { id: 'option-3', label: 'Hybrid path', value: 'option-3' },
-            { id: 'option-4', label: 'Defer pending evidence', value: 'option-4' },
           ],
         },
       });

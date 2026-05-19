@@ -67,14 +67,13 @@ function checkpointFixtureFlow(
       signals: { include: [], exclude: [] },
       intent_prefixes: [],
     },
-    entry_modes: [
-      {
-        name: 'deep',
-        start_at: 'checkpoint-step',
-        depth: 'deep',
-        description: 'Pause at the fixture checkpoint.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['deep'],
+      supports_tournament: false,
+      supports_autonomous: false,
+      default: { rigor: 'deep', tournament: false, tournament_n: 3, autonomous: false },
+    },
+    starts_at: 'checkpoint-step',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['checkpoint-step'] },
       { id: 'act-stage', title: 'Act', canonical: 'act', steps: ['relay-step'] },
@@ -203,14 +202,13 @@ function completedAttemptFixtureFlow(): unknown {
   return {
     ...base,
     id: 'checkpoint-cycle-fixture',
-    entry_modes: [
-      {
-        name: 'deep',
-        start_at: 'pre-step',
-        depth: 'deep',
-        description: 'Complete a pre-step before pausing at checkpoint.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['deep'],
+      supports_tournament: false,
+      supports_autonomous: false,
+      default: { rigor: 'deep', tournament: false, tournament_n: 3, autonomous: false },
+    },
+    starts_at: 'pre-step',
     stages: base.stages.map((stage) =>
       stage.id === 'frame-stage' ? { ...stage, steps: ['pre-step', 'checkpoint-step'] } : stage,
     ),

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
 
 const EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'explore.brief': 'explore.brief@v1',
@@ -108,6 +110,39 @@ export const ExploreDecisionOptionId = z
   .regex(/^option-[1-4]$/, { message: 'option id must be option-1 through option-4' });
 export type ExploreDecisionOptionId = z.infer<typeof ExploreDecisionOptionId>;
 
+export const ExploreRubricDimId = z.enum(THREE_AXIS_RUBRIC_TIE_BREAK_ORDER);
+export type ExploreRubricDimId = z.infer<typeof ExploreRubricDimId>;
+
+function refineExactExploreRubricDims(
+  value: Readonly<Record<string, unknown>>,
+  ctx: z.RefinementCtx,
+): void {
+  const expected = new Set<string>(THREE_AXIS_RUBRIC_TIE_BREAK_ORDER);
+  for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
+    if (value[dimId] === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [dimId],
+        message: `missing rubric dim '${dimId}'`,
+      });
+    }
+  }
+  for (const dimId of Object.keys(value)) {
+    if (!expected.has(dimId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [dimId],
+        message: `unknown rubric dim '${dimId}'`,
+      });
+    }
+  }
+}
+
+export const ExploreRubricModelJudgments = z
+  .record(ExploreRubricDimId, RubricJudgment)
+  .superRefine(refineExactExploreRubricDims);
+export type ExploreRubricModelJudgments = z.infer<typeof ExploreRubricModelJudgments>;
+
 export const ExploreDecisionOption = z
   .object({
     id: ExploreDecisionOptionId,
@@ -147,11 +182,12 @@ export const ExploreTournamentProposal = z
     verdict: z.literal('accept'),
     option_id: ExploreDecisionOptionId,
     option_label: z.string().min(1),
-    case_summary: z.string().min(1),
+    case_summary: z.string(),
     assumptions: z.array(z.string().min(1)),
-    evidence_refs: z.array(z.string().min(1)).min(1),
+    evidence_refs: z.array(z.string().min(1)),
     risks: z.array(z.string().min(1)),
-    next_action: z.string().min(1),
+    next_action: z.string(),
+    rubric_model_judgments: ExploreRubricModelJudgments,
   })
   .strict();
 export type ExploreTournamentProposal = z.infer<typeof ExploreTournamentProposal>;
@@ -166,6 +202,7 @@ export const ExploreTournamentAggregateBranch = z
     result_path: z.string().min(1),
     duration_ms: z.number().nonnegative(),
     result_body: ExploreTournamentProposal.optional(),
+    rubric_result: RubricResult.optional(),
   })
   .strict();
 export type ExploreTournamentAggregateBranch = z.infer<typeof ExploreTournamentAggregateBranch>;
@@ -173,7 +210,7 @@ export type ExploreTournamentAggregateBranch = z.infer<typeof ExploreTournamentA
 export const ExploreTournamentAggregate = z
   .object({
     schema_version: z.literal(1),
-    join_policy: z.literal('aggregate-only'),
+    join_policy: z.literal('aggregate-survivors'),
     branch_count: z.number().int().positive(),
     branches: z.array(ExploreTournamentAggregateBranch).min(1),
   })
@@ -192,6 +229,13 @@ export const ExploreTournamentAggregate = z
           code: z.ZodIssueCode.custom,
           path: ['branches', index, 'result_body'],
           message: 'complete tournament branches must include result_body provenance',
+        });
+      }
+      if (branch.child_outcome === 'complete' && branch.rubric_result === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['branches', index, 'rubric_result'],
+          message: 'complete tournament branches must include rubric_result provenance',
         });
       }
       if (

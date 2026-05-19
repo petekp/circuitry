@@ -314,7 +314,7 @@ The installed doctor reports:
 - Codex hook status, launcher paths, and duplicate/missing hook state
 
 The installed doctor is read-only. It is operator convenience, not public release
-authority, and it never gates `release`.
+authority, and it never blocks `release`.
 
 ### Stage 4: Claude Marketplace Wiring
 

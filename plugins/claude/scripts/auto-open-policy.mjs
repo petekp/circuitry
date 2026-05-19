@@ -28,7 +28,7 @@ export function shouldSkipAutoOpen(env) {
 //      gets parsed as a flag, e.g. `open -b com.apple.Terminal` would
 //      launch Terminal instead of opening a file. Requiring an absolute
 //      path (POSIX `/` or Windows drive-letter) blocks this.
-//   2. Wrong artifact: defense-in-depth that we are opening an HTML
+//   2. Wrong file: defense-in-depth that we are opening an HTML
 //      summary, not an arbitrary file the runtime might emit.
 //   3. cmd.exe metacharacter re-parse on Windows: `spawn('cmd', ...)`
 //      hands the joined argv string to cmd which interprets `& | < > ^`

@@ -47,14 +47,12 @@ function syntheticComposeCompiledFlow(): CompiledFlow {
     version: '0.1.0',
     purpose: 'Synthetic flow that exercises the compose-writer registry contract.',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-step',
-        depth: 'standard',
-        description: 'synthetic compose registry test',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-step',
     stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-step'] }],
     stage_path_policy: {
       mode: 'partial',

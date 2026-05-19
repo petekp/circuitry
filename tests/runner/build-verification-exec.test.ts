@@ -67,14 +67,12 @@ function verificationCompiledFlow(options: { verifyRoutes?: Record<string, strin
     version: '0.1.0',
     purpose: 'test Build verification execution',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'seed-plan-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'seed-plan-step',
     stages: [
       {
         id: 'verify-stage',

@@ -97,7 +97,7 @@ function convertStep(step: CompiledStep): ExecutableStep {
     return {
       ...base,
       kind: 'checkpoint',
-      choices: step.policy.choices.map((choice) => choice.id),
+      choices: step.policy.choices?.map((choice) => choice.id) ?? [],
       policy: step.policy,
     };
   }
@@ -130,30 +130,17 @@ function convertStep(step: CompiledStep): ExecutableStep {
     },
     concurrency: step.concurrency,
     onChildFailure: step.on_child_failure,
+    ...(step.rubric === undefined ? {} : { rubric: step.rubric }),
   };
 }
 
 export function fromCompiledFlow(flow: CompiledFlow): ExecutableFlow {
-  const defaultEntryMode = flow.entry_modes[0];
-  if (defaultEntryMode === undefined) {
-    throw new Error(`compiled flow v1 '${flow.id}' has no entry modes`);
-  }
-
   const defaultSelection = toSelection(flow.default_selection);
   const executable: ExecutableFlow = {
     id: flow.id,
     version: flow.version,
     purpose: flow.purpose,
-    entry: defaultEntryMode.start_at,
-    entryModes: flow.entry_modes.map((mode) => ({
-      name: mode.name,
-      startAt: mode.start_at,
-      depth: mode.depth,
-      description: mode.description,
-      ...(mode.default_change_kind === undefined
-        ? {}
-        : { defaultChangeKind: mode.default_change_kind }),
-    })),
+    entry: flow.starts_at,
     stages: flow.stages.map((stage) => {
       const selection = toSelection(stage.selection);
       return {

@@ -71,7 +71,7 @@ export interface CheckpointBriefBuilder {
 // runner accepts for this step. Lives here (not in registry.ts) so
 // builders can import it without a registry round-trip.
 export function checkpointChoiceIds(step: CheckpointStep): string[] {
-  return step.policy.choices.map((choice) => choice.id);
+  return step.policy.choices?.map((choice) => choice.id) ?? [];
 }
 
 // Re-export for builder convenience.

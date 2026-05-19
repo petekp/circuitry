@@ -43,19 +43,19 @@ metacharacters:
    Lite Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make a small change' --entry-mode lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make a small change' --rigor lite
    ```
 
    Deep Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --entry-mode deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --rigor deep
    ```
 
    Autonomous Build:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'ship the requested fix' --entry-mode autonomous
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'ship the requested fix' --autonomous
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
@@ -67,15 +67,10 @@ metacharacters:
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Claude Code plugin directory, injects the
    plugin's packaged flow root, and launches Circuit's bundled runtime.
-2. **Only add `--entry-mode` when the operator explicitly asks for a Build
-   mode.** Map Lite Build to `--entry-mode lite`, Deep Build to
-   `--entry-mode deep`, and Autonomous Build to `--entry-mode autonomous`.
-   Omit `--entry-mode` for normal Build.
-3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
-   an explicit depth level instead of a Build mode, pass it with `--depth`.
-   Do not combine mismatched aliases; `--entry-mode deep` already implies deep
-   depth.
-4. **Let the presentation wrapper render output.** `present` streams
+2. **Only add axis flags when the operator explicitly asks for them.** Map
+   Lite Build to `--rigor lite`, Deep Build to `--rigor deep`, and Autonomous
+   Build to `--autonomous`. Omit axis flags for normal Build.
+3. **Let the presentation wrapper render output.** `present` streams
    Circuit status blocks, renders checkpoint questions, and prints the
    final Circuit summary without exposing raw JSON. Do not parse raw JSON
    or JSONL after Bash.

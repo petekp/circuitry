@@ -17,11 +17,11 @@ Three failure modes in long-running agent loops:
 
 - **Ambiguity compounds.** Each loop turn's output is the next turn's
   input. One vague decision early on misshapes everything after it.
-  His fix: a heavy upfront interview phase that resolves ambiguity
+  His fix: a heavy upfront interview stage that resolves ambiguity
   before any autonomous run begins.
 - **One agent loses to many.** A single smart agent burning more
   tokens loses to an orchestrator + subagent team (implementer ↔
-  reviewer). His fix: dispatch implementer subagents in git worktrees,
+  reviewer). His fix: relay to implementer subagents in git worktrees,
   follow each milestone with an architectural reviewer subagent.
 - **Memory leaks out of context.** Long runs blow past the context
   window. His fix: four markdown files (`goal.md`, `standards.md`,
@@ -34,28 +34,28 @@ The post is honest about the failure mode of the third fix:
 ## What the skill is
 
 A single `SKILL.md` plus a templates file. The execution model is two
-phases:
+stages:
 
-- **Phase 1 — Setup.** Operator interview, then autonomous plan
+- **Stage 1 — Setup.** Operator interview, then autonomous plan
   drafting. Output: four markdown files in `.agent/`. Last user
   interaction.
-- **Phase 2 — Orchestrate.** A loop: read `progress.md` and
-  `plans.md`, identify the current milestone, dispatch implementers
-  in git worktrees (max 5 parallel), verify, merge, dispatch
+- **Stage 2 — Orchestrate.** A loop: read `progress.md` and
+  `plans.md`, identify the current milestone, relay to implementers
+  in git worktrees (max 5 parallel), verify, merge, relay to a
   reviewer, fix-cycle until approved or 3 iterations, update
   `progress.md`, advance.
 
-Dispatch is via the host's `Agent` tool with `isolation: "worktree"`.
+Relay is via the host's `Agent` tool with `isolation: "worktree"`.
 State is the four markdown files. The reviewer cycle is a hardcoded
 loop with a 3-iteration cap.
 
 ## What's worth borrowing
 
-### The setup phase as a contract
+### The setup stage as a contract
 
 The strongest move in the skill is the discipline of *resolving all
 ambiguity before any autonomous run begins*. The interview is treated
-as the most important part of the workflow, not a preamble. After
+as the most important part of the flow, not a preamble. After
 sign-off, no further operator input.
 
 We already practice the equivalent at the operator level (the
@@ -96,7 +96,7 @@ flow-authoring guidance.
 
 ## What we'd skip, and why
 
-### Markdown files as the memory primitive
+### Markdown files as the memory store
 
 The four `.agent/*.md` files are where the skill is weakest by its
 own admission. The model is the writer; the file is a side effect of
@@ -122,7 +122,7 @@ review, not in instructions to a model.
 
 Same reasoning as the cursor-orchestrate writeup: Circuit assumes an
 operator-in-the-loop session who can redirect mid-flow. Walk-away
-semantics aren't compatible with that. The skill's setup-phase
+semantics aren't compatible with that. The skill's setup-stage
 discipline is worth lifting; its no-more-operator-input rule isn't.
 
 ### One universal "build a project" macro
@@ -136,7 +136,7 @@ macro flow even if we shipped a Build flow tomorrow.
 ## The architectural disagreement
 
 The skill and Circuit are answers to the same question — how do you
-keep agents on track over a long workflow — at different layers.
+keep agents on track over a long flow — at different layers.
 
 - **Skill: markdown protocol on top of any model.** The model is
   asked to follow a procedure. Memory is a file the model writes.
@@ -159,9 +159,9 @@ The honest tradeoff: the skill is lighter for one-shot greenfield
 on repeated kinds of work, where the same shape runs many times and
 the cost of drift compounds.
 
-## Why the memory model requires the workflow architecture
+## Why the memory model requires the flow architecture
 
-The typed-trace bet only exists because the workflow architecture
+The typed-trace bet only exists because the flow architecture
 exists. They are not two independent design choices; the second is a
 projection of the first.
 
@@ -190,9 +190,9 @@ declared effects. You can't bolt a WAL onto a system that doesn't
 already have transactions; the log records nothing meaningful because
 there are no boundaries to record. The transaction model is the
 precondition; the WAL is the projection. Trace and run folder are the
-same kind of projection over the workflow architecture.
+same kind of projection over the flow architecture.
 
-What you can do without the workflow architecture is land somewhere
+What you can do without the flow architecture is land somewhere
 near cursor-orchestrate's pattern: script drives, agent decides, JSON
 state file. That's a real improvement over markdown — typed shapes,
 validated, externally written. But the model is still the writer,
@@ -201,7 +201,7 @@ still decides what the next state should be. The runtime *being* the
 writer requires the runtime to *know* what work is being done against
 what contracts.
 
-The reason this matters for positioning: the workflow architecture is
+The reason this matters for positioning: the flow architecture is
 what makes the memory bet defensible. Anyone can write a SKILL.md
 saying "use these four files." Building a runtime that compiles typed
 flows is a much bigger lift, and once it exists the memory model

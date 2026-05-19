@@ -14,14 +14,45 @@ import {
   ExploreResultReportPointer,
   ExploreReviewVerdict,
   ExploreReviewVerdictValue,
+  ExploreRubricModelJudgments,
+  ExploreTournamentAggregate,
+  ExploreTournamentProposal,
   ExploreTournamentResult,
 } from '../../src/flows/explore/reports.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
+import { combineRubricResult } from '../../src/shared/rubric.js';
 
 const EXPLORE_FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');
 
 function loadExploreCompiledFlow(): CompiledFlow {
   return CompiledFlow.parse(JSON.parse(readFileSync(EXPLORE_FIXTURE_PATH, 'utf8')));
+}
+
+const PASSING_RUBRIC_MODEL_JUDGMENTS = {
+  evidence_rigor: 'pass',
+  actionability: 'pass',
+  coverage_adequacy: 'pass',
+  scope_discipline: 'pass',
+  honest_calibration: 'pass',
+  project_specificity: 'pass',
+  insight_density: 'pass',
+  branch_distinctness: 'pass',
+} as const;
+
+function passingRubricResult() {
+  return combineRubricResult({
+    orderedDims: Object.keys(PASSING_RUBRIC_MODEL_JUDGMENTS),
+    dims: {
+      evidence_rigor: { runtime_signal: 'met', model_judgment: 'pass' },
+      actionability: { runtime_signal: 'met', model_judgment: 'pass' },
+      coverage_adequacy: { runtime_signal: 'met', model_judgment: 'pass' },
+      scope_discipline: { runtime_signal: 'met', model_judgment: 'pass' },
+      honest_calibration: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      project_specificity: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      insight_density: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      branch_distinctness: { runtime_signal: 'n/a', model_judgment: 'pass' },
+    },
+  });
 }
 
 function defaultResultPointers(): ExploreResultReportPointer[] {
@@ -277,6 +308,105 @@ describe('explore report schemas', () => {
         objections: ['Clarify the migration risk'],
         missed_angles: ['Operational rollout'],
         smuggled: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts tournament proposals with all eight model rubric judgments', () => {
+    const proposal = ExploreTournamentProposal.parse({
+      verdict: 'accept',
+      option_id: 'option-1',
+      option_label: 'Keep the proof path',
+      case_summary: 'The proposal keeps the proof path simple.',
+      assumptions: ['The branch can be implemented in one slice.'],
+      evidence_refs: ['reports/decision-options.json'],
+      risks: ['The fixture is synthetic.'],
+      next_action: 'Run Build on the selected option.',
+      rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+    });
+
+    expect(proposal.rubric_model_judgments).toEqual(PASSING_RUBRIC_MODEL_JUDGMENTS);
+  });
+
+  it('rejects tournament proposals missing any model rubric judgment', () => {
+    expect(
+      ExploreRubricModelJudgments.safeParse({
+        evidence_rigor: 'pass',
+        actionability: 'pass',
+        coverage_adequacy: 'pass',
+        scope_discipline: 'pass',
+        honest_calibration: 'pass',
+        project_specificity: 'pass',
+        insight_density: 'pass',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts tournament aggregates with one RubricResult per completed option', () => {
+    const aggregate = ExploreTournamentAggregate.parse({
+      schema_version: 1,
+      join_policy: 'aggregate-survivors',
+      branch_count: 1,
+      branches: [
+        {
+          branch_id: 'option-1',
+          child_run_id: 'option-1-run',
+          child_outcome: 'complete',
+          verdict: 'accept',
+          admitted: true,
+          result_path: 'reports/tournament-branches/option-1/report.json',
+          duration_ms: 1,
+          result_body: {
+            verdict: 'accept',
+            option_id: 'option-1',
+            option_label: 'Keep the proof path',
+            case_summary: 'The proposal keeps the proof path simple.',
+            assumptions: ['The branch can be implemented in one slice.'],
+            evidence_refs: ['reports/decision-options.json'],
+            risks: ['The fixture is synthetic.'],
+            next_action: 'Run Build on the selected option.',
+            rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+          },
+          rubric_result: passingRubricResult(),
+        },
+      ],
+    });
+
+    const branch = aggregate.branches[0];
+    expect(branch?.rubric_result?.dims).toHaveProperty('evidence_rigor');
+    expect(Object.keys(branch?.rubric_result?.dims ?? {}).sort()).toEqual(
+      Object.keys(PASSING_RUBRIC_MODEL_JUDGMENTS).sort(),
+    );
+  });
+
+  it('rejects completed tournament aggregate branches without rubric_result', () => {
+    expect(
+      ExploreTournamentAggregate.safeParse({
+        schema_version: 1,
+        join_policy: 'aggregate-survivors',
+        branch_count: 1,
+        branches: [
+          {
+            branch_id: 'option-1',
+            child_run_id: 'option-1-run',
+            child_outcome: 'complete',
+            verdict: 'accept',
+            admitted: true,
+            result_path: 'reports/tournament-branches/option-1/report.json',
+            duration_ms: 1,
+            result_body: {
+              verdict: 'accept',
+              option_id: 'option-1',
+              option_label: 'Keep the proof path',
+              case_summary: 'The proposal keeps the proof path simple.',
+              assumptions: ['The branch can be implemented in one slice.'],
+              evidence_refs: ['reports/decision-options.json'],
+              risks: ['The fixture is synthetic.'],
+              next_action: 'Run Build on the selected option.',
+              rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+            },
+          },
+        ],
       }).success,
     ).toBe(false);
   });

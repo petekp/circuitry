@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CompiledFlowId, RunId } from './ids.js';
 import { MAX_STATUS_TEXT_CHARS } from './progress-event.js';
+import { RubricResult } from './rubric.js';
 import { RunClosedOutcome } from './trace-entry.js';
 
 export const OperatorSummaryWarning = z
@@ -38,6 +39,36 @@ export const OperatorBriefSlots = z
   .strict();
 export type OperatorBriefSlots = z.infer<typeof OperatorBriefSlots>;
 
+export const OperatorAutoResolution = z
+  .object({
+    checkpoint_id: z.string().min(1),
+    checkpoint_label: z.string().min(1).optional(),
+    policy: z.enum(['accept-as-is', 'highest-score', 'first-acceptable', 'refuse']),
+    resolved_value: z.string().min(1),
+    alternatives_available: z.array(z.string().min(1)),
+    scores: z
+      .record(
+        z.string().min(1),
+        z
+          .object({
+            aggregate_score: z.number().min(0).max(1),
+            runtime_veto_count: z.number().int().nonnegative(),
+          })
+          .strict(),
+      )
+      .optional(),
+    rubric_results: z.record(z.string().min(1), RubricResult).optional(),
+    winning_score: z.number().min(0).max(1).optional(),
+    runner_up_score: z.number().min(0).max(1).optional(),
+    margin: z.number().nullable().optional(),
+    tie_break: z.string().min(1).optional(),
+    runtime_veto_effect: z.string().min(1).optional(),
+    runtime_or_model: z.enum(['runtime', 'model']),
+    resolved_at: z.string().min(1),
+  })
+  .strict();
+export type OperatorAutoResolution = z.infer<typeof OperatorAutoResolution>;
+
 export const OperatorSummary = z
   .object({
     schema_version: z.literal(1),
@@ -56,6 +87,7 @@ export const OperatorSummary = z
     result_path: z.string().min(1).optional(),
     html_path: z.string().min(1).optional(),
     report_paths: z.array(OperatorSummaryReportLink),
+    auto_resolutions: z.array(OperatorAutoResolution).optional(),
     checkpoint: z
       .object({
         step_id: z.string().min(1),

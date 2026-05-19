@@ -469,16 +469,16 @@ export async function executeProductionRelayAttempt(input: {
 
   // Persist the schema-tied report when downstream readers (operator-summary
   // projection, CI tooling, status storyboard) need it. Two paths:
-  //   - verdict-gate pass AND validator (if any) approved: write as before.
-  //   - verdict-gate fail BUT body parses against the declared schema:
-  //     write anyway. The verdict gate governs route selection only; it
-  //     does not gate artifact emission. A relay step that returned a
+  //   - verdict check pass AND validator (if any) approved: write as before.
+  //   - verdict check fail BUT body parses against the declared schema:
+  //     write anyway. The verdict check governs route selection only; it
+  //     does not block report emission. A relay step that returned a
   //     structurally valid body (e.g., review with verdict 'release-blocked')
   //     must still produce its schema-tied report so the close-path can
   //     read it and the operator summary can render the real verdict.
   // A pass-then-downgrade (validator rejected on schema/cross-validator/
   // provenance grounds) is intentionally NOT written — those are substantive
-  // validation failures, not gate failures.
+  // validation failures, not check failures.
   let writtenReportPath: string | undefined;
   if (step.report !== undefined) {
     let reportBody: unknown;

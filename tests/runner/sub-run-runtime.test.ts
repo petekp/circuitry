@@ -45,14 +45,12 @@ function buildParentCompiledFlow(parentCheckPass: readonly string[]): CompiledFl
       signals: { include: ['sub-run-test'], exclude: [] },
       intent_prefixes: ['sub-run-test'],
     },
-    entry_modes: [
-      {
-        name: 'sub-run-test',
-        start_at: 'sub-run-step',
-        depth: 'standard',
-        description: 'Default sub-run-test entry mode.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'sub-run-step',
     stages: [
       {
         id: 'act-stage',
@@ -104,14 +102,12 @@ function buildChildCompiledFlow(): CompiledFlow {
     version: '0.1.0',
     purpose: 'sub-run runtime test child — single compose step.',
     entry: { signals: { include: ['child-test'], exclude: [] }, intent_prefixes: ['child-test'] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'child-step',
-        depth: 'standard',
-        description: 'Default child entry mode.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'child-step',
     stages: [{ id: 'act-stage', title: 'Act', canonical: 'act', steps: ['child-step'] }],
     stage_path_policy: {
       mode: 'partial',

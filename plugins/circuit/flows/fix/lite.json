@@ -2,7 +2,7 @@
   "schema_version": "2",
   "id": "fix",
   "version": "0.1.0",
-  "purpose": "Fix flow: capture problem boundary, prove the pre-fix regression before any specialist relay can edit the checkout, gather context, diagnose, apply a focused change, verify, review (in standard depth), and close with evidence. If the standard reviewer connector is unavailable after proof passes, Fix closes with the proof artifacts and marks review skipped. Lite mode skips the review relay and closes immediately after verification via the fix-verify route_overrides.continue.lite override. fix-no-repro-decision and fix-handoff remain in the schematic as authoring intent for future ask/handoff routing in the runtime; they are unreachable at compile and do not appear in the emitted compiled flows.",
+  "purpose": "Fix flow: capture problem boundary, prove the pre-fix regression before any specialist relay can edit the checkout, gather context, diagnose, apply a focused change, verify, review (in standard depth), and close with evidence. If the standard reviewer connector is unavailable after proof passes, Fix closes with proof evidence and marks review skipped. Lite mode skips the review relay and closes immediately after verification via the fix-verify route_overrides.continue.lite override. fix-no-repro-decision and fix-handoff remain in the schematic as authoring intent for future ask/handoff routing in the runtime; they are unreachable at compile and do not appear in the emitted compiled flows.",
   "entry": {
     "signals": {
       "include": ["fix", "bug", "broken", "regression", "incident", "outage", "diagnose"],
@@ -10,14 +10,18 @@
     },
     "intent_prefixes": ["fix", "diagnose"]
   },
-  "entry_modes": [
-    {
-      "name": "lite",
-      "start_at": "fix-frame",
-      "depth": "lite",
-      "description": "Lite Fix entry mode — skips the review relay and closes immediately after verification."
+  "axes": {
+    "allowed_rigors": ["lite", "standard", "deep"],
+    "supports_tournament": false,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
     }
-  ],
+  },
+  "starts_at": "fix-frame",
   "stages": [
     {
       "id": "frame-stage",

@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import type { CheckpointStep as IndexedCheckpointStep } from '../../flows/registries/checkpoint-writers/types.js';
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
+import { Axes, type Axes as AxesValue } from '../../schemas/axes.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import { LayeredConfig } from '../../schemas/config.js';
@@ -66,6 +67,7 @@ export interface CheckpointResumeRejectedResult {
 export type CheckpointResumeResult = CheckpointResumeSuccessResult | CheckpointResumeRejectedResult;
 
 interface CheckpointRequestContext {
+  readonly axes?: AxesValue;
   readonly projectRoot?: string;
   readonly selectionConfigLayers: readonly LayeredConfigValue[];
   readonly checkpointReportSha256?: string;
@@ -218,10 +220,14 @@ function readCheckpointRequestContextResult(input: {
     );
   }
   const requestChoices = stringArray(raw.allowed_choices);
+  const expectedChoices =
+    input.step.choices.length === 0 && requestChoices !== undefined
+      ? requestChoices
+      : input.step.choices;
   if (
     requestChoices === undefined ||
-    requestChoices.length !== input.step.choices.length ||
-    requestChoices.some((choice, index) => choice !== input.step.choices[index])
+    requestChoices.length !== expectedChoices.length ||
+    requestChoices.some((choice, index) => choice !== expectedChoices[index])
   ) {
     return checkpointResumeRejected(
       `runtime checkpoint resume rejected: request choices for '${input.step.id}' are stale`,
@@ -237,6 +243,14 @@ function readCheckpointRequestContextResult(input: {
   if (projectRoot !== undefined && typeof projectRoot !== 'string') {
     return checkpointResumeRejected('runtime checkpoint resume rejected: project_root is invalid');
   }
+  let axes: AxesValue | undefined;
+  if (context.axes !== undefined) {
+    try {
+      axes = Axes.parse(context.axes);
+    } catch (error) {
+      return checkpointResumeRejectedFrom(error);
+    }
+  }
   let selectionConfigLayers: readonly LayeredConfigValue[];
   try {
     selectionConfigLayers = LayeredConfig.array().parse(context.selection_config_layers ?? []);
@@ -250,6 +264,7 @@ function readCheckpointRequestContextResult(input: {
     );
   }
   return checkpointResumeValid({
+    ...(axes === undefined ? {} : { axes }),
     ...(projectRoot === undefined ? {} : { projectRoot }),
     selectionConfigLayers,
     ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
@@ -390,7 +405,7 @@ export async function resumeCompiledFlowResult(
   const stepResult = checkpointStepResult({ flow: executable, stepId });
   if (isCheckpointResumeRejectedResult(stepResult)) return stepResult;
   const step = stepResult.value;
-  const savedChoices = step.choices;
+  const savedChoices = step.choices.length === 0 ? allowedChoices : step.choices;
   if (!sameStringArray(allowedChoices, savedChoices)) {
     return checkpointResumeRejected(
       `runtime checkpoint resume rejected: checkpoint trace choices for '${stepId}' are stale`,
@@ -447,6 +462,7 @@ export async function resumeCompiledFlowResult(
     manifestHash: snapshot.hash,
     manifestBytes: flowBytes,
     ...(depth === undefined ? {} : { depth }),
+    ...(requestContext.axes === undefined ? {} : { axes: requestContext.axes }),
     ...(options.now === undefined ? {} : { now: options.now }),
     ...(options.executors === undefined ? {} : { executors: options.executors }),
     ...(options.childCompiledFlowResolver === undefined

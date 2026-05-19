@@ -1,0 +1,278 @@
+Step: stress-proposals-step
+Title: Decision — stress proposals
+Role: reviewer
+Accepted verdicts: recommend, no-clear-winner, needs-operator
+
+Context (from reads):
+--- reports/brief.json ---
+{
+  "subject": "decide: React vs Vue",
+  "task": "decide: React vs Vue",
+  "success_condition": "Answer the Explore goal with evidence-backed findings: decide: React vs Vue Name the evidence inspected or still needed, separate confirmed facts from assumptions, and identify the proof that would make the recommendation trustworthy."
+}
+
+
+--- reports/decision-options.json ---
+{
+  "decision_question": "Which path should Circuit recommend for: decide: React vs Vue?",
+  "options": [
+    {
+      "id": "option-1",
+      "label": "React",
+      "summary": "Choose React as the best-supported path for decide: React vs Vue.",
+      "best_case_prompt": "Make the strongest case for choosing React on decide: React vs Vue.",
+      "evidence_refs": [
+        "reports/brief.json"
+      ],
+      "tradeoffs": [
+        "Can move the decision forward now",
+        "May miss strengths from another option"
+      ]
+    },
+    {
+      "id": "option-2",
+      "label": "Vue",
+      "summary": "Choose Vue as the best-supported path for decide: React vs Vue.",
+      "best_case_prompt": "Make the strongest case for choosing Vue on decide: React vs Vue.",
+      "evidence_refs": [
+        "reports/brief.json"
+      ],
+      "tradeoffs": [
+        "Can move the decision forward now",
+        "May miss strengths from another option"
+      ]
+    }
+  ],
+  "recommendation_basis": "Compare the named options and bounded fallback choices against the available evidence."
+}
+
+
+--- reports/tournament-aggregate.json ---
+{
+  "schema_version": 1,
+  "join_policy": "aggregate-survivors",
+  "branch_count": 2,
+  "branches": [
+    {
+      "branch_id": "option-1",
+      "child_run_id": "6d640282-58a4-43d3-afbf-8015a5965a72",
+      "child_outcome": "complete",
+      "verdict": "accept",
+      "admitted": true,
+      "result_path": "reports/tournament-branches/option-1/report.json",
+      "duration_ms": 3,
+      "result_body": {
+        "verdict": "accept",
+        "option_id": "option-1",
+        "option_label": "React",
+        "case_summary": "Choose React for the broad ecosystem and hiring pool.",
+        "assumptions": [
+          "The operator values ecosystem maturity."
+        ],
+        "evidence_refs": [],
+        "risks": [
+          "The larger ecosystem may add dependency sprawl."
+        ],
+        "next_action": "Run a Build plan for a React prototype.",
+        "rubric_model_judgments": {
+          "evidence_rigor": "pass",
+          "actionability": "pass",
+          "coverage_adequacy": "pass",
+          "scope_discipline": "pass",
+          "honest_calibration": "pass",
+          "project_specificity": "pass",
+          "insight_density": "pass",
+          "branch_distinctness": "pass"
+        }
+      },
+      "rubric_result": {
+        "dims": {
+          "evidence_rigor": {
+            "runtime_signal": "missing",
+            "model_judgment": "pass",
+            "final_score": "fail",
+            "dim_score": 0,
+            "runtime_vetoed": true
+          },
+          "actionability": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "coverage_adequacy": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "scope_discipline": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "honest_calibration": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "project_specificity": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "insight_density": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "branch_distinctness": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          }
+        },
+        "aggregate_score": 0.875,
+        "runtime_veto_count": 1,
+        "tie_break": {
+          "ordered_dims": [
+            "evidence_rigor",
+            "actionability",
+            "coverage_adequacy",
+            "scope_discipline",
+            "honest_calibration",
+            "project_specificity",
+            "insight_density",
+            "branch_distinctness"
+          ],
+          "final_reason": "not-ranked"
+        }
+      }
+    },
+    {
+      "branch_id": "option-2",
+      "child_run_id": "029f47ac-3f65-42e5-b037-fd548385b500",
+      "child_outcome": "complete",
+      "verdict": "accept",
+      "admitted": true,
+      "result_path": "reports/tournament-branches/option-2/report.json",
+      "duration_ms": 3,
+      "result_body": {
+        "verdict": "accept",
+        "option_id": "option-2",
+        "option_label": "Vue",
+        "case_summary": "Choose Vue for a smaller surface and faster product iteration.",
+        "assumptions": [
+          "The operator values implementation speed."
+        ],
+        "evidence_refs": [
+          "reports/decision-options.json"
+        ],
+        "risks": [
+          "Team familiarity may be thinner."
+        ],
+        "next_action": "Run a Build plan for a Vue prototype.",
+        "rubric_model_judgments": {
+          "evidence_rigor": "pass",
+          "actionability": "pass",
+          "coverage_adequacy": "pass",
+          "scope_discipline": "pass",
+          "honest_calibration": "pass",
+          "project_specificity": "pass",
+          "insight_density": "pass",
+          "branch_distinctness": "pass"
+        }
+      },
+      "rubric_result": {
+        "dims": {
+          "evidence_rigor": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "actionability": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "coverage_adequacy": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "scope_discipline": {
+            "runtime_signal": "met",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "honest_calibration": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "project_specificity": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "insight_density": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          },
+          "branch_distinctness": {
+            "runtime_signal": "n/a",
+            "model_judgment": "pass",
+            "final_score": "pass",
+            "dim_score": 1,
+            "runtime_vetoed": false
+          }
+        },
+        "aggregate_score": 1,
+        "runtime_veto_count": 0,
+        "tie_break": {
+          "ordered_dims": [
+            "evidence_rigor",
+            "actionability",
+            "coverage_adequacy",
+            "scope_discipline",
+            "honest_calibration",
+            "project_specificity",
+            "insight_density",
+            "branch_distinctness"
+          ],
+          "final_reason": "not-ranked"
+        }
+      }
+    }
+  ]
+}
+
+
+Respond with a single raw JSON object whose top-level shape is exactly: { "verdict": "<recommend|no-clear-winner|needs-operator>", "recommended_option_id": "<one generated option id>", "comparison": "<comparative assessment>", "objections": ["<objection>"], "missing_evidence": ["<missing evidence>"], "tradeoff_question": "<specific choice the operator must make>", "confidence": "<low|medium|high>" } Use the proposal aggregate and source reports. Treat this as the stress review inside the Decision stage, not as a separate canonical Review stage. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. The runtime parses your response with JSON.parse and validates the full report body against explore.tournament-review@v1 before writing reports/tournament-review.json.

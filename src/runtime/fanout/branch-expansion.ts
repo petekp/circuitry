@@ -1,7 +1,9 @@
 import { type FanoutBranch, FanoutBranch as FanoutBranchSchema } from '../../schemas/step.js';
 import { expandTemplate, resolveDottedPath } from '../../shared/fanout-branch-template.js';
+import { resolveRuntimeNumberSource } from '../../shared/runtime-source.js';
 import type { FanoutStep } from '../manifest/executable-flow.js';
 import type { RunFileStore } from '../run-files/run-file-store.js';
+import type { RunContext } from '../run/run-context.js';
 import type { ResolvedBranch } from './types.js';
 
 function resolveBranch(branch: FanoutBranch): ResolvedBranch {
@@ -33,6 +35,7 @@ function resolveBranch(branch: FanoutBranch): ResolvedBranch {
 export async function expandFanoutBranches(
   step: FanoutStep,
   files: RunFileStore,
+  context?: Pick<RunContext, 'axes'>,
 ): Promise<readonly ResolvedBranch[]> {
   const branches = step.branches as
     | {
@@ -44,7 +47,13 @@ export async function expandFanoutBranches(
         readonly source_report: string;
         readonly items_path: string;
         readonly template: unknown;
-        readonly max_branches: number;
+        readonly max_branches:
+          | number
+          | { readonly kind: 'constant'; readonly value: number }
+          | { readonly kind: 'axis'; readonly axis: 'tournament_n' };
+        readonly required_count?:
+          | { readonly kind: 'constant'; readonly value: number }
+          | { readonly kind: 'axis'; readonly axis: 'tournament_n' };
       };
 
   if (branches.kind === 'static') {
@@ -58,9 +67,21 @@ export async function expandFanoutBranches(
       `dynamic fanout: items_path '${branches.items_path}' did not resolve to an array (got ${typeof items})`,
     );
   }
-  if (items.length > branches.max_branches) {
+  const maxBranches =
+    typeof branches.max_branches === 'number'
+      ? branches.max_branches
+      : resolveRuntimeNumberSource(branches.max_branches, context?.axes);
+  if (branches.required_count !== undefined) {
+    const expected = resolveRuntimeNumberSource(branches.required_count, context?.axes);
+    if (items.length !== expected) {
+      throw new Error(
+        `dynamic fanout expected ${expected} items from '${branches.items_path}' but found ${items.length}`,
+      );
+    }
+  }
+  if (items.length > maxBranches) {
     throw new Error(
-      `dynamic fanout expanded to ${items.length} items but max_branches is ${branches.max_branches}`,
+      `dynamic fanout expanded to ${items.length} items but max_branches is ${maxBranches}`,
     );
   }
 

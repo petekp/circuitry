@@ -43,7 +43,7 @@ Confirmed current source:
   adapters, generated schematic parity, and production flow definitions.
 - `docs/generated-surfaces.md` marks schematic JSON, compiled manifests, host
   mirrors, command mirrors, and Codex skill mirrors as generated surfaces.
-- `node scripts/emit-flows.ts --check` is the generated-surface drift gate.
+- `node scripts/emit-flows.ts --check` is the generated-surface drift check.
 
 ## What Landed
 
@@ -80,7 +80,7 @@ Effect or a separate functional kernel.
 
 ## Generated Surface Policy
 
-Generated artifacts are compatibility outputs. Do not edit them by hand.
+Generated outputs are compatibility outputs. Do not edit them by hand.
 
 Authored sources:
 
@@ -138,7 +138,7 @@ Do not merge the spike wholesale into current `main`. Current `main` already
 has a newer flow definition kernel, generated-surface model, runtime contract
 tests, and public plugin behavior.
 
-## Stabilization Gates
+## Stabilization Checks
 
 Use these checks for source changes in this area:
 
@@ -159,6 +159,6 @@ node scripts/release/audit-public-docs.mjs
 node scripts/release/audit-marketplace-safe-paths.mjs
 ```
 
-`npm run verify` remains the canonical implementation gate before commit. For a
+`npm run verify` remains the canonical implementation check before commit. For a
 strict read-only audit, prefer the checks above because `check-plugin-runtime`
 may emit gitignored `dist/*` sidecar files in check mode.

@@ -151,7 +151,7 @@ try {
   }
 } catch {
   // ls-files -v is best-effort; if it fails (e.g., bare repo), record nothing
-  // rather than aborting. The other gates are still in force.
+  // rather than aborting. The other checks are still in force.
 }
 
 process.stdout.write(

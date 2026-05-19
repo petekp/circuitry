@@ -24,13 +24,17 @@ const runtimeProofSchematic = {
     },
     intent_prefixes: ['runtime-proof'],
   },
-  entry_modes: [
-    {
-      name: 'runtime-proof',
-      depth: 'standard',
-      description: 'Default runtime-proof entry mode; seeds the run at the compose step.',
+  axes: {
+    allowed_rigors: ['standard'],
+    supports_tournament: false,
+    supports_autonomous: false,
+    default: {
+      rigor: 'standard',
+      tournament: false,
+      tournament_n: 3,
+      autonomous: false,
     },
-  ],
+  },
   stage_path_policy: {
     mode: 'partial',
     omits: ['frame', 'analyze', 'verify', 'review', 'close'],

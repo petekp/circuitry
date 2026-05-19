@@ -290,21 +290,10 @@ describe('runtime-proof runner smoke', () => {
       }) as typeof process.stdout.write;
       let exit = -1;
       try {
-        exit = await main(
-          [
-            'runtime-proof',
-            '--goal',
-            'smoke via CLI',
-            '--depth',
-            'standard',
-            '--run-folder',
-            runFolder,
-          ],
-          {
-            configHomeDir: join(runFolderBase, 'empty-home'),
-            configCwd: join(runFolderBase, 'empty-cwd'),
-          },
-        );
+        exit = await main(['runtime-proof', '--goal', 'smoke via CLI', '--run-folder', runFolder], {
+          configHomeDir: join(runFolderBase, 'empty-home'),
+          configCwd: join(runFolderBase, 'empty-cwd'),
+        });
       } finally {
         process.stdout.write = origWrite;
       }

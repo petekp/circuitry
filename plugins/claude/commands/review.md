@@ -54,12 +54,10 @@ metacharacters:
    or JSONL after Bash.
    Use non-`present` wrapper mode only for debug, tests, or explicit raw
    machine-readable output.
-## Depth
+## Axes
 
-This command runs at `standard` depth by default. The CLI accepts
-`--depth <lite|standard|deep|tournament|autonomous>` — if the user's scope
-text includes an explicit depth request, map it to the flag; otherwise
-omit the flag and accept the default.
+Review runs at standard rigor. Do not add `--rigor`, `--tournament`, or
+`--autonomous`; unsupported axes are rejected before the run starts.
 
 ## Authority
 

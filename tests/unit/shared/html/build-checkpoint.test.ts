@@ -136,7 +136,7 @@ describe('buildCheckpointProjector — gating', () => {
 });
 
 describe('buildCheckpointProjector — rendering', () => {
-  it('emits a complete artifact-first HTML document with recommendation, risk, proof, and choices', () => {
+  it('emits a complete report-first HTML document with recommendation, risk, proof, and choices', () => {
     const html = buildCheckpointProjector(buildContext()) as string;
     expect(html).toContain('<!doctype html>');
     expect(html).toContain('<h1>Add checkpoint HTML</h1>');

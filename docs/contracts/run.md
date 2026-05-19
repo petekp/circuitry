@@ -285,7 +285,7 @@ property-test harness + reducer exist in Stage 2.
   `relay.request` follows `relay.started` directly.
 
   Runtime-safety-floor Slice 3 adds the connector-invocation failure
-  sequence for failures that happen before an connector receipt/result exists:
+  sequence for failures that happen before a connector receipt/result exists:
 
   ```
   relay.started → [skills.loaded] → relay.request → relay.failed

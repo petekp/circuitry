@@ -22,7 +22,7 @@ describe('fix-vs-vanilla scoring', () => {
     expect(score.false_fixed).toBe(true);
   });
 
-  it('scores complete Circuit proof artifacts as quality 3', () => {
+  it('scores complete Circuit proof evidence as quality 3', () => {
     expect(
       circuitProofQuality({
         regression_status: 'proved',

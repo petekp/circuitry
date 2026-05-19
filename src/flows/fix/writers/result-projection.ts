@@ -1,10 +1,10 @@
-// Fix result projector — the single source of truth for how proof artifacts
+// Fix result projector — the single source of truth for how proof reports
 // project into the FixResult shape. The close writer and any runtime
 // self-check both go through this function so the runtime cannot drift from
 // its own evidence: there is exactly one place that decides what counts as
 // 'fixed', 'partial', 'not-reproduced', or 'failed'.
 //
-// Inputs are already-parsed proof artifacts. Pointers are built by the caller
+// Inputs are already-parsed proof reports. Pointers are built by the caller
 // from compiled-flow context and passed in. The projector itself does not
 // touch the filesystem or the flow registry — it is a pure function from
 // proof state to FixResult.

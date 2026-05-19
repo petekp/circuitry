@@ -38,7 +38,6 @@ type FlowDefinitionPaths = Omit<CompiledFlowPaths, 'schematic'> & {
 type FlowDefinitionWriters = Partial<CompiledFlowPackage['writers']>;
 
 export interface FlowDefinitionRuntimeSurface {
-  readonly supportedEntryModes?: CompiledFlowRuntimeSurface['supportedEntryModes'];
   readonly primaryResult?: CompiledFlowRuntimeSurface['primaryResult'];
   readonly progress?: CompiledFlowRuntimeSurface['progress'];
 }
@@ -237,18 +236,6 @@ function compilePaths(definition: FlowDefinition): CompiledFlowPaths {
     : { ...paths, contract: definition.paths.contract };
 }
 
-function deriveSupportedEntryModes(
-  definition: FlowDefinition,
-): CompiledFlowRuntimeSurface['supportedEntryModes'] {
-  const entryModes = definition.schematic.entry_modes;
-  if (entryModes === undefined) {
-    throw new Error(
-      `flow definition '${definition.id}' cannot derive runtime support without schematic entry_modes`,
-    );
-  }
-  return entryModes.map((mode) => ({ entryModeName: mode.name, depth: mode.depth }));
-}
-
 function validateProgressSurface(
   definition: FlowDefinition,
   progress: CompiledFlowRuntimeSurface['progress'],
@@ -280,12 +267,7 @@ function compileRuntimeSurface(definition: FlowDefinition): CompiledFlowRuntimeS
   const runtimeSurface = definition.runtimeSurface;
   if (runtimeSurface === undefined) return undefined;
   validateProgressSurface(definition, runtimeSurface.progress);
-  const out: CompiledFlowRuntimeSurface = {
-    supportedEntryModes:
-      runtimeSurface.supportedEntryModes ?? deriveSupportedEntryModes(definition),
-  };
   return {
-    ...out,
     ...(runtimeSurface.primaryResult === undefined
       ? {}
       : { primaryResult: runtimeSurface.primaryResult }),

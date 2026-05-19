@@ -17,6 +17,32 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 let baseDir: string;
 
+const PASSING_RUBRIC_MODEL_JUDGMENTS = {
+  evidence_rigor: 'pass',
+  actionability: 'pass',
+  coverage_adequacy: 'pass',
+  scope_discipline: 'pass',
+  honest_calibration: 'pass',
+  project_specificity: 'pass',
+  insight_density: 'pass',
+  branch_distinctness: 'pass',
+} as const;
+
+const TEST_FANOUT_RUBRIC = {
+  model_judgments_path: 'rubric_model_judgments',
+  ordered_dims: Object.keys(PASSING_RUBRIC_MODEL_JUDGMENTS),
+  runtime_signals: {
+    evidence_rigor: { kind: 'non_empty_array', path: 'evidence_refs' },
+    actionability: { kind: 'non_empty_string', path: 'next_action' },
+    coverage_adequacy: { kind: 'constant', signal: 'met' },
+    scope_discipline: { kind: 'constant', signal: 'met' },
+    honest_calibration: { kind: 'constant', signal: 'n/a' },
+    project_specificity: { kind: 'constant', signal: 'n/a' },
+    insight_density: { kind: 'constant', signal: 'n/a' },
+    branch_distinctness: { kind: 'constant', signal: 'n/a' },
+  },
+} as const;
+
 beforeEach(async () => {
   baseDir = await mkdtemp(join(tmpdir(), 'circuit-runtime-fanout-'));
 });
@@ -29,7 +55,12 @@ function dynamicRelayFanoutFlow(
   options: {
     readonly role?: string;
     readonly selection?: unknown;
-    readonly joinPolicy?: 'aggregate-only' | 'disjoint-merge' | 'pick-winner';
+    readonly joinPolicy?:
+      | 'aggregate-only'
+      | 'aggregate-survivors'
+      | 'disjoint-merge'
+      | 'pick-winner';
+    readonly onChildFailure?: 'abort-all' | 'continue-others';
   } = {},
 ): ExecutableFlow {
   return {
@@ -75,7 +106,7 @@ function dynamicRelayFanoutFlow(
           max_branches: 4,
         },
         concurrency: { kind: 'bounded', max: 2 },
-        onChildFailure: 'abort-all',
+        onChildFailure: options.onChildFailure ?? 'abort-all',
         join: { aggregate: { path: 'reports/aggregate.json' } },
         check: {
           kind: 'fanout_aggregate',
@@ -124,9 +155,10 @@ function compiledRelayFanoutFlow(
     },
     concurrency: { kind: 'bounded', max: 1 },
     on_child_failure: 'abort-all',
+    rubric: TEST_FANOUT_RUBRIC,
     writes: {
       branches_dir: 'reports/branches',
-      aggregate: { path: 'reports/aggregate.json', schema: 'explore.tournament-aggregate@v1' },
+      aggregate: { path: 'reports/aggregate.json', schema: 'fanout-aggregate@v1' },
     },
     check: {
       kind: 'fanout_aggregate',
@@ -145,14 +177,12 @@ function compiledRelayFanoutFlow(
       signals: { include: ['fanout-relay-runtime'], exclude: [] },
       intent_prefixes: ['fanout-relay-runtime'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'fanout-step',
-        depth: 'standard',
-        description: 'Relay fanout entry.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'fanout-step',
     stages: [
       {
         id: 'plan-stage',
@@ -180,6 +210,7 @@ function validProposalBody(optionId = 'option-1'): string {
     evidence_refs: ['reports/options.json'],
     risks: [],
     next_action: 'Continue.',
+    rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
   });
 }
 
@@ -266,14 +297,12 @@ function childFlowBytes(): Buffer {
       version: '0.1.0',
       purpose: 'fanout child',
       entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'close',
-          depth: 'standard',
-          description: 'Default child entry',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'close',
       stages: [{ id: 'close-stage', title: 'Close', canonical: 'close', steps: ['close'] }],
       stage_path_policy: {
         mode: 'partial',
@@ -396,7 +425,7 @@ describe('runtime fanout executor', () => {
 
   it('aggregates verdict-fail branches with parsable bodies onto result.json (envelope), not the schema-tied report.json that Slice 1 now writes', async () => {
     // Slice 1's relay change (F-H-1 tertiary) writes the schema-tied report
-    // whenever the body parses, regardless of whether the verdict gate
+    // whenever the body parses, regardless of whether the verdict check
     // passed. The branch's report.json now exists on disk for verdict-fail-
     // with-parsable-body cases. The fanout aggregator branches on
     // evaluation.kind === 'pass' before consuming relayAttempt.report_path;
@@ -408,7 +437,7 @@ describe('runtime fanout executor', () => {
     // Use the test-only runtime-proof-strict@v1 schema where verdict is an
     // open string. The explore tournament-proposal schema fixes verdict to
     // the literal 'accept', which would short-circuit on schema parse fail
-    // before reaching the verdict gate and never exercise the post-Slice-1
+    // before reaching the verdict check and never exercise the post-Slice-1
     // path under test.
     const offAdmitBody = {
       verdict: 'reject',
@@ -514,6 +543,7 @@ describe('runtime fanout executor', () => {
           evidence_refs: ['fanout fixture'],
           risks: [],
           next_action: 'Continue',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
         };
       },
     };
@@ -546,6 +576,154 @@ describe('runtime fanout executor', () => {
     const entries = await trace(runDir);
     expect(entries.filter((entry) => entry.kind === 'fanout.branch_completed')).toHaveLength(2);
     expect(entries.find((entry) => entry.kind === 'fanout.joined')?.branches_completed).toBe(2);
+  });
+
+  it('continues aggregate-survivors fanout when one branch fails and two branches are parseable', async () => {
+    const runDir = join(baseDir, 'dynamic-survivors-one-failure-run');
+    const relayCalls: string[] = [];
+    const relayConnector: RelayConnector = {
+      async relay(request) {
+        relayCalls.push(request.stepId);
+        if (request.stepId.endsWith('option-2')) return 'not-json{{{';
+        const optionId = request.stepId.endsWith('option-1') ? 'option-1' : 'option-3';
+        return {
+          verdict: 'accept',
+          option_id: optionId,
+          option_label: optionId === 'option-1' ? 'Option 1' : 'Option 3',
+          case_summary: request.prompt,
+          assumptions: [],
+          evidence_refs: ['fanout fixture'],
+          risks: [],
+          next_action: 'Continue',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+        };
+      },
+    };
+
+    const result = await executeExecutableFlow(
+      dynamicRelayFanoutFlow({
+        joinPolicy: 'aggregate-survivors',
+        onChildFailure: 'continue-others',
+      }),
+      {
+        runDir,
+        runId: randomUUID(),
+        goal: 'fanout goal',
+        relayConnector,
+        executors: {
+          compose: async (_step, context) => {
+            await context.files.writeJson('reports/options.json', {
+              options: [
+                { id: 'option-1', prompt: 'argue for option one' },
+                { id: 'option-2', prompt: 'argue for option two' },
+                { id: 'option-3', prompt: 'argue for option three' },
+              ],
+            });
+            return { route: 'pass' };
+          },
+        },
+        now: () => new Date('2026-05-03T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.outcome).toBe('complete');
+    expect(relayCalls).toHaveLength(3);
+    const aggregate = JSON.parse(await readFile(join(runDir, 'reports', 'aggregate.json'), 'utf8'));
+    expect(aggregate).toMatchObject({ join_policy: 'aggregate-survivors', branch_count: 3 });
+    expect(aggregate.branches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ branch_id: 'option-1', child_outcome: 'complete' }),
+        expect.objectContaining({ branch_id: 'option-2', child_outcome: 'aborted' }),
+        expect.objectContaining({ branch_id: 'option-3', child_outcome: 'complete' }),
+      ]),
+    );
+    const entries = await trace(runDir);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'fanout.started',
+        step_id: 'fanout',
+        on_child_failure: 'continue-others',
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'fanout.joined',
+        step_id: 'fanout',
+        policy: 'aggregate-survivors',
+        branches_completed: 2,
+        branches_failed: 1,
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'check.evaluated',
+        step_id: 'fanout',
+        outcome: 'pass',
+      }),
+    );
+  });
+
+  it('collapses aggregate-survivors fanout when fewer than two branches are parseable', async () => {
+    const runDir = join(baseDir, 'dynamic-survivors-collapse-run');
+    let relayCalls = 0;
+    const relayConnector: RelayConnector = {
+      async relay(request) {
+        relayCalls += 1;
+        if (!request.stepId.endsWith('option-3')) return 'not-json{{{';
+        return {
+          verdict: 'accept',
+          option_id: 'option-3',
+          option_label: 'Option 3',
+          case_summary: request.prompt,
+          assumptions: [],
+          evidence_refs: ['fanout fixture'],
+          risks: [],
+          next_action: 'Continue',
+          rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+        };
+      },
+    };
+
+    const result = await executeExecutableFlow(
+      dynamicRelayFanoutFlow({
+        joinPolicy: 'aggregate-survivors',
+        onChildFailure: 'continue-others',
+      }),
+      {
+        runDir,
+        runId: randomUUID(),
+        goal: 'fanout goal',
+        relayConnector,
+        executors: {
+          compose: async (_step, context) => {
+            await context.files.writeJson('reports/options.json', {
+              options: [
+                { id: 'option-1', prompt: 'argue for option one' },
+                { id: 'option-2', prompt: 'argue for option two' },
+                { id: 'option-3', prompt: 'argue for option three' },
+              ],
+            });
+            return { route: 'pass' };
+          },
+        },
+        now: () => new Date('2026-05-03T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain('tournament collapsed:');
+    expect(relayCalls).toBe(3);
+    const aggregate = JSON.parse(await readFile(join(runDir, 'reports', 'aggregate.json'), 'utf8'));
+    expect(aggregate).toMatchObject({ join_policy: 'aggregate-survivors', branch_count: 3 });
+    const entries = await trace(runDir);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        kind: 'check.evaluated',
+        step_id: 'fanout',
+        outcome: 'fail',
+        reason: expect.stringContaining('tournament collapsed:'),
+      }),
+    );
   });
 
   it('aborts before fanout start when dynamic branch expansion fails', async () => {

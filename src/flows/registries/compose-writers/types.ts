@@ -19,6 +19,7 @@
 // (evidence_links, optional reads for mode-conditional inputs)
 // that don't apply to upstream compose steps.
 
+import type { Axes } from '../../../schemas/axes.js';
 import type { RuntimeEvidencePolicy } from '../../../shared/relay-runtime-types.js';
 import type { RuntimeIndexedComposeStep, RuntimeIndexedFlow } from '../runtime-index.js';
 
@@ -40,6 +41,7 @@ export interface ComposeBuildContext {
   readonly flow: RuntimeIndexedFlow;
   readonly step: ComposeStep;
   readonly goal: string;
+  readonly axes?: Axes;
   readonly projectRoot?: string;
   readonly evidencePolicy?: RuntimeEvidencePolicy;
   // Pre-resolved inputs from declared reads (or empty if no reads

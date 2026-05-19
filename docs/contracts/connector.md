@@ -16,22 +16,22 @@ property_ids: [connector.prop.custom_command_direct_exec_semantics, connector.pr
 
 # Connector Contract
 
-An **Connector** is the relay target a `RelayStep` executes against at
+A **Connector** is the relay target a `RelayStep` executes against at
 run time. The connector contract governs three related surfaces:
 
 1. **Connector identity** — `EnabledConnector`, `ConnectorName`, and
-   `CustomConnectorDescriptor`, which together name every relayable
-   executor.
+   `CustomConnectorDescriptor`, which together name every connector that can
+   run relayed work.
 2. **Connector references** — `ConnectorRef` and `ConnectorReference`, which
-   spell how steps, roles, circuits, and the default refer to an connector
+   spell how steps, roles, circuits, and the default refer to a connector
    without re-declaring its shape at every reference site.
 3. **Relay resolution** — the total ordered precedence that picks a
    concrete connector for a step at relay time, plus the in-trace_entry
    provenance record (`RelayStartedTraceEntry.resolved_from`) that makes
    the choice auditable after the fact.
 
-The contract answers: what must be true of an connector name, a custom
-descriptor, an connector reference, and a relay resolution record for
+The contract answers: what must be true of a connector name, a custom
+descriptor, a connector reference, and a relay resolution record for
 the relay layer to be structurally sound, name-space-safe, and
 independently auditable?
 
@@ -42,15 +42,15 @@ See `UBIQUITOUS_LANGUAGE.md#relay-language` for canonical definitions of
 not introduce synonyms; new vocabulary must land in `UBIQUITOUS_LANGUAGE.md`
 before use here. This slice adds the entry **ConnectorName** (as a regex-
 constrained slug, reserved-name-disjoint from `EnabledConnector`), the
-entry **Custom connector descriptor** (a registered executor with an
+entry **Custom connector descriptor** (a registered connector with an
 argv command vector), and the entry **Relay resolution source** (the
 category-plus-disambiguator record emitted on every `RelayStartedTraceEntry`)
 to `UBIQUITOUS_LANGUAGE.md`.
 
-The distinction to keep straight: an **connector** is the executor that
-runs a worker (Claude Code headless CLI, Codex CLI, custom
-operator-authored command). An **connector reference** is what a config
-file or step carries pointing AT an connector. `ConnectorRef` (in
+The distinction to keep straight: a **connector** runs a worker
+(Claude Code headless CLI, Codex CLI, custom
+operator-authored command). A **connector reference** is what a config
+file or step carries pointing AT a connector. `ConnectorRef` (in
 `src/schemas/connector.ts`) is the full 3-variant union that admits an
 inline `CustomConnectorDescriptor`; `ConnectorReference` (in
 `src/schemas/config.ts`) is the 2-variant union used inside

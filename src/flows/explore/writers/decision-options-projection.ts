@@ -18,6 +18,7 @@ export type ExploreDecisionOptionsProjectorInputs = {
   readonly brief: ExploreBrief;
   readonly analysis: ExploreAnalysis;
   readonly fallbackEvidenceRef: string;
+  readonly optionCount?: number;
 };
 
 function stripDecisionPrefix(task: string): string {
@@ -67,17 +68,17 @@ function explicitOptionLabels(task: string): string[] {
   return [];
 }
 
-function boundedOptionLabels(task: string): string[] {
-  const explicit = explicitOptionLabels(task).slice(0, 4);
+function boundedOptionLabels(task: string, optionCount: number): string[] {
+  const explicit = explicitOptionLabels(task).slice(0, optionCount);
   const labels = [...explicit];
   const fallbackPool = explicit.length > 0 ? EXPLICIT_FILL_LABELS : FALLBACK_LABELS;
   for (const fallback of fallbackPool) {
-    if (labels.length >= 4) break;
+    if (labels.length >= optionCount) break;
     if (!labels.some((label) => label.toLocaleLowerCase() === fallback.toLocaleLowerCase())) {
       labels.push(fallback);
     }
   }
-  return labels.slice(0, 4);
+  return labels.slice(0, optionCount);
 }
 
 function summaryForLabel(label: string, subject: string): string {
@@ -105,7 +106,8 @@ export function projectExploreDecisionOptions(
 ): ExploreDecisionOptions {
   const primaryEvidence =
     inputs.analysis.aspects[0]?.evidence[0]?.source ?? inputs.fallbackEvidenceRef;
-  const optionLabels = boundedOptionLabels(inputs.brief.task);
+  const optionCount = inputs.optionCount ?? 3;
+  const optionLabels = boundedOptionLabels(inputs.brief.task, optionCount);
 
   return ExploreDecisionOptions.parse({
     decision_question: `Which path should Circuit recommend for: ${inputs.brief.task}?`,

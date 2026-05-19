@@ -1,3 +1,5 @@
+import type { Axes } from '../../schemas/axes.js';
+import type { FanoutRubric } from '../../schemas/step.js';
 import type { ExecutableStage, FlowId } from '../domain/flow.js';
 import type { Routes } from '../domain/route.js';
 import type { RunFileRef } from '../domain/run-file.js';
@@ -65,6 +67,7 @@ export interface FanoutStep extends BaseStep {
   readonly join: unknown;
   readonly concurrency?: unknown;
   readonly onChildFailure?: string;
+  readonly rubric?: FanoutRubric;
 }
 
 export type ExecutableStep =
@@ -86,4 +89,5 @@ export interface ExecutableFlow {
   readonly defaultSelection?: Selection;
   readonly stagePathPolicy?: unknown;
   readonly metadata?: Record<string, unknown>;
+  readonly axes?: Axes;
 }

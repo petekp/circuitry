@@ -38,9 +38,12 @@ describe('CompiledFlow graph closure', () => {
       signals: { include: ['feature'], exclude: ['bug'] },
       intent_prefixes: ['develop:'],
     },
-    entry_modes: [
-      { name: 'default', start_at: 'frame', depth: 'standard', description: 'Standard.' },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame',
     stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame'] }],
     steps: [okFrameStep],
     stage_path_policy: partialSpineOmittingNonFrame,
@@ -57,27 +60,18 @@ describe('CompiledFlow graph closure', () => {
     ).toBe(false);
   });
 
-  it('WF-I2: rejects entry_modes.start_at referencing an unknown step', () => {
-    // Include a second, valid entry mode
-    // so that WF-I9 (no dead steps) is satisfied via the valid entry, and
-    // WF-I2 is the unique failure mode the test proves. Without this, a
-    // single unknown start_at would cascade into a WF-I9 violation, and
-    // removing the explicit WF-I2 check in the schema would still fail
-    // the fixture for the wrong reason.
+  it('WF-I2: rejects starts_at referencing an unknown step', () => {
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [
-          { name: 'covers', start_at: 'frame', depth: 'standard', description: 'valid' },
-          { name: 'broken', start_at: 'nowhere', depth: 'standard', description: 'bad ref' },
-        ],
+        starts_at: 'nowhere',
       }),
     );
     expect(result.success).toBe(false);
     if (!result.success) {
       const issuePaths = result.error.issues.map((i) => i.path.join('.'));
       expect(
-        issuePaths.some((p) => p === 'entry_modes.1.start_at'),
-        `WF-I2 isolation: expected an issue at entry_modes[1].start_at, got paths ${JSON.stringify(issuePaths)}`,
+        issuePaths.some((p) => p === 'starts_at'),
+        `WF-I2 isolation: expected an issue at starts_at, got paths ${JSON.stringify(issuePaths)}`,
       ).toBe(true);
     }
   });
@@ -102,7 +96,7 @@ describe('CompiledFlow graph closure', () => {
     ).toBe(false);
   });
 
-  it('WF-I5: rejects duplicate entry_mode names', () => {
+  it('WF-I5: rejects legacy entry_modes fields', () => {
     expect(
       CompiledFlow.safeParse(
         okCompiledFlow({
@@ -148,7 +142,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [{ name: 'default', start_at: 'a', depth: 'standard', description: 'cycle' }],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),
@@ -174,7 +168,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [{ name: 'default', start_at: 'a', depth: 'standard', description: 'chain' }],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),
@@ -182,9 +176,9 @@ describe('CompiledFlow graph closure', () => {
     expect(result.success).toBe(true);
   });
 
-  it('WF-I9: rejects a flow with a step unreachable from any entry_mode', () => {
+  it('WF-I9: rejects a flow with a step unreachable from starts_at', () => {
     // Step 'a' goes to @complete. Step 'b' goes to @complete but nothing
-    // routes into 'b' and no entry_mode.start_at is 'b'. 'b' is declared but dead.
+    // routes into 'b'. 'b' is declared but dead.
     const stepA = {
       ...okFrameStep,
       id: 'a',
@@ -197,7 +191,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [{ name: 'default', start_at: 'a', depth: 'standard', description: 'only a' }],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),
@@ -209,13 +203,12 @@ describe('CompiledFlow graph closure', () => {
     }
   });
 
-  it('WF-I9: accepts when both steps are reached by distinct entry_modes', () => {
-    // Two entry_modes, each pointing at a different step. Both steps are
-    // reached. Both close to @complete.
+  it('WF-I9: accepts when both steps are reached from starts_at', () => {
+    // Step 'a' routes to 'b', so both declared steps are reached.
     const stepA = {
       ...okFrameStep,
       id: 'a',
-      routes: { pass: '@complete' },
+      routes: { pass: 'b' },
     };
     const stepB = {
       ...okFrameStep,
@@ -224,10 +217,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [
-          { name: 'default', start_at: 'a', depth: 'standard', description: 'entry a' },
-          { name: 'alt', start_at: 'b', depth: 'standard', description: 'entry b' },
-        ],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),
@@ -275,9 +265,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [
-          { name: 'default', start_at: 'loop-step', depth: 'standard', description: 'loop' },
-        ],
+        starts_at: 'loop-step',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['loop-step'] }],
         steps: [loopStep],
       }),
@@ -303,7 +291,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [{ name: 'default', start_at: 'a', depth: 'standard', description: 'cycle' }],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),
@@ -329,7 +317,7 @@ describe('CompiledFlow graph closure', () => {
     };
     const result = CompiledFlow.safeParse(
       okCompiledFlow({
-        entry_modes: [{ name: 'default', start_at: 'a', depth: 'standard', description: 'chain' }],
+        starts_at: 'a',
         stages: [{ id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['a', 'b'] }],
         steps: [stepA, stepB],
       }),

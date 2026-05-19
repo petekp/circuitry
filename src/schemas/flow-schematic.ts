@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { FlowAxes } from './axes.js';
 import { ChangeKind } from './change-kind.js';
-import { FanoutJoinPolicy } from './check.js';
+import { CheckpointAllowFrom, FanoutJoinPolicy } from './check.js';
 import { Depth } from './depth.js';
 import {
   FlowBlockCatalog,
@@ -32,6 +33,7 @@ import {
   FanoutBranches,
   FanoutConcurrency,
   FanoutFailurePolicy,
+  FanoutRubric,
   RelayRole,
 } from './step.js';
 
@@ -148,6 +150,7 @@ export const SchematicFanout = z
     concurrency: FanoutConcurrency.optional(),
     on_child_failure: FanoutFailurePolicy.optional(),
     join: FanoutJoinPolicy,
+    rubric: FanoutRubric.optional(),
   })
   .strict();
 export type SchematicFanout = z.infer<typeof SchematicFanout>;
@@ -161,6 +164,7 @@ export const StepCheck = z
   .object({
     required: z.array(z.string().min(1)).min(1).optional(),
     allow: z.array(z.string().min(1)).min(1).optional(),
+    allow_from: CheckpointAllowFrom.optional(),
     pass: z.array(z.string().min(1)).min(1).optional(),
   })
   .strict();
@@ -363,7 +367,10 @@ function validateExecutionShape(
         });
       }
     };
-    const forbidField = (field: 'required' | 'allow' | 'pass', allowedKinds: string) => {
+    const forbidField = (
+      field: 'required' | 'allow' | 'allow_from' | 'pass',
+      allowedKinds: string,
+    ) => {
       if (g[field] !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -377,10 +384,24 @@ function validateExecutionShape(
       case 'verification':
         expectField('required', `${kind}`);
         forbidField('allow', 'checkpoint');
+        forbidField('allow_from', 'checkpoint');
         forbidField('pass', 'relay|sub-run');
         break;
       case 'checkpoint':
-        expectField('allow', 'checkpoint');
+        if (g.allow === undefined && g.allow_from === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['check', 'allow'],
+            message: 'checkpoint execution requires check.allow or check.allow_from',
+          });
+        }
+        if (g.allow !== undefined && g.allow_from !== undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['check', 'allow'],
+            message: 'checkpoint execution cannot declare both check.allow and check.allow_from',
+          });
+        }
         forbidField('required', 'compose|verification');
         forbidField('pass', 'relay|sub-run');
         break;
@@ -389,11 +410,13 @@ function validateExecutionShape(
         expectField('pass', `${kind}`);
         forbidField('required', 'compose|verification');
         forbidField('allow', 'checkpoint');
+        forbidField('allow_from', 'checkpoint');
         break;
       case 'fanout':
         expectField('pass', 'fanout');
         forbidField('required', 'compose|verification');
         forbidField('allow', 'checkpoint');
+        forbidField('allow_from', 'checkpoint');
         break;
     }
   }
@@ -421,9 +444,9 @@ function validateExecutionShape(
   }
 }
 
-// Schematic-level entry mode. Each emitted CompiledFlow inherits these as
-// CompiledFlow.entry_modes[i] with start_at = schematic.starts_at.
-export const FlowEntryMode = z
+// Derived axis selection. The compiler uses these internal rows to choose
+// which steps a compiled flow includes for a requested axis tuple.
+export const FlowAxisSelection = z
   .object({
     name: z.string().regex(/^[a-z][a-z0-9-]*$/),
     depth: Depth,
@@ -431,7 +454,7 @@ export const FlowEntryMode = z
     default_change_kind: ChangeKind.optional(),
   })
   .strict();
-export type FlowEntryMode = z.infer<typeof FlowEntryMode>;
+export type FlowAxisSelection = z.infer<typeof FlowAxisSelection>;
 
 // Per-canonical-stage metadata. Lets a schematic map its canonical stages
 // to author-friendly stage ids and titles ("Synthesize" for explore's
@@ -460,6 +483,9 @@ export const FlowSchematicEntry = z
   .strict();
 export type FlowSchematicEntry = z.infer<typeof FlowSchematicEntry>;
 
+const TOURNAMENT_FANOUT_CONTRACT_MESSAGE =
+  'tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors';
+
 export const FlowSchematic = z
   .object({
     schema_version: z.literal('1'),
@@ -475,7 +501,7 @@ export const FlowSchematic = z
     // at parse time once a schematic is active.
     version: z.string().min(1).optional(),
     entry: FlowSchematicEntry.optional(),
-    entry_modes: z.array(FlowEntryMode).min(1).optional(),
+    axes: FlowAxes.optional(),
     stage_path_policy: SpinePolicy.optional(),
     stages: z.array(SchematicStage).optional(),
     default_selection: SelectionOverride.optional(),
@@ -541,20 +567,6 @@ export const FlowSchematic = z
       aliases.add(key);
     }
 
-    if (schematic.entry_modes !== undefined) {
-      const seenNames = new Set<string>();
-      for (const [index, mode] of schematic.entry_modes.entries()) {
-        if (seenNames.has(mode.name)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['entry_modes', index, 'name'],
-            message: `duplicate entry mode name: ${mode.name}`,
-          });
-        }
-        seenNames.add(mode.name);
-      }
-    }
-
     if (schematic.stages !== undefined) {
       const seenCanonicals = new Set<CanonicalStageValue>();
       const seenIds = new Set<string>();
@@ -592,6 +604,35 @@ export const FlowSchematic = z
       // The reverse is valid: a schematic may declare canonical stage
       // metadata even when a mode leaves that stage empty. The compiler
       // records the omission reason in stage_path_policy.
+    }
+
+    if (schematic.axes?.tournament_fan_out_stage !== undefined && schematic.stages !== undefined) {
+      const stageById = new Map(
+        schematic.stages.map((stage) => [stage.id as unknown as string, stage]),
+      );
+      const fanOutStage = schematic.axes.tournament_fan_out_stage as unknown as string;
+      const stage = stageById.get(fanOutStage);
+      if (stage === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['axes', 'tournament_fan_out_stage'],
+          message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`,
+        });
+      } else {
+        for (const [index, item] of schematic.items.entries()) {
+          if (item.stage !== stage.canonical || item.execution.kind !== 'fanout') continue;
+          if (
+            item.fanout?.on_child_failure !== 'continue-others' ||
+            item.fanout.join.policy !== 'aggregate-survivors'
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['items', index, 'fanout'],
+              message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE,
+            });
+          }
+        }
+      }
     }
 
     if (
@@ -644,9 +685,7 @@ export type FlowSchematic = z.infer<typeof FlowSchematic>;
 function validateActiveSchematicCompleteness(schematic: FlowSchematic, ctx: z.RefinementCtx): void {
   if (schematic.status !== 'active') return;
 
-  const requireField = (
-    field: 'version' | 'entry' | 'entry_modes' | 'stage_path_policy' | 'stages',
-  ) => {
+  const requireField = (field: 'version' | 'entry' | 'axes' | 'stage_path_policy' | 'stages') => {
     if (schematic[field] !== undefined) return;
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -657,7 +696,7 @@ function validateActiveSchematicCompleteness(schematic: FlowSchematic, ctx: z.Re
 
   requireField('version');
   requireField('entry');
-  requireField('entry_modes');
+  requireField('axes');
   requireField('stage_path_policy');
   requireField('stages');
 

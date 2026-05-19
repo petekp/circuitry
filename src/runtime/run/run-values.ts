@@ -28,6 +28,7 @@ export interface RunValue {
   readonly manifestHash: string;
   readonly entryModeName?: string;
   readonly depth?: string;
+  readonly axes?: RunContext['axes'];
   readonly activeStepAttempt?: number;
   readonly resumeCheckpoint?: RunContext['resumeCheckpoint'];
 }
@@ -107,6 +108,7 @@ export function runValueFromContext(context: RunContext): RunValue {
     manifestHash: context.manifestHash,
     ...(context.entryModeName === undefined ? {} : { entryModeName: context.entryModeName }),
     ...(context.depth === undefined ? {} : { depth: context.depth }),
+    ...(context.axes === undefined ? {} : { axes: context.axes }),
     ...(context.activeStepAttempt === undefined
       ? {}
       : { activeStepAttempt: context.activeStepAttempt }),

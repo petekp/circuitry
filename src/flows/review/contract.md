@@ -30,6 +30,12 @@ The flow deliberately omits `plan`, `act`, `verify`, and nested `review`.
 This is an audit-only flow; a verification-bearing variant would be a
 separate flow kind.
 
+## Axis Support
+
+Review declares `axes.allowed_rigors = [standard]` and does not support
+tournament or autonomous runs. Operator-supplied tournament or autonomous
+flags are rejected before execution.
+
 ## Scope Note
 
 This is a flow-specific contract over the base `CompiledFlow` schema, the

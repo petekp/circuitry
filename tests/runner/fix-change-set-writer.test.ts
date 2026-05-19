@@ -282,7 +282,7 @@ describe('fixChangeSetWriter.buildResult', () => {
     expect(result.reason).toMatch(/undeclared extras: src\/extra\.ts/);
   });
 
-  it('ignores active run-folder artifacts when the run folder is inside the project root', () => {
+  it('ignores active run-folder outputs when the run folder is inside the project root', () => {
     const projectRoot = tempRunFolder();
     const runFolder = join(projectRoot, 'circuit-surface-test/run-1');
     const { context } = makeFixture({
@@ -302,7 +302,7 @@ describe('fixChangeSetWriter.buildResult', () => {
       },
       change: {
         verdict: 'accept',
-        summary: 'fix with run artifacts present',
+        summary: 'fix with run outputs present',
         diagnosis_ref: 'fix.diagnosis@v1',
         changed_files: ['src/a.ts'],
         evidence: ['ok'],

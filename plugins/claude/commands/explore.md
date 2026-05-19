@@ -64,12 +64,12 @@ metacharacters:
    or JSONL after Bash.
    Use non-`present` wrapper mode only for debug, tests, or explicit raw
    machine-readable output.
-## Depth
+## Axes
 
-This command runs at `standard` depth by default. The CLI accepts
-`--depth <lite|standard|deep|tournament|autonomous>` — if the user's goal
-text includes an explicit depth request (e.g., "deep dive", "quick look"),
-map it to the flag; otherwise omit the flag and accept the default.
+This command runs at standard rigor by default. Use `--rigor lite` for a quick
+look, `--rigor deep` for deeper analysis, and `--tournament` for a bounded
+decision tournament. Add `--autonomous` only when the operator explicitly asks
+for autonomous checkpoint handling.
 
 ## Authority
 

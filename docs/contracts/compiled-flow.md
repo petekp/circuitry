@@ -4,13 +4,13 @@ status: draft
 version: 0.4
 schema_source: src/schemas/compiled-flow.ts
 last_updated: 2026-05-08
-depends_on: [step, stage, depth, change_kind, selection-policy, skill]
+depends_on: [step, stage, axes, rigor, change_kind, selection-policy, skill]
 report_ids:
   - flow.definition
   - flow.scalar_catalog
   - flow.schematic_definition
 invariant_ids: [WF-I1, WF-I2, WF-I3, WF-I4, WF-I5, WF-I6, WF-I7, WF-I8, WF-I9, WF-I10, WF-I11, WF-I12]
-property_ids: [flow.prop.entry_mode_reachability, flow.prop.no_dead_steps, flow.prop.stage_step_closure, flow.prop.route_target_closure, flow.prop.terminal_target_coverage]
+property_ids: [flow.prop.start_reachability, flow.prop.no_dead_steps, flow.prop.stage_step_closure, flow.prop.route_target_closure, flow.prop.terminal_target_coverage]
 ---
 
 # CompiledFlow Contract
@@ -31,14 +31,15 @@ inside `CompiledFlow.superRefine` — and tested in
 `tests/contracts/schema-parity.test.ts`.
 
 - **WF-I1 — Unique step ids.** No two steps in `CompiledFlow.steps` share an `id`.
-- **WF-I2 — Closed entry references.** Every `EntryMode.start_at` must be the
-  `id` of an existing step.
+- **WF-I2 — Closed start reference.** `starts_at` must be the `id` of an
+  existing step.
 - **WF-I3 — Closed stage references.** Every `StepId` in `Stage.steps` must
   be the `id` of an existing step.
 - **WF-I4 — Closed route targets.** Every route target in `Step.routes`
   must be either a terminal label (`@complete`, `@stop`, `@escalate`,
   `@handoff`) or the `id` of an existing step.
-- **WF-I5 — Unique entry mode names.** No two `EntryMode`s share a `name`.
+- **WF-I5 — No legacy entry modes.** `CompiledFlow` declares `axes` plus
+  `starts_at`; a legacy `entry_modes` array is rejected by the strict schema.
 - **WF-I6 — Unique stage ids.** No two `Stage`s share an `id`.
 - **WF-I7 — Schema version is 2.** The literal `schema_version: '2'` is
   required. v1 manifests are not accepted; migration is a future Stage 2
@@ -47,14 +48,14 @@ inside `CompiledFlow.superRefine` — and tested in
   at least one chain of `routes` starting at that step eventually reaches
   a terminal route target (`@complete`, `@stop`, `@escalate`, `@handoff`).
   A flow that contains a step unable to reach any terminal is rejected
-  at parse time. In particular, every `EntryMode.start_at` step reaches a
+  at parse time. In particular, the `starts_at` step reaches a
   terminal, so a bootstrapped Run is always capable of closing. Without
   this invariant, a plugin-authored flow fixture could bootstrap a Run
   but never emit `run.closed`, producing a hung run state.
 - **WF-I9 — No dead steps.** For every step in `CompiledFlow.steps`, there is
-  at least one chain of `routes` from some `EntryMode.start_at` that
-  reaches that step. A flow that declares a step unreachable from any
-  entry mode is rejected at parse time. Unreachable steps are a silent
+  at least one chain of `routes` from `starts_at` that reaches that step.
+  A flow that declares a step unreachable from the start step is rejected
+  at parse time. Unreachable steps are a silent
   declaration bug (the author believes the step will execute but it
   never will), not a feature; WF-I9 fails the fixture fast rather than
   letting it pass and then puzzling the operator.
@@ -119,11 +120,11 @@ Property-based tests will cover:
   targets resolve.
 - `flow.prop.stage_step_closure` — For any valid CompiledFlow, all stage
   step references resolve.
-- `flow.prop.entry_mode_reachability` — For every entry mode, the
-  `start_at` step is reachable by at least one sequence of routes leading
-  to a terminal target.
-- `flow.prop.no_dead_steps` — Every step is reachable from at least
-  one entry mode. (Note: now also enforced structurally at parse time
+- `flow.prop.start_reachability` — `starts_at` names an existing step, and
+  that step is reachable by at least one sequence of routes leading to a
+  terminal target.
+- `flow.prop.no_dead_steps` — Every step is reachable from `starts_at`.
+  (Note: now also enforced structurally at parse time
   as **WF-I9**; this property id remains reserved for Slice 29's
   property-harness fast-check generation around the same semantics.
   The earlier "modulo `disposable`-change_kind flows" carveout is
@@ -142,7 +143,8 @@ Property-based tests will cover:
   on-Step) are in `docs/contracts/step.md`.
 - **stage**: CompiledFlow embeds `Stage[]`. Stage invariants in
   `docs/contracts/stage.md` (ratified v0.1; stage-I1..I5 + stage_path_policy enforcement).
-- **depth**: `EntryMode.depth` must be a valid `Depth` value.
+- **axes / rigor**: `axes` declares the allowed rigor, tournament, and
+  autonomous support for this flow.
 - **change_kind**: `EntryMode.default_change_kind` is optional; when present, must be
   a valid `ChangeKind` literal.
 - **selection-policy**: `CompiledFlow.default_selection` is a

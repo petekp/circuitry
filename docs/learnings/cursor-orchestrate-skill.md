@@ -42,8 +42,8 @@ circuit-next's circuits are long-running agent loops — Frame → Plan
 → Act → Verify → Review → Close. The drift risk applies even though
 we're sequential rather than parallel. The question worth asking next
 time we touch a circuit: how much of its state is reconstructed from
-natural-language phase markers each turn, vs. recorded in a
-structured artifact the engine reads? If the answer is "mostly
+natural-language stage markers each turn, vs. recorded in a
+structured report the engine reads? If the answer is "mostly
 natural language," we have the drift surface orchestrate is pointing
 at.
 
@@ -57,9 +57,9 @@ file, it publishes a task for a worker instead. Sharper than the
 flywheel's implicit Plan/Bead/Code separation, because it's stated as
 a contract, not an emergent property.
 
-circuit-next has Plan and Act phases, but nothing enforces the
-separation — a Build-circuit Plan phase can quietly slide into editing
-if the agent gets impatient. Importing this rule (as a phase
+circuit-next has Plan and Act stages, but nothing enforces the
+separation — a Build-circuit Plan stage can quietly slide into editing
+if the agent gets impatient. Importing this rule (as a stage
 contract, not as new infra) would be free and would prevent a real
 failure mode where Plan output is partial and Act has nothing left to
 do.
@@ -71,7 +71,7 @@ columns (runs the loop? scope? output?). The entire mental model of
 the system fits on one screen.
 
 circuit-next has comparable conceptual surface area — circuits,
-rigor profiles, adapters, dispatch shapes — and we have nothing this
+depth profiles, adapters, relay shapes — and we have nothing this
 crisp. Even if we don't lift the architecture, the table format is
 worth lifting for our own surfaces. Operators reading our docs should
 be able to see the whole shape on one screen.
@@ -103,7 +103,7 @@ What genuinely doesn't transfer from orchestrate isn't the tree
 shape itself — it's two specific properties of orchestrate's tree:
 
 - **Workers run as cloud agents in cloned sandboxes.** circuit-next
-  dispatches in-process / on-host. We don't have the cloud infra,
+  relays in-process / on-host. We don't have the cloud infra,
   and adopting it isn't a design choice — it's a separate
   infrastructure project.
 - **The operator kicks off the root and walks away.** circuit-next is
@@ -125,7 +125,7 @@ In orchestrate, a verifier is a distinct node that checks acceptance
 criteria and returns a verdict. It earns its keep because workers
 need an external judge in a parallel system.
 
-circuit-next folds verification into the Verify and Review *phases*
+circuit-next folds verification into the Verify and Review *stages*
 inside circuits — same agent, same context, different stage of the
 loop. For a sequential system that's fine; the cost of "agent grades
 its own work" is mitigated by the fresh-eyes-on-batch-review pattern
@@ -135,50 +135,50 @@ add structure without solving a real problem.
 ### Subplanners as a separate, named node type
 
 The recursion concept is fine on its own — circuit-next already has
-the primitive in dispatch, and a worker could in principle dispatch
+the block in relay, and a worker could in principle relay
 its own workers. What we'd skip is treating recursive planners as a
 *distinct named role* in our model. Naming "Subplanner" as a separate
 node type would be premature taxonomy for a shape we don't yet
 exercise. If a circuit ever genuinely needs nested fanout, we'd
-extend dispatch, not import a node-type vocabulary.
+extend relay, not import a node-type vocabulary.
 
 ## The architectural disagreement
 
 orchestrate and circuit-next are both answers to the question "how do
-you keep coding agents on track over a long workflow." They differ in
+you keep coding agents on track over a long flow." They differ in
 two ways that are easy to conflate, so it's worth pulling them apart.
 
 **Role discipline.** orchestrate enforces it through topology:
 planners can't code because workers are the only nodes holding an
 edit context; siblings can't talk because the tree forbids it; state
 lives in a file because no agent's memory survives a sandbox restart.
-circuit-next would have to enforce the same rules through phase
+circuit-next would have to enforce the same rules through stage
 contracts and convention, since our circuits run in one session. The
 discipline patterns are independently load-bearing — they'd help a
 sequential system too — and adopting them costs nothing.
 
 **Topology.** Here the two systems are closer than they look.
-circuit-next already has a parallelism primitive: dispatch fans out
+circuit-next already has a parallelism mechanism: relay fans out
 work to workers and collects structured results, which is the same
 shape as orchestrate's planner → worker relationship. The parts of
 orchestrate that genuinely don't transfer are narrower than they
 first appear:
 
 - **Cloud-agent execution.** orchestrate spawns Cursor cloud agents
-  in isolated sandboxes via the SDK; we dispatch in-process /
+  in isolated sandboxes via the SDK; we relay in-process /
   on-host. That's missing infra, not a design choice.
 - **The operator-walks-away session model.** orchestrate assumes the
   operator typed `/orchestrate` and is done; the tree runs for hours
   and comes back with a PR. circuit-next assumes the operator is
-  reading along and can redirect mid-phase. That's the deeper design
+  reading along and can redirect mid-stage. That's the deeper design
   difference, and it's about session shape, not parallelism.
 
-What's *not* orthogonal: recursive dispatch (a worker spawning its
-own sub-fanout), wider parallel fan-out within a phase (e.g. parallel
-slice execution in Build), structured-handoff returns (dispatch
+What's *not* orthogonal: recursive relay (a worker spawning its
+own sub-fanout), wider parallel fan-out within a stage (e.g. parallel
+slice execution in Build), structured-handoff returns (relay
 already does this in a small way). These are extensions of
 circuit-next's existing topology, not imports of a foreign one. We
-just haven't pushed dispatch in those directions because the
+just haven't pushed relay in those directions because the
 operator-in-the-loop session model hasn't yet needed it.
 
 So the more honest separation is three buckets, not two:
@@ -186,7 +186,7 @@ So the more honest separation is three buckets, not two:
 - *Role-discipline patterns* — real list, worth adopting.
 - *Cloud-execution and walk-away session model* — genuinely
   orthogonal, infrastructure- and session-model-level.
-- *Recursive / wider dispatch* — in our design space, available if a
+- *Recursive / wider relay* — in our design space, available if a
   circuit ever earns it.
 
 ## Status
@@ -196,8 +196,8 @@ near-term work:
 
 - The "agent decides, script drives" lens, applied next time a
   circuit feels flaky or repeats itself.
-- The planners-don't-code rule, applied as a Plan-phase contract next
+- The planners-don't-code rule, applied as a Plan-stage contract next
   time we touch Build.
 
 The node-type table format is worth keeping in mind for any future
-docs pass over circuits/rigor/adapters.
+docs pass over circuits/depth/adapters.

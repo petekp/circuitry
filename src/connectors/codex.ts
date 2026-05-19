@@ -380,7 +380,7 @@ async function cleanupSchemaTempDir(dir: string | undefined): Promise<void> {
   if (dir === undefined) return;
   // Remove the entire mkdtemp directory; the schema file is the only
   // thing in it, but `rm -rf` against the dir is safer than dance-
-  // around-then-rmdir if any future code ever drops a sibling artifact.
+  // around-then-rmdir if any future code ever drops a sibling output.
   try {
     await rm(dir, { recursive: true, force: true });
   } catch {
@@ -603,7 +603,7 @@ export function parseCodexStdout(
   }
 
   // `item.updated` (Codex 0.128+) carries an incremental progress payload
-  // for an item already opened via `item.started`. Gate it against the
+  // for an item already opened via `item.started`. Check it against the
   // same KNOWN_CODEX_ITEM_TYPES allowlist as `item.completed` so a novel
   // item type cannot slip in via the update channel either.
   const itemUpdated = trace_entries.filter((e) => e.type === 'item.updated');

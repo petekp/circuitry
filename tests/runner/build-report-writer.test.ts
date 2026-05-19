@@ -41,14 +41,12 @@ function planCompiledFlow(options: { omitBriefRead?: boolean } = {}): {
     version: '0.1.0',
     purpose: 'test Build plan writer',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'seed-brief-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'seed-brief-step',
     stages: [
       {
         id: 'plan-stage',
@@ -202,14 +200,12 @@ function closeCompiledFlow(
     version: '0.1.0',
     purpose: 'test Build result writer',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: seedSteps[0]?.id ?? 'close-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: seedSteps[0]?.id ?? 'close-step',
     stages: [
       {
         id: 'close-stage',

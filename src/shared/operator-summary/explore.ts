@@ -113,13 +113,13 @@ function exploreDecisionReport(
   );
 }
 
-// Looser gate than the HTML projector's `loadHtmlPayload`. Returns the
+// Looser check than the HTML projector's `loadHtmlPayload`. Returns the
 // snapshot as soon as a tournament has *picked* a winner — even before
 // decision.json is finalized — because the markdown summary should surface
 // the selected-option label and rationale-so-far the moment they exist. The
 // HTML projector intentionally waits for `decision_verdict === 'decided'`
 // since a checkpoint_waiting state without decision.json would render an
-// empty/incomplete grid. Keep the asymmetry: do not tighten this gate
+// empty/incomplete grid. Keep the asymmetry: do not tighten this check
 // without revisiting the projector.
 function exploreTournamentSnapshot(flowReport: JsonObject | undefined): JsonObject | undefined {
   const snapshot = isObject(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : undefined;

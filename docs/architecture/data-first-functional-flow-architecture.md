@@ -36,12 +36,12 @@ before making any runtime or Effect migration.
 Use these rules as the review bar for the migration plan.
 
 1. Separate things that vary independently.
-   A block, a step, a report schema, a writer, a route, a generated artifact,
+   A block, a step, a report schema, a writer, a route, a generated output,
    and a runtime effect are different things. The authoring model may connect
    them, but it should not hide one inside another.
 
 2. Prefer values over places.
-   The compiler should accept immutable flow data and return artifacts or error
+   The compiler should accept immutable flow data and return outputs or error
    values. Mutable places such as run folders, trace stores, subprocesses, and
    progress streams belong at runtime edges.
 
@@ -86,7 +86,7 @@ These must remain true through any migration slice derived from this spec.
   `runtime-proof`, `build`, and `explore` unless a separate versioned migration
   reopens it.
 - Semantic writer, validator, relay-hint, and helper code remains source code.
-- Generated compatibility artifacts are regenerated and drift-checked, not
+- Generated compatibility outputs are regenerated and drift-checked, not
   edited by hand.
 - Runtime graph execution stays flow-agnostic.
 - This spec remains design-only until implementation is explicitly requested.
@@ -108,7 +108,7 @@ These must remain true through any migration slice derived from this spec.
 | Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/data.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/emit-flows.ts --check` as the drift check. |
 | Connector sharing is intentionally narrow. | Confirmed | `src/connectors/shared.ts` exposes neutral relay/hash types only; `src/connectors/subprocess.ts` owns subprocess lifecycle. `tests/contracts/architecture-boundaries.test.ts` ratchets this boundary. |
 | Verification command execution is behind a shared proof-plan boundary. | Confirmed | `src/runtime/executors/verification.ts` calls `runProofPlanCommand()`; `src/shared/proof-plan.ts` owns cwd checks, script preflight, env allowlist, timeout, and output caps. |
-| Current tests already describe many migration safety gates. | Confirmed | `tests/runner/flow-definition-compiler.test.ts`, `tests/contracts/catalog-completeness.test.ts`, `tests/contracts/flow-schematic.test.ts`, `tests/contracts/runtime-context-boundary.test.ts`, `tests/contracts/architecture-boundaries.test.ts`, `tests/runtime/progress-projection.test.ts`, `tests/unit/proof-plan.test.ts`, and `tests/runner/connector-subprocess.test.ts`. |
+| Current tests already describe many migration safety checks. | Confirmed | `tests/runner/flow-definition-compiler.test.ts`, `tests/contracts/catalog-completeness.test.ts`, `tests/contracts/flow-schematic.test.ts`, `tests/contracts/runtime-context-boundary.test.ts`, `tests/contracts/architecture-boundaries.test.ts`, `tests/runtime/progress-projection.test.ts`, `tests/unit/proof-plan.test.ts`, and `tests/runner/connector-subprocess.test.ts`. |
 | Effect is useful only after runtime capabilities are named. | Future-facing | No Effect dependency exists today. This is a target constraint, not current source fact. |
 
 ## Current System Map
@@ -122,7 +122,7 @@ These must remain true through any migration slice derived from this spec.
 | Writers | `src/flows/<id>/writers/*` plus package writer arrays | Semantic code is good; array registration is mechanical. | Writer functions remain code; registration derives from report declarations. |
 | Relay hints | `src/flows/<id>/relay-hints.ts` plus package relay report entries | Hint text is semantic; attachment is mechanical. | Hint values remain code/data; attachment derives from report declarations. |
 | Runtime surface | `runtimeSurface` inside each flow definition | Necessary public metadata, but repeated beside steps and modes. | Derived from modes, primary result, and explicit progress display values. |
-| Schematic JSON | `src/flows/<id>/schematic.json` | Compatibility output, not authored source. | Generated compatibility artifact. |
+| Schematic JSON | `src/flows/<id>/schematic.json` | Compatibility output, not authored source. | Generated compatibility output. |
 | Compiled manifests | `generated/flows/<id>/*.json` | Already generated. | Continue generated and drift-checked. |
 | Runtime execution | `src/runtime/run/graph-runner.ts` plus executors | The graph walk is clear, but concrete IO classes are wired into core context. | Same graph walk over named capabilities. |
 | Trace and run files | `TraceStore`, `RunFileStore`, report validator | Durable facts are already explicit, but storage is concrete runtime machinery. | `TraceLog` and `RunFiles` capabilities. |
@@ -138,7 +138,7 @@ Circuit should become this pipeline:
 authored flow value
   -> validation value
   -> compiled package value
-  -> generated compatibility artifacts
+  -> generated compatibility outputs
   -> runtime interpreter over executable graph values
   -> append-only trace facts
   -> edge-provided capabilities
@@ -482,7 +482,7 @@ type FlowDefinitionError =
   | { readonly kind: 'invalid-block-execution'; readonly flowId: string; readonly stepId: string; readonly block: string; readonly execution: string }
   | { readonly kind: 'missing-writer'; readonly flowId: string; readonly schemaName: string; readonly slot: string }
   | { readonly kind: 'missing-progress'; readonly flowId: string; readonly stepId: string }
-  | { readonly kind: 'generated-parity-drift'; readonly flowId: string; readonly artifact: string };
+  | { readonly kind: 'generated-parity-drift'; readonly flowId: string; readonly output: string };
 ```
 
 Runtime expected failures should also become values where the caller can render
@@ -568,7 +568,7 @@ Slice boundary:
 - add compressed definition types and pure compiler helpers in a new module;
 - re-express Build in compressed form;
 - keep the existing `buildFlowDefinition` export behavior unchanged;
-- keep current generated artifacts unchanged;
+- keep current generated outputs unchanged;
 - do not change runtime execution;
 - do not add Effect.
 
@@ -607,7 +607,7 @@ source-backed answer.
 
 - Current-system map names the owner of flow authoring, block defaults, report
   schemas, writer hooks, relay hints, runtime surface metadata, generated
-  artifacts, CLI selection, runtime graph execution, trace storage, connector
+  outputs, CLI selection, runtime graph execution, trace storage, connector
   subprocesses, and proof-plan command execution.
 - The first compressed authoring value can express Build without method
   chaining, callbacks, or flow-specific compiler branches.
@@ -634,7 +634,7 @@ Stop the migration design if any of these becomes necessary:
 - The compressed API needs fluent method chains to be usable.
 - A reviewer cannot inspect the authored value without running code.
 - The compiler must change runtime behavior to preserve parity.
-- Public generated artifacts change in the first slice.
+- Public generated outputs change in the first slice.
 - Missing public runtime metadata is silently tolerated.
 - Progress display depends on prose step-title heuristics for public flows.
 - Connector security policy is loosened or hidden behind a generic effect.

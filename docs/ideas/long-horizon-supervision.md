@@ -18,7 +18,7 @@ together by hand:
 > were all available in one product.."
 
 The "if only these features were all available in one product" is the
-opening. Circuit already owns the workflow-runner layer. The question
+opening. Circuit already owns the flow-runner layer. The question
 is whether long-horizon supervision is a shape Circuit should grow
 into, or whether it's a different product.
 
@@ -45,25 +45,25 @@ executor lives in minutes (next change, next test). The supervisor
 lives in tens of minutes (is the trajectory still right?). The crow's
 nest lives in seconds, but only when the operator looks at it.
 
-Circuit today collapses all three into one agent doing one workflow
+Circuit today collapses all three into one agent doing one flow
 in one session. That's right for short bounded work and wrong for
 long-horizon work.
 
 ## The shape that fits Circuit
 
-Circuit's adapter / worker / phase model already has most of the
+Circuit's adapter / worker / stage model already has most of the
 pieces. The missing pieces are the heartbeat and the visual surface.
 
-**Executor = a long-running worker dispatch.** Circuit's `workers`
+**Executor = a long-running worker relay.** Circuit's `workers`
 adapter already runs implement-review-converge loops. Extend it from
 "one batch, then return" to "drive the goal until done or blocked."
 The work-item granularity stays small (the worker still works in
 review-able batches), but the outer loop runs in the background
 across many batches without the operator sitting on it.
 
-**Supervisor = a phase that runs on a clock, not on the executor's
-turn.** This is the genuinely new piece. Today, every Circuit phase
-fires when the previous phase finishes. A heartbeat phase fires on a
+**Supervisor = a stage that runs on a clock, not on the executor's
+turn.** This is the genuinely new piece. Today, every Circuit stage
+fires when the previous stage finishes. A heartbeat stage fires on a
 timer — every 10 / 30 / 60 minutes — independent of where the
 executor is. The supervisor reads the run record and the latest
 diff, asks "are we still pointed at the goal?", and if not, writes a
@@ -109,7 +109,7 @@ the real additions.
 
 ## Design constraints to get right
 
-**Heartbeat cadence is per-run, not per-workflow-type.** A 4-hour
+**Heartbeat cadence is per-run, not per-flow-type.** A 4-hour
 Build doesn't want the same heartbeat as a 12-hour architecture change. Default
 something sane (every 30 minutes?) and let the operator tune it per
 run. Probably also wants a "max heartbeats per run" cap so a
@@ -138,8 +138,8 @@ reads that stream as input on its next heartbeat ("operator already
 addressed this, no further note needed").
 
 **Stop condition on the executor matters more than usual.** Today,
-Circuit workflows close at the end of a phase. A long-horizon
-executor can't rely on phase boundaries — it needs a clear "goal
+Circuit flows close at the end of a stage. A long-horizon
+executor can't rely on stage boundaries — it needs a clear "goal
 achieved" check, plus hard stops on (a) operator pause, (b) repeated
 failures (worker can't converge after N attempts on the same item),
 (c) supervisor escalation ("this is off the rails, stop"). Without
@@ -191,11 +191,11 @@ Two reasons it might still be worth thinking about:
 
 1. **Marketplace fit.** "Circuit can run unattended for long stretches with a
    supervisor that course-corrects and a status board you check in
-   the morning" is a clean external value prop. Other workflow
+   the morning" is a clean external value prop. Other flow
    runners don't have this; the tweet suggests there's real demand
    and people are duct-taping it together by hand.
 2. **It's a generalization of patterns Circuit already has.** The
-   supervisor is a phase that runs on a different clock. The crow's
+   supervisor is a stage that runs on a different clock. The crow's
    nest is `active-run.md` with a richer renderer. Neither is a
    foreign concept; they're extensions of the existing model.
 
@@ -205,7 +205,7 @@ methodology strip cut a lot of speculative scaffolding. This idea
 should sit in `docs/ideas/` and stay there until either (a) you
 personally hit a long-horizon use case where you wish you had this,
 or (b) someone in the marketplace says "I want to run Circuit unattended
-for long stretches." Until then, the recipe-pattern path — operator stitches
+for long stretches." Until then, the schematic-pattern path — operator stitches
 together a supervisor by hand using existing tools — is the right
 level of investment.
 
@@ -213,11 +213,11 @@ level of investment.
 
 The cheapest experiment that proves the shape, not the full system.
 
-**Step 1 — heartbeat phase, no supervisor logic yet.** Add a phase
-type that fires on a timer. Wire it into one workflow. Have it do
+**Step 1 — heartbeat stage, no supervisor logic yet.** Add a stage
+type that fires on a timer. Wire it into one flow. Have it do
 nothing but log "heartbeat fired at T+30m." Confirms the clock-driven
-phase shape works inside the existing engine without breaking
-turn-driven phases.
+stage shape works inside the existing engine without breaking
+turn-driven stages.
 
 **Step 2 — supervisor reads run record, writes correction notes.**
 Add a real supervisor prompt. Inputs: goal, last correction note,
@@ -231,7 +231,7 @@ drive a goal across many batches without returning to the operator.
 Add the stop conditions (goal-met check, repeated-failure cap,
 supervisor escalation). Run the same drift test end-to-end.
 
-**Step 4 — crow's nest, prose first.** A separate phase that runs
+**Step 4 — crow's nest, prose first.** A separate stage that runs
 on its own slow clock, reads the run record, and produces a
 structured human-readable status snapshot. No diagrams. Test by
 having the operator (you) actually use it — does the snapshot
@@ -268,10 +268,10 @@ first if demand pulls one direction.
   supervisor and executor both need to resume from continuity, not
   from scratch, when the operator's session boundary triggers a
   recompaction.
-- Does the crow's nest belong as a Circuit phase, or as an external
+- Does the crow's nest belong as a Circuit stage, or as an external
   read-only viewer that points at the run record? External is
   simpler and decouples the visualizer from the engine; in-engine
   gets first-class scheduling. Probably external.
-- Is the supervisor a phase, a workflow, or something new? Phases
+- Is the supervisor a stage, a flow, or something new? Stages
   are turn-driven today; this is the first clock-driven one. Worth
-  naming the new concept explicitly rather than overloading "phase."
+  naming the new concept explicitly rather than overloading "stage."

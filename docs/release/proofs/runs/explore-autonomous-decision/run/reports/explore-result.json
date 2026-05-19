@@ -1,0 +1,42 @@
+{
+  "summary": "Explore 'decide: React vs Vue': Choose Vue for a smaller surface and faster product iteration.",
+  "verdict_snapshot": {
+    "decision_verdict": "decided",
+    "tournament_review_verdict": "recommend",
+    "selected_option_id": "option-2",
+    "objection_count": 1,
+    "missing_evidence_count": 1
+  },
+  "evidence_links": [
+    {
+      "report_id": "explore.brief",
+      "path": "reports/brief.json",
+      "schema": "explore.brief@v1"
+    },
+    {
+      "report_id": "explore.analysis",
+      "path": "reports/analysis.json",
+      "schema": "explore.analysis@v1"
+    },
+    {
+      "report_id": "explore.decision-options",
+      "path": "reports/decision-options.json",
+      "schema": "explore.decision-options@v1"
+    },
+    {
+      "report_id": "explore.tournament-aggregate",
+      "path": "reports/tournament-aggregate.json",
+      "schema": "explore.tournament-aggregate@v1"
+    },
+    {
+      "report_id": "explore.tournament-review",
+      "path": "reports/tournament-review.json",
+      "schema": "explore.tournament-review@v1"
+    },
+    {
+      "report_id": "explore.decision",
+      "path": "reports/decision.json",
+      "schema": "explore.decision@v1"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
   "flow_id": "explore",
   "run_folder": "<repo>/docs/release/proofs/runs/explore-decision/run",
   "outcome": "complete",
-  "trace_entries_observed": 68,
+  "trace_entries_observed": 60,
   "result_path": "<repo>/docs/release/proofs/runs/explore-decision/run/reports/result.json",
   "operator_summary_path": "<repo>/docs/release/proofs/runs/explore-decision/run/reports/operator-summary.json",
   "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/explore-decision/run/reports/operator-summary.md",

@@ -43,19 +43,19 @@ metacharacters:
    Lite Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make a small change' --entry-mode lite --progress jsonl
+   ./bin/circuit-next run build --goal 'make a small change' --rigor lite --progress jsonl
    ```
 
    Deep Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make the focused change' --entry-mode deep --progress jsonl
+   ./bin/circuit-next run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Autonomous Build:
 
    ```bash
-   ./bin/circuit-next run build --goal 'ship the requested fix' --entry-mode autonomous --progress jsonl
+   ./bin/circuit-next run build --goal 'ship the requested fix' --autonomous --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
@@ -68,15 +68,10 @@ metacharacters:
    is the repo-local launcher for the compiled Circuit runtime; when the
    compiled CLI is absent in a fresh checkout, it builds `dist/` with the
    local TypeScript compiler before invoking `dist/cli/circuit.js`.
-2. **Only add `--entry-mode` when the operator explicitly asks for a Build
-   mode.** Map Lite Build to `--entry-mode lite`, Deep Build to
-   `--entry-mode deep`, and Autonomous Build to `--entry-mode autonomous`.
-   Omit `--entry-mode` for normal Build.
-3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
-   an explicit depth level instead of a Build mode, pass it with `--depth`.
-   Do not combine mismatched aliases; `--entry-mode deep` already implies deep
-   depth.
-4. **Render progress while the run is active.** `--progress jsonl` writes
+2. **Only add axis flags when the operator explicitly asks for them.** Map
+   Lite Build to `--rigor lite`, Deep Build to `--rigor deep`, and Autonomous
+   Build to `--autonomous`. Omit axis flags for normal Build.
+3. **Render progress while the run is active.** `--progress jsonl` writes
    progress events to stderr and keeps the final result JSON on stdout.
    Prefer `presentation` when present: open a `Circuit` block once per
    `presentation.block_id`, render visible status lines as

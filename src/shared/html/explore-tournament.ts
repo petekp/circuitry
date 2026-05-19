@@ -14,7 +14,7 @@ import {
 } from '../../flows/explore/reports.js';
 import { type Intent, card, chip, verdictBanner } from './components.js';
 import { MAX_BULLET_LEN, MAX_PROMPT_LEN, escapeHtml, renderPage, truncate } from './page.js';
-import type { HtmlProjector, JsonObject } from './projector.js';
+import type { HtmlAutoResolution, HtmlProjector, JsonObject } from './projector.js';
 
 function stringField(report: JsonObject | undefined, key: string): string | undefined {
   const value = report?.[key];
@@ -138,6 +138,42 @@ function renderTournamentDetails(
   return sections.join('\n      ');
 }
 
+function formatScore(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'n/a';
+  return value.toFixed(3).replace(/\.?0+$/, '');
+}
+
+function formatSignedScore(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'n/a';
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${formatScore(value)}`;
+}
+
+function autoResolutionLine(record: HtmlAutoResolution): string {
+  const label = record.checkpoint_label ?? record.checkpoint_id;
+  if (record.policy === 'highest-score') {
+    const vetoText =
+      record.runtime_veto_effect === undefined || record.runtime_veto_effect === 'none'
+        ? 'no runtime vetoes'
+        : record.runtime_veto_effect;
+    return `${label}: ${record.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record.winning_score)}; margin ${formatSignedScore(record.margin)} over runner-up; ${vetoText}).`;
+  }
+  return `${label}: ${record.resolved_value} selected by policy ${record.policy}.`;
+}
+
+function renderAutoResolutions(records: readonly HtmlAutoResolution[] | undefined): string {
+  if (records === undefined || records.length === 0) return '';
+  const items = records
+    .map((record) => `<li>${escapeHtml(autoResolutionLine(record))}</li>`)
+    .join('');
+  return `
+  <section>
+    <h2>Auto-resolutions</h2>
+    <ul>${items}</ul>
+  </section>
+`;
+}
+
 type ExploreHtmlPayload = {
   readonly decisionOptions: ExploreDecisionOptions;
   readonly tournamentReview: ExploreTournamentReviewType;
@@ -192,12 +228,15 @@ export const exploreTournamentProjector: HtmlProjector = (ctx) => {
 
   const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision);
   const detailsBody = renderTournamentDetails(tournamentReview, decision);
+  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
 
   const bodyHtml = `${banner}
 
   <div class="grid">
 ${cards}
   </div>
+
+${autoResolutions}
 
   <details>
     <summary>Tournament reasoning &middot; why this recommendation?</summary>

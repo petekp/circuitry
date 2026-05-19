@@ -97,28 +97,17 @@ export const buildFlowData = {
       },
       intent_prefixes: ['build', 'implement', 'develop'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        depth: 'standard',
-        description: 'Default Build entry mode.',
+    axes: {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: false,
+      supports_autonomous: true,
+      default: {
+        rigor: 'standard',
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false,
       },
-      {
-        name: 'lite',
-        depth: 'lite',
-        description: 'Lite Build entry mode.',
-      },
-      {
-        name: 'deep',
-        depth: 'deep',
-        description: 'Deep Build entry mode.',
-      },
-      {
-        name: 'autonomous',
-        depth: 'autonomous',
-        description: 'Autonomous Build entry mode.',
-      },
-    ],
+    },
     stage_path_policy: {
       mode: 'partial',
       omits: ['analyze'],

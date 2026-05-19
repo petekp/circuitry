@@ -6,8 +6,8 @@ Status: implementation plan
 
 Circuit checkpoints should feel like an excellent report asking for a manager's
 judgment, not like an agent handing work back. The operator should see the
-artifact, the recommendation, the proof, the risk, and the few choices that
-actually change the outcome.
+report preview, the recommendation, the proof, the risk, and the few choices
+that actually change the outcome.
 
 The working metaphor is "manager and star employees":
 
@@ -53,7 +53,7 @@ resume-time validator, and existing checkpoint runtime coverage.
   `waiting_checkpoint` when the run should pause, and writes the response plus
   `checkpoint.resolved` on selection. See
   `src/runtime/executors/checkpoint.ts:90-220`.
-- Resume validates the waiting checkpoint request and dispatches typed report
+- Resume validates the waiting checkpoint request and runs typed report
   validation through the checkpoint writer registry. See
   `src/runtime/run/checkpoint-resume.ts:188-227`.
 - Checkpoint policy is strict: `prompt`, `choices`, safe choices, and optional
@@ -99,7 +99,7 @@ resume-time validator, and existing checkpoint runtime coverage.
   the repo still names cross-run query/recall and agent-side consumption as
   gaps. See `docs/positioning-and-strategy.md:158-168`.
 - Fix has the clearest proof-carrying precedent for refusing false completion:
-  false-done cases are caught by runtime-owned proof artifacts, regression
+  false-done cases are caught by runtime-owned proof evidence, regression
   proof, change-set proof, and regression rerun proof. See
   `evals/false-done-fix/README.md:5-31`,
   `src/flows/fix/reports.ts:315-333`, and
@@ -109,7 +109,7 @@ resume-time validator, and existing checkpoint runtime coverage.
 
 - Build's checkpoint brief is structurally valid but not yet a rich decision
   packet. It lacks explicit recommendation, salience, risk, proof capsule,
-  artifact preview, and "what stays internal" fields.
+  report preview, and "what stays internal" fields.
 - Waiting checkpoints can technically carry an HTML path through the CLI, but no
   Build checkpoint HTML projector exists.
 - The generic HTML projector context cannot yet distinguish "waiting checkpoint"
@@ -133,8 +133,8 @@ resume-time validator, and existing checkpoint runtime coverage.
    formatting, or obvious verification is required, the plan should do it before
    checkpointing.
 4. Choices must map to executable flow routes. No decorative buttons.
-5. Evidence is layered: top layer is artifact, recommendation, proof, risk, and
-   next action; raw logs and trace files remain linked evidence.
+5. Evidence is layered: top layer is report preview, recommendation, proof,
+   risk, and next action; raw logs and trace files remain linked evidence.
 6. Runtime stays generic. Flow-specific packet content lives in flow schemas,
    writers, and HTML projectors.
 7. Stronger models reduce the number of checkpoints; they do not remove the need
@@ -151,7 +151,8 @@ The packet should include:
 - `salience`: why this deserves the operator's attention now;
 - `decision`: the one judgment being requested;
 - `recommendation`: the agent's recommended choice and rationale;
-- `artifact`: the whole artifact or artifact preview the operator should judge;
+- `artifact`: compatibility field for the report preview the operator should
+  judge;
 - `proof`: verification plan or already-collected proof relevant to the choice;
 - `risk`: the real remaining uncertainty, not routine implementation chores;
 - `choices`: labels and descriptions aligned with executable checkpoint choice
@@ -209,7 +210,7 @@ Implement:
 - add a Build checkpoint projector under `src/shared/html/`;
 - register `build` in `HTML_PROJECTORS`;
 - render only when `runOutcome === "checkpoint_waiting"` and the packet parses;
-- make the first viewport artifact-first and recommendation-first;
+- make the first viewport report-first and recommendation-first;
 - keep risk, proof, exact resume command, and evidence links visible but quiet;
 - escape HTML and strip deceptive control characters using the existing HTML
   component/sanitization patterns.
@@ -360,7 +361,7 @@ only when produced by that pipeline.
 The first shippable prototype is done when:
 
 - a deep Build run pauses with `outcome: "checkpoint_waiting"`;
-- the run writes a typed `build.brief@v1` packet with recommendation, artifact,
+- the run writes a typed `build.brief@v1` packet with recommendation, report preview,
   proof, risk, salience, and executable choices;
 - `reports/operator-summary.html` renders the packet;
 - the CLI returns `operator_summary_html_path`;

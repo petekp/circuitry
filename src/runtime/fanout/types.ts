@@ -1,7 +1,11 @@
 import type { RunClosedOutcome } from '../domain/run.js';
 export { NO_VERDICT_SENTINEL } from '../../shared/relay-support.js';
 
-export type FanoutJoinPolicy = 'pick-winner' | 'disjoint-merge' | 'aggregate-only';
+export type FanoutJoinPolicy =
+  | 'pick-winner'
+  | 'disjoint-merge'
+  | 'aggregate-only'
+  | 'aggregate-survivors';
 
 export interface ResolvedSubRunBranch {
   readonly kind: 'sub-run';

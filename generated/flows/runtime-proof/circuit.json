@@ -10,14 +10,18 @@
     },
     "intent_prefixes": ["runtime-proof"]
   },
-  "entry_modes": [
-    {
-      "name": "runtime-proof",
-      "start_at": "compose-step",
-      "depth": "standard",
-      "description": "Default runtime-proof entry mode; seeds the run at the compose step."
+  "axes": {
+    "allowed_rigors": ["standard"],
+    "supports_tournament": false,
+    "supports_autonomous": false,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
     }
-  ],
+  },
+  "starts_at": "compose-step",
   "stages": [
     {
       "id": "plan-stage",

@@ -126,7 +126,7 @@ describe('Build runtime wiring', () => {
     expect(frame?.kind).toBe('checkpoint');
     if (frame?.kind !== 'checkpoint') throw new Error('frame-step is not a checkpoint');
 
-    expect(frame.policy.choices.map((choice) => choice.id)).toEqual(['continue']);
+    expect(frame.policy.choices?.map((choice) => choice.id)).toEqual(['continue']);
     expect(frame.check.allow).toEqual(['continue']);
   });
 
@@ -278,7 +278,7 @@ describe('Build runtime wiring', () => {
 
     expect(outcome.outcome).toBe('aborted');
     expect(outcome.reason).toMatch(/connector declared verdict 'reject'/);
-    // The verdict gate fails ('reject' is not in build-review.pass), but
+    // The verdict check fails ('reject' is not in build-review.pass), but
     // the body parses against build.review@v1, so the schema-tied report
     // is still materialized for the operator-summary projector.
     expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(true);
@@ -348,26 +348,18 @@ describe('Build runtime wiring', () => {
     expect(result.review_verdict).toBe('accept-with-fixes');
   });
 
-  it('declares default, lite, deep, and autonomous entry modes, and lite reaches Review by the pass route', () => {
+  it('declares Build axes and reaches Review by the pass route', () => {
     const { flow } = loadFixture();
-    expect(flow.entry_modes.map((mode) => mode.name)).toEqual([
-      'default',
-      'lite',
-      'deep',
-      'autonomous',
-    ]);
-    expect(flow.entry_modes.map((mode) => mode.depth)).toEqual([
-      'standard',
-      'lite',
-      'deep',
-      'autonomous',
-    ]);
+    expect(flow.axes).toMatchObject({
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: false,
+      supports_autonomous: true,
+    });
+    expect(flow.starts_at).toBe('frame-step');
 
-    const lite = flow.entry_modes.find((mode) => mode.name === 'lite');
-    if (lite === undefined) throw new Error('expected lite entry mode');
     const stepsById = new Map(flow.steps.map((step) => [step.id as unknown as string, step]));
     const visited: string[] = [];
-    let current: string | undefined = lite.start_at as unknown as string;
+    let current: string | undefined = flow.starts_at as unknown as string;
     while (current !== undefined && !current.startsWith('@')) {
       visited.push(current);
       current = stepsById.get(current)?.routes.pass;
@@ -382,9 +374,9 @@ describe('Build runtime wiring', () => {
     ]);
   });
 
-  it('uses the selected lite entry mode as the run depth when no explicit depth is supplied', async () => {
+  it('uses the selected lite axis as the run depth when no explicit depth is supplied', async () => {
     const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'lite-entry-mode');
+    const runFolder = join(runFolderBase, 'lite-axis-selection');
     const relayInputs: ClaudeCodeRelayInput[] = [];
     const relayer = relayerWith();
 
@@ -422,9 +414,9 @@ describe('Build runtime wiring', () => {
     expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
   });
 
-  it('uses deep entry mode to pause at the operator checkpoint when no explicit depth is supplied', async () => {
+  it('uses deep axis selection to pause at the operator checkpoint when no explicit depth is supplied', async () => {
     const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'deep-entry-mode');
+    const runFolder = join(runFolderBase, 'deep-axis-selection');
 
     const outcome = await runCompiledFlowWithWaiting({
       runDir: runFolder,
@@ -445,9 +437,9 @@ describe('Build runtime wiring', () => {
     expect(existsSync(join(runFolder, 'reports/result.json'))).toBe(false);
   });
 
-  it('lets an explicit depth override the selected entry mode default', async () => {
+  it('lets an explicit depth override the selected axis default', async () => {
     const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'entry-mode-depth-override');
+    const runFolder = join(runFolderBase, 'axis-depth-override');
     const relayInputs: ClaudeCodeRelayInput[] = [];
     const relayer = relayerWith();
 
@@ -476,7 +468,7 @@ describe('Build runtime wiring', () => {
     expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'standard' });
   });
 
-  it('uses explicit autonomous depth over the default entry mode for checkpoint policy', async () => {
+  it('uses explicit autonomous depth over the default axis for checkpoint policy', async () => {
     const { bytes } = loadFixture();
     const runFolder = join(runFolderBase, 'default-entry-autonomous-override');
     const relayInputs: ClaudeCodeRelayInput[] = [];
@@ -516,9 +508,9 @@ describe('Build runtime wiring', () => {
     expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'autonomous' });
   });
 
-  it('uses autonomous entry mode to take the declared safe autonomous checkpoint choice', async () => {
+  it('uses autonomous axis selection to take the declared safe autonomous checkpoint choice', async () => {
     const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'autonomous-entry-mode');
+    const runFolder = join(runFolderBase, 'autonomous-axis-selection');
 
     const outcome = await runCompiledFlow({
       runDir: runFolder,
@@ -544,24 +536,5 @@ describe('Build runtime wiring', () => {
       selection: 'continue',
       resolution_source: 'safe-autonomous',
     });
-  });
-
-  it('rejects an unknown entry mode before bootstrapping a run folder', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'unknown-entry-mode');
-
-    await expect(
-      runCompiledFlow({
-        runDir: runFolder,
-        flowBytes: bytes,
-        runId: 'b2000000-0000-0000-0000-000000000008',
-        goal: 'Try a missing entry mode',
-        entryModeName: 'missing',
-        now: deterministicNow(Date.UTC(2026, 3, 25, 9, 20, 0)),
-        relayer: relayerWith(),
-        projectRoot: makeVerificationProjectRoot(),
-      }),
-    ).rejects.toThrow(/entry mode named 'missing'/);
-    expect(existsSync(runFolder)).toBe(false);
   });
 });

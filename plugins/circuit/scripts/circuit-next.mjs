@@ -507,7 +507,7 @@ function runDoctor() {
           'build',
           '--goal',
           'develop: add a focused feature that waits for framing',
-          '--entry-mode',
+          '--rigor',
           'deep',
           '--flow-root',
           packagedFlowRoot,

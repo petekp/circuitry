@@ -41,6 +41,7 @@ export interface BlockStepUse
   readonly checkpointResponsePath?: StepWritesInput['checkpoint_response_path'];
   readonly required?: StepCheckInput['required'];
   readonly allow?: StepCheckInput['allow'];
+  readonly allowFrom?: StepCheckInput['allow_from'];
   readonly pass?: StepCheckInput['pass'];
   readonly routeOverrides?: SchematicStepInput['route_overrides'];
   readonly checkpointPolicy?: SchematicStepInput['checkpoint_policy'];
@@ -286,7 +287,8 @@ function resolveCheck(
     return use.required === undefined ? undefined : { required: use.required };
   }
   if (executionKind === 'checkpoint') {
-    return use.allow === undefined ? undefined : { allow: use.allow };
+    if (use.allow !== undefined) return { allow: use.allow };
+    return use.allowFrom === undefined ? undefined : { allow_from: use.allowFrom };
   }
   return use.pass === undefined ? undefined : { pass: use.pass };
 }
@@ -314,6 +316,7 @@ function schematicStepInputFromBlockUse(input: {
     checkpointResponsePath: _checkpointResponsePath,
     required: _required,
     allow: _allow,
+    allowFrom: _allowFrom,
     pass: _pass,
     writes: _writes,
     check: _check,

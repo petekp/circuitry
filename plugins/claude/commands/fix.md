@@ -44,19 +44,19 @@ metacharacters:
    Lite Fix (skips review, closes after verification):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --entry-mode lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --rigor lite
    ```
 
    Deep Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the failing pipeline' --entry-mode deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the failing pipeline' --rigor deep
    ```
 
    Autonomous Fix:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'diagnose and patch the crash' --entry-mode autonomous
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'diagnose and patch the crash' --autonomous
    ```
 
    Example for a task `can't reproduce` (contains one apostrophe):
@@ -68,18 +68,14 @@ metacharacters:
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Claude Code plugin directory, injects the
    plugin's packaged flow root, and launches Circuit's bundled runtime.
-2. **Only add `--entry-mode` when the operator explicitly asks for a Fix
-   mode.** Map Lite Fix to `--entry-mode lite`, Deep Fix to
-   `--entry-mode deep`, and Autonomous Fix to `--entry-mode autonomous`.
-   Omit `--entry-mode` for default Fix.
-3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
-   an explicit depth level, pass it with `--depth`. A single command may carry
-   both flags.
-4. **Per-mode flow files.** When `--entry-mode lite` is supplied, the CLI
+2. **Only add axis flags when the operator explicitly asks for them.** Map
+   Lite Fix to `--rigor lite`, Deep Fix to `--rigor deep`, and Autonomous Fix
+   to `--autonomous`. Omit axis flags for default Fix.
+3. **Per-mode flow files.** When `--rigor lite` is supplied, the CLI
    prefers `generated/flows/fix/lite.json` over `circuit.json` because
    the Fix schematic emits a Lite-only compiled flow that skips the review
    relay. Other modes (default/deep/autonomous) load `circuit.json`.
-5. **Let the presentation wrapper render output.** `present` streams
+4. **Let the presentation wrapper render output.** `present` streams
    Circuit status blocks, renders checkpoint questions, and prints the
    final Circuit summary without exposing raw JSON. Do not parse raw JSON
    or JSONL after Bash.

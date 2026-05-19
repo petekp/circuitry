@@ -1,25 +1,23 @@
 // Pure compiler: FlowSchematic → CompiledFlow(s). Takes a fully-populated schematic
-// (schematic-level entry/entry_modes/stage_path_policy/stages/version present;
+// (schematic-level entry/axes/stage_path_policy/stages/version present;
 // per-item protocol/writes/check present) and produces compiled CompiledFlow
 // objects shaped like the existing committed `generated/flows/<id>/`
 // fixtures.
 //
-// Compile is per entry mode: routes are resolved against
+// Compile is per derived axis selection: routes are resolved against
 // `route_overrides[outcome][mode.depth]` when the schematic declares one;
 // reachability is computed against that resolved graph and unreachable
-// items are dropped per mode. The result is a discriminated union:
+// items are dropped per axis selection. The result is a discriminated union:
 //
 //   - `kind: 'single'`  when the schematic declares no route_overrides anywhere.
-//                       All entry modes share the same compiled graph; the
-//                       returned CompiledFlow's entry_modes is the full schematic
-//                       list. Build-time emit writes one `circuit.json`.
+//                       All axis selections share the same compiled graph.
+//                       Build-time emit writes one `circuit.json`.
 //
 //   - `kind: 'per-mode'` when at least one item declares route_overrides.
-//                        Returns one CompiledFlow per entry mode, each with
-//                        `entry_modes: [<this mode>]`. Build-time emit
-//                        groups by graph identity, writes the largest
-//                        group to `circuit.json` (with entry_modes merged)
-//                        and remaining modes to `<mode-name>.json`.
+//                        Returns one CompiledFlow per axis selection.
+//                        Build-time emit groups by graph identity, writes
+//                        the largest group to `circuit.json`, and writes
+//                        remaining modes to `<mode-name>.json`.
 //
 // Failure modes are deliberate: if any compile-required field is missing,
 // or any `kind ↔ report schema` pair is one the runner does not support,
@@ -29,7 +27,7 @@ import type { CompiledFlow as CompiledFlowValue } from '../schemas/compiled-flow
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import type { FlowContractRef } from '../schemas/flow-blocks.js';
 import type {
-  FlowEntryMode,
+  FlowAxisSelection,
   FlowSchematic,
   SchematicStep,
   StepWrites,
@@ -42,6 +40,7 @@ import {
 import type { CanonicalStage } from '../schemas/stage.js';
 import { CANONICAL_STAGES } from '../schemas/stage.js';
 import type { Step } from '../schemas/step.js';
+import { axisSelectionsForAxes } from './axis-selections.js';
 import { findCheckpointBriefBuilder } from './registries/checkpoint-writers/registry.js';
 import { findVerificationWriter } from './registries/verification-writers/registry.js';
 
@@ -96,14 +95,13 @@ function requireItemField<T>(value: T | undefined, fieldName: string, itemId: st
 }
 
 // Resolve a single schematic-side route outcome to its target after applying
-// any mode-specific override. The override map is keyed by Depth; we look
-// it up using `mode.depth`, not `mode.name` (the schema declares it that
-// way so authors can express "lite-depth variants of this flow skip
-// review" without naming individual entry modes).
+// any depth-specific override. The override map is keyed by Depth so authors
+// can express "lite-depth variants of this flow skip review" without naming
+// individual axis selections.
 function resolveRouteTarget(
   item: SchematicStep,
   outcome: string,
-  mode: FlowEntryMode,
+  mode: FlowAxisSelection,
 ): string | undefined {
   const overrides = item.route_overrides[outcome];
   const overridden = overrides?.[mode.depth];
@@ -116,7 +114,7 @@ function resolveRouteTarget(
 // labels stay in the compiled flow, so steps reachable only through ask,
 // handoff, retry, or revise are real runtime targets instead of hidden
 // authoring notes.
-function computeReachableForMode(schematic: FlowSchematic, mode: FlowEntryMode): Set<string> {
+function computeReachableForMode(schematic: FlowSchematic, mode: FlowAxisSelection): Set<string> {
   const itemById = new Map(schematic.items.map((item) => [item.id as unknown as string, item]));
   const reachable = new Set<string>();
   const queue: string[] = [schematic.starts_at as unknown as string];
@@ -205,7 +203,10 @@ function computeReads(
 // on `pass`. The original schematic labels are preserved too, so checkpoint
 // selections and rich route outcomes can execute without a second
 // hand-maintained graph.
-function compileRoutesForMode(item: SchematicStep, mode: FlowEntryMode): Record<string, string> {
+function compileRoutesForMode(
+  item: SchematicStep,
+  mode: FlowAxisSelection,
+): Record<string, string> {
   const routes: Record<string, string> = {};
   let passSet = false;
   for (const outcome of Object.keys(item.routes)) {
@@ -321,7 +322,16 @@ function compileItem(
         check: {
           kind: 'checkpoint_selection',
           source: { kind: 'checkpoint_response', ref: 'response' },
-          allow: requireCheckField(check.allow, 'allow', item.id, 'checkpoint'),
+          ...(check.allow === undefined
+            ? {
+                allow_from: requireCheckField(
+                  check.allow_from,
+                  'allow_from',
+                  item.id,
+                  'checkpoint',
+                ),
+              }
+            : { allow: check.allow }),
         },
       } as Step;
     }
@@ -411,6 +421,7 @@ function compileItem(
         ...(fanout.on_child_failure === undefined
           ? {}
           : { on_child_failure: fanout.on_child_failure }),
+        ...(fanout.rubric === undefined ? {} : { rubric: fanout.rubric }),
         writes: {
           branches_dir: branchesDir,
           aggregate: { path: reportPath, schema: item.output },
@@ -441,37 +452,16 @@ function requireWritesField(
   return value;
 }
 
-function requireCheckField(
-  value: readonly string[] | undefined,
-  field: 'required' | 'allow' | 'pass',
+function requireCheckField<T>(
+  value: T | undefined,
+  field: 'required' | 'allow' | 'allow_from' | 'pass',
   itemId: string,
   kind: string,
-): string[] {
+): T {
   if (value === undefined) {
     fail(`schematic item '${itemId}' (${kind}) is missing check.${field}`);
   }
-  return [...value];
-}
-
-function compileEntryMode(
-  mode: FlowEntryMode,
-  startsAt: string,
-): {
-  name: string;
-  start_at: string;
-  depth: string;
-  description: string;
-  default_change_kind?: string;
-} {
-  return {
-    name: mode.name,
-    start_at: startsAt,
-    depth: mode.depth,
-    description: mode.description,
-    ...(mode.default_change_kind !== undefined
-      ? { default_change_kind: mode.default_change_kind }
-      : {}),
-  };
+  return value;
 }
 
 function schematicHasOverrides(schematic: FlowSchematic): boolean {
@@ -486,6 +476,7 @@ interface SchematicFrame {
     signals: { include: readonly string[]; exclude: readonly string[] };
     intent_prefixes: readonly string[];
   };
+  axes: NonNullable<FlowSchematic['axes']>;
   startsAt: string;
   initialContracts: Set<FlowContractRef>;
   stageEntries: readonly { canonical: CanonicalStage; id: string; title: string }[];
@@ -515,6 +506,7 @@ function frameSchematic(schematic: FlowSchematic): SchematicFrame {
       },
       intent_prefixes: entry.intent_prefixes,
     },
+    axes: requireSchematicField(schematic.axes, 'axes', schematicId),
     startsAt: schematic.starts_at as unknown as string,
     initialContracts: new Set(schematic.initial_contracts),
     stageEntries: stageEntries.map((p) => ({
@@ -528,15 +520,15 @@ function frameSchematic(schematic: FlowSchematic): SchematicFrame {
   };
 }
 
-// Compile the schematic for a single entry mode. Reachability + overrides are
-// applied; unreachable items are dropped, empty stages are filtered, and
+// Compile the schematic for a single derived axis selection. Reachability +
+// overrides are applied; unreachable items are dropped, empty stages are filtered, and
 // stage_path_policy.omits is widened to include any canonical that ends up
 // empty in this mode (so the CompiledFlow validator's stage path completeness rule
 // stays satisfied).
 function compileForMode(
   schematic: FlowSchematic,
   frame: SchematicFrame,
-  mode: FlowEntryMode,
+  mode: FlowAxisSelection,
 ): CompiledFlowValue {
   const reachable = computeReachableForMode(schematic, mode);
   const reachableItems = schematic.items.filter((item) =>
@@ -601,8 +593,6 @@ function compileForMode(
           rationale: composeStagePathRationale(frame.stagePathRationale, autoOmits, mode),
         };
 
-  const compiledEntryMode = compileEntryMode(mode, frame.startsAt);
-
   const flow: unknown = {
     schema_version: '2',
     id: schematic.id,
@@ -615,7 +605,8 @@ function compileForMode(
       },
       intent_prefixes: frame.entry.intent_prefixes,
     },
-    entry_modes: [compiledEntryMode],
+    axes: frame.axes,
+    starts_at: frame.startsAt,
     stages,
     stage_path_policy: stagePathPolicy,
     steps,
@@ -634,7 +625,7 @@ function compileForMode(
 function composeStagePathRationale(
   declared: string | undefined,
   autoOmits: readonly CanonicalStage[],
-  mode: FlowEntryMode,
+  mode: FlowAxisSelection,
 ): string {
   if (autoOmits.length === 0) {
     return declared ?? '';
@@ -647,32 +638,20 @@ function composeStagePathRationale(
 
 export function compileSchematicToCompiledFlow(schematic: FlowSchematic): CompileResult {
   const frame = frameSchematic(schematic);
-  const entryModes = requireSchematicField(schematic.entry_modes, 'entry_modes', frame.schematicId);
+  const axisSelections = axisSelectionsForAxes(frame.schematicId, frame.axes);
 
   if (!schematicHasOverrides(schematic)) {
-    // No mode-specific topology. Compile one graph and attach every entry mode
-    // to it; only route_overrides that change reachability need per-mode JSON
-    // siblings for the CLI loader.
-    const firstMode = entryModes[0];
+    // No mode-specific topology. Compile one graph; only route_overrides that
+    // change reachability need per-mode JSON siblings for the CLI loader.
+    const firstMode = axisSelections[0];
     if (firstMode === undefined) {
-      fail(`schematic '${frame.schematicId}' has empty entry_modes`);
+      fail(`schematic '${frame.schematicId}' has no derived axis selections`);
     }
-    const single = compileForMode(schematic, frame, firstMode);
-    const expanded = {
-      ...single,
-      entry_modes: entryModes.map((mode) => compileEntryMode(mode, frame.startsAt)),
-    };
-    const reparsed = CompiledFlow.safeParse(expanded);
-    if (!reparsed.success) {
-      fail(
-        `schematic '${frame.schematicId}' failed to re-parse after entry_modes expansion: ${reparsed.error.message}`,
-      );
-    }
-    return { kind: 'single', flow: reparsed.data };
+    return { kind: 'single', flow: compileForMode(schematic, frame, firstMode) };
   }
 
   const flows = new Map<string, CompiledFlowValue>();
-  for (const mode of entryModes) {
+  for (const mode of axisSelections) {
     flows.set(mode.name, compileForMode(schematic, frame, mode));
   }
   return { kind: 'per-mode', flows };

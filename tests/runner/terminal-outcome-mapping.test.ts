@@ -52,14 +52,12 @@ function terminalCompiledFlow(route: TerminalRoute): { bytes: Buffer } {
       signals: { include: ['terminal-outcome'], exclude: [] },
       intent_prefixes: ['terminal-outcome'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'terminal-step',
-        depth: 'standard',
-        description: 'Start at the only step so the pass route reaches a terminal immediately.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'terminal-step',
     stages: [
       {
         id: 'plan-stage',
@@ -138,14 +136,12 @@ function richCheckpointRouteCompiledFlow(route: RichRoute): { bytes: Buffer } {
       signals: { include: ['rich-route'], exclude: [] },
       intent_prefixes: ['rich-route'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'checkpoint-step',
-        depth: 'standard',
-        description: 'Auto-select one rich checkpoint route.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'checkpoint-step',
     stages: [
       {
         id: 'plan-stage',
@@ -216,14 +212,12 @@ function retryLoopCompiledFlow(): { bytes: Buffer } {
       signals: { include: ['retry-loop'], exclude: [] },
       intent_prefixes: ['retry-loop'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'checkpoint-step',
-        depth: 'standard',
-        description: 'Auto-select retry until the route budget is exhausted.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'checkpoint-step',
     stages: [
       {
         id: 'plan-stage',
@@ -279,14 +273,12 @@ function relayFailureRecoveryCompiledFlow(): { bytes: Buffer } {
       signals: { include: ['relay-recovery'], exclude: [] },
       intent_prefixes: ['relay-recovery'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'relay-step',
-        depth: 'standard',
-        description: 'Recover from a rejected relay verdict through retry route.',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'relay-step',
     stages: [
       {
         id: 'act-stage',

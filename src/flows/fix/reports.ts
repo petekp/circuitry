@@ -313,7 +313,7 @@ export const FixVerification = z
 export type FixVerification = z.infer<typeof FixVerification>;
 
 // Runtime-owned regression proof. The brief's regression contract states the
-// model's *intent* — what test should reproduce the bug. This artifact records
+// model's *intent* — what test should reproduce the bug. This report records
 // what the runtime actually observed when it executed that test before the fix
 // was applied:
 //   - 'proved'     — runtime ran the regression command and observed it fail
@@ -457,7 +457,7 @@ export const FixHiddenIndexFlag = z
 export type FixHiddenIndexFlag = z.infer<typeof FixHiddenIndexFlag>;
 
 // Runtime-owned pre-fix-act snapshot of git state. Captured immediately before
-// the implementer touches the working tree, this artifact is the baseline that
+// the implementer touches the working tree, this report is the baseline that
 // the post-verify change-set step diffs against. The change-set step compares
 // the entries it observes after the fix against this snapshot's entries:
 //   - paths in the post snapshot but not in baseline = newly-dirty paths
@@ -468,7 +468,7 @@ export type FixHiddenIndexFlag = z.infer<typeof FixHiddenIndexFlag>;
 // which the change-set then compares against `fix.change@v1` `changed_files`.
 //
 // overall_status is always 'passed' — the snapshot exists to record state,
-// not to gate routing. Failures abort via the runner's normal error path.
+// not to block routing. Failures abort via the runner's normal error path.
 export const FixBaselineSnapshot = z
   .object({
     overall_status: z.literal('passed'),
@@ -709,7 +709,7 @@ export type FixReviewFinding = z.infer<typeof FixReviewFinding>;
 // on `findings` becomes a structural JSON-Schema constraint rather than a
 // superRefine (which `zod-to-json-schema` silently drops). With this shape,
 // the CLI's `--json-schema` / `--output-schema` boundary rejects
-// {verdict: 'reject'|'accept-with-fixes', findings: []} at the same gate
+// {verdict: 'reject'|'accept-with-fixes', findings: []} at the same boundary
 // where Zod would reject it.
 export const FixReview = z.discriminatedUnion('verdict', [
   z

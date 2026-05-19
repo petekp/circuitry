@@ -24,12 +24,11 @@ describe('compileSchematicToCompiledFlow — per-mode emission', () => {
     const result = compileSchematicToCompiledFlow(schematic);
     expect(result.kind).toBe('single');
     if (result.kind !== 'single') return;
-    expect(result.flow.entry_modes.map((m) => m.name)).toEqual([
-      'default',
-      'lite',
-      'deep',
-      'autonomous',
-    ]);
+    expect(result.flow.axes).toMatchObject({
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_autonomous: true,
+    });
+    expect(result.flow.starts_at).toBe('frame-step');
   });
 
   it('returns kind:per-mode when an item declares route_overrides; lite mode drops unreachable items', () => {
@@ -64,9 +63,8 @@ describe('compileSchematicToCompiledFlow — per-mode emission', () => {
     expect(liteReview?.routes.pass).toBe('@complete');
     expect(defReview?.routes.pass).toBe('close-step');
 
-    // Each per-mode compiled flow lists only that mode in entry_modes.
-    expect(lite.entry_modes.map((m) => m.name)).toEqual(['lite']);
-    expect(def.entry_modes.map((m) => m.name)).toEqual(['default']);
+    expect(lite.starts_at).toBe('frame-step');
+    expect(def.starts_at).toBe('frame-step');
   });
 
   it('auto-omits canonicals that have no reachable items in a given mode', () => {

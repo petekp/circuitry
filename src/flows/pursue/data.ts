@@ -107,18 +107,17 @@ export const pursueFlowData = {
       },
       intent_prefixes: ['pursue'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        depth: 'standard',
-        description: 'Default Pursue entry mode.',
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: true,
+      default: {
+        rigor: 'standard',
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false,
       },
-      {
-        name: 'autonomous',
-        depth: 'autonomous',
-        description: 'Autonomous Pursue entry mode with the same serial-write safety policy.',
-      },
-    ],
+    },
     stage_path_policy: PURSUE_STAGE_POLICY.stagePathPolicy,
     stages: [
       {

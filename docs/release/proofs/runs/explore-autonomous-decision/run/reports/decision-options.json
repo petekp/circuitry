@@ -1,0 +1,32 @@
+{
+  "decision_question": "Which path should Circuit recommend for: decide: React vs Vue?",
+  "options": [
+    {
+      "id": "option-1",
+      "label": "React",
+      "summary": "Choose React as the best-supported path for decide: React vs Vue.",
+      "best_case_prompt": "Make the strongest case for choosing React on decide: React vs Vue.",
+      "evidence_refs": [
+        "reports/brief.json"
+      ],
+      "tradeoffs": [
+        "Can move the decision forward now",
+        "May miss strengths from another option"
+      ]
+    },
+    {
+      "id": "option-2",
+      "label": "Vue",
+      "summary": "Choose Vue as the best-supported path for decide: React vs Vue.",
+      "best_case_prompt": "Make the strongest case for choosing Vue on decide: React vs Vue.",
+      "evidence_refs": [
+        "reports/brief.json"
+      ],
+      "tradeoffs": [
+        "Can move the decision forward now",
+        "May miss strengths from another option"
+      ]
+    }
+  ],
+  "recommendation_basis": "Compare the named options and bounded fallback choices against the available evidence."
+}

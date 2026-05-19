@@ -489,7 +489,7 @@ describe('release truth infrastructure', () => {
       ExploreDecisionOptions.parse(
         jsonFile('docs/release/proofs/runs/explore-decision/run/reports/decision-options.json'),
       ).options.map((option) => option.label),
-    ).toEqual(['React', 'Vue', 'Hybrid path', 'Defer pending evidence']);
+    ).toEqual(['React', 'Vue', 'Hybrid path']);
     const aggregate = ExploreTournamentAggregate.parse(
       jsonFile('docs/release/proofs/runs/explore-decision/run/reports/tournament-aggregate.json'),
     );

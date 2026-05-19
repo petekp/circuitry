@@ -81,14 +81,17 @@ export const reviewFlowData = {
       },
       intent_prefixes: ['review'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        depth: 'standard',
-        description:
-          'Default review entry mode — resolves the review scope, relays an independent audit, then writes the verdict report.',
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+      default: {
+        rigor: 'standard',
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false,
       },
-    ],
+    },
     stage_path_policy: {
       mode: 'partial',
       omits: ['plan', 'act', 'verify', 'review'],

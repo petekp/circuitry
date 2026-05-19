@@ -22,7 +22,17 @@
           "risk-hunt request"
         ]
       },
-      "entry_modes": ["default"],
+      "axis_support": {
+        "allowed_rigors": ["standard"],
+        "supports_tournament": false,
+        "supports_autonomous": false,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
       "stages": ["Intake", "Independent Audit", "Verdict"],
       "reports": ["review.intake@v1", "review.result@v1"],
       "writers": {
@@ -45,7 +55,17 @@
         "order": 20,
         "signal_labels": ["fix prefix", "fix request", "quick fix prefix", "trailing fix request"]
       },
-      "entry_modes": ["autonomous", "deep", "default", "lite"],
+      "axis_support": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
       "stages": ["Frame", "Analyze", "Fix", "Verify", "Review", "Close"],
       "reports": [
         "continuity.record@v1",
@@ -89,7 +109,17 @@
         "order": 25,
         "signal_labels": ["multiple autonomous goals", "pursue prefix", "pursuit request"]
       },
-      "entry_modes": ["autonomous", "default"],
+      "axis_support": {
+        "allowed_rigors": ["standard"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
       "stages": ["Frame", "Coordinate", "Execute", "Verify", "Review", "Close"],
       "reports": [
         "pursuit.batch@v1",
@@ -126,7 +156,17 @@
           "test-passing implementation request"
         ]
       },
-      "entry_modes": ["autonomous", "deep", "default", "lite"],
+      "axis_support": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
       "stages": ["Frame", "Plan", "Act", "Verify", "Review", "Close"],
       "reports": [
         "build.brief@v1",
@@ -157,7 +197,18 @@
         "signal_labels": [],
         "default_reason": "no routed flow signal matched; routed to explore as the conservative default"
       },
-      "entry_modes": ["autonomous", "deep", "default", "lite", "tournament"],
+      "axis_support": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": true,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        },
+        "tournament_fan_out_stage": "decision-stage"
+      },
       "stages": ["Frame", "Analyze", "Plan or Decision", "Close"],
       "reports": [
         "explore.analysis@v1",
@@ -736,7 +787,7 @@
       "kind": "mode",
       "title": "build autonomous",
       "status": "implemented",
-      "summary": "build declares entry mode autonomous.",
+      "summary": "build supports the autonomous axis selection.",
       "evidence": ["generated/flows/build"],
       "readiness_refs": [],
       "axes": {
@@ -751,7 +802,7 @@
       "kind": "mode",
       "title": "build deep",
       "status": "implemented",
-      "summary": "build declares entry mode deep.",
+      "summary": "build supports the deep axis selection.",
       "evidence": ["generated/flows/build"],
       "readiness_refs": [],
       "axes": {
@@ -766,7 +817,7 @@
       "kind": "mode",
       "title": "build default",
       "status": "implemented",
-      "summary": "build declares entry mode default.",
+      "summary": "build supports the default axis selection.",
       "evidence": ["generated/flows/build"],
       "readiness_refs": [],
       "axes": {
@@ -781,7 +832,7 @@
       "kind": "mode",
       "title": "build lite",
       "status": "implemented",
-      "summary": "build declares entry mode lite.",
+      "summary": "build supports the lite axis selection.",
       "evidence": ["generated/flows/build"],
       "readiness_refs": [],
       "axes": {
@@ -796,7 +847,7 @@
       "kind": "mode",
       "title": "explore autonomous",
       "status": "implemented",
-      "summary": "explore declares entry mode autonomous.",
+      "summary": "explore supports the autonomous axis selection.",
       "evidence": ["generated/flows/explore"],
       "readiness_refs": [],
       "axes": {
@@ -811,7 +862,7 @@
       "kind": "mode",
       "title": "explore deep",
       "status": "implemented",
-      "summary": "explore declares entry mode deep.",
+      "summary": "explore supports the deep axis selection.",
       "evidence": ["generated/flows/explore"],
       "readiness_refs": [],
       "axes": {
@@ -826,7 +877,7 @@
       "kind": "mode",
       "title": "explore default",
       "status": "implemented",
-      "summary": "explore declares entry mode default.",
+      "summary": "explore supports the default axis selection.",
       "evidence": ["generated/flows/explore"],
       "readiness_refs": [],
       "axes": {
@@ -841,7 +892,7 @@
       "kind": "mode",
       "title": "explore lite",
       "status": "implemented",
-      "summary": "explore declares entry mode lite.",
+      "summary": "explore supports the lite axis selection.",
       "evidence": ["generated/flows/explore"],
       "readiness_refs": [],
       "axes": {
@@ -856,7 +907,7 @@
       "kind": "mode",
       "title": "explore tournament",
       "status": "implemented",
-      "summary": "explore declares entry mode tournament.",
+      "summary": "explore supports the tournament axis selection.",
       "evidence": ["generated/flows/explore"],
       "readiness_refs": [],
       "axes": {
@@ -871,7 +922,7 @@
       "kind": "mode",
       "title": "fix autonomous",
       "status": "implemented",
-      "summary": "fix declares entry mode autonomous.",
+      "summary": "fix supports the autonomous axis selection.",
       "evidence": ["generated/flows/fix"],
       "readiness_refs": [],
       "axes": {
@@ -886,7 +937,7 @@
       "kind": "mode",
       "title": "fix deep",
       "status": "implemented",
-      "summary": "fix declares entry mode deep.",
+      "summary": "fix supports the deep axis selection.",
       "evidence": ["generated/flows/fix"],
       "readiness_refs": [],
       "axes": {
@@ -901,7 +952,7 @@
       "kind": "mode",
       "title": "fix default",
       "status": "implemented",
-      "summary": "fix declares entry mode default.",
+      "summary": "fix supports the default axis selection.",
       "evidence": ["generated/flows/fix"],
       "readiness_refs": [],
       "axes": {
@@ -916,7 +967,7 @@
       "kind": "mode",
       "title": "fix lite",
       "status": "implemented",
-      "summary": "fix declares entry mode lite.",
+      "summary": "fix supports the lite axis selection.",
       "evidence": ["generated/flows/fix"],
       "readiness_refs": [],
       "axes": {
@@ -931,7 +982,7 @@
       "kind": "mode",
       "title": "pursue autonomous",
       "status": "implemented",
-      "summary": "pursue declares entry mode autonomous.",
+      "summary": "pursue supports the autonomous axis selection.",
       "evidence": ["generated/flows/pursue"],
       "readiness_refs": [],
       "axes": {
@@ -946,7 +997,7 @@
       "kind": "mode",
       "title": "pursue default",
       "status": "implemented",
-      "summary": "pursue declares entry mode default.",
+      "summary": "pursue supports the default axis selection.",
       "evidence": ["generated/flows/pursue"],
       "readiness_refs": [],
       "axes": {
@@ -961,7 +1012,7 @@
       "kind": "mode",
       "title": "review default",
       "status": "implemented",
-      "summary": "review declares entry mode default.",
+      "summary": "review supports the default axis selection.",
       "evidence": ["generated/flows/review"],
       "readiness_refs": [],
       "axes": {

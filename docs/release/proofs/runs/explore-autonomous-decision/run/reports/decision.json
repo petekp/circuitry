@@ -1,0 +1,30 @@
+{
+  "verdict": "decided",
+  "decision_question": "Which path should Circuit recommend for: decide: React vs Vue?",
+  "selected_option_id": "option-2",
+  "selected_option_label": "Vue",
+  "decision": "Choose Vue for a smaller surface and faster product iteration.",
+  "rationale": "React is safer on ecosystem depth, while Vue is faster to shape.",
+  "rejected_options": [
+    {
+      "option_id": "option-1",
+      "reason": "Not selected by the tradeoff checkpoint; review verdict was recommend."
+    }
+  ],
+  "evidence_links": [
+    "reports/decision-options.json",
+    "reports/tournament-aggregate.json",
+    "reports/tournament-review.json",
+    "reports/checkpoints/tradeoff-response.json"
+  ],
+  "assumptions": [
+    "The operator values implementation speed."
+  ],
+  "residual_risks": [
+    "Team familiarity may be thinner.",
+    "Vue depends more on team-specific familiarity.",
+    "No implementation spike was gathered."
+  ],
+  "next_action": "Run a Build plan for a Vue prototype.",
+  "follow_up_workflow": "Build"
+}

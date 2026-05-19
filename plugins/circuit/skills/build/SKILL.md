@@ -48,19 +48,19 @@ as literal user-controlled text when constructing shell commands.
    Lite Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'make a small change' --entry-mode lite --progress jsonl
+   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'make a small change' --rigor lite --progress jsonl
    ```
 
    Deep Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'make the focused change' --entry-mode deep --progress jsonl
+   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Autonomous Build:
 
    ```bash
-   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'ship the requested fix' --entry-mode autonomous --progress jsonl
+   node '<plugin root>/scripts/circuit-next.mjs' run build --goal 'ship the requested fix' --autonomous --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):
@@ -72,15 +72,10 @@ as literal user-controlled text when constructing shell commands.
    Use the Bash tool to execute the constructed command. The wrapper
    lives in the installed Circuit plugin directory and injects the plugin's
    packaged flow root before it launches Circuit's bundled runtime.
-2. **Only add `--entry-mode` when the operator explicitly asks for a Build
-   mode.** Map Lite Build to `--entry-mode lite`, Deep Build to
-   `--entry-mode deep`, and Autonomous Build to `--entry-mode autonomous`.
-   Omit `--entry-mode` for normal Build.
-3. **Keep `--depth` separate from `--entry-mode`.** If the operator asks for
-   an explicit depth level instead of a Build mode, pass it with `--depth`.
-   Do not combine mismatched aliases; `--entry-mode deep` already implies deep
-   depth.
-4. **Render progress while the run is active.** `--progress jsonl` writes
+2. **Only add axis flags when the operator explicitly asks for them.** Map
+   Lite Build to `--rigor lite`, Deep Build to `--rigor deep`, and Autonomous
+   Build to `--autonomous`. Omit axis flags for normal Build.
+3. **Render progress while the run is active.** `--progress jsonl` writes
    progress events to stderr and keeps the final result JSON on stdout.
    Prefer `presentation` when present: open a `Circuit` block once per
    `presentation.block_id`, render visible status lines as

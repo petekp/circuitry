@@ -59,14 +59,12 @@ function syntheticCloseCompiledFlow(): CompiledFlow {
     version: '0.1.0',
     purpose: 'Synthetic flow that exercises the close-builder registry contract.',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-stub',
-        depth: 'standard',
-        description: 'synthetic registry test',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-stub',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-stub'] },
       { id: 'close-stage', title: 'Close', canonical: 'close', steps: ['close-step'] },

@@ -25,11 +25,6 @@ function loadCompiledFlow(path: string) {
   return CompiledFlow.parse(readJson(path));
 }
 
-function withoutEntryModes(flow: CompiledFlow) {
-  const { entry_modes: _entryModes, ...rest } = flow;
-  return rest;
-}
-
 describe('compileSchematicToCompiledFlow — byte-equivalence with committed compiled flows', () => {
   const cases = [
     {
@@ -66,13 +61,8 @@ describe('compileSchematicToCompiledFlow — byte-equivalence with committed com
     const defaultFlow = compiled.flows.get('default');
     if (defaultFlow === undefined) throw new Error('missing default Explore mode');
     const committedDefault = loadCompiledFlow('generated/flows/explore/circuit.json');
-    expect(withoutEntryModes(defaultFlow)).toEqual(withoutEntryModes(committedDefault));
-    expect(committedDefault.entry_modes.map((mode) => mode.name)).toEqual([
-      'default',
-      'lite',
-      'deep',
-      'autonomous',
-    ]);
+    expect(defaultFlow).toEqual(committedDefault);
+    expect(committedDefault.starts_at).toBe('frame-step');
     expect(compiled.flows.get('tournament')).toEqual(
       loadCompiledFlow('generated/flows/explore/tournament.json'),
     );
@@ -122,7 +112,7 @@ describe('compileSchematicToCompiledFlow — failure modes', () => {
     expect(() => compileSchematicToCompiledFlow(fixSchematic)).not.toThrow();
   });
 
-  it('throws if a checkpoint step writes an report whose schema has no registered checkpoint writer', () => {
+  it('throws if a checkpoint step writes a report whose schema has no registered checkpoint writer', () => {
     const schematic = loadBuildSchematic();
     const itemsCopy = schematic.items.map((item) =>
       item.id === ('frame-step' as unknown as typeof item.id)

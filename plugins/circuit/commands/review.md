@@ -93,12 +93,10 @@ metacharacters:
 7. **Do not modify the CLI output before surfacing.** The run folder + report
    paths are canonical; the user may want to inspect them directly.
 
-## Depth
+## Axes
 
-This command runs at `standard` depth by default. The CLI accepts
-`--depth <lite|standard|deep|tournament|autonomous>` — if the user's scope
-text includes an explicit depth request, map it to the flag; otherwise
-omit the flag and accept the default.
+Review runs at standard rigor. Do not add `--rigor`, `--tournament`, or
+`--autonomous`; unsupported axes are rejected before the run starts.
 
 ## Authority
 

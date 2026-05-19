@@ -18,7 +18,7 @@
 //
 // If the brief deferred the regression test (no command available), this
 // writer emits status='deferred', which mirrors the baseline. fix-close
-// already gates on regression_status='proved' so the deferred case is
+// already checks regression_status='proved' so the deferred case is
 // already routed to outcome='partial'; the rerun's deferred status is
 // recorded for transparency.
 

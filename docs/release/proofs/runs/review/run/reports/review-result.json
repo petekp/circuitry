@@ -14,7 +14,7 @@
   "evidence_summary": {
     "kind": "git-working-tree",
     "untracked_content_policy": "metadata-only",
-    "untracked_file_count": 24,
+    "untracked_file_count": 31,
     "untracked_files_sampled": 20,
     "untracked_files_truncated": true
   },

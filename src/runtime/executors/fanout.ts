@@ -38,7 +38,12 @@ function branchesDir(step: FanoutStep): string {
 
 function joinPolicy(step: FanoutStep): FanoutJoinPolicy {
   const policy = (step.check as { readonly join?: { readonly policy?: unknown } }).join?.policy;
-  if (policy === 'pick-winner' || policy === 'disjoint-merge' || policy === 'aggregate-only') {
+  if (
+    policy === 'pick-winner' ||
+    policy === 'disjoint-merge' ||
+    policy === 'aggregate-only' ||
+    policy === 'aggregate-survivors'
+  ) {
     return policy;
   }
   throw new Error(`fanout step '${step.id}' has unsupported join policy`);
@@ -59,6 +64,17 @@ function concurrencyLimit(step: FanoutStep): number | 'unbounded' {
     return concurrency.max;
   }
   return 4;
+}
+
+function outcomesInBranchOrder(
+  outcomes: readonly BranchOutcome[],
+  branchIds: readonly string[],
+): BranchOutcome[] {
+  const byId = new Map(outcomes.map((outcome) => [outcome.branch_id, outcome]));
+  return branchIds.flatMap((branchId) => {
+    const outcome = byId.get(branchId);
+    return outcome === undefined ? [] : [outcome];
+  });
 }
 
 async function runWithConcurrency<T>(
@@ -97,7 +113,7 @@ async function executeFanoutInternal(
   const attempt = context.activeStepAttempt ?? 1;
   const branchDirRoot = branchesDir(step);
   const aggregate = aggregateRef(step);
-  const branches = await expandFanoutBranches(step, context.files);
+  const branches = await expandFanoutBranches(step, context.files, context);
   if (branches.length === 0) {
     throw new Error(`fanout step '${step.id}': branch resolution produced zero branches`);
   }
@@ -195,11 +211,13 @@ async function executeFanoutInternal(
     }
   }
 
+  const orderedOutcomes = outcomesInBranchOrder(outcomes, branchIds);
+
   const joinResult = evaluateFanoutJoinPolicy({
     policy,
     stepId: step.id,
     admitOrder: admitOrder(step),
-    outcomes: outcomes.map((outcome) => ({
+    outcomes: orderedOutcomes.map((outcome) => ({
       branch_id: outcome.branch_id,
       child_outcome: outcome.child_outcome,
       verdict: outcome.verdict,
@@ -213,7 +231,7 @@ async function executeFanoutInternal(
 
   await context.files.writeJson(
     aggregate,
-    buildFanoutAggregate(policy, outcomes, joinResult.winnerBranchId),
+    buildFanoutAggregate(policy, orderedOutcomes, joinResult.winnerBranchId, step.rubric),
   );
   await context.trace.append({
     run_id: context.runId,
@@ -223,7 +241,7 @@ async function executeFanoutInternal(
     report_path: aggregate.path,
     report_schema: aggregate.schema ?? 'fanout-aggregate@v1',
   });
-  const branchesCompleted = outcomes.filter(
+  const branchesCompleted = orderedOutcomes.filter(
     (outcome) => outcome.child_outcome === 'complete',
   ).length;
   await context.trace.append({
@@ -237,7 +255,7 @@ async function executeFanoutInternal(
       : { selected_branch_id: joinResult.winnerBranchId }),
     aggregate_path: aggregate.path,
     branches_completed: branchesCompleted,
-    branches_failed: outcomes.length - branchesCompleted,
+    branches_failed: orderedOutcomes.length - branchesCompleted,
   });
 
   if (joinResult.joinedSuccessfully) {

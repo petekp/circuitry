@@ -46,13 +46,8 @@ function packageFor(flowId: string): CompiledFlowPackage {
   return pkg;
 }
 
-function withoutEntryModes(flow: CompiledFlowValue): Omit<CompiledFlowValue, 'entry_modes'> {
-  const { entry_modes: _entryModes, ...rest } = flow;
-  return rest;
-}
-
 function graphIdentityHash(flow: CompiledFlowValue): string {
-  return JSON.stringify(withoutEntryModes(flow));
+  return JSON.stringify(flow);
 }
 
 function plannedGeneratedFlows(
@@ -84,17 +79,7 @@ function plannedGeneratedFlows(
   const planned = new Map<string, CompiledFlowValue>();
   const main = ordered[0];
   if (main === undefined) return planned;
-  planned.set(`generated/flows/${flowId}/circuit.json`, {
-    ...main.flow,
-    entry_modes: main.modes.map((modeName) => {
-      const flow = compiled.flows.get(modeName);
-      const entryMode = flow?.entry_modes[0];
-      if (entryMode === undefined) {
-        throw new Error(`compiled flow '${flowId}' mode '${modeName}' has no entry mode`);
-      }
-      return entryMode;
-    }),
-  });
+  planned.set(`generated/flows/${flowId}/circuit.json`, main.flow);
   for (let i = 1; i < ordered.length; i++) {
     const group = ordered[i];
     if (group === undefined) continue;
@@ -155,13 +140,11 @@ function minimalDefinition(id: string) {
         signals: { include: [id], exclude: [] },
         intent_prefixes: [id],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          depth: 'standard',
-          description: 'Default test mode.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
       stage_path_policy: {
         mode: 'partial',
         omits: ['frame', 'analyze', 'act', 'verify', 'review', 'close'],
@@ -205,7 +188,7 @@ function minimalDefinition(id: string) {
 }
 
 describe('FlowDefinition compiler', () => {
-  it('projects default package fields and runtime support from entry modes', () => {
+  it('projects default package fields and runtime surface metadata', () => {
     const definition = minimalDefinition('definition-test');
     const pkg = compileFlowDefinition(definition);
 
@@ -216,7 +199,15 @@ describe('FlowDefinition compiler', () => {
       relayReports: [],
       writers: { compose: [], close: [], verification: [], checkpoint: [] },
       runtimeSurface: {
-        supportedEntryModes: [{ entryModeName: 'default', depth: 'standard' }],
+        progress: {
+          steps: [
+            {
+              stepId: 'compose-step',
+              taskTitle: 'Compose test report',
+              activeText: 'Composing test report',
+            },
+          ],
+        },
       },
     });
   });
@@ -479,27 +470,10 @@ describe('FlowDefinition compiler', () => {
     }
   });
 
-  it('preserves per-flow mode and command ownership expectations', () => {
-    expect(packageFor('review').runtimeSurface?.supportedEntryModes).toEqual([
-      { entryModeName: 'default', depth: 'standard' },
-    ]);
-    expect(packageFor('build').runtimeSurface?.supportedEntryModes).toEqual([
-      { entryModeName: 'default', depth: 'standard' },
-      { entryModeName: 'lite', depth: 'lite' },
-      { entryModeName: 'deep', depth: 'deep' },
-      { entryModeName: 'autonomous', depth: 'autonomous' },
-    ]);
-    expect(packageFor('explore').runtimeSurface?.supportedEntryModes).toEqual([
-      { entryModeName: 'default', depth: 'standard' },
-      { entryModeName: 'lite', depth: 'lite' },
-      { entryModeName: 'deep', depth: 'deep' },
-      { entryModeName: 'tournament', depth: 'tournament' },
-      { entryModeName: 'autonomous', depth: 'autonomous' },
-    ]);
-    expect(packageFor('pursue').runtimeSurface?.supportedEntryModes).toEqual([
-      { entryModeName: 'default', depth: 'standard' },
-      { entryModeName: 'autonomous', depth: 'autonomous' },
-    ]);
+  it('preserves per-flow runtime and command ownership expectations', () => {
+    for (const flowId of ['review', 'build', 'explore', 'pursue'] as const) {
+      expect(packageFor(flowId).runtimeSurface).not.toHaveProperty('supportedEntryModes');
+    }
     expect(packageFor('pursue').paths.command).toBeUndefined();
     expect(packageFor('fix').runtimeSurface?.progress?.steps).toHaveLength(14);
     expect(packageFor('build').engineFlags).toEqual({

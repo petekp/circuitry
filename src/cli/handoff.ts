@@ -975,8 +975,7 @@ function loadRunBackedSnapshot(runFolder: string): {
     JSON.parse(Buffer.from(manifest.bytes_base64, 'base64').toString('utf8')),
   );
   const currentStep =
-    ('current_step' in status ? status.current_step?.step_id : undefined) ??
-    flow.entry_modes[0]?.start_at;
+    ('current_step' in status ? status.current_step?.step_id : undefined) ?? flow.starts_at;
   if (currentStep === undefined) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
   }

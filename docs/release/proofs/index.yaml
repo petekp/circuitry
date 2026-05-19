@@ -29,7 +29,7 @@ scenarios:
   - id: proof:explicit-build
     title: Explicit Build
     category: doing-work
-    command: ./bin/circuit-next run build --goal "add a focused change" --entry-mode deep --progress jsonl
+    command: ./bin/circuit-next run build --goal "add a focused change" --rigor deep --progress jsonl
     expected_flow: build
     expected_outcome: complete or checkpoint_waiting
     summary_contract: Summary explains explicit Build selection, checkpoint/verification state, and next action.
@@ -67,7 +67,7 @@ scenarios:
   - id: proof:checkpoint-resume
     title: Checkpoint And Resume
     category: continuity
-    command: ./bin/circuit-next run build --goal "deep change that asks for scope" --entry-mode deep --progress jsonl
+    command: ./bin/circuit-next run build --goal "deep change that asks for scope" --rigor deep --progress jsonl
     expected_flow: build
     expected_outcome: checkpoint_waiting then complete after resume
     summary_contract: Summary gives the checkpoint question, allowed choices, resume command, and final outcome.
@@ -155,6 +155,35 @@ scenarios:
       - docs/release/proofs/runs/explore-decision/run/reports/checkpoints/tradeoff-request.json
       - docs/release/proofs/runs/explore-decision/run/reports/checkpoints/tradeoff-response.json
       - docs/release/proofs/runs/explore-decision/run/reports/tournament-branches
+    exception_ids: []
+    readiness_refs: [REL-004, REL-011, REL-023]
+  - id: proof:explore-autonomous-decision
+    title: Explore Autonomous Decision
+    category: deciding
+    command: './bin/circuit-next run explore --goal "decide: React vs Vue" --tournament --tournament-n 2 --autonomous --run-folder docs/release/proofs/runs/explore-autonomous-decision/run --progress jsonl'
+    expected_flow: explore
+    expected_outcome: complete
+    summary_contract: Summary states the highest-score auto-resolution, selected winner, rubric evidence, runtime veto, and next action.
+    redaction_policy: Uses non-sensitive architecture fixture text.
+    required_files:
+      - docs/release/proofs/runs/explore-autonomous-decision/progress.jsonl
+      - docs/release/proofs/runs/explore-autonomous-decision/operator-summary.md
+      - docs/release/proofs/runs/explore-autonomous-decision/result.json
+    status: verified_current
+    backing_paths:
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/brief.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/analysis.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/decision-options.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/tournament-aggregate.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/tournament-review.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/decision.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/explore-result.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/operator-summary.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/operator-summary.md
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/operator-summary.html
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/checkpoints/tradeoff-request.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/checkpoints/tradeoff-response.json
+      - docs/release/proofs/runs/explore-autonomous-decision/run/reports/tournament-branches
     exception_ids: []
     readiness_refs: [REL-004, REL-011, REL-023]
   - id: proof:handoff

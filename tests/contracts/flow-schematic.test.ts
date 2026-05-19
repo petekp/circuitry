@@ -466,13 +466,89 @@ describe('flow schematic compiler-required metadata', () => {
       status: 'active',
       version: '0.1.0',
       entry: { signals: { include: ['demo'], exclude: [] }, intent_prefixes: ['demo'] },
-      entry_modes: [{ name: 'default', depth: 'standard', description: 'default mode' }],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
       stage_path_policy: {
         mode: 'partial',
         omits: ['analyze', 'plan', 'act', 'verify', 'review', 'close'],
         rationale: 'demo schematic with only a frame stage for testing',
       },
       stages: [{ canonical: 'frame', id: 'frame-stage', title: 'Frame' }],
+    };
+  }
+
+  function tournamentFanoutItemWith(fanout: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: 'a-fanout',
+      block: 'act',
+      title: 'Fanout',
+      stage: 'act',
+      input: { brief: 'flow.brief@v1' },
+      output: 'change.evidence@v1',
+      evidence_requirements: ['changed files', 'change rationale', 'declared follow-up proof'],
+      execution: { kind: 'fanout' },
+      routes: { continue: '@complete' },
+      protocol: 'demo-fanout@v1',
+      writes: {
+        report_path: 'reports/aggregate.json',
+        branches_dir_path: 'reports/branches',
+      },
+      check: { pass: ['accept'] },
+      fanout,
+    };
+  }
+
+  function activeTournamentSchematic(fanout: Record<string, unknown>): Record<string, unknown> {
+    const frame = frameItemWithExtras({
+      protocol: 'demo-frame@v1',
+      writes: { report_path: 'reports/brief.json' },
+      check: { required: ['scope'] },
+      routes: { continue: 'a-fanout' },
+    });
+    return {
+      ...activeSchematic([frame, tournamentFanoutItemWith(fanout)]),
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: true,
+        supports_autonomous: false,
+        tournament_fan_out_stage: 'act-stage',
+      },
+      stage_path_policy: {
+        mode: 'partial',
+        omits: ['analyze', 'plan', 'verify', 'review', 'close'],
+        rationale: 'demo tournament schematic for fanout policy validation',
+      },
+      stages: [
+        { canonical: 'frame', id: 'frame-stage', title: 'Frame' },
+        { canonical: 'act', id: 'act-stage', title: 'Act' },
+      ],
+    };
+  }
+
+  function validTournamentFanout(): Record<string, unknown> {
+    return {
+      branches: {
+        kind: 'dynamic',
+        source_report: 'reports/options.json',
+        items_path: 'options',
+        template: {
+          branch_id: '$item.id',
+          execution: {
+            kind: 'relay',
+            role: 'researcher',
+            goal: '$item.prompt',
+            report_schema: 'runtime-proof-canonical@v1',
+          },
+        },
+        max_branches: { kind: 'axis', axis: 'tournament_n' },
+        required_count: { kind: 'axis', axis: 'tournament_n' },
+      },
+      concurrency: { kind: 'bounded', max: 2 },
+      on_child_failure: 'continue-others',
+      join: { policy: 'aggregate-survivors' },
     };
   }
 
@@ -497,7 +573,7 @@ describe('flow schematic compiler-required metadata', () => {
     if (!result.success) {
       expect(result.error.message).toMatch(/active schematic requires version/);
       expect(result.error.message).toMatch(/active schematic requires entry/);
-      expect(result.error.message).toMatch(/active schematic requires entry_modes/);
+      expect(result.error.message).toMatch(/active schematic requires axes/);
       expect(result.error.message).toMatch(/active schematic requires stage_path_policy/);
       expect(result.error.message).toMatch(/active schematic requires stages/);
     }
@@ -673,7 +749,7 @@ describe('flow schematic compiler-required metadata', () => {
     }
   });
 
-  it('accepts schematic-level entry, entry_modes, stage_path_policy, stages', () => {
+  it('accepts schematic-level entry, axes, stage_path_policy, stages', () => {
     const schematic = {
       ...baseSchematic([
         frameItemWithExtras({
@@ -683,7 +759,11 @@ describe('flow schematic compiler-required metadata', () => {
       ]),
       version: '0.1.0',
       entry: { signals: { include: ['demo'], exclude: [] }, intent_prefixes: ['demo'] },
-      entry_modes: [{ name: 'default', depth: 'standard', description: 'default mode' }],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
       stage_path_policy: {
         mode: 'partial',
         omits: ['analyze', 'plan', 'act', 'verify', 'review', 'close'],
@@ -695,7 +775,51 @@ describe('flow schematic compiler-required metadata', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects duplicate entry mode names', () => {
+  it('rejects a tournament fan-out stage that is not declared by the schematic', () => {
+    const schematic = {
+      ...activeSchematic([
+        frameItemWithExtras({
+          writes: { report_path: 'reports/brief.json' },
+          check: { required: ['scope'] },
+        }),
+      ]),
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: true,
+        supports_autonomous: false,
+        tournament_fan_out_stage: 'missing-stage',
+      },
+    };
+    const result = FlowSchematic.safeParse(schematic);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.message).toMatch(
+        /tournament_fan_out_stage references unknown stage id: missing-stage/,
+      );
+    }
+  });
+
+  it('rejects tournament fanout metadata without continue-others plus aggregate-survivors', () => {
+    for (const invalid of ['abort-all', 'aggregate-only'] as const) {
+      const fanout = validTournamentFanout();
+      if (invalid === 'abort-all') {
+        fanout.on_child_failure = 'abort-all';
+      } else {
+        fanout.join = { policy: 'aggregate-only' };
+      }
+
+      const result = FlowSchematic.safeParse(activeTournamentSchematic(fanout));
+
+      expect(result.success, invalid).toBe(false);
+      if (!result.success) {
+        expect(result.error.message, invalid).toMatch(
+          /tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors/,
+        );
+      }
+    }
+  });
+
+  it('rejects legacy entry_modes', () => {
     const schematic = {
       ...baseSchematic([
         frameItemWithExtras({
@@ -703,15 +827,12 @@ describe('flow schematic compiler-required metadata', () => {
           check: { required: ['scope'] },
         }),
       ]),
-      entry_modes: [
-        { name: 'default', depth: 'standard', description: 'a' },
-        { name: 'default', depth: 'lite', description: 'b' },
-      ],
+      entry_modes: [{ name: 'default', depth: 'standard', description: 'a' }],
     };
     const result = FlowSchematic.safeParse(schematic);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.message).toMatch(/duplicate entry mode name: default/);
+      expect(result.error.message).toMatch(/Unrecognized key\(s\) in object: 'entry_modes'/);
     }
   });
 

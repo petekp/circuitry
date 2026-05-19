@@ -64,14 +64,12 @@ function flowBytes(
       version: '0.0.0-test',
       purpose: 'Exercise user skill loading.',
       entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: steps[0]?.id,
-          depth: 'standard',
-          description: 'Default test mode.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: steps[0]?.id,
       stages: [
         {
           id: 'act-stage',

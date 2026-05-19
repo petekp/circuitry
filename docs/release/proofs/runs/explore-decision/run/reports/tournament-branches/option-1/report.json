@@ -12,5 +12,15 @@
   "risks": [
     "The larger ecosystem may add dependency sprawl."
   ],
-  "next_action": "Run a Build plan for a React prototype."
+  "next_action": "Run a Build plan for a React prototype.",
+  "rubric_model_judgments": {
+    "evidence_rigor": "pass",
+    "actionability": "pass",
+    "coverage_adequacy": "pass",
+    "scope_discipline": "pass",
+    "honest_calibration": "pass",
+    "project_specificity": "pass",
+    "insight_density": "pass",
+    "branch_distinctness": "pass"
+  }
 }

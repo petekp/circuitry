@@ -185,7 +185,7 @@ export const FanoutJoinedProgressEvent = ProgressEventBase.extend({
   type: z.literal('fanout.joined'),
   step_id: StepId,
   step_title: z.string().min(1),
-  policy: z.enum(['pick-winner', 'disjoint-merge', 'aggregate-only']),
+  policy: z.enum(['pick-winner', 'disjoint-merge', 'aggregate-only', 'aggregate-survivors']),
   aggregate_path: z.string().min(1),
   branches_completed: z.number().int().nonnegative(),
   branches_failed: z.number().int().nonnegative(),

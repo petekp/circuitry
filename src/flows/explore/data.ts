@@ -1,3 +1,4 @@
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
 import { expandBlockStepUse } from '../block-step-expansion.js';
 import type { FlowData } from '../flow-definition.js';
 import {
@@ -108,37 +109,18 @@ export const exploreFlowData = {
       },
       intent_prefixes: ['explore', 'investigate', 'decide'],
     },
-    entry_modes: [
-      {
-        name: 'default',
-        depth: 'standard',
-        description: 'Default explore entry mode — seeds the run at Frame at standard depth.',
+    axes: {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: true,
+      supports_autonomous: true,
+      default: {
+        rigor: 'standard',
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false,
       },
-      {
-        name: 'lite',
-        depth: 'lite',
-        description:
-          'Lite Explore entry mode — frames, analyzes, and closes with a compact Plan/Decision pass.',
-      },
-      {
-        name: 'deep',
-        depth: 'deep',
-        description:
-          'Deep Explore entry mode — frames, analyzes, and spends more effort on Plan/Decision evidence and seam proof.',
-      },
-      {
-        name: 'tournament',
-        depth: 'tournament',
-        description:
-          'Decision tournament entry mode — frames and analyzes the question, fans out option cases, pauses for a bounded tradeoff choice, then closes with the selected decision.',
-      },
-      {
-        name: 'autonomous',
-        depth: 'autonomous',
-        description:
-          'Autonomous Explore entry mode — carries ambiguity forward when no safe checkpoint answer is available.',
-      },
-    ],
+      tournament_fan_out_stage: 'decision-stage',
+    },
     stage_path_policy: {
       mode: 'partial',
       omits: ['act', 'verify', 'review'],
@@ -344,15 +326,30 @@ export const exploreFlowData = {
                 provenance_field: 'option_id',
               },
             },
-            max_branches: 4,
+            max_branches: { kind: 'axis', axis: 'tournament_n' },
+            required_count: { kind: 'axis', axis: 'tournament_n' },
           },
           concurrency: {
             kind: 'bounded',
             max: 2,
           },
-          on_child_failure: 'abort-all',
+          on_child_failure: 'continue-others',
           join: {
-            policy: 'aggregate-only',
+            policy: 'aggregate-survivors',
+          },
+          rubric: {
+            model_judgments_path: 'rubric_model_judgments',
+            ordered_dims: [...THREE_AXIS_RUBRIC_TIE_BREAK_ORDER],
+            runtime_signals: {
+              evidence_rigor: { kind: 'non_empty_array', path: 'evidence_refs' },
+              actionability: { kind: 'non_empty_string', path: 'next_action' },
+              coverage_adequacy: { kind: 'non_empty_string', path: 'case_summary' },
+              scope_discipline: { kind: 'constant', signal: 'met' },
+              honest_calibration: { kind: 'constant', signal: 'n/a' },
+              project_specificity: { kind: 'constant', signal: 'n/a' },
+              insight_density: { kind: 'constant', signal: 'n/a' },
+              branch_distinctness: { kind: 'constant', signal: 'n/a' },
+            },
           },
         },
         routes: {
@@ -400,33 +397,33 @@ export const exploreFlowData = {
         protocol: 'explore-tradeoff-checkpoint@v1',
         checkpointRequestPath: 'reports/checkpoints/tradeoff-request.json',
         checkpointResponsePath: 'reports/checkpoints/tradeoff-response.json',
-        allow: ['option-1', 'option-2', 'option-3', 'option-4'],
+        check: {
+          allow_from: { kind: 'policy_choices' },
+        },
         checkpointPolicy: {
           prompt:
             'Choose the option Circuit should close with. This checkpoint only supports final option choices; ask-for-more-evidence and stop routes are intentionally not encoded until the runtime has executable route semantics for them.',
-          choices: [
-            {
-              id: 'option-1',
-              label: 'Option 1',
-              description: 'Close with the first drafted option.',
+          choices_from: {
+            kind: 'report_items',
+            source_report: 'reports/tournament-aggregate.json',
+            items_path: 'branches',
+            filter: {
+              kind: 'path_equals',
+              path: 'child_outcome',
+              value: 'complete',
             },
-            {
-              id: 'option-2',
-              label: 'Option 2',
-              description: 'Close with the second drafted option.',
-            },
-            {
-              id: 'option-3',
-              label: 'Option 3',
-              description: 'Close with the third drafted option.',
-            },
-            {
-              id: 'option-4',
-              label: 'Option 4',
-              description: 'Close with the fourth drafted option.',
-            },
-          ],
+            id_path: 'branch_id',
+            label_path: 'result_body.option_label',
+            description_path: 'result_body.case_summary',
+          },
           safe_default_choice: 'option-1',
+          auto_resolution: {
+            policy: 'highest-score',
+            source_report: 'reports/tournament-aggregate.json',
+            branches_path: 'branches',
+            id_path: 'branch_id',
+            rubric_result_path: 'rubric_result',
+          },
         },
         routes: {
           continue: 'decision-step',

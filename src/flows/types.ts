@@ -115,11 +115,6 @@ export interface CompiledFlowEngineFlags {
   readonly bindsExecutionDepthToRelaySelection?: boolean;
 }
 
-export interface CompiledFlowSupportedEntryMode {
-  readonly entryModeName: string;
-  readonly depth: string;
-}
-
 export interface CompiledFlowPrimaryResult {
   readonly schemaName: string;
   readonly path: string;
@@ -140,7 +135,6 @@ export interface CompiledFlowProgressSurface {
 }
 
 export interface CompiledFlowRuntimeSurface {
-  readonly supportedEntryModes: readonly CompiledFlowSupportedEntryMode[];
   readonly primaryResult?: CompiledFlowPrimaryResult;
   readonly progress?: CompiledFlowProgressSurface;
 }

@@ -52,6 +52,7 @@ import {
   CompiledFlow as CompiledFlowSchema,
 } from '../../src/schemas/compiled-flow.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
+import { combineRubricResult } from '../../src/shared/rubric.js';
 
 export interface CompiledFlowFixture {
   readonly flow: CompiledFlow;
@@ -60,6 +61,33 @@ export interface CompiledFlowFixture {
 }
 
 const TERMINAL_TARGETS = new Set(['@complete', '@stop', '@handoff', '@escalate']);
+
+const PASSING_RUBRIC_MODEL_JUDGMENTS = {
+  evidence_rigor: 'pass',
+  actionability: 'pass',
+  coverage_adequacy: 'pass',
+  scope_discipline: 'pass',
+  honest_calibration: 'pass',
+  project_specificity: 'pass',
+  insight_density: 'pass',
+  branch_distinctness: 'pass',
+} as const;
+
+function passingExploreRubricResult() {
+  return combineRubricResult({
+    orderedDims: Object.keys(PASSING_RUBRIC_MODEL_JUDGMENTS),
+    dims: {
+      evidence_rigor: { runtime_signal: 'met', model_judgment: 'pass' },
+      actionability: { runtime_signal: 'met', model_judgment: 'pass' },
+      coverage_adequacy: { runtime_signal: 'met', model_judgment: 'pass' },
+      scope_discipline: { runtime_signal: 'met', model_judgment: 'pass' },
+      honest_calibration: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      project_specificity: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      insight_density: { runtime_signal: 'n/a', model_judgment: 'pass' },
+      branch_distinctness: { runtime_signal: 'n/a', model_judgment: 'pass' },
+    },
+  });
+}
 
 const commandSpec = {
   id: 'runtime-parity-check',
@@ -120,16 +148,11 @@ export async function loadCompiledFlowFixture(flowId: string): Promise<CompiledF
   };
 }
 
-export function expectedPassStepIds(
-  flow: CompiledFlow,
-  entryModeName = flow.entry_modes[0]?.name,
-): string[] {
-  const entry = flow.entry_modes.find((mode) => mode.name === entryModeName);
-  if (entry === undefined) throw new Error(`missing entry mode ${String(entryModeName)}`);
+export function expectedPassStepIds(flow: CompiledFlow, _axisSelectionName?: string): string[] {
   const stepsById = new Map(flow.steps.map((step) => [step.id as string, step]));
   const seen = new Set<string>();
   const stepIds: string[] = [];
-  let current: string | undefined = entry.start_at;
+  let current: string | undefined = flow.starts_at;
 
   while (current !== undefined) {
     if (seen.has(current)) throw new Error(`pass route cycle at ${current}`);
@@ -595,11 +618,12 @@ function reportBody(
         evidence_refs: ['generated fixture'],
         risks: [],
         next_action: 'Continue the run.',
+        rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
       });
     case 'explore.tournament-aggregate@v1':
       return ExploreTournamentAggregate.parse({
         schema_version: 1,
-        join_policy: 'aggregate-only',
+        join_policy: 'aggregate-survivors',
         branch_count: 2,
         branches: [
           {
@@ -615,6 +639,7 @@ function reportBody(
               context,
               'explore.tournament-proposal@v1',
             ),
+            rubric_result: passingExploreRubricResult(),
           },
           {
             branch_id: 'option-2',
@@ -629,6 +654,7 @@ function reportBody(
               context,
               'explore.tournament-proposal@v1',
             ),
+            rubric_result: passingExploreRubricResult(),
           },
         ],
       });

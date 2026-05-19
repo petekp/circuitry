@@ -97,13 +97,13 @@ metacharacters:
    Example for a Build task using Deep mode:
 
    ```bash
-   ./bin/circuit-next run build --goal 'make the focused change' --entry-mode deep --progress jsonl
+   ./bin/circuit-next run build --goal 'make the focused change' --rigor deep --progress jsonl
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --entry-mode lite --progress jsonl
+   ./bin/circuit-next run fix --goal 'fix the missing-token edge case' --rigor lite --progress jsonl
    ```
 
    Example for a task `can't ship` (contains one apostrophe):

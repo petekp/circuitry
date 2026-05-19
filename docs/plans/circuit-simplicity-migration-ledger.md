@@ -32,7 +32,7 @@ rollback points, or decisions.
   authored Flow definitions as plain typed values, effects at the boundary, and
   preserved report schema/Zod contracts.
 - `docs/architecture/declarative-flow-architecture.md` records the current
-  FlowData-plus-flow adapter model and generated artifact rules.
+  FlowData-plus-flow adapter model and generated output rules.
 - `src/flows/catalog.ts` is the engine-facing catalog source.
 - `src/flows/flow-definition.ts` currently owns FlowDefinition, FlowData
   validation, FlowData projection, and compiled package projection.
@@ -46,7 +46,7 @@ rollback points, or decisions.
 - Focused red/green loop: one target test file for the active slice.
 - Slice proof: focused tests plus any targeted generated drift check.
 - Program milestone: `npm run verify:fast`.
-- Final ship gate: `npm run verify`.
+- Final ship check: `npm run verify`.
 
 ## Program 1 - One Canonical Flow Value
 
@@ -987,7 +987,7 @@ Source evidence:
   explicit `execution` only when those values differ from the Block-owned
   default or the execution kind is ambiguous.
 - `tests/runner/flow-definition-compiler.test.ts` proves generated Schematics
-  remain full compatibility artifacts after authoring compression.
+  remain full compatibility outputs after authoring compression.
 
 Target state:
 
@@ -1001,7 +1001,7 @@ Checklist:
 
 - [x] Add override-only syntax.
 - [x] Reject restated Block-owned defaults after migrations.
-- [x] Keep generated Schematics complete compatibility artifacts.
+- [x] Keep generated Schematics complete compatibility outputs.
 
 Intended tests:
 
@@ -1036,7 +1036,7 @@ Decision:
 
 - `output`, `evidenceRequirements`, and single-kind `execution` are now
   override-only in compressed Block Step authoring.
-- Generated Schematic values remain complete compatibility artifacts with
+- Generated Schematic values remain complete compatibility outputs with
   output, evidence, execution, writes, and check fields populated.
 
 ## Program 3 - Runtime Values Separate From Places And Effects
@@ -1456,7 +1456,7 @@ Target state:
 - Boundary tests make the simpler runtime shape durable.
 - No internal temporary adapter remains that can be removed without breaking
   current public contracts.
-- Program 3 passes the milestone verification gate.
+- Program 3 passes the milestone verification check.
 
 Checklist:
 

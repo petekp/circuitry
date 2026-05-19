@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
+import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { FlowSchematic } from '../../src/schemas/flow-schematic.js';
 import type { SelectionOverride } from '../../src/schemas/selection-policy.js';
 
@@ -39,11 +40,71 @@ const ALLOWED_WRITER_SCHEMA_ALIASES = new Map<string, readonly string[]>([
     ],
   ],
 ]);
+const EXPECTED_AXES_BY_FLOW: ReadonlyMap<
+  string,
+  {
+    readonly allowed_rigors: readonly string[];
+    readonly supports_tournament: boolean;
+    readonly supports_autonomous: boolean;
+    readonly tournament_fan_out_stage?: string;
+  }
+> = new Map([
+  [
+    'review',
+    {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+  ],
+  [
+    'fix',
+    {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: false,
+      supports_autonomous: true,
+    },
+  ],
+  [
+    'build',
+    {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: false,
+      supports_autonomous: true,
+    },
+  ],
+  [
+    'explore',
+    {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: true,
+      supports_autonomous: true,
+      tournament_fan_out_stage: 'decision-stage',
+    },
+  ],
+  [
+    'pursue',
+    {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: true,
+    },
+  ],
+  [
+    'runtime-proof',
+    {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+  ],
+] as const);
 
 // Entries at the flows root that are NOT flow-package directories
 // (catalog, router/compiler, types, and shared flow infrastructure).
 // Anything else under src/flows/ is expected to be a package.
 const NON_PACKAGE_FILES = new Set([
+  'axis-selections.ts',
   'block-step-expansion.ts',
   'canonical-stage-policy.ts',
   'catalog.ts',
@@ -56,6 +117,7 @@ const NON_PACKAGE_FILES = new Set([
   'stage-policy.ts',
   'types.ts',
 ]);
+
 const NON_PACKAGE_DIRECTORIES = new Set(['registries']);
 
 function isFile(path: string): boolean {
@@ -118,12 +180,42 @@ describe('flow catalog completeness', () => {
     const visibilityById = new Map(flowPackages.map((pkg) => [pkg.id, pkg.visibility]));
 
     expect(visibilityById.get('runtime-proof')).toBe('internal');
-    for (const flow of ['build', 'explore', 'fix', 'review']) {
+    for (const flow of ['build', 'explore', 'fix', 'pursue', 'review']) {
       expect(visibilityById.get(flow), `${flow} should be host-visible`).toBe('public');
     }
   });
 
-  it('public flow runtime surfaces match their source schematic entry modes', () => {
+  it('compiled fixtures carry the Section 3 axis allow-lists', () => {
+    const scopedPackages = flowPackages.filter(
+      (pkg) => pkg.visibility === 'public' || pkg.id === 'runtime-proof',
+    );
+    expect(scopedPackages.map((pkg) => pkg.id).sort()).toEqual(
+      [...EXPECTED_AXES_BY_FLOW.keys()].sort(),
+    );
+
+    for (const pkg of scopedPackages) {
+      const expected = EXPECTED_AXES_BY_FLOW.get(pkg.id);
+      if (expected === undefined) throw new Error(`missing expected axes for ${pkg.id}`);
+      const flow = CompiledFlow.parse(
+        JSON.parse(readFileSync(`generated/flows/${pkg.id}/circuit.json`, 'utf8')),
+      );
+      expect(flow.axes, `${pkg.id} generated fixture axes drifted`).toMatchObject({
+        ...expected,
+        default: {
+          rigor: 'standard',
+          tournament: false,
+          tournament_n: 3,
+          autonomous: false,
+        },
+      });
+      const sourceSchematic = FlowSchematic.parse(
+        JSON.parse(readFileSync(pkg.paths.schematic, 'utf8')),
+      );
+      expect(sourceSchematic.axes, `${pkg.id} source schematic axes drifted`).toEqual(flow.axes);
+    }
+  });
+
+  it('public flow runtime surfaces no longer carry mode/depth support rows', () => {
     const offenders: string[] = [];
 
     for (const pkg of flowPackages) {
@@ -133,16 +225,9 @@ describe('flow catalog completeness', () => {
         offenders.push(`${pkg.id}: missing runtimeSurface`);
         continue;
       }
-
-      const schematic = FlowSchematic.parse(JSON.parse(readFileSync(pkg.paths.schematic, 'utf8')));
-      const expected = schematic.entry_modes?.map((mode) => ({
-        entryModeName: mode.name,
-        depth: mode.depth,
-      }));
-      expect(expected, `${pkg.id}: active schematic should declare entry_modes`).toBeDefined();
-      expect(surface.supportedEntryModes, `${pkg.id}: runtimeSurface entry modes drifted`).toEqual(
-        expected,
-      );
+      if ('supportedEntryModes' in surface) {
+        offenders.push(`${pkg.id}: runtimeSurface still declares supportedEntryModes`);
+      }
     }
 
     expect(offenders).toEqual([]);
@@ -173,19 +258,6 @@ describe('flow catalog completeness', () => {
     }
 
     expect(offenders).toEqual([]);
-  });
-
-  it('runtime surface keeps per-mode support visible outside one compiled fixture', () => {
-    const byId = new Map(flowPackages.map((pkg) => [pkg.id, pkg.runtimeSurface]));
-
-    expect(byId.get('fix')?.supportedEntryModes).toContainEqual({
-      entryModeName: 'lite',
-      depth: 'lite',
-    });
-    expect(byId.get('explore')?.supportedEntryModes).toContainEqual({
-      entryModeName: 'tournament',
-      depth: 'tournament',
-    });
   });
 
   it('public flow runtime surfaces own progress display metadata for every schematic item', () => {
@@ -384,7 +456,7 @@ describe('flow catalog completeness', () => {
     }
   });
 
-  it('every package that declares relayReports ships an reports.ts module', () => {
+  it('every package that declares relayReports ships a reports.ts module', () => {
     // A package that registers a relay report must own the
     // schema. The report-schema registry derives from
     // relayReports, so an empty / missing reports.ts here

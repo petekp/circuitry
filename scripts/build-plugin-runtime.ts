@@ -107,7 +107,7 @@ for (const sidecar of ASSET_SIDECARS) {
     const outAbs = resolve(repoRoot, rel);
     // dist/* targets are gitignored local-build artifacts that tsc does not
     // emit, so they need to be brought into being in --check mode too;
-    // committed targets under plugins/* still go through the drift gate.
+    // committed targets under plugins/* still go through the drift check.
     const emitOnly = rel.startsWith('dist/');
     if (checkMode && !emitOnly) {
       let current: string | undefined;

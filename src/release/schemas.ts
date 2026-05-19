@@ -133,6 +133,24 @@ export const OriginalCapabilitySnapshot = z
   });
 export type OriginalCapabilitySnapshot = z.infer<typeof OriginalCapabilitySnapshot>;
 
+export const FlowAxisSupportRecord = z
+  .object({
+    allowed_rigors: z.array(z.enum(['lite', 'standard', 'deep'])).min(1),
+    supports_tournament: z.boolean(),
+    supports_autonomous: z.boolean(),
+    default: z
+      .object({
+        rigor: z.enum(['lite', 'standard', 'deep']),
+        tournament: z.boolean(),
+        tournament_n: z.number().int().min(2).max(4),
+        autonomous: z.boolean(),
+      })
+      .strict(),
+    tournament_fan_out_stage: z.string().min(1).optional(),
+  })
+  .strict();
+export type FlowAxisSupportRecord = z.infer<typeof FlowAxisSupportRecord>;
+
 export const CurrentCapability = z
   .object({
     id: z.string().min(1),
@@ -162,7 +180,7 @@ export const FlowCapabilityRecord = z
         default_reason: z.string().optional(),
       })
       .strict(),
-    entry_modes: z.array(z.string().min(1)).default([]),
+    axis_support: FlowAxisSupportRecord,
     stages: z.array(z.string().min(1)).default([]),
     reports: z.array(z.string().min(1)).default([]),
     writers: z

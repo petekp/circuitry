@@ -247,7 +247,8 @@ function runtimeWaitingCheckpointProjection(input: {
       manifestIdentity: input.manifestIdentity,
     });
   }
-  const savedChoices = step.policy.choices.map((choice) => choice.id as unknown as string);
+  const savedChoices =
+    step.policy.choices?.map((choice) => choice.id as unknown as string) ?? allowedChoices;
   if (!sameStringArray(allowedChoices, savedChoices)) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -320,7 +321,7 @@ function runtimeWaitingCheckpointProjection(input: {
 
   const prompt = typeof requestRecord.prompt === 'string' ? requestRecord.prompt : undefined;
   const policyChoiceLabels = new Map(
-    step.policy.choices.map((choice) => [
+    (step.policy.choices ?? []).map((choice) => [
       choice.id as unknown as string,
       (choice.label as unknown as string | undefined) ?? (choice.id as unknown as string),
     ]),

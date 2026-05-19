@@ -1,8 +1,8 @@
 // Tests for the stale-sibling guard in scripts/emit-flows.ts.
 //
 // The CLI loader at src/cli/circuit.ts prefers `<mode>.json` over
-// `circuit.json` when an entry mode is requested, so a stale per-mode
-// sibling (left behind from a renamed/collapsed entry mode) can silently
+// `circuit.json` when an axis selection is requested, so a stale per-selection
+// sibling (left behind from a renamed/collapsed axis selection) can silently
 // drive runtime behavior even after `npm run verify` reports clean.
 //
 // `--check` must fail when an unexpected JSON sibling exists in a

@@ -90,13 +90,13 @@ metacharacters:
    Example for a Build task using Deep mode:
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --entry-mode deep
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run build --goal 'make the focused change' --rigor deep
    ```
 
    Example for a Fix task using Lite mode (skips the review pass):
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --entry-mode lite
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run fix --goal 'fix the missing-token edge case' --rigor lite
    ```
 
    Example for a task `can't ship` (contains one apostrophe):

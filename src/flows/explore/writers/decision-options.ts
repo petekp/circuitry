@@ -24,6 +24,7 @@ export const exploreDecisionOptionsComposeBuilder: ComposeBuilder = {
       brief,
       analysis,
       fallbackEvidenceRef: context.step.reads[0] ?? 'reports/analysis.json',
+      ...(context.axes === undefined ? {} : { optionCount: context.axes.tournament_n }),
     });
   },
 };

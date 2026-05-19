@@ -1,0 +1,1 @@
+{"verdict":"recommend","recommended_option_id":"option-1","comparison":"React is safer on ecosystem depth, while Vue is faster to shape.","objections":["Vue depends more on team-specific familiarity."],"missing_evidence":["No implementation spike was gathered."],"tradeoff_question":"Choose React ecosystem depth or Vue iteration speed.","confidence":"medium"}

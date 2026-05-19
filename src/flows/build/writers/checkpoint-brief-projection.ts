@@ -53,7 +53,7 @@ function recommendedChoiceId(step: CheckpointBuildContext['step']): string {
 export function buildCheckpointPacket(input: BuildBriefProjectorInputs): BuildCheckpointPacket {
   const allowedChoices = checkpointChoiceIds(input.context.step);
   const recommendationId = recommendedChoiceId(input.context.step);
-  const choices = input.context.step.policy.choices
+  const choices = (input.context.step.policy.choices ?? [])
     .filter((choice) => allowedChoices.includes(choice.id))
     .flatMap((choice) => {
       const route = routeForChoice(input.context.step, choice.id);

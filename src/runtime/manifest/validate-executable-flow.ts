@@ -121,7 +121,11 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
     }
 
     if (step.kind === 'checkpoint') {
-      if (step.choices.length === 0) {
+      const hasDynamicChoices =
+        typeof step.policy === 'object' &&
+        step.policy !== null &&
+        (step.policy as { readonly choices_from?: unknown }).choices_from !== undefined;
+      if (step.choices.length === 0 && !hasDynamicChoices) {
         issues.push(`checkpoint step '${step.id}' must declare at least one choice`);
       }
       const seenChoices = new Set<string>();

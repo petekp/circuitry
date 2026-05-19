@@ -10,20 +10,18 @@
     },
     "intent_prefixes": ["pursue"]
   },
-  "entry_modes": [
-    {
-      "name": "default",
-      "start_at": "contract-step",
-      "depth": "standard",
-      "description": "Default Pursue entry mode."
-    },
-    {
-      "name": "autonomous",
-      "start_at": "contract-step",
-      "depth": "autonomous",
-      "description": "Autonomous Pursue entry mode with the same serial-write safety policy."
+  "axes": {
+    "allowed_rigors": ["standard"],
+    "supports_tournament": false,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
     }
-  ],
+  },
+  "starts_at": "contract-step",
   "stages": [
     {
       "id": "frame-stage",

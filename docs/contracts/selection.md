@@ -137,7 +137,7 @@ Closes Codex LOW #12 (enforcement-location claim drift).
   medium | high | xhigh` (OpenAI vocabulary, chosen for cross-provider
   portability). The current built-ins honor `low | medium | high | xhigh`;
   `none` and `minimal` fail before
-  subprocess spawn until an connector has explicit support for those
+  subprocess spawn until a connector has explicit support for those
   values. Enforced at `src/schemas/selection-policy.ts` for shape and
   `src/connectors/*.ts` for connector-specific honoring.
 

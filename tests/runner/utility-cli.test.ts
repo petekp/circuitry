@@ -1153,7 +1153,7 @@ describe('utility CLI commands', () => {
         'build',
         '--goal',
         'deep change that asks for scope',
-        '--entry-mode',
+        '--rigor',
         'deep',
         '--run-folder',
         runFolder,

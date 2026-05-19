@@ -11,14 +11,13 @@
 //
 // File layout:
 //   - kind:'single'   → generated/flows/<id>/circuit.json
-//                       (entry_modes carries the full schematic list)
 //   - kind:'per-mode' → group compiled flows by graph identity
-//                       (everything except entry_modes). The largest
-//                       group goes to circuit.json with merged
-//                       entry_modes; remaining modes get one file each
+//                       The largest group goes to circuit.json; remaining
+//                       modes get one file each
 //                       at generated/flows/<id>/<mode-name>.json.
-//                       The CLI loader prefers <mode>.json when an entry
-//                       mode is requested and falls back to circuit.json.
+//                       The CLI loader prefers <mode>.json when an axis
+//                       tuple needs a distinct graph and falls back to
+//                       circuit.json.
 //
 // Modes:
 //   node scripts/emit-flows.ts            → emit (write to disk)
@@ -603,13 +602,11 @@ function biomeFormatInPlace(absolutePath: string): void {
   });
 }
 
-// Stable structural identity for grouping per-mode flows. Two compiled
-// flows belong to the same group when their stringified form (with
-// entry_modes stripped) is byte-identical. JSON.stringify is deterministic
-// for our object construction order.
+// Stable structural identity for grouping per-mode flows. Two compiled flows
+// belong to the same group when their stringified form is byte-identical.
+// JSON.stringify is deterministic for our object construction order.
 function graphIdentityHash(flow: CompiledFlow): string {
-  const { entry_modes: _entryModes, ...rest } = flow;
-  return JSON.stringify(rest);
+  return JSON.stringify(flow);
 }
 
 type SchematicFilePlan = {
@@ -617,9 +614,8 @@ type SchematicFilePlan = {
   flow: CompiledFlow;
 };
 
-// Decide the per-schematic file plan: what to write, where, and with which
-// entry_modes payload. Exposed so the emit and check paths share the
-// same logic.
+// Decide the per-schematic file plan: what to write and where. Exposed so the
+// emit and check paths share the same logic.
 function planSchematicFiles(id: string, result: CompileResult): SchematicFilePlan[] {
   if (result.kind === 'single') {
     return [
@@ -649,28 +645,14 @@ function planSchematicFiles(id: string, result: CompileResult): SchematicFilePla
     return aFirst.localeCompare(bFirst);
   });
   const plan: SchematicFilePlan[] = [];
-  // Largest group → circuit.json, with entry_modes spanning all modes in
-  // that group. Read each mode's compiled entry_modes[0] from the original
-  // result so per-mode depth/description survive.
+  // Largest group → circuit.json.
   const main = ordered[0];
   if (main === undefined) return plan;
-  const mainEntryModes = main.modes.map((m) => {
-    const flow = result.flows.get(m);
-    if (flow === undefined) {
-      throw new Error(`compiler returned no flow for mode '${m}' in '${id}'`);
-    }
-    const firstEntryMode = flow.entry_modes[0];
-    if (firstEntryMode === undefined) {
-      throw new Error(`compiled flow for mode '${m}' in '${id}' has no entry_modes`);
-    }
-    return firstEntryMode;
-  });
   plan.push({
     outRel: `generated/flows/${id}/circuit.json`,
-    flow: { ...main.flow, entry_modes: mainEntryModes },
+    flow: main.flow,
   });
-  // Remaining groups → one file per mode in those groups, with single-mode
-  // entry_modes (already shaped that way by the compiler).
+  // Remaining groups → one file per mode in those groups.
   for (let i = 1; i < ordered.length; i++) {
     const group = ordered[i];
     if (group === undefined) continue;
@@ -707,7 +689,7 @@ function codexHostPlan(plan: SchematicFilePlan[]): SchematicFilePlan[] {
 // Returns the set of unexpected `*.json` files in a generated flow directory:
 // anything on disk under `<rootRel>/<id>/` that ends in `.json`
 // but isn't in the emit plan. These are stale per-mode siblings from a
-// renamed/collapsed entry mode.
+// renamed/collapsed axis selection.
 function findStaleSiblings(id: string, plan: SchematicFilePlan[], rootRel: string): string[] {
   const skillDirAbs = resolve(projectRoot, `${rootRel}/${id}`);
   if (!existsSync(skillDirAbs)) return [];

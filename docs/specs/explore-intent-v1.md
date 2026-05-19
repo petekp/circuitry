@@ -4,14 +4,14 @@ status: draft
 version: 1
 last_updated: 2026-05-08
 source: intent grill conducted 2026-05-07/2026-05-08; 19 questions across the foundational design tree
-purpose: target intent for the Explore flow, written from first principles. Implementation reconciliation is a separate phase.
+purpose: target intent for the Explore flow, written from first principles. Implementation reconciliation is a separate stage.
 ---
 
 # Explore Flow Intent Spec v1
 
 This spec defines what the Explore flow *should be*. It is upstream of any
 implementation choice. The current code may diverge from this spec; that
-divergence is the harden-or-improve worklist for the next phase.
+divergence is the harden-or-improve worklist for the next stage.
 
 ## Status
 
@@ -29,7 +29,7 @@ spec references them; it does not redefine them.
    orthogonal axes: `Depth` (lite/standard/deep), `Tournament` (on/off),
    `Autonomous` (on/off).
 2. **`--from-run <run-folder>` cross-flow composition** — single canonical
-   flag for any flow to consume any other flow's prior-run artifact as
+   flag for any flow to consume any other flow's prior-run report as
    input context. Operator-mediated; no auto-chaining.
 3. **Structured human-in-the-loop checkpoint protocol** — flows emit
    structured question events with anticipated answers; host adapter
@@ -58,11 +58,11 @@ fixed, Explore is the wrong flow — they reach for the action flow directly.
 
 ---
 
-## 2. Output artifact
+## 2. Output report
 
 ### Canonical sections
 
-Every Explore run produces a single canonical artifact with these sections,
+Every Explore run produces a single canonical report with these sections,
 in this order. Sections are **present-or-absent based on content**, never
 filled with hedge-language to satisfy a template:
 
@@ -135,7 +135,7 @@ tournament only; needs extension).
 - [bulleted, when present]
 
 **Where to look**
-- Full artifact: <path>
+- Full report: <path>
 - Trace: <path>
 - Key evidence: [top 3 file paths or report paths]
 ```
@@ -149,7 +149,7 @@ resolved without operator input.
 Length cap: ~200-400 words. Plain prose, short sentences, no
 project-internal jargon.
 
-### Tournament artifact variant
+### Tournament report variant
 
 When tournament is on, the Options section is replaced by:
 
@@ -160,8 +160,8 @@ Tournament/
   Selection            — selected option (operator-picked OR autonomous-resolved with rationale)
 ```
 
-The artifact identity stays the same (`explore-result.json`) — tournament
-is an in-shape variant, not a separate artifact type.
+The report identity stays the same (`explore-result.json`) — tournament
+is an in-shape variant, not a separate report type.
 
 ---
 
@@ -179,7 +179,7 @@ Frame  →  Analyze  →  Synthesize  →  Review  →  Close
 | **Analyze** | Decomposes the Subject; gathers evidence; produces Findings. |
 | **Synthesize** | Produces Options + Recommendation. When tournament is on, fans out to N parallel branches. |
 | **Review** | Adversarial pass against the 8-dimension quality rubric. Reviewer connector MUST be distinct from synthesizer. |
-| **Close** | Aggregates prior reports, emits Open Questions, writes the final artifact + three operator-facing surfaces. |
+| **Close** | Aggregates prior reports, emits Open Questions, writes the final report + three operator-facing surfaces. |
 
 ### Depth honoring
 
@@ -204,7 +204,7 @@ auto-resolves per the comparative review's recommendation).
 
 - **No Plan stage** — Explore surfaces clarity, doesn't plan execution.
 - **No Verify stage** — Explore produces findings, not executable
-  artifacts; nothing to verify mechanically. Review is the quality gate.
+  reports; nothing to verify mechanically. Review is the quality check.
 - **No Act stage** — Explore is read-only on the codebase.
 
 ### Drift to reconcile
@@ -234,7 +234,7 @@ behavior in the cross-cutting axis spec).
 
 ### What posture is NOT
 
-- Not per-stage operator gates — operator does not approve every stage
+- Not per-stage operator approvals — operator does not approve every stage
 - Not back-and-forth chat — the LLM doesn't ask for input when it could
   just produce output
 - Not silent — trace stream surfaces progress; operator sees what's
@@ -273,7 +273,7 @@ project boundary.
 
 ### Run folder location
 
-The artifact + trace live in the current project's run folder regardless
+The report + trace live in the current project's run folder regardless
 of how broadly the investigation scope reaches.
 
 ---
@@ -286,7 +286,7 @@ computed from per-dimension scores.
 
 | Dimension | What it catches |
 |---|---|
-| **Evidence rigor** | Invention; cites that don't actually support the claim |
+| **Evidence depth** | Invention; cites that don't actually support the claim |
 | **Project-specificity** | Generic best practices substituted for project analysis |
 | **Insight density** | Restating the prompt; trivial summaries |
 | **Actionability** | Vague recommendations |
@@ -300,18 +300,18 @@ computed from per-dimension scores.
 | Per-dimension scores | Overall verdict | Routing |
 |---|---|---|
 | All `pass` | `pass` | Proceed to Close |
-| Any `concern`, none `fail` | `pass-with-objections` | Proceed to Close; objections carried in artifact |
+| Any `concern`, none `fail` | `pass-with-objections` | Proceed to Close; objections carried in report |
 | Any `fail`, ≤ 2 dimensions | `needs-revision` | Retry Synthesize (autonomous) or abort (otherwise) |
 | Any `fail`, ≥ 3 dimensions | `fail` | Abort regardless of mode |
 
-### Artifact contracts derived from the rubric
+### Report contracts derived from the rubric
 
 - **`evidence_refs` is required and structured.** Each ref has `kind`
   (file/report/memory) + `pointer` + `supports` (what claim it backs).
   Empty arrays are not valid.
 - **`Recommendation.confidence` is mandatory when Recommendation is
   present.** Forces explicit commitment to a confidence level.
-- **`review-summary` section in the artifact** carries per-dimension
+- **`review-summary` section in the report** carries per-dimension
   scores so the operator sees the quality signal.
 
 ### What passes Review as honest-thin
@@ -339,7 +339,7 @@ The rubric tests for *fakery*, not *honest limits*. These pass:
 
 ### Positive obligations (Explore MUST always)
 
-- Produce an artifact, even on degraded outputs
+- Produce a report, even on degraded outputs
 - Cite evidence for every Finding
 - Honor the depth/tournament/autonomous axes per the cross-cutting spec
 - Trace what it did (every stage emits its report; every auto-resolved
@@ -366,7 +366,7 @@ The rubric tests for *fakery*, not *honest limits*. These pass:
 
 ## 8. Hand-off & composition
 
-Explore stops at Close. The operator reads the artifact, decides whether
+Explore stops at Close. The operator reads the report, decides whether
 to act, and invokes the next flow themselves. **No auto-chaining.**
 
 ### Structured next_action
@@ -380,7 +380,7 @@ Recommendation includes a structured `next_action` field:
     "confidence": "medium",
     "next_action": {
       "flow": "build",
-      "goal": "implement the inventory dispatch step using the codex adapter",
+      "goal": "implement the inventory relay step using the codex adapter",
       "depth_hint": "standard",
       "tournament_hint": false
     }
@@ -394,7 +394,7 @@ also omitted.
 ### Cross-flow consumption
 
 Per the cross-cutting `--from-run` spec: action flows MAY consume an
-Explore artifact via `--from-run <explore-run-folder>`. Explore's
+Explore report via `--from-run <explore-run-folder>`. Explore's
 `explore-result.json` is shaped to support this consumption. Mechanics
 live in the cross-cutting spec, not here.
 
@@ -447,7 +447,7 @@ Per cross-cutting spec semantics. Explore-specific behaviors:
 | 7a | External resource unreachable read-only | Structured checkpoint: clone/auth manually then rerun / proceed without / abort. Autonomous default: proceed without with `confidence: low`. |
 | 8 | Prompt asks for action work directly | Honor explore portion only. Recommendation names action flow. Hard refusal on writes. |
 | 9 | Tournament with no plausible alternatives | Structured checkpoint to confirm proceed-non-tournament. Autonomous default: proceed-non-tournament with note. |
-| 10 | All tournament branches fail Review | Honest artifact with no Selection. Open Questions explains impasse. Autonomous behaves the same. |
+| 10 | All tournament branches fail Review | Honest report with no Selection. Open Questions explains impasse. Autonomous behaves the same. |
 | 11 | Memory has strong opinions on topic | Memory is first-class evidence. Findings surface tension explicitly when memory contradicts prompt premise. |
 | 12 | Re-explore (operator wants follow-up) | Always a fresh run, optionally `--from-run` prior. Run folders are immutable. |
 
@@ -496,7 +496,7 @@ organization+naming alone is the minimum-viable improvement.
 The flow is named **Explore**. Slash command: `/circuit:explore`.
 
 Rationale: matches the openness of direction uncertainty; action-neutral;
-already in the operator's vocabulary; friendly verb on rigorous flow is
+already in the operator's vocabulary; friendly verb on thorough flow is
 preferable to a heavy verb (Investigate / Diagnose) that scares operators
 away from a useful tool.
 
@@ -504,7 +504,7 @@ away from a useful tool.
 
 ## 13. Reconciliation needed with current implementation
 
-The harden-or-improve worklist for the next phase. None of these are
+The harden-or-improve worklist for the next stage. None of these are
 addressed by this spec; they are the diff between this spec and current
 code.
 
@@ -554,7 +554,7 @@ This spec is reopened if any of:
 4. **Tournament default N changes** based on real usage data.
 5. **Operator-summary surfaces grow** — e.g., a fourth surface (TUI? Slack
    message?) is added.
-6. **A second flow's intent spec** reveals a primitive that should
+6. **A second flow's intent spec** reveals a block that should
    generalize (e.g., a different success-condition shape that fits all
    flows).
 

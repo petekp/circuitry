@@ -37,11 +37,14 @@ export interface RuntimeIndexedCheckpointStep extends RuntimeIndexedStepBase {
   readonly kind: 'checkpoint';
   readonly policy: {
     readonly prompt: string;
-    readonly choices: readonly {
-      readonly id: string;
-      readonly label?: string | undefined;
-      readonly description?: string | undefined;
-    }[];
+    readonly choices?:
+      | readonly {
+          readonly id: string;
+          readonly label?: string | undefined;
+          readonly description?: string | undefined;
+        }[]
+      | undefined;
+    readonly choices_from?: unknown | undefined;
     readonly safe_default_choice?: string | undefined;
     readonly safe_autonomous_choice?: string | undefined;
     readonly report_template?: unknown | undefined;

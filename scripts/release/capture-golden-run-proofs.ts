@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   mkdirSync,
   readFileSync,
@@ -35,6 +36,10 @@ const composeRuntime = (await import(
   resolve(projectRoot, 'dist/runtime/executors/compose.js')
 )) as typeof ComposeModule;
 const { executeCompose } = composeRuntime;
+
+function sha256Hex(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
+}
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
@@ -174,6 +179,149 @@ function buildAbortRelayer(): Relayer {
   };
 }
 
+const buildProofCheckpointExecutor: StepExecutor = async (step, context) => {
+  if (step.kind !== 'checkpoint' || step.id !== 'frame-step') {
+    const checkpointRuntime = (await import(
+      resolve(projectRoot, 'dist/runtime/executors/checkpoint.js')
+    )) as { executeCheckpoint: StepExecutor };
+    return await checkpointRuntime.executeCheckpoint(step, context);
+  }
+  const report = step.writes?.report;
+  const request = step.writes?.request;
+  const response = step.writes?.response;
+  if (report?.schema !== 'build.brief@v1' || request === undefined || response === undefined) {
+    throw new Error(
+      "Build proof checkpoint executor expected frame-step to write 'build.brief@v1'",
+    );
+  }
+
+  const attempt = context.activeStepAttempt ?? 1;
+  const brief = {
+    objective: context.goal,
+    scope: 'Make the smallest safe change that satisfies the requested goal.',
+    success_criteria: [
+      'The requested behavior is implemented',
+      'Verification passes',
+      'Review completes without a blocking issue',
+    ],
+    verification_command_candidates: [
+      {
+        id: 'npm-check',
+        cwd: '.',
+        argv: ['npm', 'run', 'check'],
+        timeout_ms: 120_000,
+        max_output_bytes: 200_000,
+        env: {},
+      },
+    ],
+    checkpoint: {
+      request_path: request.path,
+      response_path: response.path,
+      allowed_choices: step.choices,
+    },
+  };
+
+  await context.files.writeJson(report, brief);
+  const reportHash = sha256Hex(await context.files.readText(report));
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'step.report_written',
+    step_id: step.id,
+    attempt,
+    report_path: report.path,
+    report_schema: report.schema,
+  });
+
+  const stepPolicy = step.policy as {
+    readonly prompt: string;
+    readonly safe_default_choice?: string;
+    readonly safe_autonomous_choice?: string;
+    readonly choices: readonly { readonly id: string; readonly label?: string }[];
+  };
+  const effectiveDepth = context.depth ?? 'standard';
+  const waitsForOperator = effectiveDepth === 'deep' || effectiveDepth === 'tournament';
+  const autoSelection =
+    effectiveDepth === 'autonomous'
+      ? stepPolicy.safe_autonomous_choice
+      : stepPolicy.safe_default_choice;
+  const requestBody = {
+    schema_version: 1,
+    step_id: step.id,
+    prompt: stepPolicy.prompt,
+    allowed_choices: stepPolicy.choices.map((choice) => choice.id),
+    ...(stepPolicy.safe_default_choice === undefined
+      ? {}
+      : { safe_default_choice: stepPolicy.safe_default_choice }),
+    ...(stepPolicy.safe_autonomous_choice === undefined
+      ? {}
+      : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice }),
+    execution_context: {
+      ...(context.projectRoot === undefined ? {} : { project_root: context.projectRoot }),
+      selection_config_layers: context.selectionConfigLayers ?? [],
+      checkpoint_report_sha256: reportHash,
+    },
+  };
+  await context.files.writeJson(request, requestBody);
+  const requestHash = sha256Hex(await context.files.readText(request));
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'checkpoint.requested',
+    step_id: step.id,
+    attempt,
+    request_path: request.path,
+    request_report_hash: requestHash,
+    options: step.choices,
+    auto_resolved: !waitsForOperator,
+  });
+
+  if (waitsForOperator) {
+    return {
+      kind: 'waiting_checkpoint',
+      checkpoint: {
+        stepId: step.id,
+        attempt,
+        requestPath: context.files.resolve(request),
+        allowedChoices: step.choices,
+      },
+    };
+  }
+  if (autoSelection === undefined) {
+    throw new Error(`Build proof checkpoint executor cannot resolve ${effectiveDepth} depth`);
+  }
+  await context.files.writeJson(response, {
+    schema_version: 1,
+    step_id: step.id,
+    selection: autoSelection,
+    resolution_source: effectiveDepth === 'autonomous' ? 'safe-autonomous' : 'safe-default',
+  });
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'checkpoint.resolved',
+    step_id: step.id,
+    attempt,
+    selection: autoSelection,
+    auto_resolved: true,
+    resolution_source: effectiveDepth === 'autonomous' ? 'safe-autonomous' : 'safe-default',
+    response_path: response.path,
+  });
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'check.evaluated',
+    step_id: step.id,
+    attempt,
+    check_kind: 'checkpoint_selection',
+    outcome: 'pass',
+  });
+  return {
+    route: Object.hasOwn(step.routes, autoSelection) ? autoSelection : 'pass',
+    details: { selection: autoSelection },
+  };
+};
+
+function buildProofExecutors(): RuntimeExecutorsOption {
+  return { checkpoint: buildProofCheckpointExecutor };
+}
+
 function reviewRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
@@ -311,8 +459,8 @@ const fixProofComposeExecutor: StepExecutor = async (step, context) => {
 // actually modifies files, so the live executors would observe an empty file
 // list and the change-set writer would refuse the run with "missing declared:
 // src/login.ts". This stub writes passing reports for both steps so the
-// proof closes with outcome 'partial' (still gated by the deferred
-// regression test) — exactly as it did before Slice 2 added these gates.
+// proof closes with outcome 'partial' (still routed by the deferred
+// regression test) — exactly as it did before Slice 2 added these checks.
 const fixProofVerificationExecutor: StepExecutor = async (step, context) => {
   if (step.kind !== 'verification') {
     throw new Error(
@@ -381,6 +529,17 @@ function fixProofExecutors(): RuntimeExecutorsOption {
   };
 }
 
+const PASSING_RUBRIC_MODEL_JUDGMENTS = {
+  evidence_rigor: 'pass',
+  actionability: 'pass',
+  coverage_adequacy: 'pass',
+  scope_discipline: 'pass',
+  honest_calibration: 'pass',
+  project_specificity: 'pass',
+  insight_density: 'pass',
+  branch_distinctness: 'pass',
+} as const;
+
 function exploreDecisionRelayer(): Relayer {
   return {
     connectorName: 'claude-code',
@@ -398,6 +557,7 @@ function exploreDecisionRelayer(): Relayer {
             evidence_refs: ['reports/decision-options.json'],
             risks: ['The larger ecosystem may add dependency sprawl.'],
             next_action: 'Run a Build plan for a React prototype.',
+            rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
           }),
           duration_ms: 10,
           cli_version: 'proof-stub',
@@ -416,6 +576,7 @@ function exploreDecisionRelayer(): Relayer {
             evidence_refs: ['reports/decision-options.json'],
             risks: ['Team familiarity may be thinner.'],
             next_action: 'Run a Build plan for a Vue prototype.',
+            rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
           }),
           duration_ms: 11,
           cli_version: 'proof-stub',
@@ -434,6 +595,7 @@ function exploreDecisionRelayer(): Relayer {
             evidence_refs: ['reports/decision-options.json'],
             risks: ['The decision takes longer.'],
             next_action: 'Run a short Explore follow-up with prototype criteria.',
+            rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
           }),
           duration_ms: 12,
           cli_version: 'proof-stub',
@@ -452,6 +614,7 @@ function exploreDecisionRelayer(): Relayer {
             evidence_refs: ['reports/decision-options.json'],
             risks: ['The project loses momentum.'],
             next_action: 'Collect the missing constraints and rerun the decision.',
+            rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
           }),
           duration_ms: 13,
           cli_version: 'proof-stub',
@@ -475,6 +638,26 @@ function exploreDecisionRelayer(): Relayer {
         };
       }
       throw new Error(`unexpected Explore proof relay prompt:\n${input.prompt.slice(0, 500)}`);
+    },
+  };
+}
+
+function exploreAutonomousDecisionRelayer(): Relayer {
+  const base = exploreDecisionRelayer();
+  return {
+    connectorName: base.connectorName,
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
+      const result = await base.relay(input);
+      const resultBody = JSON.parse(result.result_body) as Record<string, unknown>;
+      if (resultBody.option_id !== 'option-1') return result;
+      return {
+        ...result,
+        receipt_id: 'proof-autonomous-proposal-option-1',
+        result_body: JSON.stringify({
+          ...resultBody,
+          evidence_refs: [],
+        }),
+      };
     },
   };
 }
@@ -603,7 +786,7 @@ async function captureHandoff(): Promise<void> {
         'build',
         '--goal',
         'deep change that asks for handoff continuity',
-        '--entry-mode',
+        '--rigor',
         'deep',
         '--run-folder',
         runFolder,
@@ -612,6 +795,7 @@ async function captureHandoff(): Promise<void> {
       ],
       {
         runId: '44444444-4444-4444-4444-444444444411',
+        runtimeExecutors: buildProofExecutors(),
         now,
         configCwd: projectRoot,
       },
@@ -730,13 +914,15 @@ const scenarios: Scenario[] = [
     slug: 'routed-build',
     argv: ['run', '--goal', 'develop: add a small safe change'],
     relayer: buildRelayer(),
+    runtimeExecutors: buildProofExecutors(),
     runId: '44444444-4444-4444-4444-444444444402',
     startMs: Date.UTC(2026, 3, 29, 18, 0, 0),
   },
   {
     slug: 'explicit-build',
-    argv: ['run', 'build', '--goal', 'add a focused change', '--entry-mode', 'deep'],
+    argv: ['run', 'build', '--goal', 'add a focused change', '--rigor', 'deep'],
     relayer: buildRelayer(),
+    runtimeExecutors: buildProofExecutors(),
     runId: '44444444-4444-4444-4444-444444444403',
     startMs: Date.UTC(2026, 3, 29, 18, 30, 0),
   },
@@ -749,8 +935,9 @@ const scenarios: Scenario[] = [
   },
   {
     slug: 'checkpoint',
-    argv: ['run', 'build', '--goal', 'deep change that asks for scope', '--entry-mode', 'deep'],
+    argv: ['run', 'build', '--goal', 'deep change that asks for scope', '--rigor', 'deep'],
     relayer: buildRelayer(),
+    runtimeExecutors: buildProofExecutors(),
     resumeChoice: 'continue',
     runId: '44444444-4444-4444-4444-444444444405',
     startMs: Date.UTC(2026, 3, 29, 19, 30, 0),
@@ -759,6 +946,7 @@ const scenarios: Scenario[] = [
     slug: 'abort',
     argv: ['run', 'build', '--goal', 'simulate connector failure'],
     relayer: buildAbortRelayer(),
+    runtimeExecutors: buildProofExecutors(),
     runId: '44444444-4444-4444-4444-444444444406',
     startMs: Date.UTC(2026, 3, 29, 20, 0, 0),
   },
@@ -779,9 +967,26 @@ const scenarios: Scenario[] = [
     startMs: Date.UTC(2026, 3, 29, 17, 0, 0),
   },
   {
+    slug: 'explore-autonomous-decision',
+    argv: [
+      'run',
+      'explore',
+      '--goal',
+      'decide: React vs Vue',
+      '--tournament',
+      '--tournament-n',
+      '2',
+      '--autonomous',
+    ],
+    relayer: exploreAutonomousDecisionRelayer(),
+    runId: '44444444-4444-4444-4444-444444444442',
+    startMs: Date.UTC(2026, 3, 29, 17, 30, 0),
+  },
+  {
     slug: 'plan-execution',
     argv: ['run', '--goal', 'Execute this plan: ./docs/specs/headless-engine-host-api-v1.md'],
     relayer: buildRelayer(),
+    runtimeExecutors: buildProofExecutors(),
     runId: '44444444-4444-4444-4444-444444444410',
     startMs: Date.UTC(2026, 3, 29, 22, 0, 0),
   },

@@ -128,14 +128,12 @@ describe('deriveTerminalVerdict — fix #2 coverage', () => {
       version: '0.1.0',
       purpose: 'Test fixture for multi-relay terminal verdict derivation.',
       entry: { signals: { include: ['multi'], exclude: [] }, intent_prefixes: ['multi'] },
-      entry_modes: [
-        {
-          name: 'multi',
-          start_at: 'first-relay',
-          depth: 'standard',
-          description: 'two-relay route',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'first-relay',
       stages: [
         {
           id: 'act-stage',
@@ -243,14 +241,12 @@ describe('deriveTerminalVerdict — fix #2 coverage', () => {
       version: '0.1.0',
       purpose: 'Test fixture: a flow with no verdict-bearing steps.',
       entry: { signals: { include: ['syn'], exclude: [] }, intent_prefixes: ['syn'] },
-      entry_modes: [
-        {
-          name: 'syn',
-          start_at: 'only-compose',
-          depth: 'standard',
-          description: 'one compose step',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'only-compose',
       stages: [{ id: 'plan-stage', title: 'Plan', canonical: 'plan', steps: ['only-compose'] }],
       stage_path_policy: {
         mode: 'partial',

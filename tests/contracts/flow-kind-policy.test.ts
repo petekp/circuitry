@@ -123,14 +123,12 @@ function validExploreFixture(overrides: Record<string, unknown> = {}): Record<st
     version: '0.1.0',
     purpose: 'test fixture',
     entry: { signals: { include: [], exclude: [] }, intent_prefixes: [] },
-    entry_modes: [
-      {
-        name: 'default',
-        start_at: 'frame-step',
-        depth: 'standard',
-        description: 'test entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: 'frame-step',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { id: 'analyze-stage', title: 'Analyze', canonical: 'analyze', steps: ['analyze-step'] },
@@ -156,14 +154,14 @@ function validExploreTournamentFixture(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return validExploreFixture({
-    entry_modes: [
-      {
-        name: 'tournament',
-        start_at: 'frame-step',
-        depth: 'tournament',
-        description: 'test tournament entry mode',
-      },
-    ],
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: true,
+      supports_autonomous: false,
+      default: { rigor: 'standard', tournament: true, tournament_n: 3, autonomous: false },
+      tournament_fan_out_stage: 'decision-stage',
+    },
+    starts_at: 'frame-step',
     stages: [
       { id: 'frame-stage', title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { id: 'analyze-stage', title: 'Analyze', canonical: 'analyze', steps: ['analyze-step'] },

@@ -328,7 +328,7 @@ describe('materializer schema-parse', () => {
     // runtime-proof-strict@v1 schema parse — but the check evaluator
     // rejects "reject" (not in check.pass ["ok"]). The schema-tied
     // report IS written so downstream readers see the verdict;
-    // the verdict gate governs route selection, not artifact emission.
+    // the verdict check governs route selection, not report emission.
     // The reason text still names the verdict rejection path, not
     // the schema parse path.
     const { bytes } = loadMutatedFixture((raw) => {
@@ -347,8 +347,8 @@ describe('materializer schema-parse', () => {
 
     // Schema-tied report IS materialized — the body parses against
     // runtime-proof-strict@v1, so downstream readers (operator-summary
-    // projector, CI tooling, status storyboard) get the artifact even
-    // though the verdict failed the gate.
+    // projector, CI tooling, status storyboard) get the report even
+    // though the verdict failed the check.
     const reportAbs = join(runFolder, 'reports', 'relay-canonical.json');
     expect(existsSync(reportAbs)).toBe(true);
     expect(JSON.parse(readFileSync(reportAbs, 'utf8'))).toEqual({

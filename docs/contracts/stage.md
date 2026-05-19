@@ -170,7 +170,7 @@ exist in Stage 2:
   `verify`.)
 - `stage.prop.canonical_stage_reachability` — For every non-omitted
   canonical stage, at least one Step in that stage MUST be reachable
-  from at least one CompiledFlow entry mode along a valid route sequence.
+  from the CompiledFlow `starts_at` step along a valid route sequence.
   A flow cannot satisfy stage_path_policy and then route from `frame`
   directly to `@complete`, skipping all declared canonicals. (Closes
   Codex HIGH #2.)

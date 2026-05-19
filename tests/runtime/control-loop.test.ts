@@ -78,14 +78,12 @@ function relayFlowBytes(options: readonly string[] | RelayFlowFixtureOptions = [
         signals: { include: ['runtime-relay-check'], exclude: [] },
         intent_prefixes: ['runtime-relay-check'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'relay-step',
-          depth: 'standard',
-          description: 'Start directly at the relay step.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'relay-step',
       stages: [
         {
           id: 'act-stage',
@@ -132,14 +130,12 @@ function multiRelayVerdictFlowBytes(): Buffer {
         signals: { include: ['runtime-multi-relay-verdict'], exclude: [] },
         intent_prefixes: ['runtime-multi-relay-verdict'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'first-relay',
-          depth: 'standard',
-          description: 'Run two relay steps before closing.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'first-relay',
       stages: [
         {
           id: 'act-stage',
@@ -227,14 +223,12 @@ function checkpointRouteFlowBytes(selection: RichCheckpointRoute): Buffer {
         signals: { include: ['runtime-checkpoint-routes'], exclude: [] },
         intent_prefixes: ['runtime-checkpoint-routes'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'checkpoint-step',
-          depth: 'standard',
-          description: 'Auto-resolve a checkpoint route label.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'checkpoint-step',
       stages: [
         {
           id: 'frame-stage',
@@ -297,14 +291,12 @@ function checkpointRetryLoopFlowBytes(): Buffer {
         signals: { include: ['runtime-checkpoint-retry-loop'], exclude: [] },
         intent_prefixes: ['runtime-checkpoint-retry-loop'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'checkpoint-step',
-          depth: 'standard',
-          description: 'Auto-resolve retry until the route budget is exhausted.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'checkpoint-step',
       stages: [
         {
           id: 'frame-stage',
@@ -374,14 +366,18 @@ function checkpointMissingSafeChoiceFlowBytes(input: {
         signals: { include: ['runtime-checkpoint-missing-safe-choice'], exclude: [] },
         intent_prefixes: ['runtime-checkpoint-missing-safe-choice'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'checkpoint-step',
-          depth: input.depth,
-          description: 'Start directly at the checkpoint step.',
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: input.depth === 'autonomous',
+        default: {
+          rigor: 'standard',
+          tournament: false,
+          tournament_n: 3,
+          autonomous: input.depth === 'autonomous',
         },
-      ],
+      },
+      starts_at: 'checkpoint-step',
       stages: [
         {
           id: 'frame-stage',
@@ -431,14 +427,12 @@ function verificationFlowBytes(reportSchema = 'never-registered.verification@v1'
         signals: { include: ['runtime-verification-failure'], exclude: [] },
         intent_prefixes: ['runtime-verification-failure'],
       },
-      entry_modes: [
-        {
-          name: 'default',
-          start_at: 'verification-step',
-          depth: 'standard',
-          description: 'Start directly at the verification step.',
-        },
-      ],
+      axes: {
+        allowed_rigors: ['standard'],
+        supports_tournament: false,
+        supports_autonomous: false,
+      },
+      starts_at: 'verification-step',
       stages: [
         {
           id: 'verify-stage',
@@ -1169,7 +1163,7 @@ describe('runtime control-loop parity twins', () => {
     expect(result.outcome).toBe('aborted');
     expect(result.verdict).toBeUndefined();
     expect(resultJson.verdict).toBeUndefined();
-    // The verdict gate fails ('reject' is not in pass=['accept']), but the
+    // The verdict check fails ('reject' is not in pass=['accept']), but the
     // body parses against runtime-proof-canonical@v1, so the schema-tied
     // report is still materialized for downstream readers.
     expect(inspection).toEqual({

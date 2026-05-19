@@ -27,10 +27,10 @@ The post names three reasoning spaces and asserts a rough cost ratio:
 **Plan space (1x), Bead space (5x), Code space (25x)**. A change made
 in the plan is roughly 25x cheaper than the same change made in code.
 
-circuit-next already encodes this intuition in its phase ordering
+circuit-next already encodes this intuition in its stage ordering
 (Frame → Plan → Act, then Verify → Review → Close), but we've never
-*named* the cost ratio. Naming it would sharpen rigor-profile choice:
-"this is a Deep-rigor task because the cost of being wrong in code is
+*named* the cost ratio. Naming it would sharpen depth choice:
+"this is a Deep task because the cost of being wrong in code is
 high, so we pay more upstream." It's a framing tool, not new
 machinery — exactly the kind of thing that fits our cut-not-patch
 default.
@@ -41,10 +41,10 @@ Their guidance for when to stop polishing a plan: stop when content
 similarity is rising, output size is shrinking, and change velocity is
 slowing. These are concrete signals, not gut-feel.
 
-circuit-next's iteration loops — Explore polish, dispatch
+circuit-next's iteration loops — Explore polish, relay
 implement/review/converge — currently terminate on gut-feel or fixed
 caps. A "diminishing returns" check would be a small heuristic, not a
-new artifact, and it would prevent two failure modes we already see:
+new file, and it would prevent two failure modes we already see:
 stopping too early because the loop felt slow, and grinding past the
 point where the model is just rephrasing itself.
 
@@ -57,7 +57,7 @@ context.
 
 We already do hostile fresh-context review post-commit (the
 adversarial subagent batch). Adding the same review on the plan side,
-before code gets written, is a phase-ordering tweak inside Build and
+before code gets written, is a stage-ordering tweak inside Build and
 Fix. No new infra. The cost ratio above justifies it: catching a
 plan defect at 1x is much cheaper than catching the same defect at
 25x in code review.
@@ -89,11 +89,11 @@ editing the same repo at once. We don't.
 
 ### The Idea-Wizard pipeline (30 ideas → winnow to 5 → expand to 10 → human review)
 
-A six-phase wizard for adding a feature to an existing project.
+A six-stage wizard for adding a feature to an existing project.
 Generates 30 candidate ideas, narrows to 5, expands those, asks the
 operator to pick. It's a structured brainstorm.
 
-For circuit-next this is over-engineered — our Explore workflow
+For circuit-next this is over-engineered — our Explore flow
 already covers "shape an execution plan" and our operator has a sharp
 sense of what to build. Generating 25 throwaway ideas to discard is
 the kind of churn the methodology strip was meant to prevent.
@@ -117,14 +117,14 @@ any agent can pick up any bead.
 
 circuit-next's design is the opposite: we have specialized adapters
 (agent vs codex), specialized flows (Build vs Fix vs Review),
-specialized rigor profiles, and dispatch routing that picks the right
+specialized depth profiles, and relay routing that picks the right
 runtime for the shape of the work.
 
 A flywheel partisan would call this coordination tax — every
 specialization is a place where work has to be routed correctly or
 gets stuck. We'd call their fungibility a waste of differentiated
 runtime strengths (Codex's read-only sandbox, Claude's tool surface,
-the rigor-profile gradient).
+the depth gradient).
 
 These can both be right under different conditions. Their bet pays
 off when you have many cheap fungible workers and the bottleneck is
@@ -132,7 +132,7 @@ coordination overhead. Ours pays off when the operator is the scarce
 resource and routing-by-shape lets one human direct work without
 having to think about adapter mechanics.
 
-Worth holding this tension in mind next time we touch the dispatch
+Worth holding this tension in mind next time we touch the relay
 layer. If we ever find ourselves adding a fifth or sixth adapter
 distinction, the flywheel argument is the one to stress-test against.
 

@@ -305,8 +305,9 @@ Minimum fields:
 - `next_action`
 - `follow_up_workflow`
 
-`follow_up_workflow` should be explicit when the decision naturally starts
-Build, Fix, Review, or another Explore run.
+`follow_up_workflow` is a compatibility field in the report schema. In prose,
+call it the follow-up flow. It should be explicit when the decision naturally
+starts Build, Fix, Review, or another Explore run.
 
 ### 8. Close With Result
 

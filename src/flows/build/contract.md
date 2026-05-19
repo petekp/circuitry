@@ -20,13 +20,18 @@ property_ids: []
 
 The **Build** flow is circuit-next's standard implementation flow:
 frame, plan, act, verify, review, close. It produces a typed,
-structured JSON report and an evidence chain at every step.
+structured JSON report and a chain of evidence at every step.
 
 ## Canonical stage policy
 
 Build uses the canonical set `{frame, plan, act, verify, review, close}` and
 omits `{analyze}`. This is enforced by `src/shared/flow-kind-policy-core.ts`
 against the generated flow at `generated/flows/build/circuit.json`.
+
+## Axis Support
+
+Build declares `axes.allowed_rigors = [lite, standard, deep]`. It supports
+autonomous runs and does not support tournament runs.
 
 This contract starts as the typed-output home for the six Build reports:
 

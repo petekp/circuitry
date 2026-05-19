@@ -6,6 +6,7 @@
 // should only interpret the executable graph and append durable trace entries.
 
 import { randomUUID } from 'node:crypto';
+import type { Axes } from '../../schemas/axes.js';
 import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
 import { isProofPlanBlockedError } from '../../shared/proof-plan.js';
@@ -31,6 +32,7 @@ export interface GraphRunnerOptions extends RuntimeExecutionCapabilities {
   readonly manifestBytes?: Uint8Array;
   readonly entryModeName?: string;
   readonly depth?: string;
+  readonly axes?: Axes;
   readonly maxSteps?: number;
   readonly resumeCheckpoint?: {
     readonly stepId: string;
@@ -300,6 +302,7 @@ async function executeExecutableFlowOutcomeUnsafe(
     manifestHash: resolveManifestHash(flow, options),
     ...(options.entryModeName === undefined ? {} : { entryModeName: options.entryModeName }),
     ...(options.depth === undefined ? {} : { depth: options.depth }),
+    ...(options.axes === undefined ? {} : { axes: options.axes }),
     now: boundary.clock.now,
     files,
     trace,

@@ -19,32 +19,22 @@
       "release-note-flow"
     ]
   },
-  "entry_modes": [
-    {
-      "name": "default",
-      "start_at": "frame-step",
-      "depth": "standard",
-      "description": "Default Build entry mode."
-    },
-    {
-      "name": "lite",
-      "start_at": "frame-step",
-      "depth": "lite",
-      "description": "Lite Build entry mode."
-    },
-    {
-      "name": "deep",
-      "start_at": "frame-step",
-      "depth": "deep",
-      "description": "Deep Build entry mode."
-    },
-    {
-      "name": "autonomous",
-      "start_at": "frame-step",
-      "depth": "autonomous",
-      "description": "Autonomous Build entry mode."
+  "axes": {
+    "allowed_rigors": [
+      "lite",
+      "standard",
+      "deep"
+    ],
+    "supports_tournament": false,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
     }
-  ],
+  },
+  "starts_at": "frame-step",
   "stages": [
     {
       "id": "frame-stage",
@@ -131,20 +121,6 @@
             "The requested behavior is implemented",
             "Verification passes",
             "Review completes without a blocking issue"
-          ],
-          "verification_command_candidates": [
-            {
-              "id": "npm-check",
-              "cwd": ".",
-              "argv": [
-                "npm",
-                "run",
-                "check"
-              ],
-              "timeout_ms": 120000,
-              "max_output_bytes": 200000,
-              "env": {}
-            }
           ]
         }
       },

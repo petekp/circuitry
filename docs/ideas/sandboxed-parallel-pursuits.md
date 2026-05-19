@@ -5,7 +5,7 @@ Date: 2026-05-16
 Idea for letting Pursue run multiple code-changing pursuits in parallel
 without trusting agents to politely avoid each other. The product goal is
 simple: the operator throws several goals at Circuit, Pursue coordinates
-them, parallelizes what is actually safe, applies only verified artifacts
+them, parallelizes what is actually safe, applies only verified change packets
 to the parent checkout, and checks in only when it cannot prove safety.
 
 This grew out of the Pursue V1 limitation: Pursue can coordinate multiple
@@ -20,12 +20,12 @@ instruction.
 
 The coordinator can propose that two pursuits look independent. That is
 useful, but it is not proof. The runtime has to isolate each branch,
-measure what really changed, reject overlaps, apply safe artifacts, and
+measure what really changed, reject overlaps, apply safe change packets, and
 run final verification on the composed result.
 
 The rule:
 
-> Agents may work in parallel. Only Circuit applies verified artifacts to
+> Agents may work in parallel. Only Circuit applies verified change packets to
 > the parent checkout.
 
 That keeps the user-facing experience high trust: "throw ideas at
@@ -56,7 +56,7 @@ remove, and list changed files for branch worktrees. It does not yet
 produce patches or apply branch changes back into the parent checkout.
 
 So this is not a blank-slate feature. It is a careful extension of the
-fanout and sub-run substrate, plus a stronger artifact boundary.
+fanout and sub-run substrate, plus a stronger change packet boundary.
 
 ## Why not one shared worktree
 
@@ -88,15 +88,15 @@ There are two related but different features.
 other's code changes. Each agent gets a separate checkout at the same
 base ref. Circuit collects each branch's patch, changed-file manifest,
 logs, and proof. The parent checkout stays untouched until Circuit
-applies accepted artifacts.
+applies accepted change packets.
 
 **Security sandboxing** prevents untrusted code from reading or mutating
 resources outside its boundary. That means filesystem allowlists,
 network policy, no ambient secrets, process limits, cleanup guarantees,
-and artifact-only exit.
+and change-packet-only exit.
 
 Pursue should ship worktree isolation first. True sandboxing should plug
-in behind the same artifact interface.
+in behind the same change packet interface.
 
 ## Clean runtime API
 
@@ -155,7 +155,7 @@ Proposed fanout join policy:
 
 `disjoint-apply` should be a new policy. The runtime can keep the older
 `disjoint-merge` behavior stable while the new policy carries the
-stronger promise: collect branch artifacts, prove disjointness, apply to
+stronger promise: collect branch change packets, prove disjointness, apply to
 parent, then verify the composed checkout.
 
 ## Pursue contract shape
@@ -186,7 +186,7 @@ execution_policy: {
 That lets Pursue choose conservatively. If the coordinator cannot prove
 the branches are safe candidates, it falls back to serial work.
 
-## Artifact report
+## Change packet report
 
 Add a first-class apply report instead of hiding the important evidence
 inside a generic aggregate.
@@ -226,7 +226,7 @@ combined result.
 
 ## Sandbox runner API
 
-Security sandboxing should arrive as a backend behind the same artifact
+Security sandboxing should arrive as a backend behind the same change packet
 pipeline. The Pursue API should not care whether isolation is a git
 worktree, container, VM, microVM, or remote runner.
 
@@ -267,9 +267,9 @@ changing the Pursue contract.
 This is sized for a strong coding agent working in focused sessions, not
 for a human calendar plan.
 
-### Slice 1: Worktree artifact substrate
+### Slice 1: Worktree change packet substrate
 
-Add branch artifact collection to the existing fanout/sub-run worktree
+Add branch change packet collection to the existing fanout/sub-run worktree
 path.
 
 Expected changes:
@@ -278,7 +278,7 @@ Expected changes:
 - Add changed-file and patch manifests per branch.
 - Keep parent checkout untouched until join.
 - Add tests where two branches change different files and produce
-  distinct artifacts.
+  distinct change packets.
 
 Acceptance:
 
@@ -324,22 +324,22 @@ Acceptance:
 - Pursue still serializes unclear or overlapping work.
 - Final Pursue result shows completed, rejected, and applied counts.
 
-### Slice 4: Artifact-only worker contract
+### Slice 4: Change packet-only worker contract
 
-Make the worker boundary explicit: branch agents produce artifacts,
+Make the worker boundary explicit: branch agents produce change packets,
 Circuit applies them.
 
 Expected changes:
 
 - Branch child output includes patch path, changed files, command
   evidence, and result JSON.
-- Operator summary explains which artifacts were applied and why.
+- Operator summary explains which change packets were applied and why.
 - Final verification runs after all accepted patches are applied.
 
 Acceptance:
 
 - No branch mutates the parent checkout directly.
-- Operator can inspect every accepted and rejected artifact.
+- Operator can inspect every accepted and rejected change packet.
 - Final verification failure blocks a "complete" outcome.
 
 ### Slice 5: SandboxRunner abstraction
@@ -356,7 +356,7 @@ Expected changes:
 
 Acceptance:
 
-- Pursue can run through the same artifact pipeline using the
+- Pursue can run through the same change packet pipeline using the
   `worktree` backend.
 - Backend choice is visible in reports and trace entries.
 - The API is ready for container or remote sandbox backends.
@@ -374,14 +374,14 @@ Minimum credible behavior:
 - Network policy: `none` or allowlisted egress.
 - Secret policy: no ambient secrets; scoped injected secrets only.
 - CPU, memory, disk, process, and wall-clock limits.
-- Artifact-only exit.
+- Change packet-only exit.
 
 Acceptance:
 
 - A sandboxed branch cannot read a known forbidden host file.
 - A sandboxed branch cannot make network calls when network is disabled.
 - A runaway process is terminated and cleaned up.
-- The parent checkout only receives collected artifacts.
+- The parent checkout only receives collected change packets.
 
 ## Expected effort with Codex 5.5 xhigh
 
@@ -390,14 +390,14 @@ slice:
 
 | Target | Expected effort |
 | --- | --- |
-| Worktree artifact substrate | 1 strong session |
+| Worktree change packet substrate | 1 strong session |
 | `disjoint-apply` join policy | 1 strong session |
 | Pursue parallel worktree mode | 1-2 strong sessions |
-| Artifact-only operator proof packet | 1 strong session |
+| Change packet-only operator proof packet | 1 strong session |
 | `SandboxRunner` abstraction | 1 strong session |
 | First credible sandbox backend | 3-6 strong sessions plus review |
 
-The useful V1 is worktree isolation plus artifact-only apply. Calling it
+The useful V1 is worktree isolation plus change-packet-only apply. Calling it
 "true security sandboxing" requires the later backend and a threat-model
 review.
 
@@ -414,7 +414,7 @@ manifests as high-risk touch points unless the runtime proves otherwise.
 
 **Dirty parent checkout.** Parallel apply should require a clean or
 explicitly snapshotted parent baseline. Otherwise Circuit cannot tell
-which changes came from branch artifacts.
+which changes came from branch change packets.
 
 **Overclaiming security.** Worktree isolation is not security
 sandboxing. The product copy and reports must say which backend ran.
@@ -428,7 +428,7 @@ failure.
 - Full security sandboxing.
 - Automatic semantic conflict resolution.
 - Parallel writes inside a single shared worktree.
-- Applying artifacts when final verification fails.
+- Applying change packets when final verification fails.
 - Letting the coordinator override runtime safety checks.
 
 ## The narrow first build

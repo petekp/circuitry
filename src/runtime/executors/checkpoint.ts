@@ -6,7 +6,16 @@
 // resume path, not here.
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
+import type { OperatorAutoResolution } from '../../schemas/operator-summary.js';
+import type { CheckpointChoiceSource } from '../../schemas/runtime-source.js';
+import type { AutoResolutionPolicy } from '../../schemas/step.js';
+import { resolveHighestScoreAutoResolution } from '../../shared/checkpoint-auto-resolution.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
+import { resolveDottedPath } from '../../shared/fanout-branch-template.js';
+import {
+  type CheckpointChoice,
+  resolveCheckpointChoicesSource,
+} from '../../shared/runtime-source.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { CheckpointStep } from '../manifest/executable-flow.js';
 import type { RunContext } from '../run/run-context.js';
@@ -24,6 +33,7 @@ type CheckpointResolution =
       readonly selection: string;
       readonly resolutionSource: 'operator' | 'safe-default' | 'safe-autonomous';
       readonly autoResolved: boolean;
+      readonly autoResolution?: OperatorAutoResolution;
     }
   | { readonly kind: 'waiting' }
   | { readonly kind: 'failed'; readonly reason: string };
@@ -36,15 +46,66 @@ function policy(step: CheckpointStep) {
     readonly prompt: string;
     readonly safe_default_choice?: string;
     readonly safe_autonomous_choice?: string;
-    readonly choices: readonly { readonly id: string; readonly label?: string }[];
+    readonly choices?: readonly CheckpointChoice[];
+    readonly choices_from?: CheckpointChoiceSource;
+    readonly auto_resolution?: AutoResolutionPolicy;
   };
 }
 
-function resolveCheckpoint(step: CheckpointStep, depth: string | undefined): CheckpointResolution {
-  const effectiveDepth = depth ?? 'standard';
+async function materializePolicy(
+  step: CheckpointStep,
+  context: RunContext,
+): Promise<{
+  readonly prompt: string;
+  readonly safe_default_choice?: string;
+  readonly safe_autonomous_choice?: string;
+  readonly choices: readonly CheckpointChoice[];
+  readonly auto_resolution?: AutoResolutionPolicy;
+}> {
   const stepPolicy = policy(step);
-  if (effectiveDepth === 'deep' || effectiveDepth === 'tournament') return { kind: 'waiting' };
-  if (effectiveDepth === 'autonomous') {
+  const choices =
+    stepPolicy.choices ??
+    (stepPolicy.choices_from === undefined
+      ? undefined
+      : await resolveCheckpointChoicesSource({
+          source: stepPolicy.choices_from,
+          files: context.files,
+          ...(context.axes === undefined ? {} : { axes: context.axes }),
+          owner: `checkpoint step '${step.id}' choices_from`,
+        }));
+  if (choices === undefined || choices.length === 0) {
+    throw new Error(`checkpoint step '${step.id}' has no executable checkpoint choices`);
+  }
+  return {
+    prompt: stepPolicy.prompt,
+    choices,
+    ...(stepPolicy.safe_default_choice === undefined
+      ? {}
+      : { safe_default_choice: stepPolicy.safe_default_choice }),
+    ...(stepPolicy.safe_autonomous_choice === undefined
+      ? {}
+      : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice }),
+    ...(stepPolicy.auto_resolution === undefined
+      ? {}
+      : { auto_resolution: stepPolicy.auto_resolution }),
+  };
+}
+
+async function resolveCheckpoint(
+  step: CheckpointStep,
+  context: RunContext,
+  depth: string | undefined,
+  stepPolicy: Awaited<ReturnType<typeof materializePolicy>>,
+): Promise<CheckpointResolution> {
+  const effectiveDepth = depth ?? 'standard';
+  const autonomous = context.axes?.autonomous === true || effectiveDepth === 'autonomous';
+  if (!autonomous && (effectiveDepth === 'deep' || effectiveDepth === 'tournament')) {
+    return { kind: 'waiting' };
+  }
+  if (autonomous) {
+    if (stepPolicy.auto_resolution !== undefined) {
+      return await resolveAutoResolution(step, context, stepPolicy, stepPolicy.auto_resolution);
+    }
     const selection = stepPolicy.safe_autonomous_choice;
     if (selection === undefined) {
       return {
@@ -64,12 +125,120 @@ function resolveCheckpoint(step: CheckpointStep, depth: string | undefined): Che
   return { kind: 'resolved', selection, resolutionSource: 'safe-default', autoResolved: true };
 }
 
+async function resolveAutoResolution(
+  step: CheckpointStep,
+  context: RunContext,
+  stepPolicy: Awaited<ReturnType<typeof materializePolicy>>,
+  autoResolution: AutoResolutionPolicy,
+): Promise<CheckpointResolution> {
+  if (autoResolution.policy === 'refuse') {
+    return {
+      kind: 'failed',
+      reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth because policy is refuse`,
+    };
+  }
+  if (autoResolution.policy === 'first-acceptable') {
+    const selection = stepPolicy.choices[0]?.id;
+    if (selection === undefined) {
+      return { kind: 'failed', reason: `checkpoint step '${step.id}' has no executable choices` };
+    }
+    return {
+      kind: 'resolved',
+      selection,
+      resolutionSource: 'safe-autonomous',
+      autoResolved: true,
+      autoResolution: simpleAutoResolutionRecord({
+        step,
+        context,
+        stepPolicy,
+        policy: autoResolution.policy,
+        selection,
+      }),
+    };
+  }
+  if (autoResolution.policy === 'accept-as-is') {
+    const selection = stepPolicy.safe_autonomous_choice ?? stepPolicy.safe_default_choice;
+    if (selection === undefined) {
+      return {
+        kind: 'failed',
+        reason: `checkpoint step '${step.id}' accept-as-is requires safe_autonomous_choice or safe_default_choice`,
+      };
+    }
+    return {
+      kind: 'resolved',
+      selection,
+      resolutionSource: 'safe-autonomous',
+      autoResolved: true,
+      autoResolution: simpleAutoResolutionRecord({
+        step,
+        context,
+        stepPolicy,
+        policy: autoResolution.policy,
+        selection,
+      }),
+    };
+  }
+
+  const sourceRaw = await context.files.readJson(autoResolution.source_report);
+  const branches = resolveDottedPath(sourceRaw, autoResolution.branches_path);
+  if (!Array.isArray(branches)) {
+    return {
+      kind: 'failed',
+      reason: `checkpoint step '${step.id}' highest-score source '${autoResolution.source_report}.${autoResolution.branches_path}' did not resolve to an array`,
+    };
+  }
+  try {
+    const highestScore = resolveHighestScoreAutoResolution({
+      checkpointId: step.id,
+      ...(step.title === undefined ? {} : { checkpointLabel: step.title }),
+      choices: stepPolicy.choices.map((choice) => choice.id),
+      resolvedAt: context.now().toISOString(),
+      branches,
+      idPath: autoResolution.id_path,
+      rubricResultPath: autoResolution.rubric_result_path,
+    });
+    return {
+      kind: 'resolved',
+      selection: highestScore.selection,
+      resolutionSource: 'safe-autonomous',
+      autoResolved: true,
+      autoResolution: highestScore.record,
+    };
+  } catch (error) {
+    return {
+      kind: 'failed',
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function simpleAutoResolutionRecord(input: {
+  readonly step: CheckpointStep;
+  readonly context: RunContext;
+  readonly stepPolicy: Awaited<ReturnType<typeof materializePolicy>>;
+  readonly policy: 'accept-as-is' | 'first-acceptable';
+  readonly selection: string;
+}): OperatorAutoResolution {
+  return {
+    checkpoint_id: input.step.id,
+    ...(input.step.title === undefined ? {} : { checkpoint_label: input.step.title }),
+    policy: input.policy,
+    resolved_value: input.selection,
+    alternatives_available: input.stepPolicy.choices
+      .filter((choice) => choice.id !== input.selection)
+      .map((choice) => choice.id),
+    runtime_or_model: 'runtime',
+    resolved_at: input.context.now().toISOString(),
+  };
+}
+
 function checkpointRequestBody(input: {
   readonly step: CheckpointStep;
   readonly context: RunContext;
+  readonly stepPolicy: Awaited<ReturnType<typeof materializePolicy>>;
   readonly checkpointReportSha256?: string;
 }) {
-  const stepPolicy = policy(input.step);
+  const stepPolicy = input.stepPolicy;
   return {
     schema_version: 1,
     step_id: input.step.id,
@@ -82,6 +251,7 @@ function checkpointRequestBody(input: {
       ? {}
       : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice }),
     execution_context: {
+      ...(input.context.axes === undefined ? {} : { axes: input.context.axes }),
       ...(input.context.projectRoot === undefined
         ? {}
         : { project_root: input.context.projectRoot }),
@@ -107,12 +277,13 @@ export async function executeCheckpointResult(
       );
     }
     const indexedStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'checkpoint');
+    const stepPolicy = await materializePolicy(step, context);
 
     let checkpointReportSha256: string | undefined;
     const report = step.writes?.report;
     const resumedSelection =
       context.resumeCheckpoint?.stepId === step.id ? context.resumeCheckpoint.selection : undefined;
-    const resolution = resolveCheckpoint(step, context.depth);
+    const resolution = await resolveCheckpoint(step, context, context.depth, stepPolicy);
     if (resumedSelection === undefined) {
       if (report !== undefined) {
         const builder =
@@ -142,6 +313,7 @@ export async function executeCheckpointResult(
       const requestBody = checkpointRequestBody({
         step,
         context,
+        stepPolicy,
         ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
       });
       await context.files.writeJson(request, requestBody);
@@ -153,7 +325,7 @@ export async function executeCheckpointResult(
         attempt,
         request_path: request.path,
         request_report_hash: sha256Hex(requestText),
-        options: step.choices,
+        options: stepPolicy.choices.map((choice) => choice.id),
         auto_resolved: resolution.kind === 'resolved' ? resolution.autoResolved : false,
       });
     }
@@ -174,7 +346,7 @@ export async function executeCheckpointResult(
           stepId: step.id,
           attempt,
           requestPath: context.files.resolve(request),
-          allowedChoices: step.choices,
+          allowedChoices: stepPolicy.choices.map((choice) => choice.id),
         },
       });
     }
@@ -192,9 +364,12 @@ export async function executeCheckpointResult(
     }
 
     const allowed = (step.check as { readonly allow?: unknown }).allow;
-    if (Array.isArray(allowed) && !allowed.includes(effectiveResolution.selection)) {
+    const effectiveAllowed = Array.isArray(allowed)
+      ? allowed
+      : stepPolicy.choices.map((choice) => choice.id);
+    if (!effectiveAllowed.includes(effectiveResolution.selection)) {
       return stepExecutionFailed(
-        `checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${allowed.join(', ')}]`,
+        `checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${effectiveAllowed.join(', ')}]`,
       );
     }
     await context.files.writeJson(response, {
@@ -202,6 +377,9 @@ export async function executeCheckpointResult(
       step_id: step.id,
       selection: effectiveResolution.selection,
       resolution_source: effectiveResolution.resolutionSource,
+      ...(effectiveResolution.autoResolution === undefined
+        ? {}
+        : { auto_resolution: effectiveResolution.autoResolution }),
     });
     await context.trace.append({
       run_id: context.runId,

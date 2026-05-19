@@ -235,7 +235,7 @@ from the catalog.
 Do not add hand-maintained lists of:
 
 - installed flows;
-- entry modes per flow;
+- axis support per flow;
 - generated compiled-flow files;
 - command ownership;
 - current route inventories;

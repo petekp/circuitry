@@ -403,9 +403,9 @@ describe('relay verdict truth: edge-case parser coverage', () => {
   }
 });
 
-// When a relay step declares `writes.report` and the verdict gate FAILS
+// When a relay step declares `writes.report` and the verdict check FAILS
 // but the body parses against the declared schema, the canonical report at
-// `writes.report.path` IS still written. The verdict gate governs route
+// `writes.report.path` IS still written. The verdict check governs route
 // selection only; downstream readers (operator-summary projection, CI
 // tooling, status storyboard) need the schema-tied report whenever the
 // relay step entered with a structurally valid body. The materializer
@@ -445,7 +445,7 @@ describe('verdict-fail with schema-valid body still materializes the canonical r
 
     // Canonical report file IS written: the body parses against
     // runtime-proof-canonical@v1, so downstream readers get the
-    // schema-tied artifact even when the verdict gate failed.
+    // schema-tied report even when the verdict check failed.
     const reportPath = join(runFolder, 'reports', 'relay-canonical.json');
     expect(existsSync(reportPath)).toBe(true);
     expect(JSON.parse(readFileSync(reportPath, 'utf8'))).toEqual({ verdict: 'reject' });

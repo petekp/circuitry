@@ -1,7 +1,7 @@
 // Property tests for the five flow graph closure invariants:
 //
 //   flow.prop.route_target_closure   (WF-I4)
-//   flow.prop.entry_mode_reachability (WF-I2)
+//   flow.prop.start_reachability      (WF-I2)
 //   flow.prop.stage_step_closure     (WF-I3)
 //   flow.prop.terminal_target_coverage (WF-I8)
 //   flow.prop.no_dead_steps          (WF-I9)
@@ -68,8 +68,7 @@ interface GraphSpec {
   readonly stepIds: readonly string[];
   // pass-route target per step id; either a step id or a terminal label.
   readonly passTargets: ReadonlyMap<string, string>;
-  // entry_modes start_at values; first becomes 'default'.
-  readonly entryStartAts: readonly string[];
+  readonly startsAt: string;
   // stage.steps[] entries for the single declared stage.
   readonly stageStepRefs: readonly string[];
 }
@@ -102,12 +101,12 @@ function buildCompiledFlow(spec: GraphSpec): Record<string, unknown> {
       signals: { include: ['feature'], exclude: [] },
       intent_prefixes: ['develop:'],
     },
-    entry_modes: spec.entryStartAts.map((startAt, i) => ({
-      name: i === 0 ? 'default' : `mode-${i}`,
-      start_at: startAt,
-      depth: 'standard',
-      description: 'Property fixture entry mode.',
-    })),
+    axes: {
+      allowed_rigors: ['standard'],
+      supports_tournament: false,
+      supports_autonomous: false,
+    },
+    starts_at: spec.startsAt,
     stages: [
       {
         id: 'frame-stage',
@@ -149,7 +148,7 @@ function chainBase(n: number): GraphSpec {
   return {
     stepIds,
     passTargets,
-    entryStartAts: [first],
+    startsAt: first,
     stageStepRefs: stepIds,
   };
 }
@@ -216,12 +215,10 @@ describe('flow.prop.route_target_closure (WF-I4)', () => {
   });
 });
 
-describe('flow.prop.entry_mode_reachability (WF-I2)', () => {
-  // Property: every entry_modes[].start_at must be a declared step id.
-  // (This is the "reachability" of the entry mode into the step graph
-  // — without this closure, WF-I9's BFS would seed from a phantom
-  // node.) Inject a second entry mode whose start_at is varied.
-  it('rejects exactly when some entry_mode.start_at is not a declared step id', () => {
+describe('flow.prop.start_reachability (WF-I2)', () => {
+  // Property: starts_at must be a declared step id. Without this closure,
+  // WF-I9's BFS would seed from a phantom node.
+  it('rejects exactly when starts_at is not a declared step id', () => {
     const rng = mulberry32(0xc105e02);
     let acceptedCount = 0;
     let rejectedCount = 0;
@@ -230,40 +227,31 @@ describe('flow.prop.entry_mode_reachability (WF-I2)', () => {
       const n = 2 + nextInt(rng, 4);
       const base = chainBase(n);
 
-      // First entry mode is always the valid 'a' from chainBase. Add
-      // a second entry mode that may or may not be valid.
       const inject = nextBool(rng);
       const violated = inject;
-      const secondStartAt = inject ? `phantom-${i}` : pick(rng, base.stepIds); // any declared step is sound
+      const startsAt = inject ? `phantom-${i}` : base.startsAt;
 
       const spec: GraphSpec = {
         ...base,
-        entryStartAts: [...base.entryStartAts, secondStartAt],
+        startsAt,
       };
       const result = CompiledFlow.safeParse(buildCompiledFlow(spec));
 
       if (violated) {
         rejectedCount++;
-        expect(result.success, `case ${i}: phantom entry start_at accepted unexpectedly`).toBe(
-          false,
-        );
+        expect(result.success, `case ${i}: phantom starts_at accepted unexpectedly`).toBe(false);
         if (!result.success) {
           const issuePaths = result.error.issues.map((issue) => issue.path.join('.'));
           expect(
-            issuePaths.some((p) => p === 'entry_modes.1.start_at'),
-            `case ${i}: rejection should pin to entry_modes[1].start_at; got paths ${JSON.stringify(issuePaths)}`,
+            issuePaths.some((p) => p === 'starts_at'),
+            `case ${i}: rejection should pin to starts_at; got paths ${JSON.stringify(issuePaths)}`,
           ).toBe(true);
         }
       } else {
         acceptedCount++;
-        // Adding a second entry mode whose start_at is a real step
-        // can render a previously-unreachable step reachable, so the
-        // graph stays sound. But: the second entry mode duplicates
-        // the entry-mode name slot. We assigned 'mode-1' earlier;
-        // 'default' stays unique. Should accept.
         expect(
           result.success,
-          `case ${i}: sound multi-entry graph rejected: ${
+          `case ${i}: sound starts_at graph rejected: ${
             result.success ? '' : JSON.stringify(result.error.issues)
           }`,
         ).toBe(true);
@@ -395,15 +383,15 @@ describe('flow.prop.terminal_target_coverage (WF-I8)', () => {
 });
 
 describe('flow.prop.no_dead_steps (WF-I9)', () => {
-  // Property: every declared step is reachable from at least one
-  // entry_modes[].start_at by following pass-route edges.
+  // Property: every declared step is reachable from starts_at by following
+  // pass-route edges.
   //
   // Generator: chainBase (entry='a' covers every chain step). Reject
   // mutation: append an extra orphan step 'orphan' to steps[] and to
   // stage.steps[] (so WF-I3 still passes). It routes to @complete (so
   // WF-I8 is fine for it), but no chain step routes into it and no
-  // entry_mode starts there — it is unreachable. WF-I9 fires.
-  it('rejects exactly when some declared step is unreachable from any entry_mode.start_at', () => {
+  // starts_at points there — it is unreachable. WF-I9 fires.
+  it('rejects exactly when some declared step is unreachable from starts_at', () => {
     const rng = mulberry32(0xc105e09);
     let acceptedCount = 0;
     let rejectedCount = 0;
@@ -423,7 +411,7 @@ describe('flow.prop.no_dead_steps (WF-I9)', () => {
         spec = {
           stepIds: [...base.stepIds, orphanId],
           passTargets,
-          entryStartAts: base.entryStartAts,
+          startsAt: base.startsAt,
           stageStepRefs: [...base.stageStepRefs, orphanId],
         };
       } else {
