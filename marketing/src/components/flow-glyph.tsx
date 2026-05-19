@@ -34,37 +34,56 @@ function shapesFor(name: string, count: number): Shape[] {
 
 function Cell({
   shape,
-  color,
+  fill,
   size,
+  radius,
+  strokeWidth,
 }: {
   shape: Shape;
-  color: string;
+  fill: string;
   size: number;
+  radius: number;
+  strokeWidth: number;
 }) {
   const s = size;
   switch (shape) {
     case "square":
-      return <rect width={s} height={s} fill={color} />;
+      return <rect width={s} height={s} rx={radius} fill={fill} />;
     case "circle":
-      return <circle cx={s / 2} cy={s / 2} r={s / 2} fill={color} />;
+      return <circle cx={s / 2} cy={s / 2} r={s / 2} fill={fill} />;
     case "qtl":
       return (
-        <path d={`M 0 0 L ${s} 0 A ${s} ${s} 0 0 1 0 ${s} Z`} fill={color} />
+        <path
+          d={`M 0 0 L ${s} 0 A ${s} ${s} 0 0 1 0 ${s} Z`}
+          fill={fill}
+          strokeLinejoin="round"
+        />
       );
     case "qtr":
       return (
-        <path d={`M ${s} 0 L ${s} ${s} A ${s} ${s} 0 0 1 0 0 Z`} fill={color} />
+        <path
+          d={`M ${s} 0 L ${s} ${s} A ${s} ${s} 0 0 1 0 0 Z`}
+          fill={fill}
+          strokeLinejoin="round"
+        />
       );
     case "qbl":
       return (
-        <path d={`M 0 ${s} L 0 0 A ${s} ${s} 0 0 1 ${s} ${s} Z`} fill={color} />
+        <path
+          d={`M 0 ${s} L 0 0 A ${s} ${s} 0 0 1 ${s} ${s} Z`}
+          fill={fill}
+          strokeLinejoin="round"
+        />
       );
     case "qbr":
       return (
-        <path d={`M ${s} ${s} L 0 ${s} A ${s} ${s} 0 0 1 ${s} 0 Z`} fill={color} />
+        <path
+          d={`M ${s} ${s} L 0 ${s} A ${s} ${s} 0 0 1 ${s} 0 Z`}
+          fill={fill}
+          strokeLinejoin="round"
+        />
       );
     case "outline": {
-      const strokeWidth = Math.max(2, Math.round(s / 12));
       const inset = strokeWidth / 2;
       return (
         <rect
@@ -72,8 +91,9 @@ function Cell({
           y={inset}
           width={s - strokeWidth}
           height={s - strokeWidth}
+          rx={radius}
           fill="none"
-          stroke={color}
+          stroke={fill}
           strokeWidth={strokeWidth}
         />
       );
@@ -87,7 +107,6 @@ export function FlowGlyph({
   ghost,
   cellSize = 32,
   cells = 3,
-  offset = 3,
   className,
 }: {
   name: string;
@@ -95,27 +114,35 @@ export function FlowGlyph({
   ghost: string;
   cellSize?: number;
   cells?: number;
-  offset?: number;
   className?: string;
 }) {
   const shapes = shapesFor(name, cells);
-  const pad = offset;
+  const gradId = `flowgrad-${name}-${cellSize}`;
+  const radius = Math.round(cellSize * 0.22);
+  const strokeWidth = Math.max(2, Math.round(cellSize / 10));
   return (
     <svg
-      width={cellSize + pad}
-      height={cellSize * cells + pad}
-      viewBox={`-${pad} 0 ${cellSize + pad} ${cellSize * cells + pad}`}
+      width={cellSize}
+      height={cellSize * cells}
+      viewBox={`0 0 ${cellSize} ${cellSize * cells}`}
       className={className}
       aria-hidden="true"
     >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={ghost} />
+        </linearGradient>
+      </defs>
       {shapes.map((shape, i) => (
-        <g key={`g-${i}`} transform={`translate(${-offset}, ${i * cellSize + offset})`}>
-          <Cell shape={shape} color={ghost} size={cellSize} />
-        </g>
-      ))}
-      {shapes.map((shape, i) => (
-        <g key={`p-${i}`} transform={`translate(0, ${i * cellSize})`}>
-          <Cell shape={shape} color={color} size={cellSize} />
+        <g key={i} transform={`translate(0, ${i * cellSize})`}>
+          <Cell
+            shape={shape}
+            fill={`url(#${gradId})`}
+            size={cellSize}
+            radius={radius}
+            strokeWidth={strokeWidth}
+          />
         </g>
       ))}
     </svg>

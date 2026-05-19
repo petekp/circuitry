@@ -92,7 +92,6 @@ export default function Home() {
               color={f.color}
               ghost={f.ghost}
               cellSize={28}
-              offset={3}
             />
           ))}
         </div>
@@ -125,7 +124,6 @@ export default function Home() {
                 color={f.color}
                 ghost={f.ghost}
                 cellSize={44}
-                offset={4}
               />
               <div className="flex flex-col gap-1">
                 <div className="text-[15px] font-medium tracking-tight">
