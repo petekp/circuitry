@@ -2,7 +2,7 @@
 
 Date: 2026-05-07
 
-A note from a working session comparing circuit-next to Every's
+A note from a working session comparing Circuit to Every's
 [Compound Engineering plugin](https://github.com/EveryInc/compound-engineering-plugin).
 Framed around capability for developers using coding agents, not market
 competition. Captures what each project is actually doing, where the

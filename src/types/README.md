@@ -1,6 +1,6 @@
 # Types
 
-Types in `circuit-next` are **inferred from Zod schemas** in `../schemas/`.
+Types in `circuit` are **inferred from Zod schemas** in `../schemas/`.
 
 Contract source of truth lives in `../schemas/*.ts`. Each schema exports a
 `z.infer`-derived TypeScript type of the same name. A contract-parity test

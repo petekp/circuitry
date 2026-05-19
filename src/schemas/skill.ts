@@ -4,7 +4,7 @@ import { SkillId, SkillSlotId } from './ids.js';
 /**
  * SkillDescriptor — see docs/contracts/skill.md.
  *
- * The compiled catalog entry for a circuit-next plugin skill. A selection
+ * The compiled catalog entry for a Circuit plugin skill. A selection
  * resolver binds skills by `SkillId`; a catalog compiler enumerates them.
  *
  * This is NOT the Claude Code `SKILL.md` YAML frontmatter shape. That

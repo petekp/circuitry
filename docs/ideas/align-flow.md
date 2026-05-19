@@ -249,7 +249,7 @@ detector step is `compass-check` regardless.
 ## What to prototype
 
 Before building the flow, prove the concept by running it manually
-once on circuit-next itself. The repo already has fragments scattered
+once on Circuit itself. The repo already has fragments scattered
 across AGENTS.md and auto-memory; consolidating them into draft
 align docs would test whether the drafted docs add real value or
 just rearranges what's there.
@@ -263,7 +263,7 @@ Steps for the manual prototype:
    question shape.
 3. Draft the five doc candidates (or fewer, if some don't earn
    their place).
-4. Stress-test against three real recent decisions from circuit-next
+4. Stress-test against three real recent decisions from Circuit
    history. Did the docs predict the decision the operator actually
    made?
 5. If yes, the flow has signal. Build it.

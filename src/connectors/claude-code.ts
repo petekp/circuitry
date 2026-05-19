@@ -46,7 +46,7 @@ export { sha256Hex };
 //                              this project's Stop hook), which would
 //                              otherwise deadlock the subprocess via
 //                              hook-feedback retry loops when spawned from
-//                              within circuit-next.
+//                              within Circuit.
 //   --settings '{}'          — explicit empty inline settings override so
 //                              nothing (including keychain reads for stray
 //                              settings) reintroduces a hook registration.

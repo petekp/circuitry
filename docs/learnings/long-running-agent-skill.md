@@ -8,7 +8,7 @@ argues that bare prompt loops (Codex's `/goal`, ralph wiggum loops)
 fail on three predictable axes; the skill is his answer, packaged as a
 single `SKILL.md` that any agent runtime can load.
 
-This file captures what's worth lifting into circuit-next, what isn't,
+This file captures what's worth lifting into Circuit, what isn't,
 and where the two systems disagree.
 
 ## What the post argues

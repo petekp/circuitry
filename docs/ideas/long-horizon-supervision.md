@@ -183,7 +183,7 @@ single-executor case clean first.
 ## Honest tradeoff
 
 This adds a lot of surface area for a use case Circuit's current
-operator (you, on circuit-next itself) doesn't have. You stay close
+operator (you, on Circuit itself) doesn't have. You stay close
 to your work; you don't run 12-hour unattended sessions. So today
 this idea solves a problem you don't currently have.
 

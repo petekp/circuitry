@@ -10,7 +10,7 @@ exceptions:
     capability_id: router:intent:fix
     status: approved_exception
     readiness_ref: REL-004
-    rationale: Original Circuit treated bare "fix:" as Lite. circuit-next intentionally keeps bare "fix:" at normal routing depth and reserves Lite for explicit quick/small/tiny/simple Fix language so serious bug fixes do not skip review.
+    rationale: Original Circuit treated bare "fix:" as Lite. Circuit intentionally keeps bare "fix:" at normal routing depth and reserves Lite for explicit quick/small/tiny/simple Fix language so serious bug fixes do not skip review.
     public_wording: Bare "fix:" selects the Fix flow; Lite requires an explicit quick/small/tiny/simple hint or an explicit mode flag.
   - id: EX-REL-007-WRITE-CAPABLE-DISCLOSURE
     capability_id: safety:write-capable-worker
