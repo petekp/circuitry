@@ -3,30 +3,68 @@
 </p>
 <br />
 
-# circuit
+# Circuit
 
-**Structured flows for coding agents.**
+**Flow orchestration for coding agents.**
 
-Circuit is an orchestration layer for structured, resumable, multi-stage
-developer flows. Ask Circuit to handle a task in natural language. In
-Claude Code, `/circuit:run` selects the right flow before it starts. In
-Codex, `@Circuit` lets Codex choose the best bundled Circuit skill. In the
-local CLI, `circuit run --goal` keeps the deterministic router path.
+Circuit gives coding agents a structured path through real work. Give it a
+task, and it chooses or runs the right flow, moves through each step in order,
+checks outputs before continuing, and leaves behind a trace, reports, and
+evidence.
 
-Once a flow is selected, Circuit runs the same headless engine in every
-host and checks each step's output against a contract before moving on.
+Use Circuit when you want a repeatable path for bug fixes, implementation,
+reviews, architecture choices, or a broad goal that needs ordered work.
 
-- **Configurable relay steps.** Pick the model, reasoning effort, connector,
-  and optional local skills through flow and config selection layers.
-- **Resumable.** If a session dies mid-run, you can pick up where it left off.
-- **Adjustable autonomy.** Steer at checkpoints or run unattended.
-- **Mode-driven depth.** Use the default mode, or pick Lite for a faster pass
-  and Deep for a more thorough one.
+## Current Alpha
 
-## Get Started
+Circuit `0.1.0-alpha.6` is a plugin-only alpha for Claude Code and Codex. The
+root `circuit` npm package in this checkout remains private, so Claude Code
+users install a host plugin instead of installing a global npm package.
 
-Circuit is currently a pre-release alpha. For Claude Code, install the plugin
-from the marketplace:
+This alpha ships:
+
+- Public flows: Build, Explore, Fix, Pursue, and Review.
+- Claude Code commands: `/circuit:run`, `/circuit:explore`,
+  `/circuit:review`, `/circuit:fix`, `/circuit:build`, `/circuit:create`, and
+  `/circuit:handoff`.
+- Codex plugin skills: `run`, `build`, `create`, `explore`, `fix`, `handoff`,
+  and `review`.
+- A repo-local CLI: `./bin/circuit run --goal "<task>"` and explicit flow
+  names such as `./bin/circuit run fix --goal "<bug>"`.
+
+This alpha does not ship:
+
+- Native Codex App Server or Claude Agent SDK adapters.
+- `codex-isolated` writable worker support. `codex-isolated` is not a valid
+  config value in this alpha.
+- Cross-run project-memory query and recall.
+- An automatic update channel.
+- A public `/circuit:pursue` slash command. Pursue can still run through
+  `/circuit:run`, `@Circuit`, or `./bin/circuit run pursue --goal "<task>"`.
+- A polished generic-shell progress UI.
+- An external same-task comparison demo. For this alpha, use the checked-in
+  proof set as the release proof.
+
+## When To Use It
+
+| Flow | Use it for | Write behavior |
+| --- | --- | --- |
+| Explore | Investigating, explaining, comparing options, or making a decision before editing code. | Does not implement the change for you. |
+| Review | Auditing code, a diff, a PR, a plan, a report, or a risk surface. | Audit-only. |
+| Fix | Bugs, regressions, failing tests, crashes, flaky behavior, or production issues. | May invoke a write-capable worker. |
+| Build | Features, refactors, docs, tests, or focused code changes that are not mainly bug fixes. | May invoke a write-capable worker. |
+| Pursue | Broad goals with several coordinated pieces of work that need ordering. | May invoke a write-capable worker. |
+
+Circuit also ships two utilities:
+
+| Utility | Use it for |
+| --- | --- |
+| Create | Drafting, validating, and publishing a reusable custom flow after explicit confirmation. |
+| Handoff | Saving, resuming, clearing, briefing, or installing continuity handoff support. |
+
+## Install And Run
+
+For Claude Code, install the plugin from the marketplace:
 
 ```bash
 /plugin marketplace add petekp/circuit
@@ -34,15 +72,41 @@ from the marketplace:
 /reload-plugins
 ```
 
+Run the doctor before your first task run:
+
+```bash
+node '<plugin root>/scripts/circuit.ts' doctor
+```
+
+The doctor output should include `"runtime_source": "bundled"`. That means the
+plugin uses the runtime it shipped with, not a `circuit` binary from `PATH`.
+
 Then ask Circuit to choose a flow:
 
 ```text
-/circuit:run <your task>
+/circuit:run the checkout total is wrong when discounts and tax both apply
 ```
 
-The installed plugin is self-contained. Normal users do not need to clone this
-repo, run `npm install`, install a `circuit` binary, or create a symlink.
+The installed Claude Code plugin is self-contained. You do not need to clone
+this repo, run `npm install`, install a `circuit` binary, or create a symlink.
 The plugin wrapper launches the bundled runtime that ships with the plugin.
+
+For Codex from this checkout, refresh the local Codex plugin package and check
+that the cache matches the repo:
+
+```bash
+npm run sync:codex-plugin-cache
+npm run check:codex-plugin-cache
+```
+
+Then ask Codex to use Circuit:
+
+```text
+@Circuit the checkout total is wrong when discounts and tax both apply
+```
+
+Codex can choose the best bundled Circuit flow skill from your natural-language
+request.
 
 For local development from this checkout:
 
@@ -54,154 +118,109 @@ npm run build
 ./bin/circuit run --goal '<your task>'
 ```
 
-To use Circuit from Codex, install or refresh the Codex plugin package and ask
-Codex to use `@Circuit`. Codex can choose the best bundled Circuit flow
-skill from your natural-language request.
-
-Optional but recommended: drop a personal config at
-`~/.config/circuit/config.yaml` to set defaults (model, reasoning effort,
-local skills, connector routing) across every project. A repo-local
-`./.circuit/config.yaml` overrides those defaults per project. See
-[User-Space Configuration](#user-space-configuration) for details.
-
-## How It Works
-
-Circuit replaces ad-hoc skill invocation and copy-pasted instructions. Use one
-natural-language front door for normal work, or call a flow directly when
-you already know what you want.
-
-**Core Flows:**
-
-These flows ship with the plugin. Build, Fix, Explore, Review, and Pursue can
-all be selected by the host model or invoked explicitly through the CLI.
-
-| Flow | Purpose |
-|----------|-------------|
-| **Explore** | Investigate, understand, choose among options, shape a plan |
-| **Build** | Features, refactors, docs, tests, mixed changes |
-| **Fix** | Bugs, regressions, flaky behavior |
-| **Review** | Audit-only review, no implementation |
-| **Pursue** | Broad goals with multiple coordinated pieces of work |
-
-**Run Controls:**
-
-Each flow declares which rigor, tournament, and autonomous settings it
-supports. Unsupported combinations fail before the run starts.
-
-| Control | Behavior |
-|-------|--------|
-| **Default** | Standard rigor, no tournament, operator-present checkpoints unless the flow has safe defaults. |
-| **Lite** | Lower rigor where the flow allows it. Use for small, low-risk work. |
-| **Deep** | Higher rigor where the flow allows it. Useful for risky or architecture-heavy work. |
-| **Tournament** | Competing proposals with adversarial evaluation. Available on Explore. |
-| **Autonomous** | Checkpoints auto-resolve to declared safe choices. Useful for unattended runs. |
-
-Use `--rigor <lite|standard|deep>`, `--tournament`, `--tournament-n <2|3|4>`,
-and `--autonomous` to set those controls. Availability varies by flow; see
-each flow's `src/flows/<id>/data.ts` for the authoritative FlowData value,
-`src/flows/<id>/flow.ts` for the adapter, and `src/flows/<id>/schematic.json`
-for the generated compatibility schematic.
-
-Every flow is built from a fixed set of stages: **Frame, Analyze, Plan, Act,
-Verify, Review, Close**. Not every flow runs every stage, but the order
-holds.
-
-1. **The flow is selected.** In host plugins, the host model may choose a
-   flow before calling Circuit. In CLI router mode, Circuit's deterministic
-   router chooses.
-
-2. **Steps run in the right order.** Research before decisions. Decisions
-   before implementation. Implementation gets an independent review from a
-   separate worker. Every step writes a typed report and an entry in the run
-   trace.
-
-3. **Progress survives session crashes.** Each run gets its own folder with a
-   trace, reports, and evidence. If a session dies, resume against that
-   folder and Circuit picks up at the last completed step.
-
-4. **Stay in the loop.** Flows pause at checkpoints when they need scope
-   confirmation or a tradeoff decision. Everything else runs autonomously.
-   Autonomous mode resolves checkpoints to their safe default and keeps
-   going.
+Circuit requires Node.js `22.18.0` or newer.
 
 ## Commands
 
-**Default front doors:**
+Use one front door unless you already know the flow you want:
 
-| Host | You type | What chooses |
-|----------|-------------|-------------|
+| Host | You type | Who chooses the flow |
+| --- | --- | --- |
 | Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host model selects an explicit Circuit flow. |
 | Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex chooses the best bundled Circuit flow skill. |
 | CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
 
-**Direct flow control:**
+Use a direct command when the flow choice is clear:
 
-| Host | You type | What happens |
-|----------|-------------|-------------|
-| Claude Code | `/circuit:fix checkout total is wrong` | Runs Fix directly. |
-| Claude Code | `/circuit:review current diff` | Runs Review directly. |
-| Claude Code | `/circuit:build add billing settings` | Runs Build directly. |
-| Claude Code | `/circuit:explore compare auth providers` | Runs Explore directly. |
-| Codex | Invoke the specific Circuit flow skill directly. | Runs that flow through the Codex plugin wrapper. |
-| CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Runs Fix directly. |
-| CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Runs Pursue directly. |
+| Host | You type | What runs |
+| --- | --- | --- |
+| Claude Code | `/circuit:fix checkout total is wrong` | Fix. |
+| Claude Code | `/circuit:review current diff` | Review. |
+| Claude Code | `/circuit:build add billing settings` | Build. |
+| Claude Code | `/circuit:explore compare auth providers` | Explore. |
+| Codex | Invoke `fix`, `review`, `build`, or `explore` as a specific Circuit skill. | Runs that flow through the Codex plugin wrapper. |
+| CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Fix. |
+| CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Pursue. |
 
-The host commands wrap the underlying CLI. Each flow accepts a `--goal`; direct
-CLI runs can also pass `--rigor`, `--tournament`, `--tournament-n`, and
-`--autonomous` when the selected flow supports that axis combination.
+The host commands wrap the same CLI. Each run accepts `--goal`. Direct CLI runs
+can also pass these controls when the selected flow supports them:
+
+| Control | CLI flag | Supported by |
+| --- | --- | --- |
+| Lite, standard, or deep depth | `--rigor <lite|standard|deep>` | Build, Explore, and Fix. Review and Pursue only support standard depth. |
+| Tournament | `--tournament --tournament-n <2|3|4>` | Explore. |
+| Autonomous checkpoint handling | `--autonomous` | Build, Explore, Fix, and Pursue. |
+
+Unsupported combinations fail before the run starts.
 
 **Advanced compatibility:**
 
 The deterministic CLI router still understands old intent prefixes such as
-`fix:`, `review:`, `develop:`, and `decide:`. They are kept for scripts and
-older habits, not as the normal user experience.
+`fix:`, `review:`, `develop:`, and `decide:`. Keep them for scripts and older
+habits, not for the normal user path.
 
 Review collects untracked file paths and sizes by default, but not untracked
-file contents. If you explicitly want Review to send untracked file contents
-to the configured worker, add `--include-untracked-content` after confirming
+file contents. If you explicitly want Review to send untracked file contents to
+the configured worker, add `--include-untracked-content` after you confirm
 those files are safe to relay.
 
-## Key Features
+## How A Run Works
 
-**Natural flow selection.** Describe your task. In host plugins, the host
-model may choose the flow before calling Circuit. In CLI router mode,
-Circuit uses a small deterministic classifier.
+1. Circuit selects a flow. In host plugins, the host model may select the flow
+   before calling Circuit. In CLI router mode, Circuit's deterministic router
+   selects it.
+2. Circuit loads the compiled flow from the catalog and checks the requested
+   depth, tournament, and autonomous controls against that flow's allow-list.
+3. Circuit runs stages in order. Examples include Frame, Analyze, Plan, Act,
+   Verify, Review, and Close. Each flow chooses the stages it needs.
+4. Circuit writes a trace, typed reports, evidence, and checkpoint state into a
+   run folder under `.circuit/runs/`.
+5. If a checkpoint needs your choice, Circuit pauses. Resume it with:
 
-**Independent review.** For default and deep modes, implementation and review
-run in separate workers. The reviewer starts fresh with no knowledge of the
-implementation choices. Lite mode skips the review where the flow allows it.
+   ```bash
+   ./bin/circuit resume \
+     --run-folder '<run_folder>' \
+     --checkpoint-choice '<choice>'
+   ```
 
-**Typed reports and evidence.** Every step writes a Zod-validated report. A
-flow's final report links the reports the run produced — the implementation,
-the verification result, the review verdict — so you can audit a run end to
-end without re-reading the trace.
+Build, Fix, and Pursue disclose the write-capable worker path before they
+invoke an implementer:
 
-**Relay configuration.** Pick the model, reasoning effort, connector, and
-optional local skills for relay steps. Configuration layers from defaults to
-user-global to project to invocation, and the resolver enforces a single
-ordering at run time.
+> This flow may invoke a write-capable Claude Code worker. Circuit will verify
+> and review the result, but the worker can edit files in this checkout.
 
-**Definition-driven flows.** Each flow is one folder under `src/flows/<id>/`:
-typed definition, report schemas, command, contract, writers, and relay hints.
-The engine derives every per-flow registry from the catalog. Adding a flow does
-not require editing the engine.
+## Configuration
 
-**Run folders.** Each run gets its own directory with the trace, every typed
-report, evidence, and a checkpoint inbox. Resuming, debugging, and audits
-all read from the same place.
+Circuit reads two config files:
+
+1. `~/.config/circuit/config.yaml` for your personal defaults across projects.
+2. `./.circuit/config.yaml` at the repo root for project-specific overrides.
+
+Both files use the same schema. For selection fields such as model, effort, and
+skills, Circuit composes layers in this order:
+
+```text
+defaults < user-global < project < invocation
+```
+
+Config can set models, reasoning effort, local skills, connector routing, and
+per-flow overrides under `circuits.<flow_id>`. Connector routing has its own
+precedence, described below.
+
+Circuit reads config at run time, so editing config does not require a plugin
+rebuild.
 
 ## Local Skills
 
-Circuit can load your own local `SKILL.md` files into relay prompts. It scans
-the host-native skill folders, in this order:
+Circuit can load your own `SKILL.md` files into relay prompts. It scans these
+host-native roots in order:
 
 1. `~/.agents/skills/<skill-id>/SKILL.md`
 2. `~/.claude/skills/<skill-id>/SKILL.md`
 
 `~/.agents/skills` wins when both roots contain the same skill id. Built-in
-flows do not require any local skills, and they do not name concrete local
-skill ids. A built-in flow may expose an optional skill slot, and you can bind
-that slot to one of your own skills in config.
+flows do not require local skills. A built-in flow may expose an optional skill
+slot, and you can bind that slot to one of your skills in config.
 
 ```yaml
 schema_version: 1
@@ -223,32 +242,9 @@ circuits:
 
 `selection.skills` names concrete local skill ids and must resolve before the
 worker starts. `skills.bindings` and `circuits.<flow>.skill_bindings` bind
-optional flow slots to concrete local skills. Missing unbound slots are ignored.
-When a skill is loaded, the run trace records its id, optional slot, path,
-SHA-256, and byte count.
-
-## User-Space Configuration
-
-Circuit reads configuration from two layered files:
-
-1. `~/.config/circuit/config.yaml` for your personal defaults across
-   projects.
-2. `./.circuit/config.yaml` at a repo root for project-specific overrides.
-
-Both files share the same schema. The project file's keys win when the same
-key is set in both. The default selection ordering is: defaults < user-global
-< project < invocation flags.
-
-Configuration controls:
-
-- Per-step **model** (which Claude model to use)
-- Per-step **reasoning effort**
-- Local **skills** selected through `selection.skills` or optional slot bindings
-- Per-step **connector** (which backend executes a relayed step)
-- Per-flow overrides under `circuits.<flow_id>`
-
-Config is read at run time, so editing either file does not require a
-plugin rebuild.
+optional flow slots to concrete local skills. Circuit ignores missing unbound
+slots. When Circuit loads a skill, the trace records the skill id, optional
+slot, path, SHA-256, and byte count.
 
 ## Codex Host And Codex Worker
 
@@ -257,113 +253,119 @@ Codex can use Circuit in two separate ways:
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
   Codex chooses the best bundled Circuit flow skill and invokes the local
   Circuit engine.
-- **worker connector behavior:** Circuit can also relay read-only worker steps
+- **worker connector behavior:** Circuit can relay read-only worker steps
   through the Codex CLI from any host.
 
-The Codex worker connector is optional.
+The Codex worker connector is optional:
 
 ```bash
 npm install -g @openai/codex
 ```
 
-When Codex is the connector for a step, Circuit launches `codex exec` with
-read-only sandbox flags. It inherits the Circuit process environment and
-current working directory, so configure it only where those process settings are
-appropriate for the worker.
+When a step uses Codex as its connector, Circuit launches `codex exec` with
+read-only sandbox flags. The Codex subprocess inherits the Circuit process
+environment and current working directory, so configure it only where those
+process settings are appropriate for the worker.
 
 ## Connector Routing
 
-Circuit keeps flow schematics connector-agnostic. Routing lives in
-`config.yaml`, so the same flow can pick the right execution transport
-without baking transport choices into the schematic.
+Flow schematics do not hard-code a connector. Config chooses the connector for
+each relay step in this order:
 
-Connector resolution at relay time follows a fixed order:
-
-1. `relay.roles.<role>` mapping (matches the role of the step being relayed)
-2. `relay.circuits.<flow_id>` mapping (matches the active flow)
-3. `relay.default`
-4. Auto-detect (currently `claude-code`)
+1. `relay.roles.<role>` mapping for the step role.
+2. `relay.circuits.<flow_id>` mapping for the active flow.
+3. `relay.default`.
+4. Auto-detect, which currently selects `claude-code`.
 
 Built-in connectors:
 
-- **`claude-code`** — Claude Code CLI subprocess. This is the trusted
-  same-workspace connector and the current auto default.
-- **`codex`** — Codex CLI subprocess using Codex's read-only sandbox flags.
-  This connector cannot run implementer steps.
+- **`claude-code`**: Claude Code CLI subprocess. Use it for trusted
+  same-workspace writes.
+- **`codex`**: Codex CLI subprocess with read-only sandbox flags. Circuit will
+  not route implementer steps to this connector.
 
-`codex-isolated` is planned for a future isolated writable Codex worker. It is
-not a current config value; use `codex` for read-only Codex relays or
-`claude-code` for trusted same-workspace writes.
-
-Before a Build or Fix run invokes an implementer, Circuit
-discloses the write-capable worker path:
-
-> This flow may invoke a write-capable Claude Code worker. Circuit will verify
-> and review the result, but the worker can edit files in this checkout.
+`codex-isolated` is not a current config value. Use `codex` for read-only Codex
+relays or `claude-code` for trusted same-workspace writes.
 
 Custom connectors are wrapper executables. Define them under
 `relay.connectors.<name>.command` as a YAML argv array. Circuit appends
-`PROMPT_FILE OUTPUT_FILE` as the final two arguments; the wrapper reads the
-prompt file and writes a JSON response object to the output file. This keeps
-wrapper contracts small and avoids shell interpolation.
+`PROMPT_FILE OUTPUT_FILE` as the final two arguments. The wrapper reads the
+prompt file and writes one JSON response object to the output file.
 
-Custom connectors are trusted local processes, not an OS sandbox. For custom
-connectors, stdin is ignored, stdout is treated as debug output, and stderr is
-included in failure messages. They inherit the Circuit process environment and
-current working directory. `capabilities.filesystem: read-only` means Circuit
-will only route them to read-only worker roles; it does not prevent the wrapper
-process from writing files on its own. See
+Treat custom connectors as trusted local processes, not an OS sandbox. For
+custom connectors, stdin is ignored, stdout is debug output, and stderr appears
+in failure messages. Each custom connector inherits the Circuit process environment
+and current working directory. `capabilities.filesystem: read-only` tells
+Circuit to route the connector only to read-only worker roles; it does not stop
+the wrapper process from writing files on its own. See
 [`docs/contracts/connector.md`](docs/contracts/connector.md) for the full
 contract.
 
-## Prerequisites
+## Generated Files
 
-- **Claude Code**
-- **Node.js 22.18.0+**
+Do not hand-edit generated host output.
+
+| Surface | Source of truth | Regenerate or check |
+| --- | --- | --- |
+| Flow definitions | `src/flows/<id>/data.ts` and `src/flows/<id>/flow.ts` | `npm run emit-flows` |
+| Flow-owned commands | `src/flows/<id>/command.md` | `npm run emit-flows` |
+| Direct commands | `src/commands/<id>.md` | `npm run emit-flows` |
+| Generated schematics, compiled flow files, plugin command mirrors, Codex skill surfaces, and Claude plugin flow mirrors | Generated from the sources above | `npm run check-flow-drift` |
+| Plugin runtime bundle | TypeScript build output | `npm run build-plugin-runtime` or `npm run check-plugin-runtime` |
+
+`docs/generated-surfaces.md` is the full source map.
+
+## Verification
+
+Use focused checks while you work and the release checks before public claims:
+
+| Command | What it checks |
+| --- | --- |
+| `npm run check` | TypeScript with `tsc --noEmit`. |
+| `npm run lint` | Biome. |
+| `npm run test` | Full Vitest suite. |
+| `npm run test:fast` | Vitest without the slow CLI router outlier. |
+| `npm run build` | Production TypeScript build. |
+| `npm run verify:fast` | Check, lint, build, fast tests, eval checks, flow drift, and plugin runtime drift. |
+| `npm run verify` | The full canonical check that CI enforces. |
+| `npm run check-release-ready` | Strict release readiness check. |
+| `npm run publish:plugins:check` | Plugin packaging and version alignment check. |
+
+The checked-in release proof set lives at
+[`docs/release/proofs/index.yaml`](docs/release/proofs/index.yaml). It covers
+doing work, deciding, continuity, customization, failure, first run, and plan
+execution for this alpha.
+
+Run `npm run capture-proofs:golden-runs` only when a release diff changes
+runtime control flow, flow behavior, command semantics, progress, summaries,
+reports, checkpoints, or proof scenarios.
 
 ## Troubleshooting
 
-**Verify your install.** From a checkout, run the full check suite:
+**The plugin doctor fails.** Fix doctor output first. A healthy plugin install
+reports `"runtime_source": "bundled"`.
 
-```bash
-npm run verify
-```
-
-This runs `tsc --noEmit`, the linter, the build, the test suite, and the
-flow-emit drift check. If any step fails, that is the issue to fix first.
-
-**Changes to flow source not showing up.** Slash commands and compiled flows
-are generated from `src/flows/<id>/`. Regenerate them with:
+**Flow source changes do not appear in commands or plugin files.** Regenerate
+generated surfaces:
 
 ```bash
 npm run emit-flows
+npm run check-flow-drift
 ```
 
-Verify there is no drift with `npm run check-flow-drift`. CI runs the same
-check on every push.
+**A plugin run uses the wrong local CLI.** The plugin ignores ambient `PATH`
+binaries by default. Use `CIRCUIT_CLI=/absolute/path/to/bin/circuit` for an
+explicit development override, or set `CIRCUIT_DEV=1` to allow repo-local and
+`PATH` fallbacks during development only.
 
-**Verify a plugin install.** Run the plugin doctor. The JSON should include
-`"runtime_source": "bundled"`:
+**Node is too old.** Upgrade to Node.js `22.18.0` or newer.
 
-```bash
-node '<plugin root>/scripts/circuit.ts' doctor
-```
-
-**Develop against a local CLI.** The plugin ignores ambient `PATH` binaries by
-default. Use `CIRCUIT_CLI=/absolute/path/to/bin/circuit` for an
-explicit override, or set `CIRCUIT_DEV=1` to allow repo-local and `PATH`
-fallbacks during development only.
-
-**Node version failure.** The bundled runtime requires Node.js 22.18.0 or
-newer. Upgrade Node if the wrapper reports an older version.
-
-**"codex not found" warning.** Codex CLI is optional. The `claude-code`
+**Codex is missing.** The Codex worker connector is optional. The `claude-code`
 connector works without Codex. Install Codex only if you want a separate
 read-only Codex worker process per relay.
 
-**A run resumed from the wrong step.** Each run's state lives in its run
-folder under `.circuit/runs/`. To resume a specific run with an explicit
-checkpoint choice:
+**A run is waiting at a checkpoint.** Resume it with the run folder and one of
+the allowed checkpoint choices:
 
 ```bash
 ./bin/circuit resume \
@@ -371,21 +373,20 @@ checkpoint choice:
   --checkpoint-choice '<choice>'
 ```
 
-If a run is irrecoverably stuck, the simplest recovery is to delete its run
-folder and start the task again from scratch.
+If a run cannot recover, delete its run folder under `.circuit/runs/` and start
+the task again.
 
 ## Further Reading
 
-- **[`AGENTS.md`](AGENTS.md):** The agent-facing operating doc for this
-  repo.
-- **[`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md):** Canonical vocabulary
-  for Circuit.
-- **[`docs/README.md`](docs/README.md):** The low-noise map of canonical docs,
-  archived records, generated evidence, research notes, and removal candidates.
+- **[`AGENTS.md`](AGENTS.md):** Agent instructions for this repo.
+- **[`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md):** Canonical Circuit
+  vocabulary.
+- **[`docs/README.md`](docs/README.md):** Map of current docs, generated
+  evidence, research notes, and archived records.
 - **[`docs/architecture/runtime.md`](docs/architecture/runtime.md):** Runtime
   architecture and run-folder ownership.
-- **[`docs/contracts/`](docs/contracts/):** Engine contracts (config,
-  connector, run, step, flow, selection, continuity, skill, stage).
+- **[`docs/contracts/`](docs/contracts/):** Contracts for config, connector,
+  run, step, flow, selection, continuity, skill, and stage behavior.
 - **[`docs/flows/`](docs/flows/):** Flow design notes and the block catalog.
 
 ## License
