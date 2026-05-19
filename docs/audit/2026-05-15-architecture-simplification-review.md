@@ -4,6 +4,9 @@ Date: 2026-05-15
 
 Status: evidence-backed review, no source changes proposed here.
 
+Archive note: this is a dated audit record. Use current code, tests,
+`docs/README.md`, and canonical architecture docs for live guidance.
+
 Goal: find places where the codebase asks a reader to jump through extra
 representations, side tables, or prose heuristics before they can answer a
 simple product question. In the Rich Hickey sense, this review favors simpler

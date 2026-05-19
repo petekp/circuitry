@@ -2,6 +2,9 @@
 
 Status: analysis-only sibling note for `docs/specs/3-axis-rigor-tournament-autonomous-v1.md`. This does not edit Section 9, change the locked grill decisions, or change source code.
 
+Archive note: this is a sibling analysis record. Use current Explore code,
+tests, generated surfaces, and the 3-axis decision ledger before acting on it.
+
 ## Recommendation summary
 
 Keep all four Section 9 defaults for v1:

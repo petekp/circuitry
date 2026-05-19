@@ -4,6 +4,9 @@ Date: 2026-05-17
 
 Status: staged implementation record.
 
+Archive note: this is a dated implementation record. Use current code, tests,
+`docs/README.md`, and canonical architecture docs for live guidance.
+
 Goal: fold more built-in flow authoring into the data-first declarative kernel
 without changing generated surfaces, runtime behavior, report contracts, or host
 mirrors.

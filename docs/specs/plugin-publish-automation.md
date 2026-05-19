@@ -2,6 +2,9 @@
 
 Status: Implemented V1
 
+Archive note: this records the implemented V1 release path. Current command
+truth lives in `package.json` and `scripts/publish-plugins.ts`.
+
 ## Purpose
 
 Circuit needs one dependable release path for its Claude Code and Codex host

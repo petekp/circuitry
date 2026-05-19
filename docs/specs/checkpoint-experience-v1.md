@@ -2,6 +2,9 @@
 
 Status: implementation plan
 
+Plan note: this is a design plan, not current behavior. Verify against code,
+tests, generated surfaces, and `docs/README.md` before implementing from it.
+
 ## Product Target
 
 Circuit checkpoints should feel like an excellent report asking for a manager's

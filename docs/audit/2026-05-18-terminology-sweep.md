@@ -3,6 +3,9 @@
 Status: reviewed on 2026-05-18. This file is the terminology table and evidence
 ledger for the approved or low-risk cleanup batches in this sweep.
 
+Archive note: this is a dated audit record. Use `UBIQUITOUS_LANGUAGE.md` as the
+current vocabulary source before making prose or schema decisions.
+
 This file intentionally names confusing and deprecated terms as evidence. Exclude
 this file from old-term greps unless the goal is to audit the audit.
 

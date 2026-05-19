@@ -83,6 +83,7 @@ changes need `check-release-infra`.
 | Flow packages | `src/flows/<id>/` (FlowData, schematic, output schemas, command, contract, writers, relay hints) |
 | Flow catalog | `src/flows/catalog.ts` (single source of truth the engine derives from) |
 | Tests | `tests/` |
+| Documentation map | `docs/README.md` |
 | Engine contracts | `docs/contracts/` |
 | Flow design notes | `docs/flows/` |
 | Release proof runs | `docs/release/proofs/runs/` |

@@ -2,6 +2,9 @@
 
 Date: 2026-05-19
 
+Archive note: this completed rename note is historical evidence. Use current
+repo paths, remotes, code, and `docs/README.md` for live guidance.
+
 ## Goal
 
 Promote the current `~/Code/circuit-next` checkout to the canonical local

@@ -2,6 +2,9 @@
 
 Status: Draft
 
+Plan note: this draft is also used as a local plan-execution proof input. Do
+not treat it as a shipped host API unless current code and contracts agree.
+
 ## Purpose
 
 Circuit needs a small, stable headless surface that visual hosts can build on

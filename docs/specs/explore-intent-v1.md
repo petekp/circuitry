@@ -9,6 +9,9 @@ purpose: target intent for the Explore flow, written from first principles. Impl
 
 # Explore Flow Intent Spec v1
 
+Research note: this draft records upstream Explore intent. It is not current
+implementation truth until reconciled with code, tests, and generated surfaces.
+
 This spec defines what the Explore flow *should be*. It is upstream of any
 implementation choice. The current code may diverge from this spec; that
 divergence is the harden-or-improve worklist for the next stage.

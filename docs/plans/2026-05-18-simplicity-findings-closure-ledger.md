@@ -3,6 +3,9 @@
 Status: complete
 Last updated: 2026-05-18
 
+Archive note: this completed ledger is historical evidence. Use current code,
+tests, `docs/README.md`, and canonical architecture docs for live guidance.
+
 This ledger is the durable source of truth for closing the 2026-05-18
 Circuit simplicity assessment. It exists so the assessment findings, closure
 decisions, proof, and deferrals survive this chat session.

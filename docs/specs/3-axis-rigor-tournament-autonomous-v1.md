@@ -3,6 +3,10 @@
 Status: historical target spec, last fully code-reconciled on 2026-05-18. The operator-selected v1 posture is recorded as decided: full rubric infrastructure in v1, no minimal interim scorer; orthogonal rigor, tournament, and autonomous axes; optional canonical stages opt in per flow. Parts of the axis work have since shipped, so use current code and the generated surface map as implementation truth before treating Appendix A or C as current.
 Scope: cross-cutting. Public flows (Review, Fix, Build, Explore, Pursue) and the internal Runtime Proof flow reconcile to this spec.
 
+Archive note: this is a decision ledger. Use code, tests, generated surfaces,
+and `docs/README.md` before treating any implementation snapshot here as
+current behavior.
+
 Read this as the target design plus a historical current-code reconciliation.
 The main body keeps the 31 locked grill decisions intact or marks the
 deliberate amendments. Appendix A records what the code did on May 18, 2026,

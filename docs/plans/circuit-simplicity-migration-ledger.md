@@ -4,6 +4,10 @@ Status: complete
 Active slice: complete
 Last updated: 2026-05-18
 
+Archive note: this completed migration ledger is historical evidence. Use
+current code, tests, `docs/README.md`, and canonical architecture docs for live
+guidance.
+
 This ledger is the durable execution record for the Circuit simplicity migration.
 It exists so context compaction does not erase slice status, test evidence,
 rollback points, or decisions.

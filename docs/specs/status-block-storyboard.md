@@ -1,5 +1,9 @@
 # Circuit Status Block Storyboard
 
+Removal-candidate note: the live rendering contract is
+`docs/contracts/host-rendering.md`. Keep this only while the transcript examples
+remain useful design context.
+
 This is the storyboard behind Circuit's status-block rendering contract. The
 live contract is in `docs/contracts/host-rendering.md`; this file shows how the
 event stream should feel in transcripts and future live host surfaces.
