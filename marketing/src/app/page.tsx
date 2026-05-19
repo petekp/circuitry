@@ -1,12 +1,26 @@
-import { FlowGlyph } from "@/components/flow-glyph";
+import { FlowGlyph, type Shape } from "@/components/flow-glyph";
 import { Wordmark } from "@/components/wordmark";
 
-const flows = [
+type Flow = {
+  name: string;
+  command: string;
+  color: string;
+  ghost: string;
+  shapes: Shape[];
+  summary: string;
+};
+
+const flows: Flow[] = [
   {
     name: "EXPLORE",
     command: "/circuit:explore",
     color: "#00B8D4",
     ghost: "#FF6B6B",
+    shapes: [
+      "empty", "ht", "empty",
+      "hl", "dot", "hr",
+      "empty", "hb", "empty",
+    ],
     summary:
       "Investigate, compare options, and shape a plan before you commit code.",
   },
@@ -15,6 +29,11 @@ const flows = [
     command: "/circuit:build",
     color: "#FF6B1A",
     ghost: "#1AB8FF",
+    shapes: [
+      "empty", "outline", "empty",
+      "outline", "square", "outline",
+      "square", "square", "square",
+    ],
     summary:
       "Implement a feature end-to-end with checkpoints along the way.",
   },
@@ -23,6 +42,11 @@ const flows = [
     command: "/circuit:fix",
     color: "#E91E63",
     ghost: "#1AFFB8",
+    shapes: [
+      "empty", "hb", "empty",
+      "hr", "square", "hl",
+      "empty", "ht", "empty",
+    ],
     summary:
       "Reproduce the bug, fix it, and produce a proof the regression is gone.",
   },
@@ -31,6 +55,11 @@ const flows = [
     command: "/circuit:review",
     color: "#00C853",
     ghost: "#FF1A4A",
+    shapes: [
+      "outline", "circle", "outline",
+      "circle", "dot", "circle",
+      "outline", "circle", "outline",
+    ],
     summary: "Audit a scoped change against the contract you set for it.",
   },
   {
@@ -38,6 +67,11 @@ const flows = [
     command: "/circuit:run",
     color: "#7C4DFF",
     ghost: "#FFC107",
+    shapes: [
+      "empty", "empty", "tur",
+      "empty", "tur", "empty",
+      "tur", "empty", "empty",
+    ],
     summary:
       "Describe a task in plain English. Circuit picks the right flow.",
   },
@@ -84,14 +118,15 @@ export default function Home() {
           actually finished.
         </p>
 
-        <div className="flex items-end gap-1 mt-2">
+        <div className="flex items-end gap-2 mt-2">
           {flows.map((f) => (
             <FlowGlyph
               key={f.name}
               name={f.name}
               color={f.color}
               ghost={f.ghost}
-              cellSize={28}
+              shapes={f.shapes}
+              cellSize={24}
             />
           ))}
         </div>
@@ -123,7 +158,8 @@ export default function Home() {
                 name={f.name}
                 color={f.color}
                 ghost={f.ghost}
-                cellSize={44}
+                shapes={f.shapes}
+                cellSize={36}
               />
               <div className="flex flex-col gap-1">
                 <div className="text-[15px] font-medium tracking-tight">
