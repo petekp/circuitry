@@ -76,7 +76,7 @@ export default function Home() {
       <section className="flex flex-col gap-10">
         <Label>[ Pre-release Alpha ]</Label>
 
-        <Wordmark height={96} />
+        <Wordmark />
 
         <p className="max-w-2xl text-[15px] leading-relaxed">
           Structured flows for coding agents. Each step runs against a

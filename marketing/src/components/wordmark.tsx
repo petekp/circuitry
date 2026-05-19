@@ -1,24 +1,15 @@
 import Image from "next/image";
 
-const WORDMARK_RATIO = 2063 / 452;
-
-export function Wordmark({
-  height = 96,
-  className,
-}: {
-  height?: number;
-  className?: string;
-}) {
-  const width = Math.round(height * WORDMARK_RATIO);
+export function Wordmark({ className }: { className?: string }) {
   return (
     <Image
       src="/circuit-wordmark.png"
       alt="Circuit"
-      width={width}
-      height={height}
+      width={2063}
+      height={452}
       priority
       className={className}
-      style={{ width: "auto", height, maxWidth: "100%" }}
+      style={{ width: 1032, height: "auto", maxWidth: "100%" }}
     />
   );
 }
