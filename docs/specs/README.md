@@ -8,10 +8,7 @@ Use this directory with care:
 | Spec | Class | Current use |
 | --- | --- | --- |
 | `3-axis-rigor-tournament-autonomous-v1.md` | Archived | Historical target spec. Current CLI and flow-axis behavior lives in code and generated surfaces. |
-| `3-axis-rubric-tuneables-analysis.md` | Archived | Sibling analysis for the 3-axis spec. Not implementation truth. |
 | `checkpoint-experience-v1.md` | Research note | Checkpoint UX target. Verify current behavior against code before acting. |
 | `explore-intent-v1.md` | Research note | Upstream product intent for Explore. Not reconciled as current implementation. |
 | `headless-engine-host-api-v1.md` | Research note | Used by local plan-execution proof paths. Not a shipped host API unless code and contracts agree. |
 | `narration-display-profiles.md` | Canonical | Companion to `docs/contracts/host-rendering.md`; covered by host experience tests. |
-| `plugin-publish-automation.md` | Archived | Current command truth lives in `package.json` and `scripts/publish-plugins.ts`. |
-| `status-block-storyboard.md` | Removal candidate | Storyboard superseded by `docs/contracts/host-rendering.md`; keep only while useful as transcript design context. |

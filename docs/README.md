@@ -28,16 +28,15 @@ over dated plans or audits.
 | Canonical | `docs/first-run.md`, `docs/host-trial-checklist.md`, `docs/positioning-and-strategy.md` | Operator onboarding, host testing, and strategy notes. Check code and release evidence before turning strategy copy into product claims. |
 | Generated/evidence | `docs/generated-surfaces.md`, `docs/flows/block-catalog.json`, `generated/**`, `docs/release/**`, `plugins/**` generated mirrors | Generated truth, release truth, or proof evidence. Do not hand-edit generated mirrors. |
 | Research note | `docs/ideas/**`, `docs/learnings/**`, `docs/flows/research-intake.md`, `docs/flows/cloudflare-glasswing-block-review.md` | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |
-| Archived | `docs/audit/**`, `docs/plans/**`, completed or historical files in `docs/specs/**` | Dated evidence, migration ledgers, closure records, and target specs. Do not treat as active instructions unless a canonical doc links to a live section. |
-| Removal candidate | Unreferenced specs listed in `docs/audit/2026-05-19-docs-claim-inventory.md` | Keep until their decisions are absorbed or explicitly discarded. |
+| Archived | Completed or historical files in `docs/specs/**` | Dated target specs and design records. Do not treat as active instructions unless a canonical doc links to a live section. |
 
 ## Low-Noise Rules
 
 - Keep current how-to guidance in the canonical docs above.
 - Keep generated ownership in `docs/generated-surfaces.md`; do not repeat it in
   every guide.
-- Put completed execution records in `docs/plans/` or `docs/audit/` with a
-  dated status, then stop linking them as live guidance.
+- Move completed execution records that are not public release evidence into
+  local-only `docs/internal/archive/` after repo-wide reference probes.
 - Keep speculative product ideas in `docs/ideas/` and prior-art notes in
   `docs/learnings/`.
 - Leave release proof runs in place unless a release check proves they are safe
