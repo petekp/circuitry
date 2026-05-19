@@ -1,34 +1,39 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { FlowGlyph } from "@/components/flow-glyph";
 
 const flows = [
   {
-    name: "Explore",
+    name: "EXPLORE",
     command: "/circuit:explore",
+    color: "#00B8D4",
     summary:
       "Investigate, compare options, and shape a plan before you commit code.",
   },
   {
-    name: "Build",
+    name: "BUILD",
     command: "/circuit:build",
-    summary: "Implement a feature end-to-end with checkpoints along the way.",
+    color: "#FF6B1A",
+    summary:
+      "Implement a feature end-to-end with checkpoints along the way.",
   },
   {
-    name: "Fix",
+    name: "FIX",
     command: "/circuit:fix",
+    color: "#E91E63",
     summary:
       "Reproduce the bug, fix it, and produce a proof the regression is gone.",
   },
   {
-    name: "Review",
+    name: "REVIEW",
     command: "/circuit:review",
+    color: "#00C853",
     summary: "Audit a scoped change against the contract you set for it.",
   },
   {
-    name: "Run",
+    name: "RUN",
     command: "/circuit:run",
-    summary: "Describe a task in plain English. Circuit picks the right flow.",
+    color: "#7C4DFF",
+    summary:
+      "Describe a task in plain English. Circuit picks the right flow.",
   },
 ];
 
@@ -51,93 +56,106 @@ const principles = [
   },
 ];
 
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-20 px-6 py-20 sm:py-28">
-        <section className="flex flex-col gap-6">
-          <Badge variant="secondary" className="w-fit">
-            Pre-release alpha
-          </Badge>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Structured flows for coding agents.
-          </h1>
-          <p className="max-w-2xl text-lg text-muted-foreground">
-            Circuit changes what your coding agent is allowed to call done. Each
-            step runs against a contract, so the next step only starts when the
-            previous one actually finished.
+    <main className="mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
+      <section className="flex flex-col gap-10">
+        <Label>[ Pre-release Alpha ]</Label>
+
+        <h1 className="text-5xl sm:text-7xl font-medium tracking-tight leading-none">
+          CIRCUIT
+        </h1>
+
+        <p className="max-w-2xl text-[15px] leading-relaxed">
+          Structured flows for coding agents. Each step runs against a
+          contract, so the next step only starts when the previous one
+          actually finished.
+        </p>
+
+        <div className="flex items-end gap-0 mt-2">
+          {flows.map((f) => (
+            <FlowGlyph
+              key={f.name}
+              name={f.name}
+              color={f.color}
+              cellSize={28}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3 mt-2">
+          <Label>[ Install · Claude Code ]</Label>
+          <pre className="bg-foreground text-background px-5 py-4 text-[13px] leading-7 overflow-x-auto">
+            <code>
+              {`/plugin marketplace add petekp/circuit-next
+/plugin install circuit@circuit-next
+/reload-plugins`}
+            </code>
+          </pre>
+          <p className="text-[13px] text-muted-foreground">
+            Then run{" "}
+            <code className="px-1.5 py-0.5 bg-muted text-foreground">
+              /circuit:run &lt;your task&gt;
+            </code>
           </p>
-          <div className="mt-2 flex flex-col gap-3">
-            <p className="text-sm font-medium text-muted-foreground">
-              Install for Claude Code
-            </p>
-            <pre className="rounded-md border bg-muted/50 px-4 py-3 text-sm leading-6 font-mono">
-              <code>
-                /plugin marketplace add petekp/circuit-next{"\n"}
-                /plugin install circuit@circuit-next{"\n"}
-                /reload-plugins
-              </code>
-            </pre>
-            <p className="text-sm text-muted-foreground">
-              Then ask Circuit to choose a flow:{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                /circuit:run &lt;your task&gt;
-              </code>
-            </p>
-          </div>
-        </section>
+        </div>
+      </section>
 
-        <Separator />
+      <section className="mt-28 flex flex-col gap-10">
+        <Label>[ Flows ]</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-12">
+          {flows.map((f) => (
+            <div key={f.name} className="flex flex-col gap-5">
+              <FlowGlyph name={f.name} color={f.color} cellSize={44} />
+              <div className="flex flex-col gap-1">
+                <div className="text-[15px] font-medium tracking-tight">
+                  {f.name}
+                </div>
+                <code className="text-[11px] text-muted-foreground">
+                  {f.command}
+                </code>
+              </div>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                {f.summary}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <section className="flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold tracking-tight">Flows</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {flows.map((flow) => (
-              <Card key={flow.name}>
-                <CardHeader>
-                  <CardTitle className="flex items-baseline justify-between gap-3">
-                    <span>{flow.name}</span>
-                    <code className="text-xs font-mono text-muted-foreground">
-                      {flow.command}
-                    </code>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  {flow.summary}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+      <section className="mt-28 flex flex-col gap-10">
+        <Label>[ What you get ]</Label>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
+          {principles.map((p) => (
+            <li key={p.title} className="flex flex-col gap-1.5">
+              <h3 className="text-[15px] font-medium tracking-tight">
+                {p.title}
+              </h3>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                {p.body}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-        <Separator />
-
-        <section className="flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            What you get
-          </h2>
-          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {principles.map((p) => (
-              <li key={p.title} className="flex flex-col gap-1">
-                <h3 className="font-medium">{p.title}</h3>
-                <p className="text-sm text-muted-foreground">{p.body}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <Separator />
-
-        <footer className="flex flex-col gap-2 pb-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>Circuit — pre-release alpha</span>
-          <a
-            href="https://github.com/petekp/circuit-next"
-            className="font-medium text-foreground hover:underline"
-          >
-            github.com/petekp/circuit-next
-          </a>
-        </footer>
-      </main>
-    </div>
+      <footer className="mt-28 pt-8 border-t border-border flex flex-col sm:flex-row gap-2 sm:justify-between text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+        <span>[ Circuit · Pre-release ]</span>
+        <a
+          href="https://github.com/petekp/circuit-next"
+          className="hover:text-foreground transition-colors"
+        >
+          github.com/petekp/circuit-next
+        </a>
+      </footer>
+    </main>
   );
 }
