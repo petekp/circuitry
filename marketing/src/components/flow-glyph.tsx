@@ -84,27 +84,37 @@ function Cell({
 export function FlowGlyph({
   name,
   color,
+  ghost,
   cellSize = 32,
   cells = 3,
+  offset = 3,
   className,
 }: {
   name: string;
   color: string;
+  ghost: string;
   cellSize?: number;
   cells?: number;
+  offset?: number;
   className?: string;
 }) {
   const shapes = shapesFor(name, cells);
+  const pad = offset;
   return (
     <svg
-      width={cellSize}
-      height={cellSize * cells}
-      viewBox={`0 0 ${cellSize} ${cellSize * cells}`}
+      width={cellSize + pad}
+      height={cellSize * cells + pad}
+      viewBox={`-${pad} 0 ${cellSize + pad} ${cellSize * cells + pad}`}
       className={className}
       aria-hidden="true"
     >
       {shapes.map((shape, i) => (
-        <g key={i} transform={`translate(0, ${i * cellSize})`}>
+        <g key={`g-${i}`} transform={`translate(${-offset}, ${i * cellSize + offset})`}>
+          <Cell shape={shape} color={ghost} size={cellSize} />
+        </g>
+      ))}
+      {shapes.map((shape, i) => (
+        <g key={`p-${i}`} transform={`translate(0, ${i * cellSize})`}>
           <Cell shape={shape} color={color} size={cellSize} />
         </g>
       ))}

@@ -1,10 +1,12 @@
 import { FlowGlyph } from "@/components/flow-glyph";
+import { Wordmark } from "@/components/wordmark";
 
 const flows = [
   {
     name: "EXPLORE",
     command: "/circuit:explore",
     color: "#00B8D4",
+    ghost: "#FF6B6B",
     summary:
       "Investigate, compare options, and shape a plan before you commit code.",
   },
@@ -12,6 +14,7 @@ const flows = [
     name: "BUILD",
     command: "/circuit:build",
     color: "#FF6B1A",
+    ghost: "#1AB8FF",
     summary:
       "Implement a feature end-to-end with checkpoints along the way.",
   },
@@ -19,6 +22,7 @@ const flows = [
     name: "FIX",
     command: "/circuit:fix",
     color: "#E91E63",
+    ghost: "#1AFFB8",
     summary:
       "Reproduce the bug, fix it, and produce a proof the regression is gone.",
   },
@@ -26,12 +30,14 @@ const flows = [
     name: "REVIEW",
     command: "/circuit:review",
     color: "#00C853",
+    ghost: "#FF1A4A",
     summary: "Audit a scoped change against the contract you set for it.",
   },
   {
     name: "RUN",
     command: "/circuit:run",
     color: "#7C4DFF",
+    ghost: "#FFC107",
     summary:
       "Describe a task in plain English. Circuit picks the right flow.",
   },
@@ -70,9 +76,12 @@ export default function Home() {
       <section className="flex flex-col gap-10">
         <Label>[ Pre-release Alpha ]</Label>
 
-        <h1 className="text-5xl sm:text-7xl font-medium tracking-tight leading-none">
-          CIRCUIT
-        </h1>
+        <Wordmark
+          height={96}
+          primary="oklch(0.94 0.008 80)"
+          ghost="#FF3B30"
+          ghostOffset={3}
+        />
 
         <p className="max-w-2xl text-[15px] leading-relaxed">
           Structured flows for coding agents. Each step runs against a
@@ -80,20 +89,22 @@ export default function Home() {
           actually finished.
         </p>
 
-        <div className="flex items-end gap-0 mt-2">
+        <div className="flex items-end gap-1 mt-2">
           {flows.map((f) => (
             <FlowGlyph
               key={f.name}
               name={f.name}
               color={f.color}
+              ghost={f.ghost}
               cellSize={28}
+              offset={3}
             />
           ))}
         </div>
 
         <div className="flex flex-col gap-3 mt-2">
           <Label>[ Install · Claude Code ]</Label>
-          <pre className="bg-foreground text-background px-5 py-4 text-[13px] leading-7 overflow-x-auto">
+          <pre className="bg-black/40 border border-border text-foreground px-5 py-4 text-[13px] leading-7 overflow-x-auto">
             <code>
               {`/plugin marketplace add petekp/circuit-next
 /plugin install circuit@circuit-next
@@ -114,7 +125,13 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-12">
           {flows.map((f) => (
             <div key={f.name} className="flex flex-col gap-5">
-              <FlowGlyph name={f.name} color={f.color} cellSize={44} />
+              <FlowGlyph
+                name={f.name}
+                color={f.color}
+                ghost={f.ghost}
+                cellSize={44}
+                offset={4}
+              />
               <div className="flex flex-col gap-1">
                 <div className="text-[15px] font-medium tracking-tight">
                   {f.name}
