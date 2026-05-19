@@ -82,7 +82,8 @@ The v0.1 Config contract governs each layer's shape, not the merge.
 The runtime MUST reject any `Config`, `LayeredConfig`, or
 `CircuitOverride` that violates these. All invariants are enforced via
 `src/schemas/config.ts`; tested in
-`tests/contracts/schema-parity.test.ts`.
+`tests/contracts/config-schema.test.ts` and
+`tests/runner/config-loader.test.ts`.
 
 - **CONFIG-I1 — `Config` rejects surplus keys at parse time (`.strict()`).**
   A top-level authorial typo like `defuults: {...}` or `dispath: {...}`
@@ -289,7 +290,7 @@ After a `CircuitOverride` is accepted:
   `RelayConfig.circuits` per connector-I8 closure notes). The
   property constrains only key shape, not catalog closure. Note that
   CONFIG-I8 (added in the Slice 26 Codex fold-in) already pins the
-  key-shape enforcement at the schema-parity level; this property
+  key-shape enforcement at the config-schema level; this property
   adds fuzzing breadth rather than changing the guarantee.
 
 ## Cross-contract dependencies
@@ -399,7 +400,7 @@ After a `CircuitOverride` is accepted:
     posture as CONFIG-I3 so regression flags a named invariant.
   - CONFIG-I8 added (Codex MED #5 fold-in) — `Config.circuits` key
     shape enforced at parse time via `z.record(CompiledFlowId, ...)`;
-    positive + negative schema-parity tests pin the guarantee.
+    positive + negative config-schema tests pin the guarantee.
   - Connector schema ownership narrowed to relay-specific config; the
     config types stay owned by `src/schemas/config.ts`.
   - `pending_rehome` block removed from `connector.registry`.

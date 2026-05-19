@@ -1,6 +1,6 @@
 # Circuit, read as literature
 
-A literate guide to `circuit-next`, written so the system can be understood
+A literate guide to Circuit, written so the system can be understood
 end-to-end without first having to puzzle out where things live. Sections are
 numbered with the section sign (§1, §2, …) and cross-reference each other.
 You can read it linearly; the cross-references exist so you can also jump and
@@ -67,13 +67,14 @@ makes Circuit cross-host: every host adapter speaks the same JSON
 protocol to the same binary. A run from Claude Code and a run from the
 terminal produce identical run folders.
 
-**Flows are data, not code.** A flow — Build, Fix, Explore, or
-Review — is authored as a JSON *schematic* and compiled into a
-runtime graph. The engine never imports a flow's code module. New flows
-are added by appending to a catalog (§19); the engine derives every
-per-flow behavior — routing, report writers, shape hints, skill slots —
-from that catalog. If you find yourself adding an `if (flow.id === 'fix')`
-to the engine, you are violating the boundary.
+**Flows are data, not code.** A flow — Build, Fix, Explore, Review, or
+Pursue — is authored as a typed `FlowData` value and compiled into a
+runtime graph. The generated schematic JSON is a compatibility surface,
+not the source to edit. The engine never imports a flow's code module
+directly. New flows are added by appending to a catalog (§19); the
+engine derives every per-flow behavior — routing, report writers, shape
+hints, skill slots — from that catalog. If you find yourself adding an
+`if (flow.id === 'fix')` to the engine, you are violating the boundary.
 
 These two ideas — host/engine separation and flows-as-data — are the
 backbone of the system. They show up in the file layout
@@ -114,12 +115,13 @@ lives in a folder on disk (§10), not in the session's memory.
 
 ## §4. A flow is data
 
-A flow's authored definition is a typed module at
+A flow's authored definition is a plain typed value at
+`src/flows/<id>/data.ts`, bound to the compiler by the thin adapter at
 `src/flows/<id>/flow.ts`. The build script (§19) regenerates the
 compatibility schematic at `src/flows/<id>/schematic.json`, then compiles
 that schematic into a `CompiledFlow` — the runtime graph the engine actually
 loads. Compiled outputs land at `generated/flows/<id>/circuit.json` and get
-mirrored into the host plugin packages.
+mirrored into the host plugin packages when the flow is public.
 
 The `CompiledFlow` schema is defined with Zod and lives at
 `src/schemas/compiled-flow.ts`. Its body, trimmed to the fields that
@@ -137,7 +139,8 @@ const CompiledFlowBody = z
       signals: EntrySignals,
       intent_prefixes: z.array(z.string()).default([]),
     }).strict(),
-    entry_modes: z.array(EntryMode).min(1),
+    axes: FlowAxes,
+    starts_at: StepId,
     stages: z.array(Stage).min(1),
     stage_path_policy: SpinePolicy,
     steps: z.array(Step).min(1),
@@ -151,13 +154,12 @@ rather than being silently dropped. This discipline shows up everywhere
 in Circuit's schemas, and §23 makes the case for why. For now, take it
 as an aesthetic: typos should crash, not warp.
 
-A compiled flow declares its `entry_modes` (the named modes Lite, Default,
-Deep, Autonomous, Tournament — each pinning an entry step and a depth),
-its `stages` (Frame, Plan, Act, …), and its `steps` — the array of
-individual things the engine will execute. This is the data the engine
-runs against. The runtime never needs to know that a step *implements
-Build*; it knows only that the step is a `relay` with a particular role
-and report schema.
+A compiled flow declares its `axes` support (rigor, tournament, and
+autonomous availability), `starts_at` entry step, `stages` (Frame, Plan,
+Act, …), and `steps` — the array of individual things the engine will
+execute. This is the data the engine runs against. The runtime never needs
+to know that a step *implements Build*; it knows only that the step is a
+`relay` with a particular role and report schema.
 
 Notice that the schematic itself is *not* the runtime form. Schematics
 are designed for authoring — they say things like `"output":
@@ -963,21 +965,25 @@ package directly; it consumes them through `src/flows/catalog.ts`:
 
 ```ts
 // src/flows/catalog.ts
-export const flowPackages: readonly CompiledFlowPackage[] = [
-  reviewCompiledFlowPackage,
-  fixCompiledFlowPackage,
-  runtimeProofCompiledFlowPackage,
-  buildCompiledFlowPackage,
-  exploreCompiledFlowPackage,
+export const flowDefinitions: readonly FlowDefinition[] = [
+  reviewFlowDefinition,
+  fixFlowDefinition,
+  pursueFlowDefinition,
+  runtimeProofFlowDefinition,
+  buildFlowDefinition,
+  exploreFlowDefinition,
 ];
+
+export const flowPackages: readonly CompiledFlowPackage[] =
+  compileFlowDefinitions(flowDefinitions);
 ```
 
 Adding a flow is therefore a four-step process: create the folder, author
-`flow.ts`, add the definition to the catalog, run `npm run build && node
-scripts/emit-flows.ts` to regenerate the schematic, compiled JSON, and host
-plugin mirrors. No engine edit. The repository's `AGENTS.md` says the rule
-explicitly: *if you find yourself editing engine files to add a flow, the
-boundary is being violated.*
+`data.ts` and the thin `flow.ts` adapter, add the definition to the catalog,
+run `npm run build && node scripts/emit-flows.ts` to regenerate the
+schematic, compiled JSON, and host plugin mirrors. No engine edit. The
+repository's `AGENTS.md` says the rule explicitly: *if you find yourself
+editing engine files to add a flow, the boundary is being violated.*
 
 The catalog also drives drift detection. A CI step,
 `check-flow-drift`, runs the emit pipeline and compares the output bytes
@@ -1093,8 +1099,8 @@ The Claude Code plugin contains:
 - `commands/<id>.md` — slash command files (`/circuit:run`,
   `/circuit:fix`, etc.). These are prompts that the host model reads;
   they instruct the model to pick a flow and then invoke the CLI.
-- `skills/<id>/circuit.json` — compiled flow JSON, mirrored from
-  `generated/flows/`.
+- `skills/<id>/circuit.json` — compiled flow JSON for public flows,
+  mirrored from `generated/flows/`.
 - `hooks/session-start.mjs` — a hook that injects a Circuit handoff
   context into the start of a session if a continuity record is present.
 - `.claude-plugin/plugin.json` — the plugin manifest.
@@ -1215,5 +1221,5 @@ canonical vocabulary, `docs/architecture/runtime.md` for the runtime's
 own one-page summary, `docs/contracts/run.md` for the formal RUN-I
 invariants, `docs/contracts/host-adapter.md` for the host adapter
 surface, `docs/flows/blocks.md` for the block catalog and authoring
-model. The definitions under `src/flows/<id>/flow.ts` are the clearest
+model. The definitions under `src/flows/<id>/data.ts` are the clearest
 examples of the data we have been discussing all along.*

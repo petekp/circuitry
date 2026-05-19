@@ -1,12 +1,12 @@
 schema_version: 1
 claims:
   - id: CLAIM-FLOW-CATALOG-CURRENT
-    claim: Circuit-next has current flow packages for Build, Explore, Fix, and Review.
+    claim: Circuit has current public flow packages for Build, Explore, Fix, Pursue, and Review.
     type: flow
     status: verified_current
     surfaces: [README.md, docs/release/parity-matrix.generated.md]
     backing:
-      capability_ids: [flow:build, flow:explore, flow:fix, flow:review]
+      capability_ids: [flow:build, flow:explore, flow:fix, flow:pursue, flow:review]
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: If false, the release catalog itself is misleading.
     readiness_refs: [REL-004]

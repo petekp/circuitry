@@ -1,5 +1,5 @@
 ---
-description: Investigate, understand, choose among options, or shape an execution plan. Invokes the circuit-next `explore` flow end-to-end via the project CLI, producing a run trace + final report under the run folder.
+description: Investigate, understand, choose among options, or shape an execution plan. Invokes Circuit's `explore` flow end-to-end via the project CLI, producing a run trace + final report under the run folder.
 argument-hint: <goal>
 ---
 

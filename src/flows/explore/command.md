@@ -1,5 +1,5 @@
 ---
-description: Investigate, understand, choose among options, or shape an execution plan. Invokes the circuit-next `explore` flow end-to-end via the project CLI, producing a run trace + final report under the run folder.
+description: Investigate, understand, choose among options, or shape an execution plan. Invokes Circuit's `explore` flow end-to-end via the project CLI, producing a run trace + final report under the run folder.
 argument-hint: <goal>
 ---
 
@@ -20,7 +20,7 @@ metacharacters:
 
 1. **Confirm working directory.** The CLI is a repo-local launcher
    (`./bin/circuit-next`), not a globally installed binary. If the user
-   invoked this command outside a circuit-next repo checkout, tell them so
+   invoked this command outside a Circuit repo checkout, tell them so
    and ask them to `cd` into one.
 2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
    by double-quoting the raw goal (double quotes expand `$VAR`, `` `cmd` ``,

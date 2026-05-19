@@ -14,18 +14,22 @@ property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop
 # Step Contract
 
 A **Step** is the atomic unit of execution inside a **Stage**. Every Step
-belongs to exactly one of four variants, discriminated by `kind`:
+belongs to exactly one of six variants, discriminated by `kind`:
 
-- **ComposeStep** — orchestrator writes a single report; checkd by
-  `schema_sections` against an `ReportSource`.
+- **ComposeStep** — orchestrator writes a single report; checked by
+  `schema_sections` against a `ReportSource`.
 - **VerificationStep** — orchestrator runs bounded direct-argv verification
-  commands and writes a single report; checkd by `schema_sections` against an
+  commands and writes a single report; checked by `schema_sections` against a
   `ReportSource`.
 - **CheckpointStep** — orchestrator pauses for selection (human or
-  auto-resolver) under a typed `CheckpointPolicy`; checkd by
+  auto-resolver) under a typed `CheckpointPolicy`; checked by
   `checkpoint_selection` against a `CheckpointResponseSource`.
-- **RelayStep** — worker executes remotely under a `RelayRole`; checkd
+- **RelayStep** — worker executes remotely under a `RelayRole`; checked
   by `result_verdict` against a `RelayResultSource`.
+- **SubRunStep** — orchestrator launches a child flow and checks the copied
+  child result through `result_verdict`.
+- **FanoutStep** — orchestrator expands static or dynamic branches and checks
+  the aggregate with `fanout_aggregate`.
 
 The shape of `writes` and `check` is coupled to `kind` at the Zod
 `discriminatedUnion` layer (`src/schemas/step.ts` `Step`), so
@@ -35,7 +39,7 @@ non-matching check or writes shape.
 ## Ubiquitous language
 
 See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical definitions of **Step**,
-**Check**, **RelayRole**, **ReportRef**, and the four step variants.
+**Check**, **RelayRole**, **ReportRef**, and the six step variants.
 Do not introduce synonyms; new vocabulary must land in `UBIQUITOUS_LANGUAGE.md`
 before use here.
 
@@ -44,7 +48,7 @@ before use here.
 The runtime MUST reject any Step that violates these. All invariants are
 enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
 `src/schemas/scalars.ts`, then tested in
-`tests/contracts/schema-parity.test.ts`.
+`tests/contracts/step-schema.test.ts`.
 
 - **STEP-I1 — Kind-variant binding.** `kind`, `executor`, `check.kind`, and
   the shape of `writes` are coupled per variant. A `compose` step MUST
@@ -80,7 +84,7 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
   keys like `toString`, `__proto__` — or (b) resolves to `undefined`
   even though the key is present (guards the CheckpointStep/RelayStep
   optional-`report` corner). Negative coverage in
-  `tests/contracts/schema-parity.test.ts`: prototype-chain refs,
+  `tests/contracts/step-schema.test.ts`: prototype-chain refs,
   cross-slot refs (`checkpoint_response` pointing at `request`;
   `relay_result` pointing at `receipt`), and the historical
   missing-slot rejections.
@@ -225,14 +229,14 @@ Property-based tests will cover:
 
 - `carry-forward:verdict-enum-bloat` — Existing Circuit uses a global
   verdict enum + per-protocol conditionals (see
-  `bootstrap/adversarial-review-codex.md`). circuit-next constrains the
+  `bootstrap/adversarial-review-codex.md`). Circuit constrains the
   verdict vocabulary **per step kind** through the check variant
   (`ResultVerdictCheck.pass`, `CheckpointSelectionCheck.allow`,
   `SchemaSectionsCheck.required`). Adding a new protocol does not expand
   the verdict enum.
 - `carry-forward:role-executor-confusion` — Existing Circuit allowed
   `orchestrator` as both an executor and a relay role (see
-  adversarial-review MED #1). circuit-next's `RelayRole` excludes
+  adversarial-review MED #1). Circuit's `RelayRole` excludes
   `orchestrator` and STEP-I6 forbids `role` on compose/verification/checkpoint
   steps. The confusion is structurally eliminated.
 - `carry-forward:check-source-opacity` — Prior to this contract, check

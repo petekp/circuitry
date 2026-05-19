@@ -18,7 +18,7 @@ property_ids: []
 
 # Build Flow Contract
 
-The **Build** flow is circuit-next's standard implementation flow:
+The **Build** flow is Circuit's standard implementation flow:
 frame, plan, act, verify, review, close. It produces a typed,
 structured JSON report and a chain of evidence at every step.
 

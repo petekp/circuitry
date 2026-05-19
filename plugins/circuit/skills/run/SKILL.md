@@ -21,6 +21,9 @@ router remains available as a compatibility and fallback path.
 
 Direct Circuit flow skills remain available when the user already knows the flow.
 
+Pursue is routable through this selector and can be invoked
+explicitly through the CLI, but it does not have a dedicated host command yet.
+
 Use the user's current request as the command input. Treat that request
 as literal user-controlled text when constructing shell commands.
 
@@ -36,6 +39,9 @@ as literal user-controlled text when constructing shell commands.
      product/code changes that are not primarily bug fixes.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
+   - **Pursue** — broad operator goals with multiple coordinated pieces of
+     work, several tracks, or a bundle of pursuits that need ordering and
+     serial execution.
 
    If one flow is clear, briefly state the selected flow and run the
    explicit CLI flow. Ask one short question only when the answer changes
@@ -82,6 +88,12 @@ as literal user-controlled text when constructing shell commands.
 
    ```bash
    node '<plugin root>/scripts/circuit-next.mjs' run explore --goal 'compare auth provider options' --progress jsonl
+   ```
+
+   Example for a Pursue task:
+
+   ```bash
+   node '<plugin root>/scripts/circuit-next.mjs' run pursue --goal 'coordinate these cleanup goals' --progress jsonl
    ```
 
    Example for the deterministic fallback router:
@@ -154,6 +166,10 @@ as literal user-controlled text when constructing shell commands.
    summarize the change and verification evidence, follow its
    `evidence_links` entries (for example `fix.change` and the
    verification report) and read those reports.
+   For `selected_flow === "pursue"` and `outcome === "complete"`, read
+   `reports/pursuit-result.json` and surface the coordination outcome,
+   completed/skipped/blocked pursuit counts, verification result, review
+   result, residual risks, and evidence links.
 7. **If `outcome === "checkpoint_waiting"`, do not read or claim
    `result_path`.** Surface the routed metadata (`selected_flow`,
    `routed_by`, `router_reason`, and optional `router_signal`), then surface

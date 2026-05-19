@@ -31,7 +31,8 @@ new vocabulary must land in `UBIQUITOUS_LANGUAGE.md` before use here.
 
 The runtime MUST reject any Stage that violates these. All invariants are
 enforced via `src/schemas/stage.ts` + `src/schemas/compiled-flow.ts` and tested
-in `tests/contracts/schema-parity.test.ts`.
+in `tests/contracts/flow-graph-schema.test.ts` and
+`tests/contracts/selection-schema.test.ts`.
 
 - **stage-I1 — Non-empty steps.** `Stage.steps` contains at least one
   `StepId`. Enforced at `src/schemas/stage.ts` via `z.array(StepId).min(1)`.
@@ -82,7 +83,7 @@ in `tests/contracts/schema-parity.test.ts`.
 
   Enforced in `src/schemas/compiled-flow.ts` `superRefine` + `src/schemas/stage.ts`
   (SpinePolicy discriminated union); negative coverage in
-  `tests/contracts/schema-parity.test.ts`.
+  `tests/contracts/flow-graph-schema.test.ts`.
 
 - **stage-I5 — Canonical uniqueness within a flow.** No two
   `Stage`s in the same `CompiledFlow` may share the same defined
@@ -90,10 +91,10 @@ in `tests/contracts/schema-parity.test.ts`.
   specific stages — are permitted in unlimited number.) A flow that
   declares two `canonical: 'review'` stages is structurally ambiguous
   about which is "the" review for audit/relay purposes; rather than
-  pick a silent convention, circuit-next rejects the ambiguity at
+  pick a silent convention, Circuit rejects the ambiguity at
   parse time. Closes Codex adversarial-auditor MED #4. Enforced in
   `src/schemas/compiled-flow.ts` `superRefine`; negative coverage in
-  `tests/contracts/schema-parity.test.ts`.
+  `tests/contracts/flow-graph-schema.test.ts`.
 
 - **stage-I6 — CompiledFlow-level strict surplus-key rejection.** The
   `CompiledFlow` schema itself is `.strict()`, so top-level surplus keys

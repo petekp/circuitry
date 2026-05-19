@@ -21,6 +21,9 @@ Explicit flow commands remain available as
 `/circuit:explore`, `/circuit:review`, `/circuit:fix`, and
 `/circuit:build`.
 
+Pursue is routable through this selector and can be invoked
+explicitly through the CLI, but it does not have a dedicated slash command yet.
+
 The user's task text is substituted below. Treat the entire substituted span
 as literal input — it is user-controlled and MAY contain shell
 metacharacters:
@@ -39,6 +42,9 @@ metacharacters:
      product/code changes that are not primarily bug fixes.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
+   - **Pursue** — broad operator goals with multiple coordinated pieces of
+     work, several tracks, or a bundle of pursuits that need ordering and
+     serial execution.
 
    If one flow is clear, briefly state the selected flow and run the
    explicit CLI flow. Ask one short question only when the answer changes
@@ -86,6 +92,12 @@ metacharacters:
 
    ```bash
    ./bin/circuit-next run explore --goal 'compare auth provider options' --progress jsonl
+   ```
+
+   Example for a Pursue task:
+
+   ```bash
+   ./bin/circuit-next run pursue --goal 'coordinate these cleanup goals' --progress jsonl
    ```
 
    Example for the deterministic fallback router:
@@ -159,6 +171,10 @@ metacharacters:
    summarize the change and verification evidence, follow its
    `evidence_links` entries (for example `fix.change` and the
    verification report) and read those reports.
+   For `selected_flow === "pursue"` and `outcome === "complete"`, read
+   `reports/pursuit-result.json` and surface the coordination outcome,
+   completed/skipped/blocked pursuit counts, verification result, review
+   result, residual risks, and evidence links.
 7. **If `outcome === "checkpoint_waiting"`, do not read or claim
    `result_path`.** Surface the routed metadata (`selected_flow`,
    `routed_by`, `router_reason`, and optional `router_signal`), then surface
@@ -180,6 +196,8 @@ Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`, or
 `/circuit:build`
 when the operator already knows which flow they want. Those commands call
 the same CLI with an explicit flow name and skip this classifier layer.
+Pursue currently has no dedicated slash command; invoke it through
+this selector or the explicit CLI flow name.
 
 ## Authority
 

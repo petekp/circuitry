@@ -1,5 +1,5 @@
 ---
-description: Audit a scoped change or report with the review flow. Invokes the circuit-next `review` flow via the project CLI, producing a run trace and review-result report under the run folder.
+description: Audit a scoped change or report with the review flow. Invokes Circuit's `review` flow via the project CLI, producing a run trace and review-result report under the run folder.
 argument-hint: <scope>
 ---
 
@@ -20,7 +20,7 @@ metacharacters:
 
 1. **Confirm working directory.** The CLI is a repo-local launcher
    (`./bin/circuit-next`), not a globally installed binary. If the user
-   invoked this command outside a circuit-next repo checkout, tell them so
+   invoked this command outside a Circuit repo checkout, tell them so
    and ask them to `cd` into one.
 2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
    by double-quoting the raw scope text. Double quotes expand `$VAR`,

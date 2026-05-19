@@ -54,7 +54,7 @@ The runtime MUST reject any `SelectionOverride`, `ResolvedSelection`, or
 `SelectionResolution` that violates these. All invariants are enforced via
 `src/schemas/selection-policy.ts` and — for the cross-schema invariants —
 the schema files named per invariant (currently SEL-I9 at
-`src/schemas/stage.ts`); tested in `tests/contracts/schema-parity.test.ts`.
+`src/schemas/stage.ts`); tested in `tests/contracts/selection-schema.test.ts`.
 Closes Codex LOW #12 (enforcement-location claim drift).
 
 - **SEL-I1 — Selection precedence is declared, closed, and compile-time
@@ -128,7 +128,7 @@ Closes Codex LOW #12 (enforcement-location claim drift).
   model string is connector-owned (e.g., `claude-opus-4-7` for Anthropic,
   `gpt-5.4-reasoning` for OpenAI). Connector-specific validation or
   honoring of known model strings is a Stage 2 connector concern, not a
-  schema concern; new model releases do not require a circuit-next
+  schema concern; new model releases do not require a Circuit
   schema change. Slice 87 gives the current built-in connectors narrow
   handling: `claude-code` accepts provider `anthropic` and passes the model to
   Claude's `--model`; `codex` accepts provider `openai` and passes the
@@ -307,7 +307,7 @@ Stage 2 harness task where noted below.
   schema-level binding (would-be SEL-I8-equivalent) is deferred to
   Stage 2 because re-running the composition inside a single
   `superRefine` pass entangles schema with resolver logic in a way
-  circuit-next has elsewhere refused (see run.md's `run.prop.
+  Circuit has elsewhere refused (see run.md's `run.prop.
   deterministic_replay` scope caveat).
 
 - `selection.prop.skill_override_composition_total` — For any sequence

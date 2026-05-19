@@ -28,7 +28,7 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 >
 > Each flow encodes the moves experienced AI engineers actually reach for: investigate before you build, plan before you act, verify before you review. The implementer isn't the reviewer — Circuit runs them as separate workers, the way frontier labs do. Every step demands evidence the agent has to produce; it can't close out without showing its work. Patterns most people only land on after months of trial and error. You get them as defaults.
 >
-> Pick how it runs. Every flow has lite, standard, and deep modes — same shape, different depth. Hand it the wheel in autonomous mode, or stay in the loop with checkpoints at the moments that matter.
+> Pick how it runs. Flows declare the rigor and autonomy they support, so you can ask for a quicker pass, a deeper pass, a tournament decision, or unattended checkpoint resolution when that flow supports it.
 >
 > Each step is a self-contained module — a unit of capability with one clear job. Modules upgrade independently, so as best practices change, your flows inherit the improvements. Customize which skills apply at a step, a flow, or across your whole setup.
 >
@@ -70,7 +70,10 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 
 These are real, demonstrable, and pointed at the fatigue audience's actual pain:
 
-- **Depth modes per flow** — every flow has `lite / standard / deep / autonomous` entry modes (verified in every schematic). *"Pick how thorough you want to be — the flow scales with you."*
+- **Run controls per flow** — Build, Fix, and Explore support `lite`, `standard`,
+  `deep`, and `autonomous`; Explore also supports `tournament`; Pursue supports
+  `standard` and `autonomous`; Review is standard-only. *"Pick how thorough you
+  want to be when the flow supports that choice."*
 - **Evidence requirements as anti-fakery** — every step has `evidence_requirements` the agent must produce; it literally can't close the step otherwise. *"The agent can't fake completion."* This directly addresses the audience's #1 complaint.
 - **Checkpoints with safe defaults** — schematics carry `safe_default_choice` and `safe_autonomous_choice`; human-in-the-loop is first-class. *"Pause for you when it matters; run autonomously when you let it."*
 - **Multi-agent review by default** — Build runs implementer and reviewer as separate workers (`role: "implementer"` vs `role: "reviewer"`). Frontier-lab pattern most users don't manually wire up.

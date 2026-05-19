@@ -1,5 +1,5 @@
 ---
-description: Audit a scoped change or report with the review flow. Invokes the circuit-next `review` flow via the project CLI, producing a run trace and review-result report under the run folder.
+description: Audit a scoped change or report with the review flow. Invokes Circuit's `review` flow via the project CLI, producing a run trace and review-result report under the run folder.
 argument-hint: <scope>
 ---
 

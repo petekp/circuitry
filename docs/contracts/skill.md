@@ -17,7 +17,7 @@ property_ids: [skill.prop.descriptor_round_trips_through_json, skill.prop.id_clo
 
 # Skill Contract
 
-A **Skill** in circuit-next is a discoverable capability with a local
+A **Skill** in Circuit is a discoverable capability with a local
 `SKILL.md` instruction file. Circuit deals with two related but separate
 projections:
 
@@ -34,14 +34,14 @@ config. Slot ids are not `SkillId`s and do not appear in
 The descriptor is NOT the Claude Code `SKILL.md` YAML frontmatter. CC's
 frontmatter (`name`, `description`, `trigger`) is an external-protocol
 INPUT to the catalog compiler; this contract governs the compiler's
-internal OUTPUT shape. The field sets differ: circuit-next's descriptor
+internal OUTPUT shape. The field sets differ: Circuit's descriptor
 uses `id`/`title`/`description`/`trigger` plus `capabilities` and
 `domain`. The compiler's mapping from CC frontmatter to this descriptor
 is a catalog-compiler concern, not a schema concern; when that compiler
 lands it will cite this contract as its output target.
 
 `skill.descriptor` is therefore greenfield: the descriptor shape is invented
-by circuit-next. `skill.user-entry` is the minimal local-skill projection used
+by Circuit. `skill.user-entry` is the minimal local-skill projection used
 by the runtime loader. It accepts optional `SKILL.md` frontmatter fields
 (`name`, `description`, `trigger`) but derives `id` from the directory name,
 not from frontmatter.
@@ -62,7 +62,8 @@ resolver at relay time.
 
 The runtime MUST reject any `SkillDescriptor` that violates these. All
 invariants are enforced via `src/schemas/skill.ts` and tested in
-`tests/contracts/schema-parity.test.ts`.
+`tests/contracts/skill-schema.test.ts` and
+`tests/runner/user-skill-loading.test.ts`.
 
 - **SKILL-I1 — `id` is a `SkillId` (branded slug).** Format is the
   shared slug pattern `/^[a-z][a-z0-9-]*$/`. Uppercase, underscores,

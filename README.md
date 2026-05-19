@@ -67,8 +67,8 @@ you already know what you want.
 
 **Core Flows:**
 
-These flows ship with the plugin. Build, Fix, Explore, and Review can all
-be selected by the host model or invoked explicitly.
+These flows ship with the plugin. Build, Fix, Explore, Review, and Pursue can
+all be selected by the host model or invoked explicitly through the CLI.
 
 | Flow | Purpose |
 |----------|-------------|
@@ -76,26 +76,26 @@ be selected by the host model or invoked explicitly.
 | **Build** | Features, refactors, docs, tests, mixed changes |
 | **Fix** | Bugs, regressions, flaky behavior |
 | **Review** | Audit-only review, no implementation |
+| **Pursue** | Broad goals with multiple coordinated pieces of work |
 
-**Modes:**
+**Run Controls:**
 
-Each flow accepts a mode at run time that scales how thorough the run is
-and which review steps fire.
+Each flow declares which rigor, tournament, and autonomous settings it
+supports. Unsupported combinations fail before the run starts.
 
-| Mode | Behavior |
+| Control | Behavior |
 |-------|--------|
-| **Default** | Plan, act, verify, independent review where the flow includes one. |
-| **Lite** | Skips the review relay where the flow allows it. Use for small, low-risk changes. |
-| **Deep** | More thorough analysis and review. Pauses for input at architecture-class checkpoints. |
+| **Default** | Standard rigor, no tournament, operator-present checkpoints unless the flow has safe defaults. |
+| **Lite** | Lower rigor where the flow allows it. Use for small, low-risk work. |
+| **Deep** | Higher rigor where the flow allows it. Useful for risky or architecture-heavy work. |
 | **Tournament** | Competing proposals with adversarial evaluation. Available on Explore. |
-| **Autonomous** | Checkpoints auto-resolve to safe defaults. Useful for unattended runs. |
+| **Autonomous** | Checkpoints auto-resolve to declared safe choices. Useful for unattended runs. |
 
-Pass a mode with `--entry-mode <lite|deep|autonomous>` (or `--mode`, the
-shorter alias). Tournament is a depth-level option exposed through
-`--depth tournament` on the flows that support it. Mode availability varies
-by flow; see each flow's `src/flows/<id>/data.ts` for the authoritative
-FlowData value, `src/flows/<id>/flow.ts` for the adapter, and
-`src/flows/<id>/schematic.json` for the generated compatibility schematic.
+Use `--rigor <lite|standard|deep>`, `--tournament`, `--tournament-n <2|3|4>`,
+and `--autonomous` to set those controls. Availability varies by flow; see
+each flow's `src/flows/<id>/data.ts` for the authoritative FlowData value,
+`src/flows/<id>/flow.ts` for the adapter, and `src/flows/<id>/schematic.json`
+for the generated compatibility schematic.
 
 Every flow is built from a fixed set of stages: **Frame, Analyze, Plan, Act,
 Verify, Review, Close**. Not every flow runs every stage, but the order
@@ -139,10 +139,11 @@ holds.
 | Claude Code | `/circuit:explore compare auth providers` | Runs Explore directly. |
 | Codex | Invoke the specific Circuit flow skill directly. | Runs that flow through the Codex plugin wrapper. |
 | CLI | `./bin/circuit-next run fix --goal "checkout total is wrong"` | Runs Fix directly. |
+| CLI | `./bin/circuit-next run pursue --goal "coordinate these cleanup goals"` | Runs Pursue directly. |
 
-The host commands wrap the underlying CLI. Each flow accepts a `--goal`,
-an `--entry-mode` (lite, deep, autonomous), and an explicit `--depth` flag if
-you want to override the mode's depth pairing.
+The host commands wrap the underlying CLI. Each flow accepts a `--goal`; direct
+CLI runs can also pass `--rigor`, `--tournament`, `--tournament-n`, and
+`--autonomous` when the selected flow supports that axis combination.
 
 **Advanced compatibility:**
 

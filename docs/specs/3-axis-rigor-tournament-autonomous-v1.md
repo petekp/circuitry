@@ -1,15 +1,31 @@
 # 3-axis spec: Rigor × Tournament × Autonomous (v1)
 
-Status: sign-off-ready target spec, code-reconciled on 2026-05-18. The operator-selected v1 posture is recorded as decided: full rubric infrastructure in v1, no minimal interim scorer; orthogonal rigor, tournament, and autonomous axes; optional canonical stages opt in per flow. Not implementation-current — implementation work is sketched in Slices 1–5 in §11.
+Status: historical target spec, last fully code-reconciled on 2026-05-18. The operator-selected v1 posture is recorded as decided: full rubric infrastructure in v1, no minimal interim scorer; orthogonal rigor, tournament, and autonomous axes; optional canonical stages opt in per flow. Parts of the axis work have since shipped, so use current code and the generated surface map as implementation truth before treating Appendix A or C as current.
 Scope: cross-cutting. Public flows (Review, Fix, Build, Explore, Pursue) and the internal Runtime Proof flow reconcile to this spec.
 
-Read this as the target design plus a current-code reconciliation. The main body keeps the 31 locked grill decisions intact or marks the deliberate amendments. Appendix A records what the code does today with file:line evidence. Appendix B records the locked decisions and whether current code already matches them. Appendix C is the misalignment report. Appendix D records the prior adversarial-review finding resolutions named in the goal.
+Read this as the target design plus a historical current-code reconciliation.
+The main body keeps the 31 locked grill decisions intact or marks the
+deliberate amendments. Appendix A records what the code did on May 18, 2026,
+and is stale where later commits shipped axes and CLI flag work. Appendix B
+records the locked decisions. Appendix C is the old misalignment report.
+Appendix D records the prior adversarial-review finding resolutions named in
+the goal.
 
-Current implementation still uses a flat `Depth` enum (`src/schemas/depth.ts:3`) and `entry_modes` in compiled flow fixtures (`src/schemas/compiled-flow.ts:18-40`). The functional/declarative move is real, but it moved flow ownership into `FlowData`/`FlowDefinition` packages and the catalog, not into this 3-axis schema yet (`src/flows/flow-definition.ts:67-86`, `src/flows/catalog.ts:18-27`, `src/flows/types.ts:1-11`).
+Current implementation now has `axes` in compiled flow fixtures and parses
+`--rigor`, `--tournament`, `--tournament-n`, and `--autonomous` in the CLI.
+This spec remains useful as the decision ledger for the broader axis design,
+but its current-code appendix is stale where it says axes and target flags are
+absent.
 
 ## 0. Why this spec exists
 
-Today `src/schemas/depth.ts` is a flat enum: `lite | standard | deep | tournament | autonomous` (`src/schemas/depth.ts:3`). The CLI carries `--mode` and `--depth` as aliases for one thoroughness level (`src/cli/circuit.ts:101-123`, `src/cli/circuit.ts:397-425`). Runtime support is declared as per-flow 1:1 `(entryModeName, depth)` rows derived from schematic `entry_modes` (`src/flows/flow-definition.ts:240-249`, `src/cli/circuit.ts:458-475`).
+When this spec was written, `Depth` and `entry_modes` carried too much meaning
+and the CLI used older aliases. Current code has since shipped the first axis
+layer: `src/schemas/axes.ts`, `src/schemas/rigor.ts`, compiled-flow `axes`,
+and CLI parsing for `--rigor`, `--tournament`, `--tournament-n`, and
+`--autonomous`. The remaining reason to keep this spec is the broader target
+shape: rubric provenance, auto-resolution policy vocabulary, and future
+tournament behavior.
 
 This shape conflates three things that are not the same:
 - **How careful** the run is (rigor).
@@ -104,7 +120,9 @@ In the target design, each flow's schematic carries:
 
 Axis-level defaults (used when a flow omits `default`): `rigor=standard`, `tournament=false`, `autonomous=false`, `tournament_n=3`.
 
-**Starting target allow-lists for the existing flows** (projected from today's `entry_modes`; per-flow specs can revise):
+**Starting target allow-lists for the existing flows** (originally projected
+from legacy entry modes; current code should be checked against each flow's
+`axes` block):
 
 | Flow | allowed_rigors | supports_tournament | supports_autonomous |
 |---|---|---|---|
@@ -115,7 +133,10 @@ Axis-level defaults (used when a flow omits `default`): `rigor=standard`, `tourn
 | Pursue | `[standard]` | no | yes |
 | Runtime Proof (internal) | `[standard]` | no | no |
 
-Current code does not yet carry this table as an `axes` block. It derives runtime support from schematic `entry_modes` and flow runtime surfaces (`src/flows/flow-definition.ts:240-249`, `src/flows/flow-definition.ts:279-293`, `tests/contracts/catalog-completeness.test.ts:125-148`).
+Current code now carries this table as `axes` blocks in generated compiled
+flows. Treat this table as the intended public support projection and verify
+the exact current values against `src/flows/<id>/data.ts` and
+`generated/flows/<id>/*.json`.
 
 ---
 
@@ -178,7 +199,7 @@ Target behavior:
 | Winner-select shape | Pick one of N. Losing strands surfaced as Options in the canonical operator report alongside the winning Recommendation. |
 | Strand failure | Tournament fanout requires `on_child_failure: continue-others` and `join.policy: aggregate-survivors`. Continue if survivors ≥ 2; otherwise abort with `tournament collapsed: <reason>`. |
 
-**Implementation note.** Survivor-aware behavior is a two-part contract. The fanout step must use `on_child_failure: continue-others` so later children are not cancelled when an early child fails; the schema already has that failure-policy value (`src/schemas/step.ts:347-350`). The join must use a new `aggregate-survivors` policy alongside the existing `aggregate-only` (`src/schemas/check.ts:136-147`, `src/shared/fanout-join-policy.ts:90-112`). The new policy succeeds when ≥ 2 strands close with parseable bodies, failing only if < 2 do. Tournament flows use `aggregate-survivors`; the existing `aggregate-only` stays for non-tournament fanout that genuinely needs all branches. Current Explore uses `abort-all` plus `aggregate-only`, so it must change (`src/flows/explore/data.ts:347-357`).
+**Implementation note.** Survivor-aware behavior is a two-part contract. The fanout step must use `on_child_failure: continue-others` so later children are not cancelled when an early child fails; the schema already has that failure-policy value (`src/schemas/step.ts:347-350`). The join must use `aggregate-survivors` alongside the existing `aggregate-only` (`src/schemas/check.ts:136-147`, `src/shared/fanout-join-policy.ts:90-112`). The survivor policy succeeds when ≥ 2 strands close with parseable bodies, failing only if < 2 do. Tournament flows use `aggregate-survivors`; the existing `aggregate-only` stays for non-tournament fanout that genuinely needs all branches. Explore now uses this survivor policy.
 
 ---
 
@@ -475,9 +496,12 @@ Implementation matches this spec when every row below has a passing proof.
 
 ---
 
-## Appendix A. Current-code reconciliation (2026-05-18)
+## Appendix A. Historical Current-Code Reconciliation (2026-05-18)
 
-This appendix is the current implementation snapshot. It is intentionally separate from the target spec above so target decisions do not read as shipped behavior.
+This appendix is a dated reconciliation snapshot. It is not the current
+implementation truth after the May 19 axis and CLI commits.
+Rows marked as shipped after this snapshot record the May 19 code state so
+readers do not mistake already-landed axis work for remaining follow-up.
 
 ### A1. Architecture and source of truth
 
@@ -491,42 +515,42 @@ This appendix is the current implementation snapshot. It is intentionally separa
 
 | Claim area | Current code fact | Evidence | Status |
 |---|---|---|---|
-| Axis schema | There is no shipped `Rigor`, `Tournament`, `Autonomous`, or `Axes` schema. The shipped `Depth` enum still contains `lite`, `standard`, `deep`, `tournament`, and `autonomous`. | `src/schemas/depth.ts:3-11` | Code must change to match spec. |
-| Compiled fixtures | `CompiledFlow` requires `entry_modes`; no `axes` block exists. | `src/schemas/compiled-flow.ts:18-40` | Code must change to match spec. |
-| Flow schematics | Active schematics still declare `entry_modes`, `stage_path_policy`, and `stages`; no `axes` block exists. Source schematic mirrors show the same entry-mode shape for Review, Fix, Build, Explore, and Pursue. | `src/schemas/flow-schematic.ts:424-434`, `src/schemas/flow-schematic.ts:463-480`, `src/flows/review/schematic.json:124-130`, `src/flows/fix/schematic.json:578-599`, `src/flows/build/schematic.json:252-273`, `src/flows/explore/schematic.json:470-496`, `src/flows/pursue/schematic.json:283-294` | Code must change to match spec. |
-| Checkpoint policies | Checkpoints declare `choices`, optional `safe_default_choice`, optional `safe_autonomous_choice`, and optional `report_template`; they do not declare `accept-as-is`, `highest-score`, `first-acceptable`, or `refuse`. | `src/schemas/step.ts:68-111` | Code must change to match spec. |
+| Axis schema | `Rigor`, `Axes`, `TournamentN`, and `FlowAxes` now exist. `Depth` remains as a legacy compatibility enum. | `src/schemas/axes.ts`, `src/schemas/rigor.ts`, `src/schemas/depth.ts` | Axis base shipped after this snapshot. |
+| Compiled fixtures | `CompiledFlow` now requires `axes` and `starts_at`; legacy `entry_modes` is rejected by the strict schema. | `src/schemas/compiled-flow.ts`, `tests/contracts/flow-graph-schema.test.ts` | Axis base shipped after this snapshot. |
+| Flow schematics | Active schematics now declare `axes`, `stage_path_policy`, and `stages`; legacy `entry_modes` is rejected. | `src/schemas/flow-schematic.ts`, `src/flows/*/schematic.json`, `tests/contracts/flow-schematic.test.ts` | Axis base shipped after this snapshot. |
+| Checkpoint policies | Checkpoints declare `choices`, optional safe choices, optional typed `auto_resolution` policies (`accept-as-is`, `highest-score`, `first-acceptable`, `refuse`), and optional `report_template`. | `src/schemas/step.ts`, `tests/runner/cli-router.test.ts` | Auto-resolution policy shipped after this snapshot. |
 | Fanout limits | Static fanout caps branches at 64. Dynamic fanout has a positive `max_branches` capped at 256 and defaulted to 16. Bounded concurrency is capped at 64. | `src/schemas/step.ts:300-350` | Spec target differs; see C3.2 and C3.3. |
 
 ### A3. CLI surface and fixture-load validation
 
 | Claim area | Current code fact | Evidence | Status |
 |---|---|---|---|
-| CLI flags | The CLI accepts `--depth`, `--entry-mode`, and `--mode`; usage text documents `--mode` and `--depth` aliases. | `src/cli/circuit.ts:101-123`, `src/cli/circuit.ts:203-224` | Code must change to match spec. |
-| Target flags | Unknown flags throw. Since `--rigor`, `--tournament`, `--tournament-n`, and `--autonomous` are not parsed, they are unknown today. | `src/cli/circuit.ts:203-224`, `src/cli/circuit.ts:284-285` | Code must change to match spec. |
-| Alias validators | `entryModeForDepth`, `depthForEntryMode`, and `validateModeDepthAliasConsistency` still exist. | `src/cli/circuit.ts:397-425` | Code must change to match spec. |
-| Runtime support validation | The CLI validates by supported `(entryModeName, depth)` rows from flow runtime surfaces, not by axis tuples. | `src/cli/circuit.ts:458-475`, `src/cli/circuit.ts:576-648` | Code must change to match spec. |
-| Fixture load | `loadFixture` parses `CompiledFlow` and validates flow-kind stage policy. It does not validate `supports_autonomous` plus reachable `refuse` checkpoints. | `src/cli/circuit.ts:477-490` | Code must change to match spec. |
+| CLI flags | The CLI parses `--rigor`, `--tournament`, `--tournament-n`, and `--autonomous`; tests reject old `--entry-mode`, `--mode`, and `--depth` flags. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis CLI shipped after this snapshot. |
+| Target flags | Target flags are implemented at the CLI parsing layer and validated against each flow's allow-list. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis CLI shipped after this snapshot. |
+| Alias validators | Old mode/depth alias validators were removed from the current CLI path. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis CLI shipped after this snapshot. |
+| Runtime support validation | The CLI validates axis choices against each flow's `axes` support. | `src/cli/circuit.ts`, `src/schemas/axes.ts` | Axis CLI shipped after this snapshot. |
+| Fixture load | `loadFixture` parses `CompiledFlow`, validates flow-kind stage policy, and rejects autonomous-capable fixtures that declare checkpoint `auto_resolution.policy: "refuse"`. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Partially shipped after this snapshot. |
 
 ### A4. Checkpoints, autonomous behavior, and presentation
 
 | Claim area | Current code fact | Evidence | Status |
 |---|---|---|---|
-| Checkpoint resolution | `deep` and `tournament` wait. `autonomous` requires `safe_autonomous_choice`. Other depths require `safe_default_choice`. | `src/runtime/executors/checkpoint.ts:43-65` | Code must change to match spec. |
+| Checkpoint resolution | Autonomous checkpoints use typed `auto_resolution` when declared; otherwise they fall back to `safe_autonomous_choice`. Non-autonomous defaults still use `safe_default_choice`. | `src/runtime/executors/checkpoint.ts`, `src/schemas/step.ts` | Auto-resolution policy shipped after this snapshot; safe-choice fallback remains. |
 | Missing safe choice | Missing safe choices fail during runtime execution and are recorded in trace; they do not fail fixture load. | `src/runtime/executors/checkpoint.ts:181-191`, `tests/runtime/control-loop.test.ts:849-912` | Code must change to match spec. |
 | Checkpoint request body | Request JSON records prompt, allowed choices, safe defaults, and execution context. | `src/runtime/executors/checkpoint.ts:67-94` | Spec corrected here. |
 | Auto-resolved trace | `checkpoint.requested` and `checkpoint.resolved` trace entries include `auto_resolved`. | `src/runtime/executors/checkpoint.ts:149-158`, `src/runtime/executors/checkpoint.ts:200-215` | Partially supports target. |
 | Run boundary presentation hook | The run boundary wires a progress projector into the trace store, so presentation events are derived from trace append events. | `src/runtime/run/run-boundary.ts:86-113` | Spec corrected here. |
 | Progress presentation | Progress projection suppresses waiting UI for auto-resolved checkpoint requests; non-auto-resolved checkpoints emit `checkpoint.waiting` and `user_input.requested`. | `src/runtime/projections/progress.ts:673-755` | Spec corrected here. |
-| Operator summary | JSON, Markdown, and optionally HTML summaries are written, but there is no `auto_resolutions` section. | `src/shared/operator-summary-writer.ts:178-207`, `src/shared/operator-summary-writer.ts:341-375` | Code must change to match spec. |
+| Operator summary | JSON, Markdown, and optionally HTML summaries are written. Auto-resolved checkpoint decisions are recorded in `auto_resolutions` when present. | `src/shared/operator-summary-writer.ts`, `tests/runner/cli-router.test.ts` | Auto-resolution reporting shipped after this snapshot. |
 
 ### A5. Tournament behavior
 
 | Claim area | Current code fact | Evidence | Status |
 |---|---|---|---|
-| Tournament as entry mode | Explore has a `tournament` entry mode whose depth is `tournament`; tournament is not a separate axis. | `src/flows/explore/data.ts:111-140`, `generated/flows/explore/tournament.json:13-20` | Code must change to match spec. |
-| Fan-out stage | Explore tournament drafts options, then dynamically fans out option cases in the Plan/Decision stage. | `src/flows/explore/data.ts:289-357`, `generated/flows/explore/tournament.json:35-45` | Partially supports target. |
-| Strand count | Explore tournament is bounded by the report schema's four option ids and the fanout's `max_branches: 4`; there is no runtime `tournament_n`. | `src/flows/explore/data.ts:347-353`, `src/flows/explore/data.ts:403-430`, `src/runtime/fanout/branch-expansion.ts:61-65` | Target change; see C3.2 and C3.3. |
-| Failure policy | Explore tournament uses `on_child_failure: abort-all` and `join.policy: aggregate-only`; aggregate-only requires every branch to close complete with a parseable result body. | `src/flows/explore/data.ts:347-357`, `src/shared/fanout-join-policy.ts:90-112`, `src/runtime/executors/fanout.ts:122-170` | Target change; see C3.4. |
+| Tournament as entry mode | Explore now declares tournament support on `axes`. The runtime still emits compatibility `entry_mode` labels such as `tournament` or `autonomous`. | `src/flows/explore/data.ts`, `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis selection shipped after this snapshot; compatibility labels remain. |
+| Fan-out stage | Explore declares `axes.tournament_fan_out_stage: "decision-stage"` and fans out option cases in the Plan/Decision stage. | `src/flows/explore/data.ts`, `generated/flows/explore/tournament.json` | Shipped after this snapshot. |
+| Strand count | Explore tournament fanout reads `axis.tournament_n`; the CLI validates the v1 range [2, 4]. | `src/flows/explore/data.ts`, `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Shipped after this snapshot. |
+| Failure policy | Explore tournament uses `on_child_failure: continue-others` and `join.policy: aggregate-survivors`. | `src/flows/explore/data.ts`, `src/shared/fanout-join-policy.ts`, `src/runtime/executors/fanout.ts` | Shipped after this snapshot. |
 | Join output | Runtime writes a fanout aggregate and appends `fanout.joined` with completed and failed branch counts. | `src/runtime/executors/fanout.ts:198-241` | Spec corrected here. |
 
 ### A6. Current per-flow support projection
@@ -546,37 +570,37 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 
 | # | Locked decision | Reconciliation status |
 |---|---|---|
-| D01 | Split flat depth into rigor, tournament, and autonomous axes. | Preserved target; code still uses flat `Depth` (`src/schemas/depth.ts:3`). |
-| D02 | Rigor vocabulary is `lite`, `standard`, `deep`. | Preserved target; code still includes `tournament` and `autonomous` in `Depth` (`src/schemas/depth.ts:3`). |
+| D01 | Split flat depth into rigor, tournament, and autonomous axes. | Shipped after this snapshot through `Axes`/`FlowAxes`; legacy `Depth` remains for compatibility labels and selection depth plumbing. |
+| D02 | Rigor vocabulary is `lite`, `standard`, `deep`. | Shipped after this snapshot through `Rigor`; legacy `Depth` still includes `tournament` and `autonomous` for compatibility labels. |
 | D03 | Rigor must not alter the canonical stage path. | Amended by §1, §8, and C3.1: required canonicals remain immutable; flow-declared `optional_canonicals` may be omitted only by lite in v1. Fix lite omits Review today (`src/flows/fix/data.ts:443-447`, `generated/flows/fix/lite.json:59-63`). |
 | D04 | Lite means one pass per stage with a permissive bar. | Preserved target; not represented as a typed runtime policy today. |
-| D05 | Standard is the baseline. | Preserved target; current `default` entry modes map to `standard` depth (`src/cli/circuit.ts:397-412`). |
+| D05 | Standard is the baseline. | Shipped after this snapshot: `Axes` defaults to `rigor: "standard"`, `tournament: false`, `tournament_n: 3`, and `autonomous: false`. |
 | D06 | Deep iterates within each stage until rubric pass or budget cap. | Preserved target; current code has `deep` depth but no generic typed iteration policy in the audited surfaces. |
 | D07 | Rigor never adds or removes checkpoints. | Amended by §1, §8, and C3.1: required checkpoints remain immutable; checkpoints inside a lite-omitted optional canonical are omitted only when that canonical is explicitly optional. Negative tests must reject standard/deep omission. |
-| D08 | Tournament is boolean plus N integer lower bound 2, default 3. | Preserved with v1 cap by §1, §6, §12, and C3.2: `tournament_n` defaults to 3 and is valid only in [2, 4]. Current Explore is still a mode with max 4 options, not a runtime `tournament_n` axis (`src/flows/explore/data.ts:130-134`, `src/flows/explore/data.ts:347-353`). |
-| D09 | Tournament fan-out happens at a flow-declared stage. | Partially matched: Explore fans out in Plan/Decision, but declaration is route shape, not an `axes.tournament_fan_out_stage` field (`src/flows/explore/data.ts:289-357`). |
+| D08 | Tournament is boolean plus N integer lower bound 2, default 3. | Shipped after this snapshot with the v1 [2, 4] cap. |
+| D09 | Tournament fan-out happens at a flow-declared stage. | Shipped after this snapshot through `axes.tournament_fan_out_stage`. |
 | D10 | Tournament strands are isolated during generation. | Partially matched for relay branches; fanout runs branch-specific outputs and branch directories (`src/runtime/executors/fanout.ts:127-170`). |
-| D11 | Tournament strands inherit run rigor. | Preserved target; current tournament is its own depth, so there is no combined `rigor+tournament` tuple. |
+| D11 | Tournament strands inherit run rigor. | Partially shipped after this snapshot: the CLI accepts the tuple, while runtime worker selection still carries a compatibility depth label. |
 | D12 | Tournament winner-select checkpoint chooses one strand and later stages run once. | Partially matched: Explore has a tradeoff checkpoint and then decision/close steps (`src/flows/explore/data.ts:390-435`). |
-| D13 | Tournament branch failure continues with survivors >= 2 and aborts below 2. | Preserved target by §6, §12, and C3.4: tournament fanout requires both `on_child_failure: continue-others` and `join.policy: aggregate-survivors`. Current Explore uses `abort-all` plus `aggregate-only` (`src/flows/explore/data.ts:347-357`, `src/shared/fanout-join-policy.ts:90-112`). |
+| D13 | Tournament branch failure continues with survivors >= 2 and aborts below 2. | Shipped after this snapshot through `continue-others` plus `aggregate-survivors`. |
 | D14 | Tournament does not add stages outside fanout. | Partially matched: Explore embeds tournament work in Plan/Decision and Close (`generated/flows/explore/tournament.json:35-56`). |
-| D15 | Autonomous is a checkpoint-resolution policy. | Preserved target; current autonomous is a `Depth` value whose checkpoint resolver uses safe choices (`src/runtime/executors/checkpoint.ts:43-65`). |
-| D16 | Autonomous keeps the same stages/checkpoints as interactive. | Mostly matched for current autonomous entry modes, but not yet represented as an axis. |
-| D17 | Autonomous fires declared auto-resolution instead of waiting. | Partially matched: current code fires `safe_autonomous_choice`, not one of the four target policies (`src/runtime/executors/checkpoint.ts:47-55`). |
-| D18 | Auto-resolutions are recorded in the canonical operator report. | Code follow-up: trace records auto-resolved checkpoints, but operator-summary JSON has no `auto_resolutions` field (`src/runtime/executors/checkpoint.ts:206-215`, `src/shared/operator-summary-writer.ts:341-375`). |
+| D15 | Autonomous is a checkpoint-resolution policy. | Partially shipped after this snapshot: autonomous is an axis, and checkpoints can declare typed `auto_resolution`; safe-choice fallback remains. |
+| D16 | Autonomous keeps the same stages/checkpoints as interactive. | Mostly matched for current autonomous axes; compatibility fixture selection may still choose an autonomous graph label. |
+| D17 | Autonomous fires declared auto-resolution instead of waiting. | Shipped after this snapshot for typed `auto_resolution`; safe-choice fallback remains for checkpoints without a policy. |
+| D18 | Auto-resolutions are recorded in the canonical operator report. | Shipped after this snapshot for typed auto-resolutions in operator summary JSON and Markdown. |
 | D19 | Autonomous suppresses ambient interactive UI but keeps trace/progress/writes. | Partially matched: progress suppresses waiting UI for auto-resolved checkpoint requests (`src/runtime/projections/progress.ts:673-755`). |
-| D20 | CLI parses any axis tuple before flow validation. | Code follow-up: target flags are unknown today (`src/cli/circuit.ts:203-224`, `src/cli/circuit.ts:284-285`). |
-| D21 | Unsupported tuple is default-denied with an allow-list in the error. | Code follow-up: current rejection is depth/entry-mode based (`src/cli/circuit.ts:466-475`, `src/cli/circuit.ts:576-648`). |
-| D22 | Cross-axis constraints are flow-owned, not global. | Preserved target; current flow-owned support is expressed through runtime surfaces derived from entry modes (`src/flows/flow-definition.ts:240-249`). |
-| D23 | Schematics carry an `axes` block with allow-list/default/fanout stage. | Code follow-up: schematics carry `entry_modes`, not `axes` (`src/schemas/flow-schematic.ts:424-480`). |
-| D24 | Axis defaults are standard/false/false/3. | Preserved target; no typed axis defaults exist today. |
-| D25 | `--mode` is removed in target; alias validators and support matrix go away. | Code follow-up: `--mode` and alias validators still exist (`src/cli/circuit.ts:101-123`, `src/cli/circuit.ts:397-425`). |
-| D26 | Target CLI flags are `--rigor`, `--tournament`, `--tournament-n`, `--autonomous`. | Code follow-up: these flags are not parsed today (`src/cli/circuit.ts:203-224`, `src/cli/circuit.ts:284-285`). |
-| D27 | Auto-resolution policies are `accept-as-is`, `highest-score`, `first-acceptable`, `refuse`. | Code follow-up: current checkpoint policy has safe choices only (`src/schemas/step.ts:68-111`). |
-| D28 | `supports_autonomous` plus reachable `refuse` fails fixture-load validation. | Code follow-up: fixture load parses `CompiledFlow` and flow-kind policy only (`src/cli/circuit.ts:477-490`). |
-| D29 | Autonomous tournament winner-select uses `highest-score` unless a flow declares otherwise. | Preserved target by §5, §9, §10, Slice 5E, and C3.6: Explore tradeoff becomes a `highest-score` checkpoint. Current Explore tradeoff has only `safe_default_choice`, no score policy (`src/flows/explore/data.ts:403-430`). |
-| D30 | Rubric provenance uses runtime signal, model judgment, final score, and runtime-veto. | Preserved and expanded by §9 and C3.5: the typed result includes `runtime_signal: "n/a"`, dim scale, aggregate score, tie-break, and runtime-veto effect. Current schemas do not contain this shape. Probe for `runtime_signal`, `model_judgment`, and `final_score` outside this spec returned no matches. |
-| D31 | Operator reports include auto-resolutions in JSON plus Markdown/HTML summaries. | Preserved target by §10 and §14.8. Current summaries are written, but no `auto_resolutions` section exists (`src/shared/operator-summary-writer.ts:178-207`, `src/shared/operator-summary-writer.ts:341-375`). |
+| D20 | CLI parses any axis tuple before flow validation. | Shipped after this snapshot. |
+| D21 | Unsupported tuple is default-denied with an allow-list in the error. | Shipped after this snapshot through flow-owned axis support validation. |
+| D22 | Cross-axis constraints are flow-owned, not global. | Shipped after this snapshot through each flow's `axes` block. |
+| D23 | Schematics carry an `axes` block with allow-list/default/fanout stage. | Shipped after this snapshot: current schematics carry `axes` and reject legacy `entry_modes`. |
+| D24 | Axis defaults are standard/false/false/3. | Shipped after this snapshot through `DEFAULT_AXES` and `FlowAxes.default`. |
+| D25 | `--mode` is removed in target; alias validators and support matrix go away. | Shipped after this snapshot: current tests reject `--mode` and `--entry-mode`. |
+| D26 | Target CLI flags are `--rigor`, `--tournament`, `--tournament-n`, `--autonomous`. | Shipped after this snapshot: current CLI parses these flags. |
+| D27 | Auto-resolution policies are `accept-as-is`, `highest-score`, `first-acceptable`, `refuse`. | Shipped after this snapshot through `AutoResolutionPolicy`. |
+| D28 | `supports_autonomous` plus reachable `refuse` fails fixture-load validation. | Partially shipped after this snapshot: autonomous-capable fixtures reject checkpoint `auto_resolution.policy: "refuse"` regardless of reachability. |
+| D29 | Autonomous tournament winner-select uses `highest-score` unless a flow declares otherwise. | Shipped after this snapshot for Explore tournament. |
+| D30 | Rubric provenance uses runtime signal, model judgment, final score, and runtime-veto. | Partially shipped after this snapshot through `RubricResult` and Explore tournament aggregate reports. |
+| D31 | Operator reports include auto-resolutions in JSON plus Markdown/HTML summaries. | Shipped after this snapshot for operator summary JSON and Markdown when auto-resolutions exist; HTML remains renderer-dependent. |
 
 ## Appendix C. Misalignment report
 
@@ -588,21 +612,21 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 | The spec did not explain the functional/declarative refactor. | Added current architecture notes showing `FlowData`, `compileFlowDefinitions`, and catalog-derived registries. Evidence: `src/flows/flow-definition.ts:67-86`, `src/flows/flow-definition.ts:374-388`, `src/flows/catalog.ts:1-27`. |
 | The per-flow allow-list table was target-only but looked like current implementation. | Reframed it as a target projection and added Appendix A6 with current entry mode evidence. |
 | Runtime presentation claims were too broad. | Recorded current progress behavior: auto-resolved checkpoint requests do not emit waiting UI; waiting checkpoints emit `checkpoint.waiting` and `user_input.requested`. Evidence: `src/runtime/projections/progress.ts:673-755`. |
-| Fixture-load validation claims were target behavior, not current behavior. | Recorded that current fixture loading parses `CompiledFlow` and flow-kind policy only. Evidence: `src/cli/circuit.ts:477-490`. |
-| Tournament behavior lacked current-code details. | Recorded current Explore tournament as dynamic fanout with max 4, bounded concurrency 2, abort-all, and aggregate-only join. Evidence: `src/flows/explore/data.ts:289-357`. |
+| Fixture-load validation claims were target behavior, not current behavior. | Updated after the May 19 commits: fixture loading now also rejects autonomous-capable fixtures that declare checkpoint `auto_resolution.policy: "refuse"`. Evidence: `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts`. |
+| Tournament behavior lacked current-code details. | Updated after the May 19 commits: Explore tournament now uses `axis.tournament_n`, `continue-others`, `aggregate-survivors`, and `highest-score` auto-resolution. Evidence: `src/flows/explore/data.ts`, `tests/runner/cli-router.test.ts`. |
 
 ### C2. Code must change to match spec (operator follow-up)
 
 | Gap | Required code change |
 |---|---|
-| Axis schemas are absent. | Add typed rigor/tournament/autonomous or axes schemas and migrate off flat `Depth` (`src/schemas/depth.ts:3`). |
-| Compiled fixtures lack `axes`. | Replace `entry_modes` with an `axes` block in `CompiledFlow` and schematic schemas (`src/schemas/compiled-flow.ts:18-40`, `src/schemas/flow-schematic.ts:424-480`). |
-| CLI still uses `--mode`/`--depth`. | Add target axis flags and remove alias inference/validation (`src/cli/circuit.ts:101-123`, `src/cli/circuit.ts:397-425`). |
-| Flow support is mode/depth rows. | Replace runtime-surface support rows with axis tuple allow-lists (`src/flows/flow-definition.ts:240-249`, `src/cli/circuit.ts:458-475`). |
-| Checkpoint auto-resolution vocabulary is still safe-choice based. | Add `accept-as-is`, `highest-score`, `first-acceptable`, and `refuse` policies (`src/schemas/step.ts:68-111`, `src/runtime/executors/checkpoint.ts:43-65`). |
-| Autonomous fixture-load rejection does not exist. | Add static validation for reachable `refuse` checkpoints when autonomous is supported (`src/cli/circuit.ts:477-490`). |
-| Auto-resolution report section does not exist. | Add `auto_resolutions` provenance to operator summary JSON and Markdown/HTML rendering (`src/shared/operator-summary-writer.ts:178-207`, `src/shared/operator-summary-writer.ts:341-375`). |
-| Runtime rubric provenance is not represented in the audited schemas. | Add the full §9 `RubricDimResult`/`RubricResult` shape where the relevant flow report schemas need it. Probe for `runtime_signal`, `model_judgment`, and `final_score` outside this spec returned no matches. |
+| Axis schemas were absent. | Shipped after this snapshot: `src/schemas/axes.ts` and `src/schemas/rigor.ts` now define the axis model. |
+| Compiled fixtures lacked `axes`. | Shipped after this snapshot: compiled fixtures now carry `axes`, and legacy `entry_modes` is rejected. |
+| CLI used `--mode`/`--depth`. | Shipped after this snapshot: current CLI parses axis flags and rejects old aliases. |
+| Flow support was mode/depth rows. | Shipped after this snapshot: flow support is expressed through `axes` allow-lists. |
+| Checkpoint auto-resolution vocabulary was only safe-choice based. | Shipped after this snapshot: `accept-as-is`, `highest-score`, `first-acceptable`, and `refuse` policies exist; safe-choice fallback remains. |
+| Autonomous fixture-load rejection did not exist. | Partially shipped after this snapshot: autonomous-capable fixtures reject `refuse` checkpoint auto-resolution policies. |
+| Auto-resolution report section did not exist. | Shipped after this snapshot: operator summary JSON and Markdown include `auto_resolutions` when present. |
+| Runtime rubric provenance was not represented in audited schemas. | Partially shipped after this snapshot for Explore tournament rubric results; broader flow adoption remains future work. |
 
 ### C3. Decision conflicts - signed v1 resolutions
 
@@ -613,7 +637,7 @@ The main spec body reflects the signed v1 resolutions below.
 | C3.1 Lite stage/checkpoint invariance vs Fix lite skipping Review. | **Amend the invariant.** A flow may declare specific canonical stages as optional via `defineEnforcedStagePolicy`'s `optional_canonicals` field. In v1, lite may skip only those declared-optional stages; standard and deep may not. Required stages and checkpoints remain immutable. | §1 Rigor section amended. §8 negative-test guidance added. §14 criterion #6 added. |
 | C3.2 Tournament N cap/no-cap vs current max 4. | **Cap N at 4 globally in v1.** Range becomes [2, 4]. Cap reflects the option-comparison surface and current rendering limits. Flagged as a v1 product limit; revisit in v2 if a real use case demands it. | §1 Tournament range updated. §6 strand count row updated. §12 edge case row updated. §14 criterion #3 updated. |
 | C3.3 `tournament_n` declared but not wired to branch generation/checkpoint options. | **Wire N through the runtime surface.** Resolved `tournament_n` controls option generation, dynamic fanout expansion, branch cap, checkpoint `allow`, and checkpoint `choices`; mismatch fails before child relays start. | §1 Tournament steps amended. §6 wiring rows added. §11 Slice 5C added. §12 mismatch edge case added. §14 criterion #10 added. |
-| C3.4 Tournament survivor policy vs current abort-all/aggregate-only. | **Implement survivor policy as a two-part contract.** Tournament fanout must use `on_child_failure: continue-others` and the new `aggregate-survivors` join policy. Existing `aggregate-only` stays for fanout that needs all branches. Graceful degradation: ≥ 2 strands closing parseably continues; otherwise abort. | §6 implementation note added. §11 Slice 5D added. §12 survivor edge cases updated. §14 criterion #9 added. |
+| C3.4 Tournament survivor policy vs prior abort-all/aggregate-only. | **Implement survivor policy as a two-part contract.** Tournament fanout must use `on_child_failure: continue-others` and the new `aggregate-survivors` join policy. Existing `aggregate-only` stays for fanout that needs all branches. Graceful degradation: ≥ 2 strands closing parseably continues; otherwise abort. | §6 implementation note added. §11 Slice 5D added. §12 survivor edge cases updated. §14 criterion #9 added. |
 | C3.5 Minimal scorer temptation vs full v1 rubric infrastructure. | **Build the full long-term solution in v1.** No minimal interim scorer. Every dim emits the typed §9 result, including `runtime_signal: "n/a"`, dim scale, aggregate score, tie-break, and runtime-veto effect. | §9 expanded. §10 JSON example expanded. §11 Slice 5A/5B added. §14 criterion #7 added. |
 | C3.6 Autonomous + tournament winner selection vs current tradeoff checkpoint. | **Autonomous + tournament is supported in v1.** The `highest-score` auto-resolution policy ranks tournament strands by typed rubric result. Per-axis allow-list shape stays sufficient because we do not refuse the combination globally. | §5 policy text expanded. §10 report provenance expanded. §11 Slice 5E/5F added. §14 criterion #11 added. |
 | C3.7 Slice 5 was too broad to ship safely. | **Split Slice 5 into independently shippable sub-slices.** Typed rubric, Explore signals, N wiring, survivor fanout, highest-score reporting, and end-to-end proof each get their own tests and verification gate. | §11 Slice 5A-5F added. |
@@ -626,9 +650,9 @@ The raw prior review transcript is not stored in this repo snapshot, so this led
 |---|---|
 | 1. Flow inventory and allow-list drift. | Resolved in spec: §3, §14, and Appendix A6 now include Review, Fix, Build, Explore, Pursue, and internal Runtime Proof with current-code evidence. |
 | 2. Target 3-axis design read as current shipped behavior. | Resolved in spec: status note and Appendix A separate target design from current implementation. |
-| 3. CLI surface mismatch. | Documented as code follow-up: current `--mode`/`--depth` aliases remain; target flags are absent. Evidence: `src/cli/circuit.ts:101-123`, `src/cli/circuit.ts:203-224`, `src/cli/circuit.ts:397-425`. |
-| 4. Schematic and compiled fixture shape mismatch. | Documented as code follow-up: current shape is `entry_modes`, not `axes`. Evidence: `src/schemas/compiled-flow.ts:18-40`, `src/schemas/flow-schematic.ts:424-480`. |
-| 5. Checkpoint policy and fixture-load validation mismatch. | Documented as code follow-up: current safe-choice checkpoint policy and runtime missing-safe-choice failures differ from target policy/refuse load validation. Evidence: `src/schemas/step.ts:68-111`, `src/runtime/executors/checkpoint.ts:43-65`, `tests/runtime/control-loop.test.ts:849-912`. |
+| 3. CLI surface mismatch. | Resolved after this snapshot: current CLI parses axis flags and rejects old aliases. |
+| 4. Schematic and compiled fixture shape mismatch. | Resolved after this snapshot: current schematics and compiled fixtures carry `axes`, not `entry_modes`. |
+| 5. Checkpoint policy and fixture-load validation mismatch. | Partially resolved after this snapshot: typed auto-resolution policies and autonomous `refuse` fixture rejection shipped; safe-choice fallback and some target-reporting details remain compatibility behavior. |
 | 6. Tournament runtime mismatch. | Resolved in C3.2-C3.4: N capped at 4 in v1; `tournament_n` wires to branch generation and checkpoint choices; survivor fanout requires `continue-others` plus `aggregate-survivors`. |
 | 7. Full rubric result underspecified. | Resolved in §9 and C3.5: `RubricDimResult` includes explicit dim scale, `runtime_signal: "n/a"`, aggregate score, tie-break, and runtime-veto effect. |
 | 8. Autonomous tournament could collapse into a minimal interim scorer. | Resolved in §5, §9, §10, and C3.6: v1 ships `highest-score` over typed rubric results and records full provenance in Auto-resolutions. |

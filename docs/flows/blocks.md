@@ -1,6 +1,6 @@
 ---
 name: flow-blocks
-description: Canonical first-principles inventory of reusable flow blocks for circuit-next.
+description: Canonical first-principles inventory of reusable flow blocks for Circuit.
 type: product-architecture
 date: 2026-04-28
 status: active
@@ -8,8 +8,7 @@ status: active
 
 # Flow Blocks
 
-This document names the reusable flow blocks circuit-next should build
-toward.
+This document names the reusable flow blocks Circuit should build toward.
 
 The system aims for a small set of reusable blocks that operators can
 assemble into clear flows, rather than a long list of one-off flow
@@ -170,7 +169,7 @@ Future work should start by asking:
 4. Which routes are allowed by mode?
 5. Which block is missing and should be built generically?
 
-This means Build, Fix, Review, and custom flows are not necessarily
+This means Build, Fix, Review, Pursue, and custom flows are not necessarily
 separate implementation towers. They should be different schematics over
 a shared set of blocks.
 

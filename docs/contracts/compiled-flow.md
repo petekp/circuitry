@@ -28,7 +28,8 @@ The runtime MUST reject any CompiledFlow that violates these. All invariants
 are enforced by the `CompiledFlow` Zod schema — some as literal fields on
 `CompiledFlowBody` (e.g. WF-I7's `schema_version` literal), the remainder
 inside `CompiledFlow.superRefine` — and tested in
-`tests/contracts/schema-parity.test.ts`.
+`tests/contracts/flow-graph-schema.test.ts`,
+`tests/contracts/flow-schematic.test.ts`, and related runtime projection tests.
 
 - **WF-I1 — Unique step ids.** No two steps in `CompiledFlow.steps` share an `id`.
 - **WF-I2 — Closed start reference.** `starts_at` must be the `id` of an
@@ -110,7 +111,7 @@ After a CompiledFlow is accepted:
 - The CompiledFlow's step graph is closed under `WF-I1..4`.
 - Any step-level `skill_slots` are typed `SkillSlot`s and remain optional
   until config binds them.
-- The CompiledFlow is referentially serializable to `circuit.manifest.yaml`.
+- The CompiledFlow is serializable to the run-folder manifest snapshot.
 
 ## Property ids (reserved for Stage 2 testing)
 
@@ -157,10 +158,10 @@ Property-based tests will cover:
 ## Failure modes (carried from evidence)
 
 - `carry-forward:verdict-enum-bloat` — Existing Circuit uses per-protocol
-  verdict conditionals. circuit-next's Step discriminated union constrains
+  verdict conditionals. Circuit's Step discriminated union constrains
   verdicts per step kind, not per protocol.
 - `carry-forward:prose-schema-drift` — Existing Circuit's SKILL.md can
-  silently disagree with `circuit.yaml`. circuit-next prevents this by
+  silently disagree with `circuit.yaml`. Circuit prevents this by
   generating host-facing flow surfaces from flow package sources.
 - `carry-forward:stage path-policy-too-loose` — **Closed in stage.md v0.1.**
   `CompiledFlow.stage_path_policy` is a required discriminated union with two

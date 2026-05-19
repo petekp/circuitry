@@ -1,6 +1,6 @@
 ---
 name: flow-research-intake
-description: Rubric for turning prior-art research into circuit-next flow design decisions.
+description: Rubric for turning prior-art research into Circuit flow design decisions.
 type: product-architecture
 date: 2026-04-28
 status: active

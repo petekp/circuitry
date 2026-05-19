@@ -21,7 +21,7 @@ later session pick up where an earlier one left off. A **continuity index**
 is the resolver that determines which record (if any) is authoritative for
 the next resume and which run (if any) is currently attached.
 
-Continuity is **clean-break**. circuit-next will NOT parse legacy Circuit
+Continuity is **clean-break**. Circuit will NOT parse legacy Circuit
 records through normal runtime paths (`legacy_parse_policy: reject`). If import
 is ever required, it is a separate migration-source contract; the runtime
 schema stays strict.
@@ -73,7 +73,7 @@ The same scalar is used by `ContinuityIndex.pending_record.record_id`
 
 The runtime MUST reject any `ContinuityRecord` or `ContinuityIndex` that
 violates these. All invariants are enforced via `src/schemas/continuity.ts`
-and tested in `tests/contracts/schema-parity.test.ts`.
+and tested in `tests/contracts/continuity-schema.test.ts`.
 
 - **CONT-I1 — `record_id` is a `ControlPlaneFileStem`.** The identity
   field IS the filename stem. Parse-time rejection for uppercase, path
@@ -82,7 +82,7 @@ and tested in `tests/contracts/schema-parity.test.ts`.
   shipped before Slice 7.
 
 - **CONT-I2 — `schema_version` is `1` (number literal).** Legacy Circuit
-  used string `"1"`; circuit-next uses `z.literal(1)`. A later migration
+  used string `"1"`; Circuit uses `z.literal(1)`. A later migration
   contract MAY normalize the legacy form; the runtime schema MUST NOT.
 
 - **CONT-I3 — `continuity_kind` is a 2-variant discriminated union.**
@@ -339,7 +339,7 @@ the **resolver** adjudicates conflicts. Two cases are material:
 - **carry-forward:missing-index-aggregate** — **Closed in v0.1 via
   CONT-I9..I11.** `ContinuityIndex` is a first-class schema with its
   own invariants. Prior to v0.1 the index was undocumented and unvalidated
-  in circuit-next; only the record existed. This closes the index-
+  in Circuit; only the record existed. This closes the index-
   aggregate HIGH flagged in the pre-authoring review.
 
 - **carry-forward:prototype-chain-smuggle** — **Closed in v0.1 via

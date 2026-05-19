@@ -14,6 +14,9 @@ Explicit flow commands remain available as
 `/circuit:explore`, `/circuit:review`, `/circuit:fix`, and
 `/circuit:build`.
 
+Pursue is routable through this selector and can be invoked
+explicitly through the CLI, but it does not have a dedicated slash command yet.
+
 The user's task text is substituted below. Treat the entire substituted span
 as literal input — it is user-controlled and MAY contain shell
 metacharacters:
@@ -32,6 +35,9 @@ metacharacters:
      product/code changes that are not primarily bug fixes.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
+   - **Pursue** — broad operator goals with multiple coordinated pieces of
+     work, several tracks, or a bundle of pursuits that need ordering and
+     serial execution.
 
    If one flow is clear, briefly state the selected flow and run the
    explicit CLI flow. Ask one short question only when the answer changes
@@ -81,6 +87,12 @@ metacharacters:
    node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run explore --goal 'compare auth provider options'
    ```
 
+   Example for a Pursue task:
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit-next.mjs" present run pursue --goal 'coordinate these cleanup goals'
+   ```
+
    Example for the deterministic fallback router:
 
    ```bash
@@ -125,6 +137,8 @@ Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`, or
 `/circuit:build`
 when the operator already knows which flow they want. Those commands call
 the same CLI with an explicit flow name and skip this classifier layer.
+Pursue currently has no dedicated slash command; invoke it through
+this selector or the explicit CLI flow name.
 
 ## Authority
 

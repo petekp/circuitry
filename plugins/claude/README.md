@@ -13,10 +13,10 @@ claude --plugin-dir ./plugins/claude
   description, keywords).
 - `commands/<id>.md` — **generated** Claude Code command files copied from
   source command files.
-- `skills/<flow>/` — **generated** compiled flow JSON files. One folder per
-  flow that registers a slash command. Each folder contains
-  `circuit.json` (the default mode) and any per-mode variants
-  (e.g. `lite.json`).
+- `skills/<flow>/` — **generated** compiled flow JSON files for public flows.
+  Some public flows, such as Pursue, can be selected by `/circuit:run` without
+  owning a dedicated slash command. Each folder contains `circuit.json` and any
+  per-mode variants (e.g. `lite.json`).
 - `hooks/` — Claude Code auto-loaded SessionStart hook registration and hook
   script.
 - `runtime/circuit-next.js` — **generated** bundled Circuit runtime. Normal
@@ -33,8 +33,9 @@ claude --plugin-dir ./plugins/claude
 - `commands/<id>.md` — **do not edit by hand**. Edit
   `src/commands/<id>.md` for direct commands or
   `src/flows/<id>/command.md` for flow-owned commands.
-- `skills/<flow>/*.json` — **do not edit by hand**. Edit the flow's schematic
-  (`src/flows/<id>/schematic.json`).
+- `skills/<flow>/*.json` — **do not edit by hand**. Edit the flow's
+  `src/flows/<id>/data.ts` source and thin `src/flows/<id>/flow.ts` adapter,
+  then regenerate.
 - `runtime/circuit-next.js` — **do not edit by hand**. Run
   `npm run build-plugin-runtime`.
 - After editing an authored source, run `npm run emit-flows`. The drift check

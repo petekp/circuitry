@@ -47,7 +47,8 @@ the machine-facing execution.
 The runtime MUST reject any `RunTrace` or `RunProjection` that violates these.
 All invariants are enforced via `src/schemas/run.ts` (`RunTrace.superRefine`
 and `RunProjection.superRefine`) and tested in
-`tests/contracts/schema-parity.test.ts`.
+`tests/contracts/runtrace-schema.test.ts` and
+`tests/runtime/runtime-trace-contract.test.ts`.
 
 - **RUN-I1 — First trace_entry is `run.bootstrapped`.** A `RunTrace` is a non-empty
   array of trace_entries whose index-0 trace_entry has `kind: 'run.bootstrapped'`. The
@@ -90,7 +91,7 @@ and `RunProjection.superRefine`) and tested in
 
 - **RUN-I4 — Bootstrap singleton.** Exactly one `run.bootstrapped` trace_entry per
   `RunTrace`. A second bootstrap would make `change_kind`, `depth`, `manifest_hash`,
-  and `flow_id` ambiguous at replay time; circuit-next rejects the
+  and `flow_id` ambiguous at replay time; Circuit rejects the
   ambiguity at parse time rather than pick a silent convention (earliest-
   wins, latest-wins, last-bootstrap-for-each-field, etc.). Enforced at
   `src/schemas/run.ts`.

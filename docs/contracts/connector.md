@@ -65,7 +65,8 @@ The runtime MUST reject any `EnabledConnector`, `ConnectorName`,
 `RelayConfig`, or `RelayStartedTraceEntry.resolved_from` that
 violates these. All invariants are enforced via `src/schemas/connector.ts`
 and — for the cross-schema invariants — the schema files named per
-invariant; tested in `tests/contracts/schema-parity.test.ts`.
+invariant; tested in `tests/contracts/connector-schema.test.ts` and
+`tests/contracts/codex-connector-schema.test.ts`.
 
 - **connector-I1 — `EnabledConnector` is a closed 2-variant enum with
   declared semantic distinctions; adding a built-in is a breaking
