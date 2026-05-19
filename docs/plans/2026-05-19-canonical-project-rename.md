@@ -95,6 +95,9 @@ Focused checks after identity edits:
 - `npm run check-release-infra` passed.
 - Allowlisted stale-reference audit for old repo/marketplace identities passed with no matches outside this migration note.
 - `npm run verify` passed after the Claude marketplace contract test was updated.
+- `git push --force-with-lease origin main:main` completed the remote takeover: `main` moved from `5ec00339fa3f83e559ff0a39fade639c5b4a593c` to `7bcdf8147f8ed8a402cca03ec5c42e9c942bb948`.
+- Remote archive branches `archive/circuit-v1-main-20260519` and `archive/circuit-v1-working-tree-20260519` remained present after takeover.
+- Final local status after takeover: promoted `/Users/petepetrash/Code/circuit` clean on `main`; preserved `/Users/petepetrash/Code/circuit-v1` clean on `main`.
 
 ## Reference audit policy
 
