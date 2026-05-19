@@ -1,7 +1,7 @@
 {
-  "name": "circuit-next",
+  "name": "circuit",
   "interface": {
-    "displayName": "Circuit Next"
+    "displayName": "Circuit"
   },
   "plugins": [
     {

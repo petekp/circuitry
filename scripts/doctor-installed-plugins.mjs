@@ -223,7 +223,7 @@ try {
   const version = readJson(resolve(repoRoot, 'plugins/version.json')).version;
   const home = process.env.HOME ?? homedir();
   const codexHome = process.env.CODEX_HOME ?? resolve(home, '.codex');
-  const claudeInstalledRoot = resolve(home, '.claude/plugins/cache/circuit-next/circuit', version);
+  const claudeInstalledRoot = resolve(home, '.claude/plugins/cache/circuit/circuit', version);
   const codexInstalledRoot = resolve(
     codexHome,
     'plugins/cache/circuit-next-local/circuit',

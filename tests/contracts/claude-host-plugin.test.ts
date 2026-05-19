@@ -32,7 +32,7 @@ const PluginManifest = z
 
 const VersionManifest = z.object({ version: z.string().min(1) });
 const MarketplaceManifest = z.object({
-  name: z.literal('circuit-next'),
+  name: z.literal('circuit'),
   owner: z.object({ name: z.literal('Pete Petrash') }),
   plugins: z.array(
     z.object({

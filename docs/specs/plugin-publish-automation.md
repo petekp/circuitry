@@ -43,7 +43,7 @@ Known gaps:
   version source.
 - Codex local cache refresh is automated through the local cache name
   `circuit-next-local`.
-- the checked-in Codex marketplace is named `circuit-next` for release.
+- the checked-in Codex marketplace is named `circuit` for release.
 - `scripts/publish-plugins.ts` validates, tags, pushes, and reports both host
   package outcomes together.
 
@@ -89,7 +89,7 @@ Expose it through package scripts:
   "publish:plugins:bump": "node scripts/publish-plugins.ts bump",
   "publish:plugins:check": "node scripts/publish-plugins.ts check",
   "publish:plugins:local": "node scripts/publish-plugins.ts local",
-  "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
+  "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit",
   "doctor:plugins:installed": "node scripts/doctor-installed-plugins.mjs"
 }
 ```
@@ -155,7 +155,7 @@ Checks:
 - Claude manifest name is `circuit`
 - Codex manifest name is `circuit`
 - Codex marketplace points at `./plugins/circuit`
-- checked-in Codex marketplace name is `circuit-next`
+- checked-in Codex marketplace name is `circuit`
 - local Codex cache defaults may still use `circuit-next-local`
 - versions match for `release`
 - version mismatch is reported but does not block `check` or `local`
@@ -252,15 +252,15 @@ Claude Code local refresh:
 
 ```bash
 claude plugin marketplace add <repoRoot> --scope user
-claude plugin update circuit@circuit-next --scope user
+claude plugin update circuit@circuit --scope user
 ```
 
 If the installed Claude package bytes still differ from `plugins/claude` after
 the update, the local target falls back to a same-version reinstall:
 
 ```bash
-claude plugin uninstall circuit@circuit-next --scope user --keep-data --yes
-claude plugin install circuit@circuit-next --scope user
+claude plugin uninstall circuit@circuit --scope user --keep-data --yes
+claude plugin install circuit@circuit --scope user
 ```
 
 Codex local cache refresh:
@@ -283,9 +283,9 @@ Rules:
 - local publish fails on dirty tracked state unless `--allow-dirty` is present
 - local dry-run records user-level mutations with `skipped: true` and does not
   mutate user plugin installs or hooks
-- local publish adds or updates the user `circuit-next` Claude marketplace to
+- local publish adds or updates the user `circuit` Claude marketplace to
   the current repo root before updating the installed package
-- if user `circuit-next` points at another local checkout, local publish removes
+- if user `circuit` points at another local checkout, local publish removes
   that marketplace entry and adds the current repo root
 - if same-version Claude bytes stay stale, local publish uses uninstall with
   `--keep-data --yes` and installs again
@@ -330,7 +330,7 @@ Minimum shape:
 
 ```json
 {
-  "name": "circuit-next",
+  "name": "circuit",
   "description": "Public marketplace entry for Circuit's Claude Code plugin.",
   "owner": {
     "name": "Pete Petrash"
@@ -367,7 +367,7 @@ The current `.agents/plugins/marketplace.json` is the public repo marketplace:
 
 ```json
 {
-  "name": "circuit-next"
+  "name": "circuit"
 }
 ```
 
@@ -391,8 +391,8 @@ Dry-run command:
 ```bash
 npm run publish:plugins:release -- \
   --version 0.1.0-alpha.3 \
-  --codex-source petekp/circuit-next \
-  --codex-marketplace circuit-next
+  --codex-source petekp/circuit \
+  --codex-marketplace circuit
 ```
 
 Effectful command:
@@ -401,8 +401,8 @@ Effectful command:
 npm run publish:plugins:release -- \
   --yes \
   --version 0.1.0-alpha.3 \
-  --codex-source petekp/circuit-next \
-  --codex-marketplace circuit-next
+  --codex-source petekp/circuit \
+  --codex-marketplace circuit
 ```
 
 Claude release actions:
@@ -418,8 +418,8 @@ use `./` as the Codex source.
 Codex release actions require a remote marketplace source:
 
 ```bash
-codex plugin marketplace add petekp/circuit-next --ref circuit--v0.1.0-alpha.3
-codex plugin marketplace upgrade circuit-next
+codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.3
+codex plugin marketplace upgrade circuit
 ```
 
 Rules:

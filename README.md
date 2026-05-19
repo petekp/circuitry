@@ -1,4 +1,4 @@
-# circuit-next
+# circuit
 
 **Structured flows for coding agents.**
 
@@ -24,8 +24,8 @@ Circuit is currently a pre-release alpha. For Claude Code, install the plugin
 from the marketplace:
 
 ```bash
-/plugin marketplace add petekp/circuit-next
-/plugin install circuit@circuit-next
+/plugin marketplace add petekp/circuit
+/plugin install circuit@circuit
 /reload-plugins
 ```
 
@@ -42,8 +42,8 @@ The plugin wrapper launches the bundled runtime that ships with the plugin.
 For local development from this checkout:
 
 ```bash
-git clone https://github.com/petekp/circuit-next.git
-cd circuit-next
+git clone https://github.com/petekp/circuit.git
+cd circuit
 npm install
 npm run build
 ./bin/circuit-next run --goal '<your task>'

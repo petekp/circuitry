@@ -5,19 +5,19 @@
   "author": {
     "name": "Circuit"
   },
-  "homepage": "https://github.com/petekp/circuit-next",
-  "repository": "https://github.com/petekp/circuit-next",
+  "homepage": "https://github.com/petekp/circuit",
+  "repository": "https://github.com/petekp/circuit",
   "license": "UNLICENSED",
   "keywords": ["circuit", "developer-flows", "codex", "automation"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Circuit",
     "shortDescription": "Choose and run the right Circuit flow",
-    "longDescription": "Use @Circuit with a natural-language coding task. Codex can choose the best bundled Circuit flow, run the local circuit-next engine, render progress, and surface the Circuit summary. Direct Circuit flow skills remain available when you already know the flow.",
+    "longDescription": "Use @Circuit with a natural-language coding task. Codex can choose the best bundled Circuit flow, run the local Circuit engine, render progress, and surface the Circuit summary. Direct Circuit flow skills remain available when you already know the flow.",
     "developerName": "Circuit",
     "category": "Coding",
     "capabilities": ["Interactive", "Write"],
-    "websiteURL": "https://github.com/petekp/circuit-next",
+    "websiteURL": "https://github.com/petekp/circuit",
     "defaultPrompt": [
       "Use Circuit on this task",
       "Use Circuit to fix this bug",

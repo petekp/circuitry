@@ -1,5 +1,5 @@
 {
-  "name": "circuit-next",
+  "name": "circuit",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -42,7 +42,7 @@
     "publish:plugins:bump": "node scripts/publish-plugins.ts bump",
     "publish:plugins:check": "node scripts/publish-plugins.ts check",
     "publish:plugins:local": "node scripts/publish-plugins.ts local",
-    "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next",
+    "publish:plugins:release": "node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit",
     "verify": "npm run check && npm run lint && npm run build && npm run test && npm run check-evals && node scripts/emit-flows.ts --check && npm run check-plugin-runtime && npm run check-release-infra",
     "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && npm run check-evals && node scripts/emit-flows.ts --check && npm run check-plugin-runtime",
     "circuit:run": "./bin/circuit-next"

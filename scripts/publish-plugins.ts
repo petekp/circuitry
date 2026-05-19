@@ -388,7 +388,7 @@ export function runPublish(
   }
 
   function claudeInstalledRoot(): string {
-    return resolve(home, '.claude/plugins/cache/circuit-next/circuit', report.versions.source);
+    return resolve(home, '.claude/plugins/cache/circuit/circuit', report.versions.source);
   }
 
   function defaultCodexCacheTarget(): string {
@@ -440,11 +440,11 @@ export function runPublish(
       ['claude', 'plugin', 'marketplace', 'list', '--json'],
       commandOptions({ env: claudeEnv }),
     );
-    const current = parseClaudeMarketplaceList(list).find((entry) => entry.name === 'circuit-next');
+    const current = parseClaudeMarketplaceList(list).find((entry) => entry.name === 'circuit');
     if (current !== undefined && !claudeMarketplacePointsAtRepo(current)) {
       runCommand(
         'claude_marketplace_remove_user',
-        ['claude', 'plugin', 'marketplace', 'remove', 'circuit-next'],
+        ['claude', 'plugin', 'marketplace', 'remove', 'circuit'],
         commandOptions({ effect: true, env: claudeEnv }),
       );
     }
@@ -460,7 +460,7 @@ export function runPublish(
 
     runCommand(
       'claude_marketplace_update_user',
-      ['claude', 'plugin', 'marketplace', 'update', 'circuit-next'],
+      ['claude', 'plugin', 'marketplace', 'update', 'circuit'],
       commandOptions({ effect: true, env: claudeEnv }),
     );
   }
@@ -662,7 +662,7 @@ export function runPublish(
     );
     runCommand(
       'claude_install_smoke_install',
-      ['claude', 'plugin', 'install', 'circuit@circuit-next', '--scope', 'local'],
+      ['claude', 'plugin', 'install', 'circuit@circuit', '--scope', 'local'],
       { cwd: claudeSmokeProject, env: smokeEnv },
     );
     const list = runCommand('claude_install_smoke_list', ['claude', 'plugin', 'list'], {
@@ -675,7 +675,7 @@ export function runPublish(
     }
     const installedPluginRoot = resolve(
       claudeSmokeHome,
-      '.claude/plugins/cache/circuit-next/circuit',
+      '.claude/plugins/cache/circuit/circuit',
       report.versions.source,
     );
     const installedDoctor = runCommand(
@@ -757,7 +757,7 @@ export function runPublish(
       refreshClaudeUserMarketplace(claudeEnv);
       runCommand(
         'claude_plugin_update_user',
-        ['claude', 'plugin', 'update', 'circuit@circuit-next', '--scope', 'user'],
+        ['claude', 'plugin', 'update', 'circuit@circuit', '--scope', 'user'],
         commandOptions({ effect: true, env: claudeEnv }),
       );
       runCommand(
@@ -797,7 +797,7 @@ export function runPublish(
     refreshClaudeUserMarketplace(claudeEnv);
     const claudeUpdate = runOptionalCommand(
       'claude_plugin_update_user',
-      ['claude', 'plugin', 'update', 'circuit@circuit-next', '--scope', 'user'],
+      ['claude', 'plugin', 'update', 'circuit@circuit', '--scope', 'user'],
       commandOptions({ effect: true, env: claudeEnv }),
     );
     const claudeUpdateOutput = `${claudeUpdate.stdout}\n${claudeUpdate.stderr}`;
@@ -823,7 +823,7 @@ export function runPublish(
             'claude',
             'plugin',
             'uninstall',
-            'circuit@circuit-next',
+            'circuit@circuit',
             '--scope',
             'user',
             '--keep-data',
@@ -834,7 +834,7 @@ export function runPublish(
       }
       runCommand(
         'claude_plugin_install_user',
-        ['claude', 'plugin', 'install', 'circuit@circuit-next', '--scope', 'user'],
+        ['claude', 'plugin', 'install', 'circuit@circuit', '--scope', 'user'],
         commandOptions({ effect: true, env: claudeEnv }),
       );
       claudeTree = packageTreeStatus(claudeSourceRoot, claudeRoot);

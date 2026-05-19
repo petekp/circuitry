@@ -79,6 +79,23 @@ Remote rollback after promoted `main` is pushed:
 2. Use `archive/circuit-v1-working-tree-20260519` to recover the old dirty tree
    if needed.
 
+## Progress evidence
+
+Completed local moves:
+
+- `/Users/petepetrash/Code/circuit-v1` is the preserved older checkout on `main`, status clean.
+- `/Users/petepetrash/Code/circuit` is the promoted checkout on `main`.
+- Promoted checkout remote is now `git@github.com:petekp/circuit.git`.
+- After fetching the new remote, promoted `main` and `origin/main` have no merge base; takeover therefore requires an explicit `--force-with-lease` push after verification.
+
+Focused checks after identity edits:
+
+- `npm run test -- tests/contracts/codex-host-plugin.test.ts tests/release/plugin-publish-automation.test.ts` passed.
+- `npm run check-flow-drift` passed.
+- `npm run check-release-infra` passed.
+- Allowlisted stale-reference audit for old repo/marketplace identities passed with no matches outside this migration note.
+- `npm run verify` passed after the Claude marketplace contract test was updated.
+
 ## Reference audit policy
 
 Allowed remaining `circuit-next` references:
@@ -95,7 +112,7 @@ Allowed remaining `circuit-next` references:
 
 References that should not remain after promotion:
 
-- Repository URLs pointing to `petekp/circuit-next`.
+- Repository URLs pointing to `petekp/circuit-next`, except this note's initial inventory and rollback entries.
 - Marketplace or package identity fields that name the project as
   `circuit-next` when they describe the canonical project rather than the CLI
   command namespace.

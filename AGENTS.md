@@ -1,8 +1,8 @@
-# Agent Guide — circuit-next
+# Agent Guide — circuit
 
 ## What this project is
 
-`circuit-next` is a Claude Code plugin that runs configurable developer
+`circuit` is a Claude Code plugin that runs configurable developer
 flows. The product surface is `src/` (TypeScript), `tests/`, the
 generated host plugin packages under `plugins/`, the flow packages
 under `src/flows/`, the engine contracts under `docs/contracts/`,

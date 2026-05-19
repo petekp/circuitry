@@ -51,7 +51,7 @@ function createFixture(options: FixtureOptions = {}): string {
   const version = options.version ?? '0.1.0-alpha.2';
   const claudeVersion = options.claudeVersion ?? version;
   const codexVersion = options.codexVersion ?? version;
-  const marketplaceName = options.marketplaceName ?? 'circuit-next';
+  const marketplaceName = options.marketplaceName ?? 'circuit';
 
   writeJson(join(root, 'package.json'), {
     scripts: {
@@ -60,7 +60,7 @@ function createFixture(options: FixtureOptions = {}): string {
       'publish:plugins:check': 'node scripts/publish-plugins.ts check',
       'publish:plugins:local': 'node scripts/publish-plugins.ts local',
       'publish:plugins:release':
-        'node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
+        'node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit',
       'doctor:plugins:installed': 'node scripts/doctor-installed-plugins.mjs',
     },
   });
@@ -74,8 +74,8 @@ function createFixture(options: FixtureOptions = {}): string {
     name: 'circuit',
     version: codexVersion,
     description: 'Codex plugin',
-    homepage: 'https://github.com/petekp/circuit-next',
-    repository: 'https://github.com/petekp/circuit-next',
+    homepage: 'https://github.com/petekp/circuit',
+    repository: 'https://github.com/petekp/circuit',
     skills: './skills/',
     interface: {
       displayName: 'Circuit',
@@ -87,7 +87,7 @@ function createFixture(options: FixtureOptions = {}): string {
     },
   });
   writeJson(join(root, '.claude-plugin/marketplace.json'), {
-    name: 'circuit-next',
+    name: 'circuit',
     owner: { name: 'Pete Petrash' },
     plugins: [
       {
@@ -125,7 +125,7 @@ function localInstallRoots(root: string, homeDir: string, codexHome: string) {
     version: string;
   };
   return {
-    claude: join(homeDir, '.claude/plugins/cache/circuit-next/circuit', version.version),
+    claude: join(homeDir, '.claude/plugins/cache/circuit/circuit', version.version),
     codex: join(codexHome, 'plugins/cache/circuit-next-local/circuit', version.version),
   };
 }
@@ -234,7 +234,7 @@ describe('plugin publish automation', () => {
     expect(pkg.scripts['publish:plugins:check']).toBe('node scripts/publish-plugins.ts check');
     expect(pkg.scripts['publish:plugins:local']).toBe('node scripts/publish-plugins.ts local');
     expect(pkg.scripts['publish:plugins:release']).toBe(
-      'node scripts/publish-plugins.ts release --codex-source petekp/circuit-next --codex-marketplace circuit-next',
+      'node scripts/publish-plugins.ts release --codex-source petekp/circuit --codex-marketplace circuit',
     );
     expect(pkg.scripts['doctor:plugins:installed']).toBe(
       'node scripts/doctor-installed-plugins.mjs',
@@ -258,7 +258,7 @@ describe('plugin publish automation', () => {
         claude_marketplace: '0.1.0-alpha.2',
       });
       expect(report.outputs).toMatchObject({
-        codex_marketplace: 'circuit-next',
+        codex_marketplace: 'circuit',
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -326,7 +326,7 @@ describe('plugin publish automation', () => {
       expect(check.warnings.join('\n')).toContain('version mismatch');
 
       const release = runPublish(
-        ['release', '--codex-source', 'petekp/circuit-next', '--codex-marketplace', 'circuit-next'],
+        ['release', '--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit'],
         {
           repoRoot: root,
           runner,
@@ -354,17 +354,12 @@ describe('plugin publish automation', () => {
       },
       {
         name: 'local source',
-        args: ['--codex-source', './', '--codex-marketplace', 'circuit-next'],
+        args: ['--codex-source', './', '--codex-marketplace', 'circuit'],
         error: 'remote Codex source',
       },
       {
         name: 'local marketplace name',
-        args: [
-          '--codex-source',
-          'petekp/circuit-next',
-          '--codex-marketplace',
-          'circuit-next-local',
-        ],
+        args: ['--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit-next-local'],
         error: 'must not end in -local',
       },
       {
@@ -372,9 +367,9 @@ describe('plugin publish automation', () => {
         args: [
           '--allow-dirty',
           '--codex-source',
-          'petekp/circuit-next',
+          'petekp/circuit',
           '--codex-marketplace',
-          'circuit-next',
+          'circuit',
         ],
         error: 'release does not allow --allow-dirty',
       },
@@ -384,7 +379,7 @@ describe('plugin publish automation', () => {
       const root = createFixture({
         marketplaceName: testCase.args?.includes('circuit-next-local')
           ? 'circuit-next-local'
-          : 'circuit-next',
+          : 'circuit',
       });
       const { calls, runner } = createRunner(testCase.git);
       try {
@@ -393,9 +388,9 @@ describe('plugin publish automation', () => {
             'release',
             ...(testCase.args ?? [
               '--codex-source',
-              'petekp/circuit-next',
+              'petekp/circuit',
               '--codex-marketplace',
-              'circuit-next',
+              'circuit',
             ]),
           ],
           {
@@ -420,7 +415,7 @@ describe('plugin publish automation', () => {
     try {
       runPublish(['check'], { repoRoot: root, runner });
       runPublish(
-        ['release', '--codex-source', 'petekp/circuit-next', '--codex-marketplace', 'circuit-next'],
+        ['release', '--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit'],
         {
           repoRoot: root,
           runner,
@@ -443,9 +438,9 @@ describe('plugin publish automation', () => {
         codexCacheTarget: installed.codex,
         claudeMarketplaceList: [
           {
-            name: 'circuit-next',
+            name: 'circuit',
             source: 'directory',
-            path: '/tmp/old-circuit-next',
+            path: '/tmp/old-circuit',
           },
         ],
       },
@@ -508,7 +503,7 @@ describe('plugin publish automation', () => {
     const { calls, runner } = createRunner({ branch: '', upstream: null });
     try {
       const report = runPublish(
-        ['release', '--codex-source', 'petekp/circuit-next', '--codex-marketplace', 'circuit-next'],
+        ['release', '--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit'],
         { repoRoot: root, runner },
       );
 
@@ -570,9 +565,9 @@ describe('plugin publish automation', () => {
         codexCacheTarget: installed.codex,
         claudeMarketplaceList: [
           {
-            name: 'circuit-next',
+            name: 'circuit',
             source: 'directory',
-            path: '/tmp/old-circuit-next',
+            path: '/tmp/old-circuit',
           },
         ],
       },
@@ -618,7 +613,7 @@ describe('plugin publish automation', () => {
         codexCacheTarget: installed.codex,
         claudeMarketplaceList: [
           {
-            name: 'circuit-next',
+            name: 'circuit',
             source: 'directory',
             path: root,
           },
@@ -779,9 +774,9 @@ describe('plugin publish automation', () => {
           'release',
           '--install-codex-hook',
           '--codex-source',
-          'petekp/circuit-next',
+          'petekp/circuit',
           '--codex-marketplace',
-          'circuit-next',
+          'circuit',
         ],
         { repoRoot: root, runner },
       );
@@ -868,7 +863,7 @@ describe('plugin publish automation', () => {
     const yes = createRunner();
     try {
       const dryRun = runPublish(
-        ['release', '--codex-source', 'petekp/circuit-next', '--codex-marketplace', 'circuit-next'],
+        ['release', '--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit'],
         {
           repoRoot: root,
           runner: dry.runner,
@@ -881,14 +876,7 @@ describe('plugin publish automation', () => {
       expect(ids(dry.calls)).not.toContain('claude_tag_push');
 
       const published = runPublish(
-        [
-          'release',
-          '--yes',
-          '--codex-source',
-          'petekp/circuit-next',
-          '--codex-marketplace',
-          'circuit-next',
-        ],
+        ['release', '--yes', '--codex-source', 'petekp/circuit', '--codex-marketplace', 'circuit'],
         {
           repoRoot: root,
           runner: yes.runner,

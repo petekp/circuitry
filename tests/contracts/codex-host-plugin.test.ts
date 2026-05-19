@@ -42,8 +42,8 @@ const PluginManifest = z
     name: z.literal('circuit'),
     version: z.string().min(1),
     description: z.string().min(1),
-    homepage: z.literal('https://github.com/petekp/circuit-next'),
-    repository: z.literal('https://github.com/petekp/circuit-next'),
+    homepage: z.literal('https://github.com/petekp/circuit'),
+    repository: z.literal('https://github.com/petekp/circuit'),
     skills: z.literal('./skills/'),
     interface: z.object({
       displayName: z.literal('Circuit'),
@@ -97,8 +97,8 @@ describe('Codex host plugin package', () => {
     );
 
     expect(manifest.version).toBe(versionManifest.version);
-    expect(manifest.homepage).toBe('https://github.com/petekp/circuit-next');
-    expect(manifest.repository).toBe('https://github.com/petekp/circuit-next');
+    expect(manifest.homepage).toBe('https://github.com/petekp/circuit');
+    expect(manifest.repository).toBe('https://github.com/petekp/circuit');
     expect(manifest.interface.capabilities).toContain('Interactive');
     expect(manifest.interface.capabilities).toContain('Write');
     expect(manifest.description).toContain('right Circuit flow');
@@ -128,8 +128,8 @@ describe('Codex host plugin package', () => {
       }>;
     };
 
-    expect(marketplace.name).toBe('circuit-next');
-    expect(marketplace.interface.displayName).toBe('Circuit Next');
+    expect(marketplace.name).toBe('circuit');
+    expect(marketplace.interface.displayName).toBe('Circuit');
     expect(marketplace.plugins).toContainEqual({
       name: 'circuit',
       source: { source: 'local', path: './plugins/circuit' },
