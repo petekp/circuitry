@@ -29,16 +29,54 @@
 //     recursion: a node visited again at deeper depth renders as
 //     `<recursive>` rather than blowing the stack.
 
-import type { ZodTypeAny } from 'zod';
+import type * as z4 from 'zod/v4/core';
+
+type ZodSchema = z4.$ZodType;
 
 interface ZodDef {
-  readonly typeName: string;
+  readonly type: string;
   readonly description?: string;
   readonly [key: string]: unknown;
 }
 
-function defOf(node: ZodTypeAny): ZodDef {
-  return (node as unknown as { readonly _def: ZodDef })._def;
+function defOf(node: ZodSchema): ZodDef {
+  return (node as z4.$ZodTypes)._zod.def as ZodDef;
+}
+
+function objectShape(def: ZodDef): Record<string, ZodSchema> {
+  const shape = def.shape;
+  return typeof shape === 'function' ? shape() : (shape as Record<string, ZodSchema>);
+}
+
+function literalValues(def: ZodDef): readonly unknown[] {
+  if (Array.isArray(def.values)) return def.values;
+  if ('value' in def) return [def.value];
+  return [];
+}
+
+function enumValues(def: ZodDef): readonly (string | number)[] {
+  const raw = def.entries ?? def.values;
+  if (Array.isArray(raw)) return raw;
+  if (raw === undefined || raw === null || typeof raw !== 'object') return [];
+
+  // `z.nativeEnum()` numeric enums carry TypeScript's reverse-mapped form
+  // ({0:'Low',1:'High',Low:0,High:1}); Zod accepts the numeric value side.
+  const values = Object.values(raw as Record<string, string | number>);
+  const isReverseMapped = values.some(
+    (value) =>
+      typeof value === 'number' &&
+      Object.hasOwn(raw as Record<string, string | number>, String(value)),
+  );
+  const accepted = isReverseMapped
+    ? values.filter((value): value is number => typeof value === 'number')
+    : values;
+  return Array.from(new Set(accepted));
+}
+
+function renderEnumValues(values: readonly (string | number)[]): string {
+  return values
+    .map((value) => (typeof value === 'string' ? escapeJsonInner(value) : String(value)))
+    .join('|');
 }
 
 // JSON-escape a string for inline use inside a double-quoted JSON-shape
@@ -53,8 +91,12 @@ function escapeJsonInner(value: string): string {
   return serialized.slice(1, serialized.length - 1);
 }
 
-function leafDescriptionOr(node: ZodTypeAny, fallback: string): string {
-  const description = defOf(node).description;
+function leafDescriptionOr(node: ZodSchema, fallback: string): string {
+  const nodeDescription = (node as unknown as { readonly description?: unknown }).description;
+  const description =
+    typeof nodeDescription === 'string' && nodeDescription.length > 0
+      ? nodeDescription
+      : defOf(node).description;
   if (typeof description === 'string' && description.length > 0) {
     return `"<${escapeJsonInner(description)}>"`;
   }
@@ -67,11 +109,11 @@ function leafDescriptionOr(node: ZodTypeAny, fallback: string): string {
 // not module-global, so independent schemas don't share state.
 const MAX_RECURSION_DEPTH = 32;
 
-export function renderShapeSkeleton(schema: ZodTypeAny): string {
+export function renderShapeSkeleton(schema: ZodSchema): string {
   return renderNode(schema, new Set(), 0);
 }
 
-function renderNode(node: ZodTypeAny, visited: Set<ZodTypeAny>, depth: number): string {
+function renderNode(node: ZodSchema, visited: Set<ZodSchema>, depth: number): string {
   if (visited.has(node) || depth > MAX_RECURSION_DEPTH) {
     return '<recursive>';
   }
@@ -83,116 +125,91 @@ function renderNode(node: ZodTypeAny, visited: Set<ZodTypeAny>, depth: number): 
   }
 }
 
-function renderNodeInner(node: ZodTypeAny, visited: Set<ZodTypeAny>, depth: number): string {
+function renderNodeInner(node: ZodSchema, visited: Set<ZodSchema>, depth: number): string {
   const def = defOf(node);
-  switch (def.typeName) {
-    case 'ZodObject': {
-      const shapeFn = def.shape as () => Record<string, ZodTypeAny>;
-      const shape =
-        typeof shapeFn === 'function'
-          ? shapeFn()
-          : (def.shape as unknown as Record<string, ZodTypeAny>);
+  switch (def.type) {
+    case 'object': {
+      const shape = objectShape(def);
       const entries = Object.entries(shape).map(
         ([key, child]) => `"${escapeJsonInner(key)}": ${renderNode(child, visited, depth)}`,
       );
       return `{ ${entries.join(', ')} }`;
     }
-    case 'ZodArray': {
-      const inner = renderNode(def.type as ZodTypeAny, visited, depth);
+    case 'array': {
+      const inner = renderNode(def.element as ZodSchema, visited, depth);
       return `[${inner}]`;
     }
-    case 'ZodOptional':
-    case 'ZodNullable':
-    case 'ZodDefault':
-    case 'ZodReadonly':
-    case 'ZodBranded':
-    case 'ZodCatch':
-      return renderNode(def.innerType as ZodTypeAny, visited, depth);
-    case 'ZodEffects':
-      return renderNode(def.schema as ZodTypeAny, visited, depth);
-    case 'ZodPipeline':
-      return renderNode(def.out as ZodTypeAny, visited, depth);
-    case 'ZodLiteral': {
-      const value = def.value;
+    case 'optional':
+    case 'nullable':
+    case 'default':
+    case 'readonly':
+    case 'catch':
+    case 'nonoptional':
+    case 'success':
+      return renderNode(def.innerType as ZodSchema, visited, depth);
+    case 'pipe':
+      return renderNode((def.in ?? def.out) as ZodSchema, visited, depth);
+    case 'transform':
+      return '<transform>';
+    case 'literal': {
+      const [value] = literalValues(def);
       return typeof value === 'string' ? JSON.stringify(value) : JSON.stringify(value);
     }
-    case 'ZodEnum': {
-      const values = def.values as readonly string[];
-      return `"<${values.map(escapeJsonInner).join('|')}>"`;
+    case 'enum': {
+      const values = enumValues(def);
+      return `"<${renderEnumValues(values)}>"`;
     }
-    case 'ZodNativeEnum': {
-      // A native enum's `.values` is the raw enum object. For a TS string
-      // enum {A:'a',B:'b'} that's {A:'a',B:'b'}; for a numeric enum {A,B}
-      // it's the bi-directional {0:'A',1:'B',A:0,B:1} reverse-mapped form.
-      // Zod only accepts the *value side*, so filter to the accepted set
-      // by dropping reverse-mapped keys (numeric values whose key is a
-      // string name that also appears as a value's key).
-      const raw = def.values as Record<string, string | number>;
-      const isReverseMapped = Object.values(raw).some(
-        (value) => typeof value === 'number' && Object.hasOwn(raw, String(value)),
-      );
-      const accepted = isReverseMapped
-        ? Object.values(raw).filter((value): value is number => typeof value === 'number')
-        : Object.values(raw);
-      const rendered = accepted.map((value) =>
-        typeof value === 'string' ? escapeJsonInner(value) : String(value),
-      );
-      return `"<${rendered.join('|')}>"`;
-    }
-    case 'ZodString':
+    case 'string':
       return leafDescriptionOr(node, '"<string>"');
-    case 'ZodNumber':
+    case 'number':
       return leafDescriptionOr(node, '<number>');
-    case 'ZodBigInt':
+    case 'bigint':
       return leafDescriptionOr(node, '<bigint>');
-    case 'ZodBoolean':
+    case 'boolean':
       return leafDescriptionOr(node, '<true|false>');
-    case 'ZodDate':
+    case 'date':
       return leafDescriptionOr(node, '"<iso-date>"');
-    case 'ZodNull':
+    case 'null':
       return 'null';
-    case 'ZodUndefined':
+    case 'undefined':
       return '<undefined>';
-    case 'ZodAny':
+    case 'any':
       return leafDescriptionOr(node, '<any>');
-    case 'ZodUnknown':
+    case 'unknown':
       return leafDescriptionOr(node, '<unknown>');
-    case 'ZodNever':
+    case 'never':
       return '<never>';
-    case 'ZodRecord':
-      return `{ "<key>": ${renderNode(def.valueType as ZodTypeAny, visited, depth)} }`;
-    case 'ZodMap':
-      return `{ "<key>": ${renderNode(def.valueType as ZodTypeAny, visited, depth)} }`;
-    case 'ZodTuple': {
-      const items = (def.items as ZodTypeAny[]).map((item) => renderNode(item, visited, depth));
-      const rest = def.rest as ZodTypeAny | undefined | null;
+    case 'record':
+    case 'map':
+      return `{ "<key>": ${renderNode(def.valueType as ZodSchema, visited, depth)} }`;
+    case 'tuple': {
+      const items = (def.items as ZodSchema[]).map((item) => renderNode(item, visited, depth));
+      const rest = def.rest as ZodSchema | undefined | null;
       if (rest !== undefined && rest !== null) {
         items.push(`...${renderNode(rest, visited, depth)}`);
       }
       return `[${items.join(', ')}]`;
     }
-    case 'ZodDiscriminatedUnion': {
-      const discriminator = def.discriminator as string;
-      const options = def.options as ZodTypeAny[];
-      const collapsed = collapseDiscriminatedUnion(discriminator, options, visited, depth);
-      if (collapsed !== undefined) return collapsed;
+    case 'union': {
+      const options = def.options as ZodSchema[];
+      const discriminator = def.discriminator;
+      if (typeof discriminator === 'string') {
+        const collapsed = collapseDiscriminatedUnion(discriminator, options, visited, depth);
+        if (collapsed !== undefined) return collapsed;
+      }
       return options.map((opt) => renderNode(opt, visited, depth)).join(' | ');
     }
-    case 'ZodUnion': {
-      const options = def.options as ZodTypeAny[];
-      return options.map((opt) => renderNode(opt, visited, depth)).join(' | ');
-    }
-    case 'ZodLazy': {
-      const getter = def.getter as () => ZodTypeAny;
+    case 'lazy': {
+      const getter = def.getter as () => ZodSchema;
       return renderNode(getter(), visited, depth);
     }
-    case 'ZodIntersection': {
-      const left = renderNode(def.left as ZodTypeAny, visited, depth);
-      const right = renderNode(def.right as ZodTypeAny, visited, depth);
+    case 'intersection': {
+      const left = renderNode(def.left as ZodSchema, visited, depth);
+      const right = renderNode(def.right as ZodSchema, visited, depth);
       return `${left} & ${right}`;
     }
     default:
-      return `<${def.typeName}>`;
+      return `<${def.type}>`;
   }
 }
 
@@ -205,27 +222,24 @@ function renderNodeInner(node: ZodTypeAny, visited: Set<ZodTypeAny>, depth: numb
 // `a | b | c` rendering.
 function collapseDiscriminatedUnion(
   discriminator: string,
-  options: readonly ZodTypeAny[],
-  visited: Set<ZodTypeAny>,
+  options: readonly ZodSchema[],
+  visited: Set<ZodSchema>,
   depth: number,
 ): string | undefined {
   if (options.length === 0) return undefined;
-  const objectShapes: Record<string, ZodTypeAny>[] = [];
+  const objectShapes: Record<string, ZodSchema>[] = [];
   const discriminatorValues: unknown[] = [];
   for (const option of options) {
     const optDef = defOf(option);
-    if (optDef.typeName !== 'ZodObject') return undefined;
-    const shapeFn = optDef.shape as () => Record<string, ZodTypeAny>;
-    const shape =
-      typeof shapeFn === 'function'
-        ? shapeFn()
-        : (optDef.shape as unknown as Record<string, ZodTypeAny>);
+    if (optDef.type !== 'object') return undefined;
+    const shape = objectShape(optDef);
     objectShapes.push(shape);
     const discriminatorNode = shape[discriminator];
     if (discriminatorNode === undefined) return undefined;
     const discriminatorDef = defOf(discriminatorNode);
-    if (discriminatorDef.typeName !== 'ZodLiteral') return undefined;
-    discriminatorValues.push(discriminatorDef.value);
+    if (discriminatorDef.type !== 'literal') return undefined;
+    const [value] = literalValues(discriminatorDef);
+    discriminatorValues.push(value);
   }
   const firstShape = objectShapes[0];
   if (firstShape === undefined) return undefined;

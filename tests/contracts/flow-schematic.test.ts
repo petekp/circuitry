@@ -247,8 +247,12 @@ describe('flow schematic schema — active Fix schematic', () => {
     const result = FlowSchematic.safeParse(raw);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.message).toMatch(/"path":\s*\[\s*"items",\s*6,\s*"execution",\s*"role"/);
-      expect(result.error.message).toMatch(/Required/);
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          code: 'invalid_value',
+          path: ['items', 6, 'execution', 'role'],
+        }),
+      );
     }
   });
 
@@ -262,7 +266,13 @@ describe('flow schematic schema — active Fix schematic', () => {
     const result = FlowSchematic.safeParse(raw);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.message).toMatch(/Unrecognized key\(s\) in object: 'role'/);
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          code: 'unrecognized_keys',
+          keys: ['role'],
+          path: ['items', 0, 'execution'],
+        }),
+      );
     }
   });
 
@@ -832,7 +842,13 @@ describe('flow schematic compiler-required metadata', () => {
     const result = FlowSchematic.safeParse(schematic);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.message).toMatch(/Unrecognized key\(s\) in object: 'entry_modes'/);
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          code: 'unrecognized_keys',
+          keys: ['entry_modes'],
+          path: [],
+        }),
+      );
     }
   });
 

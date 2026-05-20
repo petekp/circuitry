@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { flowPackages } from '../../src/flows/catalog.js';
 import { FixChange, FixDiagnosis, FixReview } from '../../src/flows/fix/reports.js';
 import { responseJsonSchemaFromZod } from '../../src/shared/zod-to-response-schema.js';
 
@@ -12,6 +13,8 @@ describe('responseJsonSchemaFromZod', () => {
     });
     const out = responseJsonSchemaFromZod(schema);
     expect(out.type).toBe('object');
+    expect(out.$schema).toBe('http://json-schema.org/draft-07/schema#');
+    expect(out.additionalProperties).toBe(false);
     const properties = out.properties as Record<string, { type: string }>;
     expect(properties.name).toEqual({ type: 'string' });
     expect(properties.count).toEqual({ type: 'number' });
@@ -39,16 +42,10 @@ describe('responseJsonSchemaFromZod', () => {
     >;
     const verdict = properties.verdict;
     expect(verdict).toBeDefined();
-    // zod-to-json-schema emits either `const` or `enum: [value]` depending on
-    // version. Accept either as long as the value is 'accept'.
-    if (verdict?.const !== undefined) {
-      expect(verdict.const).toBe('accept');
-    } else {
-      expect(verdict?.enum).toEqual(['accept']);
-    }
+    expect(verdict?.const).toBe('accept');
   });
 
-  it('inlines nested schemas with $refStrategy "none"', () => {
+  it('inlines nested schemas without $ref or definitions', () => {
     const Inner = z.object({ id: z.string() });
     const Outer = z.object({
       first: Inner,
@@ -58,6 +55,12 @@ describe('responseJsonSchemaFromZod', () => {
     const serialized = JSON.stringify(out);
     expect(serialized).not.toContain('$ref');
     expect(serialized).not.toContain('definitions');
+  });
+
+  it('keeps passthrough objects open while plain objects stay closed', () => {
+    const out = responseJsonSchemaFromZod(z.object({ value: z.string() }).passthrough());
+    expect(out.type).toBe('object');
+    expect(out.additionalProperties).toBe(true);
   });
 
   it('returns a JSON-serializable object', () => {
@@ -75,7 +78,7 @@ describe('responseJsonSchemaFromZod', () => {
   // Regression: a `z.union` whose branches are `z.string` and
   // `z.array(z.string)` must surface BOTH shapes through to the CLI. An
   // earlier shape (`z.preprocess` wrapping the array) was silently dropped
-  // by zod-to-json-schema, so the CLI rejected single-string inputs that
+  // by JSON Schema conversion, so the CLI rejected single-string inputs that
   // Zod itself would coerce to a one-element array.
   it('preserves both branches of a union(string, array) as anyOf', () => {
     const schema = z.object({
@@ -144,5 +147,21 @@ describe('responseJsonSchemaFromZod', () => {
     const partialFindings = (partialBranch?.properties as Record<string, { minItems?: number }>)
       ?.findings;
     expect(partialFindings?.minItems).toBe(1);
+  });
+
+  it('keeps every relay report response schema inline and JSON-serializable', () => {
+    const relayReports = flowPackages.flatMap((flow) =>
+      flow.relayReports.map((report) => ({ flowId: flow.id, report })),
+    );
+    expect(relayReports.length).toBeGreaterThan(0);
+
+    for (const { flowId, report } of relayReports) {
+      const out = responseJsonSchemaFromZod(report.schema);
+      const serialized = JSON.stringify(out);
+      expect(serialized, `${flowId} ${report.schemaName}`).not.toContain('$ref');
+      expect(serialized, `${flowId} ${report.schemaName}`).not.toContain('$defs');
+      expect(serialized, `${flowId} ${report.schemaName}`).not.toContain('definitions');
+      expect(JSON.parse(serialized), `${flowId} ${report.schemaName}`).toEqual(out);
+    }
   });
 });

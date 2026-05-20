@@ -6,46 +6,89 @@
 // converted schema, and the runtime-side wiring needs to call this
 // before building the relay input. Putting it in shared/ keeps it
 // out of the runtime executors and out of the connectors themselves,
-// neither of which should depend on Zod or on `zod-to-json-schema`.
+// neither of which should depend on Zod.
 //
 // Conversion rules are intentionally conservative:
 //   - target: JSON Schema draft-07 (the format both CLIs document).
-//   - $refStrategy: 'none' — both CLIs accept fully inlined schemas,
-//     and inline schemas are easier to debug when a CLI rejection
-//     happens.
-//   - definitionPath omitted (no $defs / definitions block).
-// If a flow's schema can't be expressed in draft-07 without $ref,
-// `zod-to-json-schema` will still emit a usable schema; the strictness
-// is best-effort, not load-bearing.
+//   - io: 'input' — relay schemas may use transforms that normalize a
+//     worker-friendly input shape after parsing. The CLI sees the input
+//     shape; runtime Zod parsing remains the output-normalization boundary.
+//   - reused: 'inline' and cycles: 'throw' — both CLIs accept fully
+//     inlined schemas, and inline schemas are easier to debug when a CLI
+//     rejection happens. Relay response schemas should not be recursive.
 //
-// Conversion-fidelity note. `zod-to-json-schema` silently drops Zod
+// Conversion-fidelity note. Zod JSON Schema conversion cannot carry Zod
 // constructs that don't have a structural equivalent in JSON Schema:
 //   - `.superRefine` / `.refine` predicates — value-conditional rules
 //     (e.g. "findings must be non-empty when verdict !== 'accept'") do
 //     NOT transfer. Express such rules structurally via discriminated
 //     unions when CLI-level enforcement matters; otherwise the runtime
 //     Zod parse still catches the violation, but the CLI does not.
-//   - `.preprocess` input-coercion — the JSON Schema reflects the
-//     post-coercion type, so lenient input shapes are lost. Use
-//     `z.union` instead of `z.preprocess` when the leniency needs to
-//     be visible to the CLI.
-//
-// Migration debt: `zod-to-json-schema` ends active maintenance in 2025
-// per its README; Zod 4 ships a native `z.toJSONSchema` that supersedes
-// this wrapper. Replace the dependency when the repo upgrades to Zod 4.
+//   - `.preprocess` input-coercion is opaque to JSON Schema. Use `z.union`
+//     instead when leniency needs to be visible to the CLI.
 
-import type { ZodTypeAny } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 
 export type ResponseJsonSchema = Record<string, unknown>;
 
-export function responseJsonSchemaFromZod(schema: ZodTypeAny): ResponseJsonSchema {
-  const result = zodToJsonSchema(schema, {
-    target: 'jsonSchema7',
-    $refStrategy: 'none',
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeSchemaNode(node: unknown): void {
+  if (!isRecord(node)) return;
+
+  if (Array.isArray(node.oneOf) && node.anyOf === undefined) {
+    node.anyOf = node.oneOf;
+    Reflect.deleteProperty(node, 'oneOf');
+  }
+
+  if (
+    node.type === 'object' &&
+    isRecord(node.properties) &&
+    node.additionalProperties === undefined
+  ) {
+    node.additionalProperties = false;
+  }
+
+  if (isRecord(node.additionalProperties) && Object.keys(node.additionalProperties).length === 0) {
+    node.additionalProperties = true;
+  }
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      for (const item of value) normalizeSchemaNode(item);
+    } else {
+      normalizeSchemaNode(value);
+    }
+  }
+}
+
+function assertNoReferenceSyntax(node: unknown): void {
+  if (!isRecord(node)) return;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' || key === '$defs' || key === 'definitions') {
+      throw new Error(`Zod JSON Schema conversion emitted unsupported ${key}`);
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) assertNoReferenceSyntax(item);
+    } else {
+      assertNoReferenceSyntax(value);
+    }
+  }
+}
+
+export function responseJsonSchemaFromZod(schema: z.ZodType): ResponseJsonSchema {
+  const result = z.toJSONSchema(schema, {
+    target: 'draft-07',
+    io: 'input',
+    reused: 'inline',
+    cycles: 'throw',
   });
   if (typeof result !== 'object' || result === null) {
-    throw new Error('zod-to-json-schema returned a non-object value');
+    throw new Error('Zod JSON Schema conversion returned a non-object value');
   }
+  normalizeSchemaNode(result);
+  assertNoReferenceSyntax(result);
   return result as ResponseJsonSchema;
 }

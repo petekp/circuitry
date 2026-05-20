@@ -47,7 +47,7 @@ export const StepRouteTarget = z.union([StepId, StepRouteTerminalTarget]);
 export type StepRouteTarget = z.infer<typeof StepRouteTarget>;
 
 export const SchematicRouteModeOverrides = z
-  .record(Depth, StepRouteTarget)
+  .partialRecord(Depth, StepRouteTarget)
   .refine((overrides) => Object.keys(overrides).length > 0, {
     message: 'route override must declare at least one depth',
   });
