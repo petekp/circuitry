@@ -70,7 +70,7 @@ function createFixture(options: FixtureOptions = {}): string {
     version: claudeVersion,
     description: 'Claude plugin',
   });
-  writeJson(join(root, 'plugins/circuit/.codex-plugin/plugin.json'), {
+  writeJson(join(root, 'plugins/codex/.codex-plugin/plugin.json'), {
     name: 'circuit',
     version: codexVersion,
     description: 'Codex plugin',
@@ -102,7 +102,7 @@ function createFixture(options: FixtureOptions = {}): string {
     plugins: [
       {
         name: 'circuit',
-        source: { source: 'local', path: './plugins/circuit' },
+        source: { source: 'local', path: './plugins/codex' },
         policy: { installation: 'INSTALLED_BY_DEFAULT', authentication: 'ON_INSTALL' },
         category: 'Coding',
       },
@@ -112,10 +112,10 @@ function createFixture(options: FixtureOptions = {}): string {
   writeText(join(root, 'plugins/claude/commands/run.md'), '# Run\n');
   writeText(join(root, 'plugins/claude/skills/run/SKILL.md'), '# Run skill\n');
   writeText(join(root, 'plugins/claude/scripts/circuit.ts'), '#!/usr/bin/env node\n');
-  writeText(join(root, 'plugins/circuit/README.md'), 'Codex Circuit plugin\n');
-  writeText(join(root, 'plugins/circuit/commands/run.md'), '# Run\n');
-  writeText(join(root, 'plugins/circuit/skills/run/SKILL.md'), '# Run skill\n');
-  writeText(join(root, 'plugins/circuit/scripts/circuit.ts'), '#!/usr/bin/env node\n');
+  writeText(join(root, 'plugins/codex/README.md'), 'Codex Circuit plugin\n');
+  writeText(join(root, 'plugins/codex/commands/run.md'), '# Run\n');
+  writeText(join(root, 'plugins/codex/skills/run/SKILL.md'), '# Run skill\n');
+  writeText(join(root, 'plugins/codex/scripts/circuit.ts'), '#!/usr/bin/env node\n');
 
   return root;
 }
@@ -141,7 +141,7 @@ function primeInstalledPackages(root: string) {
   const codexHome = mkdtempSync(join(tmpdir(), 'circuit-publish-codex-'));
   const roots = localInstallRoots(root, homeDir, codexHome);
   copyPackage(join(root, 'plugins/claude'), roots.claude);
-  copyPackage(join(root, 'plugins/circuit'), roots.codex);
+  copyPackage(join(root, 'plugins/codex'), roots.codex);
   return { homeDir, codexHome, ...roots };
 }
 
@@ -286,7 +286,7 @@ describe('plugin publish automation', () => {
         JSON.parse(readFileSync(join(root, 'plugins/claude/.claude-plugin/plugin.json'), 'utf8')),
       ).toMatchObject({ version: '0.1.0-alpha.3' });
       expect(
-        JSON.parse(readFileSync(join(root, 'plugins/circuit/.codex-plugin/plugin.json'), 'utf8')),
+        JSON.parse(readFileSync(join(root, 'plugins/codex/.codex-plugin/plugin.json'), 'utf8')),
       ).toMatchObject({ version: '0.1.0-alpha.3' });
       expect(
         JSON.parse(readFileSync(join(root, '.claude-plugin/marketplace.json'), 'utf8')),
@@ -646,7 +646,7 @@ describe('plugin publish automation', () => {
     const roots = localInstallRoots(root, homeDir, codexHome);
     copyPackage(join(root, 'plugins/claude'), roots.claude);
     writeText(join(roots.claude, 'README.md'), 'orphaned stale Claude package\n');
-    copyPackage(join(root, 'plugins/circuit'), roots.codex);
+    copyPackage(join(root, 'plugins/codex'), roots.codex);
     const base = createRunner(
       {},
       {

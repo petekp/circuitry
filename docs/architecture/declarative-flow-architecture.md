@@ -99,9 +99,9 @@ Generated or mirrored outputs:
 - `generated/flows/**`
 - `plugins/claude/skills/**`
 - `plugins/claude/commands/**`
-- `plugins/circuit/flows/**`
-- `plugins/circuit/commands/**`
-- `plugins/circuit/skills/**`
+- `plugins/codex/flows/**`
+- `plugins/codex/commands/**`
+- `plugins/codex/skills/**`
 - [docs/generated-surfaces.md](../generated-surfaces.md)
 - [docs/flows/block-catalog.json](../flows/block-catalog.json)
 

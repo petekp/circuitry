@@ -9,7 +9,7 @@ import { listCommandIds, listPackageDirs, packageTreeStatus } from './package-tr
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '../..');
-const pluginRoot = resolve(repoRoot, 'plugins/circuit');
+const pluginRoot = resolve(repoRoot, 'plugins/codex');
 
 type SyncArgs = {
   check: boolean;
@@ -131,7 +131,6 @@ function summary(
     package_tree: tree,
     check_command: 'npm run check:codex-plugin-cache',
     local_sync_command: 'npm run sync:codex-plugin-cache',
-    git_marketplace_refresh: 'codex plugin marketplace upgrade circuit-local',
     commands: listCommandIds(pluginRoot),
     skills: listPackageDirs(pluginRoot, 'skills'),
   };

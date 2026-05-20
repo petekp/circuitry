@@ -74,7 +74,7 @@ claims:
     claim: Plan-execution requests must start the right work slice, ask one blocking question, or return one exact next command.
     type: plan-execution
     status: verified_current
-    surfaces: [plugins/claude/commands/run.md, plugins/circuit/skills/run/SKILL.md, docs/release/readiness-report.generated.md]
+    surfaces: [plugins/claude/commands/run.md, plugins/codex/skills/run/SKILL.md, docs/release/readiness-report.generated.md]
     backing:
       capability_ids: [feature:plan-execution]
       proof_ids: [proof:plan-execution]

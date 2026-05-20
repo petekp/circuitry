@@ -241,7 +241,7 @@ try {
   const claude = pluginStatus(resolve(repoRoot, 'plugins/claude'), claudeInstalledRoot, {
     HOME: home,
   });
-  const codex = pluginStatus(resolve(repoRoot, 'plugins/circuit'), codexInstalledRoot, {
+  const codex = pluginStatus(resolve(repoRoot, 'plugins/codex'), codexInstalledRoot, {
     CODEX_HOME: codexHome,
   });
   const codexHooks = codexHookSummary(codexHome);

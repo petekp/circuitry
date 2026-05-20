@@ -1089,7 +1089,7 @@ flows into one operator's preferences. Slots make the joint visible.
 
 ## §22. Plugins — how Circuit reaches the host
 
-`plugins/claude/` and `plugins/circuit/` are self-contained host
+`plugins/claude/` and `plugins/codex/` are self-contained host
 adapters. They are generated outputs, but they are committed to the
 repository because hosts install them as packages, not as build
 products.
@@ -1105,7 +1105,7 @@ The Claude Code plugin contains:
   context into the start of a session if a continuity record is present.
 - `.claude-plugin/plugin.json` — the plugin manifest.
 
-The Codex plugin (`plugins/circuit/`) is shaped slightly differently —
+The Codex plugin (`plugins/codex/`) is shaped slightly differently —
 flows live under `flows/<id>/` and are loaded by a `scripts/circuit.ts`
 launcher that injects `--flow-root` so Circuit reads the packaged flows
 rather than the operator's checkout.

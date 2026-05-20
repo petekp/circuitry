@@ -1,4 +1,4 @@
-$ node plugins/circuit/scripts/circuit.ts doctor
+$ node plugins/codex/scripts/circuit.ts doctor
 exit: 0
 
 stdout:
@@ -6,26 +6,26 @@ stdout:
   "schema_version": 1,
   "host": "codex",
   "status": "ok",
-  "plugin_root": "<repo>/plugins/circuit",
-  "flow_root": "<repo>/plugins/circuit/flows",
+  "plugin_root": "<repo>/plugins/codex",
+  "flow_root": "<repo>/plugins/codex/flows",
   "runtime_source": "bundled",
-  "runtime_path": "<repo>/plugins/circuit/runtime/circuit.js",
+  "runtime_path": "<repo>/plugins/codex/runtime/circuit.js",
   "runtime_version": "0.1.0-alpha.6",
   "checks": [
     {
       "name": "plugin_manifest_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/.codex-plugin/plugin.json"
+      "detail": "<repo>/plugins/codex/.codex-plugin/plugin.json"
     },
     {
       "name": "plugin_manifest_parseable",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/.codex-plugin/plugin.json"
+      "detail": "<repo>/plugins/codex/.codex-plugin/plugin.json"
     },
     {
       "name": "plugin_manifest_shape",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/.codex-plugin/plugin.json"
+      "detail": "<repo>/plugins/codex/.codex-plugin/plugin.json"
     },
     {
       "name": "codex_bundled_handoff_hooks_unregistered",
@@ -41,7 +41,7 @@ stdout:
     {
       "name": "session_start_hook_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/hooks/session-start.ts"
+      "detail": "<repo>/plugins/codex/hooks/session-start.ts"
     },
     {
       "name": "codex_hooks_feature_flag_visible",
@@ -58,7 +58,7 @@ stdout:
     {
       "name": "skills_directory_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/skills"
+      "detail": "<repo>/plugins/codex/skills"
     },
     {
       "name": "skills_present",
@@ -103,72 +103,72 @@ stdout:
     {
       "name": "wrapper_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/scripts/circuit.ts"
+      "detail": "<repo>/plugins/codex/scripts/circuit.ts"
     },
     {
       "name": "packaged_flow_root_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/flows"
+      "detail": "<repo>/plugins/codex/flows"
     },
     {
       "name": "packaged_flow_build",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/build/circuit.json"
+      "detail": "<repo>/plugins/codex/flows/build/circuit.json"
     },
     {
       "name": "packaged_flow_explore",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/explore/circuit.json"
+      "detail": "<repo>/plugins/codex/flows/explore/circuit.json"
     },
     {
       "name": "packaged_flow_fix",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/fix/circuit.json"
+      "detail": "<repo>/plugins/codex/flows/fix/circuit.json"
     },
     {
       "name": "packaged_flow_review",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/flows/review/circuit.json"
+      "detail": "<repo>/plugins/codex/flows/review/circuit.json"
     },
     {
       "name": "commands_directory_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands"
+      "detail": "<repo>/plugins/codex/commands"
     },
     {
       "name": "command_build.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/build.md"
+      "detail": "<repo>/plugins/codex/commands/build.md"
     },
     {
       "name": "command_create.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/create.md"
+      "detail": "<repo>/plugins/codex/commands/create.md"
     },
     {
       "name": "command_explore.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/explore.md"
+      "detail": "<repo>/plugins/codex/commands/explore.md"
     },
     {
       "name": "command_fix.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/fix.md"
+      "detail": "<repo>/plugins/codex/commands/fix.md"
     },
     {
       "name": "command_handoff.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/handoff.md"
+      "detail": "<repo>/plugins/codex/commands/handoff.md"
     },
     {
       "name": "command_review.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/review.md"
+      "detail": "<repo>/plugins/codex/commands/review.md"
     },
     {
       "name": "command_run.md_uses_wrapper",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/commands/run.md"
+      "detail": "<repo>/plugins/codex/commands/run.md"
     },
     {
       "name": "node_version_supported",
@@ -178,12 +178,12 @@ stdout:
     {
       "name": "bundled_runtime_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/runtime/circuit.js"
+      "detail": "<repo>/plugins/codex/runtime/circuit.js"
     },
     {
       "name": "runtime_resolved",
       "ok": true,
-      "detail": "bundled:<repo>/plugins/circuit/runtime/circuit.js"
+      "detail": "bundled:<repo>/plugins/codex/runtime/circuit.js"
     },
     {
       "name": "runtime_version_executes",

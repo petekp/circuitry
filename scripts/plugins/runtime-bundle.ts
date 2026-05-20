@@ -11,7 +11,7 @@ const repoRoot = resolve(scriptDir, '../..');
 const checkMode = process.argv.includes('--check');
 const entryPoint = resolve(repoRoot, 'dist/cli/circuit.js');
 const versionManifestPath = resolve(repoRoot, 'plugins/version.json');
-const outputPaths = ['plugins/claude/runtime/circuit.js', 'plugins/circuit/runtime/circuit.js'];
+const outputPaths = ['plugins/claude/runtime/circuit.js', 'plugins/codex/runtime/circuit.js'];
 
 // The bundled CLI resolves git-state.ts via `new URL('./git-state.ts',
 // import.meta.url)`, so the helper must live next to circuit.js in
@@ -23,7 +23,7 @@ const ASSET_SIDECARS: Array<{ src: string; outs: readonly string[] }> = [
     src: 'src/flows/fix/writers/git-state.ts',
     outs: [
       'plugins/claude/runtime/git-state.ts',
-      'plugins/circuit/runtime/git-state.ts',
+      'plugins/codex/runtime/git-state.ts',
       'dist/flows/fix/writers/git-state.ts',
     ],
   },

@@ -6,7 +6,7 @@
 // dist/), then writes canonical JSON files under generated/flows/<id>/.
 // Public flows also mirror to the Claude Code package under
 // plugins/claude/skills/<id>/ and Codex host output under
-// plugins/circuit/flows/<id>/. Internal flows stay under generated/flows
+// plugins/codex/flows/<id>/. Internal flows stay under generated/flows
 // and are not installed into host-visible plugin surfaces.
 //
 // File layout:
@@ -102,7 +102,7 @@ function failMissingDefinition(flowId: string): never {
 
 const SCHEMATICS = await loadSchematicsFromCatalog();
 const CLAUDE_PLUGIN_ROOT_REL = 'plugins/claude';
-const CODEX_PLUGIN_ROOT_REL = 'plugins/circuit';
+const CODEX_PLUGIN_ROOT_REL = 'plugins/codex';
 const SOURCE_COMMAND_ROOT_REL = 'src/commands';
 const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
 const BLOCK_CATALOG_REL = 'docs/flows/block-catalog.json';
@@ -279,7 +279,7 @@ function renderSurfaceInventory(): string {
       '`src/flows/<id>/command.md`',
       '`scripts/flows/emit.ts`',
       'source yes; outputs no',
-      '`plugins/claude/commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
+      '`plugins/claude/commands/<id>.md`<br>`plugins/codex/commands/<id>.md`<br>`plugins/codex/skills/<id>/SKILL.md`',
       '`node scripts/flows/emit.ts --check`',
       'Only public flows with `paths.command` emit these surfaces. Generated headers are omitted to preserve host command and skill parsing.',
     ],
@@ -288,7 +288,7 @@ function renderSurfaceInventory(): string {
       '`src/commands/<id>.md`',
       '`scripts/flows/emit.ts` mirrors to host plugin surfaces',
       'source yes; outputs no',
-      '`plugins/claude/commands/<id>.md`<br>`plugins/circuit/commands/<id>.md`<br>`plugins/circuit/skills/<id>/SKILL.md`',
+      '`plugins/claude/commands/<id>.md`<br>`plugins/codex/commands/<id>.md`<br>`plugins/codex/skills/<id>/SKILL.md`',
       '`node scripts/flows/emit.ts --check`',
       'Covers router/direct commands such as run, create, and handoff.',
     ],
@@ -324,7 +324,7 @@ function renderSurfaceInventory(): string {
       '`generated/flows/<id>/*.json`',
       '`scripts/flows/emit.ts`',
       'no',
-      '`plugins/circuit/flows/<id>/*.json`',
+      '`plugins/codex/flows/<id>/*.json`',
       '`node scripts/flows/emit.ts --check`',
       'Public flows only. Internal flow mirrors are stale and fail drift checks.',
     ],
@@ -333,7 +333,7 @@ function renderSurfaceInventory(): string {
       'flow-owned command sources or direct command sources',
       '`scripts/flows/emit.ts`',
       'no',
-      '`plugins/circuit/commands/<id>.md`',
+      '`plugins/codex/commands/<id>.md`',
       '`node scripts/flows/emit.ts --check`',
       'Generated headers are omitted to preserve host command parsing and byte-for-byte mirror checks.',
     ],
@@ -342,7 +342,7 @@ function renderSurfaceInventory(): string {
       'flow-owned command sources or direct command sources',
       '`scripts/flows/emit.ts`',
       'no',
-      '`plugins/circuit/skills/<id>/SKILL.md`',
+      '`plugins/codex/skills/<id>/SKILL.md`',
       '`node scripts/flows/emit.ts --check`',
       'Skill metadata is generated from script-owned metadata plus command source body. The renderer removes slash-command placeholders and source-authority footers for Codex-native invocation.',
     ],
@@ -469,13 +469,13 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
     '- Flow-owned commands are authored in `src/flows/<id>/command.md`.',
     '- Direct commands are authored in `src/commands/<id>.md`.',
     '- Canonical compiled manifests under `generated/flows/**` are generated outputs.',
-    '- Host mirrors under `plugins/claude/skills/**`, `plugins/claude/commands/**`, `plugins/circuit/flows/**`, `plugins/circuit/commands/**`, and `plugins/circuit/skills/**` are generated outputs.',
+    '- Host mirrors under `plugins/claude/skills/**`, `plugins/claude/commands/**`, `plugins/codex/flows/**`, `plugins/codex/commands/**`, and `plugins/codex/skills/**` are generated outputs.',
     '- Internal flows emit only under `generated/flows/**`; host mirrors for internal flows are stale and fail the drift check.',
     '- After editing an authored source, run `npm run build && npm run emit-flows`, then verify.',
     '',
     '## Codex Host Surface Guidance',
     '',
-    'The Codex plugin currently ships both `plugins/circuit/commands/<id>.md` and `plugins/circuit/skills/<id>/SKILL.md` generated outputs. The plugin manifest points Codex at `./skills/`, so skill files must stay runnable host instructions. Command files remain generated mirrors and authority/reference surfaces. Do not delete either surface without changing the Codex plugin contract, the emitter, and the drift checks together.',
+    'The Codex plugin currently ships both `plugins/codex/commands/<id>.md` and `plugins/codex/skills/<id>/SKILL.md` generated outputs. The plugin manifest points Codex at `./skills/`, so skill files must stay runnable host instructions. Command files remain generated mirrors and authority/reference surfaces. Do not delete either surface without changing the Codex plugin contract, the emitter, and the drift checks together.',
     '',
     'Codex skill files intentionally translate slash-command wording into skill-safe wording. They must not contain `$ARGUMENTS`, `argument-hint`, `/circuit:`, or source-only `## Authority` footers. If the host gains a smaller native presentation wrapper, change `scripts/flows/host-renderers.ts`, regenerate, and run `npm run check-flow-drift`.',
     '',

@@ -77,7 +77,7 @@ changes need `check-release-infra`.
 | Claude Code plugin manifest | `plugins/claude/.claude-plugin/plugin.json` |
 | Claude Code slash commands (generated) | `plugins/claude/commands/<id>.md` |
 | Claude Code compiled flow output (generated) | `plugins/claude/skills/<id>/circuit.json` for public flows |
-| Codex plugin package | `plugins/circuit/` |
+| Codex plugin package | `plugins/codex/` |
 | Direct command sources | `src/commands/<id>.md` |
 | Flow-owned command sources | `src/flows/<id>/command.md` |
 | Generated surface source map | [`docs/generated-surfaces.md`](docs/generated-surfaces.md) |

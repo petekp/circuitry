@@ -95,7 +95,7 @@ instructions.
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Skill** | A discoverable capability with trigger metadata and optional supporting files. In config, local operator skills live under `~/.agents/skills` or `~/.claude/skills`; in the Codex plugin package, generated `plugins/circuit/skills/<id>/SKILL.md` files are host invocation surfaces. Do not rename the generated directory without checking the Codex plugin contract. | Tool, command |
+| **Skill** | A discoverable capability with trigger metadata and optional supporting files. In config, local operator skills live under `~/.agents/skills` or `~/.claude/skills`; in the Codex plugin package, generated `plugins/codex/skills/<id>/SKILL.md` files are host invocation surfaces. Do not rename the generated directory without checking the Codex plugin contract. | Tool, command |
 | **Skill slot** | An optional flow-authored placeholder that an operator may bind to one of their local skills. | Required skill, built-in skill |
 | **Plugin** | The host-installable surface Circuit ships into Claude Code or Codex. | Package |
 | **Catalog compiler** | The build-time tool that regenerates command and skill outputs from source-of-truth files. | Generator, sync script |

@@ -385,7 +385,7 @@ For each public flow (Review, Fix, Build, Explore, Pursue) and then Runtime Proo
 - Rewrite `src/flows/<flow>/schematic.json`: remove `entry_modes`, add the `axes` block.
 - Regenerate `generated/flows/<flow>/circuit.json`.
 - Update flow's contract.md to reference axes.
-- Regenerate plugin runtime bundles (`plugins/circuit/runtime/`, `plugins/claude/runtime/`).
+- Regenerate plugin runtime bundles (`plugins/codex/runtime/`, `plugins/claude/runtime/`).
 - Refresh golden run proofs.
 - Update flow-specific tests.
 

@@ -11,9 +11,9 @@
 plugins/claude/commands/*.md linguist-generated=true
 plugins/claude/skills/**/*.json linguist-generated=true
 
-plugins/circuit/commands/*.md linguist-generated=true
-plugins/circuit/flows/**/*.json linguist-generated=true
-plugins/circuit/skills/**/SKILL.md linguist-generated=true
+plugins/codex/commands/*.md linguist-generated=true
+plugins/codex/flows/**/*.json linguist-generated=true
+plugins/codex/skills/**/SKILL.md linguist-generated=true
 
 generated/flows/**/*.json linguist-generated=true
 

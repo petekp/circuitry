@@ -18,7 +18,7 @@ import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const REPO_ROOT = resolve('.');
-const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/circuit');
+const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/codex');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const FLOW_COMMAND_SOURCES: Record<string, string> = {
   build: 'src/flows/build/command.md',
@@ -132,10 +132,23 @@ describe('Codex host plugin package', () => {
     expect(marketplace.interface.displayName).toBe('Circuit');
     expect(marketplace.plugins).toContainEqual({
       name: 'circuit',
-      source: { source: 'local', path: './plugins/circuit' },
+      source: { source: 'local', path: './plugins/codex' },
       policy: { installation: 'INSTALLED_BY_DEFAULT', authentication: 'ON_INSTALL' },
       category: 'Coding',
     });
+  });
+
+  it('does not keep a legacy Codex package path or shim', () => {
+    const legacyCodexPackageRel = ['plugins', 'circuit'].join('/');
+    const legacyRoot = resolve(REPO_ROOT, legacyCodexPackageRel);
+    const marketplace = JSON.parse(
+      readFileSync(resolve(REPO_ROOT, '.agents/plugins/marketplace.json'), 'utf8'),
+    ) as {
+      plugins: Array<{ source?: { path?: string } }>;
+    };
+
+    expect(existsSync(legacyRoot)).toBe(false);
+    expect(marketplace.plugins.map((plugin) => plugin.source?.path)).toEqual(['./plugins/codex']);
   });
 
   it('syncs and checks the local Codex plugin cache package', () => {
@@ -157,10 +170,13 @@ describe('Codex host plugin package', () => {
 
       const syncSummary = JSON.parse(syncResult.stdout) as {
         status: string;
+        source: string;
         commands: string[];
         skills: string[];
       };
       expect(syncSummary.status).toBe('synced');
+      expect(syncSummary.source).toBe(PLUGIN_ROOT);
+      expect(JSON.stringify(syncSummary)).not.toContain(['plugins', 'circuit'].join('/'));
       expect(syncSummary.commands).toEqual([...EXPECTED_CODEX_COMMANDS].sort());
       expect(syncSummary.skills).toEqual([...EXPECTED_CODEX_COMMANDS].sort());
       expect(existsSync(join(cachePath, 'skills/fix/SKILL.md'))).toBe(true);
@@ -257,7 +273,7 @@ describe('Codex host plugin package', () => {
     expect(skill).not.toContain('/circuit:');
     expect(skill).not.toMatch(/\bslash command\b/i);
     expect(skill).not.toContain('slash-command');
-    expect(skill).not.toContain('node plugins/circuit/scripts/circuit.ts');
+    expect(skill).not.toContain('node plugins/codex/scripts/circuit.ts');
     expect(skill).toContain(
       "node '<plugin root>/scripts/circuit.ts' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>'",
     );

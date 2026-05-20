@@ -323,10 +323,7 @@
       "id": "codex-plugin",
       "status": "partial",
       "summary": "Codex plugin files exist and use the current model-mediated host surface.",
-      "evidence": [
-        "plugins/circuit/.codex-plugin/plugin.json",
-        "plugins/circuit/scripts/circuit.ts"
-      ],
+      "evidence": ["plugins/codex/.codex-plugin/plugin.json", "plugins/codex/scripts/circuit.ts"],
       "readiness_refs": ["REL-014"]
     },
     {
@@ -696,10 +693,7 @@
       "title": "codex-plugin host",
       "status": "partial",
       "summary": "Codex plugin files exist and use the current model-mediated host surface.",
-      "evidence": [
-        "plugins/circuit/.codex-plugin/plugin.json",
-        "plugins/circuit/scripts/circuit.ts"
-      ],
+      "evidence": ["plugins/codex/.codex-plugin/plugin.json", "plugins/codex/scripts/circuit.ts"],
       "readiness_refs": ["REL-014"],
       "axes": {
         "intent_hints": [],

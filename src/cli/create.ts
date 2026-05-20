@@ -190,7 +190,7 @@ function validateCustomFlow(slug: string, flow: CompiledFlow, source: string): v
 }
 
 function candidateTemplatePaths(args: CreateArgs): string[] {
-  const roots = [args.templateFlowRoot, 'generated/flows', 'plugins/circuit/flows'].filter(
+  const roots = [args.templateFlowRoot, 'generated/flows', 'plugins/codex/flows'].filter(
     (root): root is string => root !== undefined,
   );
   return roots.map((root) => resolve(root, 'build', 'circuit.json'));

@@ -888,7 +888,7 @@ describe('utility CLI commands', () => {
 
   it('explains the no-wrapper default launcher failure with both supported fixes', () => {
     const root = tempRoot('circuit-launcher-packaged-');
-    const moduleDir = join(root, 'plugins/circuit/runtime');
+    const moduleDir = join(root, 'plugins/codex/runtime');
 
     const fallback = resolveDefaultLauncher(undefined, moduleDir);
     expect(fallback).toBe(resolve(root, 'plugins/bin/circuit'));

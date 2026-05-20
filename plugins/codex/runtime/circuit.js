@@ -31493,7 +31493,7 @@ function validateCustomFlow(slug, flow, source) {
   }
 }
 function candidateTemplatePaths(args) {
-  const roots = [args.templateFlowRoot, "generated/flows", "plugins/circuit/flows"].filter((root) => root !== void 0);
+  const roots = [args.templateFlowRoot, "generated/flows", "plugins/codex/flows"].filter((root) => root !== void 0);
   return roots.map((root) => resolve8(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {

@@ -5,7 +5,7 @@ argument-hint: <task>
 
 <!--
   This file is HAND-AUTHORED. Generated host copies live under
-  plugins/claude/commands/ and plugins/circuit/commands/.
+  plugins/claude/commands/ and plugins/codex/commands/.
   /circuit:run is the CLI router entry, not a flow, so its source
   of truth lives in src/commands/.
 -->

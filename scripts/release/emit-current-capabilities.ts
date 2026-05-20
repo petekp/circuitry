@@ -347,7 +347,7 @@ function flowRecord(pkg: FlowPackage): FlowRecord {
 
 function commandEvidence(id: string, host: string): string[] {
   if (host === 'claude-code') return [`plugins/claude/commands/${id}.md`];
-  if (host === 'codex-plugin') return [`plugins/circuit/commands/${id}.md`];
+  if (host === 'codex-plugin') return [`plugins/codex/commands/${id}.md`];
   return [`src/commands/${id}.md`];
 }
 
@@ -666,9 +666,9 @@ function hostRecords(): HostRecord[] {
     },
     {
       id: 'codex-plugin',
-      status: fileIsPresent('plugins/circuit/.codex-plugin/plugin.json') ? 'partial' : 'missing',
+      status: fileIsPresent('plugins/codex/.codex-plugin/plugin.json') ? 'partial' : 'missing',
       summary: 'Codex plugin files exist and use the current model-mediated host surface.',
-      evidence: ['plugins/circuit/.codex-plugin/plugin.json', 'plugins/circuit/scripts/circuit.ts'],
+      evidence: ['plugins/codex/.codex-plugin/plugin.json', 'plugins/codex/scripts/circuit.ts'],
       readiness_refs: ['REL-014'],
     },
     {
@@ -937,7 +937,7 @@ async function main(): Promise<void> {
   const proofAxesByCapability = verifiedProofAxesByCapability(proofs);
   const sourceCommands = listMarkdownBasenames('src/commands').filter((id) => id !== 'README');
   const claudeCommands = listMarkdownBasenames('plugins/claude/commands');
-  const codexCommands = listMarkdownBasenames('plugins/circuit/commands');
+  const codexCommands = listMarkdownBasenames('plugins/codex/commands');
   const claudeSkills = existsSync(resolve(projectRoot, 'plugins/claude/skills'))
     ? readdirSync(resolve(projectRoot, 'plugins/claude/skills')).filter((entry) =>
         statSync(resolve(projectRoot, 'plugins/claude/skills', entry)).isDirectory(),

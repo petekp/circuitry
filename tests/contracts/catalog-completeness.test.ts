@@ -443,7 +443,7 @@ describe('flow catalog completeness', () => {
         true,
       );
       expect(generatedSurfaceMap).toContain(
-        `| \`${command}\` | \`src/commands/${command}.md\` | \`plugins/claude/commands/${command}.md\`<br>\`plugins/circuit/commands/${command}.md\`<br>\`plugins/circuit/skills/${command}/SKILL.md\` |`,
+        `| \`${command}\` | \`src/commands/${command}.md\` | \`plugins/claude/commands/${command}.md\`<br>\`plugins/codex/commands/${command}.md\`<br>\`plugins/codex/skills/${command}/SKILL.md\` |`,
       );
     }
 

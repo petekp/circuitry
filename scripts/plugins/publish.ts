@@ -162,7 +162,7 @@ function versionFiles(repoRoot: string): {
   return {
     source: resolve(repoRoot, 'plugins/version.json'),
     claude: resolve(repoRoot, 'plugins/claude/.claude-plugin/plugin.json'),
-    codex: resolve(repoRoot, 'plugins/circuit/.codex-plugin/plugin.json'),
+    codex: resolve(repoRoot, 'plugins/codex/.codex-plugin/plugin.json'),
     claudeMarketplace: resolve(repoRoot, '.claude-plugin/marketplace.json'),
   };
 }
@@ -488,7 +488,7 @@ export function runPublish(
       resolve(repoRoot, 'plugins/claude/.claude-plugin/plugin.json'),
     );
     const codexManifest = readJson<PluginManifest>(
-      resolve(repoRoot, 'plugins/circuit/.codex-plugin/plugin.json'),
+      resolve(repoRoot, 'plugins/codex/.codex-plugin/plugin.json'),
     );
     const codexMarketplace = readJson<CodexMarketplace>(
       resolve(repoRoot, '.agents/plugins/marketplace.json'),
@@ -513,10 +513,10 @@ export function runPublish(
     if (claudeManifest.name !== 'circuit') fail('Claude plugin manifest name must be circuit');
     if (codexManifest.name !== 'circuit') fail('Codex plugin manifest name must be circuit');
     if (
-      codexMarketplace.plugins?.some((plugin) => plugin?.source?.path === './plugins/circuit') !==
+      codexMarketplace.plugins?.some((plugin) => plugin?.source?.path === './plugins/codex') !==
       true
     ) {
-      fail('Codex marketplace must point at ./plugins/circuit');
+      fail('Codex marketplace must point at ./plugins/codex');
     }
 
     const versionValues: Array<[string, string | undefined]> = [
@@ -643,7 +643,7 @@ export function runPublish(
       assertBundledDoctor('claude_doctor', claudeDoctor);
       const codexDoctor = runCommand(
         'codex_doctor',
-        [process.execPath, 'plugins/circuit/scripts/circuit.ts', 'doctor'],
+        [process.execPath, 'plugins/codex/scripts/circuit.ts', 'doctor'],
         { env: noAmbientCliEnv() },
       );
       assertBundledDoctor('codex_doctor', codexDoctor);
@@ -714,7 +714,7 @@ export function runPublish(
     const touchedFiles = [
       'plugins/version.json',
       'plugins/claude/.claude-plugin/plugin.json',
-      'plugins/circuit/.codex-plugin/plugin.json',
+      'plugins/codex/.codex-plugin/plugin.json',
       '.claude-plugin/marketplace.json',
     ];
 
@@ -746,7 +746,7 @@ export function runPublish(
 
   function runLocalPublish(): void {
     const claudeRoot = claudeInstalledRoot();
-    const codexSourceRoot = resolve(repoRoot, 'plugins/circuit');
+    const codexSourceRoot = resolve(repoRoot, 'plugins/codex');
     const claudeSourceRoot = resolve(repoRoot, 'plugins/claude');
     const codexTarget = defaultCodexCacheTarget();
     const codexLauncher = resolve(codexTarget, 'scripts/circuit.ts');

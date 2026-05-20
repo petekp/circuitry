@@ -8,7 +8,7 @@
       "bootstrap",
       "evals",
       "plugins/claude/runtime",
-      "plugins/circuit/runtime",
+      "plugins/codex/runtime",
       ".circuit",
       ".claude",
       "docs/release/proofs/runs"

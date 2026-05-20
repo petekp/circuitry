@@ -27,9 +27,9 @@
     "plugins/claude/scripts/**/*.ts",
     "plugins/claude/hooks/**/*.ts",
     "plugins/claude/runtime/**/*.ts",
-    "plugins/circuit/scripts/**/*.ts",
-    "plugins/circuit/hooks/**/*.ts",
-    "plugins/circuit/runtime/**/*.ts",
+    "plugins/codex/scripts/**/*.ts",
+    "plugins/codex/hooks/**/*.ts",
+    "plugins/codex/runtime/**/*.ts",
     "evals/circuit-vs-vanilla/**/*.ts",
     "evals/fix-vs-vanilla/*.ts"
   ],

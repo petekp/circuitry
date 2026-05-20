@@ -19,10 +19,10 @@ const buildSkillDir = resolve(projectRoot, 'generated/flows/build');
 const stalePath = resolve(buildSkillDir, 'never-a-mode.json');
 const claudeBuildSkillDir = resolve(projectRoot, 'plugins/claude/skills/build');
 const claudeStalePath = resolve(claudeBuildSkillDir, 'never-a-mode.json');
-const codexBuildSkillDir = resolve(projectRoot, 'plugins/circuit/flows/build');
+const codexBuildSkillDir = resolve(projectRoot, 'plugins/codex/flows/build');
 const codexStalePath = resolve(codexBuildSkillDir, 'never-a-mode.json');
 const runtimeProofClaudeDir = resolve(projectRoot, 'plugins/claude/skills/runtime-proof');
-const runtimeProofCodexDir = resolve(projectRoot, 'plugins/circuit/flows/runtime-proof');
+const runtimeProofCodexDir = resolve(projectRoot, 'plugins/codex/flows/runtime-proof');
 const rootClaudeMarketplacePath = resolve(projectRoot, '.claude-plugin/marketplace.json');
 const rootClaudeLegacyManifestPath = resolve(projectRoot, '.claude-plugin/plugin.json');
 
@@ -77,7 +77,7 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
     expect(combined).toContain('generated/flows/build/never-a-mode.json');
     expect(combined).toContain('plugins/claude/skills/build/never-a-mode.json');
-    expect(combined).toContain('plugins/circuit/flows/build/never-a-mode.json');
+    expect(combined).toContain('plugins/codex/flows/build/never-a-mode.json');
     expect(combined).toContain('not in the emit plan');
   });
 
@@ -100,9 +100,7 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     expect(res.stdout ?? '').toContain(
       'removed stale plugins/claude/skills/build/never-a-mode.json',
     );
-    expect(res.stdout ?? '').toContain(
-      'removed stale plugins/circuit/flows/build/never-a-mode.json',
-    );
+    expect(res.stdout ?? '').toContain('removed stale plugins/codex/flows/build/never-a-mode.json');
   });
 
   it('--check exits 1 when an internal flow has stale host mirrors', () => {
@@ -117,7 +115,7 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     expect(res.status).toBe(1);
     const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
     expect(combined).toContain('plugins/claude/skills/runtime-proof');
-    expect(combined).toContain('plugins/circuit/flows/runtime-proof');
+    expect(combined).toContain('plugins/codex/flows/runtime-proof');
     expect(combined).toContain('stale host mirror for internal flow');
   });
 
@@ -137,7 +135,7 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
       'removed internal host mirror plugins/claude/skills/runtime-proof',
     );
     expect(res.stdout ?? '').toContain(
-      'removed internal host mirror plugins/circuit/flows/runtime-proof',
+      'removed internal host mirror plugins/codex/flows/runtime-proof',
     );
   });
 

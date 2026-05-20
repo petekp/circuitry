@@ -235,7 +235,7 @@ scenarios:
   - id: proof:doctor-first-run
     title: Doctor First Run
     category: first-run
-    command: node plugins/circuit/scripts/circuit.ts doctor
+    command: node plugins/codex/scripts/circuit.ts doctor
     expected_outcome: pass or actionable failure
     summary_contract: Doctor explains install health, missing dependencies, supported host path, and next command.
     redaction_policy: Does not include local secrets or full environment dumps.

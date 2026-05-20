@@ -8,7 +8,7 @@
       "name": "circuit",
       "source": {
         "source": "local",
-        "path": "./plugins/circuit"
+        "path": "./plugins/codex"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",

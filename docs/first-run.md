@@ -16,7 +16,7 @@ node "$HOME/.claude/plugins/cache/circuit/circuit/0.1.0-alpha.6/scripts/circuit.
 Codex plugin from this checkout:
 
 ```bash
-node plugins/circuit/scripts/circuit.ts doctor
+node plugins/codex/scripts/circuit.ts doctor
 ```
 
 Synced Codex plugin cache:

@@ -353,8 +353,8 @@ describe('FlowDefinition compiler', () => {
 
     expect(pkg.paths.command).toBeUndefined();
     expect(existsSync('plugins/claude/commands/pursue.md')).toBe(false);
-    expect(existsSync('plugins/circuit/commands/pursue.md')).toBe(false);
-    expect(existsSync('plugins/circuit/skills/pursue/SKILL.md')).toBe(false);
+    expect(existsSync('plugins/codex/commands/pursue.md')).toBe(false);
+    expect(existsSync('plugins/codex/skills/pursue/SKILL.md')).toBe(false);
   });
 
   it('keeps Build checkpoint, writer, and engine-flag contracts', () => {

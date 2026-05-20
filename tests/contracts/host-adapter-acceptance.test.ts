@@ -149,7 +149,7 @@ describe('host adapter acceptance contract', () => {
       'utf8',
     );
     const codexManifest = JSON.parse(
-      readFileSync(resolve(REPO_ROOT, 'plugins/circuit/.codex-plugin/plugin.json'), 'utf8'),
+      readFileSync(resolve(REPO_ROOT, 'plugins/codex/.codex-plugin/plugin.json'), 'utf8'),
     ) as { hooks?: string };
 
     expect(acceptance).toContain('| bundled SessionStart registration | supported | unsupported |');
@@ -163,8 +163,8 @@ describe('host adapter acceptance contract', () => {
     expect(claudeHookScript).toContain('scripts/circuit.ts');
 
     expect(codexManifest).not.toHaveProperty('hooks');
-    expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/hooks.json'))).toBe(false);
-    expect(existsSync(resolve(REPO_ROOT, 'plugins/circuit/hooks/session-start.ts'))).toBe(true);
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/codex/hooks/hooks.json'))).toBe(false);
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/codex/hooks/session-start.ts'))).toBe(true);
   });
 
   it('keeps real-host smoke scripts opt-in and outside verify', () => {

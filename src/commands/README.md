@@ -8,8 +8,8 @@ Flow-owned command sources live beside their flows at
 source into host packages:
 
 - Claude Code commands: `plugins/claude/commands/<id>.md`
-- Codex commands: `plugins/circuit/commands/<id>.md`
-- Codex skills: `plugins/circuit/skills/<id>/SKILL.md`
+- Codex commands: `plugins/codex/commands/<id>.md`
+- Codex skills: `plugins/codex/skills/<id>/SKILL.md`
 
 Do not edit generated host command files by hand. Edit the source here or in
 the relevant flow package, then run `npm run emit-flows`.

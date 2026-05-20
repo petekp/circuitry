@@ -162,15 +162,8 @@ skill-safe wording; they must not contain `$ARGUMENTS`, `argument-hint`, or
 Codex command files are generated mirrors and reference surfaces. Keep both
 unless the Codex plugin contract and emitter change together.
 
-Local development caches can drift from this repo package. Prefer the official
-refresh path when it is available:
-
-```bash
-codex plugin marketplace upgrade circuit-local
-```
-
-For local-package development, this repo also provides a deterministic cache
-sync:
+Local development caches can drift from this repo package. For local-package
+development, use the deterministic cache sync:
 
 ```bash
 npm run sync:codex-plugin-cache
