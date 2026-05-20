@@ -667,7 +667,7 @@ function hostRecords(): HostRecord[] {
     {
       id: 'codex-plugin',
       status: fileIsPresent('plugins/circuit/.codex-plugin/plugin.json') ? 'partial' : 'missing',
-      summary: 'Codex plugin files exist and are model-mediated until native support lands.',
+      summary: 'Codex plugin files exist and use the current model-mediated host surface.',
       evidence: ['plugins/circuit/.codex-plugin/plugin.json', 'plugins/circuit/scripts/circuit.ts'],
       readiness_refs: ['REL-014'],
     },
@@ -678,20 +678,6 @@ function hostRecords(): HostRecord[] {
         'Generic shell can consume JSONL/final JSON, but human text progress is still pending.',
       evidence: ['src/cli/circuit.ts'],
       readiness_refs: ['REL-019'],
-    },
-    {
-      id: 'native-codex-app-server',
-      status: 'planned',
-      summary: 'Native Codex App Server adapter is a planned host expansion.',
-      evidence: ['docs/contracts/native-host-adapters.md'],
-      readiness_refs: ['REL-026'],
-    },
-    {
-      id: 'native-claude-agent-sdk',
-      status: 'planned',
-      summary: 'Claude Agent SDK bridge is a planned host expansion.',
-      evidence: ['docs/contracts/native-host-adapters.md'],
-      readiness_refs: ['REL-026'],
     },
   ];
 }

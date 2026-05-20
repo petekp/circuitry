@@ -74,12 +74,8 @@ tested.
 
 ### Codex App Server
 
-- `progress`: planned `native` bridge.
-- `task_list`: planned `native` mapping to plan updates.
-- `ask_user`: planned `native` mapping to `tool/requestUserInput`.
-- `final_summary`: read and render `operator_summary_markdown_path` verbatim.
-- `deep_links`: expose report paths through the host client.
-- `debug`: keep raw events behind an explicit debug surface.
+No current mapping. Native Codex App Server support is not a current roadmap
+item.
 
 ### Claude Code Command
 
@@ -94,12 +90,8 @@ tested.
 
 ### Claude Agent SDK
 
-- `progress`: planned `native` bridge over the SDK message stream.
-- `task_list`: planned `native` TodoWrite tracking.
-- `ask_user`: planned `native` AskUserQuestion handling through `canUseTool`.
-- `final_summary`: read `operator_summary_markdown_path`.
-- `deep_links`: expose run folders and reports through the SDK host.
-- `debug`: keep raw events behind an explicit debug surface.
+No current mapping. Native Claude Agent SDK support is not a current roadmap
+item.
 
 ## UX Rule
 

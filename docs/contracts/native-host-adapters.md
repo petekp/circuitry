@@ -1,15 +1,20 @@
 ---
 contract: native-host-adapters
-status: draft-v0.1
+status: retired-draft
 version: 0.1
-last_updated: 2026-04-28
+last_updated: 2026-05-19
 depends_on: [host-adapter, host-capabilities, host-rendering]
 ---
 
 # Native Host Adapters
 
-Circuit emits one host-neutral run stream. Native adapters map that stream to
-host affordances without changing flow behavior.
+This is a retired draft. Native Codex App Server and Claude Agent SDK adapters
+are not current roadmap items, and release truth must not list them as planned
+capabilities.
+
+Circuit emits one host-neutral run stream. If a future product decision reopens
+native adapters, they must map that stream to host affordances without changing
+flow behavior.
 
 ## Shared Events
 
@@ -22,7 +27,7 @@ wording and keep host/orchestrator separate from worker connector.
 
 ## Claude Agent SDK Track
 
-The future Claude Agent SDK adapter should:
+Historical draft notes for a possible Claude Agent SDK adapter:
 
 - map `task_list.updated` to TodoWrite/todo tracking;
 - map `user_input.requested` to AskUserQuestion through `canUseTool`;
@@ -32,7 +37,7 @@ The future Claude Agent SDK adapter should:
 
 ## Codex App Server Track
 
-The future Codex App Server adapter should:
+Historical draft notes for a possible Codex App Server adapter:
 
 - map `task_list.updated` to plan updates where supported;
 - map `user_input.requested` to `tool/requestUserInput` where supported;
@@ -42,6 +47,6 @@ The future Codex App Server adapter should:
 
 ## Non-Goals For This Slice
 
-This contract does not implement either native bridge. The current slice only
-adds the host-neutral events and teaches existing Codex and Claude surfaces to
-render or fall back from them.
+This draft does not implement either native bridge. Current Circuit host support
+is the Claude Code command surface, the Codex plugin surface, and generic shell
+fallback behavior.

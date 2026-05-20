@@ -27,14 +27,16 @@ describe('host experience docs', () => {
     expect(doc).toContain('fallback');
     expect(doc).toContain('AskUserQuestion');
     expect(doc).toContain('TodoWrite');
-    expect(doc).toContain('tool/requestUserInput');
+    expect(doc).toContain('current roadmap');
     expect(doc).toContain('operator_summary_markdown_path');
   });
 
-  it('documents the native bridge tracks without implementing them in this slice', () => {
+  it('keeps retired native bridge notes out of the current roadmap', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'docs/contracts/native-host-adapters.md'), 'utf8');
 
     expect(doc).toContain('contract: native-host-adapters');
+    expect(doc).toContain('status: retired-draft');
+    expect(doc).toContain('not current roadmap items');
     expect(doc).toContain('task_list.updated');
     expect(doc).toContain('user_input.requested');
     expect(doc).toContain('Claude Agent SDK');
@@ -42,7 +44,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('TodoWrite');
     expect(doc).toContain('Codex App Server');
     expect(doc).toContain('tool/requestUserInput');
-    expect(doc).toContain('does not implement either native bridge');
+    expect(doc).toContain('Current Circuit host support');
   });
 
   it('documents the Claude presentation wrapper and Explore visible budget', () => {

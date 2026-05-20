@@ -34,7 +34,7 @@ publication.
 | --- | --- | --- | --- | --- |
 | REL-PUB-003 | Add public release-note wording for the approved Fix Lite intent exception. | `docs/release/readiness-report.generated.md` lists this as a next action; `docs/release/parity/exceptions.yaml` tracks `EX-REL-004-FIX-INTENT-MODE`; `docs/release/parity-matrix.generated.md` marks `router:intent:fix` as `approved_exception`. | In release notes or launch copy, say that bare `fix:` selects the Fix flow at normal depth; Lite requires an explicit quick/small/tiny/simple hint or `--rigor lite`. | `npm run check-release-ready`; review release notes for the exact exception wording. |
 | REL-PUB-004 | Run and record a real host trial for Claude Code and Codex before saying the host experience is ready for broader use. | `docs/host-trial-checklist.md` defines the manual scenarios; `docs/contracts/host-adapter-acceptance.md` marks real installed-host injection as experimental for both hosts. | Execute the checklist in a clean temp repo for Claude Code and Codex, then record pass/fail notes or keep the release copy scoped to deterministic package checks. | `npm run smoke:host:claude`; `npm run smoke:host:codex`; manual checklist notes with skipped prerequisites called out. |
-| REL-PUB-005 | Keep public host-support wording scoped to current capability levels. | `generated/release/current-capabilities.json` marks `claude-code-command`, `codex-plugin`, and `generic-shell` as partial, and native Codex/Claude adapters as planned; `docs/release/readiness-report.generated.md` calls out partial host surfaces as a next action. | In README, release notes, and marketplace copy, avoid claiming native host adapters or polished generic shell text progress. Describe current Claude/Codex support as plugin command surfaces with model-mediated host affordances. | `rg -n "native|supported|generic shell|model-mediated|planned" README.md docs plugins/claude/.claude-plugin/plugin.json plugins/circuit/.codex-plugin/plugin.json`; `npm run check-release-ready`. |
+| REL-PUB-005 | Keep public host-support wording scoped to current capability levels. | `generated/release/current-capabilities.json` marks `claude-code-command`, `codex-plugin`, and `generic-shell` as partial; `docs/release/readiness-report.generated.md` calls out partial host surfaces as a next action. | In README, release notes, and marketplace copy, avoid claiming native host adapters, planned native Codex App Server or Claude Agent SDK adapters, or polished generic shell text progress. Describe current Claude/Codex support as plugin command surfaces with model-mediated host affordances. | `rg -n "native|supported|generic shell|model-mediated|planned" README.md docs plugins/claude/.claude-plugin/plugin.json plugins/circuit/.codex-plugin/plugin.json`; `npm run check-release-ready`. |
 | REL-PUB-006 | Keep golden proof runs refreshed if any blocker fix changes command, summary, or report contracts. | `docs/release/proofs/README.md` says to regenerate proofs when command, summary, report, checkpoint, or scenario contracts change; all current scenarios in `docs/release/proofs/index.yaml` are `verified_current`. | Treat manifest and command prose fixes as source-owned generated-surface changes first. Run flow drift checks after REL-PUB-002. If a fix changes command semantics, flow behavior, progress, summary, report, checkpoint, or scenario contracts, recapture proofs and review the diff. | `npm run capture-proofs:golden-runs` when required; `npm run check-release-ready`; review touched proof files manually. |
 | REL-PUB-007 | Decide whether to ship the package as alpha with the root package still private. | `package.json` is private `0.0.1`; both host plugin manifests are `0.1.0-alpha.6`; `npm run publish:plugins:check` reports source, Claude, Codex, and Claude marketplace versions as `0.1.0-alpha.6`. | If this release is plugin-only, leave root package private and state that publicly. If an npm package is part of release scope, define the package release path separately. | `npm run publish:plugins:check`; inspect `package.json`, `plugins/claude/.claude-plugin/plugin.json`, and `plugins/circuit/.codex-plugin/plugin.json`. |
 
@@ -77,11 +77,11 @@ These are the extra proof points from the execution-plan gap review:
   `check:codex-plugin-cache` when local Codex dogfooding is part of the release
   pass.
 
-## Intentionally Deferred
+## Not In Scope Or Deferred
 
-| ID | Deferred item | Why it is not in the initial release |
+| ID | Item | Why it is not in the initial release |
 | --- | --- | --- |
-| REL-PUB-011 | Native Codex App Server and Claude Agent SDK adapters. | `generated/release/current-capabilities.json` marks both native adapters as planned; `docs/contracts/native-host-adapters.md` says the contract does not implement either bridge. |
+| REL-PUB-011 | Native Codex App Server and Claude Agent SDK adapters. | These are not current roadmap items. Release truth should not list them as planned capabilities, and public copy should not imply they are pending support. |
 | REL-PUB-012 | `codex-isolated` writable worker support. | `README.md`, `docs/contracts/connector.md`, and `docs/release/claims/public-claims.yaml` all say `codex-isolated` is planned, not current. |
 | REL-PUB-013 | Cross-run project-memory query and recall surfaces. | `docs/positioning-and-strategy.md` treats structured project-memory records as real, but cross-run query and recall surfaces as gaps. Do not claim them as shipping. |
 | REL-PUB-014 | Keep-up-for-you update channel. | `docs/positioning-and-strategy.md` says the update-channel claim is not yet supported. Do not use launch copy that implies automatic methodology updates. |
@@ -95,7 +95,7 @@ Before public announcement or marketplace publication:
 2. Re-run `npm run check-release-ready`.
 3. Re-run `npm run publish:plugins:check`.
 4. If any source command, generated host surface, proof, or release truth file changed, run the focused drift check named by that source owner.
-5. Review final public copy against the intentionally deferred list above.
+5. Review final public copy against the not-in-scope/deferred list above.
 6. Review the fresh plugin publish report for status, versions, and
    warnings/errors; review cache-target evidence when local Codex dogfooding is
    part of the release pass.

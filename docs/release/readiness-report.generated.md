@@ -9,7 +9,7 @@ This report is the current release truth surface. The infra checks may pass whil
 | Measure | Value |
 | --- | --- |
 | Original capabilities | 13 |
-| Current capabilities | 81 |
+| Current capabilities | 79 |
 | Tracked exceptions | 3 |
 | Public claims | 10 |
 | Proof scenarios | 12 |
@@ -31,7 +31,7 @@ This report is the current release truth surface. The infra checks may pass whil
 ## Next Actions
 
 - Decide whether the approved Fix Lite intent exception needs public release-note wording.
-- Harden the partial host surfaces that are outside original parity: generic shell text progress and native host adapters.
+- Harden the partial host surfaces that are outside original parity: generic shell text progress and current plugin host wording.
 - Keep golden runs refreshed whenever command, summary, or report contracts change.
 - Run `npm run check-release-ready` as the strict final release check.
 
