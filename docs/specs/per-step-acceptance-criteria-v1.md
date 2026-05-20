@@ -1,10 +1,12 @@
-# Per-Step Acceptance Criteria V1 Implementation Plan
+# Per-Step Acceptance Criteria V1 Implementation Record
 
-Status: implementation plan
+Status: implemented V1 record
 
-Plan note: this is a design plan, not current behavior. Verify against code,
-tests, generated surfaces, and [docs/README.md](../README.md) before
-implementing from it.
+Implementation note: this file preserves the source-backed plan and rollout
+rationale. Current behavior is defined by code, tests, generated surfaces, and
+contracts. Start from [docs/flows/authoring-model.md](../flows/authoring-model.md#relay-acceptance-criteria),
+[docs/contracts/step.md](../contracts/step.md), and
+[docs/contracts/run.md](../contracts/run.md) before changing the feature.
 
 Last source pass: 2026-05-20.
 
@@ -29,43 +31,43 @@ step completion. See
 and
 [docs/ideas/per-step-validation-check.md:200-238](../ideas/per-step-validation-check.md#L200-L238).
 
-## Current Repo Facts
+## Current Implementation Facts
 
-- Relay steps are strict and currently have no `acceptance_criteria` field. See
-  [src/schemas/step.ts:161-175](../../src/schemas/step.ts#L161-L175).
-- Schematic steps are strict and currently have `evidence_requirements`,
-  `execution`, `routes`, `writes`, `check`, and related metadata, but no
-  acceptance criteria. See
-  [src/schemas/flow-schematic.ts:173-199](../../src/schemas/flow-schematic.ts#L173-L199).
-- Schematic metadata is kind-checked in `validateExecutionShape`, which is the
-  right place to reject criteria on non-relay execution kinds. See
-  [src/schemas/flow-schematic.ts:239-445](../../src/schemas/flow-schematic.ts#L239-L445).
-- The schematic compiler builds relay steps in one branch and currently passes
-  through writes and the result verdict check only. See
-  [src/flows/compile-schematic-to-flow.ts:338-370](../../src/flows/compile-schematic-to-flow.ts#L338-L370).
-- The compiled flow schema embeds `Step[]` directly and keeps
-  `schema_version: "2"`. Optional step fields are therefore public contract
-  changes even when runtime behavior is unchanged. See
-  [src/schemas/compiled-flow.ts:17-40](../../src/schemas/compiled-flow.ts#L17-L40).
-- The relay executor currently evaluates the connector verdict, validates the
-  declared report schema, runs registered cross-report validators, writes the
-  canonical report, then emits relay/check trace entries. See
-  [src/runtime/executors/relay.ts:263-293](../../src/runtime/executors/relay.ts#L263-L293)
+- Relay steps now carry optional `acceptance_criteria`. See
+  [src/schemas/step.ts:162-167](../../src/schemas/step.ts#L162-L167).
+- V1 criteria support deterministic `command` and `report_field` kinds, with
+  `hard-fail` as the default failure policy and `retry-with-feedback` as the
+  only retry policy. See
+  [src/schemas/acceptance-criteria.ts:12-52](../../src/schemas/acceptance-criteria.ts#L12-L52).
+- Schematic validation rejects `acceptance_criteria` on non-relay execution
+  kinds. See
+  [src/schemas/flow-schematic.ts:194-198](../../src/schemas/flow-schematic.ts#L194-L198)
   and
-  [src/runtime/executors/relay.ts:448-539](../../src/runtime/executors/relay.ts#L448-L539).
-- Relay prompt composition has no failed-criterion feedback channel today. See
-  [src/shared/relay-support.ts:80-107](../../src/shared/relay-support.ts#L80-L107).
-- Recovery route priority exists, but only routes declared on the step can be
-  taken. See
-  [src/shared/recovery-route.ts:1-24](../../src/shared/recovery-route.ts#L1-L24).
-- The graph runner bounds recovery attempts through `budgets.max_attempts`, with
-  a default of 2 for recovery routes and 1 otherwise. See
-  [src/runtime/run/graph-runner.ts:186-197](../../src/runtime/run/graph-runner.ts#L186-L197).
-- `TraceStore` validates every appended trace entry through the strict trace
-  schema, so validation history needs trace schema work, not ad hoc JSON. See
-  [src/runtime/trace/trace-store.ts:78-91](../../src/runtime/trace/trace-store.ts#L78-L91)
+  [src/schemas/flow-schematic.ts:434-440](../../src/schemas/flow-schematic.ts#L434-L440).
+- The schematic compiler, executable-flow projection, and runtime package index
+  preserve the field under their local casing. See
+  [src/flows/compile-schematic-to-flow.ts:359-367](../../src/flows/compile-schematic-to-flow.ts#L359-L367),
+  [src/runtime/manifest/from-compiled-flow.ts:104-112](../../src/runtime/manifest/from-compiled-flow.ts#L104-L112),
   and
-  [src/schemas/trace-entry.ts:51-65](../../src/schemas/trace-entry.ts#L51-L65).
+  [src/runtime/manifest/runtime-package-index.ts:63-71](../../src/runtime/manifest/runtime-package-index.ts#L63-L71).
+- The relay executor evaluates criteria after result verdict and report
+  validation. Acceptance failures emit acceptance trace entries and either
+  hard-fail or use the existing same-step retry route with feedback. See
+  [src/runtime/executors/relay.ts:312-330](../../src/runtime/executors/relay.ts#L312-L330),
+  [src/runtime/executors/relay.ts:578-604](../../src/runtime/executors/relay.ts#L578-L604),
+  and
+  [src/runtime/executors/relay.ts:702-724](../../src/runtime/executors/relay.ts#L702-L724).
+- Retry bounds still come from the graph runner's normal recovery attempt
+  logic. See
+  [src/runtime/run/graph-runner.ts:190-199](../../src/runtime/run/graph-runner.ts#L190-L199)
+  and the acceptance retry-bound test in
+  [tests/runtime/control-loop.test.ts](../../tests/runtime/control-loop.test.ts).
+- Relay prompt composition now includes declared criteria, and allowed retries
+  include failed-criterion feedback. See
+  [src/shared/relay-support.ts:100-160](../../src/shared/relay-support.ts#L100-L160).
+- Acceptance evaluations are represented as strict `check.evaluated` trace
+  entries with `check_kind: "acceptance_criteria"`. See
+  [src/schemas/trace-entry.ts:56-67](../../src/schemas/trace-entry.ts#L56-L67).
 - Verification commands already use direct argv, bounded output, explicit cwd,
   timeout, and env. See
   [src/schemas/verification.ts:60-82](../../src/schemas/verification.ts#L60-L82)
@@ -375,20 +377,23 @@ Stop conditions:
 
 Confirmed:
 
-- no current `acceptance_criteria` field exists on relay steps;
-- command criteria can reuse existing direct-argv proof command constraints;
-- generated surfaces must be regenerated from sources;
-- current recovery default is 2 attempts for retry/revise routes.
+- `acceptance_criteria` is optional and relay-only;
+- V1 criterion kinds are deterministic `report_field` and `command`;
+- command criteria reuse existing direct-argv proof command constraints;
+- generated surfaces must be regenerated from sources when flow data changes;
+- recovery default is 2 attempts for retry/revise routes unless
+  `budgets.max_attempts` overrides it.
 
 Supported inference:
 
-- keeping `schema_version: "2"` is acceptable only if this remains a
-  backward-compatible optional field and generated runtime/manifests ship
+- keeping `schema_version: "2"` remains acceptable because the field is
+  backward-compatible and optional, and generated runtime/manifests ship
   together.
 
 False or stale:
 
-- "default 3 retries" is not current behavior.
+- "default 3 retries" is not current behavior;
+- "no current `acceptance_criteria` field exists on relay steps" is stale.
 
 Blocked for V1:
 

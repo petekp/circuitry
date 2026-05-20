@@ -22,6 +22,7 @@ code, contracts, generated surfaces, or troubleshooting docs.
 | **Run** | One execution of a flow. | Session, invocation |
 | **Checkpoint** | A pause where Circuit needs operator input or a declared safe default. | Prompt, approval gate |
 | **Check** | Validation that decides whether a step may continue. | Gate |
+| **Acceptance criteria** | Flow-authored deterministic checks that a relay step's result must pass before the run may advance. | Done criteria, validation rubric |
 | **Trace** | The ordered record of what happened during a run. | Event log, runlog |
 | **Report** | A typed output written by a step or close stage. | Artifact, output blob |
 | **Evidence** | Supporting facts, files, checks, and reports produced or consumed by a run. | Artifact, proof blob |
@@ -66,6 +67,7 @@ instructions.
 | **Relay resolution** | The procedure that chooses the connector for a relay step. | Connector routing |
 | **Relay resolution source** | The provenance record explaining which rule chose a connector. | Connector source |
 | **Relay transcript** | The request, receipt, result, and completion trace entries for relayed work. | Worker log |
+| **Acceptance retry feedback** | The failed relay acceptance criterion passed back to the same relay step on an allowed retry. | Validation prompt, retry note |
 
 ## Configuration Language
 
@@ -130,6 +132,8 @@ inside historical docs, tests, or migration notes when the context is explicit.
 - A **Run** follows **Routes** through a compiled flow.
 - A **Run** records a **Trace** in its **Run folder**.
 - A **Relay** uses one **Connector** and one **Role**.
+- **Acceptance criteria** can make a **Relay** retry or stop before its
+  report becomes accepted evidence.
 - A **Checkpoint** is a step-level pause, not a separate flow.
 - A **Depth** describes product thoroughness; an **Effort** describes model reasoning allocation.
 - A **Plugin** exposes **Skills**, commands, and generated compiled-flow outputs.

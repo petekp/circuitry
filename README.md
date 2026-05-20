@@ -30,8 +30,9 @@ Circuit automates all the tedium and produces sounder results:
 - Moves through each step in sequence and/or parallelizes non-dependent steps
 - Applies your preferred skills at the appropriate steps
 - Uses your preferred model(s) and thinking power for particular steps
-- Checks the outputs of each step before continuing, providing traces, reports,
-  and evidence that the work was complete
+- Checks step outputs before continuing, including deterministic relay
+  acceptance criteria where a flow declares them, with traces, reports, and
+  evidence that show what passed
 
 Ready to try it? Pick a host below, or point your coding agent at the setup
 prompt. For the full docs map, see [`docs/README.md`](docs/README.md).

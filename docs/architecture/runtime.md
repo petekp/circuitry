@@ -17,6 +17,14 @@ validation, connector resolution, checkpoint resume, sub-run orchestration, and
 fanout joining. Adding or changing a flow should update the flow package and
 generated surfaces, not add flow-specific branches to the engine.
 
+Relay acceptance criteria follow that boundary. Flow packages author optional
+`acceptance_criteria` on relay steps; the compiler and manifest projections
+carry the field through unchanged; the relay executor evaluates the
+deterministic criteria after the result verdict and report schema pass. A failed
+criterion either aborts the step or returns through the existing retry route
+with feedback, so retry bounds stay owned by the graph runner's normal attempt
+logic.
+
 The long-term runtime direction is a functional effect shell around the same
 explicit graph walk. The graph runner should continue to make step advancement
 plain: enter step, run executor, evaluate route, append trace, move to the next

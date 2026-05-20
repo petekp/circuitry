@@ -26,7 +26,7 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 
 > Most people drive a coding agent with one long chat and hope. Circuit gives that work a shape — named ways to explore, build, fix, and review.
 >
-> Each flow encodes the moves experienced AI engineers actually reach for: investigate before you build, plan before you act, verify before you review. The implementer isn't the reviewer — Circuit runs them as separate workers, the way frontier labs do. Every step demands evidence the agent has to produce; it can't close out without showing its work. Patterns most people only land on after months of trial and error. You get them as defaults.
+> Each flow encodes the moves experienced AI engineers actually reach for: investigate before you build, plan before you act, verify before you review. The implementer isn't the reviewer — Circuit runs them as separate workers, the way frontier labs do. Flows leave typed reports and evidence behind, and relay steps can enforce declared acceptance criteria before the work moves on. Patterns most people only land on after months of trial and error. You get them as defaults.
 >
 > Pick how it runs. Flows declare the rigor and autonomy they support, so you can ask for a quicker pass, a deeper pass, a tournament decision, or unattended checkpoint resolution when that flow supports it.
 >
@@ -36,12 +36,12 @@ Tested for universality (earlier "Design the product" leaned designer-specific).
 
 ### Elevator (~30 words)
 
-> Most people drive a coding agent with one long chat and hope. Circuit gives that work a shape — named flows that encode the moves experienced AI engineers actually reach for, with evidence required at every step. Stop reinventing your flow. Ship the product.
+> Most people drive a coding agent with one long chat and hope. Circuit gives that work a shape — named flows that encode the moves experienced AI engineers actually reach for, with typed reports, evidence, and acceptance checks where flows declare them. Stop reinventing your flow. Ship the product.
 
 ### Beats (in order)
 
 1. **Felt problem** — one long chat and hope. Circuit gives the work a shape via named flows.
-2. **Provenance** — flows encode patterns experienced AI engineers reach for. Concrete proof points: separate implementer/reviewer workers, evidence required at every step.
+2. **Provenance** — flows encode patterns experienced AI engineers reach for. Concrete proof points: separate implementer/reviewer workers, typed reports and evidence, relay acceptance checks where declared.
 3. **Depth modes** — lite / standard / deep / autonomous. User agency over depth without redesigning anything.
 4. **Modularity** — each step is a self-contained module; modules upgrade independently; skills customizable at any level.
 5. **Closer** — *The field changes weekly. The shape of your work doesn't have to.*
@@ -74,7 +74,10 @@ These are real, demonstrable, and pointed at the fatigue audience's actual pain:
   `deep`, and `autonomous`; Explore also supports `tournament`; Pursue supports
   `standard` and `autonomous`; Review is standard-only. *"Pick how thorough you
   want to be when the flow supports that choice."*
-- **Evidence requirements as anti-fakery** — every step has `evidence_requirements` the agent must produce; it literally can't close the step otherwise. *"The agent can't fake completion."* This directly addresses the audience's #1 complaint.
+- **Evidence and acceptance checks as anti-fakery** — flows name the evidence a
+  step must produce, and relay steps can declare deterministic
+  `acceptance_criteria` that Circuit checks before advancing. This is the
+  grounded version of the "prove it before moving on" claim.
 - **Checkpoints with safe defaults** — schematics carry `safe_default_choice` and `safe_autonomous_choice`; human-in-the-loop is first-class. *"Pause for you when it matters; run autonomously when you let it."*
 - **Multi-agent review by default** — Build runs implementer and reviewer as separate workers (`role: "implementer"` vs `role: "reviewer"`). Frontier-lab pattern most users don't manually wire up.
 - **Variable model and effort per step** — `SelectionOverride` supports model (openai/anthropic/gemini/custom) and effort (none/minimal/low/medium/high/xhigh) at six layers of granularity, including per-step. Enables frontier-lab pipeline patterns: cheap/fast model for Frame, high-effort reasoning model for Plan, *different* model for Review (real cognitive diversity, not two instances of the same model). *"Different models for different jobs, on by default — you don't have to pick."* **Caveat:** capability is shipping; curated per-step defaults in flow schematics aren't yet — build item before this graduates from architectural to demonstrable.
