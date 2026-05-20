@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
@@ -248,6 +249,171 @@ function prototypeVerification(overrides: Record<string, unknown> = {}) {
     ],
     ...overrides,
   };
+}
+
+const PROTOTYPE_VARIANT_ROOT = 'prototype-files';
+
+function prototypeRubricJudgments() {
+  return Object.fromEntries(THREE_AXIS_RUBRIC_TIE_BREAK_ORDER.map((dim) => [dim, 'pass']));
+}
+
+function prototypeVariantArtifact(id: string, label: string, root = PROTOTYPE_VARIANT_ROOT) {
+  return {
+    verdict: 'accept',
+    variant_id: id,
+    variant_label: label,
+    summary: `${label} created a flow builder prototype.`,
+    prototype_root: root,
+    variant_root: `${root}/variants/${id}`,
+    created_files: [`${root}/variants/${id}/index.html`],
+    entry_points: [`${root}/variants/${id}/index.html`],
+    preview_instructions: `Open ${root}/variants/${id}/index.html locally.`,
+    known_limitations: ['Local prototype only.'],
+    evidence: [`${root}/variants/${id}/index.html exists`],
+    rubric_model_judgments: prototypeRubricJudgments(),
+    claim_limits: ['not production', 'not deployed'],
+  };
+}
+
+function writePrototypeVariantReports(root = PROTOTYPE_VARIANT_ROOT): void {
+  writeReport('reports/prototype/variant-aggregate.json', {
+    schema_version: 1,
+    join_policy: 'aggregate-survivors',
+    branch_count: 2,
+    branches: [
+      {
+        branch_id: 'variant-a',
+        child_run_id: 'child-a',
+        child_outcome: 'complete',
+        verdict: 'accept',
+        admitted: true,
+        result_path: 'reports/prototype/variant-branches/variant-a/report.json',
+        duration_ms: 1,
+        result_body: prototypeVariantArtifact('variant-a', 'Variant A', root),
+        rubric_result: passingRubricResult(),
+      },
+      {
+        branch_id: 'variant-b',
+        child_run_id: 'child-b',
+        child_outcome: 'complete',
+        verdict: 'accept',
+        admitted: true,
+        result_path: 'reports/prototype/variant-branches/variant-b/report.json',
+        duration_ms: 1,
+        result_body: prototypeVariantArtifact('variant-b', 'Variant B', root),
+        rubric_result: passingRubricResult(),
+      },
+    ],
+  });
+  writeReport('reports/prototype/variant-provider-evidence.json', {
+    schema_version: 1,
+    evidence_source: 'relay.started resolved_selection trace entries',
+    required_captured_count: 2,
+    captured_count: 2,
+    variants: [
+      {
+        variant_id: 'variant-a',
+        label: 'Variant A',
+        relay_step_id: 'variant-fanout-step-variant-a',
+        status: 'captured',
+        connector_name: 'claude-code',
+        provider: 'anthropic',
+        model: 'fixture-a',
+        effort: 'medium',
+        trace_sequence: 4,
+        trace_entry_kind: 'relay.started',
+        resolved_from: { source: 'role', role: 'implementer' },
+      },
+      {
+        variant_id: 'variant-b',
+        label: 'Variant B',
+        relay_step_id: 'variant-fanout-step-variant-b',
+        status: 'captured',
+        connector_name: 'claude-code',
+        provider: 'anthropic',
+        model: 'fixture-b',
+        effort: 'high',
+        trace_sequence: 8,
+        trace_entry_kind: 'relay.started',
+        resolved_from: { source: 'role', role: 'implementer' },
+      },
+    ],
+    missing_evidence: [],
+  });
+  writeReport('reports/prototype/variant-verification.json', {
+    overall_status: 'passed',
+    required_captured_provider_evidence_count: 2,
+    captured_provider_evidence_count: 2,
+    admitted_variant_count: 2,
+    variant_results: [
+      {
+        variant_id: 'variant-a',
+        status: 'passed',
+        entry_points: [`${root}/variants/variant-a/index.html`],
+        created_files: [`${root}/variants/variant-a/index.html`],
+        notes: ['ok'],
+      },
+      {
+        variant_id: 'variant-b',
+        status: 'passed',
+        entry_points: [`${root}/variants/variant-b/index.html`],
+        created_files: [`${root}/variants/variant-b/index.html`],
+        notes: ['ok'],
+      },
+    ],
+    commands: [
+      {
+        command_id: 'prototype-variant-artifact-integrity',
+        argv: [process.execPath, '-e', 'process.exit(0)'],
+        cwd: '.',
+        exit_code: 0,
+        status: 'passed',
+        duration_ms: 1,
+        stdout_summary: 'ok',
+        stderr_summary: '',
+      },
+    ],
+  });
+  writeReport('reports/prototype/variant-review.json', {
+    verdict: 'recommend',
+    recommended_variant_id: 'variant-a',
+    comparison_summary: 'Variant A is clearer; Variant B is denser.',
+    strengths: [{ variant_id: 'variant-a', note: 'Clearer.' }],
+    risks: [],
+    missing_evidence: [],
+    confidence: 'medium',
+  });
+  writeReport('reports/prototype/variant-choice-options.json', {
+    schema_version: 1,
+    prompt: 'Choose one.',
+    recommended_variant_id: 'variant-a',
+    choices: [
+      {
+        id: 'variant-a',
+        variant_id: 'variant-a',
+        label: 'Variant A',
+        description: 'Clearer.',
+        variant_root: `${root}/variants/variant-a`,
+        entry_points: [`${root}/variants/variant-a/index.html`],
+        verification_status: 'passed',
+        model_evidence_status: 'captured',
+        review_recommendation: true,
+        recommended: true,
+      },
+      {
+        id: 'variant-b',
+        variant_id: 'variant-b',
+        label: 'Variant B',
+        description: 'Denser.',
+        variant_root: `${root}/variants/variant-b`,
+        entry_points: [`${root}/variants/variant-b/index.html`],
+        verification_status: 'passed',
+        model_evidence_status: 'captured',
+        review_recommendation: false,
+        recommended: false,
+      },
+    ],
+  });
 }
 
 describe('operator summary writer', () => {
@@ -1297,6 +1463,106 @@ describe('operator summary writer', () => {
     const markdown = readFileSync(written.markdownPath, 'utf8');
     expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
     expect(markdown).toContain('Choices: keep-prototype, save-build-input, discard-prototype');
+  });
+
+  it('emits pinned-preview HTML for Prototype visual variant checkpoints through operator summary', () => {
+    writePrototypeVariantReports();
+    const requestPath = join(
+      runFolder,
+      'reports/checkpoints/prototype-variant-choice-request.json',
+    );
+    writeReport('reports/checkpoints/prototype-variant-choice-request.json', {
+      schema_version: 1,
+      step_id: 'prototype-variant-checkpoint-step',
+      prompt: 'Choose a prototype variant.',
+      allowed_choices: ['variant-a', 'variant-b'],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000020'),
+        flow_id: CompiledFlowId.parse('prototype'),
+        goal: 'prototype: tournament custom flow builder UI',
+        outcome: 'checkpoint_waiting',
+        summary:
+          "checkpoint 'prototype-variant-checkpoint-step' is waiting for an operator choice.",
+        trace_entries_observed: 12,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'prototype-variant-checkpoint-step',
+          request_path: requestPath,
+          allowed_choices: ['variant-a', 'variant-b'],
+        },
+      },
+      route: { selectedFlow: 'prototype' },
+    });
+
+    expect(written.htmlPath).toBe(join(runFolder, 'reports', 'operator-summary.html'));
+    expect(written.summary.html_path).toBe(written.htmlPath);
+    expect(written.summary.report_paths.map((report) => report.label)).toEqual([
+      'Operator summary (HTML)',
+      'Checkpoint request',
+    ]);
+
+    const html = readFileSync(written.htmlPath as string, 'utf8');
+    expect(html).toContain('mv-wrap mv-visual');
+    expect(html).toContain('Selected variant preview');
+    expect(html).toContain('src="../prototype-files/variants/variant-a/index.html"');
+    expect(html).toContain(
+      'data-mv-preview-src="../prototype-files/variants/variant-b/index.html"',
+    );
+    expect(html).toContain('--checkpoint-choice &#39;variant-a&#39;');
+
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
+    expect(markdown).toContain('Choices: variant-a, variant-b');
+  });
+
+  it('uses the checkpoint execution context to preview project-root Prototype variant artifacts', () => {
+    const projectRoot = join(runFolder, '..', 'project-root');
+    const prototypeRoot = '.circuit/prototypes/operator-summary-external';
+    writePrototypeVariantReports(prototypeRoot);
+    const requestPath = join(
+      runFolder,
+      'reports/checkpoints/prototype-variant-choice-request.json',
+    );
+    writeReport('reports/checkpoints/prototype-variant-choice-request.json', {
+      schema_version: 1,
+      step_id: 'prototype-variant-checkpoint-step',
+      prompt: 'Choose a prototype variant.',
+      allowed_choices: ['variant-a', 'variant-b'],
+      execution_context: { project_root: projectRoot },
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000021'),
+        flow_id: CompiledFlowId.parse('prototype'),
+        goal: 'prototype: tournament custom flow builder UI',
+        outcome: 'checkpoint_waiting',
+        summary:
+          "checkpoint 'prototype-variant-checkpoint-step' is waiting for an operator choice.",
+        trace_entries_observed: 12,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'prototype-variant-checkpoint-step',
+          request_path: requestPath,
+          allowed_choices: ['variant-a', 'variant-b'],
+        },
+      },
+      route: { selectedFlow: 'prototype' },
+    });
+
+    const html = readFileSync(written.htmlPath as string, 'utf8');
+    const expectedHref = pathToFileURL(
+      join(projectRoot, prototypeRoot, 'variants', 'variant-a', 'index.html'),
+    ).href;
+    expect(html).toContain('mv-wrap mv-visual');
+    expect(html).toContain(`src="${expectedHref}"`);
   });
 
   it('removes stale Prototype checkpoint HTML when typed reports are malformed', () => {

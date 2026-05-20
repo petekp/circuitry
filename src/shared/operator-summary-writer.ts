@@ -13,7 +13,7 @@
 // loose JSON helpers and friendly-* text projections live there too.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { findFlowRuntimeSurfaceById } from '../flows/runtime-surface.js';
 import {
   OperatorAutoResolution,
@@ -114,6 +114,44 @@ function markdownPath(runFolder: string): string {
 
 function htmlPath(runFolder: string): string {
   return join(runFolder, 'reports', 'operator-summary.html');
+}
+
+function isInsideOrSame(root: string, target: string): boolean {
+  const fromRoot = relative(root, target);
+  return fromRoot === '' || (!fromRoot.startsWith('..') && !isAbsolute(fromRoot));
+}
+
+function readCheckpointRequest(
+  runFolder: string,
+  checkpoint: CheckpointWaitingOperatorSummaryResult['checkpoint'],
+): JsonObject | undefined {
+  let requestPath: string;
+  try {
+    requestPath = isAbsolute(checkpoint.request_path)
+      ? resolve(checkpoint.request_path)
+      : resolveRunRelative(runFolder, checkpoint.request_path);
+  } catch {
+    return undefined;
+  }
+  if (!isInsideOrSame(resolve(runFolder), requestPath)) return undefined;
+  if (!existsSync(requestPath)) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(requestPath, 'utf8'));
+    return isObject(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function checkpointProjectRoot(
+  runFolder: string,
+  checkpoint: CheckpointWaitingOperatorSummaryResult['checkpoint'],
+): string | undefined {
+  const request = readCheckpointRequest(runFolder, checkpoint);
+  const executionContext = request?.execution_context;
+  if (!isObject(executionContext)) return undefined;
+  const projectRoot = stringField(executionContext, 'project_root');
+  return projectRoot !== undefined && isAbsolute(projectRoot) ? projectRoot : undefined;
 }
 
 function reportLink(
@@ -294,8 +332,13 @@ export function writeOperatorSummary(input: {
   let renderedHtml: string | undefined;
   if (projector !== undefined) {
     try {
+      const projectRoot =
+        input.runResult.outcome === 'checkpoint_waiting'
+          ? checkpointProjectRoot(input.runFolder, input.runResult.checkpoint)
+          : undefined;
       const ctx: HtmlProjectorContext = {
         runFolder: input.runFolder,
+        ...(projectRoot === undefined ? {} : { projectRoot }),
         runId: input.runResult.run_id as unknown as string,
         flowId,
         runOutcome: input.runResult.outcome,

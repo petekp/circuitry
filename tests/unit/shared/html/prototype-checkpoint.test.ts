@@ -4,6 +4,7 @@ import type { HtmlProjectorContext, JsonObject } from '../../../../src/shared/ht
 import { prototypeCheckpointProjector } from '../../../../src/shared/html/prototype-checkpoint.js';
 
 const ROOT = '.circuit/prototypes/html-test';
+const RUN_ARTIFACT_ROOT = '.circuit/runs/html-test/prototype-files';
 
 function brief(overrides: Record<string, unknown> = {}): JsonObject {
   return {
@@ -103,19 +104,19 @@ function rubricResult(): JsonObject {
   };
 }
 
-function variantReports(): Record<string, JsonObject> {
+function variantReports(root = ROOT): Record<string, JsonObject> {
   const artifact = (id: string, label: string) => ({
     verdict: 'accept',
     variant_id: id,
     variant_label: label,
     summary: `${label} created a local prototype.`,
-    prototype_root: ROOT,
-    variant_root: `${ROOT}/variants/${id}`,
-    created_files: [`${ROOT}/variants/${id}/index.html`],
-    entry_points: [`${ROOT}/variants/${id}/index.html`],
-    preview_instructions: `Open ${ROOT}/variants/${id}/index.html locally.`,
+    prototype_root: root,
+    variant_root: `${root}/variants/${id}`,
+    created_files: [`${root}/variants/${id}/index.html`],
+    entry_points: [`${root}/variants/${id}/index.html`],
+    preview_instructions: `Open ${root}/variants/${id}/index.html locally.`,
     known_limitations: ['Local fixture only.'],
-    evidence: [`${ROOT}/variants/${id}/index.html exists`],
+    evidence: [`${root}/variants/${id}/index.html exists`],
     rubric_model_judgments: Object.fromEntries(RUBRIC_DIMS.map((dim) => [dim, 'pass'])),
     claim_limits: ['not production', 'not deployed'],
   });
@@ -193,15 +194,15 @@ function variantReports(): Record<string, JsonObject> {
         {
           variant_id: 'variant-a',
           status: 'passed',
-          entry_points: [`${ROOT}/variants/variant-a/index.html`],
-          created_files: [`${ROOT}/variants/variant-a/index.html`],
+          entry_points: [`${root}/variants/variant-a/index.html`],
+          created_files: [`${root}/variants/variant-a/index.html`],
           notes: ['ok'],
         },
         {
           variant_id: 'variant-b',
           status: 'passed',
-          entry_points: [`${ROOT}/variants/variant-b/index.html`],
-          created_files: [`${ROOT}/variants/variant-b/index.html`],
+          entry_points: [`${root}/variants/variant-b/index.html`],
+          created_files: [`${root}/variants/variant-b/index.html`],
           notes: ['ok'],
         },
       ],
@@ -237,8 +238,8 @@ function variantReports(): Record<string, JsonObject> {
           variant_id: 'variant-a',
           label: 'Variant A',
           description: 'Clearer.',
-          variant_root: `${ROOT}/variants/variant-a`,
-          entry_points: [`${ROOT}/variants/variant-a/index.html`],
+          variant_root: `${root}/variants/variant-a`,
+          entry_points: [`${root}/variants/variant-a/index.html`],
           verification_status: 'passed',
           model_evidence_status: 'captured',
           review_recommendation: true,
@@ -249,8 +250,8 @@ function variantReports(): Record<string, JsonObject> {
           variant_id: 'variant-b',
           label: 'Variant B',
           description: 'Denser.',
-          variant_root: `${ROOT}/variants/variant-b`,
-          entry_points: [`${ROOT}/variants/variant-b/index.html`],
+          variant_root: `${root}/variants/variant-b`,
+          entry_points: [`${root}/variants/variant-b/index.html`],
           verification_status: 'passed',
           model_evidence_status: 'captured',
           review_recommendation: false,
@@ -268,6 +269,7 @@ function context(
     readonly checkpoint?: HtmlProjectorContext['checkpoint'] | null;
     readonly reports?: Record<string, JsonObject | undefined>;
     readonly runFolder?: string;
+    readonly projectRoot?: string;
   } = {},
 ): HtmlProjectorContext {
   const runFolder = overrides.runFolder ?? '/tmp/prototype-html';
@@ -280,6 +282,7 @@ function context(
   };
   return {
     runFolder,
+    ...(overrides.projectRoot === undefined ? {} : { projectRoot: overrides.projectRoot }),
     runId: 'html-test',
     flowId: overrides.flowId ?? 'prototype',
     runOutcome: overrides.runOutcome ?? 'checkpoint_waiting',
@@ -359,7 +362,7 @@ describe('prototypeCheckpointProjector', () => {
     expect(html).toContain('not deployed');
   });
 
-  it('renders model-comparison checkpoint choices from captured relay evidence', () => {
+  it('renders non-visual model-comparison checkpoints as evidence-first comparisons', () => {
     const html = prototypeCheckpointProjector(
       context({
         checkpoint: {
@@ -376,6 +379,51 @@ describe('prototypeCheckpointProjector', () => {
     expect(html).toContain('anthropic/local-fixture-a');
     expect(html).toContain('anthropic/local-fixture-b');
     expect(html).toContain('--checkpoint-choice &#39;variant-a&#39;');
+    expect(html).toContain('mv-wrap mv-evidence');
+    expect(html).not.toContain('data-mv-frame');
+  });
+
+  it('renders model-comparison checkpoints with a pinned preview rail for current-run visual artifacts', () => {
+    const html = prototypeCheckpointProjector(
+      context({
+        runFolder: '/tmp/project/.circuit/runs/html-test',
+        checkpoint: {
+          step_id: 'prototype-variant-checkpoint-step',
+          request_path: '/tmp/request.json',
+          allowed_choices: ['variant-a', 'variant-b'],
+        },
+        reports: variantReports(RUN_ARTIFACT_ROOT),
+      }),
+    ) as string;
+    expect(html).toContain('Choose a prototype variant');
+    expect(html).toContain('mv-wrap mv-visual');
+    expect(html).toContain('Selected variant preview');
+    expect(html).toContain('data-mv-frame');
+    expect(html).toContain('overscroll-behavior:contain');
+    expect(html).toContain('src="../prototype-files/variants/variant-a/index.html"');
+    expect(html).toContain(
+      'data-mv-preview-src="../prototype-files/variants/variant-b/index.html"',
+    );
+    expect(html).toContain('--checkpoint-choice &#39;variant-a&#39;');
+  });
+
+  it('renders a pinned preview rail for project-root visual artifacts when the run folder is external', () => {
+    const html = prototypeCheckpointProjector(
+      context({
+        runFolder: '/tmp/external-run',
+        projectRoot: '/tmp/project',
+        checkpoint: {
+          step_id: 'prototype-variant-checkpoint-step',
+          request_path: '/tmp/request.json',
+          allowed_choices: ['variant-a', 'variant-b'],
+        },
+        reports: variantReports(ROOT),
+      }),
+    ) as string;
+    expect(html).toContain('mv-wrap mv-visual');
+    expect(html).toContain(
+      'src="file:///tmp/project/.circuit/prototypes/html-test/variants/variant-a/index.html"',
+    );
   });
 
   it('quotes copied resume commands for run folders with spaces and quotes', () => {

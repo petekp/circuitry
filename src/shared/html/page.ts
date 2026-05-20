@@ -81,6 +81,9 @@ export type RenderPageInput = {
   readonly bodyHtml: string;
   readonly footerLeft?: string;
   readonly footerRight?: string;
+  readonly wrapClassName?: string;
+  readonly extraStyles?: string;
+  readonly extraScript?: string;
 };
 
 export function renderPage(input: RenderPageInput): string {
@@ -90,16 +93,19 @@ export function renderPage(input: RenderPageInput): string {
     input.footerRight === undefined
       ? ''
       : `<span><code>${escapeHtml(input.footerRight)}</code></span>`;
+  const wrapClassName = input.wrapClassName ?? 'wrap';
+  const extraStyles = input.extraStyles === undefined ? '' : input.extraStyles;
+  const extraScript = input.extraScript === undefined ? '' : input.extraScript;
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(input.title)}</title>
-<style>${styles()}</style>
+<style>${styles()}${extraStyles}</style>
 </head>
 <body>
-<div class="wrap">
+<div class="${escapeHtml(wrapClassName)}">
   <header class="top">
     <div class="meta">${escapeHtml(input.metaLine)}</div>
     <h1>${escapeHtml(input.headline)}</h1>
@@ -111,7 +117,7 @@ ${input.bodyHtml}
     ${footerRight}
   </footer>
 </div>
-<script>${clipboardScript()}</script>
+<script>${clipboardScript()}${extraScript}</script>
 </body>
 </html>
 `;
