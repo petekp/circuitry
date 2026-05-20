@@ -11,6 +11,11 @@ import {
   PrototypeVerification,
 } from '../../flows/prototype/reports.js';
 import { type Intent, card, chip, verdictBanner } from './components.js';
+import {
+  type MultiVariantItem,
+  previewForEntryPoints,
+  renderMultiVariantComparisonPage,
+} from './multi-variant.js';
 import { MAX_BULLET_LEN, MAX_PROMPT_LEN, escapeHtml, renderPage, truncate } from './page.js';
 import type { HtmlProjector, JsonObject } from './projector.js';
 
@@ -189,53 +194,125 @@ function filteredChoices(allowedChoices: readonly string[]): ChoiceCard[] {
   return CHOICES.filter((choice) => allowed.has(choice.id));
 }
 
-function renderVariantChoice(input: {
-  readonly choice: {
-    readonly id: string;
-    readonly label: string;
-    readonly description: string;
-    readonly entry_points: readonly string[];
-    readonly recommended: boolean;
-  };
+function relaySelectionLine(
+  evidence: PrototypeVariantProviderEvidence['variants'][number] | undefined,
+): string {
+  if (
+    evidence?.status === 'captured' &&
+    evidence.provider !== undefined &&
+    evidence.model !== undefined &&
+    evidence.effort !== undefined
+  ) {
+    return `${evidence.provider}/${evidence.model} (${evidence.effort})`;
+  }
+  return 'No captured relay selection evidence';
+}
+
+function renderVariantDetails(input: {
+  readonly review: PrototypeVariantReview;
+  readonly verification: PrototypeVariantVerification;
+  readonly providerEvidence: PrototypeVariantProviderEvidence;
+  readonly checkpointRequestPath: string | undefined;
+  readonly resumeCommand: string;
+}): string {
+  const missingEvidenceHtml =
+    input.providerEvidence.missing_evidence.length === 0 &&
+    input.review.missing_evidence.length === 0
+      ? ''
+      : `<p><strong>Missing evidence.</strong> ${escapeHtml(
+          [
+            ...input.providerEvidence.missing_evidence.map(
+              (item) => `${item.variant_id}: ${item.reason}`,
+            ),
+            ...input.review.missing_evidence,
+          ].join('; '),
+        )}</p>`;
+  const strengthsHtml =
+    input.review.strengths.length === 0
+      ? ''
+      : `<p><strong>Strengths.</strong></p><ul>${input.review.strengths
+          .map((item) => `<li>${escapeHtml(`${item.variant_id}: ${item.note}`)}</li>`)
+          .join('')}</ul>`;
+  const risksHtml =
+    input.review.risks.length === 0
+      ? ''
+      : `<p><strong>Risks.</strong></p><ul>${input.review.risks
+          .map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`)
+          .join('')}</ul>`;
+  return `  <details>
+    <summary>Comparison evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Comparison.</strong> ${escapeHtml(input.review.comparison_summary)}</p>
+      ${strengthsHtml}
+      ${risksHtml}
+      <p><strong>Verification.</strong> ${escapeHtml(input.verification.overall_status)}</p>
+      ${missingEvidenceHtml}
+      <p><strong>Resume command.</strong> <code>${escapeHtml(input.resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+          PROTOTYPE_VARIANT_AGGREGATE_PATH,
+          PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
+          PROTOTYPE_VARIANT_VERIFICATION_PATH,
+          PROTOTYPE_VARIANT_REVIEW_PATH,
+          PROTOTYPE_VARIANT_CHOICES_PATH,
+          input.checkpointRequestPath ?? '',
+        ]
+          .filter((item) => item.length > 0)
+          .map((item) => chip(item))
+          .join('\n        ')}
+      </div>
+    </div>
+  </details>`;
+}
+
+function variantComparisonItems(input: {
   readonly aggregate: PrototypeVariantAggregate;
   readonly providerEvidence: PrototypeVariantProviderEvidence;
+  readonly choices: PrototypeVariantChoiceOptions['choices'];
+  readonly recommendedChoiceId: string;
   readonly runFolder: string;
-}): string {
-  const branch = input.aggregate.branches.find(
-    (candidate) => candidate.branch_id === input.choice.id,
-  );
-  const artifact = branch?.result_body;
-  const evidence = input.providerEvidence.variants.find(
-    (candidate) => candidate.variant_id === input.choice.id,
-  );
-  const providerLine =
-    evidence?.status === 'captured'
-      ? `${evidence.provider}/${evidence.model} (${evidence.effort})`
-      : 'No captured relay selection evidence';
-  const bodyHtml = `      <p class="summary">${escapeHtml(input.choice.description)}</p>
-      <div>
-        <p class="section-label">Entry points</p>
-        <div class="evidence">
-          ${(artifact?.entry_points ?? input.choice.entry_points).map((entry) => chip(entry)).join('\n          ')}
-        </div>
-      </div>
-      <div>
-        <p class="section-label">Captured relay selection</p>
-        <p class="summary">${escapeHtml(providerLine)}</p>
-      </div>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(
-          truncate(resumeCommandForChoice(input.runFolder, input.choice.id), MAX_PROMPT_LEN),
-        )}">Copy resume command</button>
-      </div>`;
-  return card({
-    intent: input.choice.recommended ? 'positive' : 'neutral',
-    eyebrow: input.choice.id,
-    title: input.choice.label,
-    ...(input.choice.recommended
-      ? { badge: { text: 'Recommended', intent: 'positive' as const } }
-      : {}),
-    bodyHtml,
+  readonly projectRoot?: string | undefined;
+}): MultiVariantItem[] {
+  return input.choices.map((choice) => {
+    const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === choice.id);
+    const artifact = branch?.result_body;
+    const evidence = input.providerEvidence.variants.find(
+      (candidate) => candidate.variant_id === choice.id,
+    );
+    const entryPoints = artifact?.entry_points ?? choice.entry_points;
+    const createdFiles = artifact?.created_files ?? [];
+    const artifactEvidence = artifact?.evidence ?? [];
+    const risks = artifact?.known_limitations ?? [];
+    const providerLine =
+      evidence?.status === 'captured'
+        ? relaySelectionLine(evidence)
+        : 'No captured relay selection evidence';
+    const preview = previewForEntryPoints({
+      entryPoints,
+      runFolder: input.runFolder,
+      projectRoot: input.projectRoot,
+    });
+    return {
+      id: choice.id,
+      label: choice.label,
+      description: artifact?.summary ?? choice.description,
+      recommended: choice.id === input.recommendedChoiceId,
+      facts: [
+        { label: 'Relay', value: providerLine },
+        { label: 'Verification', value: choice.verification_status },
+        { label: 'Verdict', value: branch?.verdict ?? 'not reported' },
+        { label: 'Review', value: choice.review_recommendation ? 'recommended' : 'compared' },
+      ],
+      evidence: [...entryPoints, ...createdFiles, ...artifactEvidence],
+      risks,
+      ...(preview === undefined ? {} : { preview }),
+      action: {
+        label: 'Copy resume command',
+        prompt: resumeCommandForChoice(input.runFolder, choice.id),
+        primary: true,
+      },
+    };
   });
 }
 
@@ -269,73 +346,43 @@ function renderVariantCheckpoint(ctx: Parameters<HtmlProjector>[0]): string | un
   const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
   const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
   if (visibleChoices.length === 0) return undefined;
-  const recommended = choices.choices.find(
-    (choice) => choice.id === choices.recommended_variant_id,
-  );
-  const banner = verdictBanner({
-    intent: review.verdict === 'recommend' ? 'positive' : 'attention',
-    badgeText: review.verdict === 'recommend' ? 'Recommended variant' : 'Operator choice',
-    mainHtml: `<strong>${escapeHtml(recommended?.label ?? choices.recommended_variant_id)}</strong> &mdash; ${escapeHtml(review.comparison_summary)}`,
-    aside: `${providerEvidence.captured_count} relay selections captured`,
-  });
-  const missingEvidenceHtml =
-    providerEvidence.missing_evidence.length === 0
-      ? ''
-      : `<p><strong>Missing evidence.</strong> ${escapeHtml(
-          providerEvidence.missing_evidence
-            .map((item) => `${item.variant_id}: ${item.reason}`)
-            .join('; '),
-        )}</p>`;
-  const cards = visibleChoices
-    .map((choice) =>
-      renderVariantChoice({
-        choice,
-        aggregate,
-        providerEvidence,
-        runFolder: ctx.runFolder,
-      }),
-    )
-    .join('\n\n');
+  const recommended =
+    visibleChoices.find((choice) => choice.id === choices.recommended_variant_id) ??
+    visibleChoices.find((choice) => choice.recommended) ??
+    visibleChoices[0];
+  if (recommended === undefined) return undefined;
   const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(
     ctx.runFolder,
   )} --checkpoint-choice '<variant-id>'`;
-  const bodyHtml = `${banner}
 
-  <div class="grid">
-${cards}
-  </div>
-
-  <details>
-    <summary>Comparison evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Verification.</strong> ${escapeHtml(verification.overall_status)}</p>
-      ${missingEvidenceHtml}
-      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${[
-          PROTOTYPE_VARIANT_AGGREGATE_PATH,
-          PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
-          PROTOTYPE_VARIANT_VERIFICATION_PATH,
-          PROTOTYPE_VARIANT_REVIEW_PATH,
-          PROTOTYPE_VARIANT_CHOICES_PATH,
-          ctx.checkpoint?.request_path ?? '',
-        ]
-          .filter((item) => item.length > 0)
-          .map((item) => chip(item))
-          .join('\n        ')}
-      </div>
-    </div>
-  </details>
-`;
-
-  return renderPage({
+  return renderMultiVariantComparisonPage({
     title: 'Prototype model comparison checkpoint',
     metaLine: `Prototype model comparison - ${ctx.runId}`,
     headline: 'Choose a prototype variant',
     subtitle:
       'Compare local prototype artifacts using captured relay selection evidence, then keep one variant.',
-    bodyHtml,
+    recommendation: {
+      label: recommended.label,
+      rationale: review.comparison_summary,
+      badgeText: review.verdict === 'recommend' ? 'Recommended variant' : 'Operator choice',
+      intent: review.verdict === 'recommend' ? 'positive' : 'attention',
+      aside: `${providerEvidence.captured_count} relay selections captured`,
+    },
+    variants: variantComparisonItems({
+      aggregate,
+      providerEvidence,
+      choices: visibleChoices,
+      recommendedChoiceId: recommended.id,
+      runFolder: ctx.runFolder,
+      projectRoot: ctx.projectRoot,
+    }),
+    detailsHtml: renderVariantDetails({
+      review,
+      verification,
+      providerEvidence,
+      checkpointRequestPath: ctx.checkpoint?.request_path,
+      resumeCommand,
+    }),
     footerLeft: `circuit - prototype - ${ctx.runId}`,
     footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH,
   });

@@ -18,6 +18,7 @@ export type HtmlAutoResolution = {
 
 export type HtmlProjectorContext = {
   readonly runFolder: string;
+  readonly projectRoot?: string | undefined;
   readonly runId: string;
   readonly flowId: string;
   readonly runOutcome: string;
