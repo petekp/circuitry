@@ -202,8 +202,7 @@ STEP-I4.
   using author-friendly route aliases like `{ success: '@complete' }`
   cannot pass WF-I8 and then stall at runtime. Rationale for promoting
   graph semantics to parse-time invariants rather than property tests:
-  preferring types over tests where the type can express the invariant
-  (CLAUDE.md §Architecture-First types).
+  preferring types over tests where the type can express the invariant.
 - **v0.3 (Runtime Safety Floor Slice 4)**: adds
   **WF-I11** (pass-route terminal reachability) after runtime evidence
   showed WF-I8's broad

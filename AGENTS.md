@@ -99,21 +99,17 @@ terminology migration in progress.
 
 ## Adding a flow
 
-1. Create `src/flows/<id>/` with `data.ts` (the canonical `FlowData` value),
-   `flow.ts` (the thin `defineFlowData` adapter), `reports.ts` (the flow's Zod
-   report schemas), optional `command.md` and `contract.md`, optional
-   `relay-hints.ts` if any relay steps have shape hints, and `writers/` for
-   custom semantic writers.
-2. Export a tiny `index.ts` compatibility projection if callers need the
-   `<id>CompiledFlowPackage` name.
-3. Add the definition to `flowDefinitions` in `src/flows/catalog.ts`.
-3. `npm run build && node scripts/flows/emit.ts` to regenerate
-   `schematic.json`, command mirrors, and public host flow output.
-4. `npm run verify`.
+Use [`docs/flows/authoring-model.md`](docs/flows/authoring-model.md#adding-a-flow)
+as the flow-authoring playbook. It covers package files, command ownership,
+`paths.command`, generated Claude and Codex command/skill surfaces, Codex cache
+sync, release metadata, and verification.
 
-The engine (`src/runtime/`) does not need any edits — registries derive
-from the catalog. If you find yourself editing engine files to add a
-flow, the boundary is being violated.
+Keep this file as the short operating guide. Do not copy the full flow playbook
+here.
+
+The engine (`src/runtime/`) does not need edits for normal flow additions —
+registries derive from the catalog. If you find yourself editing engine files
+to add a flow, the boundary is being violated.
 
 `CompiledFlowPackage.engineFlags` carries opt-in switches the engine
 branches on (currently only `bindsExecutionDepthToRelaySelection`,

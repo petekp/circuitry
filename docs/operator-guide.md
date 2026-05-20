@@ -82,11 +82,7 @@ invoke an implementer:
 > This flow may invoke a write-capable Claude Code worker. Circuit will verify
 > and review the result, but the worker can edit files in this checkout.
 
-## Advanced Compatibility
-
-The deterministic CLI router still understands old intent prefixes such as
-`fix:`, `review:`, `develop:`, and `decide:`. Keep them for scripts and older
-habits, not for the normal user path.
+## Review Untracked Files
 
 Review collects untracked file paths and sizes by default, but not untracked
 file contents. If you explicitly want Review to send untracked file contents to

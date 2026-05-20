@@ -53,7 +53,7 @@ The implemented declarative kernel gives this repo a cleaner source model:
 - FlowData is authored as a typed plain value;
 - `flow.ts` files bind FlowData values to semantic report schemas, writers,
   relay hints, routing metadata, runtime progress, and engine flags;
-- compatibility schematic JSON is generated from the typed definition;
+- schematic JSON is generated from the typed definition;
 - compiled flow manifests and public host mirrors are generated from catalog
   state;
 - catalog derivation builds the runtime registries from compiled packages;
@@ -81,32 +81,12 @@ already moved to Effect or a separate functional kernel.
 
 ## Generated Surface Policy
 
-Generated outputs are compatibility outputs. Do not edit them by hand.
+Generated outputs are emitted artifacts. Do not edit them by hand.
 
-Authored sources:
-
-- `src/flows/<id>/data.ts`
-- `src/flows/<id>/flow.ts`
-- `src/flows/<id>/reports.ts`
-- `src/flows/<id>/command.md`
-- `src/flows/<id>/contract.md`
-- semantic writer and relay-hint modules
-- `src/commands/<id>.md` for direct commands
-
-Generated or mirrored outputs:
-
-- `src/flows/<id>/schematic.json`
-- `generated/flows/**`
-- `plugins/claude/skills/**`
-- `plugins/claude/commands/**`
-- `plugins/codex/flows/**`
-- `plugins/codex/commands/**`
-- `plugins/codex/skills/**`
-- [docs/generated-surfaces.md](../generated-surfaces.md)
-- [docs/flows/block-catalog.json](../flows/block-catalog.json)
-
-After any authored flow or command change, regenerate surfaces and run the drift
-check before review.
+Use [docs/generated-surfaces.md](../generated-surfaces.md) as the source map for
+authored sources, generated destinations, and drift checks. Use
+[docs/flows/authoring-model.md](../flows/authoring-model.md#adding-a-flow) for
+the host-ready flow-authoring checklist.
 
 ## Runtime Boundary Policy
 

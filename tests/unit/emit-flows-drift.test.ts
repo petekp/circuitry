@@ -24,7 +24,7 @@ const codexStalePath = resolve(codexBuildSkillDir, 'never-a-mode.json');
 const runtimeProofClaudeDir = resolve(projectRoot, 'plugins/claude/skills/runtime-proof');
 const runtimeProofCodexDir = resolve(projectRoot, 'plugins/codex/flows/runtime-proof');
 const rootClaudeMarketplacePath = resolve(projectRoot, '.claude-plugin/marketplace.json');
-const rootClaudeLegacyManifestPath = resolve(projectRoot, '.claude-plugin/plugin.json');
+const rootClaudeObsoleteManifestPath = resolve(projectRoot, '.claude-plugin/plugin.json');
 
 function planted(path: string): boolean {
   return existsSync(path);
@@ -62,7 +62,7 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     removeStaleSiblingIfPresent(codexStalePath);
     removeDirIfPresent(runtimeProofClaudeDir);
     removeDirIfPresent(runtimeProofCodexDir);
-    removeStaleSiblingIfPresent(rootClaudeLegacyManifestPath);
+    removeStaleSiblingIfPresent(rootClaudeObsoleteManifestPath);
   });
 
   it('--check exits 1 and names the stale sibling when one exists', () => {
@@ -139,9 +139,9 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     );
   });
 
-  it('emit mode preserves the root Claude marketplace while removing legacy root plugin files', () => {
+  it('emit mode preserves the root Claude marketplace while removing obsolete root plugin files', () => {
     const marketplaceBefore = readFileSync(rootClaudeMarketplacePath, 'utf8');
-    plantStaleSibling(rootClaudeLegacyManifestPath);
+    plantStaleSibling(rootClaudeObsoleteManifestPath);
 
     const res = spawnSync('node', [emitScript], {
       cwd: projectRoot,
@@ -149,10 +149,10 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     });
 
     expect(res.status).toBe(0);
-    expect(planted(rootClaudeLegacyManifestPath)).toBe(false);
+    expect(planted(rootClaudeObsoleteManifestPath)).toBe(false);
     expect(readFileSync(rootClaudeMarketplacePath, 'utf8')).toBe(marketplaceBefore);
     expect(res.stdout ?? '').toContain(
-      'removed legacy root host surface .claude-plugin/plugin.json',
+      'removed obsolete root host surface .claude-plugin/plugin.json',
     );
   });
 });

@@ -1,15 +1,13 @@
 # Command Sources
 
-This directory contains hand-authored source files for Circuit commands that
-are not owned by a flow package.
+This directory contains hand-authored source files for direct Circuit commands
+that are not owned by a flow package.
 
 Flow-owned command sources live beside their flows at
-`src/flows/<id>/command.md`. The emit script copies both kinds of command
-source into host packages:
+`src/flows/<id>/command.md` and are declared with `paths.command` in that
+flow's `data.ts`.
 
-- Claude Code commands: `plugins/claude/commands/<id>.md`
-- Codex commands: `plugins/codex/commands/<id>.md`
-- Codex skills: `plugins/codex/skills/<id>/SKILL.md`
-
-Do not edit generated host command files by hand. Edit the source here or in
-the relevant flow package, then run `npm run emit-flows`.
+For generated Claude and Codex command/skill destinations, edit rules, and drift
+checks, use [docs/generated-surfaces.md](../../docs/generated-surfaces.md). For
+the host-ready flow-authoring checklist, use
+[docs/flows/authoring-model.md](../../docs/flows/authoring-model.md#adding-a-flow).

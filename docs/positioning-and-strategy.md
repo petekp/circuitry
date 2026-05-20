@@ -181,7 +181,9 @@ The marketing now has two distinct payoffs operating on different time horizons:
 
 - **Moat shifts from flow schematics (replicable) to accumulated project history (real switching cost).** Once a user has a year of Circuit reports and evidence, leaving means losing institutional memory, not just retraining muscle memory.
 - **Audience expands** from fatigue persona to *anyone running long-lived projects with coding agents* — including teams, agencies, enterprises.
-- **Competitive surface upgrades** from "category of one" to a visible category (vs. MEMORY.md / CLAUDE.md / Cursor-rules ecosystem). Being in a visible category beats being a category of one.
+- **Competitive surface upgrades** from "category of one" to a visible category
+  (vs. memory files and repo-rule ecosystems). Being in a visible category
+  beats being a category of one.
 - **Circuit becomes the substrate for "agent observability."** Whether you build that layer or someone else does, owning the underlying data is leverage.
 
 ## 8. Capabilities brainstorm — sober tiers

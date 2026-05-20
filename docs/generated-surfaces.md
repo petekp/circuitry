@@ -8,7 +8,7 @@ This is the source map for Circuit command surfaces, compiled flow outputs, host
 
 - FlowData is authored in `src/flows/<id>/data.ts`; `src/flows/<id>/flow.ts` binds that plain value to the compiler.
 - Block definitions are authored in `src/schemas/flow-block-definitions.ts`.
-- Flow schematic JSON files under `src/flows/<id>/schematic.json` are generated compatibility outputs.
+- Flow schematic JSON files under `src/flows/<id>/schematic.json` are generated outputs.
 - Flow-owned commands are authored in `src/flows/<id>/command.md`.
 - Direct commands are authored in `src/commands/<id>.md`.
 - Canonical compiled manifests under `generated/flows/**` are generated outputs.
@@ -26,10 +26,10 @@ Codex skill files intentionally translate slash-command wording into skill-safe 
 
 | Surface | Source of truth | Generator | Human-editable | Expected destinations | Validation / drift check | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Block catalog | `src/schemas/flow-block-definitions.ts` | `npm run build && node scripts/flows/emit.ts` | no | `docs/flows/block-catalog.json` | `node scripts/flows/emit.ts --check` | The JSON catalog is retained for docs and compatibility; typed block definitions own current facts. |
+| Block catalog | `src/schemas/flow-block-definitions.ts` | `npm run build && node scripts/flows/emit.ts` | no | `docs/flows/block-catalog.json` | `node scripts/flows/emit.ts --check` | The JSON catalog is generated for docs; typed block definitions own current facts. |
 | Flow-owned commands | `src/flows/<id>/command.md` | `scripts/flows/emit.ts` | source yes; outputs no | `plugins/claude/commands/<id>.md`<br>`plugins/codex/commands/<id>.md`<br>`plugins/codex/skills/<id>/SKILL.md` | `node scripts/flows/emit.ts --check` | Only public flows with `paths.command` emit these surfaces. Generated headers are omitted to preserve host command and skill parsing. |
 | Direct command sources | `src/commands/<id>.md` | `scripts/flows/emit.ts` mirrors to host plugin surfaces | source yes; outputs no | `plugins/claude/commands/<id>.md`<br>`plugins/codex/commands/<id>.md`<br>`plugins/codex/skills/<id>/SKILL.md` | `node scripts/flows/emit.ts --check` | Covers router/direct commands such as run, create, and handoff. |
-| Generated schematic compatibility files | `src/flows/<id>/data.ts` + `src/flows/<id>/flow.ts` | `npm run build && node scripts/flows/emit.ts` | no | `src/flows/<id>/schematic.json` | `node scripts/flows/emit.ts --check` | JSON schematics are retained for compatibility and generated from typed FlowData plus the flow adapter. |
+| Generated schematic files | `src/flows/<id>/data.ts` + `src/flows/<id>/flow.ts` | `npm run build && node scripts/flows/emit.ts` | no | `src/flows/<id>/schematic.json` | `node scripts/flows/emit.ts --check` | JSON schematics are generated from typed FlowData plus the flow adapter. |
 | Generated flow manifests | `src/flows/<id>/data.ts` + `src/flows/<id>/flow.ts` | `npm run build && node scripts/flows/emit.ts` | no | `generated/flows/<id>/*.json` | `node scripts/flows/emit.ts --check` | Canonical compiled-flow outputs. JSON cannot carry generated headers without changing host parsing. |
 | Claude plugin flow mirrors | `generated/flows/<id>/*.json` | `scripts/flows/emit.ts` | no | `plugins/claude/skills/<id>/*.json` | `node scripts/flows/emit.ts --check` | Public flows only. Internal flow mirrors are stale and fail drift checks. |
 | Codex plugin flow mirrors | `generated/flows/<id>/*.json` | `scripts/flows/emit.ts` | no | `plugins/codex/flows/<id>/*.json` | `node scripts/flows/emit.ts --check` | Public flows only. Internal flow mirrors are stale and fail drift checks. |

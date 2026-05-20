@@ -109,9 +109,8 @@ describe('host experience docs', () => {
     expect(doc).not.toContain('check:codex-plugin-cache');
     expect(doc).not.toContain('doctor');
 
-    for (const prefix of ['fix:', 'develop:', 'decide:']) {
-      expect(operatorGuide).toContain(prefix);
-    }
+    expect(operatorGuide).not.toContain('old intent prefixes');
+    expect(operatorGuide).not.toContain('develop:');
   });
 
   it('links navigation doc references in the docs map', () => {

@@ -109,7 +109,7 @@ const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
 const BLOCK_CATALOG_REL = 'docs/flows/block-catalog.json';
 const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'run'];
 const ROOT_CLAUDE_MARKETPLACE_REL = '.claude-plugin/marketplace.json';
-const LEGACY_ROOT_HOST_SURFACES = ['commands', 'hooks'];
+const OBSOLETE_ROOT_HOST_SURFACES = ['commands', 'hooks'];
 
 // Slash command source files either live next to their flow under
 // src/flows/<id>/command.md or, for direct/router commands, under
@@ -273,7 +273,7 @@ function renderSurfaceInventory(): string {
       'no',
       '`docs/flows/block-catalog.json`',
       '`node scripts/flows/emit.ts --check`',
-      'The JSON catalog is retained for docs and compatibility; typed block definitions own current facts.',
+      'The JSON catalog is generated for docs; typed block definitions own current facts.',
     ],
     [
       'Flow-owned commands',
@@ -294,13 +294,13 @@ function renderSurfaceInventory(): string {
       'Covers router/direct commands such as run, create, and handoff.',
     ],
     [
-      'Generated schematic compatibility files',
+      'Generated schematic files',
       '`src/flows/<id>/data.ts` + `src/flows/<id>/flow.ts`',
       '`npm run build && node scripts/flows/emit.ts`',
       'no',
       '`src/flows/<id>/schematic.json`',
       '`node scripts/flows/emit.ts --check`',
-      'JSON schematics are retained for compatibility and generated from typed FlowData plus the flow adapter.',
+      'JSON schematics are generated from typed FlowData plus the flow adapter.',
     ],
     [
       'Generated flow manifests',
@@ -466,7 +466,7 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
     '',
     '- FlowData is authored in `src/flows/<id>/data.ts`; `src/flows/<id>/flow.ts` binds that plain value to the compiler.',
     '- Block definitions are authored in `src/schemas/flow-block-definitions.ts`.',
-    '- Flow schematic JSON files under `src/flows/<id>/schematic.json` are generated compatibility outputs.',
+    '- Flow schematic JSON files under `src/flows/<id>/schematic.json` are generated outputs.',
     '- Flow-owned commands are authored in `src/flows/<id>/command.md`.',
     '- Direct commands are authored in `src/commands/<id>.md`.',
     '- Canonical compiled manifests under `generated/flows/**` are generated outputs.',
@@ -718,8 +718,10 @@ function findExistingInternalHostMirrorDirs(entry: SchematicEntry): string[] {
   return internalHostMirrorDirs(entry).filter((rel) => existsSync(resolve(projectRoot, rel)));
 }
 
-function findLegacyRootHostSurfaces(): string[] {
-  const surfaces = LEGACY_ROOT_HOST_SURFACES.filter((rel) => existsSync(resolve(projectRoot, rel)));
+function findObsoleteRootHostSurfaces(): string[] {
+  const surfaces = OBSOLETE_ROOT_HOST_SURFACES.filter((rel) =>
+    existsSync(resolve(projectRoot, rel)),
+  );
   const rootClaudePluginRel = '.claude-plugin';
   const rootClaudePluginAbs = resolve(projectRoot, rootClaudePluginRel);
   if (!existsSync(rootClaudePluginAbs)) return surfaces;
@@ -733,7 +735,7 @@ function findLegacyRootHostSurfaces(): string[] {
   return surfaces;
 }
 
-function emitSchematicCompatibilityFile(entry: SchematicEntry): void {
+function emitSchematicFile(entry: SchematicEntry): void {
   const outAbs = resolve(projectRoot, entry.schematicPath);
   mkdirSync(dirname(outAbs), { recursive: true });
   writeFileSync(outAbs, stringifySchematic(entry.schematic));
@@ -741,7 +743,7 @@ function emitSchematicCompatibilityFile(entry: SchematicEntry): void {
   console.log(`emitted ${entry.schematicPath} from ${entry.definitionSourcePath}`);
 }
 
-function checkSchematicCompatibilityFile(entry: SchematicEntry, tmpDir: string): boolean {
+function checkSchematicFile(entry: SchematicEntry, tmpDir: string): boolean {
   const tmpFile = join(tmpDir, entry.schematicPath.replace(/[/]/g, '_'));
   writeFileSync(tmpFile, stringifySchematic(entry.schematic));
   biomeFormatInPlace(tmpFile);
@@ -800,7 +802,7 @@ async function emitMode(): Promise<void> {
   const expectedSkills = expectedCodexSkillIds();
   await emitBlockCatalog();
   for (const entry of SCHEMATICS) {
-    emitSchematicCompatibilityFile(entry);
+    emitSchematicFile(entry);
     const result = await compileOneSchematic(entry.schematic);
     const plan = planSchematicFiles(entry.id, result);
     for (const { outRel, flow } of plan) {
@@ -852,9 +854,9 @@ async function emitMode(): Promise<void> {
     rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
     console.log(`removed stale ${stale}`);
   }
-  for (const stale of findLegacyRootHostSurfaces()) {
+  for (const stale of findObsoleteRootHostSurfaces()) {
     rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
-    console.log(`removed legacy root host surface ${stale}`);
+    console.log(`removed obsolete root host surface ${stale}`);
   }
 }
 
@@ -867,7 +869,7 @@ async function checkMode(): Promise<void> {
       drifted = true;
     }
     for (const entry of SCHEMATICS) {
-      if (checkSchematicCompatibilityFile(entry, tmpDir)) {
+      if (checkSchematicFile(entry, tmpDir)) {
         drifted = true;
       }
       const result = await compileOneSchematic(entry.schematic);
@@ -978,9 +980,9 @@ async function checkMode(): Promise<void> {
       );
       drifted = true;
     }
-    for (const stale of findLegacyRootHostSurfaces()) {
+    for (const stale of findObsoleteRootHostSurfaces()) {
       console.error(
-        `✗ ${stale} is a legacy root host surface. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
+        `✗ ${stale} is an obsolete root host surface. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
       );
       drifted = true;
     }

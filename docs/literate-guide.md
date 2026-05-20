@@ -69,7 +69,7 @@ terminal produce identical run folders.
 
 **Flows are data, not code.** A flow — Build, Fix, Explore, Review, or
 Pursue — is authored as a typed `FlowData` value and compiled into a
-runtime graph. The generated schematic JSON is a compatibility surface,
+runtime graph. The generated schematic JSON is an emitted surface,
 not the source to edit. The engine never imports a flow's code module
 directly. New flows are added by appending to a catalog (§19); the
 engine derives every per-flow behavior — routing, report writers, shape
@@ -118,7 +118,7 @@ lives in a folder on disk (§10), not in the session's memory.
 A flow's authored definition is a plain typed value at
 `src/flows/<id>/data.ts`, bound to the compiler by the thin adapter at
 `src/flows/<id>/flow.ts`. The build script (§19) regenerates the
-compatibility schematic at `src/flows/<id>/schematic.json`, then compiles
+schematic at `src/flows/<id>/schematic.json`, then compiles
 that schematic into a `CompiledFlow` — the runtime graph the engine actually
 loads. Compiled outputs land at `generated/flows/<id>/circuit.json` and get
 mirrored into the host plugin packages when the flow is public.
@@ -978,12 +978,13 @@ export const flowPackages: readonly CompiledFlowPackage[] =
   compileFlowDefinitions(flowDefinitions);
 ```
 
-Adding a flow is therefore a four-step process: create the folder, author
-`data.ts` and the thin `flow.ts` adapter, add the definition to the catalog,
-run `npm run build && node scripts/flows/emit.ts` to regenerate the
-schematic, compiled JSON, and host plugin mirrors. No engine edit. The
-repository's [AGENTS.md](../AGENTS.md) says the rule explicitly: *if you find yourself
-editing engine files to add a flow, the boundary is being violated.*
+The durable flow-authoring playbook lives in
+[docs/flows/authoring-model.md#adding-a-flow](flows/authoring-model.md#adding-a-flow).
+It covers the full host-ready path: package files, `paths.command`, generated
+Claude and Codex command/skill surfaces, release metadata, cache sync, and
+verification. No engine edit. The repository's [AGENTS.md](../AGENTS.md) keeps
+that rule explicit: *if you find yourself editing engine files to add a flow,
+the boundary is being violated.*
 
 The catalog also drives drift detection. A CI step,
 `check-flow-drift`, runs the emit pipeline and compares the output bytes
