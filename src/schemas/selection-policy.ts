@@ -23,12 +23,14 @@ export type Effort = z.infer<typeof Effort>;
 // difference) at the resolver layer expects the inputs to be sets;
 // accepting duplicates at parse time would let a YAML author's typo
 // silently produce `['tdd', 'tdd']` and mask the intent.
-const UniqueSkillArray = z.array(SkillId).refine(
-  (arr) => new Set(arr).size === arr.length,
-  (arr) => ({
-    message: `skills array contains duplicates: ${[...new Set(arr.filter((s, i) => arr.indexOf(s) !== i))].join(', ')}`,
-  }),
-);
+const UniqueSkillArray = z.array(SkillId).superRefine((arr, ctx) => {
+  const duplicates = [...new Set(arr.filter((skill, index) => arr.indexOf(skill) !== index))];
+  if (duplicates.length === 0) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: `skills array contains duplicates: ${duplicates.join(', ')}`,
+  });
+});
 
 // Typed skill operations, no empty-array ambiguity. `inherit` is a pure
 // sentinel; the other three carry an explicit `skills: SkillId[]`. Empty

@@ -86,6 +86,13 @@ export const CapabilityAxes = z
   .strict();
 export type CapabilityAxes = z.infer<typeof CapabilityAxes>;
 
+const DEFAULT_CAPABILITY_AXES = {
+  intent_hints: [],
+  modes: [],
+  stage_path: [],
+  outputs: [],
+} satisfies CapabilityAxes;
+
 export const OriginalCapability = z
   .object({
     id: z.string().min(1),
@@ -93,7 +100,7 @@ export const OriginalCapability = z
     title: z.string().min(1),
     summary: z.string().min(1),
     release_required: z.boolean().default(true),
-    axes: CapabilityAxes.default({}),
+    axes: CapabilityAxes.default(DEFAULT_CAPABILITY_AXES),
     source_refs: z.array(z.string().min(1)).min(1),
   })
   .strict();
@@ -160,7 +167,7 @@ export const CurrentCapability = z
     summary: z.string().min(1),
     evidence: z.array(z.string().min(1)).default([]),
     readiness_refs: z.array(z.string().regex(/^REL-[0-9]+$/)).default([]),
-    axes: CapabilityAxes.default({}),
+    axes: CapabilityAxes.default(DEFAULT_CAPABILITY_AXES),
   })
   .strict();
 export type CurrentCapability = z.infer<typeof CurrentCapability>;
@@ -331,7 +338,13 @@ export const PublicClaim = z
         script_checks: z.array(z.string().min(1)).default([]),
       })
       .strict()
-      .default({}),
+      .default({
+        capability_ids: [],
+        proof_ids: [],
+        exception_ids: [],
+        test_paths: [],
+        script_checks: [],
+      }),
     user_risk: z.string().min(1),
     readiness_refs: z.array(z.string().regex(/^REL-[0-9]+$/)).default([]),
   })

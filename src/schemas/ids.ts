@@ -11,7 +11,7 @@ export type StageId = z.infer<typeof StageId>;
 export const StepId = z.string().regex(slugPattern).brand<'StepId'>();
 export type StepId = z.infer<typeof StepId>;
 
-export const RunId = z.string().uuid().brand<'RunId'>();
+export const RunId = z.guid({ error: 'Invalid UUID' }).brand<'RunId'>();
 export type RunId = z.infer<typeof RunId>;
 
 export const InvocationId = z

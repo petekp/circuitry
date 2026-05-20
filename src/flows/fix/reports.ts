@@ -707,7 +707,7 @@ export type FixReviewFinding = z.infer<typeof FixReviewFinding>;
 
 // Expressed as a discriminated union so the verdict-conditional minimum
 // on `findings` becomes a structural JSON-Schema constraint rather than a
-// superRefine (which `zod-to-json-schema` silently drops). With this shape,
+// superRefine (which JSON Schema conversion cannot express). With this shape,
 // the CLI's `--json-schema` / `--output-schema` boundary rejects
 // {verdict: 'reject'|'accept-with-fixes', findings: []} at the same boundary
 // where Zod would reject it.

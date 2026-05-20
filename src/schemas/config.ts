@@ -35,7 +35,7 @@ export type ConnectorReference = z.infer<typeof ConnectorReference>;
 const RelayConfigBody = z
   .object({
     default: z.union([EnabledConnector, z.literal('auto'), ConnectorName]).default('auto'),
-    roles: z.record(RelayRole, ConnectorReference).default({}),
+    roles: z.partialRecord(RelayRole, ConnectorReference).default({}),
     circuits: z.record(CompiledFlowId, ConnectorReference).default({}),
     connectors: z.record(ConnectorName, CustomConnectorDescriptor).default({}),
   })
@@ -149,7 +149,7 @@ export const Config = z
       circuits: {},
       connectors: {},
     }),
-    skills: SkillsConfig.default({}),
+    skills: SkillsConfig.default({ bindings: {} }),
     circuits: z.record(CompiledFlowId, CircuitOverride).default({}),
     defaults: z
       .object({
