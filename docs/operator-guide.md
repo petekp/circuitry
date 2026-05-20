@@ -66,9 +66,13 @@ that work, `trace` as the ordered record, `report` as typed output, and
    depth, tournament, and autonomous controls against that flow's allow-list.
 3. Circuit runs stages in order. Examples include Frame, Analyze, Plan, Act,
    Verify, Review, and Close. Each flow chooses the stages it needs.
-4. Circuit writes a trace, typed reports, evidence, and checkpoint state into a
+4. Relay steps may declare deterministic acceptance criteria. Circuit checks
+   those criteria after the worker returns and after the relay result has
+   passed its normal schema and verdict check. Failed criteria either stop the
+   run or retry the same relay step with feedback, depending on the flow.
+5. Circuit writes a trace, typed reports, evidence, and checkpoint state into a
    run folder under `.circuit/runs/`.
-5. If a checkpoint needs your choice, Circuit pauses. Resume it with:
+6. If a checkpoint needs your choice, Circuit pauses. Resume it with:
 
    ```bash
    ./bin/circuit resume \
@@ -132,6 +136,12 @@ generated surfaces:
 npm run emit-flows
 npm run check-flow-drift
 ```
+
+**A relay acceptance criterion failed.** The trace records
+`check.evaluated` entries with `check_kind: "acceptance_criteria"` for each
+criterion Circuit evaluated. If the step declares `retry-with-feedback`, the
+next attempt receives the failed criterion and reason in its relay prompt.
+Retry count still comes from the step's normal `budgets.max_attempts`.
 
 **A plugin run uses the wrong local CLI.** The plugin ignores ambient `PATH`
 binaries by default. Use `CIRCUIT_CLI=/absolute/path/to/bin/circuit` for an

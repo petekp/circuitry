@@ -551,6 +551,7 @@ relay.receipt     — connector's receipt id and CLI version
 relay.result      — sha256 of the result body
 relay.completed   — verdict + duration
 check.evaluated   — pass or fail against the report's check rule
+[check.evaluated] — relay acceptance criteria, if the step declares them
 ```
 
 When the connector itself fails (process crash, timeout, schema reject)
@@ -602,6 +603,20 @@ must come from the queue's `to_execute` list"). A worker that returns
 JSON that parses as legal but cross-validates as illegal sees the same
 recovery route as a worker that returned malformed JSON. The worker is
 not trusted to know that two reports must agree; the validator is.
+
+Relay steps can also declare `acceptance_criteria`. These are not another
+reviewer and they are not an LLM judgment. They are deterministic checks over
+the parsed relay result or a bounded verification command. The relay executor
+runs them after the result verdict, report schema, and cross-report checks pass.
+If a criterion fails, the run either aborts or routes through the same relay
+step's existing `retry` route with feedback. The graph runner still owns retry
+bounds through `budgets.max_attempts`.
+
+For report-writing relay steps, this order matters: a failed acceptance
+criterion stops before the canonical report is written, so later steps cannot
+quietly consume a report that Circuit already knows is incomplete. The trace
+still records the result-verdict check and each evaluated criterion on the same
+`(step_id, attempt)` pair.
 
 ## §13. Connectors
 
@@ -999,6 +1014,11 @@ shape its response must have. The hint is co-located with the schema
 it constrains, and it lives in the flow package, not in the engine —
 because the engine has no business knowing what a Build review report
 looks like.
+
+Acceptance criteria are a second flow-authored prompt fragment. The worker sees
+the declared criteria on the first attempt. On an allowed retry, the worker also
+sees the failed criterion id, kind, reason, and bounded command output summary
+when command output exists.
 
 ```ts
 // src/flows/build/relay-hints.ts (excerpt)

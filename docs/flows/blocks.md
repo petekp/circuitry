@@ -33,7 +33,8 @@ Each block has:
 - structured inputs;
 - a prompt or tool call rendered from those inputs;
 - a typed output;
-- checks that decide whether the output can be trusted;
+- checks that decide whether the output can be trusted, including relay
+  acceptance criteria when a delegated worker result needs step-level proof;
 - routes that decide what can happen next.
 
 The prompt is a delivery format, not the source of truth. The runtime

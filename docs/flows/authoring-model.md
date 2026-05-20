@@ -96,6 +96,8 @@ Typical step concerns:
 - `evidence_requirements`: proof the step promises to leave behind.
 - `execution`: whether the runtime composes, relays, verifies, checkpoints,
   runs a child flow, or fans out.
+- `acceptance_criteria`: optional deterministic checks for relay steps that
+  must pass after the relay result is schema-valid and before the flow advances.
 - `selection`: optional model, effort, skill, depth, or invocation options.
 - `routes`: named outcomes mapped to step ids or terminal targets.
 - `route_overrides`: mode-specific route target overrides.
@@ -200,6 +202,60 @@ concrete Zod types with flow-specific fields.
 Contract aliases bridge the two. Each schematic declares how generic block
 contracts map to flow-specific schemas. The runtime uses the flow-specific
 schema for actual parsing and field access.
+
+## Relay Acceptance Criteria
+
+Use `acceptance_criteria` when a relay step has a narrow, machine-checkable
+meaning of done that should stop the flow before later steps build on a bad
+result. V1 criteria are relay-only and deterministic:
+
+- `report_field`: checks a field path in the parsed relay result with
+  `present` or `non_empty`.
+- `command`: runs a bounded direct-argv verification command and expects
+  `passed`.
+
+Criteria run only after the relay result verdict passes and the report schema
+and cross-report validation succeed. Passing criteria add
+`check.evaluated` trace entries with `check_kind: "acceptance_criteria"`.
+Failing criteria do not write the canonical report for that relay attempt.
+
+The default failure policy is `hard-fail`. A relay step may opt into
+`retry-with-feedback` when its `retry` route re-enters the same step. That
+retry uses the existing route and `budgets.max_attempts`; do not add a second
+retry counter inside `acceptance_criteria`.
+
+Example:
+
+```json
+{
+  "acceptance_criteria": {
+    "checks": [
+      {
+        "kind": "report_field",
+        "id": "changed-files-present",
+        "path": ["changed_files"],
+        "predicate": "present"
+      },
+      {
+        "kind": "report_field",
+        "id": "evidence-non-empty",
+        "path": ["evidence"],
+        "predicate": "non_empty"
+      }
+    ],
+    "on_failure": { "mode": "retry-with-feedback" }
+  },
+  "routes": {
+    "continue": "verify-step",
+    "retry": "act-step",
+    "stop": "@stop"
+  }
+}
+```
+
+Do not use acceptance criteria for subjective review. Keep those verdicts in
+Review or an explicit checkpoint. LLM-judged criteria and checkpoint
+edit-criterion behavior are not part of V1.
 
 ## Fix As The Proving Shape
 

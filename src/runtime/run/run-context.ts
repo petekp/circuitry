@@ -1,5 +1,6 @@
 import type { RuntimePackageIndex } from '../../flows/registries/runtime-index.js';
 import type { Axes } from '../../schemas/axes.js';
+import type { AcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { RunId } from '../domain/run.js';
 import type { ExecutableFlow } from '../manifest/executable-flow.js';
 import type { RunFileStore } from '../run-files/run-file-store.js';
@@ -23,6 +24,7 @@ export interface RunContext
   readonly trace: TraceStore;
   readonly externalFiles: ExternalFileReader;
   readonly activeStepAttempt?: number;
+  readonly acceptanceRetryFeedback?: AcceptanceRetryFeedback;
   readonly resumeCheckpoint?: {
     readonly stepId: string;
     readonly attempt: number;

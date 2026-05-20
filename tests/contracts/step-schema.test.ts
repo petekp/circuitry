@@ -114,6 +114,56 @@ describe('Step discriminated union', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('accepts deterministic relay acceptance criteria', () => {
+    const ok = Step.safeParse({
+      ...baseCompose,
+      executor: 'worker',
+      kind: 'relay',
+      role: 'implementer',
+      acceptance_criteria: {
+        checks: [
+          {
+            kind: 'report_field',
+            id: 'evidence-non-empty',
+            path: ['evidence'],
+            predicate: 'non_empty',
+          },
+        ],
+        on_failure: { mode: 'retry-with-feedback' },
+      },
+      writes: {
+        request: 'r.json',
+        receipt: 'c.json',
+        result: 's.json',
+      },
+      check: {
+        kind: 'result_verdict',
+        source: { kind: 'relay_result', ref: 'result' },
+        pass: ['ok'],
+      },
+    });
+
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects acceptance criteria on non-relay steps', () => {
+    const bad = Step.safeParse({
+      ...baseCompose,
+      acceptance_criteria: {
+        checks: [
+          {
+            kind: 'report_field',
+            id: 'not-for-compose',
+            path: ['evidence'],
+            predicate: 'present',
+          },
+        ],
+      },
+    });
+
+    expect(bad.success).toBe(false);
+  });
+
   it('rejects relay skill slots with underscore ids', () => {
     const bad = Step.safeParse({
       ...baseCompose,

@@ -46,7 +46,9 @@ function terminalFlow(target: TerminalTarget): ExecutableFlow {
 type RelayFlowFixtureOptions = {
   readonly pass?: readonly string[];
   readonly routes?: Record<string, string>;
+  readonly budgets?: { readonly max_attempts: number };
   readonly report?: { readonly path: string; readonly schema: string };
+  readonly acceptanceCriteria?: unknown;
 };
 
 function isRelayPassList(
@@ -99,9 +101,13 @@ function relayFlowBytes(options: readonly string[] | RelayFlowFixtureOptions = [
           protocol: 'runtime-relay-check@v1',
           reads: [],
           routes,
+          ...(fixtureOptions.budgets === undefined ? {} : { budgets: fixtureOptions.budgets }),
           executor: 'worker',
           kind: 'relay',
           role: 'reviewer',
+          ...(fixtureOptions.acceptanceCriteria === undefined
+            ? {}
+            : { acceptance_criteria: fixtureOptions.acceptanceCriteria }),
           writes,
           check: {
             kind: 'result_verdict',
@@ -508,9 +514,14 @@ async function runRuntimeProofRelayCase(input: {
   readonly flowBytes?: Buffer;
   readonly connectorName?: string;
   readonly relayer?: RelayFn;
+  readonly projectRootForRunDir?: (runDir: string) => Promise<string>;
   readonly inspectRunDir?: (runDir: string) => Promise<unknown>;
 }) {
   return await withTempRun('circuit-runtime-control-loop-', async (runDir) => {
+    const projectRoot =
+      input.projectRootForRunDir === undefined
+        ? undefined
+        : await input.projectRootForRunDir(runDir);
     const result = await runCompiledFlow({
       flowBytes: input.flowBytes ?? relayFlowBytes(),
       runDir,
@@ -518,6 +529,7 @@ async function runRuntimeProofRelayCase(input: {
       goal: 'prove runtime relay check admission',
       now: () => new Date('2026-05-06T00:00:00.000Z'),
       relayer: input.relayer ?? relayerWith(input.resultBody, input.connectorName),
+      ...(projectRoot === undefined ? {} : { projectRoot }),
     });
     const trace = await new TraceStore(runDir).load();
     const resultJson = RunResult.parse(
@@ -1208,6 +1220,267 @@ describe('runtime control-loop parity twins', () => {
         kind: 'relay.completed',
         step_id: 'relay-step',
         verdict: 'ok',
+      }),
+    );
+  });
+
+  it('hard-fails relay acceptance criteria without writing the canonical report', async () => {
+    const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
+    const { result, trace, resultJson, inspection } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        report,
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+        },
+      }),
+      resultBody: '{"verdict":"ok","evidence":[]}',
+      runId: 'ffffffff-5555-4fff-8fff-ffffffff5555',
+      inspectRunDir: async (runDir) => ({
+        reportExists: existsSync(join(runDir, report.path)),
+      }),
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain('evidence-non-empty');
+    expect(resultJson.outcome).toBe('aborted');
+    expect(resultJson.reason).toContain('evidence-non-empty');
+    expect(inspection).toEqual({ reportExists: false });
+    expect(trace.map((entry) => entry.kind)).toEqual([
+      'run.bootstrapped',
+      'step.entered',
+      'relay.started',
+      'relay.request',
+      'relay.receipt',
+      'relay.result',
+      'relay.completed',
+      'check.evaluated',
+      'check.evaluated',
+      'step.aborted',
+      'run.closed',
+    ]);
+    expect(trace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'check.evaluated',
+          step_id: 'relay-step',
+          check_kind: 'result_verdict',
+          outcome: 'pass',
+        }),
+        expect.objectContaining({
+          kind: 'check.evaluated',
+          step_id: 'relay-step',
+          check_kind: 'acceptance_criteria',
+          criterion_id: 'evidence-non-empty',
+          criterion_kind: 'report_field',
+          outcome: 'fail',
+          reason: expect.stringContaining('evidence-non-empty'),
+        }),
+      ]),
+    );
+    expect(trace).not.toContainEqual(
+      expect.objectContaining({ kind: 'step.completed', step_id: 'relay-step' }),
+    );
+  });
+
+  it('records command acceptance criteria output in the trace', async () => {
+    const { result, trace } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'command',
+              id: 'command-must-pass',
+              expected_status: 'passed',
+              command: {
+                id: 'node-fails',
+                cwd: '.',
+                argv: [
+                  process.execPath,
+                  '-e',
+                  'console.log("bad output"); console.error("bad error"); process.exit(1);',
+                ],
+                timeout_ms: 5000,
+                max_output_bytes: 256,
+                env: {},
+              },
+            },
+          ],
+        },
+      }),
+      resultBody: '{"verdict":"ok"}',
+      runId: 'ffffffff-6666-4fff-8fff-ffffffff6666',
+      projectRootForRunDir: async (runDir) => runDir,
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'check.evaluated',
+        step_id: 'relay-step',
+        check_kind: 'acceptance_criteria',
+        criterion_id: 'command-must-pass',
+        criterion_kind: 'command',
+        outcome: 'fail',
+        exit_code: 1,
+        status: 'failed',
+        stdout_summary: expect.stringContaining('bad output'),
+        stderr_summary: expect.stringContaining('bad error'),
+      }),
+    );
+  });
+
+  it('retries relay acceptance criteria with feedback through the existing retry route', async () => {
+    const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
+    const prompts: string[] = [];
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input): Promise<RelayResult> => {
+        prompts.push(input.prompt);
+        const resultBody =
+          prompts.length === 1
+            ? '{"verdict":"ok","evidence":[]}'
+            : '{"verdict":"ok","evidence":["fixed"]}';
+        return {
+          request_payload: input.prompt,
+          receipt_id: `runtime-control-loop-relay-${prompts.length}`,
+          result_body: resultBody,
+          duration_ms: 0,
+          cli_version: 'test-relayer',
+        };
+      },
+    };
+
+    const { result, trace, resultJson, inspection } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        routes: { pass: '@complete', retry: 'relay-step' },
+        report,
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+          on_failure: { mode: 'retry-with-feedback' },
+        },
+      }),
+      resultBody: '{"verdict":"unused"}',
+      runId: 'ffffffff-7777-4fff-8fff-ffffffff7777',
+      relayer,
+      inspectRunDir: async (runDir) => ({
+        reportBody: JSON.parse(await readFile(join(runDir, report.path), 'utf8')),
+      }),
+    });
+
+    expect(result.outcome).toBe('complete');
+    expect(result.verdict).toBe('ok');
+    expect(resultJson.verdict).toBe('ok');
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain('Acceptance Criteria:');
+    expect(prompts[0]).not.toContain('Acceptance Criteria Feedback:');
+    expect(prompts[1]).toContain('Acceptance Criteria Feedback:');
+    expect(prompts[1]).toContain('evidence-non-empty');
+    expect(inspection).toEqual({
+      reportBody: { verdict: 'ok', evidence: ['fixed'] },
+    });
+    expect(
+      trace
+        .filter((entry) => entry.kind === 'check.evaluated')
+        .map((entry) => [entry.check_kind, entry.outcome]),
+    ).toEqual([
+      ['result_verdict', 'pass'],
+      ['acceptance_criteria', 'fail'],
+      ['result_verdict', 'pass'],
+      ['acceptance_criteria', 'pass'],
+    ]);
+    expect(trace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'step.completed',
+          step_id: 'relay-step',
+          attempt: 1,
+          route_taken: 'retry',
+        }),
+        expect.objectContaining({
+          kind: 'step.completed',
+          step_id: 'relay-step',
+          attempt: 2,
+          route_taken: 'pass',
+        }),
+      ]),
+    );
+  });
+
+  it('bounds relay acceptance retries with the existing max_attempts budget', async () => {
+    const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
+    const prompts: string[] = [];
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input): Promise<RelayResult> => {
+        prompts.push(input.prompt);
+        return {
+          request_payload: input.prompt,
+          receipt_id: `runtime-control-loop-relay-${prompts.length}`,
+          result_body: '{"verdict":"ok","evidence":[]}',
+          duration_ms: 0,
+          cli_version: 'test-relayer',
+        };
+      },
+    };
+
+    const { result, trace, resultJson } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        routes: { pass: '@complete', retry: 'relay-step' },
+        budgets: { max_attempts: 2 },
+        report,
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+          on_failure: { mode: 'retry-with-feedback' },
+        },
+      }),
+      resultBody: '{"verdict":"unused"}',
+      runId: 'ffffffff-8888-4fff-8fff-ffffffff8888',
+      relayer,
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain("route 'retry' for step 'relay-step' exhausted max_attempts=2");
+    expect(resultJson.outcome).toBe('aborted');
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).not.toContain('Acceptance Criteria Feedback:');
+    expect(prompts[1]).toContain('Acceptance Criteria Feedback:');
+    expect(
+      trace
+        .filter(
+          (entry) => entry.kind === 'check.evaluated' && entry.check_kind === 'acceptance_criteria',
+        )
+        .map((entry) => ({ attempt: entry.attempt, outcome: entry.outcome })),
+    ).toEqual([
+      { attempt: 1, outcome: 'fail' },
+      { attempt: 2, outcome: 'fail' },
+    ]);
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'step.aborted',
+        step_id: 'relay-step',
+        attempt: 3,
+        reason: expect.stringContaining('max_attempts=2'),
       }),
     );
   });

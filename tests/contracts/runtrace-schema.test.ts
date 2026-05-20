@@ -68,6 +68,25 @@ describe('TraceEntry has change_kind + manifest_hash at bootstrap', () => {
     });
     expect(ok.success).toBe(true);
   });
+
+  it('acceptance criteria check trace_entry carries criterion evidence', () => {
+    const ok = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 5,
+      recorded_at: '2026-04-18T05:00:00.000Z',
+      run_id: '0191d2f0-aaaa-7fff-8aaa-000000000000',
+      kind: 'check.evaluated',
+      step_id: 'act-step',
+      attempt: 1,
+      check_kind: 'acceptance_criteria',
+      outcome: 'fail',
+      criterion_id: 'evidence-non-empty',
+      criterion_kind: 'report_field',
+      reason: "acceptance criterion 'evidence-non-empty' failed",
+    });
+
+    expect(ok.success).toBe(true);
+  });
 });
 
 describe('Snapshot requires change_kind + manifest_hash', () => {
@@ -522,6 +541,27 @@ describe('TraceEntry variants reject top-level surplus keys (RUN-I8 coverage exp
     recorded_at: '2026-04-18T05:00:00.000Z',
     run_id: RUN_A,
   };
+
+  it('accepts acceptance criteria check trace fields', () => {
+    const ok = TraceEntry.safeParse({
+      ...base,
+      sequence: 99,
+      kind: 'check.evaluated',
+      step_id: 'relay-step',
+      attempt: 1,
+      check_kind: 'acceptance_criteria',
+      outcome: 'fail',
+      criterion_id: 'command-must-pass',
+      criterion_kind: 'command',
+      exit_code: 1,
+      status: 'failed',
+      stdout_summary: 'stdout text',
+      stderr_summary: 'stderr text',
+      reason: 'command failed',
+    });
+
+    expect(ok.success).toBe(true);
+  });
 
   const cases: Array<[string, Record<string, unknown>]> = [
     [

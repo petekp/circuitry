@@ -1,3 +1,4 @@
+import type { AcceptanceCriteria } from '../../schemas/acceptance-criteria.js';
 import type { Axes } from '../../schemas/axes.js';
 import type { FanoutRubric } from '../../schemas/step.js';
 import type { ExecutableStage, FlowId } from '../domain/flow.js';
@@ -47,6 +48,7 @@ export interface CheckpointStep extends BaseStep {
 export interface RelayStep extends BaseStep {
   readonly kind: 'relay';
   readonly role: string;
+  readonly acceptanceCriteria?: AcceptanceCriteria;
   readonly connector?: string;
   readonly prompt?: string;
   readonly report?: RunFileRef;

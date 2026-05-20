@@ -25419,6 +25419,132 @@ function date4(params) {
 // node_modules/zod/v4/classic/external.js
 config(en_default());
 
+// dist/schemas/verification.js
+var SHELL_BINARIES = /* @__PURE__ */ new Set([
+  "sh",
+  "bash",
+  "zsh",
+  "fish",
+  "dash",
+  "cmd",
+  "cmd.exe",
+  "powershell",
+  "powershell.exe",
+  "pwsh",
+  "pwsh.exe"
+]);
+function commandBinaryName(argv0) {
+  const normalized = argv0.replaceAll("\\", "/");
+  return normalized.slice(normalized.lastIndexOf("/") + 1).toLowerCase();
+}
+var ProjectRelativeCwd = external_exports.string().min(1).superRefine((cwd, ctx) => {
+  if (cwd.startsWith("/") || cwd.startsWith("~") || /^[A-Za-z]:[\\/]/.test(cwd)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "cwd must be project-relative and cannot use absolute or home paths"
+    });
+  }
+  if (cwd.startsWith("\\\\") || cwd.startsWith("//")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "cwd must not use UNC or network absolute paths"
+    });
+  }
+  const parts = cwd.split("/");
+  if (parts.some((part) => part === "..")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "cwd must not escape the project root"
+    });
+  }
+  if (cwd !== "." && parts.some((part) => part.length === 0 || part === ".")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: 'cwd must be "." or a normalized project-relative path'
+    });
+  }
+});
+var VerificationCommand = external_exports.object({
+  id: external_exports.string().min(1),
+  cwd: ProjectRelativeCwd,
+  argv: external_exports.array(external_exports.string().min(1)).min(1),
+  timeout_ms: external_exports.number().int().positive(),
+  max_output_bytes: external_exports.number().int().positive(),
+  env: external_exports.record(external_exports.string(), external_exports.string())
+}).strict().superRefine((command, ctx) => {
+  const firstArg = command.argv[0];
+  if (firstArg === void 0)
+    return;
+  const binary = commandBinaryName(firstArg);
+  if (SHELL_BINARIES.has(binary)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["argv"],
+      message: "verification commands must use direct argv execution, not a shell executable"
+    });
+  }
+});
+var VerificationCommandResult = external_exports.object({
+  command_id: external_exports.string().min(1),
+  argv: external_exports.array(external_exports.string().min(1)).min(1),
+  cwd: ProjectRelativeCwd,
+  exit_code: external_exports.number().int().nonnegative(),
+  status: external_exports.enum(["passed", "failed"]),
+  duration_ms: external_exports.number().int().nonnegative(),
+  stdout_summary: external_exports.string(),
+  stderr_summary: external_exports.string()
+}).strict().superRefine((result, ctx) => {
+  const expected = result.exit_code === 0 ? "passed" : "failed";
+  if (result.status !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["status"],
+      message: `status must be '${expected}' when exit_code is ${result.exit_code}`
+    });
+  }
+});
+var VerificationResult = external_exports.object({
+  overall_status: external_exports.enum(["passed", "failed"]),
+  commands: external_exports.array(VerificationCommandResult).min(1)
+}).strict().superRefine((verification, ctx) => {
+  const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
+  if (verification.overall_status !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["overall_status"],
+      message: `overall_status must be '${expected}' for command results`
+    });
+  }
+});
+
+// dist/schemas/acceptance-criteria.js
+var AcceptanceCriterionId = external_exports.string().min(1);
+var AcceptanceCriteriaReportFieldPredicate = external_exports.enum(["present", "non_empty"]);
+var AcceptanceCriteriaCommandCriterion = external_exports.object({
+  kind: external_exports.literal("command"),
+  id: AcceptanceCriterionId,
+  command: VerificationCommand,
+  expected_status: external_exports.literal("passed")
+}).strict();
+var AcceptanceCriteriaReportFieldCriterion = external_exports.object({
+  kind: external_exports.literal("report_field"),
+  id: AcceptanceCriterionId,
+  path: external_exports.array(external_exports.string().min(1)).min(1),
+  predicate: AcceptanceCriteriaReportFieldPredicate
+}).strict();
+var AcceptanceCriterion = external_exports.discriminatedUnion("kind", [
+  AcceptanceCriteriaCommandCriterion,
+  AcceptanceCriteriaReportFieldCriterion
+]);
+var AcceptanceCriteriaFailurePolicy = external_exports.discriminatedUnion("mode", [
+  external_exports.object({ mode: external_exports.literal("hard-fail") }).strict(),
+  external_exports.object({ mode: external_exports.literal("retry-with-feedback") }).strict()
+]);
+var AcceptanceCriteria = external_exports.object({
+  checks: external_exports.array(AcceptanceCriterion).min(1),
+  on_failure: AcceptanceCriteriaFailurePolicy.default({ mode: "hard-fail" })
+}).strict();
+
 // dist/schemas/ids.js
 var slugPattern = /^[a-z][a-z0-9-]*$/;
 var CompiledFlowId = external_exports.string().regex(slugPattern).brand();
@@ -26786,6 +26912,7 @@ var RelayStep = StepBase.extend({
   executor: external_exports.literal("worker"),
   kind: external_exports.literal("relay"),
   role: RelayRole,
+  acceptance_criteria: AcceptanceCriteria.optional(),
   writes: external_exports.object({
     report: ReportRef.optional(),
     request: RunRelativePath,
@@ -27173,6 +27300,7 @@ var SchematicStep = external_exports.object({
   protocol: ProtocolId.optional(),
   writes: StepWrites.optional(),
   check: StepCheck.optional(),
+  acceptance_criteria: AcceptanceCriteria.optional(),
   checkpoint_policy: CheckpointPolicy.optional(),
   fanout: SchematicFanout.optional()
 }).strict().superRefine((item, ctx) => {
@@ -27382,6 +27510,13 @@ function validateExecutionShape(item, ctx) {
       code: external_exports.ZodIssueCode.custom,
       path: ["checkpoint_policy"],
       message: "checkpoint_policy is only allowed for checkpoint execution"
+    });
+  }
+  if (item.acceptance_criteria !== void 0 && kind !== "relay") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["acceptance_criteria"],
+      message: "acceptance_criteria is only allowed for relay execution"
     });
   }
   if (kind === "fanout" && item.fanout === void 0) {
@@ -28047,7 +28182,7 @@ function resolveCheck(use, executionKind) {
 }
 function schematicStepInputFromBlockUse(input) {
   const { block, check: check2, execution, use, writes } = input;
-  const { checkpointPolicy, evidenceRequirements, output, routeOverrides, skillSlots, reportPath: _reportPath, requestPath: _requestPath, receiptPath: _receiptPath, resultPath: _resultPath, branchesDirPath: _branchesDirPath, checkpointRequestPath: _checkpointRequestPath, checkpointResponsePath: _checkpointResponsePath, required: _required, allow: _allow, allowFrom: _allowFrom, pass: _pass, writes: _writes, check: _check2, execution: _execution, ...step } = use;
+  const { checkpointPolicy, evidenceRequirements, output, routeOverrides, skillSlots, acceptanceCriteria, reportPath: _reportPath, requestPath: _requestPath, receiptPath: _receiptPath, resultPath: _resultPath, branchesDirPath: _branchesDirPath, checkpointRequestPath: _checkpointRequestPath, checkpointResponsePath: _checkpointResponsePath, required: _required, allow: _allow, allowFrom: _allowFrom, pass: _pass, writes: _writes, check: _check2, execution: _execution, ...step } = use;
   return {
     ...step,
     output: output ?? block.output_contract,
@@ -28055,6 +28190,7 @@ function schematicStepInputFromBlockUse(input) {
     execution,
     writes,
     check: check2,
+    ...acceptanceCriteria === void 0 ? {} : { acceptance_criteria: acceptanceCriteria },
     ...checkpointPolicy === void 0 ? {} : { checkpoint_policy: checkpointPolicy },
     ...routeOverrides === void 0 ? {} : { route_overrides: routeOverrides },
     ...skillSlots === void 0 ? {} : { skill_slots: skillSlots }
@@ -28101,104 +28237,6 @@ var buildReviewShapeHint = {
     "The runtime parses your response with JSON.parse, rejects any verdict not drawn from the accepted-verdicts list, and validates the full report body against build.review@v1 before writing reports/build/review.json."
   ].join(" ")
 };
-
-// dist/schemas/verification.js
-var SHELL_BINARIES = /* @__PURE__ */ new Set([
-  "sh",
-  "bash",
-  "zsh",
-  "fish",
-  "dash",
-  "cmd",
-  "cmd.exe",
-  "powershell",
-  "powershell.exe",
-  "pwsh",
-  "pwsh.exe"
-]);
-function commandBinaryName(argv0) {
-  const normalized = argv0.replaceAll("\\", "/");
-  return normalized.slice(normalized.lastIndexOf("/") + 1).toLowerCase();
-}
-var ProjectRelativeCwd = external_exports.string().min(1).superRefine((cwd, ctx) => {
-  if (cwd.startsWith("/") || cwd.startsWith("~") || /^[A-Za-z]:[\\/]/.test(cwd)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "cwd must be project-relative and cannot use absolute or home paths"
-    });
-  }
-  if (cwd.startsWith("\\\\") || cwd.startsWith("//")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "cwd must not use UNC or network absolute paths"
-    });
-  }
-  const parts = cwd.split("/");
-  if (parts.some((part) => part === "..")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "cwd must not escape the project root"
-    });
-  }
-  if (cwd !== "." && parts.some((part) => part.length === 0 || part === ".")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: 'cwd must be "." or a normalized project-relative path'
-    });
-  }
-});
-var VerificationCommand = external_exports.object({
-  id: external_exports.string().min(1),
-  cwd: ProjectRelativeCwd,
-  argv: external_exports.array(external_exports.string().min(1)).min(1),
-  timeout_ms: external_exports.number().int().positive(),
-  max_output_bytes: external_exports.number().int().positive(),
-  env: external_exports.record(external_exports.string(), external_exports.string())
-}).strict().superRefine((command, ctx) => {
-  const firstArg = command.argv[0];
-  if (firstArg === void 0)
-    return;
-  const binary = commandBinaryName(firstArg);
-  if (SHELL_BINARIES.has(binary)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["argv"],
-      message: "verification commands must use direct argv execution, not a shell executable"
-    });
-  }
-});
-var VerificationCommandResult = external_exports.object({
-  command_id: external_exports.string().min(1),
-  argv: external_exports.array(external_exports.string().min(1)).min(1),
-  cwd: ProjectRelativeCwd,
-  exit_code: external_exports.number().int().nonnegative(),
-  status: external_exports.enum(["passed", "failed"]),
-  duration_ms: external_exports.number().int().nonnegative(),
-  stdout_summary: external_exports.string(),
-  stderr_summary: external_exports.string()
-}).strict().superRefine((result, ctx) => {
-  const expected = result.exit_code === 0 ? "passed" : "failed";
-  if (result.status !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["status"],
-      message: `status must be '${expected}' when exit_code is ${result.exit_code}`
-    });
-  }
-});
-var VerificationResult = external_exports.object({
-  overall_status: external_exports.enum(["passed", "failed"]),
-  commands: external_exports.array(VerificationCommandResult).min(1)
-}).strict().superRefine((verification, ctx) => {
-  const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
-  if (verification.overall_status !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["overall_status"],
-      message: `overall_status must be '${expected}' for command results`
-    });
-  }
-});
 
 // dist/flows/build/reports.js
 var BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
@@ -29262,6 +29300,23 @@ var buildFlowData = {
         receiptPath: "reports/relay/build-act.receipt.txt",
         resultPath: "reports/relay/build-act.result.json",
         pass: ["accept"],
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: "report_field",
+              id: "changed-files-present",
+              path: ["changed_files"],
+              predicate: "present"
+            },
+            {
+              kind: "report_field",
+              id: "evidence-non-empty",
+              path: ["evidence"],
+              predicate: "non_empty"
+            }
+          ],
+          on_failure: { mode: "retry-with-feedback" }
+        },
         routes: {
           continue: "verify-step",
           retry: "act-step",
@@ -32818,6 +32873,23 @@ var fixFlowData = {
         receiptPath: "reports/relay/fix-act.receipt.txt",
         resultPath: "reports/relay/fix-act.result.json",
         pass: ["accept"],
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: "report_field",
+              id: "changed-files-present",
+              path: ["changed_files"],
+              predicate: "present"
+            },
+            {
+              kind: "report_field",
+              id: "evidence-non-empty",
+              path: ["evidence"],
+              predicate: "non_empty"
+            }
+          ],
+          on_failure: { mode: "retry-with-feedback" }
+        },
         routes: {
           continue: "fix-verify",
           retry: "fix-act",
@@ -37981,6 +38053,7 @@ function convertStep(step) {
       ...base,
       kind: "relay",
       role: step.role,
+      ...step.acceptance_criteria === void 0 ? {} : { acceptanceCriteria: step.acceptance_criteria },
       ...step.writes.report === void 0 ? {} : { report: toRunFileRef(step.writes.report) }
     };
   }
@@ -38081,9 +38154,16 @@ var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
     "schema_sections",
     "checkpoint_selection",
     "result_verdict",
-    "fanout_aggregate"
+    "fanout_aggregate",
+    "acceptance_criteria"
   ]),
   outcome: external_exports.enum(["pass", "fail"]),
+  criterion_id: external_exports.string().min(1).optional(),
+  criterion_kind: external_exports.enum(["command", "report_field"]).optional(),
+  exit_code: external_exports.number().int().nonnegative().optional(),
+  status: external_exports.enum(["passed", "failed"]).optional(),
+  stdout_summary: external_exports.string().optional(),
+  stderr_summary: external_exports.string().optional(),
   missing_sections: external_exports.array(external_exports.string()).optional(),
   reason: external_exports.string().optional()
 }).strict();
@@ -38674,6 +38754,183 @@ function computeManifestHash(bytes) {
 
 // dist/runtime/run/graph-runner.js
 import { randomUUID as randomUUID3 } from "node:crypto";
+
+// dist/runtime/acceptance-criteria.js
+function isAcceptanceRetryFeedback(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const record2 = value;
+  return typeof record2.step_id === "string" && record2.step_id.length > 0 && typeof record2.criterion_id === "string" && record2.criterion_id.length > 0 && (record2.criterion_kind === "command" || record2.criterion_kind === "report_field") && typeof record2.reason === "string" && record2.reason.length > 0;
+}
+function pathLabel(path) {
+  return path.join(".");
+}
+function valueAtPath(root, path) {
+  let cursor = root;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object")
+      return void 0;
+    if (!Object.hasOwn(cursor, segment))
+      return void 0;
+    cursor = cursor[segment];
+  }
+  return cursor;
+}
+function isNonEmpty(value) {
+  if (typeof value === "string")
+    return value.trim().length > 0;
+  if (Array.isArray(value))
+    return value.length > 0;
+  if (value !== null && typeof value === "object")
+    return Object.keys(value).length > 0;
+  return value !== void 0 && value !== null;
+}
+function parseReportBody(stepId, resultBody) {
+  try {
+    return { kind: "ok", value: JSON.parse(resultBody) };
+  } catch (error51) {
+    const message = error51 instanceof Error ? error51.message : String(error51);
+    return {
+      kind: "fail",
+      reason: `relay step '${stepId}': acceptance criteria could not parse relay result JSON (${message})`
+    };
+  }
+}
+function failureResult(input) {
+  return {
+    kind: "fail",
+    reason: input.failed.reason,
+    on_failure: input.criteria.on_failure,
+    checks: input.checks,
+    feedback: {
+      step_id: input.stepId,
+      criterion_id: input.failed.criterion_id,
+      criterion_kind: input.failed.criterion_kind,
+      reason: input.failed.reason,
+      ...input.failed.exit_code === void 0 ? {} : { exit_code: input.failed.exit_code },
+      ...input.failed.status === void 0 ? {} : { status: input.failed.status },
+      ...input.failed.stdout_summary === void 0 ? {} : { stdout_summary: input.failed.stdout_summary },
+      ...input.failed.stderr_summary === void 0 ? {} : { stderr_summary: input.failed.stderr_summary }
+    }
+  };
+}
+function commandTrace(criterion, observation) {
+  const base = {
+    criterion_id: criterion.id,
+    criterion_kind: criterion.kind,
+    exit_code: observation.exit_code,
+    status: observation.status,
+    stdout_summary: observation.stdout_summary,
+    stderr_summary: observation.stderr_summary
+  };
+  if (observation.status === criterion.expected_status) {
+    return { ...base, outcome: "pass" };
+  }
+  return {
+    ...base,
+    outcome: "fail",
+    reason: `acceptance criterion '${criterion.id}' failed: command '${criterion.command.id}' exited ${observation.exit_code}`
+  };
+}
+function evaluateAcceptanceCriteria(input) {
+  const checks = [];
+  let parsedBody = input.parsedBody;
+  for (const criterion of input.criteria.checks) {
+    if (criterion.kind === "report_field") {
+      if (parsedBody === void 0) {
+        const parsed = parseReportBody(input.stepId, input.resultBody);
+        if (parsed.kind === "fail") {
+          const failed2 = {
+            criterion_id: criterion.id,
+            criterion_kind: criterion.kind,
+            outcome: "fail",
+            reason: parsed.reason
+          };
+          checks.push(failed2);
+          return failureResult({
+            stepId: input.stepId,
+            criteria: input.criteria,
+            checks,
+            failed: failed2
+          });
+        }
+        parsedBody = parsed.value;
+      }
+      const value = valueAtPath(parsedBody, criterion.path);
+      const ok = criterion.predicate === "present" ? value !== void 0 : isNonEmpty(value);
+      if (ok) {
+        checks.push({
+          criterion_id: criterion.id,
+          criterion_kind: criterion.kind,
+          outcome: "pass"
+        });
+        continue;
+      }
+      const failed = {
+        criterion_id: criterion.id,
+        criterion_kind: criterion.kind,
+        outcome: "fail",
+        reason: `acceptance criterion '${criterion.id}' failed: report field '${pathLabel(criterion.path)}' did not satisfy '${criterion.predicate}'`
+      };
+      checks.push(failed);
+      return failureResult({
+        stepId: input.stepId,
+        criteria: input.criteria,
+        checks,
+        failed
+      });
+    }
+    if (input.projectRoot === void 0) {
+      const failed = {
+        criterion_id: criterion.id,
+        criterion_kind: criterion.kind,
+        outcome: "fail",
+        reason: `acceptance criterion '${criterion.id}' failed: command criteria require projectRoot`
+      };
+      checks.push(failed);
+      return failureResult({
+        stepId: input.stepId,
+        criteria: input.criteria,
+        checks,
+        failed
+      });
+    }
+    try {
+      const trace = commandTrace(criterion, runProofPlanCommand(criterion.command, input.projectRoot));
+      checks.push(trace);
+      if (trace.outcome === "fail") {
+        const failed = {
+          ...trace,
+          outcome: "fail",
+          reason: trace.reason ?? `acceptance criterion '${criterion.id}' failed: command '${criterion.command.id}' did not satisfy '${criterion.expected_status}'`
+        };
+        checks[checks.length - 1] = failed;
+        return failureResult({
+          stepId: input.stepId,
+          criteria: input.criteria,
+          checks,
+          failed
+        });
+      }
+    } catch (error51) {
+      const message = error51 instanceof Error ? error51.message : String(error51);
+      const failed = {
+        criterion_id: criterion.id,
+        criterion_kind: criterion.kind,
+        outcome: "fail",
+        reason: `acceptance criterion '${criterion.id}' failed: ${message}`
+      };
+      checks.push(failed);
+      return failureResult({
+        stepId: input.stepId,
+        criteria: input.criteria,
+        checks,
+        failed
+      });
+    }
+  }
+  return { kind: "pass", checks };
+}
 
 // dist/runtime/domain/step.js
 function isWaitingCheckpointStepOutcome(outcome) {
@@ -40654,7 +40911,44 @@ function selectedSkillsSection(skills) {
     ].join("\n"))
   ].join("\n\n");
 }
-function composeRelayPrompt(step, runFolder, loadedSkills = []) {
+function formatAcceptanceCriterion(criterion) {
+  if (criterion.kind === "report_field") {
+    return `- ${criterion.id}: report field ${criterion.path.join(".")} must be ${criterion.predicate}.`;
+  }
+  return [
+    `- ${criterion.id}: command ${criterion.command.id} must ${criterion.expected_status}.`,
+    `  cwd: ${criterion.command.cwd}`,
+    `  argv: ${JSON.stringify(criterion.command.argv)}`
+  ].join("\n");
+}
+function acceptanceCriteriaSection(step) {
+  const criteria = step.acceptance_criteria;
+  if (criteria === void 0)
+    return void 0;
+  return [
+    "Acceptance Criteria:",
+    "Before this step can advance, Circuit will check the relay result against these deterministic criteria.",
+    `Failure policy: ${criteria.on_failure.mode}`,
+    ...criteria.checks.map(formatAcceptanceCriterion)
+  ].join("\n");
+}
+function acceptanceRetryFeedbackSection(feedback) {
+  if (feedback === void 0)
+    return void 0;
+  return [
+    "Acceptance Criteria Feedback:",
+    `Criterion ${feedback.criterion_id} (${feedback.criterion_kind}) failed.`,
+    `Reason: ${feedback.reason}`,
+    ...feedback.exit_code === void 0 ? [] : [`Exit code: ${feedback.exit_code}`],
+    ...feedback.status === void 0 ? [] : [`Status: ${feedback.status}`],
+    ...feedback.stdout_summary === void 0 ? [] : [`Stdout summary:
+${feedback.stdout_summary}`],
+    ...feedback.stderr_summary === void 0 ? [] : [`Stderr summary:
+${feedback.stderr_summary}`],
+    "Revise the result so this criterion passes. Keep the same response contract and accepted verdicts."
+  ].join("\n");
+}
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
     if (!existsSync7(abs))
@@ -40663,6 +40957,8 @@ function composeRelayPrompt(step, runFolder, loadedSkills = []) {
 ${readFileSync17(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
+  const criteriaSection = acceptanceCriteriaSection(step);
+  const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -40673,6 +40969,8 @@ ${readFileSync17(abs, "utf8")}`;
     readsBody,
     "",
     ...skillsSection === void 0 ? [] : [skillsSection, ""],
+    ...criteriaSection === void 0 ? [] : [criteriaSection, ""],
+    ...feedbackSection === void 0 ? [] : [feedbackSection, ""],
     relayResponseInstruction(step)
   ].join("\n");
 }
@@ -41026,29 +41324,66 @@ function suppliedConnectorFromRelayer(context) {
 }
 function defaultValidateAcceptedProductionRelay(input) {
   const { flow, context, step, relayResult, checkEvaluation } = input;
-  if (step.report?.schema === void 0)
-    return { evaluation: checkEvaluation };
-  const parseResult = parseReport(step.report.schema, relayResult.result_body);
-  if (parseResult.kind === "fail") {
+  let parsedBody;
+  if (step.report?.schema !== void 0) {
+    const parseResult = parseReport(step.report.schema, relayResult.result_body);
+    if (parseResult.kind === "fail") {
+      return {
+        evaluation: {
+          kind: "fail",
+          reason: `relay step '${step.id}': ${parseResult.reason}`,
+          observedVerdict: checkEvaluation.verdict
+        },
+        failureKind: "schema"
+      };
+    }
+    const crossResult = runCrossReportValidator(step.report.schema, flow, context.runDir, relayResult.result_body);
+    if (crossResult.kind === "fail") {
+      return {
+        evaluation: {
+          kind: "fail",
+          reason: `relay step '${step.id}': ${crossResult.reason}`,
+          observedVerdict: checkEvaluation.verdict
+        },
+        failureKind: "schema"
+      };
+    }
+    try {
+      parsedBody = JSON.parse(relayResult.result_body);
+    } catch {
+      parsedBody = void 0;
+    }
+  }
+  if (step.acceptanceCriteria !== void 0) {
+    const acceptance = evaluateAcceptanceCriteria({
+      stepId: step.id,
+      criteria: step.acceptanceCriteria,
+      resultBody: relayResult.result_body,
+      ...parsedBody === void 0 ? {} : { parsedBody },
+      ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot }
+    });
+    if (acceptance.kind === "fail") {
+      return {
+        evaluation: {
+          kind: "fail",
+          reason: acceptance.reason,
+          observedVerdict: checkEvaluation.verdict
+        },
+        failureKind: "acceptance",
+        acceptance,
+        ...parsedBody === void 0 ? {} : { parsedBody }
+      };
+    }
     return {
-      evaluation: {
-        kind: "fail",
-        reason: `relay step '${step.id}': ${parseResult.reason}`,
-        observedVerdict: checkEvaluation.verdict
-      }
+      evaluation: checkEvaluation,
+      acceptance,
+      ...parsedBody === void 0 ? {} : { parsedBody }
     };
   }
-  const crossResult = runCrossReportValidator(step.report.schema, flow, context.runDir, relayResult.result_body);
-  if (crossResult.kind === "fail") {
-    return {
-      evaluation: {
-        kind: "fail",
-        reason: `relay step '${step.id}': ${crossResult.reason}`,
-        observedVerdict: checkEvaluation.verdict
-      }
-    };
-  }
-  return { evaluation: checkEvaluation };
+  return {
+    evaluation: checkEvaluation,
+    ...parsedBody === void 0 ? {} : { parsedBody }
+  };
 }
 async function executeProductionRelayAttempt(input) {
   const { step, compiledStep, context } = input;
@@ -41074,7 +41409,7 @@ async function executeProductionRelayAttempt(input) {
     resolvedSelection,
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
   });
-  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills);
+  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback);
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
   const result = step.writes?.result;
@@ -41170,6 +41505,8 @@ async function executeProductionRelayAttempt(input) {
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
   let evaluation = checkEvaluation;
   let parsedBody;
+  let failureKind;
+  let acceptance;
   if (checkEvaluation.kind === "pass") {
     const validation = (input.validateAcceptedResult ?? defaultValidateAcceptedProductionRelay)({
       flow,
@@ -41181,6 +41518,8 @@ async function executeProductionRelayAttempt(input) {
     });
     evaluation = validation.evaluation;
     parsedBody = validation.parsedBody;
+    failureKind = validation.failureKind;
+    acceptance = validation.acceptance;
   }
   const relayCompletedVerdict = evaluation.kind === "pass" ? evaluation.verdict : evaluation.observedVerdict ?? NO_VERDICT_SENTINEL;
   const durationMs = Math.max(0, Date.now() - startMs);
@@ -41222,15 +41561,33 @@ async function executeProductionRelayAttempt(input) {
     result_path: result.path,
     receipt_path: receipt.path
   });
+  const resultVerdictEvaluation = failureKind === "acceptance" ? checkEvaluation : evaluation;
   await context.trace.append({
     run_id: context.runId,
     kind: "check.evaluated",
     step_id: step.id,
     attempt,
     check_kind: "result_verdict",
-    outcome: evaluation.kind === "pass" ? "pass" : "fail",
-    ...evaluation.kind === "pass" ? {} : { reason: evaluation.reason }
+    outcome: resultVerdictEvaluation.kind === "pass" ? "pass" : "fail",
+    ...resultVerdictEvaluation.kind === "pass" ? {} : { reason: resultVerdictEvaluation.reason }
   });
+  for (const check2 of acceptance?.checks ?? []) {
+    await context.trace.append({
+      run_id: context.runId,
+      kind: "check.evaluated",
+      step_id: step.id,
+      attempt,
+      check_kind: "acceptance_criteria",
+      outcome: check2.outcome,
+      criterion_id: check2.criterion_id,
+      criterion_kind: check2.criterion_kind,
+      ...check2.reason === void 0 ? {} : { reason: check2.reason },
+      ...check2.exit_code === void 0 ? {} : { exit_code: check2.exit_code },
+      ...check2.status === void 0 ? {} : { status: check2.status },
+      ...check2.stdout_summary === void 0 ? {} : { stdout_summary: check2.stdout_summary },
+      ...check2.stderr_summary === void 0 ? {} : { stderr_summary: check2.stderr_summary }
+    });
+  }
   return {
     kind: "completed",
     evaluation,
@@ -41238,7 +41595,8 @@ async function executeProductionRelayAttempt(input) {
     duration_ms: durationMs,
     result_path: result.path,
     ...parsedBody === void 0 ? {} : { parsed_body: parsedBody },
-    ...writtenReportPath === void 0 ? {} : { report_path: writtenReportPath }
+    ...writtenReportPath === void 0 ? {} : { report_path: writtenReportPath },
+    ...acceptance?.kind === "fail" ? { acceptance_failure: acceptance } : {}
   };
 }
 async function executeRelayInternal(step, context, connector) {
@@ -41295,6 +41653,26 @@ async function executeProductionRelay(step, context) {
   const { evaluation } = relayAttempt;
   if (evaluation.kind === "pass")
     return { route: "pass", details: { verdict: evaluation.verdict } };
+  if (relayAttempt.acceptance_failure !== void 0) {
+    const failure = relayAttempt.acceptance_failure;
+    if (failure.on_failure.mode === "retry-with-feedback") {
+      const retryTarget = step.routes.retry;
+      if (retryTarget === void 0) {
+        throw new Error(`relay step '${step.id}' acceptance criteria requested retry-with-feedback but no retry route is declared`);
+      }
+      if (retryTarget.kind !== "step" || retryTarget.stepId !== step.id) {
+        throw new Error(`relay step '${step.id}' acceptance criteria retry-with-feedback requires retry to re-enter the same step`);
+      }
+      return {
+        route: "retry",
+        details: {
+          reason: evaluation.reason,
+          acceptance_feedback: failure.feedback
+        }
+      };
+    }
+    throw new Error(evaluation.reason);
+  }
   const recoveryRoute = recoveryRouteForStep(step);
   if (recoveryRoute !== void 0)
     return { route: recoveryRoute, details: { reason: evaluation.reason } };
@@ -42382,7 +42760,12 @@ function indexedStep(step) {
     };
   }
   if (step.kind === "relay") {
-    return { ...base, kind: step.kind, role: step.role };
+    return {
+      ...base,
+      kind: step.kind,
+      role: step.role,
+      ...step.acceptanceCriteria === void 0 ? {} : { acceptance_criteria: step.acceptanceCriteria }
+    };
   }
   return { ...base, kind: step.kind };
 }
@@ -43962,9 +44345,11 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     let route;
     let details;
     try {
+      const acceptanceRetryFeedback = activeRecovery?.originStepId === step.id && isRecoveryRoute(incomingRouteTaken) ? activeRecovery.acceptanceFeedback : void 0;
       const stepContext = {
         ...context,
         activeStepAttempt: attempt,
+        ...acceptanceRetryFeedback === void 0 ? {} : { acceptanceRetryFeedback },
         ...isResumedCheckpoint && options.resumeCheckpoint !== void 0 ? { resumeCheckpoint: options.resumeCheckpoint } : {}
       };
       const outcome = await executors[step.kind](step, stepContext);
@@ -43982,10 +44367,20 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       route = outcome.route;
       details = outcome.details ?? {};
       const recoveryReason = details.reason;
+      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0;
       if (isRecoveryRoute(route) && typeof recoveryReason === "string") {
-        activeRecovery = { originStepId: step.id, route, reason: recoveryReason };
+        activeRecovery = {
+          originStepId: step.id,
+          route,
+          reason: recoveryReason,
+          ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
+        };
       } else if (isRecoveryRoute(route)) {
-        activeRecovery = { originStepId: step.id, route };
+        activeRecovery = {
+          originStepId: step.id,
+          route,
+          ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
+        };
       }
     } catch (error51) {
       const message = error51.message;

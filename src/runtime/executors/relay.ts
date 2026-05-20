@@ -23,6 +23,10 @@ import {
 import { resolveLoadedRelaySkills } from '../../shared/skill-loading.js';
 import { responseJsonSchemaFromZod } from '../../shared/zod-to-response-schema.js';
 import {
+  type AcceptanceCriteriaEvaluationResult,
+  evaluateAcceptanceCriteria,
+} from '../acceptance-criteria.js';
+import {
   assertConnectorSelectionCompatible,
   resolveConnectorForRelay,
 } from '../connectors/resolver.js';
@@ -241,6 +245,8 @@ export interface ProductionRelayAttemptValidationInput {
 
 export interface ProductionRelayAttemptValidationResult {
   readonly evaluation: CheckEvaluation;
+  readonly failureKind?: 'schema' | 'acceptance';
+  readonly acceptance?: AcceptanceCriteriaEvaluationResult;
   readonly parsedBody?: unknown;
 }
 
@@ -258,39 +264,81 @@ export type ProductionRelayAttemptResult =
       readonly result_path: string;
       readonly parsed_body?: unknown;
       readonly report_path?: string;
+      readonly acceptance_failure?: Extract<
+        AcceptanceCriteriaEvaluationResult,
+        { readonly kind: 'fail' }
+      >;
     };
 
 function defaultValidateAcceptedProductionRelay(
   input: ProductionRelayAttemptValidationInput,
 ): ProductionRelayAttemptValidationResult {
   const { flow, context, step, relayResult, checkEvaluation } = input;
-  if (step.report?.schema === undefined) return { evaluation: checkEvaluation };
-  const parseResult = parseReport(step.report.schema, relayResult.result_body);
-  if (parseResult.kind === 'fail') {
+  let parsedBody: unknown;
+  if (step.report?.schema !== undefined) {
+    const parseResult = parseReport(step.report.schema, relayResult.result_body);
+    if (parseResult.kind === 'fail') {
+      return {
+        evaluation: {
+          kind: 'fail',
+          reason: `relay step '${step.id}': ${parseResult.reason}`,
+          observedVerdict: checkEvaluation.verdict,
+        },
+        failureKind: 'schema',
+      };
+    }
+    const crossResult = runCrossReportValidator(
+      step.report.schema,
+      flow,
+      context.runDir,
+      relayResult.result_body,
+    );
+    if (crossResult.kind === 'fail') {
+      return {
+        evaluation: {
+          kind: 'fail',
+          reason: `relay step '${step.id}': ${crossResult.reason}`,
+          observedVerdict: checkEvaluation.verdict,
+        },
+        failureKind: 'schema',
+      };
+    }
+    try {
+      parsedBody = JSON.parse(relayResult.result_body) as unknown;
+    } catch {
+      parsedBody = undefined;
+    }
+  }
+  if (step.acceptanceCriteria !== undefined) {
+    const acceptance = evaluateAcceptanceCriteria({
+      stepId: step.id,
+      criteria: step.acceptanceCriteria,
+      resultBody: relayResult.result_body,
+      ...(parsedBody === undefined ? {} : { parsedBody }),
+      ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
+    });
+    if (acceptance.kind === 'fail') {
+      return {
+        evaluation: {
+          kind: 'fail',
+          reason: acceptance.reason,
+          observedVerdict: checkEvaluation.verdict,
+        },
+        failureKind: 'acceptance',
+        acceptance,
+        ...(parsedBody === undefined ? {} : { parsedBody }),
+      };
+    }
     return {
-      evaluation: {
-        kind: 'fail',
-        reason: `relay step '${step.id}': ${parseResult.reason}`,
-        observedVerdict: checkEvaluation.verdict,
-      },
+      evaluation: checkEvaluation,
+      acceptance,
+      ...(parsedBody === undefined ? {} : { parsedBody }),
     };
   }
-  const crossResult = runCrossReportValidator(
-    step.report.schema,
-    flow,
-    context.runDir,
-    relayResult.result_body,
-  );
-  if (crossResult.kind === 'fail') {
-    return {
-      evaluation: {
-        kind: 'fail',
-        reason: `relay step '${step.id}': ${crossResult.reason}`,
-        observedVerdict: checkEvaluation.verdict,
-      },
-    };
-  }
-  return { evaluation: checkEvaluation };
+  return {
+    evaluation: checkEvaluation,
+    ...(parsedBody === undefined ? {} : { parsedBody }),
+  };
 }
 
 export async function executeProductionRelayAttempt(input: {
@@ -336,7 +384,12 @@ export async function executeProductionRelayAttempt(input: {
       ? {}
       : { configLayers: context.selectionConfigLayers }),
   });
-  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills);
+  const prompt = composeRelayPrompt(
+    compiledStep,
+    context.runDir,
+    loadedSkills,
+    context.acceptanceRetryFeedback,
+  );
 
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
@@ -448,6 +501,8 @@ export async function executeProductionRelayAttempt(input: {
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
   let evaluation: CheckEvaluation = checkEvaluation;
   let parsedBody: unknown;
+  let failureKind: ProductionRelayAttemptValidationResult['failureKind'];
+  let acceptance: AcceptanceCriteriaEvaluationResult | undefined;
   if (checkEvaluation.kind === 'pass') {
     const validation = (input.validateAcceptedResult ?? defaultValidateAcceptedProductionRelay)({
       flow,
@@ -459,6 +514,8 @@ export async function executeProductionRelayAttempt(input: {
     });
     evaluation = validation.evaluation;
     parsedBody = validation.parsedBody;
+    failureKind = validation.failureKind;
+    acceptance = validation.acceptance;
   }
 
   const relayCompletedVerdict =
@@ -518,15 +575,33 @@ export async function executeProductionRelayAttempt(input: {
     result_path: result.path,
     receipt_path: receipt.path,
   });
+  const resultVerdictEvaluation = failureKind === 'acceptance' ? checkEvaluation : evaluation;
   await context.trace.append({
     run_id: context.runId,
     kind: 'check.evaluated',
     step_id: step.id,
     attempt,
     check_kind: 'result_verdict',
-    outcome: evaluation.kind === 'pass' ? 'pass' : 'fail',
-    ...(evaluation.kind === 'pass' ? {} : { reason: evaluation.reason }),
+    outcome: resultVerdictEvaluation.kind === 'pass' ? 'pass' : 'fail',
+    ...(resultVerdictEvaluation.kind === 'pass' ? {} : { reason: resultVerdictEvaluation.reason }),
   });
+  for (const check of acceptance?.checks ?? []) {
+    await context.trace.append({
+      run_id: context.runId,
+      kind: 'check.evaluated',
+      step_id: step.id,
+      attempt,
+      check_kind: 'acceptance_criteria',
+      outcome: check.outcome,
+      criterion_id: check.criterion_id,
+      criterion_kind: check.criterion_kind,
+      ...(check.reason === undefined ? {} : { reason: check.reason }),
+      ...(check.exit_code === undefined ? {} : { exit_code: check.exit_code }),
+      ...(check.status === undefined ? {} : { status: check.status }),
+      ...(check.stdout_summary === undefined ? {} : { stdout_summary: check.stdout_summary }),
+      ...(check.stderr_summary === undefined ? {} : { stderr_summary: check.stderr_summary }),
+    });
+  }
 
   return {
     kind: 'completed',
@@ -536,6 +611,7 @@ export async function executeProductionRelayAttempt(input: {
     result_path: result.path,
     ...(parsedBody === undefined ? {} : { parsed_body: parsedBody }),
     ...(writtenReportPath === undefined ? {} : { report_path: writtenReportPath }),
+    ...(acceptance?.kind === 'fail' ? { acceptance_failure: acceptance } : {}),
   };
 }
 
@@ -622,6 +698,31 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   const { evaluation } = relayAttempt;
   if (evaluation.kind === 'pass')
     return { route: 'pass', details: { verdict: evaluation.verdict } };
+
+  if (relayAttempt.acceptance_failure !== undefined) {
+    const failure = relayAttempt.acceptance_failure;
+    if (failure.on_failure.mode === 'retry-with-feedback') {
+      const retryTarget = step.routes.retry;
+      if (retryTarget === undefined) {
+        throw new Error(
+          `relay step '${step.id}' acceptance criteria requested retry-with-feedback but no retry route is declared`,
+        );
+      }
+      if (retryTarget.kind !== 'step' || retryTarget.stepId !== step.id) {
+        throw new Error(
+          `relay step '${step.id}' acceptance criteria retry-with-feedback requires retry to re-enter the same step`,
+        );
+      }
+      return {
+        route: 'retry',
+        details: {
+          reason: evaluation.reason,
+          acceptance_feedback: failure.feedback,
+        },
+      };
+    }
+    throw new Error(evaluation.reason);
+  }
 
   const recoveryRoute = recoveryRouteForStep(step);
   if (recoveryRoute !== undefined)

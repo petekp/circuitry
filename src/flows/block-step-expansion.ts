@@ -45,6 +45,7 @@ export interface BlockStepUse
   readonly pass?: StepCheckInput['pass'];
   readonly routeOverrides?: SchematicStepInput['route_overrides'];
   readonly checkpointPolicy?: SchematicStepInput['checkpoint_policy'];
+  readonly acceptanceCriteria?: SchematicStepInput['acceptance_criteria'];
   readonly skillSlots?: SchematicStepInput['skill_slots'];
 }
 
@@ -307,6 +308,7 @@ function schematicStepInputFromBlockUse(input: {
     output,
     routeOverrides,
     skillSlots,
+    acceptanceCriteria,
     reportPath: _reportPath,
     requestPath: _requestPath,
     receiptPath: _receiptPath,
@@ -330,6 +332,7 @@ function schematicStepInputFromBlockUse(input: {
     execution,
     writes,
     check,
+    ...(acceptanceCriteria === undefined ? {} : { acceptance_criteria: acceptanceCriteria }),
     ...(checkpointPolicy === undefined ? {} : { checkpoint_policy: checkpointPolicy }),
     ...(routeOverrides === undefined ? {} : { route_overrides: routeOverrides }),
     ...(skillSlots === undefined ? {} : { skill_slots: skillSlots }),
