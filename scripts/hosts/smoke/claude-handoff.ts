@@ -9,6 +9,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command } from 'commander';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..', '..');
@@ -166,8 +167,10 @@ function eventLooksLikeFinalMessage(event: unknown): boolean {
 }
 
 function main(): number {
-  const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) {
+  const program = new Command('claude-handoff-smoke').option('-h, --help');
+  program.parse(process.argv.slice(2), { from: 'user' });
+  const args = program.opts<{ help?: boolean }>();
+  if (args.help === true) {
     process.stdout.write(`${usage()}\n`);
     return 0;
   }

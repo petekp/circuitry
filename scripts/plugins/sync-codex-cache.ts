@@ -4,6 +4,7 @@ import { cpSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command, CommanderError } from 'commander';
 import { listCommandIds, listPackageDirs, packageTreeStatus } from './package-tree.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,42 +23,32 @@ type CodexPluginManifest = {
 };
 
 function parseArgs(argv: readonly string[]): SyncArgs {
-  const parsed: SyncArgs = {
-    check: false,
-    marketplace: 'circuit-local',
-    cachePath: undefined,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '--check') {
-      parsed.check = true;
-    } else if (arg === '--marketplace') {
-      parsed.marketplace = argv[++i] ?? '';
-    } else if (arg === '--cache-path') {
-      parsed.cachePath = argv[++i];
-    } else if (arg === '--help' || arg === '-h') {
-      printHelp();
-      process.exit(0);
-    } else {
-      throw new Error(`unknown argument: ${arg}`);
-    }
+  const program = new Command('sync-codex-cache')
+    .exitOverride()
+    .configureOutput({ writeErr: () => {} })
+    .option('--check')
+    .option('--marketplace <name>')
+    .option('--cache-path <path>')
+    .option('-h, --help');
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
   }
-  return parsed;
-}
 
-function printHelp(): void {
-  console.log(`Usage: node scripts/plugins/sync-codex-cache.ts [--check] [--marketplace <name>] [--cache-path <path>]
-
-Copies the repo-local Codex plugin package into Codex's local plugin cache.
-
-Defaults:
-  marketplace: circuit-local
-  cache root:  $CODEX_HOME/plugins/cache or ~/.codex/plugins/cache
-
-Options:
-  --check       compare package bytes with the cache and exit non-zero on drift
-  --cache-path  explicit target package path, useful for tests
-`);
+  const opts = program.opts<{
+    check?: boolean;
+    marketplace?: string;
+    cachePath?: string;
+    help?: boolean;
+  }>();
+  return {
+    check: opts.check === true,
+    marketplace: opts.marketplace ?? 'circuit-local',
+    cachePath: opts.cachePath,
+  };
 }
 
 function readManifest(): CodexPluginManifest {

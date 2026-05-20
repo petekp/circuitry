@@ -1,3 +1,4 @@
+import { Command, CommanderError } from 'commander';
 import {
   RunStatusFolderError,
   projectRunStatusFromRunFolder,
@@ -35,45 +36,38 @@ function invalidInvocation(message: string, runFolder?: string): number {
   return 2;
 }
 
-function parseShowArgs(argv: readonly string[]): { readonly runFolder: string } | string {
-  let runFolder: string | undefined;
-  let json = false;
+function commanderErrorMessage(err: unknown): string {
+  if (err instanceof CommanderError) return err.message.replace(/^error: /, '');
+  return err instanceof Error ? err.message : String(err);
+}
 
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
-    if (token === undefined) continue;
-    if (token === '--json') {
-      json = true;
-      continue;
-    }
-    if (token === '--run-folder') {
-      const value = argv[i + 1];
-      if (value === undefined || value.length === 0) return '--run-folder requires a value';
-      if (runFolder !== undefined) return 'supply --run-folder only once';
-      runFolder = value;
-      i += 1;
-      continue;
-    }
-    if (token.startsWith('--')) return `unknown flag: ${token}`;
-    return `unexpected positional argument: ${token}`;
+function parseShowArgs(argv: readonly string[]): { readonly runFolder: string } | string {
+  let showOptions: { json?: boolean; runFolder?: string } | undefined;
+  const program = new Command('circuit runs')
+    .exitOverride()
+    .configureOutput({ writeErr: () => {} });
+  const show = program
+    .command('show')
+    .option('--json')
+    .option('--run-folder <path>')
+    .action(() => {
+      showOptions = show.opts<{ json?: boolean; runFolder?: string }>();
+    });
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    return commanderErrorMessage(err);
   }
 
-  if (!json) return 'runs show requires --json';
-  if (runFolder === undefined) return '--run-folder is required';
-  return { runFolder };
+  if (showOptions === undefined) return 'runs requires a subcommand';
+
+  if (showOptions.json !== true) return 'runs show requires --json';
+  if (showOptions.runFolder === undefined) return '--run-folder is required';
+  return { runFolder: showOptions.runFolder };
 }
 
 export async function runRunsCommand(argv: readonly string[]): Promise<number> {
-  const subcommand = argv[0];
-  if (subcommand !== 'show') {
-    return invalidInvocation(
-      subcommand === undefined
-        ? 'runs requires a subcommand'
-        : `unknown runs subcommand: ${subcommand}`,
-    );
-  }
-
-  const parsed = parseShowArgs(argv.slice(1));
+  const parsed = parseShowArgs(argv);
   if (typeof parsed === 'string') return invalidInvocation(parsed);
 
   try {

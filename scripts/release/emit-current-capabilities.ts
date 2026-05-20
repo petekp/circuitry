@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Command } from 'commander';
 
 import type * as CatalogModule from '../../src/flows/catalog.js';
 import type * as RouterModule from '../../src/flows/router.js';
@@ -101,7 +102,9 @@ type RouterIntent = {
   readiness_refs: string[];
 };
 
-const check = process.argv.includes('--check');
+const program = new Command('emit-current-capabilities').option('--check');
+program.parse(process.argv.slice(2), { from: 'user' });
+const check = program.opts<{ check?: boolean }>().check === true;
 const OUT_REL = 'generated/release/current-capabilities.json';
 const EXECUTABLE_SCHEMATIC_ROUTES = new Set([
   'ask',

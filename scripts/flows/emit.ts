@@ -43,6 +43,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command } from 'commander';
 
 import type * as CatalogModule from '../../src/flows/catalog.js';
 import type * as CompilerModule from '../../src/flows/compile-schematic-to-flow.js';
@@ -989,7 +990,13 @@ async function checkMode(): Promise<void> {
   if (drifted) process.exit(1);
 }
 
-const isCheck = process.argv.includes('--check');
+function parseArgs(argv: readonly string[]): { readonly check: boolean } {
+  const program = new Command('emit-flows').option('--check');
+  program.parse(argv, { from: 'user' });
+  return { check: program.opts<{ check?: boolean }>().check === true };
+}
+
+const isCheck = parseArgs(process.argv.slice(2)).check;
 if (isCheck) {
   await checkMode();
 } else {

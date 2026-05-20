@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { resolve } from 'node:path';
+import { Command } from 'commander';
 import { readJson } from './shared/json.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
@@ -18,9 +19,12 @@ type EvalRegistry = {
 };
 
 function parseArgs(argv: readonly string[]): { json: boolean; claimGrade: boolean } {
+  const program = new Command('evals-list').option('--json').option('--claim-grade');
+  program.parse(argv, { from: 'user' });
+  const opts = program.opts<{ json?: boolean; claimGrade?: boolean }>();
   return {
-    json: argv.includes('--json'),
-    claimGrade: argv.includes('--claim-grade'),
+    json: opts.json === true,
+    claimGrade: opts.claimGrade === true,
   };
 }
 

@@ -653,4 +653,17 @@ describe('runs show CLI', () => {
       error: { code: 'invalid_invocation' },
     });
   });
+
+  it('accepts equals-form option syntax through Commander', async () => {
+    const runFolder = tempRunFolder('circuit-runs-show-equals-');
+
+    const result = await captureMain(['runs', 'show', `--run-folder=${runFolder}`, '--json']);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      api_version: 'run-status-v1',
+      engine_state: 'invalid',
+    });
+  });
 });

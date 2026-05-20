@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command } from 'commander';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..', '..');
@@ -168,8 +169,10 @@ function restore(path: string, original: StoredFile): void {
 }
 
 function main(): number {
-  const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) {
+  const program = new Command('codex-handoff-smoke').option('-h, --help').option(LIVE_FLAG);
+  program.parse(process.argv.slice(2), { from: 'user' });
+  const args = program.opts<{ help?: boolean; useRealUserHooks?: boolean }>();
+  if (args.help === true) {
     process.stdout.write(`${usage()}\n`);
     return 0;
   }
@@ -196,7 +199,7 @@ function main(): number {
     finish('skip', 'Codex SessionStart hooks are not enabled or visible.', evidence);
   }
 
-  if (!args.includes(LIVE_FLAG)) {
+  if (args.useRealUserHooks !== true) {
     finish(
       'skip',
       `Safe preflight passed. Re-run with ${LIVE_FLAG} to temporarily install the user-level hook and run live Codex injection.`,

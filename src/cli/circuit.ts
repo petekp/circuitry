@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command, CommanderError } from 'commander';
 
 import type { ExecutorRegistry } from '../runtime/executors/index.js';
 import { isRuntimeRunFolder, resumeCompiledFlow } from '../runtime/run/checkpoint-resume.js';
@@ -61,7 +62,7 @@ const DEFAULT_RUNS_BASE = '.circuit/runs';
 const DEFAULT_DEV_VERSION = '0.0.0-dev';
 
 interface ParsedArgs {
-  command?: 'run' | 'resume';
+  command: 'run' | 'resume';
   flowName?: string;
   goal?: string;
   axes: AxesValue;
@@ -76,6 +77,14 @@ interface ParsedArgs {
   progress?: 'jsonl';
   includeUntrackedContent: boolean;
 }
+
+type TopLevelInvocation =
+  | { readonly command: 'run'; readonly argv: readonly string[] }
+  | { readonly command: 'resume'; readonly argv: readonly string[] }
+  | { readonly command: 'handoff'; readonly argv: readonly string[] }
+  | { readonly command: 'create'; readonly argv: readonly string[] }
+  | { readonly command: 'runs'; readonly argv: readonly string[] }
+  | { readonly command: 'version'; readonly argv: readonly string[] };
 
 interface ResolvedCompiledFlowRoute {
   flowName: string;
@@ -113,7 +122,7 @@ export function usage(): string {
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
     '       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]',
     '       circuit runs show --run-folder <path> --json',
-    '       circuit handoff [save|resume|done] [options]',
+    '       circuit handoff [save|resume|done|brief|hook|hooks] [options]',
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     '       circuit version [--json]',
     '',
@@ -171,162 +180,163 @@ function versionInfo(): Record<string, unknown> {
 }
 
 function runVersionCommand(argv: readonly string[]): number {
-  if (argv.length === 0) {
-    process.stdout.write(`${readSourceVersion()}\n`);
-    return 0;
+  const program = new Command('circuit version')
+    .exitOverride()
+    .configureOutput({ writeErr: () => {} })
+    .option('--json');
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    const message =
+      err instanceof CommanderError ? err.message.replace(/^error: /, '') : (err as Error).message;
+    process.stderr.write(`error: ${message}\n`);
+    return 2;
   }
-  if (argv.length === 1 && argv[0] === '--json') {
+  const unexpected = program.args[0];
+  if (unexpected !== undefined) {
+    process.stderr.write(
+      `error: too many arguments. Expected 0 arguments but got ${program.args.length}.\n`,
+    );
+    return 2;
+  }
+
+  if (program.opts<{ json?: boolean }>().json === true) {
     process.stdout.write(`${JSON.stringify(versionInfo(), null, 2)}\n`);
     return 0;
   }
-  process.stderr.write('error: usage: circuit version [--json]\n');
-  return 2;
+  process.stdout.write(`${readSourceVersion()}\n`);
+  return 0;
 }
 
-function parseArgs(argv: readonly string[]): ParsedArgs {
-  // Positional: first non-flag token is the flow name.
-  let flowName: string | undefined;
-  let command: 'run' | 'resume' | undefined;
-  let goal: string | undefined;
-  let rigor: RigorValue | undefined;
-  let rigorProvided = false;
-  let tournament = false;
-  let tournamentProvided = false;
-  let tournamentN: number | undefined;
-  let tournamentNProvided = false;
-  let autonomous = false;
-  let autonomousProvided = false;
-  let runFolder: string | undefined;
-  let fixturePath: string | undefined;
-  let flowRoot: string | undefined;
-  let checkpointChoice: string | undefined;
-  let progress: 'jsonl' | undefined;
-  let includeUntrackedContent = false;
-
-  for (let i = 0; i < argv.length; i++) {
-    const tok = argv[i];
-    if (tok === undefined) continue;
-    if (tok === '--goal') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error('--goal requires a value');
-      goal = next;
-      i += 1;
-      continue;
-    }
-    if (tok === '--rigor') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error(`${tok} requires a value`);
-      if (rigorProvided) {
-        throw new Error('supply --rigor only once');
-      }
-      rigor = Rigor.parse(next);
-      rigorProvided = true;
-      i += 1;
-      continue;
-    }
-    if (tok === '--tournament') {
-      if (tournamentProvided) {
-        throw new Error('supply --tournament only once');
-      }
-      tournament = true;
-      tournamentProvided = true;
-      continue;
-    }
-    if (tok === '--tournament-n') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error(`${tok} requires a value`);
-      if (tournamentNProvided) {
-        throw new Error('supply --tournament-n only once');
-      }
-      const parsed = Number(next);
-      if (!Number.isInteger(parsed) || !TournamentN.safeParse(parsed).success) {
-        throw new Error('Tournament N must be between 2 and 4');
-      }
-      tournamentN = parsed;
-      tournamentNProvided = true;
-      i += 1;
-      continue;
-    }
-    if (tok === '--autonomous') {
-      if (autonomousProvided) {
-        throw new Error('supply --autonomous only once');
-      }
-      autonomous = true;
-      autonomousProvided = true;
-      continue;
-    }
-    if (tok === '--run-folder') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error(`${tok} requires a value`);
-      if (runFolder !== undefined) {
-        throw new Error('supply --run-folder only once');
-      }
-      runFolder = next;
-      i += 1;
-      continue;
-    }
-    if (tok === '--fixture') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error('--fixture requires a value');
-      fixturePath = next;
-      i += 1;
-      continue;
-    }
-    if (tok === '--flow-root') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error('--flow-root requires a value');
-      if (next.length === 0) throw new Error('--flow-root requires a non-empty value');
-      if (flowRoot !== undefined) {
-        throw new Error('supply --flow-root only once');
-      }
-      flowRoot = next;
-      i += 1;
-      continue;
-    }
-    if (tok === '--checkpoint-choice') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error('--checkpoint-choice requires a value');
-      checkpointChoice = next;
-      i += 1;
-      continue;
-    }
-    if (tok === '--progress') {
-      const next = argv[i + 1];
-      if (next === undefined) throw new Error('--progress requires a value');
-      if (next !== 'jsonl') throw new Error("--progress only supports 'jsonl'");
-      progress = 'jsonl';
-      i += 1;
-      continue;
-    }
-    if (tok === '--dry-run') {
-      // Fail closed. An earlier version accepted the flag silently while
-      // the real connector still ran. Re-enable once real dry-run support
-      // lands (deterministic dry relayer + trace marker).
-      throw new Error(
-        '--dry-run is not currently implemented and is rejected. An earlier version silently invoked the real connector while reporting dry_run:true, which is a safety bug. The flag stays rejected until real dry-run support lands.',
-      );
-    }
-    if (tok === '--include-untracked-content') {
-      includeUntrackedContent = true;
-      continue;
-    }
-    if (tok === '--help' || tok === '-h') {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    }
-    if (tok.startsWith('--')) {
-      throw new Error(`unknown flag: ${tok}`);
-    }
-    if ((tok === 'run' || tok === 'resume') && flowName === undefined && command === undefined) {
-      command = tok;
-      continue;
-    }
-    if (flowName === undefined) {
-      flowName = tok;
-      continue;
-    }
-    throw new Error(`unexpected positional argument: ${tok}`);
+function parseCommander(program: Command, argv: readonly string[]): void {
+  try {
+    program
+      .exitOverride()
+      .configureOutput({ writeErr: () => {} })
+      .parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
   }
+}
+
+function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
+  let invocation: TopLevelInvocation | undefined;
+  const program = new Command('circuit').exitOverride().configureOutput({ writeErr: () => {} });
+  const addForwardingCommand = (name: TopLevelInvocation['command']) => {
+    program
+      .command(name)
+      .allowUnknownOption(true)
+      .allowExcessArguments(true)
+      .argument('[args...]')
+      .action((args: string[]) => {
+        invocation = { command: name, argv: args };
+      });
+  };
+  addForwardingCommand('run');
+  addForwardingCommand('resume');
+  addForwardingCommand('handoff');
+  addForwardingCommand('create');
+  addForwardingCommand('runs');
+  addForwardingCommand('version');
+
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
+  }
+
+  if (invocation === undefined) {
+    throw new Error('missing command: use run, resume, handoff, create, runs, or version');
+  }
+  return invocation;
+}
+
+function addExecutionOptions(program: Command): Command {
+  return program
+    .option('--goal <goal>')
+    .option('--rigor <lite|standard|deep>')
+    .option('--tournament')
+    .option('--tournament-n <2|3|4>')
+    .option('--autonomous')
+    .option('--run-folder <path>')
+    .option('--fixture <path>')
+    .option('--flow-root <path>')
+    .option('--checkpoint-choice <choice>')
+    .option('--progress <format>')
+    .option('--dry-run')
+    .option('--include-untracked-content');
+}
+
+function parseExecutionArgs(command: 'run' | 'resume', argv: readonly string[]): ParsedArgs {
+  const program = addExecutionOptions(new Command(`circuit ${command}`).argument('[flow-name]'));
+  parseCommander(program, argv);
+
+  const opts = program.opts<{
+    goal?: string;
+    rigor?: string;
+    tournament?: boolean;
+    tournamentN?: string;
+    autonomous?: boolean;
+    runFolder?: string;
+    fixture?: string;
+    flowRoot?: string;
+    checkpointChoice?: string;
+    progress?: string;
+    dryRun?: boolean;
+    includeUntrackedContent?: boolean;
+  }>();
+
+  const flowName = program.args[0];
+
+  if (opts.dryRun === true) {
+    // Fail closed. An earlier version accepted the flag silently while
+    // the real connector still ran. Re-enable once real dry-run support
+    // lands (deterministic dry relayer + trace marker).
+    throw new Error(
+      '--dry-run is not currently implemented and is rejected. An earlier version silently invoked the real connector while reporting dry_run:true, which is a safety bug. The flag stays rejected until real dry-run support lands.',
+    );
+  }
+
+  let rigor: RigorValue | undefined;
+  const rigorProvided = opts.rigor !== undefined;
+  if (opts.rigor !== undefined) rigor = Rigor.parse(opts.rigor);
+
+  const tournamentProvided = opts.tournament === true;
+  const tournament = opts.tournament === true;
+
+  let tournamentN: number | undefined;
+  const tournamentNProvided = opts.tournamentN !== undefined;
+  if (opts.tournamentN !== undefined) {
+    const parsed = Number(opts.tournamentN);
+    if (!Number.isInteger(parsed) || !TournamentN.safeParse(parsed).success) {
+      throw new Error('Tournament N must be between 2 and 4');
+    }
+    tournamentN = parsed;
+  }
+
+  const autonomousProvided = opts.autonomous === true;
+  const autonomous = opts.autonomous === true;
+
+  if (opts.flowRoot !== undefined && opts.flowRoot.length === 0) {
+    throw new Error('--flow-root requires a non-empty value');
+  }
+
+  if (opts.progress !== undefined && opts.progress !== 'jsonl') {
+    throw new Error("--progress only supports 'jsonl'");
+  }
+
+  const goal = opts.goal;
+  const runFolder = opts.runFolder;
+  const fixturePath = opts.fixture;
+  const flowRoot = opts.flowRoot;
+  const checkpointChoice = opts.checkpointChoice;
+  const progress = opts.progress === 'jsonl' ? 'jsonl' : undefined;
+  const includeUntrackedContent = opts.includeUntrackedContent === true;
 
   if (command === 'resume' || checkpointChoice !== undefined) {
     if (command !== 'resume') {
@@ -374,6 +384,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   });
 
   const result: ParsedArgs = {
+    command,
     axes,
     rigorProvided,
     tournamentProvided,
@@ -381,7 +392,6 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     autonomousProvided,
     includeUntrackedContent,
   };
-  if (command !== undefined) result.command = command;
   if (goal !== undefined) result.goal = goal;
   if (flowName !== undefined) result.flowName = flowName;
   if (runFolder !== undefined) result.runFolder = runFolder;
@@ -639,26 +649,33 @@ function classifyRuntimeSupport(input: {
 }
 
 export async function main(argv: readonly string[], options: CliMainOptions = {}): Promise<number> {
-  if (argv[0] === 'version') {
-    return runVersionCommand(argv.slice(1));
+  let invocation: TopLevelInvocation;
+  try {
+    invocation = parseTopLevelInvocation(argv);
+  } catch (err) {
+    process.stderr.write(`error: ${(err as Error).message}\n`);
+    return 2;
   }
-  if (argv[0] === 'handoff') {
-    return runHandoffCommand(argv.slice(1), {
+  if (invocation.command === 'version') {
+    return runVersionCommand(invocation.argv);
+  }
+  if (invocation.command === 'handoff') {
+    return runHandoffCommand(invocation.argv, {
       ...(options.now === undefined ? {} : { now: options.now }),
     });
   }
-  if (argv[0] === 'create') {
-    return runCreateCommand(argv.slice(1), {
+  if (invocation.command === 'create') {
+    return runCreateCommand(invocation.argv, {
       ...(options.now === undefined ? {} : { now: options.now }),
     });
   }
-  if (argv[0] === 'runs') {
-    return runRunsCommand(argv.slice(1));
+  if (invocation.command === 'runs') {
+    return runRunsCommand(invocation.argv);
   }
 
   let args: ParsedArgs;
   try {
-    args = parseArgs(argv);
+    args = parseExecutionArgs(invocation.command, invocation.argv);
   } catch (err) {
     process.stderr.write(`error: ${(err as Error).message}\n`);
     return 2;

@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command, CommanderError } from 'commander';
 import { projectRunStatusFromRunFolder } from '../run-status/project-run-folder.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import {
@@ -56,160 +57,120 @@ type HandoffBriefRenderResult =
   | { readonly ok: true; readonly additionalContext: string }
   | { readonly ok: false; readonly code: string; readonly message: string };
 
-function usage(): string {
-  return [
-    'usage: circuit handoff [save] --goal "<goal>" --next "<next>" [--state-markdown <md>] [--debt-markdown <md>] [--run-folder <path>] [--control-plane <path>] [--record-id <stem>] [--progress jsonl]',
-    '       circuit handoff resume [--control-plane <path>] [--progress jsonl]',
-    '       circuit handoff done [--control-plane <path>] [--progress jsonl]',
-    '       circuit handoff brief --json [--control-plane <path>] [--project-root <path>]',
-    '       circuit handoff hook --host codex [--project-root <path>]',
-    '       circuit handoff hooks install|uninstall|doctor --host codex [--hooks-file <path>] [--launcher <path>]',
-  ].join('\n');
+function parseCommander(program: Command, argv: readonly string[]): void {
+  try {
+    program
+      .exitOverride()
+      .configureOutput({ writeErr: () => {} })
+      .parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
+  }
 }
 
-function takeValue(argv: readonly string[], index: number, flag: string): string {
-  const next = argv[index + 1];
-  if (next === undefined || next.length === 0) throw new Error(`${flag} requires a value`);
-  return next;
+type HandoffCommanderOptions = {
+  host?: string;
+  goal?: string;
+  next?: string;
+  stateMarkdown?: string;
+  debtMarkdown?: string;
+  runFolder?: string;
+  controlPlane?: string;
+  projectRoot?: string;
+  hooksFile?: string;
+  launcher?: string;
+  recordId?: string;
+  createdAt?: string;
+  progress?: string;
+  json?: boolean;
+};
+
+function addHandoffOptions(program: Command): Command {
+  return program
+    .option('--host <host>')
+    .option('--goal <goal>')
+    .option('--next <next>')
+    .option('--state-markdown <md>')
+    .option('--debt-markdown <md>')
+    .option('--run-folder <path>')
+    .option('--control-plane <path>')
+    .option('--project-root <path>')
+    .option('--hooks-file <path>')
+    .option('--launcher <path>')
+    .option('--record-id <stem>')
+    .option('--created-at <iso>')
+    .option('--progress <format>')
+    .option('--json');
 }
 
 function parseArgs(argv: readonly string[]): HandoffArgs {
-  let action: HandoffAction = 'save';
-  let hooksAction: HandoffHooksAction | undefined;
-  let host: string | undefined;
-  let goal: string | undefined;
-  let next: string | undefined;
-  let stateMarkdown: string | undefined;
-  let debtMarkdown: string | undefined;
-  let runFolder: string | undefined;
-  let controlPlane: string | undefined;
-  let projectRoot: string | undefined;
-  let hooksFile: string | undefined;
-  let launcher: string | undefined;
-  let recordId: string | undefined;
-  let createdAt: string | undefined;
-  let progress = false;
-  let json = false;
+  let parsed:
+    | {
+        readonly action: HandoffAction;
+        readonly hooksAction?: HandoffHooksAction;
+        readonly opts: HandoffCommanderOptions;
+      }
+    | undefined;
+  const program = addHandoffOptions(
+    new Command('circuit handoff')
+      .exitOverride()
+      .configureOutput({ writeErr: () => {} })
+      .enablePositionalOptions(),
+  );
+  program.action(() => {
+    parsed = { action: 'save', opts: program.opts<HandoffCommanderOptions>() };
+  });
+  const addAction = (action: Exclude<HandoffAction, 'hooks'>) => {
+    const command = addHandoffOptions(program.command(action));
+    command.action(() => {
+      parsed = { action, opts: command.opts<HandoffCommanderOptions>() };
+    });
+  };
+  addAction('save');
+  addAction('resume');
+  addAction('done');
+  addAction('brief');
+  addAction('hook');
+  const hooks = program.command('hooks').action(() => {
+    throw new Error('handoff hooks requires install, uninstall, or doctor');
+  });
+  const addHooksAction = (hooksAction: HandoffHooksAction) => {
+    const command = addHandoffOptions(hooks.command(hooksAction));
+    command.action(() => {
+      parsed = { action: 'hooks', hooksAction, opts: command.opts<HandoffCommanderOptions>() };
+    });
+  };
+  addHooksAction('install');
+  addHooksAction('uninstall');
+  addHooksAction('doctor');
 
-  let start = 0;
-  const first = argv[0];
-  if (
-    first === 'save' ||
-    first === 'resume' ||
-    first === 'done' ||
-    first === 'brief' ||
-    first === 'hook'
-  ) {
-    action = first;
-    start = 1;
-  } else if (first === 'hooks') {
-    action = 'hooks';
-    const subcommand = argv[1];
-    if (subcommand !== 'install' && subcommand !== 'uninstall' && subcommand !== 'doctor') {
-      throw new Error('handoff hooks requires install, uninstall, or doctor');
-    }
-    hooksAction = subcommand;
-    start = 2;
-  }
+  parseCommander(program, argv);
+  if (parsed === undefined) throw new Error('handoff requires a subcommand');
 
-  for (let i = start; i < argv.length; i++) {
-    const tok = argv[i];
-    if (tok === undefined) continue;
-    if (tok === '--host') {
-      host = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--goal') {
-      goal = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--next') {
-      next = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--state-markdown') {
-      stateMarkdown = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--debt-markdown') {
-      debtMarkdown = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--run-folder') {
-      runFolder = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--control-plane') {
-      controlPlane = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--project-root') {
-      projectRoot = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--hooks-file') {
-      hooksFile = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--launcher') {
-      launcher = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--record-id') {
-      recordId = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--created-at') {
-      createdAt = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--progress') {
-      const value = takeValue(argv, i, tok);
-      if (value !== 'jsonl') throw new Error("--progress only supports 'jsonl'");
-      progress = true;
-      i += 1;
-      continue;
-    }
-    if (tok === '--json') {
-      json = true;
-      continue;
-    }
-    if (tok === '--help' || tok === '-h') {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    }
-    throw new Error(tok.startsWith('--') ? `unknown flag: ${tok}` : `unexpected argument: ${tok}`);
+  const { action, hooksAction, opts } = parsed;
+  if (opts.progress !== undefined && opts.progress !== 'jsonl') {
+    throw new Error("--progress only supports 'jsonl'");
   }
 
   return {
     action,
     ...(hooksAction === undefined ? {} : { hooksAction }),
-    ...(host === undefined ? {} : { host }),
-    progress,
-    json,
-    ...(goal === undefined ? {} : { goal }),
-    ...(next === undefined ? {} : { next }),
-    ...(stateMarkdown === undefined ? {} : { stateMarkdown }),
-    ...(debtMarkdown === undefined ? {} : { debtMarkdown }),
-    ...(runFolder === undefined ? {} : { runFolder }),
-    ...(controlPlane === undefined ? {} : { controlPlane }),
-    ...(projectRoot === undefined ? {} : { projectRoot }),
-    ...(hooksFile === undefined ? {} : { hooksFile }),
-    ...(launcher === undefined ? {} : { launcher }),
-    ...(recordId === undefined ? {} : { recordId }),
-    ...(createdAt === undefined ? {} : { createdAt }),
+    ...(opts.host === undefined ? {} : { host: opts.host }),
+    progress: opts.progress === 'jsonl',
+    json: opts.json === true,
+    ...(opts.goal === undefined ? {} : { goal: opts.goal }),
+    ...(opts.next === undefined ? {} : { next: opts.next }),
+    ...(opts.stateMarkdown === undefined ? {} : { stateMarkdown: opts.stateMarkdown }),
+    ...(opts.debtMarkdown === undefined ? {} : { debtMarkdown: opts.debtMarkdown }),
+    ...(opts.runFolder === undefined ? {} : { runFolder: opts.runFolder }),
+    ...(opts.controlPlane === undefined ? {} : { controlPlane: opts.controlPlane }),
+    ...(opts.projectRoot === undefined ? {} : { projectRoot: opts.projectRoot }),
+    ...(opts.hooksFile === undefined ? {} : { hooksFile: opts.hooksFile }),
+    ...(opts.launcher === undefined ? {} : { launcher: opts.launcher }),
+    ...(opts.recordId === undefined ? {} : { recordId: opts.recordId }),
+    ...(opts.createdAt === undefined ? {} : { createdAt: opts.createdAt }),
   };
 }
 

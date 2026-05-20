@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { Command, CommanderError } from 'commander';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { progressPresentation } from '../shared/progress-output.js';
@@ -25,89 +26,55 @@ interface CreateMainOptions {
 
 const RESERVED_FLOW_IDS = new Set(['build', 'explore', 'fix', 'handoff', 'review', 'run']);
 
-function usage(): string {
-  return [
-    'usage: circuit create --description "<flow idea>" [--name <slug>] [--home <path>] [--template-flow-root <path>] [--publish --yes] [--progress jsonl]',
-    '',
-    'Drafts a user-global custom flow package. Without --publish it only writes a draft; with --publish --yes it promotes the draft into the user-global flow root.',
-  ].join('\n');
-}
-
-function takeValue(argv: readonly string[], index: number, flag: string): string {
-  const next = argv[index + 1];
-  if (next === undefined || next.length === 0) throw new Error(`${flag} requires a value`);
-  return next;
+function parseCommander(program: Command, argv: readonly string[]): void {
+  try {
+    program
+      .exitOverride()
+      .configureOutput({ writeErr: () => {} })
+      .parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
+  }
 }
 
 function parseArgs(argv: readonly string[]): CreateArgs {
-  let name: string | undefined;
-  let description: string | undefined;
-  let home: string | undefined;
-  let templateFlowRoot: string | undefined;
-  let publish = false;
-  let yes = false;
-  let createdAt: string | undefined;
-  let progress = false;
+  const program = new Command('circuit create')
+    .option('--name <slug>')
+    .option('--description <flow idea>')
+    .option('--home <path>')
+    .option('--template-flow-root <path>')
+    .option('--created-at <iso>')
+    .option('--publish')
+    .option('--yes')
+    .option('--progress <format>');
+  parseCommander(program, argv);
+  if (program.args.length > 0) throw new Error(`unexpected argument: ${program.args[0]}`);
 
-  for (let i = 0; i < argv.length; i++) {
-    const tok = argv[i];
-    if (tok === undefined) continue;
-    if (tok === '--name') {
-      name = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--description') {
-      description = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--home') {
-      home = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--template-flow-root') {
-      templateFlowRoot = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--created-at') {
-      createdAt = takeValue(argv, i, tok);
-      i += 1;
-      continue;
-    }
-    if (tok === '--publish') {
-      publish = true;
-      continue;
-    }
-    if (tok === '--yes') {
-      yes = true;
-      continue;
-    }
-    if (tok === '--progress') {
-      const value = takeValue(argv, i, tok);
-      if (value !== 'jsonl') throw new Error("--progress only supports 'jsonl'");
-      progress = true;
-      i += 1;
-      continue;
-    }
-    if (tok === '--help' || tok === '-h') {
-      process.stdout.write(`${usage()}\n`);
-      process.exit(0);
-    }
-    throw new Error(tok.startsWith('--') ? `unknown flag: ${tok}` : `unexpected argument: ${tok}`);
+  const opts = program.opts<{
+    name?: string;
+    description?: string;
+    home?: string;
+    templateFlowRoot?: string;
+    createdAt?: string;
+    publish?: boolean;
+    yes?: boolean;
+    progress?: string;
+  }>();
+  if (opts.progress !== undefined && opts.progress !== 'jsonl') {
+    throw new Error("--progress only supports 'jsonl'");
   }
 
   return {
-    publish,
-    yes,
-    progress,
-    ...(name === undefined ? {} : { name }),
-    ...(description === undefined ? {} : { description }),
-    ...(home === undefined ? {} : { home }),
-    ...(templateFlowRoot === undefined ? {} : { templateFlowRoot }),
-    ...(createdAt === undefined ? {} : { createdAt }),
+    publish: opts.publish === true,
+    yes: opts.yes === true,
+    progress: opts.progress === 'jsonl',
+    ...(opts.name === undefined ? {} : { name: opts.name }),
+    ...(opts.description === undefined ? {} : { description: opts.description }),
+    ...(opts.home === undefined ? {} : { home: opts.home }),
+    ...(opts.templateFlowRoot === undefined ? {} : { templateFlowRoot: opts.templateFlowRoot }),
+    ...(opts.createdAt === undefined ? {} : { createdAt: opts.createdAt }),
   };
 }
 
