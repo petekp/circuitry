@@ -7,10 +7,12 @@
 import { buildCheckpointProjector } from './build-checkpoint.js';
 import { exploreTournamentProjector } from './explore-tournament.js';
 import type { HtmlProjector } from './projector.js';
+import { prototypeCheckpointProjector } from './prototype-checkpoint.js';
 
 export type { HtmlProjector, HtmlProjectorContext, JsonObject } from './projector.js';
 
 export const HTML_PROJECTORS: Partial<Record<string, HtmlProjector>> = {
   build: buildCheckpointProjector,
   explore: exploreTournamentProjector,
+  prototype: prototypeCheckpointProjector,
 };

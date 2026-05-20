@@ -122,6 +122,47 @@ export const SkillsConfig = z
   .strict();
 export type SkillsConfig = z.infer<typeof SkillsConfig>;
 
+export const CircuitVariantModelId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9][a-z0-9-]*$/, {
+    message: 'variant model id must be a fanout-safe kebab-case slug',
+  });
+export type CircuitVariantModelId = z.infer<typeof CircuitVariantModelId>;
+
+export const CircuitVariantModel = z
+  .object({
+    id: CircuitVariantModelId,
+    label: z.string().min(1),
+    selection: SelectionOverride,
+  })
+  .strict()
+  .superRefine((variant, ctx) => {
+    if (variant.selection.model === undefined) {
+      issueAt(ctx, ['selection', 'model'], 'variant model selection.model is required');
+    }
+    if (variant.selection.effort === undefined) {
+      issueAt(ctx, ['selection', 'effort'], 'variant model selection.effort is required');
+    }
+  });
+export type CircuitVariantModel = z.infer<typeof CircuitVariantModel>;
+
+export const CircuitVariantModels = z
+  .array(CircuitVariantModel)
+  .min(2)
+  .max(4)
+  .superRefine((variants, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, variant] of variants.entries()) {
+      if (seen.has(variant.id)) {
+        issueAt(ctx, [index, 'id'], `duplicate variant model id '${variant.id}'`);
+      }
+      seen.add(variant.id);
+    }
+  });
+export type CircuitVariantModels = z.infer<typeof CircuitVariantModels>;
+
 // Per-circuit skill contribution flows through `selection.skills` via
 // typed `SkillOverride` operations. (Earlier shapes accepted an untyped
 // `skills: string[]` channel that bypassed validation.)
@@ -129,6 +170,7 @@ export const CircuitOverride = z
   .object({
     selection: SelectionOverride.optional(),
     skill_bindings: SkillBindings.default({}),
+    variant_models: CircuitVariantModels.optional(),
   })
   .strict();
 export type CircuitOverride = z.infer<typeof CircuitOverride>;

@@ -129,6 +129,7 @@ describe('close-with-evidence registry', () => {
     expect(findCloseBuilder('build.result@v1')?.resultSchemaName).toBe('build.result@v1');
     expect(findCloseBuilder('explore.result@v1')?.resultSchemaName).toBe('explore.result@v1');
     expect(findCloseBuilder('fix.result@v1')?.resultSchemaName).toBe('fix.result@v1');
+    expect(findCloseBuilder('prototype.result@v1')?.resultSchemaName).toBe('prototype.result@v1');
     expect(findCloseBuilder('pursuit.result@v1')?.resultSchemaName).toBe('pursuit.result@v1');
   });
 

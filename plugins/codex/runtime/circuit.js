@@ -10767,7 +10767,7 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync13, readFileSync as readFileSync25 } from "node:fs";
+import { existsSync as existsSync15, readFileSync as readFileSync29 } from "node:fs";
 import { dirname as dirname9, resolve as resolve11 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
@@ -10789,7 +10789,7 @@ var {
 } = import_index.default;
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync16 } from "node:fs";
+import { readFileSync as readFileSync20 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -14013,7 +14013,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             })));
           }
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -14021,7 +14021,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
       } else if (!isOptionalIn) {
         doc.write(`
@@ -14058,7 +14058,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        
+
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -14066,7 +14066,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-        
+
       `);
       }
     }
@@ -26853,12 +26853,15 @@ var FanoutSubRunBranchTemplate = external_exports.object({
   flow_ref: CompiledFlowRef,
   goal: external_exports.string().min(1),
   depth: Depth,
-  selection: SelectionOverride.optional()
+  // Dynamic fanout selection may contain `$item.*` placeholders. The
+  // expanded branch is parsed through FanoutBranch before execution, so
+  // runtime still enforces the real SelectionOverride shape.
+  selection: external_exports.unknown().optional()
 }).strict();
 var FanoutRelayBranchTemplate = external_exports.object({
   branch_id: external_exports.string().min(1).max(64),
   execution: FanoutRelayBranchExecution,
-  selection: SelectionOverride.optional()
+  selection: external_exports.unknown().optional()
 }).strict();
 var FanoutBranchTemplate = external_exports.union([
   FanoutSubRunBranchTemplate,
@@ -28928,24 +28931,18 @@ function requireRuntimeIndexedStep(index, stepId, kind) {
   return indexedStep2;
 }
 function reportPathForSchemaInRuntimeFlow(flow, schemaName) {
-  const matches = flow.steps.filter((step) => {
-    const report2 = step.writes.report;
-    return typeof report2 === "object" && report2 !== null && report2.schema === schemaName;
-  });
+  const matches = flow.steps.flatMap((step) => Object.values(step.writes).flatMap((write) => typeof write === "object" && write !== null && write.schema === schemaName ? [{ step, write }] : []));
   if (matches.length !== 1) {
     throw new Error(`expected exactly one report writer for schema '${schemaName}', found ${matches.length}`);
   }
-  const report = matches[0]?.writes.report;
+  const report = matches[0]?.write;
   if (typeof report !== "object" || report === null) {
     throw new Error(`report writer for schema '${schemaName}' is missing a report path`);
   }
   return report.path;
 }
 function flowHasReportSchemaInRuntimeFlow(flow, schemaName) {
-  return flow.steps.some((step) => {
-    const report = step.writes.report;
-    return typeof report === "object" && report !== null && report.schema === schemaName;
-  });
+  return flow.steps.some((step) => Object.values(step.writes).some((write) => typeof write === "object" && write !== null && write.schema === schemaName));
 }
 
 // dist/flows/build/writers/result-projection.js
@@ -29777,15 +29774,15 @@ var ExploreTournamentAggregate = external_exports.object({
   join_policy: external_exports.literal("aggregate-survivors"),
   branch_count: external_exports.number().int().positive(),
   branches: external_exports.array(ExploreTournamentAggregateBranch).min(1)
-}).strict().superRefine((aggregate, ctx) => {
-  if (aggregate.branch_count !== aggregate.branches.length) {
+}).strict().superRefine((aggregate2, ctx) => {
+  if (aggregate2.branch_count !== aggregate2.branches.length) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["branch_count"],
       message: "branch_count must match branches.length"
     });
   }
-  for (const [index, branch] of aggregate.branches.entries()) {
+  for (const [index, branch] of aggregate2.branches.entries()) {
     if (branch.child_outcome === "complete" && branch.result_body === void 0) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
@@ -30279,7 +30276,7 @@ var exploreDecisionComposeBuilder = {
     const reviewPath = requiredRead(context.step.reads, "tournament-review.json");
     const responsePath = checkpointResponsePath(context);
     const options = ExploreDecisionOptions.parse(readJson(context.runFolder, optionsPath));
-    const aggregate = ExploreTournamentAggregate.parse(readJson(context.runFolder, aggregatePath));
+    const aggregate2 = ExploreTournamentAggregate.parse(readJson(context.runFolder, aggregatePath));
     const review = ExploreTournamentReview.parse(readJson(context.runFolder, reviewPath));
     const response = readJson(context.runFolder, responsePath);
     const rawSelection = response !== null && typeof response === "object" && !Array.isArray(response) ? response.selection : void 0;
@@ -30288,7 +30285,7 @@ var exploreDecisionComposeBuilder = {
     if (selectedOption === void 0) {
       throw new Error(`explore.decision@v1 selected option '${selectedOptionId}' is not present in decision options`);
     }
-    const selectedBranch = aggregate.branches.find((branch) => branch.branch_id === selectedOption.id);
+    const selectedBranch = aggregate2.branches.find((branch) => branch.branch_id === selectedOption.id);
     const selectedProposal = selectedBranch?.result_body;
     if (selectedProposal === void 0) {
       throw new Error(`explore.decision@v1 selected option '${selectedOption.id}' has no completed proposal branch`);
@@ -33215,6 +33212,2377 @@ var fixFlowData = {
 // dist/flows/fix/flow.js
 var fixFlowDefinition = defineFlowData(fixFlowData);
 
+// dist/flows/prototype/relay-hints.js
+var prototypeArtifactShapeHint = {
+  kind: "schema",
+  schema: "prototype.artifact@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<accept|blocked>", "summary": "<what prototype files were created or why blocked>", "prototype_root": "<project-relative prototype directory>", "created_files": ["<project-relative path under prototype_root>"], "entry_points": ["<project-relative path under prototype_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "claim_limits": ["not production", "not deployed"] }',
+    "Create only disposable prototype files under the prototype_root from the plan. Do not edit production application code, generated host packages, or release metadata.",
+    'Use verdict "accept" only when the entry points and created files exist under prototype_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
+    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
+    "The runtime parses your response with JSON.parse, rejects verdicts outside the accepted-verdicts list, validates the full report body against prototype.artifact@v1, and verifies reported artifact paths before writing the final Prototype result."
+  ].join(" ")
+};
+var prototypeVariantArtifactShapeHint = {
+  kind: "schema",
+  schema: "prototype.variant-artifact@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<accept|blocked>", "variant_id": "<the assigned variant_id>", "variant_label": "<the assigned label>", "summary": "<what this variant created or why blocked>", "prototype_root": "<shared prototype root>", "variant_root": "<prototype_root/variants/variant_id>", "created_files": ["<project-relative path under variant_root>"], "entry_points": ["<project-relative path under variant_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "rubric_model_judgments": { "evidence_rigor": "<pass|concern|fail>", "actionability": "<pass|concern|fail>", "coverage_adequacy": "<pass|concern|fail>", "scope_discipline": "<pass|concern|fail>", "honest_calibration": "<pass|concern|fail>", "project_specificity": "<pass|concern|fail>", "insight_density": "<pass|concern|fail>", "branch_distinctness": "<pass|concern|fail>" }, "claim_limits": ["not production", "not deployed"] }',
+    "Create only disposable prototype files under variant_root. Do not edit production application code, generated host packages, release metadata, or sibling variants.",
+    'Use verdict "accept" only when the entry points and created files exist under variant_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
+    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. The provider/model comparison evidence is captured by the runtime trace, not by this report.",
+    "The runtime validates this response against prototype.variant-artifact@v1.",
+    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
+  ].join(" ")
+};
+var prototypeVariantReviewShapeHint = {
+  kind: "schema",
+  schema: "prototype.variant-review@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<recommend|no-clear-winner|needs-operator>", "recommended_variant_id": "<variant id from the aggregate>", "comparison_summary": "<plain-language comparison grounded in the variant reports>", "strengths": [{ "variant_id": "<variant id>", "note": "<specific strength>" }], "risks": ["<risk or limitation>"], "missing_evidence": ["<missing evidence, if any>"], "confidence": "<low|medium|high>" }',
+    "Compare only the local prototype artifacts, verification report, provider evidence report, and aggregate evidence. Do not claim any provider or model actually ran unless the provider evidence report captured it from relay.started trace entries.",
+    "The runtime validates this response against prototype.variant-review@v1.",
+    "Do not claim deployment, production readiness, branch previews, screenshots, hosted URLs, or production fitness. Do not include extra top-level keys or Markdown."
+  ].join(" ")
+};
+
+// dist/schemas/connector.js
+var EnabledConnector = external_exports.enum(["claude-code", "codex"]);
+var FilesystemCapability = external_exports.enum(["read-only", "trusted-write", "isolated-write"]);
+var StructuredOutputCapability = external_exports.enum(["json"]);
+var ConnectorCapabilities = external_exports.object({
+  filesystem: FilesystemCapability,
+  structured_output: StructuredOutputCapability
+}).strict();
+var PromptTransport = external_exports.enum(["prompt-file"]);
+var ConnectorOutputExtraction = external_exports.object({
+  kind: external_exports.literal("output-file")
+}).strict();
+var BUILTIN_CONNECTOR_CAPABILITIES = {
+  "claude-code": { filesystem: "trusted-write", structured_output: "json" },
+  codex: { filesystem: "read-only", structured_output: "json" }
+};
+var RESERVED_ADAPTER_NAMES = [
+  ...EnabledConnector.options,
+  "auto"
+];
+var ConnectorName = external_exports.string().regex(/^[a-z][a-z0-9-]*$/);
+var CustomConnectorDescriptor = external_exports.object({
+  kind: external_exports.literal("custom"),
+  name: ConnectorName,
+  command: external_exports.array(external_exports.string().min(1)).min(1),
+  prompt_transport: PromptTransport,
+  output: ConnectorOutputExtraction,
+  capabilities: ConnectorCapabilities
+}).strict().superRefine((descriptor, ctx) => {
+  if (descriptor.capabilities.filesystem !== "read-only") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["capabilities", "filesystem"],
+      message: "custom connectors are read-only in V1; writable custom workers require a later isolated mode"
+    });
+  }
+});
+var BuiltInConnectorRef = external_exports.object({
+  kind: external_exports.literal("builtin"),
+  name: EnabledConnector
+}).strict();
+var NamedConnectorRef = external_exports.object({
+  kind: external_exports.literal("named"),
+  name: ConnectorName
+}).strict();
+var ConnectorRef = external_exports.union([
+  BuiltInConnectorRef,
+  NamedConnectorRef,
+  CustomConnectorDescriptor
+]);
+var ResolvedConnector = external_exports.union([BuiltInConnectorRef, CustomConnectorDescriptor]);
+var ExplicitResolutionSource = external_exports.object({ source: external_exports.literal("explicit") }).strict();
+var RoleResolutionSource = external_exports.object({ source: external_exports.literal("role"), role: RelayRole }).strict();
+var CircuitResolutionSource = external_exports.object({ source: external_exports.literal("circuit"), flow_id: CompiledFlowId }).strict();
+var DefaultResolutionSource = external_exports.object({ source: external_exports.literal("default") }).strict();
+var AutoResolutionSource = external_exports.object({ source: external_exports.literal("auto") }).strict();
+var RelayResolutionSource = external_exports.discriminatedUnion("source", [
+  ExplicitResolutionSource,
+  RoleResolutionSource,
+  CircuitResolutionSource,
+  DefaultResolutionSource,
+  AutoResolutionSource
+]);
+
+// dist/flows/prototype/reports.js
+var NonEmptyStringArray3 = external_exports.array(external_exports.string().min(1)).min(1);
+var StringArray = external_exports.array(external_exports.string().min(1));
+var PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID = {
+  "prototype.brief": "prototype.brief@v1",
+  "prototype.plan": "prototype.plan@v1",
+  "prototype.artifact": "prototype.artifact@v1",
+  "prototype.verification": "prototype.verification@v1",
+  "prototype.variant-options": "prototype.variant-options@v1",
+  "prototype.variant-aggregate": "prototype.variant-aggregate@v1",
+  "prototype.variant-provider-evidence": "prototype.variant-provider-evidence@v1",
+  "prototype.variant-verification": "prototype.variant-verification@v1",
+  "prototype.variant-review": "prototype.variant-review@v1",
+  "prototype.variant-choice-options": "prototype.variant-choice-options@v1",
+  "prototype.checkpoint.request": "checkpoint.request@v1",
+  "prototype.checkpoint.response": "checkpoint.response@v1"
+};
+var PrototypeCheckpointSelection = external_exports.enum([
+  "keep-prototype",
+  "save-build-input",
+  "discard-prototype"
+]);
+var PrototypeCheckpointSelectionOrMissing = external_exports.union([
+  PrototypeCheckpointSelection,
+  external_exports.literal("not_reached")
+]);
+function addPathIssue(ctx, path, message) {
+  ctx.addIssue({
+    code: external_exports.ZodIssueCode.custom,
+    path: [...path],
+    message
+  });
+}
+function validateProjectRelativePath(value, ctx) {
+  if (value.startsWith("/") || value.startsWith("~") || /^[A-Za-z]:[\\/]/.test(value)) {
+    addPathIssue(ctx, [], "path must be project-relative and cannot use absolute or home paths");
+  }
+  if (value.startsWith("\\\\") || value.startsWith("//")) {
+    addPathIssue(ctx, [], "path must not use UNC or network absolute paths");
+  }
+  if (value.includes("\\")) {
+    addPathIssue(ctx, [], "path must use forward slashes");
+  }
+  if (value.endsWith("/")) {
+    addPathIssue(ctx, [], "path must not end with a slash");
+  }
+  const parts = value.split("/");
+  if (parts.some((part) => part.length === 0 || part === "." || part === "..")) {
+    addPathIssue(ctx, [], "path must be normalized and must not escape the project root");
+  }
+}
+var PrototypeProjectRelativePath = external_exports.string().min(1).superRefine(validateProjectRelativePath);
+var PrototypeRootPath = PrototypeProjectRelativePath.superRefine((root, ctx) => {
+  const [firstSegment] = root.split("/");
+  if (firstSegment === void 0)
+    return;
+  if (["dist", "generated", "node_modules", "plugins"].includes(firstSegment)) {
+    addPathIssue(ctx, [], `prototype_root must not live under generated or host package output (${firstSegment})`);
+  }
+});
+function isUnderRoot(path, root) {
+  return path.startsWith(`${root}/`);
+}
+function validatePathsUnderRoot(input) {
+  input.values.forEach((value, index) => {
+    if (!isUnderRoot(value, input.root)) {
+      addPathIssue(input.ctx, [...input.path, index], `path must be inside prototype_root '${input.root}'`);
+    }
+  });
+}
+function hasClaimLimit(claimLimits, required2) {
+  const needle = required2.toLowerCase();
+  return claimLimits.some((limit) => limit.toLowerCase().includes(needle));
+}
+function validatePrototypeClaimLimits(claimLimits, ctx, path) {
+  if (!hasClaimLimit(claimLimits, "not production")) {
+    addPathIssue(ctx, path, "claim_limits must include a 'not production' limit");
+  }
+  if (!hasClaimLimit(claimLimits, "not deployed")) {
+    addPathIssue(ctx, path, "claim_limits must include a 'not deployed' limit");
+  }
+}
+var PrototypeBrief = external_exports.object({
+  objective: external_exports.string().min(1),
+  prototype_scope: external_exports.string().min(1),
+  out_of_scope: NonEmptyStringArray3,
+  target_user: external_exports.string().min(1),
+  success_criteria: NonEmptyStringArray3,
+  prototype_root: PrototypeRootPath,
+  verification_command_candidates: external_exports.array(VerificationCommand),
+  claim_limits: NonEmptyStringArray3
+}).strict().superRefine((brief, ctx) => {
+  validatePrototypeClaimLimits(brief.claim_limits, ctx, ["claim_limits"]);
+});
+var PrototypePlan = external_exports.object({
+  objective: external_exports.string().min(1),
+  prototype_root: PrototypeRootPath,
+  files_to_create: external_exports.array(PrototypeProjectRelativePath).min(1),
+  entry_points: external_exports.array(PrototypeProjectRelativePath).min(1),
+  interaction_path: PrototypeProjectRelativePath,
+  preview_instructions: external_exports.string().min(1),
+  verification: external_exports.object({
+    commands: external_exports.array(VerificationCommand)
+  }).strict(),
+  build_followup_prompt: external_exports.string().min(1),
+  risks: NonEmptyStringArray3,
+  claim_limits: NonEmptyStringArray3
+}).strict().superRefine((plan, ctx) => {
+  validatePathsUnderRoot({
+    ctx,
+    root: plan.prototype_root,
+    values: plan.files_to_create,
+    path: ["files_to_create"]
+  });
+  validatePathsUnderRoot({
+    ctx,
+    root: plan.prototype_root,
+    values: plan.entry_points,
+    path: ["entry_points"]
+  });
+  validatePathsUnderRoot({
+    ctx,
+    root: plan.prototype_root,
+    values: [plan.interaction_path],
+    path: ["interaction_path"]
+  });
+  validatePrototypeClaimLimits(plan.claim_limits, ctx, ["claim_limits"]);
+});
+var PrototypeArtifact = external_exports.object({
+  verdict: external_exports.enum(["accept", "blocked"]),
+  summary: external_exports.string().min(1),
+  prototype_root: PrototypeRootPath,
+  created_files: external_exports.array(PrototypeProjectRelativePath),
+  entry_points: external_exports.array(PrototypeProjectRelativePath),
+  preview_instructions: external_exports.string().min(1),
+  known_limitations: StringArray,
+  evidence: NonEmptyStringArray3,
+  claim_limits: NonEmptyStringArray3
+}).strict().superRefine((artifact, ctx) => {
+  validatePathsUnderRoot({
+    ctx,
+    root: artifact.prototype_root,
+    values: artifact.created_files,
+    path: ["created_files"]
+  });
+  validatePathsUnderRoot({
+    ctx,
+    root: artifact.prototype_root,
+    values: artifact.entry_points,
+    path: ["entry_points"]
+  });
+  validatePrototypeClaimLimits(artifact.claim_limits, ctx, ["claim_limits"]);
+  if (artifact.verdict === "accept") {
+    if (artifact.created_files.length === 0) {
+      addPathIssue(ctx, ["created_files"], "created_files must be non-empty for verdict 'accept'");
+    }
+    if (artifact.entry_points.length === 0) {
+      addPathIssue(ctx, ["entry_points"], "entry_points must be non-empty for verdict 'accept'");
+    }
+  }
+});
+var PrototypeVariantId = external_exports.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, {
+  message: "variant_id must be a fanout-safe kebab-case slug"
+});
+var PrototypeRubricDimId = external_exports.enum(THREE_AXIS_RUBRIC_TIE_BREAK_ORDER);
+function refineExactPrototypeRubricDims(value, ctx) {
+  const expected = new Set(THREE_AXIS_RUBRIC_TIE_BREAK_ORDER);
+  for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
+    if (value[dimId] === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: [dimId],
+        message: `missing rubric dim '${dimId}'`
+      });
+    }
+  }
+  for (const dimId of Object.keys(value)) {
+    if (!expected.has(dimId)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: [dimId],
+        message: `unknown rubric dim '${dimId}'`
+      });
+    }
+  }
+}
+var PrototypeRubricModelJudgments = external_exports.record(PrototypeRubricDimId, RubricJudgment).superRefine(refineExactPrototypeRubricDims);
+var PrototypeVariantSelection = external_exports.object({
+  model: ProviderScopedModel,
+  effort: Effort
+}).strict();
+var PrototypeVariantOption = external_exports.object({
+  variant_id: PrototypeVariantId,
+  label: external_exports.string().min(1),
+  provider: ProviderScopedModel.shape.provider,
+  model: ProviderScopedModel.shape.model,
+  effort: Effort,
+  prototype_root: PrototypeRootPath,
+  variant_root: PrototypeRootPath,
+  entry_point_hint: PrototypeProjectRelativePath,
+  selection: PrototypeVariantSelection,
+  selection_source: external_exports.string().min(1),
+  goal: external_exports.string().min(1)
+}).strict().superRefine((option, ctx) => {
+  if (option.provider !== option.selection.model.provider) {
+    addPathIssue(ctx, ["provider"], "provider must match selection.model.provider");
+  }
+  if (option.model !== option.selection.model.model) {
+    addPathIssue(ctx, ["model"], "model must match selection.model.model");
+  }
+  if (option.effort !== option.selection.effort) {
+    addPathIssue(ctx, ["effort"], "effort must match selection.effort");
+  }
+  validatePathsUnderRoot({
+    ctx,
+    root: option.variant_root,
+    values: [option.entry_point_hint],
+    path: ["entry_point_hint"]
+  });
+});
+var PrototypeVariantOptions = external_exports.object({
+  schema_version: external_exports.literal(1),
+  objective: external_exports.string().min(1),
+  prototype_root: PrototypeRootPath,
+  variant_count: external_exports.number().int().min(2).max(4),
+  variants: external_exports.array(PrototypeVariantOption).min(2).max(4),
+  claim_limits: NonEmptyStringArray3
+}).strict().superRefine((options, ctx) => {
+  validatePrototypeClaimLimits(options.claim_limits, ctx, ["claim_limits"]);
+  if (options.variant_count !== options.variants.length) {
+    addPathIssue(ctx, ["variant_count"], "variant_count must match variants.length");
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, variant] of options.variants.entries()) {
+    if (seen.has(variant.variant_id)) {
+      addPathIssue(ctx, ["variants", index, "variant_id"], `duplicate variant_id '${variant.variant_id}'`);
+    }
+    seen.add(variant.variant_id);
+    const expectedRoot = `${options.prototype_root}/variants/${variant.variant_id}`;
+    if (variant.prototype_root !== options.prototype_root) {
+      addPathIssue(ctx, ["variants", index, "prototype_root"], `prototype_root must match '${options.prototype_root}'`);
+    }
+    if (variant.variant_root !== expectedRoot) {
+      addPathIssue(ctx, ["variants", index, "variant_root"], `variant_root must be '${expectedRoot}' for variant_id '${variant.variant_id}'`);
+    }
+  }
+});
+var PrototypeVariantArtifact = external_exports.object({
+  verdict: external_exports.enum(["accept", "blocked"]),
+  variant_id: PrototypeVariantId,
+  variant_label: external_exports.string().min(1),
+  summary: external_exports.string().min(1),
+  prototype_root: PrototypeRootPath,
+  variant_root: PrototypeRootPath,
+  created_files: external_exports.array(PrototypeProjectRelativePath),
+  entry_points: external_exports.array(PrototypeProjectRelativePath),
+  preview_instructions: external_exports.string().min(1),
+  known_limitations: StringArray,
+  evidence: NonEmptyStringArray3,
+  rubric_model_judgments: PrototypeRubricModelJudgments,
+  claim_limits: NonEmptyStringArray3
+}).strict().superRefine((artifact, ctx) => {
+  const expectedRoot = `${artifact.prototype_root}/variants/${artifact.variant_id}`;
+  if (artifact.variant_root !== expectedRoot) {
+    addPathIssue(ctx, ["variant_root"], `variant_root must be '${expectedRoot}' for variant_id '${artifact.variant_id}'`);
+  }
+  validatePathsUnderRoot({
+    ctx,
+    root: artifact.variant_root,
+    values: artifact.created_files,
+    path: ["created_files"]
+  });
+  validatePathsUnderRoot({
+    ctx,
+    root: artifact.variant_root,
+    values: artifact.entry_points,
+    path: ["entry_points"]
+  });
+  validatePrototypeClaimLimits(artifact.claim_limits, ctx, ["claim_limits"]);
+  if (artifact.verdict === "accept") {
+    if (artifact.created_files.length === 0) {
+      addPathIssue(ctx, ["created_files"], "created_files must be non-empty for verdict 'accept'");
+    }
+    if (artifact.entry_points.length === 0) {
+      addPathIssue(ctx, ["entry_points"], "entry_points must be non-empty for verdict 'accept'");
+    }
+  }
+});
+var PrototypeVariantAggregateBranch = external_exports.object({
+  branch_id: PrototypeVariantId,
+  child_run_id: external_exports.string().min(1),
+  child_outcome: external_exports.enum(["complete", "aborted", "handoff", "stopped", "escalated"]),
+  verdict: external_exports.string().min(1),
+  admitted: external_exports.boolean(),
+  result_path: external_exports.string().min(1),
+  duration_ms: external_exports.number().nonnegative(),
+  result_body: PrototypeVariantArtifact.optional(),
+  rubric_result: RubricResult.optional()
+}).strict();
+var PrototypeVariantAggregate = external_exports.object({
+  schema_version: external_exports.literal(1),
+  join_policy: external_exports.literal("aggregate-survivors"),
+  branch_count: external_exports.number().int().positive(),
+  branches: external_exports.array(PrototypeVariantAggregateBranch).min(1)
+}).strict().superRefine((aggregate2, ctx) => {
+  if (aggregate2.branch_count !== aggregate2.branches.length) {
+    addPathIssue(ctx, ["branch_count"], "branch_count must match branches.length");
+  }
+  for (const [index, branch] of aggregate2.branches.entries()) {
+    if (branch.child_outcome === "complete" && branch.result_body === void 0) {
+      addPathIssue(ctx, ["branches", index, "result_body"], "complete variant branches must include result_body provenance");
+    }
+    if (branch.child_outcome === "complete" && branch.rubric_result === void 0) {
+      addPathIssue(ctx, ["branches", index, "rubric_result"], "complete variant branches must include rubric_result provenance");
+    }
+    if (branch.child_outcome === "complete" && branch.result_body !== void 0 && branch.result_body.variant_id !== branch.branch_id) {
+      addPathIssue(ctx, ["branches", index, "result_body", "variant_id"], `branch_id '${branch.branch_id}' must match result_body.variant_id '${branch.result_body.variant_id}'`);
+    }
+  }
+});
+var PrototypeVariantProviderEvidenceItem = external_exports.object({
+  variant_id: PrototypeVariantId,
+  label: external_exports.string().min(1),
+  relay_step_id: external_exports.string().min(1),
+  status: external_exports.enum(["captured", "missing"]),
+  connector_name: external_exports.string().min(1).optional(),
+  provider: ProviderScopedModel.shape.provider.optional(),
+  model: ProviderScopedModel.shape.model.optional(),
+  effort: Effort.optional(),
+  trace_sequence: external_exports.number().int().nonnegative().optional(),
+  trace_entry_kind: external_exports.literal("relay.started").optional(),
+  resolved_from: RelayResolutionSource.optional()
+}).strict().superRefine((item, ctx) => {
+  if (item.status === "captured") {
+    if (item.connector_name === void 0) {
+      addPathIssue(ctx, ["connector_name"], "captured provider evidence requires connector_name");
+    }
+    if (item.provider === void 0) {
+      addPathIssue(ctx, ["provider"], "captured provider evidence requires provider");
+    }
+    if (item.model === void 0) {
+      addPathIssue(ctx, ["model"], "captured provider evidence requires model");
+    }
+    if (item.effort === void 0) {
+      addPathIssue(ctx, ["effort"], "captured provider evidence requires effort");
+    }
+    if (item.trace_sequence === void 0) {
+      addPathIssue(ctx, ["trace_sequence"], "captured provider evidence requires trace_sequence");
+    }
+    if (item.trace_entry_kind === void 0) {
+      addPathIssue(ctx, ["trace_entry_kind"], "captured provider evidence requires trace_entry_kind 'relay.started'");
+    }
+    if (item.resolved_from === void 0) {
+      addPathIssue(ctx, ["resolved_from"], "captured provider evidence requires resolved_from");
+    }
+  }
+});
+var PrototypeVariantMissingEvidence = external_exports.object({
+  variant_id: PrototypeVariantId,
+  relay_step_id: external_exports.string().min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var PrototypeVariantProviderEvidence = external_exports.object({
+  schema_version: external_exports.literal(1),
+  evidence_source: external_exports.literal("relay.started resolved_selection trace entries"),
+  required_captured_count: external_exports.literal(2),
+  captured_count: external_exports.number().int().nonnegative(),
+  variants: external_exports.array(PrototypeVariantProviderEvidenceItem).min(2),
+  missing_evidence: external_exports.array(PrototypeVariantMissingEvidence)
+}).strict().superRefine((report, ctx) => {
+  const captured = report.variants.filter((variant) => variant.status === "captured").length;
+  if (report.captured_count !== captured) {
+    addPathIssue(ctx, ["captured_count"], "captured_count must equal captured variants length");
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, variant] of report.variants.entries()) {
+    if (seen.has(variant.variant_id)) {
+      addPathIssue(ctx, ["variants", index, "variant_id"], `duplicate variant_id '${variant.variant_id}'`);
+    }
+    seen.add(variant.variant_id);
+  }
+  const missing = report.variants.filter((variant) => variant.status === "missing");
+  if (report.missing_evidence.length !== missing.length) {
+    addPathIssue(ctx, ["missing_evidence"], "missing_evidence must contain one entry for each missing variant evidence row");
+  }
+});
+var PrototypeVariantVerificationItem = external_exports.object({
+  variant_id: PrototypeVariantId,
+  status: external_exports.enum(["passed", "failed", "blocked"]),
+  entry_points: external_exports.array(PrototypeProjectRelativePath),
+  created_files: external_exports.array(PrototypeProjectRelativePath),
+  failure_summary: external_exports.string().min(1).optional(),
+  notes: StringArray
+}).strict();
+var PrototypeVariantVerification = external_exports.object({
+  overall_status: external_exports.enum(["passed", "failed"]),
+  required_captured_provider_evidence_count: external_exports.literal(2),
+  captured_provider_evidence_count: external_exports.number().int().nonnegative(),
+  admitted_variant_count: external_exports.number().int().nonnegative(),
+  variant_results: external_exports.array(PrototypeVariantVerificationItem).min(1),
+  commands: external_exports.array(VerificationCommandResult)
+}).strict().superRefine((verification, ctx) => {
+  if (verification.overall_status === "passed" && verification.captured_provider_evidence_count < verification.required_captured_provider_evidence_count) {
+    addPathIssue(ctx, ["captured_provider_evidence_count"], "passed variant verification requires at least two captured provider evidence records");
+  }
+  if (verification.overall_status === "passed" && verification.admitted_variant_count < 2) {
+    addPathIssue(ctx, ["admitted_variant_count"], "passed variant verification requires at least two admitted variants");
+  }
+});
+var PrototypeVariantReviewVerdict = external_exports.enum([
+  "recommend",
+  "no-clear-winner",
+  "needs-operator"
+]);
+var PrototypeVariantReview = external_exports.object({
+  verdict: PrototypeVariantReviewVerdict,
+  recommended_variant_id: PrototypeVariantId,
+  comparison_summary: external_exports.string().min(1),
+  strengths: external_exports.array(external_exports.object({
+    variant_id: PrototypeVariantId,
+    note: external_exports.string().min(1)
+  }).strict()),
+  risks: StringArray,
+  missing_evidence: StringArray,
+  confidence: external_exports.enum(["low", "medium", "high"])
+}).strict();
+var PrototypeVariantChoiceOption = external_exports.object({
+  id: PrototypeVariantId,
+  label: external_exports.string().min(1),
+  description: external_exports.string().min(1),
+  variant_id: PrototypeVariantId,
+  variant_root: PrototypeRootPath,
+  entry_points: external_exports.array(PrototypeProjectRelativePath).min(1),
+  verification_status: external_exports.literal("passed"),
+  model_evidence_status: external_exports.literal("captured"),
+  review_recommendation: external_exports.boolean(),
+  recommended: external_exports.boolean()
+}).strict().superRefine((choice, ctx) => {
+  if (choice.id !== choice.variant_id) {
+    addPathIssue(ctx, ["id"], "choice id must match variant_id for V1 variant checkpoint choices");
+  }
+});
+var PrototypeVariantChoiceOptions = external_exports.object({
+  schema_version: external_exports.literal(1),
+  prompt: external_exports.string().min(1),
+  recommended_variant_id: PrototypeVariantId,
+  choices: external_exports.array(PrototypeVariantChoiceOption).min(2)
+}).strict().superRefine((options, ctx) => {
+  const seen = /* @__PURE__ */ new Set();
+  let recommendedCount = 0;
+  for (const [index, choice] of options.choices.entries()) {
+    if (seen.has(choice.id)) {
+      addPathIssue(ctx, ["choices", index, "id"], `duplicate choice id '${choice.id}'`);
+    }
+    seen.add(choice.id);
+    if (choice.recommended)
+      recommendedCount += 1;
+  }
+  if (!seen.has(options.recommended_variant_id)) {
+    addPathIssue(ctx, ["recommended_variant_id"], `recommended_variant_id '${options.recommended_variant_id}' must be present in choices`);
+  }
+  if (recommendedCount !== 1) {
+    addPathIssue(ctx, ["choices"], "exactly one variant choice must be recommended");
+  }
+});
+var PrototypeVerification = VerificationResult;
+var PrototypeResultReportId = external_exports.enum([
+  "prototype.brief",
+  "prototype.plan",
+  "prototype.artifact",
+  "prototype.verification",
+  "prototype.variant-options",
+  "prototype.variant-aggregate",
+  "prototype.variant-provider-evidence",
+  "prototype.variant-verification",
+  "prototype.variant-review",
+  "prototype.variant-choice-options",
+  "prototype.checkpoint.request",
+  "prototype.checkpoint.response"
+]);
+var PrototypeResultReportPointer = external_exports.object({
+  report_id: PrototypeResultReportId,
+  path: external_exports.string().min(1),
+  schema: external_exports.string().min(1)
+}).strict().superRefine((pointer, ctx) => {
+  const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
+  if (pointer.schema !== expectedSchema) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["schema"],
+      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
+    });
+  }
+});
+var PrototypeResultBase = external_exports.object({
+  summary: external_exports.string().min(1),
+  outcome: external_exports.enum(["kept", "build_input_saved", "discarded", "needs_attention", "failed"]),
+  artifact_status: external_exports.enum(["accepted", "blocked"]),
+  verification_status: external_exports.enum(["passed", "failed", "blocked"]),
+  checkpoint_status: external_exports.enum(["not_reached", "auto_resolved", "operator_selected"]),
+  prototype_root: PrototypeRootPath,
+  entry_points: external_exports.array(PrototypeProjectRelativePath),
+  preview_instructions: external_exports.string().min(1),
+  residual_risks: StringArray,
+  next_step: external_exports.string().min(1),
+  claim_limits: NonEmptyStringArray3,
+  evidence_links: external_exports.array(PrototypeResultReportPointer).min(3)
+});
+var PrototypeSingleArtifactResult = PrototypeResultBase.extend({
+  mode: external_exports.literal("single-artifact").default("single-artifact"),
+  checkpoint_selection: PrototypeCheckpointSelectionOrMissing,
+  build_followup_prompt: external_exports.string().min(1).optional()
+}).strict().superRefine((result, ctx) => {
+  validatePathsUnderRoot({
+    ctx,
+    root: result.prototype_root,
+    values: result.entry_points,
+    path: ["entry_points"]
+  });
+  validatePrototypeClaimLimits(result.claim_limits, ctx, ["claim_limits"]);
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, pointer] of result.evidence_links.entries()) {
+    if (seen.has(pointer.report_id)) {
+      addPathIssue(ctx, ["evidence_links", index, "report_id"], `duplicate report_id '${pointer.report_id}'`);
+    }
+    seen.add(pointer.report_id);
+  }
+  if (result.checkpoint_status === "not_reached") {
+    if (result.checkpoint_selection !== "not_reached") {
+      addPathIssue(ctx, ["checkpoint_selection"], "checkpoint_selection must be 'not_reached' when checkpoint_status is 'not_reached'");
+    }
+  } else if (result.checkpoint_selection === "not_reached") {
+    addPathIssue(ctx, ["checkpoint_selection"], "checkpoint_selection must name the checkpoint choice when checkpoint_status is reached");
+  }
+  if (result.outcome === "build_input_saved" && result.build_followup_prompt === void 0) {
+    addPathIssue(ctx, ["build_followup_prompt"], "build_followup_prompt is required when outcome is 'build_input_saved'");
+  }
+  if (["kept", "build_input_saved", "discarded"].includes(result.outcome)) {
+    if (result.artifact_status !== "accepted") {
+      addPathIssue(ctx, ["artifact_status"], `artifact_status must be 'accepted' when outcome is '${result.outcome}'`);
+    }
+    if (result.verification_status !== "passed") {
+      addPathIssue(ctx, ["verification_status"], `verification_status must be 'passed' when outcome is '${result.outcome}'`);
+    }
+    if (result.checkpoint_status === "not_reached") {
+      addPathIssue(ctx, ["checkpoint_status"], `checkpoint_status must be reached when outcome is '${result.outcome}'`);
+    }
+  }
+});
+var PrototypeModelComparisonResult = PrototypeResultBase.extend({
+  mode: external_exports.literal("model-comparison"),
+  checkpoint_selection: external_exports.union([PrototypeVariantId, external_exports.literal("not_reached")]),
+  variant_count: external_exports.number().int().min(2).max(4),
+  admitted_variant_count: external_exports.number().int().nonnegative(),
+  captured_provider_evidence_count: external_exports.number().int().nonnegative(),
+  model_evidence_status: external_exports.enum(["captured", "missing"]),
+  recommended_variant_id: PrototypeVariantId.optional(),
+  selected_variant_id: PrototypeVariantId.optional(),
+  selected_variant_label: external_exports.string().min(1).optional(),
+  selected_variant_root: PrototypeRootPath.optional(),
+  comparison_summary: external_exports.string().min(1).optional()
+}).strict().superRefine((result, ctx) => {
+  validatePathsUnderRoot({
+    ctx,
+    root: result.prototype_root,
+    values: result.entry_points,
+    path: ["entry_points"]
+  });
+  validatePrototypeClaimLimits(result.claim_limits, ctx, ["claim_limits"]);
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, pointer] of result.evidence_links.entries()) {
+    if (seen.has(pointer.report_id)) {
+      addPathIssue(ctx, ["evidence_links", index, "report_id"], `duplicate report_id '${pointer.report_id}'`);
+    }
+    seen.add(pointer.report_id);
+  }
+  if (result.checkpoint_status === "not_reached") {
+    if (result.checkpoint_selection !== "not_reached") {
+      addPathIssue(ctx, ["checkpoint_selection"], "checkpoint_selection must be 'not_reached' when checkpoint_status is 'not_reached'");
+    }
+    if (result.selected_variant_id !== void 0) {
+      addPathIssue(ctx, ["selected_variant_id"], "selected_variant_id must be absent when checkpoint_status is not_reached");
+    }
+  } else {
+    if (result.checkpoint_selection === "not_reached") {
+      addPathIssue(ctx, ["checkpoint_selection"], "checkpoint_selection must name the selected variant when checkpoint_status is reached");
+    }
+    if (result.selected_variant_id === void 0) {
+      addPathIssue(ctx, ["selected_variant_id"], "selected_variant_id is required when checkpoint_status is reached");
+    } else if (result.selected_variant_id !== result.checkpoint_selection) {
+      addPathIssue(ctx, ["selected_variant_id"], "selected_variant_id must match checkpoint_selection");
+    }
+  }
+  if (result.outcome === "kept") {
+    if (result.artifact_status !== "accepted") {
+      addPathIssue(ctx, ["artifact_status"], "artifact_status must be 'accepted' when kept");
+    }
+    if (result.verification_status !== "passed") {
+      addPathIssue(ctx, ["verification_status"], "verification_status must be 'passed' when kept");
+    }
+    if (result.checkpoint_status === "not_reached") {
+      addPathIssue(ctx, ["checkpoint_status"], "checkpoint_status must be reached when kept");
+    }
+    if (result.selected_variant_label === void 0) {
+      addPathIssue(ctx, ["selected_variant_label"], "selected_variant_label is required when kept");
+    }
+    if (result.selected_variant_root === void 0) {
+      addPathIssue(ctx, ["selected_variant_root"], "selected_variant_root is required when kept");
+    }
+    if (result.model_evidence_status !== "captured") {
+      addPathIssue(ctx, ["model_evidence_status"], "model_evidence_status must be 'captured'");
+    }
+    if (result.comparison_summary === void 0) {
+      addPathIssue(ctx, ["comparison_summary"], "comparison_summary is required when kept");
+    }
+  }
+  if ((result.outcome === "build_input_saved" || result.outcome === "discarded") && result.mode === "model-comparison") {
+    addPathIssue(ctx, ["outcome"], "model-comparison V1 only closes with 'kept' or 'needs_attention'");
+  }
+});
+var PrototypeResult = external_exports.union([
+  PrototypeSingleArtifactResult,
+  PrototypeModelComparisonResult
+]);
+
+// dist/flows/prototype/writers/brief.js
+import { createHash as createHash2 } from "node:crypto";
+import { isAbsolute as isAbsolute4, relative as relative4 } from "node:path";
+function normalizeSlashes(value) {
+  return value.replace(/\\/g, "/");
+}
+function isInsideOrSame2(relativePath) {
+  return relativePath === "" || !relativePath.startsWith("..") && !isAbsolute4(relativePath);
+}
+function hashRunFolder(runFolder) {
+  return createHash2("sha256").update(runFolder).digest("hex").slice(0, 12);
+}
+function prototypeRoot(context) {
+  if (context.projectRoot !== void 0) {
+    const relativeRunFolder = relative4(context.projectRoot, context.runFolder);
+    if (isInsideOrSame2(relativeRunFolder) && relativeRunFolder.length > 0) {
+      return `${normalizeSlashes(relativeRunFolder)}/prototype-files`;
+    }
+  }
+  return `.circuit/prototypes/${hashRunFolder(context.runFolder)}`;
+}
+function cleanGoal(goal) {
+  return goal.replace(/^\s*prototype\s*:\s*/i, "").trim() || goal.trim();
+}
+var prototypeBriefComposeBuilder = {
+  resultSchemaName: "prototype.brief@v1",
+  build(context) {
+    const objective = cleanGoal(context.goal);
+    const root = prototypeRoot(context);
+    return PrototypeBrief.parse({
+      objective,
+      prototype_scope: `Create a small, disposable artifact under ${root} that makes the requested idea inspectable.`,
+      out_of_scope: [
+        "Production application code outside prototype_root",
+        "Generated host plugin packages",
+        "Deployment, branch preview, provider, or model claims"
+      ],
+      target_user: "Operator inspecting whether the idea is worth carrying into Build",
+      success_criteria: [
+        "The prototype files exist under prototype_root",
+        "At least one entry point is reported",
+        "The result names evidence and limitations honestly"
+      ],
+      prototype_root: root,
+      verification_command_candidates: [],
+      claim_limits: ["not production", "not deployed", "not production-ready"]
+    });
+  }
+};
+
+// dist/flows/prototype/writers/close.js
+import { existsSync as existsSync4, readFileSync as readFileSync11 } from "node:fs";
+var CheckpointResponse = external_exports.object({
+  schema_version: external_exports.literal(1),
+  step_id: external_exports.literal("prototype-checkpoint-step"),
+  selection: PrototypeCheckpointSelection,
+  resolution_source: external_exports.enum(["operator", "safe-default", "safe-autonomous"])
+}).passthrough();
+var VariantCheckpointResponse = external_exports.object({
+  schema_version: external_exports.literal(1),
+  step_id: external_exports.literal("prototype-variant-checkpoint-step"),
+  selection: PrototypeVariantId,
+  resolution_source: external_exports.enum(["operator", "safe-default", "safe-autonomous"])
+}).passthrough();
+var BASE_SINGLE_POINTERS = [
+  { report_id: "prototype.brief", schema: "prototype.brief@v1" },
+  { report_id: "prototype.plan", schema: "prototype.plan@v1" },
+  { report_id: "prototype.artifact", schema: "prototype.artifact@v1" }
+];
+var BASE_VARIANT_POINTERS = [
+  { report_id: "prototype.brief", schema: "prototype.brief@v1" },
+  { report_id: "prototype.plan", schema: "prototype.plan@v1" },
+  { report_id: "prototype.variant-options", schema: "prototype.variant-options@v1" },
+  { report_id: "prototype.variant-aggregate", schema: "prototype.variant-aggregate@v1" },
+  {
+    report_id: "prototype.variant-provider-evidence",
+    schema: "prototype.variant-provider-evidence@v1"
+  },
+  { report_id: "prototype.variant-verification", schema: "prototype.variant-verification@v1" }
+];
+function checkpointStep(context, stepId) {
+  const step = context.flow.steps.find((candidate) => candidate.id === stepId && candidate.kind === "checkpoint");
+  return step;
+}
+function readCheckpointResponse(context) {
+  const step = checkpointStep(context, "prototype-checkpoint-step");
+  if (step === void 0)
+    return void 0;
+  const responsePath = step.writes.response;
+  const abs = resolveRunRelative(context.runFolder, responsePath);
+  if (!existsSync4(abs))
+    return void 0;
+  const raw = JSON.parse(readFileSync11(abs, "utf8"));
+  return { path: responsePath, response: CheckpointResponse.parse(raw) };
+}
+function readVariantCheckpointResponse(context) {
+  const step = checkpointStep(context, "prototype-variant-checkpoint-step");
+  if (step === void 0)
+    return void 0;
+  const responsePath = step.writes.response;
+  const abs = resolveRunRelative(context.runFolder, responsePath);
+  if (!existsSync4(abs))
+    return void 0;
+  const raw = JSON.parse(readFileSync11(abs, "utf8"));
+  return { path: responsePath, response: VariantCheckpointResponse.parse(raw) };
+}
+function existingCheckpointRequestPath(context) {
+  const step = checkpointStep(context, "prototype-checkpoint-step");
+  if (step === void 0)
+    return void 0;
+  const requestPath = step.writes.request;
+  return existsSync4(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
+}
+function existingVariantCheckpointRequestPath(context) {
+  const step = checkpointStep(context, "prototype-variant-checkpoint-step");
+  if (step === void 0)
+    return void 0;
+  const requestPath = step.writes.request;
+  return existsSync4(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
+}
+function evidenceLinks(context, checkpointResponse) {
+  const links = BASE_SINGLE_POINTERS.map((pointer) => ({
+    ...pointer,
+    path: reportPathForSchemaInRuntimeFlow(context.flow, pointer.schema)
+  }));
+  if (reportExists(context, "prototype.verification@v1")) {
+    links.push({
+      report_id: "prototype.verification",
+      schema: "prototype.verification@v1",
+      path: reportPathForSchemaInRuntimeFlow(context.flow, "prototype.verification@v1")
+    });
+  }
+  const checkpointRequestPath2 = existingCheckpointRequestPath(context);
+  if (checkpointRequestPath2 !== void 0) {
+    links.push({
+      report_id: "prototype.checkpoint.request",
+      schema: "checkpoint.request@v1",
+      path: checkpointRequestPath2
+    });
+  }
+  if (checkpointResponse !== void 0) {
+    links.push({
+      report_id: "prototype.checkpoint.response",
+      schema: "checkpoint.response@v1",
+      path: checkpointResponse.path
+    });
+  }
+  return links;
+}
+function reportExists(context, schemaName) {
+  const path = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
+  return existsSync4(resolveRunRelative(context.runFolder, path));
+}
+function readOptionalReport(context, schemaName, parse3) {
+  const path = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
+  const abs = resolveRunRelative(context.runFolder, path);
+  if (!existsSync4(abs))
+    return void 0;
+  return parse3(JSON.parse(readFileSync11(abs, "utf8")));
+}
+function variantEvidenceLinks(context, checkpointResponse) {
+  const links = BASE_VARIANT_POINTERS.map((pointer) => ({
+    ...pointer,
+    path: reportPathForSchemaInRuntimeFlow(context.flow, pointer.schema)
+  }));
+  if (reportExists(context, "prototype.variant-review@v1")) {
+    links.push({
+      report_id: "prototype.variant-review",
+      schema: "prototype.variant-review@v1",
+      path: reportPathForSchemaInRuntimeFlow(context.flow, "prototype.variant-review@v1")
+    });
+  }
+  if (reportExists(context, "prototype.variant-choice-options@v1")) {
+    links.push({
+      report_id: "prototype.variant-choice-options",
+      schema: "prototype.variant-choice-options@v1",
+      path: reportPathForSchemaInRuntimeFlow(context.flow, "prototype.variant-choice-options@v1")
+    });
+  }
+  const checkpointRequestPath2 = existingVariantCheckpointRequestPath(context);
+  if (checkpointRequestPath2 !== void 0) {
+    links.push({
+      report_id: "prototype.checkpoint.request",
+      schema: "checkpoint.request@v1",
+      path: checkpointRequestPath2
+    });
+  }
+  if (checkpointResponse !== void 0) {
+    links.push({
+      report_id: "prototype.checkpoint.response",
+      schema: "checkpoint.response@v1",
+      path: checkpointResponse.path
+    });
+  }
+  return links;
+}
+function checkpointStatus(response) {
+  if (response === void 0)
+    return "not_reached";
+  return response.resolution_source === "operator" ? "operator_selected" : "auto_resolved";
+}
+function outcomeFor(input) {
+  if (input.artifact.verdict !== "accept")
+    return "needs_attention";
+  if (input.verification === void 0)
+    return "needs_attention";
+  if (input.verification.overall_status !== "passed")
+    return "needs_attention";
+  if (input.checkpoint === void 0)
+    return "needs_attention";
+  if (input.checkpoint.selection === "save-build-input")
+    return "build_input_saved";
+  if (input.checkpoint.selection === "discard-prototype")
+    return "discarded";
+  return "kept";
+}
+function nextStepFor(input) {
+  if (input.outcome === "build_input_saved") {
+    return "Use build_followup_prompt as the starting brief for Build when you are ready to turn this prototype into production code.";
+  }
+  if (input.outcome === "discarded") {
+    return "Leave the artifact as evidence, or delete prototype_root after reviewing why it was discarded.";
+  }
+  if (input.outcome === "kept") {
+    return `Inspect ${input.artifact.entry_points[0] ?? input.plan.interaction_path} and decide whether a separate Build run is warranted.`;
+  }
+  return "Review the artifact, verification report, and limitations before deciding whether to rerun Prototype or switch to Explore.";
+}
+function summaryFor(input) {
+  if (input.artifact.verdict !== "accept") {
+    return `Prototype needs attention: the artifact relay reported '${input.artifact.verdict}'. ${input.artifact.summary}`;
+  }
+  if (input.verification === void 0) {
+    return `Prototype needs attention: no verification report was written before close. ${input.artifact.summary}`;
+  }
+  if (input.verification.overall_status !== "passed") {
+    return `Prototype needs attention: artifact integrity or target checks failed. ${input.artifact.summary}`;
+  }
+  if (input.checkpoint === void 0) {
+    return `Prototype needs attention: verification passed but no checkpoint choice was recorded. ${input.artifact.summary}`;
+  }
+  if (input.outcome === "build_input_saved") {
+    return `Prototype verified and saved as Build input. ${input.artifact.summary}`;
+  }
+  if (input.outcome === "discarded") {
+    return `Prototype verified and marked discarded. ${input.artifact.summary}`;
+  }
+  return `Prototype verified and kept. ${input.artifact.summary}`;
+}
+var prototypeCloseBuilder = {
+  resultSchemaName: "prototype.result@v1",
+  reads: [
+    { name: "brief", schema: "prototype.brief@v1", required: true },
+    { name: "plan", schema: "prototype.plan@v1", required: true },
+    { name: "artifact", schema: "prototype.artifact@v1", required: false },
+    { name: "verification", schema: "prototype.verification@v1", required: false },
+    { name: "variantOptions", schema: "prototype.variant-options@v1", required: false },
+    { name: "variantAggregate", schema: "prototype.variant-aggregate@v1", required: false },
+    {
+      name: "variantProviderEvidence",
+      schema: "prototype.variant-provider-evidence@v1",
+      required: false
+    },
+    {
+      name: "variantVerification",
+      schema: "prototype.variant-verification@v1",
+      required: false
+    },
+    { name: "variantReview", schema: "prototype.variant-review@v1", required: false },
+    {
+      name: "variantChoiceOptions",
+      schema: "prototype.variant-choice-options@v1",
+      required: false
+    }
+  ],
+  build(context) {
+    const brief = PrototypeBrief.parse(context.inputs.brief);
+    const plan = PrototypePlan.parse(context.inputs.plan);
+    if (context.inputs.variantAggregate !== void 0) {
+      return buildVariantResult({ context, brief, plan });
+    }
+    if (context.inputs.artifact === void 0) {
+      throw new Error("prototype.result@v1 close requires prototype.artifact@v1 in single mode");
+    }
+    const artifact = PrototypeArtifact.parse(context.inputs.artifact);
+    const verification = context.inputs.verification === void 0 ? readOptionalReport(context, "prototype.verification@v1", (raw) => PrototypeVerification.parse(raw)) : PrototypeVerification.parse(context.inputs.verification);
+    const checkpoint = readCheckpointResponse(context);
+    const outcome = outcomeFor({ artifact, verification, checkpoint: checkpoint?.response });
+    return PrototypeResult.parse({
+      summary: summaryFor({ outcome, artifact, verification, checkpoint: checkpoint?.response }),
+      outcome,
+      artifact_status: artifact.verdict === "accept" ? "accepted" : "blocked",
+      verification_status: verification === void 0 ? "blocked" : verification.overall_status === "passed" ? "passed" : "failed",
+      checkpoint_status: checkpointStatus(checkpoint?.response),
+      checkpoint_selection: checkpoint?.response.selection ?? "not_reached",
+      prototype_root: artifact.prototype_root,
+      entry_points: artifact.entry_points,
+      preview_instructions: artifact.preview_instructions,
+      ...outcome === "build_input_saved" ? { build_followup_prompt: plan.build_followup_prompt } : {},
+      residual_risks: artifact.known_limitations,
+      next_step: nextStepFor({ outcome, plan, artifact }),
+      claim_limits: brief.claim_limits,
+      evidence_links: evidenceLinks(context, checkpoint)
+    });
+  }
+};
+function buildVariantResult(input) {
+  const { context, brief, plan } = input;
+  const aggregate2 = PrototypeVariantAggregate.parse(context.inputs.variantAggregate);
+  const providerEvidence2 = context.inputs.variantProviderEvidence === void 0 ? void 0 : PrototypeVariantProviderEvidence.parse(context.inputs.variantProviderEvidence);
+  const verification = context.inputs.variantVerification === void 0 ? void 0 : PrototypeVariantVerification.parse(context.inputs.variantVerification);
+  const review = context.inputs.variantReview === void 0 ? readOptionalReport(context, "prototype.variant-review@v1", (raw) => PrototypeVariantReview.parse(raw)) : PrototypeVariantReview.parse(context.inputs.variantReview);
+  const choiceOptions = context.inputs.variantChoiceOptions === void 0 ? readOptionalReport(context, "prototype.variant-choice-options@v1", (raw) => PrototypeVariantChoiceOptions.parse(raw)) : PrototypeVariantChoiceOptions.parse(context.inputs.variantChoiceOptions);
+  const checkpoint = readVariantCheckpointResponse(context);
+  const selectedVariantId = checkpoint?.response.selection;
+  const selectedBranch = selectedVariantId === void 0 ? void 0 : aggregate2.branches.find((branch) => branch.branch_id === selectedVariantId);
+  const selectedArtifact = selectedBranch?.result_body;
+  const selectedProviderEvidenceStatus = selectedVariantId === void 0 ? "missing" : providerEvidence2?.variants.find((variant) => variant.variant_id === selectedVariantId)?.status ?? "missing";
+  const verificationPassed = verification?.overall_status === "passed";
+  const hasCheckpoint = checkpoint !== void 0;
+  const outcome = verificationPassed && hasCheckpoint && selectedArtifact !== void 0 && selectedProviderEvidenceStatus === "captured" ? "kept" : "needs_attention";
+  const admittedVariantCount = verification?.admitted_variant_count ?? aggregate2.branches.filter((branch) => branch.child_outcome === "complete" && branch.admitted).length;
+  const capturedProviderEvidenceCount = providerEvidence2?.captured_count ?? 0;
+  const selectedLabel = selectedArtifact?.variant_label ?? choiceOptions?.choices.find((choice) => choice.id === selectedVariantId)?.label;
+  const summary = outcome === "kept" ? `Prototype model comparison verified and kept ${selectedLabel ?? selectedVariantId}.` : "Prototype model comparison needs attention before a variant can be kept.";
+  return PrototypeResult.parse({
+    mode: "model-comparison",
+    summary,
+    outcome,
+    artifact_status: selectedArtifact?.verdict === "accept" ? "accepted" : "blocked",
+    verification_status: verification === void 0 ? "blocked" : verification.overall_status === "passed" ? "passed" : "failed",
+    checkpoint_status: checkpointStatus(checkpoint?.response),
+    checkpoint_selection: selectedVariantId ?? "not_reached",
+    prototype_root: plan.prototype_root,
+    entry_points: selectedArtifact?.entry_points ?? [],
+    preview_instructions: selectedArtifact?.preview_instructions ?? `Inspect variant reports under ${plan.prototype_root}/variants before rerunning Prototype.`,
+    residual_risks: [
+      .../* @__PURE__ */ new Set([
+        ...aggregate2.branches.flatMap((branch) => branch.result_body?.known_limitations ?? []),
+        ...review?.risks ?? [],
+        ...review?.missing_evidence ?? [],
+        ...plan.risks
+      ])
+    ],
+    next_step: outcome === "kept" ? `Inspect ${selectedArtifact?.entry_points[0] ?? plan.interaction_path}; run Build separately only if the chosen local prototype should become production code.` : "Review the variant aggregate, provider evidence, and verification report before rerunning Prototype model comparison.",
+    claim_limits: brief.claim_limits,
+    evidence_links: variantEvidenceLinks(context, checkpoint),
+    variant_count: aggregate2.branch_count,
+    admitted_variant_count: admittedVariantCount,
+    captured_provider_evidence_count: capturedProviderEvidenceCount,
+    model_evidence_status: selectedProviderEvidenceStatus,
+    ...review?.recommended_variant_id === void 0 ? {} : { recommended_variant_id: review.recommended_variant_id },
+    ...selectedVariantId === void 0 ? {} : { selected_variant_id: selectedVariantId },
+    ...selectedLabel === void 0 ? {} : { selected_variant_label: selectedLabel },
+    ...selectedArtifact?.variant_root === void 0 ? {} : { selected_variant_root: selectedArtifact.variant_root },
+    ...review?.comparison_summary === void 0 ? {} : { comparison_summary: review.comparison_summary }
+  });
+}
+
+// dist/flows/prototype/writers/plan.js
+var prototypePlanComposeBuilder = {
+  resultSchemaName: "prototype.plan@v1",
+  reads: [{ name: "brief", schema: "prototype.brief@v1", required: true }],
+  build(context) {
+    const brief = PrototypeBrief.parse(context.inputs.brief);
+    const indexPath2 = `${brief.prototype_root}/index.html`;
+    const readmePath = `${brief.prototype_root}/README.md`;
+    return PrototypePlan.parse({
+      objective: brief.objective,
+      prototype_root: brief.prototype_root,
+      files_to_create: [indexPath2, readmePath],
+      entry_points: [indexPath2],
+      interaction_path: indexPath2,
+      preview_instructions: `Open ${indexPath2} in a browser or inspect the file directly.`,
+      verification: {
+        commands: brief.verification_command_candidates
+      },
+      build_followup_prompt: [
+        `Build from the Prototype artifact in ${brief.prototype_root}.`,
+        `Preserve the useful interaction from ${indexPath2}, but implement it as production code only after reviewing the Prototype result and limitations.`
+      ].join(" "),
+      risks: [
+        "Prototype polish can be mistaken for production readiness",
+        "The artifact may validate the interaction idea without covering integration cost"
+      ],
+      claim_limits: brief.claim_limits
+    });
+  }
+};
+
+// dist/flows/prototype/writers/variant-choice-options.js
+var prototypeVariantChoiceOptionsComposeBuilder = {
+  resultSchemaName: "prototype.variant-choice-options@v1",
+  reads: [
+    { name: "aggregate", schema: "prototype.variant-aggregate@v1", required: true },
+    { name: "providerEvidence", schema: "prototype.variant-provider-evidence@v1", required: true },
+    { name: "verification", schema: "prototype.variant-verification@v1", required: true },
+    { name: "review", schema: "prototype.variant-review@v1", required: true }
+  ],
+  build(context) {
+    const aggregate2 = PrototypeVariantAggregate.parse(context.inputs.aggregate);
+    const providerEvidence2 = PrototypeVariantProviderEvidence.parse(context.inputs.providerEvidence);
+    const verification = PrototypeVariantVerification.parse(context.inputs.verification);
+    const review = PrototypeVariantReview.parse(context.inputs.review);
+    const verified = new Set(verification.variant_results.filter((result) => result.status === "passed").map((result) => result.variant_id));
+    const providerBacked = new Set(providerEvidence2.variants.filter((variant) => variant.status === "captured").map((variant) => variant.variant_id));
+    const branches = aggregate2.branches.filter((branch) => branch.child_outcome === "complete" && branch.admitted && branch.result_body !== void 0 && verified.has(branch.branch_id) && providerBacked.has(branch.branch_id));
+    if (branches.length < 2) {
+      throw new Error(`prototype.variant-choice-options@v1 requires at least two verified provider-evidence-backed variants; found ${branches.length}`);
+    }
+    const recommendedBranch = branches.find((branch) => branch.branch_id === review.recommended_variant_id) ?? branches[0];
+    if (recommendedBranch === void 0) {
+      throw new Error("prototype.variant-choice-options@v1 could not choose a recommended variant");
+    }
+    return PrototypeVariantChoiceOptions.parse({
+      schema_version: 1,
+      prompt: "Choose which local prototype variant Circuit should keep as the Prototype result. This does not run Build or claim deployment.",
+      recommended_variant_id: recommendedBranch.branch_id,
+      choices: branches.map((branch) => {
+        const body = branch.result_body;
+        if (body === void 0) {
+          throw new Error(`prototype.variant-choice-options@v1 branch '${branch.branch_id}' has no result_body`);
+        }
+        return {
+          id: branch.branch_id,
+          variant_id: branch.branch_id,
+          label: body.variant_label,
+          description: body.summary,
+          variant_root: body.variant_root,
+          entry_points: body.entry_points,
+          verification_status: "passed",
+          model_evidence_status: "captured",
+          review_recommendation: branch.branch_id === review.recommended_variant_id,
+          recommended: branch.branch_id === recommendedBranch.branch_id
+        };
+      })
+    });
+  }
+};
+
+// dist/runtime/connectors/resolver.js
+var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+function mergedRelayConfig(layers) {
+  const merged = {
+    default: "auto",
+    roles: {},
+    circuits: {},
+    connectors: {}
+  };
+  for (const layer of layers ?? []) {
+    if (layer.config.relay.default !== "auto" || merged.default === "auto") {
+      merged.default = layer.config.relay.default;
+    }
+    merged.roles = { ...merged.roles, ...layer.config.relay.roles };
+    merged.circuits = { ...merged.circuits, ...layer.config.relay.circuits };
+    merged.connectors = { ...merged.connectors, ...layer.config.relay.connectors };
+  }
+  return merged;
+}
+function connectorCapabilities(connector) {
+  if (connector.kind === "builtin")
+    return BUILTIN_CONNECTOR_CAPABILITIES[connector.name];
+  return connector.capabilities;
+}
+function assertConnectorCanRunRole(connector, role) {
+  const capabilities = connectorCapabilities(connector);
+  if (role === "implementer" && capabilities.filesystem === "read-only") {
+    throw new Error(`relay connector '${connector.name}' is read-only and cannot run implementer step role '${role}'`);
+  }
+}
+function resolvedConnectorFromReference(ref, relay) {
+  if (ref.kind === "builtin")
+    return ref;
+  const descriptor = relay.connectors[ref.name];
+  if (descriptor === void 0) {
+    throw new Error(`relay connector '${ref.name}' is referenced but not declared`);
+  }
+  return descriptor;
+}
+function resolvedConnectorFromDefault(defaultRef, relay) {
+  if (defaultRef === "claude-code" || defaultRef === "codex") {
+    return { kind: "builtin", name: defaultRef };
+  }
+  const descriptor = relay.connectors[defaultRef];
+  if (descriptor === void 0) {
+    throw new Error(`relay default connector '${defaultRef}' is referenced but not declared`);
+  }
+  return descriptor;
+}
+function decision(connector, resolvedFrom, role) {
+  assertConnectorCanRunRole(connector, role);
+  return {
+    connectorName: connector.name,
+    connector,
+    resolvedFrom
+  };
+}
+function resolveConnectorForRelay(input) {
+  if (input.explicitConnector !== void 0) {
+    return decision(input.explicitConnector, { source: "explicit" }, input.role);
+  }
+  const relay = mergedRelayConfig(input.configLayers);
+  const roleRef = relay.roles[input.role];
+  if (roleRef !== void 0) {
+    return decision(resolvedConnectorFromReference(roleRef, relay), {
+      source: "role",
+      role: input.role
+    }, input.role);
+  }
+  const flowId = input.flowId;
+  const flowRef = relay.circuits[flowId];
+  if (flowRef !== void 0) {
+    return decision(resolvedConnectorFromReference(flowRef, relay), {
+      source: "circuit",
+      flow_id: flowId
+    }, input.role);
+  }
+  if (relay.default !== "auto") {
+    return decision(resolvedConnectorFromDefault(relay.default, relay), { source: "default" }, input.role);
+  }
+  return decision({ kind: "builtin", name: "claude-code" }, { source: "auto" }, input.role);
+}
+function expectedProvider(connectorName) {
+  if (connectorName === "claude-code")
+    return "anthropic";
+  if (connectorName === "codex")
+    return "openai";
+  return void 0;
+}
+function assertConnectorSelectionCompatible(connectorName, selection) {
+  const expected = expectedProvider(connectorName);
+  const model = selection?.model;
+  if (expected !== void 0 && model !== void 0 && model.provider !== expected) {
+    throw new Error(`${connectorName} connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider '${expected}'`);
+  }
+  const effort = selection?.effort;
+  if (effort === void 0)
+    return;
+  const supported = connectorName === "claude-code" ? CLAUDE_CODE_SUPPORTED_EFFORTS : connectorName === "codex" ? CODEX_SUPPORTED_EFFORTS : void 0;
+  if (supported !== void 0 && !supported.includes(effort)) {
+    throw new Error(`${connectorName} connector cannot honor effort '${effort}'; supported efforts: ${supported.join(", ")}`);
+  }
+}
+
+// dist/flows/prototype/writers/variant-options.js
+function configuredVariants(layers) {
+  let variants;
+  for (const layer of layers ?? []) {
+    const circuits = layer.config.circuits;
+    const next = circuits.prototype?.variant_models;
+    if (next !== void 0)
+      variants = next;
+  }
+  return variants;
+}
+function resolvedSelectionForCompatibility(selection) {
+  return {
+    ...selection.model === void 0 ? {} : { model: selection.model },
+    ...selection.effort === void 0 ? {} : { effort: selection.effort },
+    skills: [],
+    ...selection.depth === void 0 ? {} : { depth: selection.depth },
+    invocation_options: selection.invocation_options
+  };
+}
+function validateVariantModelMatrix(input) {
+  if (input.variants.length !== input.expectedCount) {
+    throw new Error(`prototype.variant-options@v1 requires exactly axes.tournament_n (${input.expectedCount}) variant_models entries; found ${input.variants.length}`);
+  }
+  const relay = resolveConnectorForRelay({
+    flowId: "prototype",
+    role: "implementer",
+    ...input.selectionConfigLayers === void 0 ? {} : { configLayers: input.selectionConfigLayers }
+  });
+  for (const variant of input.variants) {
+    assertConnectorSelectionCompatible(relay.connectorName, resolvedSelectionForCompatibility(variant.selection));
+  }
+}
+var prototypeVariantOptionsComposeBuilder = {
+  resultSchemaName: "prototype.variant-options@v1",
+  reads: [
+    { name: "brief", schema: "prototype.brief@v1", required: true },
+    { name: "plan", schema: "prototype.plan@v1", required: true }
+  ],
+  build(context) {
+    const brief = PrototypeBrief.parse(context.inputs.brief);
+    const plan = PrototypePlan.parse(context.inputs.plan);
+    const variants = configuredVariants(context.selectionConfigLayers);
+    if (variants === void 0) {
+      throw new Error("prototype.variant-options@v1 requires circuits.prototype.variant_models in Circuit config");
+    }
+    const expectedCount = context.axes?.tournament_n ?? 3;
+    validateVariantModelMatrix({
+      variants,
+      expectedCount,
+      ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers }
+    });
+    return PrototypeVariantOptions.parse({
+      schema_version: 1,
+      objective: brief.objective,
+      prototype_root: plan.prototype_root,
+      variant_count: variants.length,
+      claim_limits: brief.claim_limits,
+      variants: variants.map((variant) => {
+        const model = variant.selection.model;
+        const effort = variant.selection.effort;
+        if (model === void 0 || effort === void 0) {
+          throw new Error(`prototype.variant-options@v1 variant '${variant.id}' requires selection.model and selection.effort`);
+        }
+        const artifactRoot = `${plan.prototype_root}/variants/${variant.id}`;
+        return {
+          variant_id: variant.id,
+          label: variant.label,
+          provider: model.provider,
+          model: model.model,
+          effort,
+          prototype_root: plan.prototype_root,
+          variant_root: artifactRoot,
+          entry_point_hint: `${artifactRoot}/index.html`,
+          selection: {
+            model,
+            effort
+          },
+          selection_source: "circuits.prototype.variant_models",
+          goal: [
+            `Create Prototype variant '${variant.label}' (${variant.id}) for: ${brief.objective}.`,
+            `Write only disposable files under ${artifactRoot}.`,
+            `The shared Prototype root is ${plan.prototype_root}.`,
+            "Do not claim deployment, production readiness, branch previews, screenshots, provider behavior, or model behavior."
+          ].join(" ")
+        };
+      })
+    });
+  }
+};
+
+// dist/flows/prototype/writers/variant-provider-evidence.js
+import { existsSync as existsSync5, readFileSync as readFileSync12 } from "node:fs";
+import { join as join3 } from "node:path";
+function readTraceEntries(runFolder) {
+  const tracePath = join3(runFolder, "trace.ndjson");
+  if (!existsSync5(tracePath))
+    return [];
+  return readFileSync12(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
+}
+function isRelayStarted(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) && value.kind === "relay.started";
+}
+function branchRelayStepId(variantId) {
+  return `variant-fanout-step-${variantId}`;
+}
+var prototypeVariantProviderEvidenceComposeBuilder = {
+  resultSchemaName: "prototype.variant-provider-evidence@v1",
+  reads: [{ name: "options", schema: "prototype.variant-options@v1", required: true }],
+  build(context) {
+    const options = PrototypeVariantOptions.parse(context.inputs.options);
+    const relayStartedByStep = /* @__PURE__ */ new Map();
+    for (const entry of readTraceEntries(context.runFolder)) {
+      if (!isRelayStarted(entry))
+        continue;
+      relayStartedByStep.set(entry.step_id, entry);
+    }
+    const variants = options.variants.map((variant) => {
+      const relayStepId = branchRelayStepId(variant.variant_id);
+      const started = relayStartedByStep.get(relayStepId);
+      const model = started?.resolved_selection.model;
+      const effort = started?.resolved_selection.effort;
+      if (started === void 0 || model === void 0 || effort === void 0) {
+        return {
+          variant_id: variant.variant_id,
+          label: variant.label,
+          relay_step_id: relayStepId,
+          status: "missing"
+        };
+      }
+      return {
+        variant_id: variant.variant_id,
+        label: variant.label,
+        relay_step_id: relayStepId,
+        status: "captured",
+        connector_name: started.connector.name,
+        provider: model.provider,
+        model: model.model,
+        effort,
+        trace_sequence: started.sequence,
+        trace_entry_kind: "relay.started",
+        resolved_from: started.resolved_from
+      };
+    });
+    const missingEvidence = variants.flatMap((variant) => variant.status === "missing" ? [
+      {
+        variant_id: variant.variant_id,
+        relay_step_id: variant.relay_step_id,
+        reason: "Missing relay.started trace entry with resolved_selection.model and effort for this variant."
+      }
+    ] : []);
+    return PrototypeVariantProviderEvidence.parse({
+      schema_version: 1,
+      evidence_source: "relay.started resolved_selection trace entries",
+      required_captured_count: 2,
+      captured_count: variants.filter((variant) => variant.status === "captured").length,
+      variants,
+      missing_evidence: missingEvidence
+    });
+  }
+};
+
+// dist/flows/prototype/writers/variant-verification.js
+import { readFileSync as readFileSync13 } from "node:fs";
+var VARIANT_INTEGRITY_SCRIPT = [
+  "const fs = require('node:fs')",
+  "const path = require('node:path')",
+  "const payload = JSON.parse(process.argv[1] || '{}')",
+  "const projectRoot = process.cwd()",
+  "const variants = Array.isArray(payload.variants) ? payload.variants : []",
+  "const errors = []",
+  'function inside(base, target) { const rel = path.relative(base, target); return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel)); }',
+  "for (const variant of variants) {",
+  '  const id = String(variant.variant_id || "")',
+  '  const root = String(variant.variant_root || "")',
+  "  const created = Array.isArray(variant.created_files) ? variant.created_files : []",
+  "  const entry = Array.isArray(variant.entry_points) ? variant.entry_points : []",
+  "  const rootAbs = path.resolve(projectRoot, root)",
+  "  if (!inside(projectRoot, rootAbs)) errors.push(`${id}: variant_root escapes project root: ${root}`)",
+  "  if (!fs.existsSync(rootAbs)) errors.push(`${id}: variant_root does not exist: ${root}`)",
+  "  else if (!fs.lstatSync(rootAbs).isDirectory()) errors.push(`${id}: variant_root is not a directory: ${root}`)",
+  "  else if (fs.lstatSync(rootAbs).isSymbolicLink()) errors.push(`${id}: variant_root is a symlink: ${root}`)",
+  "  const rootReal = fs.existsSync(rootAbs) ? fs.realpathSync.native(rootAbs) : rootAbs",
+  "  if (created.length === 0) errors.push(`${id}: accepted variant has no created_files`)",
+  "  if (entry.length === 0) errors.push(`${id}: accepted variant has no entry_points`)",
+  "  for (const rel of Array.from(new Set([...created, ...entry]))) {",
+  '    if (typeof rel !== "string" || rel.length === 0) { errors.push(`${id}: reported path must be a non-empty string`); continue; }',
+  "    if (!rel.startsWith(`${root}/`)) errors.push(`${id}: variant path is outside variant_root: ${rel}`)",
+  "    const abs = path.resolve(projectRoot, rel)",
+  "    if (!inside(rootAbs, abs)) errors.push(`${id}: variant path escapes variant_root: ${rel}`)",
+  "    if (!fs.existsSync(abs)) { errors.push(`${id}: variant path does not exist: ${rel}`); continue; }",
+  "    if (fs.lstatSync(abs).isSymbolicLink()) errors.push(`${id}: variant path is a symlink: ${rel}`)",
+  "    const real = fs.realpathSync.native(abs)",
+  "    if (!inside(rootReal, real)) errors.push(`${id}: variant path escapes real variant_root: ${rel}`)",
+  "  }",
+  "}",
+  'if (errors.length > 0) { console.error(errors.join("\\n")); process.exit(1); }',
+  "console.log(`Prototype variant integrity passed for ${variants.length} variant(s)`)"
+].join("; ");
+function readReport(context, schemaName, parse3) {
+  const reportPath = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
+  if (!context.step.reads.includes(reportPath)) {
+    throw new Error(`prototype.variant-verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
+  }
+  return parse3(JSON.parse(readFileSync13(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+}
+function aggregate(context) {
+  return readReport(context, "prototype.variant-aggregate@v1", (raw) => PrototypeVariantAggregate.parse(raw));
+}
+function providerEvidence(context) {
+  return readReport(context, "prototype.variant-provider-evidence@v1", (raw) => PrototypeVariantProviderEvidence.parse(raw));
+}
+function integrityCommand(context) {
+  const payload = {
+    variants: aggregate(context).branches.filter((branch) => branch.child_outcome === "complete" && branch.result_body !== void 0).flatMap((branch) => branch.result_body?.verdict === "accept" ? [
+      {
+        variant_id: branch.result_body.variant_id,
+        variant_root: branch.result_body.variant_root,
+        created_files: branch.result_body.created_files,
+        entry_points: branch.result_body.entry_points
+      }
+    ] : [])
+  };
+  return {
+    id: "prototype-variant-artifact-integrity",
+    cwd: ".",
+    argv: [process.execPath, "-e", VARIANT_INTEGRITY_SCRIPT, JSON.stringify(payload)],
+    timeout_ms: 3e4,
+    max_output_bytes: 2e4,
+    env: {}
+  };
+}
+function projectVariantVerification(observations, context) {
+  const aggregateReport = aggregate(context);
+  const evidence = providerEvidence(context);
+  const commandFailed = observations.some((observation) => observation.status === "failed");
+  const admitted = aggregateReport.branches.filter((branch) => branch.child_outcome === "complete" && branch.admitted && branch.result_body !== void 0);
+  const admittedIds = new Set(admitted.map((branch) => branch.branch_id));
+  const capturedProviderEvidenceCount = evidence.variants.filter((variant) => admittedIds.has(variant.variant_id) && variant.status === "captured").length;
+  const overallStatus = commandFailed || admitted.length < 2 || capturedProviderEvidenceCount < 2 ? "failed" : "passed";
+  return PrototypeVariantVerification.parse({
+    overall_status: overallStatus,
+    required_captured_provider_evidence_count: 2,
+    captured_provider_evidence_count: capturedProviderEvidenceCount,
+    admitted_variant_count: admitted.length,
+    variant_results: aggregateReport.branches.map((branch) => {
+      const providerEvidenceStatus = evidence.variants.find((variant) => variant.variant_id === branch.branch_id)?.status ?? "missing";
+      const accepted = branch.child_outcome === "complete" && branch.admitted && branch.result_body !== void 0;
+      const status = accepted && !commandFailed && providerEvidenceStatus === "captured" ? "passed" : accepted && commandFailed ? "failed" : "blocked";
+      return {
+        variant_id: branch.branch_id,
+        status,
+        entry_points: branch.result_body?.entry_points ?? [],
+        created_files: branch.result_body?.created_files ?? [],
+        ...status === "passed" ? {} : {
+          failure_summary: !accepted ? `branch outcome '${branch.child_outcome}' with verdict '${branch.verdict}'` : providerEvidenceStatus !== "captured" ? "provider/model evidence was not captured from relay.started" : "variant artifact integrity command failed"
+        },
+        notes: [
+          `branch outcome: ${branch.child_outcome}`,
+          `verdict: ${branch.verdict}`,
+          `provider evidence: ${providerEvidenceStatus}`
+        ]
+      };
+    }),
+    commands: observations.map((observation) => ({
+      command_id: observation.command.id,
+      argv: observation.command.argv,
+      cwd: observation.command.cwd,
+      exit_code: observation.exit_code,
+      status: observation.status,
+      duration_ms: observation.duration_ms,
+      stdout_summary: observation.stdout_summary,
+      stderr_summary: observation.stderr_summary
+    }))
+  });
+}
+var prototypeVariantVerificationWriter = {
+  resultSchemaName: "prototype.variant-verification@v1",
+  loadCommands(context) {
+    return [integrityCommand(context)];
+  },
+  buildResult(observations, context) {
+    return projectVariantVerification(observations, context);
+  }
+};
+
+// dist/flows/prototype/writers/verification.js
+import { readFileSync as readFileSync14 } from "node:fs";
+var ARTIFACT_INTEGRITY_SCRIPT = [
+  "const fs = require('node:fs')",
+  "const path = require('node:path')",
+  "const payload = JSON.parse(process.argv[1] || '{}')",
+  "const projectRoot = process.cwd()",
+  "const root = String(payload.prototype_root || '')",
+  "const planned = Array.isArray(payload.planned_files) ? payload.planned_files : []",
+  "const created = Array.isArray(payload.created_files) ? payload.created_files : []",
+  "const entry = Array.isArray(payload.entry_points) ? payload.entry_points : []",
+  "const errors = []",
+  'function inside(base, target) { const rel = path.relative(base, target); return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel)); }',
+  "const rootAbs = path.resolve(projectRoot, root)",
+  "if (!inside(projectRoot, rootAbs)) errors.push(`prototype_root escapes project root: ${root}`)",
+  "if (!fs.existsSync(rootAbs)) errors.push(`prototype_root does not exist: ${root}`)",
+  "else if (!fs.lstatSync(rootAbs).isDirectory()) errors.push(`prototype_root is not a directory: ${root}`)",
+  "else if (fs.lstatSync(rootAbs).isSymbolicLink()) errors.push(`prototype_root is a symlink: ${root}`)",
+  "const rootReal = fs.existsSync(rootAbs) ? fs.realpathSync.native(rootAbs) : rootAbs",
+  "const createdSet = new Set(created)",
+  "for (const rel of planned) { if (!createdSet.has(rel)) errors.push(`planned file missing from created_files: ${rel}`); }",
+  "for (const rel of Array.from(new Set([...planned, ...created, ...entry]))) {",
+  '  if (typeof rel !== "string" || rel.length === 0) { errors.push("reported path must be a non-empty string"); continue; }',
+  "  if (!rel.startsWith(`${root}/`)) errors.push(`prototype path is outside prototype_root: ${rel}`)",
+  "  const abs = path.resolve(projectRoot, rel)",
+  "  if (!inside(rootAbs, abs)) errors.push(`prototype path escapes prototype_root: ${rel}`)",
+  "  if (!fs.existsSync(abs)) { errors.push(`prototype path does not exist: ${rel}`); continue; }",
+  "  if (fs.lstatSync(abs).isSymbolicLink()) errors.push(`prototype path is a symlink: ${rel}`)",
+  "  const real = fs.realpathSync.native(abs)",
+  "  if (!inside(rootReal, real)) errors.push(`prototype path escapes real prototype_root: ${rel}`)",
+  "}",
+  'if (errors.length > 0) { console.error(errors.join("\\n")); process.exit(1); }',
+  "console.log(`Prototype artifact integrity passed for ${root}`)"
+].join("; ");
+function readReport2(context, schemaName, parse3) {
+  const reportPath = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
+  if (!context.step.reads.includes(reportPath)) {
+    throw new Error(`prototype.verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
+  }
+  return parse3(JSON.parse(readFileSync14(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+}
+function artifactIntegrityCommand(input) {
+  const payload = {
+    prototype_root: input.artifact.prototype_root,
+    planned_files: input.plan.files_to_create,
+    created_files: input.artifact.created_files,
+    entry_points: input.artifact.entry_points
+  };
+  return {
+    id: "prototype-artifact-integrity",
+    cwd: ".",
+    argv: [process.execPath, "-e", ARTIFACT_INTEGRITY_SCRIPT, JSON.stringify(payload)],
+    timeout_ms: 3e4,
+    max_output_bytes: 2e4,
+    env: {}
+  };
+}
+function projectPrototypeVerification(observations) {
+  const overallStatus = observations.some((observation) => observation.status === "failed") ? "failed" : "passed";
+  return PrototypeVerification.parse({
+    overall_status: overallStatus,
+    commands: observations.map((observation) => ({
+      command_id: observation.command.id,
+      argv: observation.command.argv,
+      cwd: observation.command.cwd,
+      exit_code: observation.exit_code,
+      status: observation.status,
+      duration_ms: observation.duration_ms,
+      stdout_summary: observation.stdout_summary,
+      stderr_summary: observation.stderr_summary
+    }))
+  });
+}
+var prototypeVerificationWriter = {
+  resultSchemaName: "prototype.verification@v1",
+  loadCommands(context) {
+    const plan = readReport2(context, "prototype.plan@v1", (raw) => PrototypePlan.parse(raw));
+    const artifact = readReport2(context, "prototype.artifact@v1", (raw) => PrototypeArtifact.parse(raw));
+    return [artifactIntegrityCommand({ plan, artifact }), ...plan.verification.commands];
+  },
+  buildResult(observations) {
+    return projectPrototypeVerification(observations);
+  }
+};
+
+// dist/flows/prototype/data.js
+var PROTOTYPE_SIGNALS = [
+  { label: "prototype prefix", pattern: /^\s*prototype\s*:/i },
+  {
+    label: "create prototype request",
+    pattern: /^\s*(?:please\s+)?(?:use\s+(?:this\s+new\s+flow|(?:the\s+)?prototype(?:\s+flow)?)\s+to\s+)?(?:create|make|build|draft)\s+(?:a\s+|an\s+|the\s+)?(?:[\w-]+\s+){0,5}prototype\b/i
+  },
+  {
+    label: "prototype request",
+    pattern: /^\s*(?:please\s+)?(?:prototype|mock\s+up|sketch)\s+(?:a\s+|an\s+|the\s+|this\s+|that\s+)?(?:small\s+|simple\s+|intuitive\s+|disposable\s+|throwaway\s+)?(?:prototype|artifact|screen|flow|interaction|experience)\b/i
+  }
+];
+var prototypeFlowData = {
+  id: "prototype",
+  visibility: "public",
+  paths: {
+    schematic: "src/flows/prototype/schematic.json",
+    command: "src/flows/prototype/command.md",
+    contract: "src/flows/prototype/contract.md"
+  },
+  routing: {
+    order: 25,
+    signals: PROTOTYPE_SIGNALS,
+    skipOnPlanningReport: true,
+    reasonForMatch(signal) {
+      return `matched ${signal.label}; routed to disposable Prototype flow`;
+    }
+  },
+  schematic: {
+    schema_version: "1",
+    id: "prototype",
+    title: "Prototype Schematic",
+    purpose: "Prototype flow. Circuit frames a disposable artifact, plans its local prototype files, either relays one artifact or fans out configured model variants, verifies reported files under prototype_root, asks which local prototype evidence to keep, and closes with evidence. Prototype does not edit production code outside prototype_root or claim deployment, branch previews, screenshots, provider behavior, model behavior, or production readiness.",
+    status: "active",
+    version: "0.1.0",
+    starts_at: "frame-step",
+    initial_contracts: ["task.intake@v1", "route.decision@v1", "verification.plan@v1"],
+    contract_aliases: [
+      {
+        generic: "flow.brief@v1",
+        actual: "prototype.brief@v1"
+      },
+      {
+        generic: "plan.strategy@v1",
+        actual: "prototype.plan@v1"
+      },
+      {
+        generic: "verification.plan@v1",
+        actual: "prototype.plan@v1"
+      },
+      {
+        generic: "change.evidence@v1",
+        actual: "prototype.artifact@v1"
+      },
+      {
+        generic: "verification.result@v1",
+        actual: "prototype.verification@v1"
+      },
+      {
+        generic: "plan.strategy@v1",
+        actual: "prototype.variant-options@v1"
+      },
+      {
+        generic: "change.evidence@v1",
+        actual: "prototype.variant-aggregate@v1"
+      },
+      {
+        generic: "flow.evidence@v1",
+        actual: "prototype.variant-aggregate@v1"
+      },
+      {
+        generic: "flow.result@v1",
+        actual: "prototype.variant-provider-evidence@v1"
+      },
+      {
+        generic: "verification.result@v1",
+        actual: "prototype.variant-verification@v1"
+      },
+      {
+        generic: "review.verdict@v1",
+        actual: "prototype.variant-review@v1"
+      },
+      {
+        generic: "review.verdict@v1",
+        actual: "prototype.variant-choice-options@v1"
+      },
+      {
+        generic: "flow.question@v1",
+        actual: "prototype.variant-choice-options@v1"
+      },
+      {
+        generic: "flow.result@v1",
+        actual: "prototype.result@v1"
+      }
+    ],
+    entry: {
+      signals: {
+        include: ["prototype", "mock up", "sketch"],
+        exclude: ["production", "deploy", "ship"]
+      },
+      intent_prefixes: ["prototype"]
+    },
+    axes: {
+      allowed_rigors: ["standard", "deep"],
+      supports_tournament: true,
+      supports_autonomous: true,
+      default: {
+        rigor: "standard",
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false
+      },
+      tournament_fan_out_stage: "act-stage"
+    },
+    stage_path_policy: {
+      mode: "partial",
+      omits: ["analyze"],
+      rationale: "Prototype follows Frame, Plan, Act, Verify, Review, Close. Analyze is omitted because V1 frames enough context to build a small disposable artifact; research-first work should use Explore."
+    },
+    stages: [
+      {
+        id: "frame-stage",
+        canonical: "frame",
+        title: "Frame"
+      },
+      {
+        id: "plan-stage",
+        canonical: "plan",
+        title: "Plan"
+      },
+      {
+        id: "act-stage",
+        canonical: "act",
+        title: "Act"
+      },
+      {
+        id: "verify-stage",
+        canonical: "verify",
+        title: "Verify"
+      },
+      {
+        id: "review-stage",
+        canonical: "review",
+        title: "Review"
+      },
+      {
+        id: "close-stage",
+        canonical: "close",
+        title: "Close"
+      }
+    ],
+    items: [
+      expandBlockStepUse({
+        id: "frame-step",
+        title: "Frame - define Prototype boundary",
+        stage: "frame",
+        block: "frame",
+        input: {
+          task: "task.intake@v1",
+          route: "route.decision@v1"
+        },
+        output: "prototype.brief@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-frame@v1",
+        reportPath: "reports/prototype/brief.json",
+        required: ["objective", "prototype_root", "claim_limits"],
+        routes: {
+          continue: "plan-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "plan-step",
+        title: "Plan - choose disposable artifact files",
+        stage: "plan",
+        block: "plan",
+        input: {
+          brief: "prototype.brief@v1"
+        },
+        output: "prototype.plan@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-plan@v1",
+        reportPath: "reports/prototype/plan.json",
+        required: ["objective", "files_to_create", "verification"],
+        routes: {
+          continue: "act-step",
+          stop: "@stop"
+        },
+        routeOverrides: {
+          continue: {
+            tournament: "variant-options-step"
+          }
+        }
+      }),
+      expandBlockStepUse({
+        id: "act-step",
+        title: "Act - create disposable prototype artifact",
+        stage: "act",
+        block: "act",
+        input: {
+          brief: "prototype.brief@v1",
+          plan: "prototype.plan@v1"
+        },
+        output: "prototype.artifact@v1",
+        execution: {
+          kind: "relay",
+          role: "implementer"
+        },
+        protocol: "prototype-act@v1",
+        reportPath: "reports/prototype/artifact.json",
+        requestPath: "reports/relay/prototype-act.request.json",
+        receiptPath: "reports/relay/prototype-act.receipt.txt",
+        resultPath: "reports/relay/prototype-act.result.json",
+        pass: ["accept"],
+        routes: {
+          continue: "verify-step",
+          stop: "close-step"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-options-step",
+        title: "Plan - resolve Prototype model variants",
+        stage: "plan",
+        block: "plan",
+        input: {
+          brief: "prototype.brief@v1",
+          plan: "prototype.plan@v1"
+        },
+        output: "prototype.variant-options@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-variant-options@v1",
+        reportPath: "reports/prototype/variant-options.json",
+        required: ["variants", "variant_count"],
+        routes: {
+          continue: "variant-fanout-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-fanout-step",
+        title: "Act - create model-comparison Prototype variants",
+        stage: "act",
+        block: "act",
+        input: {
+          brief: "prototype.brief@v1",
+          plan: "prototype.plan@v1",
+          options: "prototype.variant-options@v1"
+        },
+        output: "prototype.variant-aggregate@v1",
+        execution: {
+          kind: "fanout"
+        },
+        protocol: "prototype-variant-fanout@v1",
+        reportPath: "reports/prototype/variant-aggregate.json",
+        branchesDirPath: "reports/prototype/variant-branches",
+        pass: ["accept"],
+        fanout: {
+          branches: {
+            kind: "dynamic",
+            source_report: "reports/prototype/variant-options.json",
+            items_path: "variants",
+            template: {
+              branch_id: "$item.variant_id",
+              execution: {
+                kind: "relay",
+                role: "implementer",
+                goal: "$item.goal",
+                report_schema: "prototype.variant-artifact@v1",
+                provenance_field: "variant_id"
+              },
+              selection: {
+                model: {
+                  provider: "$item.provider",
+                  model: "$item.model"
+                },
+                effort: "$item.effort"
+              }
+            },
+            max_branches: { kind: "axis", axis: "tournament_n" },
+            required_count: { kind: "axis", axis: "tournament_n" }
+          },
+          concurrency: {
+            kind: "bounded",
+            max: 2
+          },
+          on_child_failure: "continue-others",
+          join: {
+            policy: "aggregate-survivors"
+          },
+          rubric: {
+            model_judgments_path: "rubric_model_judgments",
+            ordered_dims: [...THREE_AXIS_RUBRIC_TIE_BREAK_ORDER],
+            runtime_signals: {
+              evidence_rigor: { kind: "non_empty_array", path: "evidence" },
+              actionability: { kind: "non_empty_array", path: "entry_points" },
+              coverage_adequacy: { kind: "non_empty_string", path: "summary" },
+              scope_discipline: { kind: "constant", signal: "met" },
+              honest_calibration: { kind: "non_empty_array", path: "claim_limits" },
+              project_specificity: { kind: "non_empty_string", path: "variant_root" },
+              insight_density: { kind: "constant", signal: "n/a" },
+              branch_distinctness: { kind: "constant", signal: "n/a" }
+            }
+          }
+        },
+        routes: {
+          continue: "variant-provider-evidence-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-provider-evidence-step",
+        title: "Verify - capture variant provider evidence",
+        stage: "verify",
+        block: "close-with-evidence",
+        input: {
+          brief: "prototype.brief@v1",
+          options: "prototype.variant-options@v1",
+          aggregate: "prototype.variant-aggregate@v1"
+        },
+        output: "prototype.variant-provider-evidence@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-variant-provider-evidence@v1",
+        reportPath: "reports/prototype/variant-provider-evidence.json",
+        required: ["captured_count", "variants"],
+        routes: {
+          complete: "variant-verification-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-verification-step",
+        title: "Verify - check Prototype variants",
+        stage: "verify",
+        block: "run-verification",
+        input: {
+          plan: "prototype.plan@v1",
+          aggregate: "prototype.variant-aggregate@v1",
+          provider_evidence: "prototype.variant-provider-evidence@v1"
+        },
+        output: "prototype.variant-verification@v1",
+        protocol: "prototype-variant-verify@v1",
+        reportPath: "reports/prototype/variant-verification.json",
+        required: ["overall_status", "commands", "variant_results"],
+        routes: {
+          continue: "variant-review-step",
+          stop: "close-model-comparison-step"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-review-step",
+        title: "Review - compare Prototype variants",
+        stage: "review",
+        block: "review",
+        input: {
+          brief: "prototype.brief@v1",
+          options: "prototype.variant-options@v1",
+          aggregate: "prototype.variant-aggregate@v1",
+          provider_evidence: "prototype.variant-provider-evidence@v1",
+          verification: "prototype.variant-verification@v1"
+        },
+        output: "prototype.variant-review@v1",
+        execution: {
+          kind: "relay",
+          role: "reviewer"
+        },
+        protocol: "prototype-variant-review@v1",
+        reportPath: "reports/prototype/variant-review.json",
+        requestPath: "reports/relay/prototype-variant-review.request.json",
+        receiptPath: "reports/relay/prototype-variant-review.receipt.txt",
+        resultPath: "reports/relay/prototype-variant-review.result.json",
+        pass: ["recommend", "no-clear-winner", "needs-operator"],
+        routes: {
+          continue: "variant-choice-options-step",
+          stop: "close-model-comparison-step"
+        }
+      }),
+      expandBlockStepUse({
+        id: "variant-choice-options-step",
+        title: "Review - prepare variant checkpoint choices",
+        stage: "review",
+        block: "review",
+        input: {
+          brief: "prototype.brief@v1",
+          aggregate: "prototype.variant-aggregate@v1",
+          provider_evidence: "prototype.variant-provider-evidence@v1",
+          verification: "prototype.variant-verification@v1",
+          review: "prototype.variant-review@v1"
+        },
+        output: "prototype.variant-choice-options@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-variant-choice-options@v1",
+        reportPath: "reports/prototype/variant-choice-options.json",
+        required: ["choices", "recommended_variant_id"],
+        routes: {
+          continue: "prototype-variant-checkpoint-step",
+          stop: "close-model-comparison-step"
+        }
+      }),
+      expandBlockStepUse({
+        id: "prototype-variant-checkpoint-step",
+        title: "Review - choose Prototype variant",
+        stage: "review",
+        block: "human-decision",
+        input: {
+          choices: "prototype.variant-choice-options@v1",
+          aggregate: "prototype.variant-aggregate@v1"
+        },
+        protocol: "prototype-variant-checkpoint@v1",
+        checkpointRequestPath: "reports/checkpoints/prototype-variant-choice-request.json",
+        checkpointResponsePath: "reports/checkpoints/prototype-variant-choice-response.json",
+        allowFrom: { kind: "policy_choices" },
+        checkpointPolicy: {
+          prompt: "Choose which local Prototype variant Circuit should keep. This checkpoint does not run Build or claim deployment.",
+          choices_from: {
+            kind: "report_items",
+            source_report: "reports/prototype/variant-choice-options.json",
+            items_path: "choices",
+            id_path: "id",
+            label_path: "label",
+            description_path: "description"
+          },
+          auto_resolution: {
+            policy: "highest-score",
+            source_report: "reports/prototype/variant-aggregate.json",
+            branches_path: "branches",
+            id_path: "branch_id",
+            rubric_result_path: "rubric_result"
+          }
+        },
+        routes: {
+          continue: "close-model-comparison-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "close-model-comparison-step",
+        title: "Close - emit Prototype model-comparison result",
+        stage: "close",
+        block: "close-with-evidence",
+        input: {
+          brief: "prototype.brief@v1",
+          plan: "prototype.plan@v1",
+          options: "prototype.variant-options@v1",
+          aggregate: "prototype.variant-aggregate@v1",
+          provider_evidence: "prototype.variant-provider-evidence@v1",
+          verification: "prototype.variant-verification@v1"
+        },
+        output: "prototype.result@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-close-model-comparison@v1",
+        reportPath: "reports/prototype-result.json",
+        required: ["summary", "outcome", "evidence_links"],
+        routes: {
+          complete: "@complete",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "verify-step",
+        title: "Verify - check Prototype artifact integrity",
+        stage: "verify",
+        block: "run-verification",
+        input: {
+          plan: "prototype.plan@v1",
+          artifact: "prototype.artifact@v1"
+        },
+        output: "prototype.verification@v1",
+        protocol: "prototype-verify@v1",
+        reportPath: "reports/prototype/verification.json",
+        required: ["overall_status", "commands"],
+        routes: {
+          continue: "prototype-checkpoint-step",
+          stop: "close-step"
+        }
+      }),
+      expandBlockStepUse({
+        id: "prototype-checkpoint-step",
+        title: "Review - decide Prototype disposition",
+        stage: "review",
+        block: "human-decision",
+        input: {
+          artifact: "prototype.artifact@v1",
+          verification: "prototype.verification@v1"
+        },
+        protocol: "prototype-checkpoint@v1",
+        checkpointRequestPath: "reports/checkpoints/prototype-review-request.json",
+        checkpointResponsePath: "reports/checkpoints/prototype-review-response.json",
+        allow: ["keep-prototype", "save-build-input", "discard-prototype"],
+        checkpointPolicy: {
+          prompt: "Decide what to do with this verified Prototype artifact.",
+          choices: [
+            {
+              id: "keep-prototype",
+              label: "Keep Prototype",
+              description: "Save the prototype as useful evidence and stop here."
+            },
+            {
+              id: "save-build-input",
+              label: "Save Build Input",
+              description: "Close with a Build-ready follow-up prompt, without running Build."
+            },
+            {
+              id: "discard-prototype",
+              label: "Discard Prototype",
+              description: "Mark the prototype as discarded while keeping the evidence trail."
+            }
+          ],
+          safe_default_choice: "keep-prototype",
+          safe_autonomous_choice: "keep-prototype"
+        },
+        routes: {
+          continue: "close-step",
+          stop: "@stop"
+        }
+      }),
+      expandBlockStepUse({
+        id: "close-step",
+        title: "Close - emit Prototype result",
+        stage: "close",
+        block: "close-with-evidence",
+        input: {
+          brief: "prototype.brief@v1",
+          plan: "prototype.plan@v1",
+          artifact: "prototype.artifact@v1"
+        },
+        output: "prototype.result@v1",
+        execution: {
+          kind: "compose"
+        },
+        protocol: "prototype-close@v1",
+        reportPath: "reports/prototype-result.json",
+        required: ["summary", "outcome", "evidence_links"],
+        routes: {
+          complete: "@complete",
+          stop: "@stop"
+        }
+      })
+    ]
+  },
+  canonicalStagePolicy: {
+    kind: "enforce",
+    canonicals: ["frame", "plan", "act", "verify", "review", "close"],
+    omits: ["analyze"],
+    optional_canonicals: [],
+    variants: [],
+    title: "Frame -> Plan -> Act -> Verify -> Review -> Close",
+    authority: "src/flows/prototype/contract.md Prototype Flow Contract"
+  },
+  reports: [
+    {
+      schemaName: "prototype.artifact@v1",
+      channel: "relay",
+      schema: PrototypeArtifact,
+      relayHint: prototypeArtifactShapeHint.instruction
+    },
+    {
+      schemaName: "prototype.variant-artifact@v1",
+      channel: "relay",
+      schema: PrototypeVariantArtifact,
+      relayHint: prototypeVariantArtifactShapeHint.instruction
+    },
+    {
+      schemaName: "prototype.variant-review@v1",
+      channel: "relay",
+      schema: PrototypeVariantReview,
+      relayHint: prototypeVariantReviewShapeHint.instruction
+    },
+    {
+      schemaName: "prototype.brief@v1",
+      channel: "report",
+      schema: PrototypeBrief,
+      writers: { compose: [prototypeBriefComposeBuilder] }
+    },
+    {
+      schemaName: "prototype.plan@v1",
+      channel: "report",
+      schema: PrototypePlan,
+      writers: { compose: [prototypePlanComposeBuilder] }
+    },
+    {
+      schemaName: "prototype.variant-options@v1",
+      channel: "report",
+      schema: PrototypeVariantOptions,
+      writers: { compose: [prototypeVariantOptionsComposeBuilder] }
+    },
+    {
+      schemaName: "prototype.variant-aggregate@v1",
+      channel: "report",
+      schema: PrototypeVariantAggregate
+    },
+    {
+      schemaName: "prototype.variant-provider-evidence@v1",
+      channel: "report",
+      schema: PrototypeVariantProviderEvidence,
+      writers: { compose: [prototypeVariantProviderEvidenceComposeBuilder] }
+    },
+    {
+      schemaName: "prototype.variant-verification@v1",
+      channel: "report",
+      schema: PrototypeVariantVerification,
+      writers: { verification: [prototypeVariantVerificationWriter] }
+    },
+    {
+      schemaName: "prototype.variant-choice-options@v1",
+      channel: "report",
+      schema: PrototypeVariantChoiceOptions,
+      writers: { compose: [prototypeVariantChoiceOptionsComposeBuilder] }
+    },
+    {
+      schemaName: "prototype.verification@v1",
+      channel: "report",
+      schema: PrototypeVerification,
+      writers: { verification: [prototypeVerificationWriter] }
+    },
+    {
+      schemaName: "prototype.result@v1",
+      channel: "report",
+      schema: PrototypeResult,
+      writers: { close: [prototypeCloseBuilder] }
+    }
+  ],
+  runtimeSurface: {
+    primaryResult: {
+      schemaName: "prototype.result@v1",
+      path: "reports/prototype-result.json",
+      label: "Prototype result"
+    },
+    progress: {
+      steps: [
+        {
+          stepId: "frame-step",
+          taskTitle: "Frame the prototype",
+          activeText: "Framing the prototype"
+        },
+        {
+          stepId: "plan-step",
+          taskTitle: "Plan the artifact",
+          activeText: "Planning the artifact"
+        },
+        {
+          stepId: "act-step",
+          taskTitle: "Create the prototype",
+          activeText: "Creating the prototype",
+          relayRole: "implementer",
+          relayStartedText: "Asking the specialist to create the prototype...",
+          relayCompletedText: "Finished creating the prototype."
+        },
+        {
+          stepId: "variant-options-step",
+          taskTitle: "Resolve model variants",
+          activeText: "Resolving model variants"
+        },
+        {
+          stepId: "variant-fanout-step",
+          taskTitle: "Create prototype variants",
+          activeText: "Creating prototype variants"
+        },
+        {
+          stepId: "variant-provider-evidence-step",
+          taskTitle: "Capture provider evidence",
+          activeText: "Capturing provider evidence"
+        },
+        {
+          stepId: "variant-verification-step",
+          taskTitle: "Check prototype variants",
+          activeText: "Checking prototype variants"
+        },
+        {
+          stepId: "variant-review-step",
+          taskTitle: "Compare prototype variants",
+          activeText: "Comparing prototype variants",
+          relayRole: "reviewer",
+          relayStartedText: "Asking the reviewer to compare the variants...",
+          relayCompletedText: "Finished comparing the variants."
+        },
+        {
+          stepId: "variant-choice-options-step",
+          taskTitle: "Prepare variant choices",
+          activeText: "Preparing variant choices"
+        },
+        {
+          stepId: "prototype-variant-checkpoint-step",
+          taskTitle: "Choose variant",
+          activeText: "Waiting on the Prototype variant checkpoint"
+        },
+        {
+          stepId: "close-model-comparison-step",
+          taskTitle: "Wrap up model comparison",
+          activeText: "Wrapping up model comparison"
+        },
+        {
+          stepId: "verify-step",
+          taskTitle: "Check the artifact",
+          activeText: "Checking the artifact"
+        },
+        {
+          stepId: "prototype-checkpoint-step",
+          taskTitle: "Choose what to do next",
+          activeText: "Waiting on the Prototype checkpoint"
+        },
+        {
+          stepId: "close-step",
+          taskTitle: "Wrap up",
+          activeText: "Wrapping up"
+        }
+      ]
+    }
+  },
+  engineFlags: {
+    bindsExecutionDepthToRelaySelection: true
+  }
+};
+
+// dist/flows/prototype/flow.js
+var prototypeFlowDefinition = defineFlowData(prototypeFlowData);
+
 // dist/flows/stage-policy.js
 function defineEnforcedStagePolicy(input) {
   const canonicals = [...input.canonicals];
@@ -33284,7 +35652,7 @@ var PURSUIT_RESULT_PATH_BY_REPORT_ID = {
   "pursuit.verification": "reports/pursuit/verification.json",
   "pursuit.review": "reports/pursuit/review.json"
 };
-var NonEmptyStringArray3 = external_exports.array(external_exports.string().min(1)).min(1);
+var NonEmptyStringArray4 = external_exports.array(external_exports.string().min(1)).min(1);
 var PursuitId = external_exports.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/);
 var PursuitRisk = external_exports.enum(["low", "medium", "high"]);
 var PursuitTouchSet = external_exports.object({
@@ -33300,8 +35668,8 @@ var PursuitContractItem = external_exports.object({
   scope: external_exports.string().min(1),
   assumptions: external_exports.array(external_exports.string().min(1)),
   estimated_touch_set: PursuitTouchSet,
-  proof_plan: NonEmptyStringArray3,
-  check_in_triggers: NonEmptyStringArray3,
+  proof_plan: NonEmptyStringArray4,
+  check_in_triggers: NonEmptyStringArray4,
   rollback_notes: external_exports.array(external_exports.string().min(1)),
   risk: PursuitRisk
 }).strict();
@@ -33446,7 +35814,7 @@ var PursuitBatch = external_exports.object({
   blocked: external_exports.array(PursuitBatchItem),
   failed: external_exports.array(PursuitBatchItem),
   actual_touch_set: PursuitTouchSet,
-  proof_evidence: NonEmptyStringArray3
+  proof_evidence: NonEmptyStringArray4
 }).strict().superRefine((batch, ctx) => {
   for (const [field, expectedStatus] of [
     ["completed", "completed"],
@@ -33876,7 +36244,7 @@ var pursuitGraphComposeBuilder = {
 };
 
 // dist/flows/pursue/writers/verification.js
-import { readFileSync as readFileSync11 } from "node:fs";
+import { readFileSync as readFileSync15 } from "node:fs";
 
 // dist/flows/pursue/writers/verification-projection.js
 function projectPursuitVerification(observations) {
@@ -33904,7 +36272,7 @@ var pursuitVerificationWriter = {
     if (!context.step.reads.includes(contractPath)) {
       throw new Error(`pursuit.verification@v1 requires step '${context.step.id}' to read ${contractPath}`);
     }
-    const contract = PursuitContract.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, contractPath), "utf8")));
+    const contract = PursuitContract.parse(JSON.parse(readFileSync15(resolveRunRelative(context.runFolder, contractPath), "utf8")));
     return contract.verification_command_candidates;
   },
   buildResult(observations) {
@@ -34497,7 +36865,7 @@ var ReviewRelayResult = external_exports.object({
 // dist/flows/review/writers/intake.js
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { closeSync, lstatSync as lstatSync3, openSync, readSync } from "node:fs";
-import { isAbsolute as isAbsolute4, relative as relative4, resolve as resolve3 } from "node:path";
+import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve3 } from "node:path";
 
 // dist/flows/review/writers/intake-projection.js
 function gitCommandFailed(text) {
@@ -34649,8 +37017,8 @@ function runGitDiff(projectRoot, args) {
   };
 }
 function insideProject(projectRoot, path) {
-  const rel = relative4(projectRoot, path);
-  return rel === "" || !rel.startsWith("..") && !isAbsolute4(rel);
+  const rel = relative5(projectRoot, path);
+  return rel === "" || !rel.startsWith("..") && !isAbsolute5(rel);
 }
 function readUntrackedFile(projectRoot, path, contentPolicy) {
   const abs = resolve3(projectRoot, path);
@@ -34755,7 +37123,7 @@ var reviewIntakeComposeBuilder = {
 };
 
 // dist/flows/review/writers/result.js
-import { readFileSync as readFileSync12 } from "node:fs";
+import { readFileSync as readFileSync16 } from "node:fs";
 
 // dist/flows/review/writers/result-projection.js
 function evidenceSummary(evidence) {
@@ -34812,8 +37180,8 @@ var reviewResultComposeBuilder = {
   // its own resolution.
   build(context) {
     const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync12(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync12(resolveRunRelative(context.runFolder, path), "utf8")));
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, path), "utf8")));
     return projectReviewResult({ intake, relayResult });
   }
 };
@@ -35194,6 +37562,7 @@ var flowDefinitions = [
   fixFlowDefinition,
   pursueFlowDefinition,
   runtimeProofFlowDefinition,
+  prototypeFlowDefinition,
   buildFlowDefinition,
   exploreFlowDefinition
 ];
@@ -35217,70 +37586,6 @@ var REGISTRY = buildCheckpointRegistry(flowPackages);
 function findCheckpointBriefBuilder(resultSchemaName) {
   return REGISTRY.get(resultSchemaName);
 }
-
-// dist/schemas/connector.js
-var EnabledConnector = external_exports.enum(["claude-code", "codex"]);
-var FilesystemCapability = external_exports.enum(["read-only", "trusted-write", "isolated-write"]);
-var StructuredOutputCapability = external_exports.enum(["json"]);
-var ConnectorCapabilities = external_exports.object({
-  filesystem: FilesystemCapability,
-  structured_output: StructuredOutputCapability
-}).strict();
-var PromptTransport = external_exports.enum(["prompt-file"]);
-var ConnectorOutputExtraction = external_exports.object({
-  kind: external_exports.literal("output-file")
-}).strict();
-var BUILTIN_CONNECTOR_CAPABILITIES = {
-  "claude-code": { filesystem: "trusted-write", structured_output: "json" },
-  codex: { filesystem: "read-only", structured_output: "json" }
-};
-var RESERVED_ADAPTER_NAMES = [
-  ...EnabledConnector.options,
-  "auto"
-];
-var ConnectorName = external_exports.string().regex(/^[a-z][a-z0-9-]*$/);
-var CustomConnectorDescriptor = external_exports.object({
-  kind: external_exports.literal("custom"),
-  name: ConnectorName,
-  command: external_exports.array(external_exports.string().min(1)).min(1),
-  prompt_transport: PromptTransport,
-  output: ConnectorOutputExtraction,
-  capabilities: ConnectorCapabilities
-}).strict().superRefine((descriptor, ctx) => {
-  if (descriptor.capabilities.filesystem !== "read-only") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["capabilities", "filesystem"],
-      message: "custom connectors are read-only in V1; writable custom workers require a later isolated mode"
-    });
-  }
-});
-var BuiltInConnectorRef = external_exports.object({
-  kind: external_exports.literal("builtin"),
-  name: EnabledConnector
-}).strict();
-var NamedConnectorRef = external_exports.object({
-  kind: external_exports.literal("named"),
-  name: ConnectorName
-}).strict();
-var ConnectorRef = external_exports.union([
-  BuiltInConnectorRef,
-  NamedConnectorRef,
-  CustomConnectorDescriptor
-]);
-var ResolvedConnector = external_exports.union([BuiltInConnectorRef, CustomConnectorDescriptor]);
-var ExplicitResolutionSource = external_exports.object({ source: external_exports.literal("explicit") }).strict();
-var RoleResolutionSource = external_exports.object({ source: external_exports.literal("role"), role: RelayRole }).strict();
-var CircuitResolutionSource = external_exports.object({ source: external_exports.literal("circuit"), flow_id: CompiledFlowId }).strict();
-var DefaultResolutionSource = external_exports.object({ source: external_exports.literal("default") }).strict();
-var AutoResolutionSource = external_exports.object({ source: external_exports.literal("auto") }).strict();
-var RelayResolutionSource = external_exports.discriminatedUnion("source", [
-  ExplicitResolutionSource,
-  RoleResolutionSource,
-  CircuitResolutionSource,
-  DefaultResolutionSource,
-  AutoResolutionSource
-]);
 
 // dist/schemas/host.js
 var HostKind = external_exports.enum(["generic-shell", "claude-code", "codex"]);
@@ -35340,9 +37645,34 @@ var SkillBindings = external_exports.record(SkillSlotId, SkillId);
 var SkillsConfig = external_exports.object({
   bindings: SkillBindings.default({})
 }).strict();
+var CircuitVariantModelId = external_exports.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, {
+  message: "variant model id must be a fanout-safe kebab-case slug"
+});
+var CircuitVariantModel = external_exports.object({
+  id: CircuitVariantModelId,
+  label: external_exports.string().min(1),
+  selection: SelectionOverride
+}).strict().superRefine((variant, ctx) => {
+  if (variant.selection.model === void 0) {
+    issueAt2(ctx, ["selection", "model"], "variant model selection.model is required");
+  }
+  if (variant.selection.effort === void 0) {
+    issueAt2(ctx, ["selection", "effort"], "variant model selection.effort is required");
+  }
+});
+var CircuitVariantModels = external_exports.array(CircuitVariantModel).min(2).max(4).superRefine((variants, ctx) => {
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, variant] of variants.entries()) {
+    if (seen.has(variant.id)) {
+      issueAt2(ctx, [index, "id"], `duplicate variant model id '${variant.id}'`);
+    }
+    seen.add(variant.id);
+  }
+});
 var CircuitOverride = external_exports.object({
   selection: SelectionOverride.optional(),
-  skill_bindings: SkillBindings.default({})
+  skill_bindings: SkillBindings.default({}),
+  variant_models: CircuitVariantModels.optional()
 }).strict();
 var Config = external_exports.object({
   schema_version: external_exports.literal(1),
@@ -35375,18 +37705,18 @@ var TERMINAL_TARGETS = [
 ];
 
 // dist/runtime/run-files/paths.js
-import { existsSync as existsSync4, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve4, sep } from "node:path";
-function isInsideOrSame2(root, target) {
-  const fromRoot = relative5(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute5(fromRoot);
+import { existsSync as existsSync6, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
+import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4, sep } from "node:path";
+function isInsideOrSame3(root, target) {
+  const fromRoot = relative6(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute6(fromRoot);
 }
 function validateRunFilePath(runRelativePath) {
   const issues = [];
   if (runRelativePath.trim().length === 0) {
     issues.push("must be non-empty");
   }
-  if (isAbsolute5(runRelativePath)) {
+  if (isAbsolute6(runRelativePath)) {
     issues.push("must be relative");
   }
   if (runRelativePath.includes("\\")) {
@@ -35404,7 +37734,7 @@ function resolveRunFilePath(runDir, runRelativePath) {
   if (runRelativePath.trim().length === 0) {
     throw new Error("run file path must be non-empty");
   }
-  if (isAbsolute5(runRelativePath)) {
+  if (isAbsolute6(runRelativePath)) {
     throw new Error(`run file path must be relative: ${runRelativePath}`);
   }
   const root = resolve4(runDir);
@@ -35419,7 +37749,7 @@ function resolveRunFilePath(runDir, runRelativePath) {
   if (validation.length > 0) {
     throw new Error(`run file path ${validation[0]}: ${runRelativePath}`);
   }
-  if (existsSync4(root)) {
+  if (existsSync6(root)) {
     if (lstatSync4(root).isSymbolicLink()) {
       throw new Error(`run file path crosses symlink: ${runRelativePath}`);
     }
@@ -35427,12 +37757,12 @@ function resolveRunFilePath(runDir, runRelativePath) {
     let cursor = root;
     for (const segment of runRelativePath.split("/")) {
       cursor = resolve4(cursor, segment);
-      if (!existsSync4(cursor))
+      if (!existsSync6(cursor))
         break;
       if (lstatSync4(cursor).isSymbolicLink()) {
         throw new Error(`run file path crosses symlink: ${runRelativePath}`);
       }
-      if (!isInsideOrSame2(rootReal, realpathSync3.native(cursor))) {
+      if (!isInsideOrSame3(rootReal, realpathSync3.native(cursor))) {
         throw new Error(`run file path escapes run directory through symlink: ${runRelativePath}`);
       }
     }
@@ -35536,9 +37866,9 @@ function validateExecutableFlow(flow) {
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
     if (step.kind === "fanout" && typeof step.join === "object" && step.join !== null) {
-      const aggregate = step.join.aggregate;
-      if (typeof aggregate === "object" && aggregate !== null && typeof aggregate.path === "string") {
-        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate);
+      const aggregate2 = step.join.aggregate;
+      if (typeof aggregate2 === "object" && aggregate2 !== null && typeof aggregate2.path === "string") {
+        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate2);
       }
     }
     if (step.kind === "checkpoint") {
@@ -35709,7 +38039,7 @@ function fromCompiledFlow(flow) {
 
 // dist/runtime/trace/trace-store.js
 import { appendFile, mkdir, readFile } from "node:fs/promises";
-import { join as join3 } from "node:path";
+import { join as join4 } from "node:path";
 
 // dist/schemas/trace-entry.js
 var TraceEntryBase = external_exports.object({
@@ -35978,7 +38308,7 @@ var TraceStore = class {
   constructor(runDir, options = {}) {
     this.runDir = runDir;
     this.options = options;
-    this.tracePath = join3(runDir, "trace.ndjson");
+    this.tracePath = join4(runDir, "trace.ndjson");
   }
   async load() {
     await this.appendTail;
@@ -36301,7 +38631,7 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 var HEX643 = /^[0-9a-f]{64}$/;
 var ManifestHash = external_exports.string().regex(HEX643, {
   message: "must be a 64-character lowercase hex SHA-256 digest"
@@ -36329,7 +38659,7 @@ var ManifestSnapshot = external_exports.object({
     });
     return;
   }
-  const computed = createHash2("sha256").update(decoded).digest("hex");
+  const computed = createHash3("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -36339,7 +38669,7 @@ var ManifestSnapshot = external_exports.object({
   }
 });
 function computeManifestHash(bytes) {
-  return createHash2("sha256").update(bytes).digest("hex");
+  return createHash3("sha256").update(bytes).digest("hex");
 }
 
 // dist/runtime/run/graph-runner.js
@@ -36420,9 +38750,8 @@ function resolveHighestScoreAutoResolution(input) {
     const rawRubric = resolveDottedPath(branch, input.rubricResultPath);
     if (rawRubric === void 0)
       return [];
-    if (!choiceIds.has(id)) {
-      throw new Error(`checkpoint '${input.checkpointId}' highest-score rubric row '${id}' is not an allowed choice`);
-    }
+    if (!choiceIds.has(id))
+      return [];
     return [
       {
         id,
@@ -36997,6 +39326,7 @@ async function writeRegisteredComposeReport(step, context) {
       ...context.run.axes === void 0 ? {} : { axes: context.run.axes },
       ...context.ports.worktree.projectRoot === void 0 ? {} : { projectRoot: context.ports.worktree.projectRoot },
       ...context.ports.worktree.evidencePolicy === void 0 ? {} : { evidencePolicy: context.ports.worktree.evidencePolicy },
+      ...context.ports.selection.configLayers === void 0 ? {} : { selectionConfigLayers: context.ports.selection.configLayers },
       inputs
     });
     await context.ports.runFiles.writeJson(report, body);
@@ -37210,7 +39540,7 @@ function evaluateFanoutJoinPolicy(input) {
 
 // dist/runtime/fanout/branch-execution.js
 import { randomUUID } from "node:crypto";
-import { dirname, join as join6 } from "node:path";
+import { dirname, join as join7 } from "node:path";
 
 // dist/flows/registries/cross-report-validators.js
 var REGISTRY4 = buildCrossReportValidatorRegistry(flowPackages);
@@ -37490,7 +39820,7 @@ var CLAUDE_CODE_DISPATCH_FLAGS = [
   "--no-session-persistence"
 ];
 var CLAUDE_CODE_EXECUTABLE = "claude";
-var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+var CLAUDE_CODE_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
 var DEFAULT_TIMEOUT_MS = 6e5;
 var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
 var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
@@ -37505,8 +39835,8 @@ function selectedAnthropicModel(selection) {
   return model.model;
 }
 function assertClaudeCodeEffort(effort) {
-  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
+  if (!CLAUDE_CODE_SUPPORTED_EFFORTS2.includes(effort)) {
+    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS2.join(", ")}`);
   }
 }
 function buildClaudeCodeArgs(input) {
@@ -37677,7 +40007,7 @@ var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
   "--sandbox"
 ]);
 var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
-var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+var CODEX_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
 if (!CODEX_NO_WRITE_FLAGS.includes("-s") || !CODEX_NO_WRITE_FLAGS.includes("read-only")) {
   throw new Error('CODEX_NO_WRITE_FLAGS capability-boundary invariant broken: must include "-s read-only"');
 }
@@ -37714,8 +40044,8 @@ function captureCodexVersion() {
   return version2;
 }
 function assertCodexEffort(effort) {
-  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
+  if (!CODEX_SUPPORTED_EFFORTS2.includes(effort)) {
+    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS2.join(", ")}`);
   }
 }
 function selectedOpenAIModel(selection) {
@@ -37740,7 +40070,7 @@ function isForbiddenCodexArg(arg) {
   });
 }
 function isAllowedCodexConfigOverride(value) {
-  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
+  return value !== void 0 && CODEX_SUPPORTED_EFFORTS2.some((effort) => value === codexReasoningEffortConfigValue(effort));
 }
 function assertCodexSpawnArgvBoundary(args) {
   const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
@@ -37966,7 +40296,7 @@ function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
 // dist/connectors/custom.js
 import { mkdtemp as mkdtemp2, readFile as readFile2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir as tmpdir2 } from "node:os";
-import { join as join4 } from "node:path";
+import { join as join5 } from "node:path";
 var DEFAULT_TIMEOUT_MS3 = 12e4;
 var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
 var OUTPUT_MAX_BYTES = 16 * 1024 * 1024;
@@ -37995,9 +40325,9 @@ async function relayCustom(input) {
   if (executable === void 0) {
     throw new Error(`custom connector '${descriptor.name}' command is empty`);
   }
-  const tempDir = await mkdtemp2(join4(tmpdir2(), "circuit-custom-connector-"));
-  const promptFile = join4(tempDir, "prompt.txt");
-  const outputFile = join4(tempDir, "output.txt");
+  const tempDir = await mkdtemp2(join5(tmpdir2(), "circuit-custom-connector-"));
+  const promptFile = join5(tempDir, "prompt.txt");
+  const outputFile = join5(tempDir, "output.txt");
   await writeFile2(promptFile, input.prompt, "utf8");
   const args = [...baseArgs, promptFile, outputFile];
   const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
@@ -38250,7 +40580,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync5, readFileSync as readFileSync13 } from "node:fs";
+import { existsSync as existsSync7, readFileSync as readFileSync17 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -38327,10 +40657,10 @@ function selectedSkillsSection(skills) {
 function composeRelayPrompt(step, runFolder, loadedSkills = []) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
-    if (!existsSync5(abs))
+    if (!existsSync7(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync13(abs, "utf8")}`;
+${readFileSync17(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   return [
@@ -38349,10 +40679,10 @@ ${readFileSync13(abs, "utf8")}`;
 
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
-import { createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync6, readFileSync as readFileSync14, readdirSync } from "node:fs";
+import { createHash as createHash4 } from "node:crypto";
+import { existsSync as existsSync8, readFileSync as readFileSync18, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join as join5, resolve as resolve5 } from "node:path";
+import { join as join6, resolve as resolve5 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
 var UserSkillFrontmatter = UserSkillEntry.pick({
   name: true,
@@ -38360,10 +40690,10 @@ var UserSkillFrontmatter = UserSkillEntry.pick({
   trigger: true
 }).passthrough();
 function defaultUserSkillRoots(homeDir = homedir()) {
-  return [join5(homeDir, ".agents", "skills"), join5(homeDir, ".claude", "skills")];
+  return [join6(homeDir, ".agents", "skills"), join6(homeDir, ".claude", "skills")];
 }
 function sha256Hex2(text) {
-  return createHash3("sha256").update(text, "utf8").digest("hex");
+  return createHash4("sha256").update(text, "utf8").digest("hex");
 }
 function parseSkillMarkdown(text, skillPath) {
   if (!text.startsWith("---"))
@@ -38395,7 +40725,7 @@ function discoverCandidates(roots) {
   const candidates = /* @__PURE__ */ new Map();
   for (const root of roots) {
     const rootAbs = resolve5(root);
-    if (!existsSync6(rootAbs))
+    if (!existsSync8(rootAbs))
       continue;
     for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
       if (!entry.isDirectory())
@@ -38406,8 +40736,8 @@ function discoverCandidates(roots) {
       const key = id.data;
       if (candidates.has(key))
         continue;
-      const skillPath = join5(rootAbs, entry.name, "SKILL.md");
-      if (!existsSync6(skillPath))
+      const skillPath = join6(rootAbs, entry.name, "SKILL.md");
+      if (!existsSync8(skillPath))
         continue;
       candidates.set(key, {
         id: id.data,
@@ -38421,7 +40751,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync14(candidate.path, "utf8");
+    text = readFileSync18(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -38452,7 +40782,7 @@ function createUserSkillRegistry(options = {}) {
         throw new Error([
           `Circuit could not find skill '${key}'.`,
           "Searched:",
-          ...searchedRoots.map((root) => `- ${join5(root, key, "SKILL.md")}`)
+          ...searchedRoots.map((root) => `- ${join6(root, key, "SKILL.md")}`)
         ].join("\n"));
       }
       return loadCandidate(candidate);
@@ -38575,111 +40905,6 @@ function responseJsonSchemaFromZod(schema) {
   normalizeSchemaNode(result);
   assertNoReferenceSyntax(result);
   return result;
-}
-
-// dist/runtime/connectors/resolver.js
-var CLAUDE_CODE_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
-var CODEX_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
-function mergedRelayConfig(layers) {
-  const merged = {
-    default: "auto",
-    roles: {},
-    circuits: {},
-    connectors: {}
-  };
-  for (const layer of layers ?? []) {
-    if (layer.config.relay.default !== "auto" || merged.default === "auto") {
-      merged.default = layer.config.relay.default;
-    }
-    merged.roles = { ...merged.roles, ...layer.config.relay.roles };
-    merged.circuits = { ...merged.circuits, ...layer.config.relay.circuits };
-    merged.connectors = { ...merged.connectors, ...layer.config.relay.connectors };
-  }
-  return merged;
-}
-function connectorCapabilities(connector) {
-  if (connector.kind === "builtin")
-    return BUILTIN_CONNECTOR_CAPABILITIES[connector.name];
-  return connector.capabilities;
-}
-function assertConnectorCanRunRole(connector, role) {
-  const capabilities = connectorCapabilities(connector);
-  if (role === "implementer" && capabilities.filesystem === "read-only") {
-    throw new Error(`relay connector '${connector.name}' is read-only and cannot run implementer step role '${role}'`);
-  }
-}
-function resolvedConnectorFromReference(ref, relay) {
-  if (ref.kind === "builtin")
-    return ref;
-  const descriptor = relay.connectors[ref.name];
-  if (descriptor === void 0) {
-    throw new Error(`relay connector '${ref.name}' is referenced but not declared`);
-  }
-  return descriptor;
-}
-function resolvedConnectorFromDefault(defaultRef, relay) {
-  if (defaultRef === "claude-code" || defaultRef === "codex") {
-    return { kind: "builtin", name: defaultRef };
-  }
-  const descriptor = relay.connectors[defaultRef];
-  if (descriptor === void 0) {
-    throw new Error(`relay default connector '${defaultRef}' is referenced but not declared`);
-  }
-  return descriptor;
-}
-function decision(connector, resolvedFrom, role) {
-  assertConnectorCanRunRole(connector, role);
-  return {
-    connectorName: connector.name,
-    connector,
-    resolvedFrom
-  };
-}
-function resolveConnectorForRelay(input) {
-  if (input.explicitConnector !== void 0) {
-    return decision(input.explicitConnector, { source: "explicit" }, input.role);
-  }
-  const relay = mergedRelayConfig(input.configLayers);
-  const roleRef = relay.roles[input.role];
-  if (roleRef !== void 0) {
-    return decision(resolvedConnectorFromReference(roleRef, relay), {
-      source: "role",
-      role: input.role
-    }, input.role);
-  }
-  const flowId = input.flowId;
-  const flowRef = relay.circuits[flowId];
-  if (flowRef !== void 0) {
-    return decision(resolvedConnectorFromReference(flowRef, relay), {
-      source: "circuit",
-      flow_id: flowId
-    }, input.role);
-  }
-  if (relay.default !== "auto") {
-    return decision(resolvedConnectorFromDefault(relay.default, relay), { source: "default" }, input.role);
-  }
-  return decision({ kind: "builtin", name: "claude-code" }, { source: "auto" }, input.role);
-}
-function expectedProvider(connectorName) {
-  if (connectorName === "claude-code")
-    return "anthropic";
-  if (connectorName === "codex")
-    return "openai";
-  return void 0;
-}
-function assertConnectorSelectionCompatible(connectorName, selection) {
-  const expected = expectedProvider(connectorName);
-  const model = selection?.model;
-  if (expected !== void 0 && model !== void 0 && model.provider !== expected) {
-    throw new Error(`${connectorName} connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider '${expected}'`);
-  }
-  const effort = selection?.effort;
-  if (effort === void 0)
-    return;
-  const supported = connectorName === "claude-code" ? CLAUDE_CODE_SUPPORTED_EFFORTS2 : connectorName === "codex" ? CODEX_SUPPORTED_EFFORTS2 : void 0;
-  if (supported !== void 0 && !supported.includes(effort)) {
-    throw new Error(`${connectorName} connector cannot honor effort '${effort}'; supported efforts: ${supported.join(", ")}`);
-  }
 }
 
 // dist/runtime/executors/relay.js
@@ -39409,7 +41634,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     if (childFlow.id !== branch.flowRef) {
       throw new Error(`resolver returned flow id '${childFlow.id}' but branch flow_ref names '${branch.flowRef}'`);
     }
-    const childRunDir = join6(dirname(context.runDir), childRunId);
+    const childRunDir = join7(dirname(context.runDir), childRunId);
     const child = await context.childRunner({
       flowBytes: resolved.flowBytes,
       runDir: childRunDir,
@@ -39582,9 +41807,9 @@ var gitWorktreeRunner = {
 
 // dist/runtime/executors/fanout.js
 function aggregateRef(step) {
-  const aggregate = step.writes?.aggregate;
-  if (aggregate !== void 0)
-    return aggregate;
+  const aggregate2 = step.writes?.aggregate;
+  if (aggregate2 !== void 0)
+    return aggregate2;
   const joinAggregate = step.join.aggregate;
   if (joinAggregate !== void 0)
     return joinAggregate;
@@ -39648,7 +41873,7 @@ async function runWithConcurrency(items, limit, worker) {
 async function executeFanoutInternal(step, context, relayConnector) {
   const attempt = context.activeStepAttempt ?? 1;
   const branchDirRoot = branchesDir(step);
-  const aggregate = aggregateRef(step);
+  const aggregate2 = aggregateRef(step);
   const branches = await expandFanoutBranches(step, context.files, context);
   if (branches.length === 0) {
     throw new Error(`fanout step '${step.id}': branch resolution produced zero branches`);
@@ -39730,14 +41955,14 @@ async function executeFanoutInternal(step, context, relayConnector) {
     ...branchFiles === void 0 ? {} : { branchFiles },
     ...branchFilesError === void 0 ? {} : { branchFilesError }
   });
-  await context.files.writeJson(aggregate, buildFanoutAggregate(policy2, orderedOutcomes, joinResult.winnerBranchId, step.rubric));
+  await context.files.writeJson(aggregate2, buildFanoutAggregate(policy2, orderedOutcomes, joinResult.winnerBranchId, step.rubric));
   await context.trace.append({
     run_id: context.runId,
     kind: "step.report_written",
     step_id: step.id,
     attempt,
-    report_path: aggregate.path,
-    report_schema: aggregate.schema ?? "fanout-aggregate@v1"
+    report_path: aggregate2.path,
+    report_schema: aggregate2.schema ?? "fanout-aggregate@v1"
   });
   const branchesCompleted = orderedOutcomes.filter((outcome) => outcome.child_outcome === "complete").length;
   await context.trace.append({
@@ -39747,7 +41972,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
     attempt,
     policy: policy2,
     ...joinResult.winnerBranchId === void 0 ? {} : { selected_branch_id: joinResult.winnerBranchId },
-    aggregate_path: aggregate.path,
+    aggregate_path: aggregate2.path,
     branches_completed: branchesCompleted,
     branches_failed: orderedOutcomes.length - branchesCompleted
   });
@@ -39760,7 +41985,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
       check_kind: "fanout_aggregate",
       outcome: "pass"
     });
-    return { route: "pass", details: { aggregate: aggregate.path } };
+    return { route: "pass", details: { aggregate: aggregate2.path } };
   }
   const reason = joinResult.failureReason ?? `fanout step '${step.id}': join policy '${policy2}' did not pass`;
   await context.trace.append({
@@ -39787,7 +42012,7 @@ async function executeFanout(step, context, relayConnector) {
 
 // dist/runtime/executors/sub-run.js
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { dirname as dirname2, join as join7 } from "node:path";
+import { dirname as dirname2, join as join8 } from "node:path";
 function checkPassVerdicts(step) {
   const pass = step.check.pass;
   return Array.isArray(pass) ? pass.filter((entry) => typeof entry === "string") : [];
@@ -39881,7 +42106,7 @@ async function executeSubRunInternal(step, context) {
     return await recordSubRunCheckFailure(step, context, `sub-run step '${step.id}': resolver returned flow id '${childFlow.id}' but flow_ref names '${step.flowRef}'`);
   }
   const childRunId = randomUUID2();
-  const childRunDir = join7(dirname2(context.runDir), childRunId);
+  const childRunDir = join8(dirname2(context.runDir), childRunId);
   await context.trace.append({
     run_id: context.runId,
     kind: "sub_run.started",
@@ -40201,10 +42426,10 @@ function buildRuntimePackageIndex(flow) {
 
 // dist/runtime/run/manifest-snapshot.js
 import { mkdir as mkdir2, readFile as readFile3, writeFile as writeFile3 } from "node:fs/promises";
-import { dirname as dirname3, join as join8 } from "node:path";
+import { dirname as dirname3, join as join9 } from "node:path";
 var MANIFEST_SNAPSHOT_RUN_FILE = "manifest.snapshot.json";
 function runtimeManifestSnapshotPath(runDir) {
-  return join8(runDir, MANIFEST_SNAPSHOT_RUN_FILE);
+  return join9(runDir, MANIFEST_SNAPSHOT_RUN_FILE);
 }
 async function writeRuntimeManifestSnapshot(input) {
   const bytes = Buffer.from(input.bytes);
@@ -40252,10 +42477,10 @@ async function readRuntimeCompiledFlowManifestSnapshot(input) {
 }
 
 // dist/shared/result-path.js
-import { join as join9 } from "node:path";
+import { join as join10 } from "node:path";
 var RUN_RESULT_RELATIVE_PATH = "reports/result.json";
 function runResultPath(runFolder) {
-  return join9(runFolder, RUN_RESULT_RELATIVE_PATH);
+  return join10(runFolder, RUN_RESULT_RELATIVE_PATH);
 }
 
 // dist/runtime/run/result-writer.js
@@ -40264,11 +42489,11 @@ async function writeRuntimeRunResult(files, result) {
 }
 
 // dist/runtime/run/run-boundary.js
-import { readFileSync as readFileSync15 } from "node:fs";
+import { readFileSync as readFileSync19 } from "node:fs";
 import { lstat, mkdir as mkdir4, readdir } from "node:fs/promises";
 
 // dist/runtime/projections/progress.js
-import { join as join10 } from "node:path";
+import { join as join11 } from "node:path";
 
 // dist/schemas/progress-event.js
 var MAX_STATUS_TEXT_CHARS = 180;
@@ -40532,7 +42757,7 @@ function progressPresentation(input) {
 }
 
 // dist/shared/write-capable-worker-disclosure.js
-var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix", "pursue"]);
+var WRITE_CAPABLE_FLOW_IDS = /* @__PURE__ */ new Set(["build", "fix", "prototype", "pursue"]);
 var WRITE_CAPABLE_WORKER_DISCLOSURE = "A worker can edit this checkout.";
 function flowMayInvokeWriteCapableWorker(flowId) {
   return WRITE_CAPABLE_FLOW_IDS.has(flowId);
@@ -40681,7 +42906,7 @@ function reportTaskListProgress(input) {
   });
 }
 function readJsonReport2(files, runDir, reportPath) {
-  const text = files.readText(join10(runDir, reportPath));
+  const text = files.readText(join11(runDir, reportPath));
   if (text === void 0)
     throw new Error(`progress projection could not read ${reportPath}`);
   return JSON.parse(text);
@@ -40792,7 +43017,7 @@ function checkpointChoiceLabel(choice) {
   return choice.split(/[-_]/).filter((part) => part.length > 0).map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 function checkpointRequestPath(runDir, requestPath) {
-  return requestPath.startsWith("/") ? requestPath : join10(runDir, requestPath);
+  return requestPath.startsWith("/") ? requestPath : join11(runDir, requestPath);
 }
 function fanoutChildOutcome(value) {
   if (value === "complete" || value === "aborted" || value === "handoff" || value === "stopped" || value === "escalated") {
@@ -41087,7 +43312,7 @@ function createProgressProjector(input) {
         const presentation = tournamentCheckpointPresentation({
           readJson: (path) => {
             try {
-              const text = projectionFiles.readText(join10(input.runDir, path));
+              const text = projectionFiles.readText(join11(input.runDir, path));
               return text === void 0 ? void 0 : JSON.parse(text);
             } catch {
               return void 0;
@@ -41430,7 +43655,7 @@ async function openRunBoundary(options) {
     files: {
       readText(path) {
         try {
-          return readFileSync15(path, "utf8");
+          return readFileSync19(path, "utf8");
         } catch {
           return void 0;
         }
@@ -42014,7 +44239,7 @@ function readCheckpointRequestContextResult(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
   let requestText;
   try {
-    requestText = readFileSync16(requestAbs, "utf8");
+    requestText = readFileSync20(requestAbs, "utf8");
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
@@ -42364,16 +44589,16 @@ function findFlowRuntimeSurfaceById(flowId) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync7, readFileSync as readFileSync17 } from "node:fs";
+import { existsSync as existsSync9, readFileSync as readFileSync21 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join11, resolve as resolve6 } from "node:path";
+import { join as join12, resolve as resolve6 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
-  return join11(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+  return join12(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
 function projectConfigPath(cwd = process.cwd()) {
-  return join11(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+  return join12(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
 function parseConfigYaml(text, sourcePath) {
   try {
@@ -42384,9 +44609,9 @@ function parseConfigYaml(text, sourcePath) {
 }
 function loadConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve6(sourcePath);
-  if (!existsSync7(abs))
+  if (!existsSync9(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync17(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync21(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -42652,8 +44877,8 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync9, mkdirSync, readFileSync as readFileSync19, rmSync, writeFileSync } from "node:fs";
-import { dirname as dirname5, join as join12 } from "node:path";
+import { existsSync as existsSync11, mkdirSync, readFileSync as readFileSync23, rmSync, writeFileSync } from "node:fs";
+import { dirname as dirname5, join as join13 } from "node:path";
 
 // dist/schemas/operator-summary.js
 var OperatorSummaryWarning = external_exports.object({
@@ -43206,22 +45431,327 @@ ${autoResolutions}
   });
 };
 
+// dist/shared/html/prototype-checkpoint.js
+var PROTOTYPE_BRIEF_PATH = "reports/prototype/brief.json";
+var PROTOTYPE_PLAN_PATH = "reports/prototype/plan.json";
+var PROTOTYPE_ARTIFACT_PATH = "reports/prototype/artifact.json";
+var PROTOTYPE_VERIFICATION_PATH = "reports/prototype/verification.json";
+var PROTOTYPE_VARIANT_AGGREGATE_PATH = "reports/prototype/variant-aggregate.json";
+var PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH = "reports/prototype/variant-provider-evidence.json";
+var PROTOTYPE_VARIANT_VERIFICATION_PATH = "reports/prototype/variant-verification.json";
+var PROTOTYPE_VARIANT_REVIEW_PATH = "reports/prototype/variant-review.json";
+var PROTOTYPE_VARIANT_CHOICES_PATH = "reports/prototype/variant-choice-options.json";
+var CHOICES = [
+  {
+    id: "keep-prototype",
+    label: "Keep Prototype",
+    description: "Save the prototype as useful evidence and stop here.",
+    intent: "positive"
+  },
+  {
+    id: "save-build-input",
+    label: "Save Build Input",
+    description: "Close with a Build-ready follow-up prompt, without running Build.",
+    intent: "info"
+  },
+  {
+    id: "discard-prototype",
+    label: "Discard Prototype",
+    description: "Mark the prototype as discarded while keeping the evidence trail.",
+    intent: "attention"
+  }
+];
+function bulletList2(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText2(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function shellSingleQuote2(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice2(runFolder, choiceId) {
+  return `circuit resume --run-folder ${shellSingleQuote2(runFolder)} --checkpoint-choice ${shellSingleQuote2(choiceId)}`;
+}
+function load(readJsonRunRelative, relPath, parse3) {
+  const parsed = parse3(readJsonRunRelative(relPath));
+  return parsed.success ? parsed.data : void 0;
+}
+function renderArtifactCard2(artifact) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(artifact.summary)}</p>
+      <div>
+        <p class="section-label">Prototype root</p>
+        <div class="evidence">${chip(artifact.prototype_root)}</div>
+      </div>
+      <div>
+        <p class="section-label">Entry points</p>
+        <div class="evidence">
+          ${artifact.entry_points.map((entry) => chip(entry)).join("\n          ")}
+        </div>
+      </div>
+      <div>
+        <p class="section-label">Preview</p>
+        <p class="summary">${escapeHtml(artifact.preview_instructions)}</p>
+      </div>`;
+  return card({
+    intent: "positive",
+    eyebrow: "artifact",
+    title: "Prototype files",
+    bodyHtml
+  });
+}
+function renderVerificationCard(verification) {
+  const status = verification.overall_status;
+  const bodyHtml = `      <p class="summary">${escapeHtml(status === "passed" ? "Artifact integrity and target checks passed." : "One or more checks failed.")}</p>
+      <div>
+        <p class="section-label">Checks</p>
+        <div class="evidence">
+          ${verification.commands.map((command) => chip(commandText2(command))).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: status === "passed" ? "positive" : "negative",
+    eyebrow: status,
+    title: "Verification",
+    bodyHtml
+  });
+}
+function renderRiskCard2(artifact, brief) {
+  const limits = [...brief.claim_limits, ...artifact.claim_limits];
+  const bodyHtml = `      <p class="summary">Prototype is local evidence, not a production or deployed result.</p>
+      <div>
+        <p class="section-label">Known limitations</p>
+        ${artifact.known_limitations.length === 0 ? '<p class="summary">No limitations were reported.</p>' : bulletList2(artifact.known_limitations)}
+      </div>
+      <div>
+        <p class="section-label">Claim limits</p>
+        <div class="evidence">
+          ${Array.from(new Set(limits)).map((limit) => chip(limit)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "limits",
+    title: "Read Before Reuse",
+    bodyHtml
+  });
+}
+function renderPlanCard(plan) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(plan.preview_instructions)}</p>
+      <div>
+        <p class="section-label">Planned files</p>
+        <div class="evidence">
+          ${plan.files_to_create.map((file2) => chip(file2)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "plan",
+    title: "Artifact Plan",
+    bodyHtml
+  });
+}
+function renderChoice(choice, runFolder, recommendedId) {
+  const isRecommended = choice.id === recommendedId;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: isRecommended ? "positive" : choice.intent,
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function filteredChoices2(allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return CHOICES.filter((choice) => allowed.has(choice.id));
+}
+function renderVariantChoice(input) {
+  const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === input.choice.id);
+  const artifact = branch?.result_body;
+  const evidence = input.providerEvidence.variants.find((candidate) => candidate.variant_id === input.choice.id);
+  const providerLine = evidence?.status === "captured" ? `${evidence.provider}/${evidence.model} (${evidence.effort})` : "No captured relay selection evidence";
+  const bodyHtml = `      <p class="summary">${escapeHtml(input.choice.description)}</p>
+      <div>
+        <p class="section-label">Entry points</p>
+        <div class="evidence">
+          ${(artifact?.entry_points ?? input.choice.entry_points).map((entry) => chip(entry)).join("\n          ")}
+        </div>
+      </div>
+      <div>
+        <p class="section-label">Captured relay selection</p>
+        <p class="summary">${escapeHtml(providerLine)}</p>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(input.runFolder, input.choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: input.choice.recommended ? "positive" : "neutral",
+    eyebrow: input.choice.id,
+    title: input.choice.label,
+    ...input.choice.recommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function renderVariantCheckpoint(ctx) {
+  const aggregate2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_AGGREGATE_PATH, (raw) => PrototypeVariantAggregate.safeParse(raw));
+  const providerEvidence2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH, (raw) => PrototypeVariantProviderEvidence.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_VERIFICATION_PATH, (raw) => PrototypeVariantVerification.safeParse(raw));
+  const review = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_REVIEW_PATH, (raw) => PrototypeVariantReview.safeParse(raw));
+  const choices = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_CHOICES_PATH, (raw) => PrototypeVariantChoiceOptions.safeParse(raw));
+  if (aggregate2 === void 0 || providerEvidence2 === void 0 || verification === void 0 || review === void 0 || choices === void 0) {
+    return void 0;
+  }
+  const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
+  const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
+  if (visibleChoices.length === 0)
+    return void 0;
+  const recommended = choices.choices.find((choice) => choice.id === choices.recommended_variant_id);
+  const banner = verdictBanner({
+    intent: review.verdict === "recommend" ? "positive" : "attention",
+    badgeText: review.verdict === "recommend" ? "Recommended variant" : "Operator choice",
+    mainHtml: `<strong>${escapeHtml(recommended?.label ?? choices.recommended_variant_id)}</strong> &mdash; ${escapeHtml(review.comparison_summary)}`,
+    aside: `${providerEvidence2.captured_count} relay selections captured`
+  });
+  const missingEvidenceHtml = providerEvidence2.missing_evidence.length === 0 ? "" : `<p><strong>Missing evidence.</strong> ${escapeHtml(providerEvidence2.missing_evidence.map((item) => `${item.variant_id}: ${item.reason}`).join("; "))}</p>`;
+  const cards = visibleChoices.map((choice) => renderVariantChoice({
+    choice,
+    aggregate: aggregate2,
+    providerEvidence: providerEvidence2,
+    runFolder: ctx.runFolder
+  })).join("\n\n");
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<variant-id>'`;
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${cards}
+  </div>
+
+  <details>
+    <summary>Comparison evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Verification.</strong> ${escapeHtml(verification.overall_status)}</p>
+      ${missingEvidenceHtml}
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_VARIANT_AGGREGATE_PATH,
+    PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
+    PROTOTYPE_VARIANT_VERIFICATION_PATH,
+    PROTOTYPE_VARIANT_REVIEW_PATH,
+    PROTOTYPE_VARIANT_CHOICES_PATH,
+    ctx.checkpoint?.request_path ?? ""
+  ].filter((item) => item.length > 0).map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: "Prototype model comparison checkpoint",
+    metaLine: `Prototype model comparison - ${ctx.runId}`,
+    headline: "Choose a prototype variant",
+    subtitle: "Compare local prototype artifacts using captured relay selection evidence, then keep one variant.",
+    bodyHtml,
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH
+  });
+}
+var prototypeCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "prototype" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint?.step_id === "prototype-variant-checkpoint-step") {
+    return renderVariantCheckpoint(ctx);
+  }
+  if (ctx.checkpoint?.step_id !== "prototype-checkpoint-step")
+    return void 0;
+  const brief = load(ctx.readJsonRunRelative, PROTOTYPE_BRIEF_PATH, (raw) => PrototypeBrief.safeParse(raw));
+  const plan = load(ctx.readJsonRunRelative, PROTOTYPE_PLAN_PATH, (raw) => PrototypePlan.safeParse(raw));
+  const artifact = load(ctx.readJsonRunRelative, PROTOTYPE_ARTIFACT_PATH, (raw) => PrototypeArtifact.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VERIFICATION_PATH, (raw) => PrototypeVerification.safeParse(raw));
+  if (brief === void 0 || plan === void 0 || artifact === void 0 || verification === void 0) {
+    return void 0;
+  }
+  const choices = filteredChoices2(ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === "keep-prototype") ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Verified local artifact",
+    mainHtml: `<strong>${escapeHtml(recommendedChoice.label)}</strong> &mdash; ${escapeHtml("Safe default: keep the prototype evidence and decide on Build separately.")}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoice(choice, ctx.runFolder, recommendedChoice.id)).join("\n\n");
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard2(artifact)}
+
+${renderVerificationCard(verification)}
+
+${renderRiskCard2(artifact, brief)}
+
+${renderPlanCard(plan)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_BRIEF_PATH,
+    PROTOTYPE_PLAN_PATH,
+    PROTOTYPE_ARTIFACT_PATH,
+    PROTOTYPE_VERIFICATION_PATH,
+    ctx.checkpoint.request_path
+  ].map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} - Circuit Prototype checkpoint`,
+    metaLine: `Prototype checkpoint - ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle: "Choose whether to keep this local prototype, save it as Build input, or mark it discarded.",
+    bodyHtml,
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_ARTIFACT_PATH
+  });
+};
+
 // dist/shared/html/index.js
 var HTML_PROJECTORS = {
   build: buildCheckpointProjector,
-  explore: exploreTournamentProjector
+  explore: exploreTournamentProjector,
+  prototype: prototypeCheckpointProjector
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync8, readFileSync as readFileSync18 } from "node:fs";
+import { existsSync as existsSync10, readFileSync as readFileSync22 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync8(path))
+  if (!existsSync10(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync18(path, "utf8"));
+  const parsed = JSON.parse(readFileSync22(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -43581,6 +46111,41 @@ function buildFixDetails(flowReport) {
   }
   return details;
 }
+function prototypeDetails(flowReport) {
+  const details = [];
+  const summaryDetail = flowSummaryDetail(flowReport);
+  if (summaryDetail !== void 0)
+    details.push(summaryDetail);
+  const mode = stringField2(flowReport, "mode");
+  if (mode === "model-comparison") {
+    const selected = stringField2(flowReport, "selected_variant_id");
+    const selectedLabel = stringField2(flowReport, "selected_variant_label");
+    const admitted = numberField(flowReport, "admitted_variant_count");
+    const captured = numberField(flowReport, "captured_provider_evidence_count");
+    if (selected !== void 0) {
+      details.push(`Selected variant: ${selectedLabel === void 0 ? selected : `${selectedLabel} (${selected})`}.`);
+    }
+    if (admitted !== void 0)
+      details.push(`Admitted variants: ${admitted}.`);
+    if (captured !== void 0) {
+      details.push(`Captured relay selection evidence: ${captured}.`);
+    }
+  }
+  const verification = stringField2(flowReport, "verification_status");
+  if (verification !== void 0) {
+    details.push(`Verification: ${friendlyVerificationStatus(verification)}.`);
+  }
+  const root = stringField2(flowReport, "prototype_root");
+  if (root !== void 0)
+    details.push(`Prototype root: ${root}.`);
+  const entryPoints = stringArrayField(flowReport, "entry_points");
+  if (entryPoints.length > 0)
+    details.push(`Entry points: ${entryPoints.join(", ")}.`);
+  const nextStep = stringField2(flowReport, "next_step");
+  if (nextStep !== void 0)
+    details.push(`Next step: ${nextStep}`);
+  return details;
+}
 function flowOutcomeOrRunFallback(flowReport, runOutcome2) {
   return stringField2(flowReport, "outcome") ?? runOutcome2;
 }
@@ -43598,6 +46163,32 @@ var buildProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
     return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   })();
   return { headline, details: buildFixDetails(flowReport) };
+};
+var prototypeProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
+  const verification = stringField2(flowReport, "verification_status") ?? "unknown";
+  const checkpoint = stringField2(flowReport, "checkpoint_selection") ?? "unknown";
+  const mode = stringField2(flowReport, "mode");
+  const headline = (() => {
+    if (mode === "model-comparison" && outcome === "kept") {
+      const selected = stringField2(flowReport, "selected_variant_label") ?? checkpoint;
+      return `Circuit: Prototype model comparison verified and kept ${selected}.`;
+    }
+    if (outcome === "kept") {
+      return "Circuit: Prototype verified and kept as local evidence.";
+    }
+    if (outcome === "build_input_saved") {
+      return "Circuit: Prototype verified and saved as Build input.";
+    }
+    if (outcome === "discarded") {
+      return "Circuit: Prototype verified and marked discarded.";
+    }
+    return `Circuit: Prototype finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Checkpoint: ${checkpoint}.`;
+  })();
+  return {
+    headline,
+    details: prototypeDetails(flowReport)
+  };
 };
 var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
@@ -43639,6 +46230,7 @@ var SUMMARY_PROJECTORS = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  prototype: prototypeProjector,
   pursue: pursueProjector,
   review: reviewProjector
 };
@@ -43649,11 +46241,11 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join12(runFolder, "reports", "operator-summary.json");
-  if (!existsSync9(path))
+  const path = join13(runFolder, "reports", "operator-summary.json");
+  if (!existsSync11(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync19(path, "utf8"));
+    const raw = JSON.parse(readFileSync23(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -43668,13 +46260,13 @@ function readPriorRoute(runFolder) {
 }
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.json");
+  return join13(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.md");
+  return join13(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join12(runFolder, "reports", "operator-summary.html");
+  return join13(runFolder, "reports", "operator-summary.html");
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -43695,7 +46287,7 @@ function warningRecords(report) {
     return [{ kind, message, ...path === void 0 ? {} : { path } }];
   });
 }
-function evidenceLinks(runFolder, report) {
+function evidenceLinks2(runFolder, report) {
   return arrayField(report, "evidence_links").flatMap((item) => {
     if (!isObject3(item))
       return [];
@@ -43711,11 +46303,11 @@ function evidenceLinks(runFolder, report) {
   });
 }
 function readAutoResolutions(runFolder) {
-  const tracePath = join12(runFolder, "trace.ndjson");
-  if (!existsSync9(tracePath))
+  const tracePath = join13(runFolder, "trace.ndjson");
+  if (!existsSync11(tracePath))
     return [];
   const records = [];
-  for (const line of readFileSync19(tracePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync23(tracePath, "utf8").split(/\r?\n/)) {
     if (line.trim().length === 0)
       continue;
     let entry;
@@ -43846,14 +46438,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync9(candidateHtmlPath))
+    if (existsSync11(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
       writeFileSync(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync9(candidateHtmlPath))
+      if (existsSync11(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -43878,7 +46470,7 @@ function writeOperatorSummary(input) {
       path: checkpoint.request_path
     });
   }
-  reportPaths.push(...evidenceLinks(input.runFolder, flowReport));
+  reportPaths.push(...evidenceLinks2(input.runFolder, flowReport));
   const projection = projectSummary({
     runFolder: input.runFolder,
     flowId,
@@ -43936,13 +46528,13 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync10, mkdirSync as mkdirSync2, readFileSync as readFileSync21, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync12, mkdirSync as mkdirSync2, readFileSync as readFileSync25, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname7, join as join13, resolve as resolve8 } from "node:path";
+import { dirname as dirname7, join as join14, resolve as resolve8 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync20 } from "node:fs";
-import { dirname as dirname6, relative as relative6, resolve as resolve7 } from "node:path";
+import { readFileSync as readFileSync24 } from "node:fs";
+import { dirname as dirname6, relative as relative7, resolve as resolve7 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -43953,7 +46545,7 @@ var RUNTIME_POLICY_REASONS = {
 var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit create` publish a normal runnable flow command.";
 var CLI_RUNTIME_ROUTING_POLICY = "Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.";
 function pathIsInside(parent, child) {
-  const rel = relative6(parent, child);
+  const rel = relative7(parent, child);
   return rel.length === 0 || !rel.startsWith("..") && !rel.startsWith("/");
 }
 function fixtureEligibleForRuntime(input) {
@@ -43975,7 +46567,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync20(resolve7(dirname6(resolve7(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync24(resolve7(dirname6(resolve7(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -44094,34 +46686,34 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve8(args.home ?? join13(homedir3(), ".config", "circuit", "custom"));
+  return resolve8(args.home ?? join14(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
-  return join13(home, "drafts", slug);
+  return join14(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join13(home, "skills", slug);
+  return join14(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join13(home, "flows");
+  return join14(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join13(home, "commands");
+  return join14(home, "commands");
 }
 function reportsRoot(home) {
-  return join13(home, "reports");
+  return join14(home, "reports");
 }
 function manifestPath(home) {
-  return join13(home, "manifest.json");
+  return join14(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join13(reportsRoot(home), `${slug}-create-result.json`);
+  return join14(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join13(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join14(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
   mkdirSync2(dirname7(path), { recursive: true });
@@ -44146,9 +46738,9 @@ function candidateTemplatePaths(args) {
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync10(candidate))
+    if (!existsSync12(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync21(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync25(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -44227,8 +46819,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync10(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync21(manifestPath(input.home), "utf8"));
+  if (existsSync12(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync25(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -44239,16 +46831,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join13(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join13(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join13(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join14(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join14(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join14(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join13(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join14(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -44259,10 +46851,10 @@ function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
   mkdirSync2(root, { recursive: true });
-  writeText(join13(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join13(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
-  writeJson(join13(root, "circuit.json"), input.flow);
-  writeText(join13(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  writeText(join14(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join14(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
+  writeJson(join14(root, "circuit.json"), input.flow);
+  writeText(join14(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -44271,24 +46863,24 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join13(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync21(path, "utf8")));
+  const path = join14(draftRoot(home, slug), "circuit.json");
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync25(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync10(join13(draft, "SKILL.md"))) {
+  if (!existsSync12(join14(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join13(flowRoot(input.home), input.slug);
+  const customFlowRoot = join14(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join13(skillRoot, "SKILL.md"), readFileSync21(join13(draft, "SKILL.md"), "utf8"));
-  writeText(join13(skillRoot, "circuit.yaml"), readFileSync21(join13(draft, "circuit.yaml"), "utf8"));
-  writeText(join13(customFlowRoot, "circuit.json"), readFileSync21(join13(draft, "circuit.json"), "utf8"));
-  writeText(join13(commandRoot(input.home), `${input.slug}.md`), readFileSync21(join13(draft, "command.md"), "utf8"));
+  writeText(join14(skillRoot, "SKILL.md"), readFileSync25(join14(draft, "SKILL.md"), "utf8"));
+  writeText(join14(skillRoot, "circuit.yaml"), readFileSync25(join14(draft, "circuit.yaml"), "utf8"));
+  writeText(join14(customFlowRoot, "circuit.json"), readFileSync25(join14(draft, "circuit.json"), "utf8"));
+  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync25(join14(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -44352,11 +46944,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync10(join13(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync12(join14(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync10(join13(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync12(join14(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -44380,11 +46972,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join13(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join14(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join13(flowRoot(home), slug, "circuit.json"),
-        command_path: join13(commandRoot(home), `${slug}.md`),
+        flow_path: join14(flowRoot(home), slug, "circuit.json"),
+        command_path: join14(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -44422,9 +47014,9 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3, readFileSync as readFileSync24, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync14, mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname8, join as join17, resolve as resolve10 } from "node:path";
+import { dirname as dirname8, join as join18, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/project-run-folder.js
@@ -44432,13 +47024,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve9 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync22, writeFileSync as writeFileSync3 } from "node:fs";
-import { join as join14 } from "node:path";
+import { readFileSync as readFileSync26, writeFileSync as writeFileSync3 } from "node:fs";
+import { join as join15 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join14(runFolder, "manifest.snapshot.json");
+  return join15(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync22(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync26(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -44447,8 +47039,8 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync11 } from "node:fs";
-import { join as join15 } from "node:path";
+import { existsSync as existsSync13 } from "node:fs";
+import { join as join16 } from "node:path";
 
 // dist/schemas/run-status.js
 var RunStatusEngineState = external_exports.enum([
@@ -44606,12 +47198,12 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join15(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join15(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join16(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join16(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync11(result) ? { result_path: result } : {},
-    ...existsSync11(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync11(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync13(result) ? { result_path: result } : {},
+    ...existsSync13(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync13(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -44626,14 +47218,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync23 } from "node:fs";
-import { join as join16 } from "node:path";
+import { readFileSync as readFileSync27 } from "node:fs";
+import { join as join17 } from "node:path";
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join16(runFolder, "trace.ndjson");
-  const text = readFileSync23(tracePath, "utf8");
+  const tracePath = join17(runFolder, "trace.ndjson");
+  const text = readFileSync27(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -44818,7 +47410,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync23(requestAbs, "utf8");
+    requestText = readFileSync27(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -44879,7 +47471,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync23(join16(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync27(join17(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -45327,25 +47919,25 @@ function continuityRoot(controlPlane) {
   return resolve10(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join17(continuityRoot(controlPlane), "records");
+  return join18(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join17(continuityRoot(controlPlane), "index.json");
+  return join18(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join17(recordsRoot(controlPlane), `${recordId}.json`);
+  return join18(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join17(continuityRoot(controlPlane), "reports");
+  return join18(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join17(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join18(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join17(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join18(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join17(controlPlane, "active-run.md");
+  return join18(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
   mkdirSync3(dirname8(path), { recursive: true });
@@ -45463,23 +48055,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync12(indexAbs))
+  if (!existsSync14(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync24(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync28(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync12(recordAbs)) {
+  if (!existsSync14(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
   try {
-    record2 = ContinuityRecord.parse(JSON.parse(readFileSync24(recordAbs, "utf8")));
+    record2 = ContinuityRecord.parse(JSON.parse(readFileSync28(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -45512,7 +48104,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync24(0, "utf8");
+  const raw = readFileSync28(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -45605,7 +48197,7 @@ function resolveHooksFileArg(args) {
 }
 function resolveLauncherArg(args) {
   const launcher = resolve10(args.launcher ?? defaultLauncherPath());
-  if (!existsSync12(launcher)) {
+  if (!existsSync14(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -45631,9 +48223,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync12(path))
+  if (!existsSync14(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync24(path, "utf8"));
+  const parsed = JSON.parse(readFileSync28(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -45743,9 +48335,9 @@ function launcherPathFromCircuitHookCommand(command) {
 function writeHooksConfig(path, config2) {
   mkdirSync3(dirname8(path), { recursive: true });
   let backupPath;
-  if (existsSync12(path)) {
+  if (existsSync14(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync12(candidate)) {
+    if (!existsSync14(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
@@ -45796,7 +48388,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync12(hooksPath)) {
+  if (!existsSync14(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -45835,7 +48427,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync12(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync14(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -45866,7 +48458,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync12(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync14(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -45890,7 +48482,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync12(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync14(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -46088,7 +48680,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync24(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync28(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -46114,7 +48706,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync12(indexAbs)) {
+  if (!existsSync14(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -46152,7 +48744,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync12(recordAbs)) {
+  if (!existsSync14(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -46437,7 +49029,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync25(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync29(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -46636,7 +49228,7 @@ function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   const root = resolve11(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
     const perMode = resolve11(root, flowName, `${modeName}.json`);
-    if (existsSync13(perMode))
+    if (existsSync15(perMode))
       return perMode;
   }
   return resolve11(root, flowName, "circuit.json");
@@ -46777,10 +49369,10 @@ function validateAutonomousCheckpointPolicies(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync13(fixturePath)) {
+  if (!existsSync15(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync25(fixturePath);
+  const bytes = readFileSync29(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -46873,7 +49465,7 @@ async function main(argv, options = {}) {
         ...progress2 === void 0 ? {} : { progress: progress2 },
         progressSurfaceForFlowId
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync25(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -47029,7 +49621,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync25(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

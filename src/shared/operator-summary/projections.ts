@@ -173,6 +173,39 @@ function buildFixDetails(flowReport: JsonObject | undefined): string[] {
   return details;
 }
 
+function prototypeDetails(flowReport: JsonObject | undefined): string[] {
+  const details: string[] = [];
+  const summaryDetail = flowSummaryDetail(flowReport);
+  if (summaryDetail !== undefined) details.push(summaryDetail);
+  const mode = stringField(flowReport, 'mode');
+  if (mode === 'model-comparison') {
+    const selected = stringField(flowReport, 'selected_variant_id');
+    const selectedLabel = stringField(flowReport, 'selected_variant_label');
+    const admitted = numberField(flowReport, 'admitted_variant_count');
+    const captured = numberField(flowReport, 'captured_provider_evidence_count');
+    if (selected !== undefined) {
+      details.push(
+        `Selected variant: ${selectedLabel === undefined ? selected : `${selectedLabel} (${selected})`}.`,
+      );
+    }
+    if (admitted !== undefined) details.push(`Admitted variants: ${admitted}.`);
+    if (captured !== undefined) {
+      details.push(`Captured relay selection evidence: ${captured}.`);
+    }
+  }
+  const verification = stringField(flowReport, 'verification_status');
+  if (verification !== undefined) {
+    details.push(`Verification: ${friendlyVerificationStatus(verification)}.`);
+  }
+  const root = stringField(flowReport, 'prototype_root');
+  if (root !== undefined) details.push(`Prototype root: ${root}.`);
+  const entryPoints = stringArrayField(flowReport, 'entry_points');
+  if (entryPoints.length > 0) details.push(`Entry points: ${entryPoints.join(', ')}.`);
+  const nextStep = stringField(flowReport, 'next_step');
+  if (nextStep !== undefined) details.push(`Next step: ${nextStep}`);
+  return details;
+}
+
 // Fall back to the run-level outcome when the flow-result file is missing
 // (e.g., the flow hit @stop before close-step ran). Defaulting to 'complete'
 // would let the operator summary silently contradict result.json on any
@@ -195,6 +228,33 @@ const buildProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
     return `Circuit: Build finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Review: ${friendlyReviewStatus(review)}.`;
   })();
   return { headline, details: buildFixDetails(flowReport) } satisfies SummaryProjection;
+};
+
+const prototypeProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
+  const verification = stringField(flowReport, 'verification_status') ?? 'unknown';
+  const checkpoint = stringField(flowReport, 'checkpoint_selection') ?? 'unknown';
+  const mode = stringField(flowReport, 'mode');
+  const headline = ((): string => {
+    if (mode === 'model-comparison' && outcome === 'kept') {
+      const selected = stringField(flowReport, 'selected_variant_label') ?? checkpoint;
+      return `Circuit: Prototype model comparison verified and kept ${selected}.`;
+    }
+    if (outcome === 'kept') {
+      return 'Circuit: Prototype verified and kept as local evidence.';
+    }
+    if (outcome === 'build_input_saved') {
+      return 'Circuit: Prototype verified and saved as Build input.';
+    }
+    if (outcome === 'discarded') {
+      return 'Circuit: Prototype verified and marked discarded.';
+    }
+    return `Circuit: Prototype finished with outcome ${outcome}. Verification: ${friendlyVerificationStatus(verification)}. Checkpoint: ${checkpoint}.`;
+  })();
+  return {
+    headline,
+    details: prototypeDetails(flowReport),
+  } satisfies SummaryProjection;
 };
 
 const fixProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
@@ -254,6 +314,7 @@ export const SUMMARY_PROJECTORS: Partial<Record<string, SummaryProjector>> = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  prototype: prototypeProjector,
   pursue: pursueProjector,
   review: reviewProjector,
 };

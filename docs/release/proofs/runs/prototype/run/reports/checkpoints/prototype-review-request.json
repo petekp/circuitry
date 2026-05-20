@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "step_id": "prototype-checkpoint-step",
+  "prompt": "Decide what to do with this verified Prototype artifact.",
+  "allowed_choices": [
+    "keep-prototype",
+    "save-build-input",
+    "discard-prototype"
+  ],
+  "safe_default_choice": "keep-prototype",
+  "safe_autonomous_choice": "keep-prototype",
+  "execution_context": {
+    "axes": {
+      "rigor": "deep",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
+    },
+    "project_root": "<repo>",
+    "selection_config_layers": []
+  }
+}

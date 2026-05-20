@@ -1,0 +1,22 @@
+{
+  "objective": "sketch a custom Circuit flow builder UI",
+  "prototype_scope": "Create a small, disposable artifact under docs/release/proofs/runs/prototype/run/prototype-files that makes the requested idea inspectable.",
+  "out_of_scope": [
+    "Production application code outside prototype_root",
+    "Generated host plugin packages",
+    "Deployment, branch preview, provider, or model claims"
+  ],
+  "target_user": "Operator inspecting whether the idea is worth carrying into Build",
+  "success_criteria": [
+    "The prototype files exist under prototype_root",
+    "At least one entry point is reported",
+    "The result names evidence and limitations honestly"
+  ],
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "verification_command_candidates": [],
+  "claim_limits": [
+    "not production",
+    "not deployed",
+    "not production-ready"
+  ]
+}

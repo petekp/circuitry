@@ -1,0 +1,26 @@
+{
+  "objective": "sketch a custom Circuit flow builder UI",
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "files_to_create": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html",
+    "docs/release/proofs/runs/prototype/run/prototype-files/README.md"
+  ],
+  "entry_points": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html"
+  ],
+  "interaction_path": "docs/release/proofs/runs/prototype/run/prototype-files/index.html",
+  "preview_instructions": "Open docs/release/proofs/runs/prototype/run/prototype-files/index.html in a browser or inspect the file directly.",
+  "verification": {
+    "commands": []
+  },
+  "build_followup_prompt": "Build from the Prototype artifact in docs/release/proofs/runs/prototype/run/prototype-files. Preserve the useful interaction from docs/release/proofs/runs/prototype/run/prototype-files/index.html, but implement it as production code only after reviewing the Prototype result and limitations.",
+  "risks": [
+    "Prototype polish can be mistaken for production readiness",
+    "The artifact may validate the interaction idea without covering integration cost"
+  ],
+  "claim_limits": [
+    "not production",
+    "not deployed",
+    "not production-ready"
+  ]
+}

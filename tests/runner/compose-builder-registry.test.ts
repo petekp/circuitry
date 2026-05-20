@@ -99,6 +99,8 @@ describe('compose writer registry', () => {
     expect(findComposeBuilder('review.intake@v1')?.resultSchemaName).toBe('review.intake@v1');
     expect(findComposeBuilder('review.result@v1')?.resultSchemaName).toBe('review.result@v1');
     expect(findComposeBuilder('fix.brief@v1')?.resultSchemaName).toBe('fix.brief@v1');
+    expect(findComposeBuilder('prototype.brief@v1')?.resultSchemaName).toBe('prototype.brief@v1');
+    expect(findComposeBuilder('prototype.plan@v1')?.resultSchemaName).toBe('prototype.plan@v1');
   });
 
   it('returns undefined for an unregistered schema', () => {

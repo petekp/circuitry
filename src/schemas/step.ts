@@ -304,7 +304,10 @@ export const FanoutSubRunBranchTemplate = z
     flow_ref: CompiledFlowRef,
     goal: z.string().min(1),
     depth: Depth,
-    selection: SelectionOverride.optional(),
+    // Dynamic fanout selection may contain `$item.*` placeholders. The
+    // expanded branch is parsed through FanoutBranch before execution, so
+    // runtime still enforces the real SelectionOverride shape.
+    selection: z.unknown().optional(),
   })
   .strict();
 export type FanoutSubRunBranchTemplate = z.infer<typeof FanoutSubRunBranchTemplate>;
@@ -313,7 +316,7 @@ export const FanoutRelayBranchTemplate = z
   .object({
     branch_id: z.string().min(1).max(64),
     execution: FanoutRelayBranchExecution,
-    selection: SelectionOverride.optional(),
+    selection: z.unknown().optional(),
   })
   .strict();
 export type FanoutRelayBranchTemplate = z.infer<typeof FanoutRelayBranchTemplate>;

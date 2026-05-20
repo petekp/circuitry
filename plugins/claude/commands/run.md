@@ -11,8 +11,8 @@ host model chooses the flow before invoking Circuit. The deterministic CLI
 router remains available as a compatibility and fallback path.
 
 Explicit flow commands remain available as
-`/circuit:explore`, `/circuit:review`, `/circuit:fix`, and
-`/circuit:build`.
+`/circuit:explore`, `/circuit:review`, `/circuit:fix`,
+`/circuit:build`, and `/circuit:prototype`.
 
 Pursue is routable through this selector and can be invoked
 explicitly through the CLI, but it does not have a dedicated slash command yet.
@@ -33,6 +33,8 @@ metacharacters:
      report, implementation, or risk surface. Do not implement changes.
    - **Build** — implementation, refactor, docs, tests, or focused
      product/code changes that are not primarily bug fixes.
+   - **Prototype** — disposable local prototypes, mockups, sketches, UI
+     artifacts, model-comparison variants, or throwaway evidence before Build.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
    - **Pursue** — broad operator goals with multiple coordinated pieces of
@@ -87,6 +89,18 @@ metacharacters:
    node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run explore --goal 'compare auth provider options'
    ```
 
+   Example for a Prototype task:
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run prototype --goal 'sketch a custom flow builder UI'
+   ```
+
+   Example for a Prototype model-comparison task:
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run prototype --goal 'compare prototype variants for a custom flow builder UI' --tournament --tournament-n 3
+   ```
+
    Example for a Pursue task:
 
    ```bash
@@ -133,8 +147,8 @@ metacharacters:
    machine-readable output.
 ## Direct Flow Bypass
 
-Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`, or
-`/circuit:build`
+Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`,
+`/circuit:build`, or `/circuit:prototype`
 when the operator already knows which flow they want. Those commands call
 the same CLI with an explicit flow name and skip this classifier layer.
 Pursue currently has no dedicated slash command; invoke it through

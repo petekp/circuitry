@@ -66,6 +66,9 @@ async function writeRegisteredComposeReport(
       ...(context.ports.worktree.evidencePolicy === undefined
         ? {}
         : { evidencePolicy: context.ports.worktree.evidencePolicy }),
+      ...(context.ports.selection.configLayers === undefined
+        ? {}
+        : { selectionConfigLayers: context.ports.selection.configLayers }),
       inputs,
     });
     await context.ports.runFiles.writeJson(report, body);

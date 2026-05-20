@@ -186,6 +186,33 @@ scenarios:
       - docs/release/proofs/runs/explore-autonomous-decision/run/reports/tournament-branches
     exception_ids: []
     readiness_refs: [REL-004, REL-011, REL-023]
+  - id: proof:prototype
+    title: Prototype
+    category: doing-work
+    command: './bin/circuit run prototype --goal "prototype: sketch a custom Circuit flow builder UI" --rigor deep --run-folder docs/release/proofs/runs/prototype/run --progress jsonl; ./bin/circuit resume --run-folder docs/release/proofs/runs/prototype/run --checkpoint-choice save-build-input --progress jsonl'
+    expected_flow: prototype
+    expected_outcome: checkpoint_waiting, then complete after resume
+    summary_contract: Summary states prototype root, entry points, verification status, checkpoint choice, evidence, and Build follow-up prompt.
+    redaction_policy: Uses a synthetic disposable artifact and no private source snippets.
+    required_files:
+      - docs/release/proofs/runs/prototype/progress.jsonl
+      - docs/release/proofs/runs/prototype/operator-summary.md
+      - docs/release/proofs/runs/prototype/result.json
+    status: verified_current
+    backing_paths:
+      - docs/release/proofs/runs/prototype/checkpoint-result.json
+      - docs/release/proofs/runs/prototype/run/reports/prototype/brief.json
+      - docs/release/proofs/runs/prototype/run/reports/prototype/plan.json
+      - docs/release/proofs/runs/prototype/run/reports/prototype/artifact.json
+      - docs/release/proofs/runs/prototype/run/reports/prototype/verification.json
+      - docs/release/proofs/runs/prototype/run/reports/prototype-result.json
+      - docs/release/proofs/runs/prototype/run/reports/checkpoints/prototype-review-request.json
+      - docs/release/proofs/runs/prototype/run/reports/checkpoints/prototype-review-response.json
+      - docs/release/proofs/runs/prototype/run/reports/relay/prototype-act.receipt.txt
+      - docs/release/proofs/runs/prototype/run/prototype-files/index.html
+      - docs/release/proofs/runs/prototype/run/prototype-files/README.md
+    exception_ids: []
+    readiness_refs: [REL-011]
   - id: proof:handoff
     title: Handoff Continuity
     category: continuity

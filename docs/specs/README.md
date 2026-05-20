@@ -12,3 +12,5 @@ Use this directory with care:
 | `explore-intent-v1.md` | Research note | Upstream product intent for Explore. Not reconciled as current implementation. |
 | `headless-engine-host-api-v1.md` | Research note | Used by local plan-execution proof paths. Not a shipped host API unless code and contracts agree. |
 | [narration-display-profiles.md](narration-display-profiles.md) | Canonical | Companion to [docs/contracts/host-rendering.md](../contracts/host-rendering.md); covered by host experience tests. |
+| `prototype-flow-v1.md` | Planning spec | Source-backed product and implementation spec for a durable Prototype flow. Not current behavior. |
+| `prototype-model-comparison-v1.md` | Implementation spec | Source-backed plan for adding multi-variant model-comparison to Prototype. Not current behavior. |

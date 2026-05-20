@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444443",
+  "flow_id": "prototype",
+  "run_folder": "<repo>/docs/release/proofs/runs/prototype/run",
+  "outcome": "complete",
+  "trace_entries_observed": 28,
+  "result_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/result.json",
+  "operator_summary_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/operator-summary.json",
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/operator-summary.md",
+  "operator_summary_status_text": "Prototype verified and saved as Build input."
+}

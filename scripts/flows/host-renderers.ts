@@ -27,6 +27,11 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
     description:
       'Use when the user wants Circuit to save, resume, clear, brief, or install continuity handoff support across sessions.',
   },
+  prototype: {
+    title: 'Circuit Prototype',
+    description:
+      'Use when the user wants Circuit to create disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison prototype variants before Build.',
+  },
   review: {
     title: 'Circuit Review',
     description:
@@ -181,7 +186,7 @@ function renderCodexNativeSkillBody(body: string): string {
       'Use the same safe construction rule as the other Circuit host skills:\n',
     )
     .replace(
-      /Explicit flow commands remain available as\s+`\/circuit:explore`,[\s\S]*?`\/circuit:build`\./,
+      /Explicit flow commands remain available as[\s\S]*?(?=\n\nPursue is routable)/,
       'Direct Circuit flow skills remain available when the user already knows the flow.',
     )
     .replace(/\n## Direct Flow Bypass\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g, '\n')

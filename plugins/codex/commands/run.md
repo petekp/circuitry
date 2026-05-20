@@ -11,8 +11,8 @@ host model chooses the flow before invoking Circuit. The deterministic CLI
 router remains available as a compatibility and fallback path.
 
 Explicit flow commands remain available as
-`/circuit:explore`, `/circuit:review`, `/circuit:fix`, and
-`/circuit:build`.
+`/circuit:explore`, `/circuit:review`, `/circuit:fix`,
+`/circuit:build`, and `/circuit:prototype`.
 
 Pursue is routable through this selector and can be invoked
 explicitly through the CLI, but it does not have a dedicated slash command yet.
@@ -33,6 +33,8 @@ metacharacters:
      report, implementation, or risk surface. Do not implement changes.
    - **Build** — implementation, refactor, docs, tests, or focused
      product/code changes that are not primarily bug fixes.
+   - **Prototype** — disposable local prototypes, mockups, sketches, UI
+     artifacts, model-comparison variants, or throwaway evidence before Build.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
    - **Pursue** — broad operator goals with multiple coordinated pieces of
@@ -85,6 +87,18 @@ metacharacters:
 
    ```bash
    node '<plugin root>/scripts/circuit.ts' run explore --goal 'compare auth provider options' --progress jsonl
+   ```
+
+   Example for a Prototype task:
+
+   ```bash
+   node '<plugin root>/scripts/circuit.ts' run prototype --goal 'sketch a custom flow builder UI' --progress jsonl
+   ```
+
+   Example for a Prototype model-comparison task:
+
+   ```bash
+   node '<plugin root>/scripts/circuit.ts' run prototype --goal 'compare prototype variants for a custom flow builder UI' --tournament --tournament-n 3 --progress jsonl
    ```
 
    Example for a Pursue task:
@@ -163,6 +177,12 @@ metacharacters:
    summarize the change and verification evidence, follow its
    `evidence_links` entries (for example `fix.change` and the
    verification report) and read those reports.
+   For `selected_flow === "prototype"` and `outcome === "complete"`, read
+   `reports/prototype-result.json` and surface the prototype path, selected
+   action, verification result, known limitations, residual risks, and evidence
+   links. Do not claim deployment, branch previews, screenshots, provider
+   behavior, model behavior, or production readiness unless the Prototype
+   reports and trace evidence prove those facts.
    For `selected_flow === "pursue"` and `outcome === "complete"`, read
    `reports/pursuit-result.json` and surface the coordination outcome,
    completed/skipped/blocked pursuit counts, verification result, review
@@ -184,8 +204,8 @@ metacharacters:
 
 ## Direct Flow Bypass
 
-Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`, or
-`/circuit:build`
+Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`,
+`/circuit:build`, or `/circuit:prototype`
 when the operator already knows which flow they want. Those commands call
 the same CLI with an explicit flow name and skip this classifier layer.
 Pursue currently has no dedicated slash command; invoke it through

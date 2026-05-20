@@ -35,11 +35,7 @@ export function resolveHighestScoreAutoResolution(
     }
     const rawRubric = resolveDottedPath(branch, input.rubricResultPath);
     if (rawRubric === undefined) return [];
-    if (!choiceIds.has(id)) {
-      throw new Error(
-        `checkpoint '${input.checkpointId}' highest-score rubric row '${id}' is not an allowed choice`,
-      );
-    }
+    if (!choiceIds.has(id)) return [];
     return [
       {
         id,

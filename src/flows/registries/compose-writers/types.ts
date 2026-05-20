@@ -20,6 +20,7 @@
 // that don't apply to upstream compose steps.
 
 import type { Axes } from '../../../schemas/axes.js';
+import type { LayeredConfig as LayeredConfigValue } from '../../../schemas/config.js';
 import type { RuntimeEvidencePolicy } from '../../../shared/relay-runtime-types.js';
 import type { RuntimeIndexedComposeStep, RuntimeIndexedFlow } from '../runtime-index.js';
 
@@ -44,6 +45,7 @@ export interface ComposeBuildContext {
   readonly axes?: Axes;
   readonly projectRoot?: string;
   readonly evidencePolicy?: RuntimeEvidencePolicy;
+  readonly selectionConfigLayers?: readonly LayeredConfigValue[];
   // Pre-resolved inputs from declared reads (or empty if no reads
   // declared). Builders narrow each via their own Zod schema.
   readonly inputs: Record<string, unknown | undefined>;

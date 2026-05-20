@@ -6,7 +6,15 @@ import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
 
 const REPO_ROOT = resolve('.');
 const RETIRED_FLOW_IDS = [`mi${'grate'}`, `sw${'eep'}`] as const;
-const RETAINED_FLOW_IDS = ['review', 'fix', 'pursue', 'runtime-proof', 'build', 'explore'];
+const RETAINED_FLOW_IDS = [
+  'review',
+  'fix',
+  'pursue',
+  'runtime-proof',
+  'prototype',
+  'build',
+  'explore',
+];
 const SURFACE_ROOTS = [
   'src/flows',
   'src/commands',

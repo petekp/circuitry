@@ -37,6 +37,8 @@ as literal user-controlled text when constructing shell commands.
      report, implementation, or risk surface. Do not implement changes.
    - **Build** — implementation, refactor, docs, tests, or focused
      product/code changes that are not primarily bug fixes.
+   - **Prototype** — disposable local prototypes, mockups, sketches, UI
+     artifacts, model-comparison variants, or throwaway evidence before Build.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
    - **Pursue** — broad operator goals with multiple coordinated pieces of
@@ -88,6 +90,18 @@ as literal user-controlled text when constructing shell commands.
 
    ```bash
    node '<plugin root>/scripts/circuit.ts' run explore --goal 'compare auth provider options' --progress jsonl
+   ```
+
+   Example for a Prototype task:
+
+   ```bash
+   node '<plugin root>/scripts/circuit.ts' run prototype --goal 'sketch a custom flow builder UI' --progress jsonl
+   ```
+
+   Example for a Prototype model-comparison task:
+
+   ```bash
+   node '<plugin root>/scripts/circuit.ts' run prototype --goal 'compare prototype variants for a custom flow builder UI' --tournament --tournament-n 3 --progress jsonl
    ```
 
    Example for a Pursue task:
@@ -166,6 +180,12 @@ as literal user-controlled text when constructing shell commands.
    summarize the change and verification evidence, follow its
    `evidence_links` entries (for example `fix.change` and the
    verification report) and read those reports.
+   For `selected_flow === "prototype"` and `outcome === "complete"`, read
+   `reports/prototype-result.json` and surface the prototype path, selected
+   action, verification result, known limitations, residual risks, and evidence
+   links. Do not claim deployment, branch previews, screenshots, provider
+   behavior, model behavior, or production readiness unless the Prototype
+   reports and trace evidence prove those facts.
    For `selected_flow === "pursue"` and `outcome === "complete"`, read
    `reports/pursuit-result.json` and surface the coordination outcome,
    completed/skipped/blocked pursuit counts, verification result, review

@@ -662,6 +662,82 @@ function exploreAutonomousDecisionRelayer(): Relayer {
   };
 }
 
+function readPromptJson(prompt: string, relPath: string): Record<string, unknown> {
+  const marker = `--- ${relPath} ---\n`;
+  const start = prompt.indexOf(marker);
+  if (start < 0) throw new Error(`prompt did not include ${relPath}`);
+  const jsonStart = start + marker.length;
+  const nextReport = prompt.indexOf('\n\n--- ', jsonStart);
+  const instructionStart = prompt.indexOf('\n\nRespond with', jsonStart);
+  const endCandidates = [nextReport, instructionStart].filter((index) => index >= 0);
+  const jsonEnd = endCandidates.length === 0 ? prompt.length : Math.min(...endCandidates);
+  return JSON.parse(prompt.slice(jsonStart, jsonEnd).trim()) as Record<string, unknown>;
+}
+
+function writeProofProjectFile(relPath: string, body: string): void {
+  const abs = resolve(projectRoot, relPath);
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, body);
+}
+
+function prototypeRelayer(): Relayer {
+  return {
+    connectorName: 'claude-code',
+    relay: async (input: RelayInput): Promise<RelayOutcome> => {
+      if (!input.prompt.includes('Step: act-step')) {
+        throw new Error(`unexpected Prototype proof relay prompt:\n${input.prompt.slice(0, 500)}`);
+      }
+      const plan = readPromptJson(input.prompt, 'reports/prototype/plan.json');
+      const prototypeRoot = String(plan.prototype_root);
+      const entryPoints = Array.isArray(plan.entry_points)
+        ? plan.entry_points.map((value) => String(value))
+        : [`${prototypeRoot}/index.html`];
+      const createdFiles = Array.isArray(plan.files_to_create)
+        ? plan.files_to_create.map((value) => String(value))
+        : [`${prototypeRoot}/index.html`, `${prototypeRoot}/README.md`];
+      writeProofProjectFile(
+        createdFiles[0] ?? `${prototypeRoot}/index.html`,
+        [
+          '<!doctype html>',
+          '<html lang="en">',
+          '<head><meta charset="utf-8"><title>Circuit Prototype</title></head>',
+          '<body><main><h1>Custom Circuit Flow Builder</h1><p>Inspect core flows and compose a new flow from existing blocks.</p></main></body>',
+          '</html>',
+        ].join('\n'),
+      );
+      writeProofProjectFile(
+        createdFiles[1] ?? `${prototypeRoot}/README.md`,
+        [
+          '# Custom Circuit Flow Builder Prototype',
+          '',
+          'Disposable local prototype evidence for creating custom Circuit flows from existing blocks and inspecting pre-packaged flows.',
+        ].join('\n'),
+      );
+      return {
+        request_payload: input.prompt,
+        receipt_id: 'proof-prototype-act',
+        result_body: JSON.stringify({
+          verdict: 'accept',
+          summary:
+            'Created a local prototype artifact for building custom Circuit flows from existing blocks and inspecting pre-packaged flows.',
+          prototype_root: prototypeRoot,
+          created_files: createdFiles,
+          entry_points: entryPoints,
+          preview_instructions: `Open ${entryPoints[0] ?? `${prototypeRoot}/index.html`} locally.`,
+          known_limitations: [
+            'Prototype is not wired to live Circuit flow-saving behavior.',
+            'Core-flow inspection uses static fixture content.',
+          ],
+          evidence: ['Prototype files were created under prototype_root.'],
+          claim_limits: ['not production', 'not deployed'],
+        }),
+        duration_ms: 10,
+        cli_version: 'proof-stub',
+      };
+    },
+  };
+}
+
 type Scenario = {
   slug: string;
   argv: readonly string[];
@@ -1023,6 +1099,21 @@ const scenarios: Scenario[] = [
     relayer: exploreAutonomousDecisionRelayer(),
     runId: '44444444-4444-4444-4444-444444444442',
     startMs: Date.UTC(2026, 3, 29, 17, 30, 0),
+  },
+  {
+    slug: 'prototype',
+    argv: [
+      'run',
+      'prototype',
+      '--goal',
+      'prototype: sketch a custom Circuit flow builder UI',
+      '--rigor',
+      'deep',
+    ],
+    relayer: prototypeRelayer(),
+    resumeChoice: 'save-build-input',
+    runId: '44444444-4444-4444-4444-444444444443',
+    startMs: Date.UTC(2026, 3, 29, 21, 30, 0),
   },
   {
     slug: 'plan-execution',

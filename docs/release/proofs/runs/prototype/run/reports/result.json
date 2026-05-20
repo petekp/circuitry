@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444443",
+  "flow_id": "prototype",
+  "goal": "prototype: sketch a custom Circuit flow builder UI",
+  "outcome": "complete",
+  "summary": "Run closed with outcome complete via @complete.",
+  "closed_at": "2026-04-29T21:30:30.000Z",
+  "trace_entries_observed": 28,
+  "manifest_hash": "cfbf623982c0cf2fd3509fe6ef7c556a00255bc77adb0fad7f001115232969b6",
+  "verdict": "accept"
+}

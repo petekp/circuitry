@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "44444444-4444-4444-4444-444444444443",
+  "flow_id": "prototype",
+  "selected_flow": "prototype",
+  "routed_by": "explicit",
+  "router_reason": "explicit flow positional argument",
+  "entry_mode": "deep",
+  "entry_mode_source": "explicit",
+  "run_folder": "<repo>/docs/release/proofs/runs/prototype/run",
+  "outcome": "checkpoint_waiting",
+  "trace_entries_observed": 21,
+  "operator_summary_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/operator-summary.json",
+  "operator_summary_markdown_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/operator-summary.md",
+  "operator_summary_status_text": "Waiting for a checkpoint choice.",
+  "operator_summary_html_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/operator-summary.html",
+  "checkpoint": {
+    "step_id": "prototype-checkpoint-step",
+    "request_path": "<repo>/docs/release/proofs/runs/prototype/run/reports/checkpoints/prototype-review-request.json",
+    "allowed_choices": [
+      "keep-prototype",
+      "save-build-input",
+      "discard-prototype"
+    ]
+  }
+}

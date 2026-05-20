@@ -1,0 +1,489 @@
+{
+  "schema_version": "2",
+  "id": "prototype",
+  "version": "0.1.0",
+  "purpose": "Prototype flow. Circuit frames a disposable artifact, plans its local prototype files, either relays one artifact or fans out configured model variants, verifies reported files under prototype_root, asks which local prototype evidence to keep, and closes with evidence. Prototype does not edit production code outside prototype_root or claim deployment, branch previews, screenshots, provider behavior, model behavior, or production readiness.",
+  "entry": {
+    "signals": {
+      "include": ["prototype", "mock up", "sketch"],
+      "exclude": ["production", "deploy", "ship"]
+    },
+    "intent_prefixes": ["prototype"]
+  },
+  "axes": {
+    "allowed_rigors": ["standard", "deep"],
+    "supports_tournament": true,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
+    },
+    "tournament_fan_out_stage": "act-stage"
+  },
+  "starts_at": "frame-step",
+  "stages": [
+    {
+      "id": "frame-stage",
+      "title": "Frame",
+      "canonical": "frame",
+      "steps": ["frame-step"]
+    },
+    {
+      "id": "plan-stage",
+      "title": "Plan",
+      "canonical": "plan",
+      "steps": ["plan-step", "variant-options-step"]
+    },
+    {
+      "id": "act-stage",
+      "title": "Act",
+      "canonical": "act",
+      "steps": ["variant-fanout-step"]
+    },
+    {
+      "id": "verify-stage",
+      "title": "Verify",
+      "canonical": "verify",
+      "steps": ["variant-provider-evidence-step", "variant-verification-step"]
+    },
+    {
+      "id": "review-stage",
+      "title": "Review",
+      "canonical": "review",
+      "steps": [
+        "variant-review-step",
+        "variant-choice-options-step",
+        "prototype-variant-checkpoint-step"
+      ]
+    },
+    {
+      "id": "close-stage",
+      "title": "Close",
+      "canonical": "close",
+      "steps": ["close-model-comparison-step"]
+    }
+  ],
+  "stage_path_policy": {
+    "mode": "partial",
+    "omits": ["analyze"],
+    "rationale": "Prototype follows Frame, Plan, Act, Verify, Review, Close. Analyze is omitted because V1 frames enough context to build a small disposable artifact; research-first work should use Explore."
+  },
+  "steps": [
+    {
+      "id": "frame-step",
+      "title": "Frame - define Prototype boundary",
+      "protocol": "prototype-frame@v1",
+      "reads": [],
+      "routes": {
+        "continue": "plan-step",
+        "pass": "plan-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/brief.json",
+          "schema": "prototype.brief@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["objective", "prototype_root", "claim_limits"]
+      }
+    },
+    {
+      "id": "plan-step",
+      "title": "Plan - choose disposable artifact files",
+      "protocol": "prototype-plan@v1",
+      "reads": ["reports/prototype/brief.json"],
+      "routes": {
+        "continue": "variant-options-step",
+        "pass": "variant-options-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/plan.json",
+          "schema": "prototype.plan@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["objective", "files_to_create", "verification"]
+      }
+    },
+    {
+      "id": "variant-options-step",
+      "title": "Plan - resolve Prototype model variants",
+      "protocol": "prototype-variant-options@v1",
+      "reads": ["reports/prototype/brief.json", "reports/prototype/plan.json"],
+      "routes": {
+        "continue": "variant-fanout-step",
+        "pass": "variant-fanout-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/variant-options.json",
+          "schema": "prototype.variant-options@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["variants", "variant_count"]
+      }
+    },
+    {
+      "id": "variant-fanout-step",
+      "title": "Act - create model-comparison Prototype variants",
+      "protocol": "prototype-variant-fanout@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/plan.json",
+        "reports/prototype/variant-options.json"
+      ],
+      "routes": {
+        "continue": "variant-provider-evidence-step",
+        "pass": "variant-provider-evidence-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "fanout",
+      "branches": {
+        "kind": "dynamic",
+        "source_report": "reports/prototype/variant-options.json",
+        "items_path": "variants",
+        "template": {
+          "branch_id": "$item.variant_id",
+          "execution": {
+            "kind": "relay",
+            "role": "implementer",
+            "goal": "$item.goal",
+            "report_schema": "prototype.variant-artifact@v1",
+            "provenance_field": "variant_id"
+          },
+          "selection": {
+            "model": {
+              "provider": "$item.provider",
+              "model": "$item.model"
+            },
+            "effort": "$item.effort"
+          }
+        },
+        "max_branches": {
+          "kind": "axis",
+          "axis": "tournament_n"
+        },
+        "required_count": {
+          "kind": "axis",
+          "axis": "tournament_n"
+        }
+      },
+      "concurrency": {
+        "kind": "bounded",
+        "max": 2
+      },
+      "on_child_failure": "continue-others",
+      "rubric": {
+        "model_judgments_path": "rubric_model_judgments",
+        "ordered_dims": [
+          "evidence_rigor",
+          "actionability",
+          "coverage_adequacy",
+          "scope_discipline",
+          "honest_calibration",
+          "project_specificity",
+          "insight_density",
+          "branch_distinctness"
+        ],
+        "runtime_signals": {
+          "evidence_rigor": {
+            "kind": "non_empty_array",
+            "path": "evidence"
+          },
+          "actionability": {
+            "kind": "non_empty_array",
+            "path": "entry_points"
+          },
+          "coverage_adequacy": {
+            "kind": "non_empty_string",
+            "path": "summary"
+          },
+          "scope_discipline": {
+            "kind": "constant",
+            "signal": "met"
+          },
+          "honest_calibration": {
+            "kind": "non_empty_array",
+            "path": "claim_limits"
+          },
+          "project_specificity": {
+            "kind": "non_empty_string",
+            "path": "variant_root"
+          },
+          "insight_density": {
+            "kind": "constant",
+            "signal": "n/a"
+          },
+          "branch_distinctness": {
+            "kind": "constant",
+            "signal": "n/a"
+          }
+        }
+      },
+      "writes": {
+        "branches_dir": "reports/prototype/variant-branches",
+        "aggregate": {
+          "path": "reports/prototype/variant-aggregate.json",
+          "schema": "prototype.variant-aggregate@v1"
+        }
+      },
+      "check": {
+        "kind": "fanout_aggregate",
+        "source": {
+          "kind": "fanout_results",
+          "ref": "aggregate"
+        },
+        "join": {
+          "policy": "aggregate-survivors"
+        },
+        "verdicts": {
+          "admit": ["accept"]
+        }
+      }
+    },
+    {
+      "id": "variant-provider-evidence-step",
+      "title": "Verify - capture variant provider evidence",
+      "protocol": "prototype-variant-provider-evidence@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/variant-options.json",
+        "reports/prototype/variant-aggregate.json"
+      ],
+      "routes": {
+        "complete": "variant-verification-step",
+        "pass": "variant-verification-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/variant-provider-evidence.json",
+          "schema": "prototype.variant-provider-evidence@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["captured_count", "variants"]
+      }
+    },
+    {
+      "id": "variant-verification-step",
+      "title": "Verify - check Prototype variants",
+      "protocol": "prototype-variant-verify@v1",
+      "reads": [
+        "reports/prototype/plan.json",
+        "reports/prototype/variant-aggregate.json",
+        "reports/prototype/variant-provider-evidence.json"
+      ],
+      "routes": {
+        "continue": "variant-review-step",
+        "pass": "variant-review-step",
+        "stop": "close-model-comparison-step"
+      },
+      "executor": "orchestrator",
+      "kind": "verification",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/variant-verification.json",
+          "schema": "prototype.variant-verification@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["overall_status", "commands", "variant_results"]
+      }
+    },
+    {
+      "id": "variant-review-step",
+      "title": "Review - compare Prototype variants",
+      "protocol": "prototype-variant-review@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/variant-options.json",
+        "reports/prototype/variant-aggregate.json",
+        "reports/prototype/variant-provider-evidence.json",
+        "reports/prototype/variant-verification.json"
+      ],
+      "routes": {
+        "continue": "variant-choice-options-step",
+        "pass": "variant-choice-options-step",
+        "stop": "close-model-comparison-step"
+      },
+      "executor": "worker",
+      "kind": "relay",
+      "role": "reviewer",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/variant-review.json",
+          "schema": "prototype.variant-review@v1"
+        },
+        "request": "reports/relay/prototype-variant-review.request.json",
+        "receipt": "reports/relay/prototype-variant-review.receipt.txt",
+        "result": "reports/relay/prototype-variant-review.result.json"
+      },
+      "check": {
+        "kind": "result_verdict",
+        "source": {
+          "kind": "relay_result",
+          "ref": "result"
+        },
+        "pass": ["recommend", "no-clear-winner", "needs-operator"]
+      }
+    },
+    {
+      "id": "variant-choice-options-step",
+      "title": "Review - prepare variant checkpoint choices",
+      "protocol": "prototype-variant-choice-options@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/variant-aggregate.json",
+        "reports/prototype/variant-provider-evidence.json",
+        "reports/prototype/variant-verification.json",
+        "reports/prototype/variant-review.json"
+      ],
+      "routes": {
+        "continue": "prototype-variant-checkpoint-step",
+        "pass": "prototype-variant-checkpoint-step",
+        "stop": "close-model-comparison-step"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/variant-choice-options.json",
+          "schema": "prototype.variant-choice-options@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["choices", "recommended_variant_id"]
+      }
+    },
+    {
+      "id": "prototype-variant-checkpoint-step",
+      "title": "Review - choose Prototype variant",
+      "protocol": "prototype-variant-checkpoint@v1",
+      "reads": [
+        "reports/prototype/variant-choice-options.json",
+        "reports/prototype/variant-aggregate.json"
+      ],
+      "routes": {
+        "continue": "close-model-comparison-step",
+        "pass": "close-model-comparison-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "checkpoint",
+      "policy": {
+        "prompt": "Choose which local Prototype variant Circuit should keep. This checkpoint does not run Build or claim deployment.",
+        "choices_from": {
+          "kind": "report_items",
+          "source_report": "reports/prototype/variant-choice-options.json",
+          "items_path": "choices",
+          "id_path": "id",
+          "label_path": "label",
+          "description_path": "description"
+        },
+        "auto_resolution": {
+          "policy": "highest-score",
+          "source_report": "reports/prototype/variant-aggregate.json",
+          "branches_path": "branches",
+          "id_path": "branch_id",
+          "rubric_result_path": "rubric_result"
+        }
+      },
+      "writes": {
+        "request": "reports/checkpoints/prototype-variant-choice-request.json",
+        "response": "reports/checkpoints/prototype-variant-choice-response.json"
+      },
+      "check": {
+        "kind": "checkpoint_selection",
+        "source": {
+          "kind": "checkpoint_response",
+          "ref": "response"
+        },
+        "allow_from": {
+          "kind": "policy_choices"
+        }
+      }
+    },
+    {
+      "id": "close-model-comparison-step",
+      "title": "Close - emit Prototype model-comparison result",
+      "protocol": "prototype-close-model-comparison@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/plan.json",
+        "reports/prototype/variant-options.json",
+        "reports/prototype/variant-aggregate.json",
+        "reports/prototype/variant-provider-evidence.json",
+        "reports/prototype/variant-verification.json"
+      ],
+      "routes": {
+        "complete": "@complete",
+        "pass": "@complete",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype-result.json",
+          "schema": "prototype.result@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["summary", "outcome", "evidence_links"]
+      }
+    }
+  ]
+}

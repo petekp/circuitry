@@ -505,6 +505,83 @@ describe('Step discriminated union', () => {
     expect(bad.success).toBe(false);
   });
 
+  it('accepts dynamic fanout selection templates but still rejects static invalid selections', () => {
+    const dynamic = Step.safeParse({
+      ...baseCompose,
+      id: 'variant-fanout',
+      title: 'Variant fanout',
+      kind: 'fanout',
+      protocol: 'prototype-variant-fanout@v1',
+      writes: {
+        branches_dir: 'reports/branches',
+        aggregate: { path: 'reports/aggregate.json', schema: 'prototype.variant-aggregate@v1' },
+      },
+      branches: {
+        kind: 'dynamic',
+        source_report: 'reports/options.json',
+        items_path: 'variants',
+        template: {
+          branch_id: '$item.variant_id',
+          execution: {
+            kind: 'relay',
+            role: 'implementer',
+            goal: '$item.goal',
+            report_schema: 'prototype.variant-artifact@v1',
+            provenance_field: 'variant_id',
+          },
+          selection: {
+            model: { provider: '$item.provider', model: '$item.model' },
+            effort: '$item.effort',
+          },
+        },
+      },
+      check: {
+        kind: 'fanout_aggregate',
+        source: { kind: 'fanout_results', ref: 'aggregate' },
+        verdicts: { admit: ['accept'] },
+        join: { policy: 'aggregate-survivors' },
+      },
+    });
+    expect(dynamic.success).toBe(true);
+
+    const invalidStatic = Step.safeParse({
+      ...baseCompose,
+      id: 'static-fanout',
+      title: 'Static fanout',
+      kind: 'fanout',
+      protocol: 'prototype-static-fanout@v1',
+      writes: {
+        branches_dir: 'reports/branches',
+        aggregate: { path: 'reports/aggregate.json', schema: 'prototype.variant-aggregate@v1' },
+      },
+      branches: {
+        kind: 'static',
+        branches: [
+          {
+            branch_id: 'variant-a',
+            execution: {
+              kind: 'relay',
+              role: 'implementer',
+              goal: 'make a variant',
+              report_schema: 'prototype.variant-artifact@v1',
+            },
+            selection: {
+              model: { provider: '$item.provider', model: '$item.model' },
+              effort: '$item.effort',
+            },
+          },
+        ],
+      },
+      check: {
+        kind: 'fanout_aggregate',
+        source: { kind: 'fanout_results', ref: 'aggregate' },
+        verdicts: { admit: ['accept'] },
+        join: { policy: 'aggregate-survivors' },
+      },
+    });
+    expect(invalidStatic.success).toBe(false);
+  });
+
   it('STEP-I8 — rejects non-run-relative paths on every flow-controlled Step path surface', () => {
     const invalidPaths = [
       '../escaped.json',

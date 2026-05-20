@@ -1,0 +1,56 @@
+{
+  "summary": "Prototype verified and saved as Build input. Created a local prototype artifact for building custom Circuit flows from existing blocks and inspecting pre-packaged flows.",
+  "outcome": "build_input_saved",
+  "artifact_status": "accepted",
+  "verification_status": "passed",
+  "checkpoint_status": "operator_selected",
+  "checkpoint_selection": "save-build-input",
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "entry_points": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html"
+  ],
+  "preview_instructions": "Open docs/release/proofs/runs/prototype/run/prototype-files/index.html locally.",
+  "build_followup_prompt": "Build from the Prototype artifact in docs/release/proofs/runs/prototype/run/prototype-files. Preserve the useful interaction from docs/release/proofs/runs/prototype/run/prototype-files/index.html, but implement it as production code only after reviewing the Prototype result and limitations.",
+  "residual_risks": [
+    "Prototype is not wired to live Circuit flow-saving behavior.",
+    "Core-flow inspection uses static fixture content."
+  ],
+  "next_step": "Use build_followup_prompt as the starting brief for Build when you are ready to turn this prototype into production code.",
+  "claim_limits": [
+    "not production",
+    "not deployed",
+    "not production-ready"
+  ],
+  "evidence_links": [
+    {
+      "report_id": "prototype.brief",
+      "path": "reports/prototype/brief.json",
+      "schema": "prototype.brief@v1"
+    },
+    {
+      "report_id": "prototype.plan",
+      "path": "reports/prototype/plan.json",
+      "schema": "prototype.plan@v1"
+    },
+    {
+      "report_id": "prototype.artifact",
+      "path": "reports/prototype/artifact.json",
+      "schema": "prototype.artifact@v1"
+    },
+    {
+      "report_id": "prototype.verification",
+      "path": "reports/prototype/verification.json",
+      "schema": "prototype.verification@v1"
+    },
+    {
+      "report_id": "prototype.checkpoint.request",
+      "path": "reports/checkpoints/prototype-review-request.json",
+      "schema": "checkpoint.request@v1"
+    },
+    {
+      "report_id": "prototype.checkpoint.response",
+      "path": "reports/checkpoints/prototype-review-response.json",
+      "schema": "checkpoint.response@v1"
+    }
+  ]
+}

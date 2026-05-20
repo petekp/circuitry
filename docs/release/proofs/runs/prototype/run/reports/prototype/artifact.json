@@ -1,0 +1,24 @@
+{
+  "verdict": "accept",
+  "summary": "Created a local prototype artifact for building custom Circuit flows from existing blocks and inspecting pre-packaged flows.",
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "created_files": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html",
+    "docs/release/proofs/runs/prototype/run/prototype-files/README.md"
+  ],
+  "entry_points": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html"
+  ],
+  "preview_instructions": "Open docs/release/proofs/runs/prototype/run/prototype-files/index.html locally.",
+  "known_limitations": [
+    "Prototype is not wired to live Circuit flow-saving behavior.",
+    "Core-flow inspection uses static fixture content."
+  ],
+  "evidence": [
+    "Prototype files were created under prototype_root."
+  ],
+  "claim_limits": [
+    "not production",
+    "not deployed"
+  ]
+}

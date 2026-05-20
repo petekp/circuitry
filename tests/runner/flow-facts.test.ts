@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 
 import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
 
-const RETAINED_FLOW_IDS = ['review', 'fix', 'pursue', 'runtime-proof', 'build', 'explore'] as const;
+const RETAINED_FLOW_IDS = [
+  'review',
+  'fix',
+  'pursue',
+  'runtime-proof',
+  'prototype',
+  'build',
+  'explore',
+] as const;
 function readSource(path: string): string {
   return readFileSync(path, 'utf8');
 }

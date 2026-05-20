@@ -69,10 +69,14 @@ async function buildRuntimeBundle(): Promise<string> {
         'process.env.CIRCUIT_VERSION': JSON.stringify(readVersion()),
       },
     });
-    return readFileSync(tempFile, 'utf8');
+    return stripTrailingWhitespace(readFileSync(tempFile, 'utf8'));
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
+}
+
+function stripTrailingWhitespace(body: string): string {
+  return body.replace(/[ \t]+$/gm, '');
 }
 
 const bundle = await buildRuntimeBundle();

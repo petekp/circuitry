@@ -10,6 +10,7 @@ import { exploreFlowDefinition } from './explore/flow.js';
 import { fixFlowDefinition } from './fix/flow.js';
 import { compileFlowDefinitions } from './flow-definition.js';
 import type { FlowDefinition } from './flow-definition.js';
+import { prototypeFlowDefinition } from './prototype/flow.js';
 import { pursueFlowDefinition } from './pursue/flow.js';
 import { reviewFlowDefinition } from './review/flow.js';
 import { runtimeProofFlowDefinition } from './runtime-proof/flow.js';
@@ -20,6 +21,7 @@ export const flowDefinitions: readonly FlowDefinition[] = [
   fixFlowDefinition,
   pursueFlowDefinition,
   runtimeProofFlowDefinition,
+  prototypeFlowDefinition,
   buildFlowDefinition,
   exploreFlowDefinition,
 ];

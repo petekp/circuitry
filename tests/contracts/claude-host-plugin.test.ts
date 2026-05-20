@@ -18,7 +18,16 @@ import { z } from 'zod';
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/claude');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
-const EXPECTED_CLAUDE_COMMANDS = ['build', 'create', 'explore', 'fix', 'handoff', 'review', 'run'];
+const EXPECTED_CLAUDE_COMMANDS = [
+  'build',
+  'create',
+  'explore',
+  'fix',
+  'handoff',
+  'prototype',
+  'review',
+  'run',
+];
 const RAW_PROGRESS_INVOCATION =
   /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.ts" (?!present\b)[^\n]*--progress jsonl/;
 

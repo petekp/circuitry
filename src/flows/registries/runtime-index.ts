@@ -128,16 +128,19 @@ export function reportPathForSchemaInRuntimeFlow(
   flow: RuntimeIndexedFlow,
   schemaName: string,
 ): string {
-  const matches = flow.steps.filter((step) => {
-    const report = step.writes.report;
-    return typeof report === 'object' && report !== null && report.schema === schemaName;
-  });
+  const matches = flow.steps.flatMap((step) =>
+    Object.values(step.writes).flatMap((write) =>
+      typeof write === 'object' && write !== null && write.schema === schemaName
+        ? [{ step, write }]
+        : [],
+    ),
+  );
   if (matches.length !== 1) {
     throw new Error(
       `expected exactly one report writer for schema '${schemaName}', found ${matches.length}`,
     );
   }
-  const report = matches[0]?.writes.report;
+  const report = matches[0]?.write;
   if (typeof report !== 'object' || report === null) {
     throw new Error(`report writer for schema '${schemaName}' is missing a report path`);
   }
@@ -148,9 +151,10 @@ export function flowHasReportSchemaInRuntimeFlow(
   flow: RuntimeIndexedFlow,
   schemaName: string,
 ): boolean {
-  return flow.steps.some((step) => {
-    const report = step.writes.report;
-    return typeof report === 'object' && report !== null && report.schema === schemaName;
-  });
+  return flow.steps.some((step) =>
+    Object.values(step.writes).some(
+      (write) => typeof write === 'object' && write !== null && write.schema === schemaName,
+    ),
+  );
 }
 import type { SelectionOverride as SelectionOverrideValue } from '../../schemas/selection-policy.js';

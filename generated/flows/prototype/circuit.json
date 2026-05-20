@@ -1,0 +1,261 @@
+{
+  "schema_version": "2",
+  "id": "prototype",
+  "version": "0.1.0",
+  "purpose": "Prototype flow. Circuit frames a disposable artifact, plans its local prototype files, either relays one artifact or fans out configured model variants, verifies reported files under prototype_root, asks which local prototype evidence to keep, and closes with evidence. Prototype does not edit production code outside prototype_root or claim deployment, branch previews, screenshots, provider behavior, model behavior, or production readiness.",
+  "entry": {
+    "signals": {
+      "include": ["prototype", "mock up", "sketch"],
+      "exclude": ["production", "deploy", "ship"]
+    },
+    "intent_prefixes": ["prototype"]
+  },
+  "axes": {
+    "allowed_rigors": ["standard", "deep"],
+    "supports_tournament": true,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
+    },
+    "tournament_fan_out_stage": "act-stage"
+  },
+  "starts_at": "frame-step",
+  "stages": [
+    {
+      "id": "frame-stage",
+      "title": "Frame",
+      "canonical": "frame",
+      "steps": ["frame-step"]
+    },
+    {
+      "id": "plan-stage",
+      "title": "Plan",
+      "canonical": "plan",
+      "steps": ["plan-step"]
+    },
+    {
+      "id": "act-stage",
+      "title": "Act",
+      "canonical": "act",
+      "steps": ["act-step"]
+    },
+    {
+      "id": "verify-stage",
+      "title": "Verify",
+      "canonical": "verify",
+      "steps": ["verify-step"]
+    },
+    {
+      "id": "review-stage",
+      "title": "Review",
+      "canonical": "review",
+      "steps": ["prototype-checkpoint-step"]
+    },
+    {
+      "id": "close-stage",
+      "title": "Close",
+      "canonical": "close",
+      "steps": ["close-step"]
+    }
+  ],
+  "stage_path_policy": {
+    "mode": "partial",
+    "omits": ["analyze"],
+    "rationale": "Prototype follows Frame, Plan, Act, Verify, Review, Close. Analyze is omitted because V1 frames enough context to build a small disposable artifact; research-first work should use Explore."
+  },
+  "steps": [
+    {
+      "id": "frame-step",
+      "title": "Frame - define Prototype boundary",
+      "protocol": "prototype-frame@v1",
+      "reads": [],
+      "routes": {
+        "continue": "plan-step",
+        "pass": "plan-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/brief.json",
+          "schema": "prototype.brief@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["objective", "prototype_root", "claim_limits"]
+      }
+    },
+    {
+      "id": "plan-step",
+      "title": "Plan - choose disposable artifact files",
+      "protocol": "prototype-plan@v1",
+      "reads": ["reports/prototype/brief.json"],
+      "routes": {
+        "continue": "act-step",
+        "pass": "act-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/plan.json",
+          "schema": "prototype.plan@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["objective", "files_to_create", "verification"]
+      }
+    },
+    {
+      "id": "act-step",
+      "title": "Act - create disposable prototype artifact",
+      "protocol": "prototype-act@v1",
+      "reads": ["reports/prototype/brief.json", "reports/prototype/plan.json"],
+      "routes": {
+        "continue": "verify-step",
+        "pass": "verify-step",
+        "stop": "close-step"
+      },
+      "executor": "worker",
+      "kind": "relay",
+      "role": "implementer",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/artifact.json",
+          "schema": "prototype.artifact@v1"
+        },
+        "request": "reports/relay/prototype-act.request.json",
+        "receipt": "reports/relay/prototype-act.receipt.txt",
+        "result": "reports/relay/prototype-act.result.json"
+      },
+      "check": {
+        "kind": "result_verdict",
+        "source": {
+          "kind": "relay_result",
+          "ref": "result"
+        },
+        "pass": ["accept"]
+      }
+    },
+    {
+      "id": "verify-step",
+      "title": "Verify - check Prototype artifact integrity",
+      "protocol": "prototype-verify@v1",
+      "reads": ["reports/prototype/plan.json", "reports/prototype/artifact.json"],
+      "routes": {
+        "continue": "prototype-checkpoint-step",
+        "pass": "prototype-checkpoint-step",
+        "stop": "close-step"
+      },
+      "executor": "orchestrator",
+      "kind": "verification",
+      "writes": {
+        "report": {
+          "path": "reports/prototype/verification.json",
+          "schema": "prototype.verification@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["overall_status", "commands"]
+      }
+    },
+    {
+      "id": "prototype-checkpoint-step",
+      "title": "Review - decide Prototype disposition",
+      "protocol": "prototype-checkpoint@v1",
+      "reads": ["reports/prototype/artifact.json", "reports/prototype/verification.json"],
+      "routes": {
+        "continue": "close-step",
+        "pass": "close-step",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "checkpoint",
+      "policy": {
+        "prompt": "Decide what to do with this verified Prototype artifact.",
+        "choices": [
+          {
+            "id": "keep-prototype",
+            "label": "Keep Prototype",
+            "description": "Save the prototype as useful evidence and stop here."
+          },
+          {
+            "id": "save-build-input",
+            "label": "Save Build Input",
+            "description": "Close with a Build-ready follow-up prompt, without running Build."
+          },
+          {
+            "id": "discard-prototype",
+            "label": "Discard Prototype",
+            "description": "Mark the prototype as discarded while keeping the evidence trail."
+          }
+        ],
+        "safe_default_choice": "keep-prototype",
+        "safe_autonomous_choice": "keep-prototype"
+      },
+      "writes": {
+        "request": "reports/checkpoints/prototype-review-request.json",
+        "response": "reports/checkpoints/prototype-review-response.json"
+      },
+      "check": {
+        "kind": "checkpoint_selection",
+        "source": {
+          "kind": "checkpoint_response",
+          "ref": "response"
+        },
+        "allow": ["keep-prototype", "save-build-input", "discard-prototype"]
+      }
+    },
+    {
+      "id": "close-step",
+      "title": "Close - emit Prototype result",
+      "protocol": "prototype-close@v1",
+      "reads": [
+        "reports/prototype/brief.json",
+        "reports/prototype/plan.json",
+        "reports/prototype/artifact.json"
+      ],
+      "routes": {
+        "complete": "@complete",
+        "pass": "@complete",
+        "stop": "@stop"
+      },
+      "executor": "orchestrator",
+      "kind": "compose",
+      "writes": {
+        "report": {
+          "path": "reports/prototype-result.json",
+          "schema": "prototype.result@v1"
+        }
+      },
+      "check": {
+        "kind": "schema_sections",
+        "source": {
+          "kind": "report",
+          "ref": "report"
+        },
+        "required": ["summary", "outcome", "evidence_links"]
+      }
+    }
+  ]
+}

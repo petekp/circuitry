@@ -129,6 +129,76 @@ describe('CircuitOverride strict surface (CONFIG-I3)', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('accepts typed Prototype variant model matrices', () => {
+    const ok = CircuitOverride.safeParse({
+      variant_models: [
+        {
+          id: 'variant-a',
+          label: 'Variant A',
+          selection: {
+            model: { provider: 'anthropic', model: 'local-fixture-a' },
+            effort: 'medium',
+          },
+        },
+        {
+          id: 'variant-b',
+          label: 'Variant B',
+          selection: {
+            model: { provider: 'anthropic', model: 'local-fixture-b' },
+            effort: 'high',
+          },
+        },
+      ],
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects unsafe or incomplete Prototype variant model matrices', () => {
+    expect(
+      CircuitOverride.safeParse({
+        variant_models: [
+          {
+            id: 'variant-a',
+            label: 'Variant A',
+            selection: {
+              model: { provider: 'anthropic', model: 'local-fixture-a' },
+              effort: 'medium',
+            },
+          },
+          {
+            id: 'variant-a',
+            label: 'Duplicate Variant A',
+            selection: {
+              model: { provider: 'anthropic', model: 'local-fixture-b' },
+              effort: 'medium',
+            },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      CircuitOverride.safeParse({
+        variant_models: [
+          {
+            id: '../escape',
+            label: 'Bad id',
+            selection: {
+              model: { provider: 'anthropic', model: 'local-fixture-a' },
+              effort: 'medium',
+            },
+          },
+          {
+            id: 'variant-b',
+            label: 'Missing effort',
+            selection: {
+              model: { provider: 'anthropic', model: 'local-fixture-b' },
+            },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects circuit override with `skills: string[]` v0.0 shortcut (CONFIG-I3)', () => {
     const bad = CircuitOverride.safeParse({ skills: ['runtime-proof'] });
     expect(bad.success).toBe(false);

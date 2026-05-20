@@ -424,6 +424,13 @@ const PROOF_AXIS_BY_SCENARIO = new Map([
     },
   ],
   [
+    'proof:prototype',
+    {
+      capability: 'flow:prototype',
+      proof: 'Prototype golden run with checkpoint disposition.',
+    },
+  ],
+  [
     'proof:plan-execution',
     {
       capability: 'feature:plan-execution',

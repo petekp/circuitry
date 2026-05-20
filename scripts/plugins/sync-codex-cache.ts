@@ -65,6 +65,11 @@ function assertSafePathSegment(value: string, label: string): void {
   if (!/^[A-Za-z0-9._-]+$/.test(value) || value === '.' || value === '..') {
     throw new Error(`${label} must be a single safe path segment; got ${JSON.stringify(value)}`);
   }
+  if (value.includes('circuit-next')) {
+    throw new Error(
+      `${label} must use the canonical Circuit package name; legacy circuit-next cache names are not supported`,
+    );
+  }
 }
 
 function pathEndsWithSegments(path: string, suffix: readonly string[]): boolean {

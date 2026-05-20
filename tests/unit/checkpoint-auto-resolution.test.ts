@@ -115,6 +115,27 @@ describe('resolveHighestScoreAutoResolution', () => {
     ).toThrow(/missing rubric rows for choices: option-2/);
   });
 
+  it('ranks only allowed checkpoint choices when aggregate evidence has extra rubric rows', () => {
+    const resolution = resolveHighestScoreAutoResolution({
+      checkpointId: 'tradeoff-checkpoint-step',
+      choices: ['option-1', 'option-2'],
+      resolvedAt: '2026-05-19T12:00:00.000Z',
+      branches: [
+        { branch_id: 'option-1', rubric_result: rubric({ evidence_rigor: CONCERN }) },
+        { branch_id: 'option-2', rubric_result: rubric() },
+        { branch_id: 'option-3', rubric_result: rubric() },
+      ],
+      idPath: 'branch_id',
+      rubricResultPath: 'rubric_result',
+    });
+
+    expect(resolution.selection).toBe('option-2');
+    const scores = resolution.record.scores;
+    expect(scores).toBeDefined();
+    if (scores === undefined) throw new Error('expected scores');
+    expect(Object.keys(scores)).toEqual(['option-2', 'option-1']);
+  });
+
   it('summarizes runtime-veto effects', () => {
     const result = resolveHighestScoreAutoResolution({
       checkpointId: 'tradeoff-checkpoint-step',

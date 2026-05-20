@@ -184,6 +184,72 @@ function buildBrief(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const PROTOTYPE_ROOT = '.circuit/prototypes/operator-summary';
+
+function prototypeBrief(overrides: Record<string, unknown> = {}) {
+  return {
+    objective: 'Custom flow builder',
+    prototype_scope: 'Create a disposable UI artifact.',
+    out_of_scope: ['Production code', 'Deployment'],
+    target_user: 'Circuit operator',
+    success_criteria: ['Prototype files exist'],
+    prototype_root: PROTOTYPE_ROOT,
+    verification_command_candidates: [],
+    claim_limits: ['not production', 'not deployed'],
+    ...overrides,
+  };
+}
+
+function prototypePlan(overrides: Record<string, unknown> = {}) {
+  return {
+    objective: 'Custom flow builder',
+    prototype_root: PROTOTYPE_ROOT,
+    files_to_create: [`${PROTOTYPE_ROOT}/index.html`, `${PROTOTYPE_ROOT}/README.md`],
+    entry_points: [`${PROTOTYPE_ROOT}/index.html`],
+    interaction_path: `${PROTOTYPE_ROOT}/index.html`,
+    preview_instructions: `Open ${PROTOTYPE_ROOT}/index.html locally.`,
+    verification: { commands: [] },
+    build_followup_prompt: 'Use this prototype as Build input later.',
+    risks: ['Prototype polish can overstate readiness.'],
+    claim_limits: ['not production', 'not deployed'],
+    ...overrides,
+  };
+}
+
+function prototypeArtifact(overrides: Record<string, unknown> = {}) {
+  return {
+    verdict: 'accept',
+    summary: 'Created a local custom-flow UI prototype.',
+    prototype_root: PROTOTYPE_ROOT,
+    created_files: [`${PROTOTYPE_ROOT}/index.html`, `${PROTOTYPE_ROOT}/README.md`],
+    entry_points: [`${PROTOTYPE_ROOT}/index.html`],
+    preview_instructions: `Open ${PROTOTYPE_ROOT}/index.html locally.`,
+    known_limitations: ['Not wired to live Circuit flow saving.'],
+    evidence: ['index.html exists'],
+    claim_limits: ['not production', 'not deployed'],
+    ...overrides,
+  };
+}
+
+function prototypeVerification(overrides: Record<string, unknown> = {}) {
+  return {
+    overall_status: 'passed',
+    commands: [
+      {
+        command_id: 'prototype-artifact-integrity',
+        argv: [process.execPath, '-e', 'process.exit(0)'],
+        cwd: '.',
+        exit_code: 0,
+        status: 'passed',
+        duration_ms: 1,
+        stdout_summary: 'ok',
+        stderr_summary: '',
+      },
+    ],
+    ...overrides,
+  };
+}
+
 describe('operator summary writer', () => {
   it('writes Review summary files with verdict, finding count, warnings, and report paths', () => {
     writeReport('reports/review-result.json', {
@@ -1168,6 +1234,101 @@ describe('operator summary writer', () => {
         },
       },
       route: { selectedFlow: 'build' },
+    });
+
+    expect(written.htmlPath).toBeUndefined();
+    expect(existsSync(stalePath)).toBe(false);
+    expect(written.summary.report_paths.map((report) => report.label)).not.toContain(
+      'Operator summary (HTML)',
+    );
+  });
+
+  it('emits operator-summary.html for Prototype waiting checkpoints and links it from JSON and Markdown', () => {
+    writeReport('reports/prototype/brief.json', prototypeBrief());
+    writeReport('reports/prototype/plan.json', prototypePlan());
+    writeReport('reports/prototype/artifact.json', prototypeArtifact());
+    writeReport('reports/prototype/verification.json', prototypeVerification());
+    const requestPath = join(runFolder, 'reports/checkpoints/prototype-review-request.json');
+    writeReport('reports/checkpoints/prototype-review-request.json', {
+      schema_version: 1,
+      step_id: 'prototype-checkpoint-step',
+      prompt: 'Decide what to do with this verified Prototype artifact.',
+      allowed_choices: ['keep-prototype', 'save-build-input', 'discard-prototype'],
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000018'),
+        flow_id: CompiledFlowId.parse('prototype'),
+        goal: 'prototype: sketch a custom flow builder UI',
+        outcome: 'checkpoint_waiting',
+        summary: "checkpoint 'prototype-checkpoint-step' is waiting for an operator choice.",
+        trace_entries_observed: 5,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'prototype-checkpoint-step',
+          request_path: requestPath,
+          allowed_choices: ['keep-prototype', 'save-build-input', 'discard-prototype'],
+        },
+      },
+      route: { selectedFlow: 'prototype' },
+    });
+
+    expect(written.htmlPath).toBe(join(runFolder, 'reports', 'operator-summary.html'));
+    expect(existsSync(written.htmlPath as string)).toBe(true);
+    expect(written.summary.html_path).toBe(written.htmlPath);
+    expect(written.summary.report_paths.map((report) => report.label)).toEqual([
+      'Operator summary (HTML)',
+      'Checkpoint request',
+    ]);
+
+    const html = readFileSync(written.htmlPath as string, 'utf8');
+    expect(html).toContain('Custom flow builder');
+    expect(html).toContain('Verified local artifact');
+    expect(html).toContain('Keep Prototype');
+    expect(html).toContain('Save Build Input');
+    expect(html).toContain('Discard Prototype');
+    expect(html).toContain(`${PROTOTYPE_ROOT}/index.html`);
+    expect(html).toContain('not production');
+    expect(html).toContain('not deployed');
+
+    const markdown = readFileSync(written.markdownPath, 'utf8');
+    expect(markdown).toContain(`Rich summary: ${written.htmlPath as string}`);
+    expect(markdown).toContain('Choices: keep-prototype, save-build-input, discard-prototype');
+  });
+
+  it('removes stale Prototype checkpoint HTML when typed reports are malformed', () => {
+    const stalePath = join(runFolder, 'reports', 'operator-summary.html');
+    writeFileSync(stalePath, '<!doctype html><body>stale prototype checkpoint</body>');
+    writeReport('reports/prototype/brief.json', prototypeBrief());
+    writeReport('reports/prototype/plan.json', prototypePlan());
+    writeReport('reports/prototype/artifact.json', {
+      ...prototypeArtifact(),
+      entry_points: ['src/outside.html'],
+    });
+    writeReport('reports/prototype/verification.json', prototypeVerification());
+    const requestPath = join(runFolder, 'reports/checkpoints/prototype-review-request.json');
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: {
+        schema_version: 1,
+        run_id: RunId.parse('87000000-0000-0000-0000-000000000019'),
+        flow_id: CompiledFlowId.parse('prototype'),
+        goal: 'prototype: sketch a custom flow builder UI',
+        outcome: 'checkpoint_waiting',
+        summary: "checkpoint 'prototype-checkpoint-step' is waiting for an operator choice.",
+        trace_entries_observed: 5,
+        manifest_hash: 'abc123',
+        checkpoint: {
+          step_id: 'prototype-checkpoint-step',
+          request_path: requestPath,
+          allowed_choices: ['keep-prototype'],
+        },
+      },
+      route: { selectedFlow: 'prototype' },
     });
 
     expect(written.htmlPath).toBeUndefined();

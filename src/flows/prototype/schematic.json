@@ -1,0 +1,685 @@
+{
+  "schema_version": "1",
+  "id": "prototype",
+  "title": "Prototype Schematic",
+  "purpose": "Prototype flow. Circuit frames a disposable artifact, plans its local prototype files, either relays one artifact or fans out configured model variants, verifies reported files under prototype_root, asks which local prototype evidence to keep, and closes with evidence. Prototype does not edit production code outside prototype_root or claim deployment, branch previews, screenshots, provider behavior, model behavior, or production readiness.",
+  "status": "active",
+  "starts_at": "frame-step",
+  "initial_contracts": ["task.intake@v1", "route.decision@v1", "verification.plan@v1"],
+  "contract_aliases": [
+    {
+      "generic": "flow.brief@v1",
+      "actual": "prototype.brief@v1"
+    },
+    {
+      "generic": "plan.strategy@v1",
+      "actual": "prototype.plan@v1"
+    },
+    {
+      "generic": "verification.plan@v1",
+      "actual": "prototype.plan@v1"
+    },
+    {
+      "generic": "change.evidence@v1",
+      "actual": "prototype.artifact@v1"
+    },
+    {
+      "generic": "verification.result@v1",
+      "actual": "prototype.verification@v1"
+    },
+    {
+      "generic": "plan.strategy@v1",
+      "actual": "prototype.variant-options@v1"
+    },
+    {
+      "generic": "change.evidence@v1",
+      "actual": "prototype.variant-aggregate@v1"
+    },
+    {
+      "generic": "flow.evidence@v1",
+      "actual": "prototype.variant-aggregate@v1"
+    },
+    {
+      "generic": "flow.result@v1",
+      "actual": "prototype.variant-provider-evidence@v1"
+    },
+    {
+      "generic": "verification.result@v1",
+      "actual": "prototype.variant-verification@v1"
+    },
+    {
+      "generic": "review.verdict@v1",
+      "actual": "prototype.variant-review@v1"
+    },
+    {
+      "generic": "review.verdict@v1",
+      "actual": "prototype.variant-choice-options@v1"
+    },
+    {
+      "generic": "flow.question@v1",
+      "actual": "prototype.variant-choice-options@v1"
+    },
+    {
+      "generic": "flow.result@v1",
+      "actual": "prototype.result@v1"
+    }
+  ],
+  "items": [
+    {
+      "id": "frame-step",
+      "block": "frame",
+      "title": "Frame - define Prototype boundary",
+      "stage": "frame",
+      "input": {
+        "task": "task.intake@v1",
+        "route": "route.decision@v1"
+      },
+      "output": "prototype.brief@v1",
+      "evidence_requirements": ["scope boundary", "constraints", "proof plan"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "plan-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-frame@v1",
+      "writes": {
+        "report_path": "reports/prototype/brief.json"
+      },
+      "check": {
+        "required": ["objective", "prototype_root", "claim_limits"]
+      }
+    },
+    {
+      "id": "plan-step",
+      "block": "plan",
+      "title": "Plan - choose disposable artifact files",
+      "stage": "plan",
+      "input": {
+        "brief": "prototype.brief@v1"
+      },
+      "output": "prototype.plan@v1",
+      "evidence_requirements": ["ordered steps", "risk notes", "proof strategy"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "act-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {
+        "continue": {
+          "tournament": "variant-options-step"
+        }
+      },
+      "protocol": "prototype-plan@v1",
+      "writes": {
+        "report_path": "reports/prototype/plan.json"
+      },
+      "check": {
+        "required": ["objective", "files_to_create", "verification"]
+      }
+    },
+    {
+      "id": "act-step",
+      "block": "act",
+      "title": "Act - create disposable prototype artifact",
+      "stage": "act",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "plan": "prototype.plan@v1"
+      },
+      "output": "prototype.artifact@v1",
+      "evidence_requirements": ["changed files", "change rationale", "declared follow-up proof"],
+      "execution": {
+        "kind": "relay",
+        "role": "implementer"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "verify-step",
+        "stop": "close-step"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-act@v1",
+      "writes": {
+        "report_path": "reports/prototype/artifact.json",
+        "request_path": "reports/relay/prototype-act.request.json",
+        "receipt_path": "reports/relay/prototype-act.receipt.txt",
+        "result_path": "reports/relay/prototype-act.result.json"
+      },
+      "check": {
+        "pass": ["accept"]
+      }
+    },
+    {
+      "id": "variant-options-step",
+      "block": "plan",
+      "title": "Plan - resolve Prototype model variants",
+      "stage": "plan",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "plan": "prototype.plan@v1"
+      },
+      "output": "prototype.variant-options@v1",
+      "evidence_requirements": ["ordered steps", "risk notes", "proof strategy"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "variant-fanout-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-options@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-options.json"
+      },
+      "check": {
+        "required": ["variants", "variant_count"]
+      }
+    },
+    {
+      "id": "variant-fanout-step",
+      "block": "act",
+      "title": "Act - create model-comparison Prototype variants",
+      "stage": "act",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "plan": "prototype.plan@v1",
+        "options": "prototype.variant-options@v1"
+      },
+      "output": "prototype.variant-aggregate@v1",
+      "evidence_requirements": ["changed files", "change rationale", "declared follow-up proof"],
+      "execution": {
+        "kind": "fanout"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "variant-provider-evidence-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-fanout@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-aggregate.json",
+        "branches_dir_path": "reports/prototype/variant-branches"
+      },
+      "check": {
+        "pass": ["accept"]
+      },
+      "fanout": {
+        "branches": {
+          "kind": "dynamic",
+          "source_report": "reports/prototype/variant-options.json",
+          "items_path": "variants",
+          "template": {
+            "branch_id": "$item.variant_id",
+            "execution": {
+              "kind": "relay",
+              "role": "implementer",
+              "goal": "$item.goal",
+              "report_schema": "prototype.variant-artifact@v1",
+              "provenance_field": "variant_id"
+            },
+            "selection": {
+              "model": {
+                "provider": "$item.provider",
+                "model": "$item.model"
+              },
+              "effort": "$item.effort"
+            }
+          },
+          "max_branches": {
+            "kind": "axis",
+            "axis": "tournament_n"
+          },
+          "required_count": {
+            "kind": "axis",
+            "axis": "tournament_n"
+          }
+        },
+        "concurrency": {
+          "kind": "bounded",
+          "max": 2
+        },
+        "on_child_failure": "continue-others",
+        "join": {
+          "policy": "aggregate-survivors"
+        },
+        "rubric": {
+          "model_judgments_path": "rubric_model_judgments",
+          "ordered_dims": [
+            "evidence_rigor",
+            "actionability",
+            "coverage_adequacy",
+            "scope_discipline",
+            "honest_calibration",
+            "project_specificity",
+            "insight_density",
+            "branch_distinctness"
+          ],
+          "runtime_signals": {
+            "evidence_rigor": {
+              "kind": "non_empty_array",
+              "path": "evidence"
+            },
+            "actionability": {
+              "kind": "non_empty_array",
+              "path": "entry_points"
+            },
+            "coverage_adequacy": {
+              "kind": "non_empty_string",
+              "path": "summary"
+            },
+            "scope_discipline": {
+              "kind": "constant",
+              "signal": "met"
+            },
+            "honest_calibration": {
+              "kind": "non_empty_array",
+              "path": "claim_limits"
+            },
+            "project_specificity": {
+              "kind": "non_empty_string",
+              "path": "variant_root"
+            },
+            "insight_density": {
+              "kind": "constant",
+              "signal": "n/a"
+            },
+            "branch_distinctness": {
+              "kind": "constant",
+              "signal": "n/a"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "variant-provider-evidence-step",
+      "block": "close-with-evidence",
+      "title": "Verify - capture variant provider evidence",
+      "stage": "verify",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "options": "prototype.variant-options@v1",
+        "aggregate": "prototype.variant-aggregate@v1"
+      },
+      "output": "prototype.variant-provider-evidence@v1",
+      "evidence_requirements": ["outcome", "evidence pointers", "residual risks", "follow-ups"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "complete": "variant-verification-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-provider-evidence@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-provider-evidence.json"
+      },
+      "check": {
+        "required": ["captured_count", "variants"]
+      }
+    },
+    {
+      "id": "variant-verification-step",
+      "block": "run-verification",
+      "title": "Verify - check Prototype variants",
+      "stage": "verify",
+      "input": {
+        "plan": "prototype.plan@v1",
+        "aggregate": "prototype.variant-aggregate@v1",
+        "provider_evidence": "prototype.variant-provider-evidence@v1"
+      },
+      "output": "prototype.variant-verification@v1",
+      "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
+      "execution": {
+        "kind": "verification"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "variant-review-step",
+        "stop": "close-model-comparison-step"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-verify@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-verification.json"
+      },
+      "check": {
+        "required": ["overall_status", "commands", "variant_results"]
+      }
+    },
+    {
+      "id": "variant-review-step",
+      "block": "review",
+      "title": "Review - compare Prototype variants",
+      "stage": "review",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "options": "prototype.variant-options@v1",
+        "aggregate": "prototype.variant-aggregate@v1",
+        "provider_evidence": "prototype.variant-provider-evidence@v1",
+        "verification": "prototype.variant-verification@v1"
+      },
+      "output": "prototype.variant-review@v1",
+      "evidence_requirements": ["verdict", "findings", "confidence", "required fixes"],
+      "execution": {
+        "kind": "relay",
+        "role": "reviewer"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "variant-choice-options-step",
+        "stop": "close-model-comparison-step"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-review@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-review.json",
+        "request_path": "reports/relay/prototype-variant-review.request.json",
+        "receipt_path": "reports/relay/prototype-variant-review.receipt.txt",
+        "result_path": "reports/relay/prototype-variant-review.result.json"
+      },
+      "check": {
+        "pass": ["recommend", "no-clear-winner", "needs-operator"]
+      }
+    },
+    {
+      "id": "variant-choice-options-step",
+      "block": "review",
+      "title": "Review - prepare variant checkpoint choices",
+      "stage": "review",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "aggregate": "prototype.variant-aggregate@v1",
+        "provider_evidence": "prototype.variant-provider-evidence@v1",
+        "verification": "prototype.variant-verification@v1",
+        "review": "prototype.variant-review@v1"
+      },
+      "output": "prototype.variant-choice-options@v1",
+      "evidence_requirements": ["verdict", "findings", "confidence", "required fixes"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "prototype-variant-checkpoint-step",
+        "stop": "close-model-comparison-step"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-choice-options@v1",
+      "writes": {
+        "report_path": "reports/prototype/variant-choice-options.json"
+      },
+      "check": {
+        "required": ["choices", "recommended_variant_id"]
+      }
+    },
+    {
+      "id": "prototype-variant-checkpoint-step",
+      "block": "human-decision",
+      "title": "Review - choose Prototype variant",
+      "stage": "review",
+      "input": {
+        "choices": "prototype.variant-choice-options@v1",
+        "aggregate": "prototype.variant-aggregate@v1"
+      },
+      "output": "decision.answer@v1",
+      "evidence_requirements": [
+        "question",
+        "available options",
+        "selected option",
+        "answer source"
+      ],
+      "execution": {
+        "kind": "checkpoint"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "close-model-comparison-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-variant-checkpoint@v1",
+      "writes": {
+        "checkpoint_request_path": "reports/checkpoints/prototype-variant-choice-request.json",
+        "checkpoint_response_path": "reports/checkpoints/prototype-variant-choice-response.json"
+      },
+      "check": {
+        "allow_from": {
+          "kind": "policy_choices"
+        }
+      },
+      "checkpoint_policy": {
+        "prompt": "Choose which local Prototype variant Circuit should keep. This checkpoint does not run Build or claim deployment.",
+        "choices_from": {
+          "kind": "report_items",
+          "source_report": "reports/prototype/variant-choice-options.json",
+          "items_path": "choices",
+          "id_path": "id",
+          "label_path": "label",
+          "description_path": "description"
+        },
+        "auto_resolution": {
+          "policy": "highest-score",
+          "source_report": "reports/prototype/variant-aggregate.json",
+          "branches_path": "branches",
+          "id_path": "branch_id",
+          "rubric_result_path": "rubric_result"
+        }
+      }
+    },
+    {
+      "id": "close-model-comparison-step",
+      "block": "close-with-evidence",
+      "title": "Close - emit Prototype model-comparison result",
+      "stage": "close",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "plan": "prototype.plan@v1",
+        "options": "prototype.variant-options@v1",
+        "aggregate": "prototype.variant-aggregate@v1",
+        "provider_evidence": "prototype.variant-provider-evidence@v1",
+        "verification": "prototype.variant-verification@v1"
+      },
+      "output": "prototype.result@v1",
+      "evidence_requirements": ["outcome", "evidence pointers", "residual risks", "follow-ups"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "complete": "@complete",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-close-model-comparison@v1",
+      "writes": {
+        "report_path": "reports/prototype-result.json"
+      },
+      "check": {
+        "required": ["summary", "outcome", "evidence_links"]
+      }
+    },
+    {
+      "id": "verify-step",
+      "block": "run-verification",
+      "title": "Verify - check Prototype artifact integrity",
+      "stage": "verify",
+      "input": {
+        "plan": "prototype.plan@v1",
+        "artifact": "prototype.artifact@v1"
+      },
+      "output": "prototype.verification@v1",
+      "evidence_requirements": ["command list", "exit status", "bounded output", "pass or fail"],
+      "execution": {
+        "kind": "verification"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "prototype-checkpoint-step",
+        "stop": "close-step"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-verify@v1",
+      "writes": {
+        "report_path": "reports/prototype/verification.json"
+      },
+      "check": {
+        "required": ["overall_status", "commands"]
+      }
+    },
+    {
+      "id": "prototype-checkpoint-step",
+      "block": "human-decision",
+      "title": "Review - decide Prototype disposition",
+      "stage": "review",
+      "input": {
+        "artifact": "prototype.artifact@v1",
+        "verification": "prototype.verification@v1"
+      },
+      "output": "decision.answer@v1",
+      "evidence_requirements": [
+        "question",
+        "available options",
+        "selected option",
+        "answer source"
+      ],
+      "execution": {
+        "kind": "checkpoint"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "close-step",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-checkpoint@v1",
+      "writes": {
+        "checkpoint_request_path": "reports/checkpoints/prototype-review-request.json",
+        "checkpoint_response_path": "reports/checkpoints/prototype-review-response.json"
+      },
+      "check": {
+        "allow": ["keep-prototype", "save-build-input", "discard-prototype"]
+      },
+      "checkpoint_policy": {
+        "prompt": "Decide what to do with this verified Prototype artifact.",
+        "choices": [
+          {
+            "id": "keep-prototype",
+            "label": "Keep Prototype",
+            "description": "Save the prototype as useful evidence and stop here."
+          },
+          {
+            "id": "save-build-input",
+            "label": "Save Build Input",
+            "description": "Close with a Build-ready follow-up prompt, without running Build."
+          },
+          {
+            "id": "discard-prototype",
+            "label": "Discard Prototype",
+            "description": "Mark the prototype as discarded while keeping the evidence trail."
+          }
+        ],
+        "safe_default_choice": "keep-prototype",
+        "safe_autonomous_choice": "keep-prototype"
+      }
+    },
+    {
+      "id": "close-step",
+      "block": "close-with-evidence",
+      "title": "Close - emit Prototype result",
+      "stage": "close",
+      "input": {
+        "brief": "prototype.brief@v1",
+        "plan": "prototype.plan@v1",
+        "artifact": "prototype.artifact@v1"
+      },
+      "output": "prototype.result@v1",
+      "evidence_requirements": ["outcome", "evidence pointers", "residual risks", "follow-ups"],
+      "execution": {
+        "kind": "compose"
+      },
+      "skill_slots": [],
+      "routes": {
+        "complete": "@complete",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "protocol": "prototype-close@v1",
+      "writes": {
+        "report_path": "reports/prototype-result.json"
+      },
+      "check": {
+        "required": ["summary", "outcome", "evidence_links"]
+      }
+    }
+  ],
+  "version": "0.1.0",
+  "entry": {
+    "signals": {
+      "include": ["prototype", "mock up", "sketch"],
+      "exclude": ["production", "deploy", "ship"]
+    },
+    "intent_prefixes": ["prototype"]
+  },
+  "axes": {
+    "allowed_rigors": ["standard", "deep"],
+    "supports_tournament": true,
+    "supports_autonomous": true,
+    "default": {
+      "rigor": "standard",
+      "tournament": false,
+      "tournament_n": 3,
+      "autonomous": false
+    },
+    "tournament_fan_out_stage": "act-stage"
+  },
+  "stage_path_policy": {
+    "mode": "partial",
+    "omits": ["analyze"],
+    "rationale": "Prototype follows Frame, Plan, Act, Verify, Review, Close. Analyze is omitted because V1 frames enough context to build a small disposable artifact; research-first work should use Explore."
+  },
+  "stages": [
+    {
+      "canonical": "frame",
+      "id": "frame-stage",
+      "title": "Frame"
+    },
+    {
+      "canonical": "plan",
+      "id": "plan-stage",
+      "title": "Plan"
+    },
+    {
+      "canonical": "act",
+      "id": "act-stage",
+      "title": "Act"
+    },
+    {
+      "canonical": "verify",
+      "id": "verify-stage",
+      "title": "Verify"
+    },
+    {
+      "canonical": "review",
+      "id": "review-stage",
+      "title": "Review"
+    },
+    {
+      "canonical": "close",
+      "id": "close-stage",
+      "title": "Close"
+    }
+  ]
+}

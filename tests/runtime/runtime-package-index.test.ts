@@ -27,6 +27,36 @@ function flowWithReports(reports: readonly { readonly stepId: string; readonly s
   } satisfies ExecutableFlow;
 }
 
+function flowWithFanoutAggregate() {
+  return {
+    id: 'index-test',
+    version: '0.0.0',
+    entry: 'fanout',
+    stages: [{ id: 'stage', stepIds: ['fanout'] }],
+    steps: [
+      {
+        id: 'fanout',
+        title: 'fanout',
+        protocol: 'fanout@v1',
+        kind: 'fanout' as const,
+        branches: [{ kind: 'static', items: [] }],
+        join: { policy: 'aggregate-survivors' },
+        routes: { pass: { kind: 'terminal' as const, target: '@complete' as const } },
+        writes: {
+          branches_dir: { path: 'reports/branches' },
+          aggregate: { path: 'reports/aggregate.json', schema: 'aggregate@v1' },
+        },
+        check: {
+          kind: 'fanout_aggregate',
+          source: { kind: 'fanout_results' as const, ref: 'aggregate' },
+          join: 'aggregate-survivors' as const,
+          verdicts: { admit: ['accept'] },
+        },
+      },
+    ],
+  } satisfies ExecutableFlow;
+}
+
 describe('runtime package index', () => {
   it('fails closed when a report schema resolves to multiple writers', () => {
     const index = buildRuntimePackageIndex(
@@ -48,6 +78,14 @@ describe('runtime package index', () => {
 
     expect(() => reportPathForSchemaInRuntimeFlow(index.flow, 'missing@v1')).toThrow(
       "expected exactly one report writer for schema 'missing@v1', found 0",
+    );
+  });
+
+  it('resolves schema-bearing fanout aggregate writes', () => {
+    const index = buildRuntimePackageIndex(flowWithFanoutAggregate());
+
+    expect(reportPathForSchemaInRuntimeFlow(index.flow, 'aggregate@v1')).toBe(
+      'reports/aggregate.json',
     );
   });
 

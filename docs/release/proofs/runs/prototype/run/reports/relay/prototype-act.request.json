@@ -1,0 +1,61 @@
+Step: act-step
+Title: Act - create disposable prototype artifact
+Role: implementer
+Accepted verdicts: accept
+
+Context (from reads):
+--- reports/prototype/brief.json ---
+{
+  "objective": "sketch a custom Circuit flow builder UI",
+  "prototype_scope": "Create a small, disposable artifact under docs/release/proofs/runs/prototype/run/prototype-files that makes the requested idea inspectable.",
+  "out_of_scope": [
+    "Production application code outside prototype_root",
+    "Generated host plugin packages",
+    "Deployment, branch preview, provider, or model claims"
+  ],
+  "target_user": "Operator inspecting whether the idea is worth carrying into Build",
+  "success_criteria": [
+    "The prototype files exist under prototype_root",
+    "At least one entry point is reported",
+    "The result names evidence and limitations honestly"
+  ],
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "verification_command_candidates": [],
+  "claim_limits": [
+    "not production",
+    "not deployed",
+    "not production-ready"
+  ]
+}
+
+
+--- reports/prototype/plan.json ---
+{
+  "objective": "sketch a custom Circuit flow builder UI",
+  "prototype_root": "docs/release/proofs/runs/prototype/run/prototype-files",
+  "files_to_create": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html",
+    "docs/release/proofs/runs/prototype/run/prototype-files/README.md"
+  ],
+  "entry_points": [
+    "docs/release/proofs/runs/prototype/run/prototype-files/index.html"
+  ],
+  "interaction_path": "docs/release/proofs/runs/prototype/run/prototype-files/index.html",
+  "preview_instructions": "Open docs/release/proofs/runs/prototype/run/prototype-files/index.html in a browser or inspect the file directly.",
+  "verification": {
+    "commands": []
+  },
+  "build_followup_prompt": "Build from the Prototype artifact in docs/release/proofs/runs/prototype/run/prototype-files. Preserve the useful interaction from docs/release/proofs/runs/prototype/run/prototype-files/index.html, but implement it as production code only after reviewing the Prototype result and limitations.",
+  "risks": [
+    "Prototype polish can be mistaken for production readiness",
+    "The artifact may validate the interaction idea without covering integration cost"
+  ],
+  "claim_limits": [
+    "not production",
+    "not deployed",
+    "not production-ready"
+  ]
+}
+
+
+Respond with a single raw JSON object whose top-level shape is exactly: { "verdict": "<accept|blocked>", "summary": "<what prototype files were created or why blocked>", "prototype_root": "<project-relative prototype directory>", "created_files": ["<project-relative path under prototype_root>"], "entry_points": ["<project-relative path under prototype_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "claim_limits": ["not production", "not deployed"] } Create only disposable prototype files under the prototype_root from the plan. Do not edit production application code, generated host packages, or release metadata. Use verdict "accept" only when the entry points and created files exist under prototype_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered. Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse, rejects verdicts outside the accepted-verdicts list, validates the full report body against prototype.artifact@v1, and verifies reported artifact paths before writing the final Prototype result.

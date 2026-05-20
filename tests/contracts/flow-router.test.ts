@@ -8,7 +8,7 @@ describe('flow router classifier', () => {
     // each package's routing.order, not from this array. Asserting set
     // membership keeps the test stable across catalog reordering.
     expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(
-      ['build', 'explore', 'fix', 'pursue', 'review'].sort(),
+      ['build', 'explore', 'fix', 'prototype', 'pursue', 'review'].sort(),
     );
   });
 
@@ -130,6 +130,25 @@ describe('flow router classifier', () => {
     for (const task of cases) {
       const decision = classifyCompiledFlowTask(task);
       expect(decision.flowName, task).toBe('build');
+      expect(decision.source).toBe('classifier');
+      expect(decision.matched_signal).toBeDefined();
+    }
+  });
+
+  it('routes explicit prototype tasks to the Prototype flow', () => {
+    const cases = [
+      'prototype: sketch a custom flow builder UI',
+      'create a prototype of a simple UI for creating custom Circuit flows',
+      'use Prototype to create a simple UI prototype',
+      'make a prototype for inspecting core flows',
+      'prototype a small interaction for saving Circuit flows',
+      'mock up a simple prototype for inspecting core flows',
+      'sketch a disposable prototype screen',
+    ];
+
+    for (const task of cases) {
+      const decision = classifyCompiledFlowTask(task);
+      expect(decision.flowName, task).toBe('prototype');
       expect(decision.source).toBe('classifier');
       expect(decision.matched_signal).toBeDefined();
     }

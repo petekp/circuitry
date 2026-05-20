@@ -140,6 +140,53 @@
       "unsupported_route_outcomes": []
     },
     {
+      "id": "prototype",
+      "source": "src/flows/prototype/schematic.json",
+      "command_path": "src/flows/prototype/command.md",
+      "contract_path": "src/flows/prototype/contract.md",
+      "routing": {
+        "routable": true,
+        "is_default": false,
+        "order": 25,
+        "signal_labels": ["create prototype request", "prototype prefix", "prototype request"]
+      },
+      "axis_support": {
+        "allowed_rigors": ["standard", "deep"],
+        "supports_tournament": true,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        },
+        "tournament_fan_out_stage": "act-stage"
+      },
+      "stages": ["Frame", "Plan", "Act", "Verify", "Review", "Close"],
+      "reports": [
+        "prototype.artifact@v1",
+        "prototype.brief@v1",
+        "prototype.plan@v1",
+        "prototype.result@v1",
+        "prototype.variant-aggregate@v1",
+        "prototype.variant-artifact@v1",
+        "prototype.variant-choice-options@v1",
+        "prototype.variant-options@v1",
+        "prototype.variant-provider-evidence@v1",
+        "prototype.variant-review@v1",
+        "prototype.variant-verification@v1",
+        "prototype.verification@v1"
+      ],
+      "writers": {
+        "compose": 5,
+        "close": 1,
+        "verification": 2,
+        "checkpoint": 0
+      },
+      "route_outcomes": ["complete", "continue", "stop"],
+      "unsupported_route_outcomes": []
+    },
+    {
       "id": "build",
       "source": "src/flows/build/schematic.json",
       "command_path": "src/flows/build/command.md",
@@ -274,9 +321,9 @@
   ],
   "commands": {
     "source": ["create", "handoff", "run"],
-    "claude_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
-    "codex_plugin": ["build", "create", "explore", "fix", "handoff", "review", "run"],
-    "claude_plugin_skills": ["build", "explore", "fix", "pursue", "review"]
+    "claude_plugin": ["build", "create", "explore", "fix", "handoff", "prototype", "review", "run"],
+    "codex_plugin": ["build", "create", "explore", "fix", "handoff", "prototype", "review", "run"],
+    "claude_plugin_skills": ["build", "explore", "fix", "prototype", "pursue", "review"]
   },
   "connectors": [
     {
@@ -402,6 +449,21 @@
       "status": "implemented",
       "summary": "Command handoff is present for claude-code.",
       "evidence": ["plugins/claude/commands/handoff.md"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "command:prototype",
+      "kind": "flow",
+      "title": "claude-code command prototype",
+      "status": "implemented",
+      "summary": "Command prototype is present for claude-code.",
+      "evidence": ["plugins/claude/commands/prototype.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -621,6 +683,40 @@
         "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
         "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder.",
         "proof": "Fix golden run with regression evidence."
+      }
+    },
+    {
+      "id": "flow:prototype",
+      "kind": "flow",
+      "title": "prototype flow",
+      "status": "implemented",
+      "summary": "Flow prototype is registered in the catalog.",
+      "evidence": ["src/flows/prototype/schematic.json", "generated/flows/prototype/circuit.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": ["autonomous", "deep", "default", "tournament"],
+        "stage_path": ["Frame", "Plan", "Act", "Verify", "Review", "Close"],
+        "outputs": [
+          "prototype.artifact@v1",
+          "prototype.brief@v1",
+          "prototype.plan@v1",
+          "prototype.result@v1",
+          "prototype.variant-aggregate@v1",
+          "prototype.variant-artifact@v1",
+          "prototype.variant-choice-options@v1",
+          "prototype.variant-options@v1",
+          "prototype.variant-provider-evidence@v1",
+          "prototype.variant-review@v1",
+          "prototype.variant-verification@v1",
+          "prototype.verification@v1"
+        ],
+        "checkpoint": "Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.",
+        "review": "Compiled review stages or reviewer relays are present.",
+        "verification": "Compiled verification steps write command-result reports before close.",
+        "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
+        "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder.",
+        "proof": "Prototype golden run with checkpoint disposition."
       }
     },
     {
@@ -919,6 +1015,66 @@
       "status": "implemented",
       "summary": "fix supports the lite axis selection.",
       "evidence": ["generated/flows/fix"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:prototype:autonomous",
+      "kind": "mode",
+      "title": "prototype autonomous",
+      "status": "implemented",
+      "summary": "prototype supports the autonomous axis selection.",
+      "evidence": ["generated/flows/prototype"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:prototype:deep",
+      "kind": "mode",
+      "title": "prototype deep",
+      "status": "implemented",
+      "summary": "prototype supports the deep axis selection.",
+      "evidence": ["generated/flows/prototype"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:prototype:default",
+      "kind": "mode",
+      "title": "prototype default",
+      "status": "implemented",
+      "summary": "prototype supports the default axis selection.",
+      "evidence": ["generated/flows/prototype"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:prototype:tournament",
+      "kind": "mode",
+      "title": "prototype tournament",
+      "status": "implemented",
+      "summary": "prototype supports the tournament axis selection.",
+      "evidence": ["generated/flows/prototype"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1264,6 +1420,51 @@
       "status": "implemented",
       "summary": "stop maps to an executable compiled route.",
       "evidence": ["src/flows/fix/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:prototype:complete",
+      "kind": "route_outcome",
+      "title": "prototype route complete",
+      "status": "implemented",
+      "summary": "complete maps to an executable compiled route.",
+      "evidence": ["src/flows/prototype/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:prototype:continue",
+      "kind": "route_outcome",
+      "title": "prototype route continue",
+      "status": "implemented",
+      "summary": "continue maps to an executable compiled route.",
+      "evidence": ["src/flows/prototype/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:prototype:stop",
+      "kind": "route_outcome",
+      "title": "prototype route stop",
+      "status": "implemented",
+      "summary": "stop maps to an executable compiled route.",
+      "evidence": ["src/flows/prototype/schematic.json"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],

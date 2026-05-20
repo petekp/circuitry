@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "step_id": "prototype-checkpoint-step",
+  "selection": "save-build-input",
+  "resolution_source": "operator"
+}
