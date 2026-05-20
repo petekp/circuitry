@@ -111,12 +111,6 @@ resumes, clears, briefs, or installs continuity support. See
 [`docs/operator-guide.md`](docs/operator-guide.md) for direct commands, flags,
 checkpoints, verification, and troubleshooting.
 
-**Advanced compatibility:**
-
-The deterministic CLI router still understands old intent prefixes such as
-`fix:`, `review:`, `develop:`, and `decide:`. Keep them for scripts and older
-habits, not for the normal user path.
-
 ## Safety Notes
 
 Build, Fix, and Pursue may invoke a write-capable worker. Circuit discloses

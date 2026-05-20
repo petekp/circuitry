@@ -19,8 +19,6 @@ Start here when you need repo truth without reading every historical note.
   coding agents.
 - [AGENTS.md](../AGENTS.md) - repo operating rules for agents working in this
   checkout.
-- [CLAUDE.md](../CLAUDE.md) - compatibility pointer to
-  [AGENTS.md](../AGENTS.md).
 - [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) - product vocabulary and
   terms to avoid.
 - [docs/literate-guide.md](literate-guide.md) - codebase walkthrough for
@@ -54,12 +52,36 @@ Start here when you need repo truth without reading every historical note.
 When docs disagree, prefer code, tests, generated surfaces, and release checks
 over dated plans or audits.
 
+## Approved Active How-To Locations
+
+Keep active runbooks, playbooks, and agent-facing how-to guidance in these
+locations:
+
+| Guidance | Source of truth |
+| --- | --- |
+| Repo agent operating rules | [AGENTS.md](../AGENTS.md) |
+| Coding-agent setup prompt | [docs/agent-setup.md](agent-setup.md) |
+| First install proof | [docs/first-run.md](first-run.md) |
+| Operator commands and verification | [docs/operator-guide.md](operator-guide.md) |
+| Config and connector routing | [docs/configuration.md](configuration.md) |
+| Flow and block authoring | [docs/flows/authoring-model.md](flows/authoring-model.md) and [docs/flows/blocks.md](flows/blocks.md) |
+| Generated command, skill, schematic, manifest, and plugin output ownership | [docs/generated-surfaces.md](generated-surfaces.md) |
+| Direct command source ownership | [src/commands/README.md](../src/commands/README.md) |
+| Release proof lifecycle | [docs/release/proofs/README.md](release/proofs/README.md) |
+| Host release QA checklist | [docs/host-trial-checklist.md](host-trial-checklist.md) |
+| Current host rendering profile | [docs/specs/narration-display-profiles.md](specs/narration-display-profiles.md) with [docs/contracts/host-rendering.md](contracts/host-rendering.md) |
+
+Historical plans, specs, audits, ideas, learnings, and checked-in proof runs are
+not active instructions unless one of the sources above links to a live section.
+The 2026-05-20 documentation audit inventory is
+[docs/documentation-surface-inventory.md](documentation-surface-inventory.md).
+
 ## Document Classes
 
 | Audience / role | Paths | Use as |
 | --- | --- | --- |
 | Operator entry | [README.md](../README.md), [docs/first-run.md](first-run.md), [docs/operator-guide.md](operator-guide.md), [docs/configuration.md](configuration.md) | Current user-facing setup and operation. |
-| Agent setup | [docs/agent-setup.md](agent-setup.md), [AGENTS.md](../AGENTS.md), [CLAUDE.md](../CLAUDE.md) | Instructions for coding agents in this checkout. [CLAUDE.md](../CLAUDE.md) is only a compatibility pointer. |
+| Agent setup | [docs/agent-setup.md](agent-setup.md), [AGENTS.md](../AGENTS.md) | Instructions for coding agents in this checkout. |
 | Vocabulary | [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) | Current product terms for product prose, docs, contracts, and flow authoring notes. |
 | Contributor reference | [docs/literate-guide.md](literate-guide.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/script-inventory.md](script-inventory.md) | Current codebase, flow, block, contract, and script ownership reference. |
 | Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Do not hand-edit generated mirrors. |
@@ -73,6 +95,8 @@ over dated plans or audits.
 - Keep current how-to guidance in the canonical docs above.
 - Keep generated ownership in [docs/generated-surfaces.md](generated-surfaces.md);
   do not repeat it in every guide.
+- Do not add a new active runbook or playbook outside the approved locations
+  without updating this map and the documentation-surface tests.
 - Move completed execution records that are not public release evidence into
   local-only [docs/internal/archive/](internal/archive/) after repo-wide
   reference probes.

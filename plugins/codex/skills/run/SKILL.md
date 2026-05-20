@@ -17,7 +17,8 @@ the directory that contains `.codex-plugin/plugin.json`. Do not use a path relat
 Selects the best Circuit flow for the user's natural-language task, then
 runs that explicit flow through the project CLI. In this host surface, the
 host model chooses the flow before invoking Circuit. The deterministic CLI
-router remains available as a compatibility and fallback path.
+router is available only when the operator asks Circuit to choose mechanically
+or when the host cannot confidently choose.
 
 Direct Circuit flow skills remain available when the user already knows the flow.
 

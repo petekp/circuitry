@@ -1,14 +1,14 @@
 // CompiledFlow package — the per-flow unit the engine consumes.
 //
-// Each flow lives in src/flows/<id>/ and exports a
-// CompiledFlowPackage describing its source files, routing metadata,
-// relay reports, writers, and structural shape hints. The engine
-// (router, registries, report-schemas, emit script) derives everything
-// from the flowPackages aggregation in src/flows/catalog.ts —
+// Each flow lives in src/flows/<id>/ and exports a FlowDefinition that
+// compiles into a CompiledFlowPackage describing source files, routing
+// metadata, relay reports, writers, and structural shape hints. The
+// engine (router, registries, report-schemas, emit script) derives
+// everything from the flowPackages aggregation in src/flows/catalog.ts —
 // it never imports a flow module directly.
 //
-// Adding a flow = create src/flows/<id>/, export a
-// CompiledFlowPackage, append it to catalog.ts. No edits to the engine.
+// The flow-authoring playbook lives in docs/flows/authoring-model.md.
+// No engine edits are needed for normal flow additions.
 
 import type { z } from 'zod';
 import type { CheckpointBriefBuilder } from './registries/checkpoint-writers/types.js';

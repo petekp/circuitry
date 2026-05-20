@@ -46,3 +46,4 @@ text:
 - `src/cli/create.ts`
 - `src/schemas/compiled-flow.ts`
 - `docs/flows/authoring-model.md`
+- `docs/generated-surfaces.md`

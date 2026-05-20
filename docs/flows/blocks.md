@@ -40,7 +40,7 @@ The prompt is a delivery format, not the source of truth. The runtime
 should pass structured state between blocks whenever possible, and only
 render prompts at the connector boundary.
 
-## Compatibility Rule
+## Contract Fit Rule
 
 Not every block works after every other block.
 

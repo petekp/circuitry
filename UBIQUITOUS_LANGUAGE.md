@@ -104,12 +104,11 @@ instructions.
 ## Deprecated Or Methodology Terms
 
 Avoid these in user-facing product prose and command help. They may still appear
-inside historical docs, tests, migrations, or compatibility shims when the
-context is explicit.
+inside historical docs, tests, or migration notes when the context is explicit.
 
 | Term | Replacement | Notes |
 | --- | --- | --- |
-| **change_kind** | **Mode** or **Depth** | Keep only where serialized compatibility requires it. |
+| **change_kind** | **Mode** or **Depth** | Keep only where serialized schemas still require it. |
 | **runtime-proof** | **Runtime proof** | Internal test flow, not a visible user flow. |
 | **recipe** | **Schematic** | Older authored-flow term. |
 | **scalar** | **Block** or schema-specific name | Avoid for flow composition. |

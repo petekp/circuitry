@@ -278,11 +278,14 @@ for the design sketch.
 This guide explains the product shape. The current executable truth lives
 in:
 
-- `src/flows/pursue/schematic.json`;
+- `src/flows/pursue/data.ts`;
+- `src/flows/pursue/flow.ts`;
 - `src/flows/pursue/reports.ts`;
 - `src/flows/pursue/writers/`;
 - `src/flows/pursue/relay-hints.ts`;
-- `generated/flows/pursue/circuit.json`.
+- generated outputs listed in
+  [docs/generated-surfaces.md](../generated-surfaces.md).
 
-Regenerate generated surfaces after source changes with
+Use [docs/flows/authoring-model.md](authoring-model.md#adding-a-flow) for the
+flow-authoring playbook. Regenerate generated surfaces after source changes with
 `npm run emit-flows`.

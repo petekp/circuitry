@@ -111,12 +111,12 @@ Source: `git diff --name-status 1957e041..origin/main -- scripts`
 
 | Old path | New path | Owner | Notes |
 | --- | --- | --- | --- |
-| `scripts/emit-flows.ts` | `scripts/flows/emit.ts` | Flow generation | Keeps the `emit-flows` npm command name for public workflow compatibility. |
+| `scripts/emit-flows.ts` | `scripts/flows/emit.ts` | Flow generation | Keeps the published `emit-flows` npm command name stable. |
 | `scripts/emit-flows/host-renderers.ts` | `scripts/flows/host-renderers.ts` | Flow generation | Helper stayed beside the flow emitter. |
 | `scripts/build-plugin-runtime.ts` | `scripts/plugins/runtime-bundle.ts` | Plugin packaging | Keeps `build-plugin-runtime` and `check-plugin-runtime` npm command names. |
 | `scripts/doctor-installed-plugins.mjs` | `scripts/plugins/installed-doctor.ts` | Plugin packaging | Installed-plugin diagnostics now live with other plugin operations. |
 | `scripts/plugin-package-tree.mjs` | `scripts/plugins/package-tree.ts` | Plugin packaging | Shared package-tree comparison helper for publish and doctor flows. |
-| `scripts/plugin-package-tree.d.mts` | none | Plugin packaging | Retired declaration shim; `scripts/plugins/package-tree.ts` is typed source. No runtime script was deleted. |
+| `scripts/plugin-package-tree.d.mts` | none | Plugin packaging | Retired declaration file; `scripts/plugins/package-tree.ts` is typed source. No runtime script was deleted. |
 | `scripts/publish-plugins.ts` | `scripts/plugins/publish.ts` | Plugin packaging | Keeps all `publish:plugins*` npm command names. |
 | `scripts/sync-codex-plugin-cache.mjs` | `scripts/plugins/sync-codex-cache.ts` | Plugin packaging | Keeps `sync:codex-plugin-cache` and `check:codex-plugin-cache` command names. |
 | `scripts/host-smoke/claude-handoff.mjs` | `scripts/hosts/smoke/claude-handoff.ts` | Host smoke checks | Host smoke scripts now sit under the host owner. |
@@ -142,7 +142,7 @@ Source: `git diff --name-status 1957e041..origin/main -- scripts`
 | `scripts/release/check-release-ready.mjs` | `scripts/release/check-release-ready.ts` | Release checks | Same release check, converted to typed source. |
 | `scripts/release/emit-current-capabilities.ts` | `scripts/release/emit-current-capabilities.ts` | Release checks | Retained path. |
 | `scripts/release/lib.mjs` | `scripts/release/shared.ts` | Release checks | Shared release helper. |
-| `scripts/release/lib.d.mts` | none | Release checks | Retired declaration shim; `scripts/release/shared.ts` is typed source. No runtime script was deleted. |
+| `scripts/release/lib.d.mts` | none | Release checks | Retired declaration file; `scripts/release/shared.ts` is typed source. No runtime script was deleted. |
 | `scripts/release/render-parity-matrix.mjs` | `scripts/release/render-parity-matrix.ts` | Release checks | Same release renderer, converted to typed source. |
 | `scripts/release/render-readiness-report.mjs` | `scripts/release/render-readiness-report.ts` | Release checks | Same release renderer, converted to typed source. |
 

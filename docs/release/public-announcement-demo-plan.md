@@ -321,7 +321,7 @@ Files:
 - `src/flows/demo-build/flow.ts`
 - `src/flows/demo-build/reports.ts`
 - `src/flows/demo-build/contract.md`
-- `src/flows/demo-build/index.ts` if compatibility projection is needed
+- `src/flows/demo-build/index.ts` only if current imports need a package surface
 - `src/flows/catalog.ts`
 
 Acceptance:

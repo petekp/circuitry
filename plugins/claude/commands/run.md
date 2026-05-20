@@ -8,7 +8,8 @@ argument-hint: <task>
 Selects the best Circuit flow for the user's natural-language task, then
 runs that explicit flow through the project CLI. In this host surface, the
 host model chooses the flow before invoking Circuit. The deterministic CLI
-router remains available as a compatibility and fallback path.
+router is available only when the operator asks Circuit to choose mechanically
+or when the host cannot confidently choose.
 
 Explicit flow commands remain available as
 `/circuit:explore`, `/circuit:review`, `/circuit:fix`,

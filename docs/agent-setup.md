@@ -1,6 +1,17 @@
 # Agent Setup
 
-Safe setup steps for coding agents working in a Circuit checkout.
+Thin setup prompt for coding agents working in a Circuit checkout.
+
+Keep durable setup and operating instructions in:
+
+- [docs/first-run.md](first-run.md) for the safest install proof.
+- [docs/operator-guide.md](operator-guide.md) for commands, checkpoints, and
+  verification.
+- [docs/configuration.md](configuration.md) for config and connector routing.
+- [docs/generated-surfaces.md](generated-surfaces.md) for generated output
+  ownership.
+
+Do not turn this file into a second operator guide.
 
 ## Copy-Paste Prompt
 
@@ -29,64 +40,17 @@ Use Review as the first real run unless I ask for a write-capable flow. Report
 commands run, files changed, verification results, and any blocker.
 ```
 
-## Checks To Run
+## What This Prompt Delegates
 
-Gather the blockers before changing anything:
+- Environment blockers and the safe first Review path:
+  [docs/first-run.md](first-run.md).
+- Verification and troubleshooting:
+  [docs/operator-guide.md#verification](operator-guide.md#verification).
+- Config boundaries and connector choices:
+  [docs/configuration.md](configuration.md).
+- Generated host output and Codex cache sync:
+  [docs/generated-surfaces.md](generated-surfaces.md).
 
-```bash
-git status --short
-node --version
-npm --version
-```
-
-If Node is older than `22.18.0`, stop and report that blocker. Do not try to
-work around it inside the repo.
-
-If the checkout needs dependencies, install them from the repo root:
-
-```bash
-npm install
-```
-
-Then prove the repo builds:
-
-```bash
-npm run build
-```
-
-If the task is local Codex host setup, sync and check the local plugin cache:
-
-```bash
-npm run sync:codex-plugin-cache
-npm run check:codex-plugin-cache
-```
-
-For plugin or public-claim changes, use the verification section in
-[`docs/operator-guide.md`](operator-guide.md#verification).
-
-## Config Boundaries
-
-Config files are:
-
-- `~/.config/circuit/config.yaml` for personal defaults across projects.
-- `./.circuit/config.yaml` for project-specific overrides.
-
-The agent should preview config before writing it. A minimal config starts with:
-
-```yaml
-schema_version: 1
-```
-
-Use `codex` only for read-only Codex relays. Use `claude-code` for trusted
-same-workspace writes. Do not use `codex-isolated`; it is planned, not current.
-
-## Safest First Run
-
-Use Review first because it is audit-only:
-
-```bash
-./bin/circuit run review --goal 'review this checkout for obvious release blockers'
-```
-
-Build, Fix, and Pursue may invoke a write-capable Claude Code worker. The agent
-should not start one unless the operator asked for code-changing work.
+Use Review first because it is audit-only. Build, Fix, and Pursue may invoke a
+write-capable Claude Code worker, so do not start one unless the operator asked
+for code-changing work.

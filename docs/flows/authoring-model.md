@@ -17,15 +17,18 @@ Use it with:
 - [docs/flows/block-catalog.json](block-catalog.json) for the generated
   machine-readable block catalog.
 - `src/schemas/flow-blocks.ts` for the block catalog schema.
-- `src/schemas/flow-schematic.ts` for generated schematic compatibility shape.
+- `src/schemas/flow-schematic.ts` for generated schematic shape.
 - `src/flows/compile-schematic-to-flow.ts` for schematic to compiled-flow projection.
+- `src/flows/catalog.ts` for the built-in flow catalog the engine derives from.
+- [docs/generated-surfaces.md](../generated-surfaces.md) for generated
+  command, skill, schematic, manifest, and plugin output ownership.
 - [docs/contracts/compiled-flow.md](../contracts/compiled-flow.md) for runtime
   graph invariants.
 
 This document is hand-authored because it explains intent and boundaries.
 Do not hand-maintain current flow inventories here. Current flow data comes from
 `src/flows/<id>/data.ts`; `src/flows/<id>/flow.ts` binds that plain value to the
-compiler. Generated compatibility schematics live under
+compiler. Generated schematics live under
 `src/flows/<id>/schematic.json`, generated compiled outputs live under
 `generated/flows/<id>/`, and generated release surfaces such as
 [docs/release/parity-matrix.generated.md](../release/parity-matrix.generated.md)
@@ -33,8 +36,8 @@ are derived.
 
 ## Short Version
 
-A flow is an authored typed definition compiled through a compatibility
-schematic into a runtime graph.
+A flow is an authored typed definition compiled through a generated schematic
+into a runtime graph.
 
 A flow definition should say:
 
@@ -100,7 +103,7 @@ Typical step concerns:
 The compiler normalizes the authored shape into a CompiledFlow. Runtime graph
 invariants then apply to the compiled manifest, not to prose in this document.
 
-## Compatibility
+## Contract Fit
 
 Schematic assembly should fail early when a step cannot consume what came before
 it.
@@ -115,7 +118,7 @@ If one branch can reach Close without passing through Review, Close cannot
 require a Review report unless the schematic has a separate close path for the
 skipped-review case.
 
-Mode-specific routes are part of compatibility. If Lite skips Review, it should
+Mode-specific routes are part of contract fit. If Lite skips Review, it should
 route to a separate close step whose inputs do not require a Review report. That
 keeps reviewed and unreviewed close paths honest.
 
@@ -222,16 +225,124 @@ of scope unless the public naming model is explicitly reopened.
 
 ## Adding A Flow
 
-1. Create `src/flows/<id>/data.ts` for the canonical `FlowData` value and `src/flows/<id>/flow.ts` for the thin adapter.
-2. Define per-flow report schemas in `src/flows/<id>/reports.ts`.
-3. Declare contract aliases in the FlowData.
-4. Wire steps to schemas through step `input` and `output`.
-5. Add writers and relay hints owned by the flow package.
-6. Add the definition to `flowDefinitions` in `src/flows/catalog.ts`.
-7. Run `npm run build && node scripts/flows/emit.ts` and then `npm run verify`.
+This is the flow-authoring playbook. Keep durable flow-authoring instructions
+here instead of repeating them in agent guides, architecture notes, command
+docs, or generated host output.
+
+### 1. Own the flow package
+
+Create `src/flows/<id>/` and keep flow-specific behavior there:
+
+- `data.ts` owns the canonical `FlowData` value.
+- `flow.ts` is the thin `defineFlowData(...)` adapter.
+- `reports.ts` owns the flow's Zod report schemas.
+- `contract.md` explains flow-specific operator and report contracts when the
+  flow needs one.
+- `relay-hints.ts` owns relay response shape hints when any relay step needs
+  more guidance than the generic report schema.
+- `writers/` owns compose, close, checkpoint, and verification writers.
+- `index.ts` may export the current package surface when current imports need
+  the `<id>CompiledFlowPackage` name. Do not add exports only to preserve old
+  caller shapes.
 
 The runtime should not import the new flow directly. Runtime registries derive
-from the catalog.
+from `src/flows/catalog.ts`.
+
+### 2. Decide command ownership
+
+Command ownership decides whether hosts get a direct command or only a routed
+flow.
+
+- If the flow should be directly invocable, create
+  `src/flows/<id>/command.md` and set `paths.command` to that file in
+  `src/flows/<id>/data.ts`.
+- If the flow should be public but routed only, leave `paths.command`
+  undefined and document the intended entry path in the flow guide or
+  `src/commands/run.md`.
+- Do not put flow-owned commands in `src/commands/`. That directory is only for
+  direct commands that are not owned by a flow package, such as `run`, `create`,
+  and `handoff`.
+
+For a public flow with `paths.command`, the emitter creates all host-ready
+command surfaces:
+
+- `plugins/claude/commands/<id>.md`
+- `plugins/codex/commands/<id>.md`
+- `plugins/codex/skills/<id>/SKILL.md`
+
+For a public flow, the emitter also creates host-ready compiled flow surfaces:
+
+- `src/flows/<id>/schematic.json`
+- `generated/flows/<id>/*.json`
+- `plugins/claude/skills/<id>/*.json`
+- `plugins/codex/flows/<id>/*.json`
+
+For an internal flow, host mirrors must not exist.
+
+### 3. Wire the catalog and reports
+
+Add the definition to `flowDefinitions` in `src/flows/catalog.ts`. The flow
+definition should carry its visibility, paths, routing metadata, axes, contract
+aliases, relay reports, report schemas, writers, structural hints, and any
+explicit engine flags.
+
+Use `CompiledFlowPackage.engineFlags` only for opt-in engine behavior that is
+still flow-agnostic. Do not add flow-specific branches to runtime code.
+
+### 4. Regenerate generated surfaces
+
+After authored flow or command changes, run:
+
+```bash
+npm run emit-flows
+```
+
+Then inspect [docs/generated-surfaces.md](../generated-surfaces.md). It is the
+generated source map for command, skill, schematic, compiled manifest, and
+plugin mirror ownership. Do not hand-edit generated host files.
+
+If you need to test the Codex host from this checkout, sync the local Codex
+plugin cache after regeneration:
+
+```bash
+npm run sync:codex-plugin-cache
+npm run check:codex-plugin-cache
+```
+
+Cache sync is a local host-test step. It is not a substitute for generated
+surface drift checks.
+
+### 5. Update release truth when behavior changes
+
+If the flow changes public behavior, command semantics, release claims, or
+capability metadata, update release truth with the release scripts instead of
+editing generated release output by hand.
+
+Use these checks as the decision points:
+
+- Run `npm run emit-release` when capability, parity, or readiness metadata
+  should change.
+- Run `npm run check-release-infra` before claiming release truth is current.
+- Run `npm run capture-proofs:golden-runs` when a proof scenario asserts the
+  behavior you changed: runtime control flow, route outcomes, report schemas,
+  operator summaries, checkpoints, command semantics, or proof coverage.
+
+Release proof artifacts under `docs/release/proofs/runs/` are evidence, not
+examples. Preserve them unless a release check and proof capture path says they
+are safe to change.
+
+### 6. Prove the flow is host-ready
+
+Choose focused proof before the final check:
+
+- `tests/runner/flow-facts.test.ts` and
+  `tests/contracts/catalog-completeness.test.ts` for catalog and flow package
+  shape.
+- The flow's report-schema and runtime tests for behavior.
+- `npm run check-flow-drift` for schematic, manifest, command, skill, plugin,
+  and generated source-map drift.
+- `npm run check-release-infra` for release truth and public-claim safety.
+- `npm run verify` before calling the change done.
 
 ## What Not To Put Here
 

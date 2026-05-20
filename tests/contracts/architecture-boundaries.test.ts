@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 function read(path: string): string {
@@ -11,6 +11,7 @@ describe('architecture boundary ratchets', () => {
     const connectorBarrel = read('src/connectors/shared.ts');
 
     expect(lifecycle).toContain('runConnectorSubprocess');
+    expect(existsSync('src/shared/connector-helpers.ts')).toBe(false);
     expect(lifecycle).not.toContain('../schemas/');
     expect(lifecycle).not.toContain('connector-helpers');
     expect(connectorBarrel).not.toContain('connector-helpers');
