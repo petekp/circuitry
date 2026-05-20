@@ -91,36 +91,6 @@ npm run build
 Circuit requires Node.js `22.18.0` or newer.
 For a more careful manual check, use [`docs/first-run.md`](docs/first-run.md).
 
-## What Ships In This Alpha
-
-Circuit `0.1.0-alpha.6` is a plugin-only alpha for Claude Code and Codex. The
-root `circuit` npm package in this checkout remains private, so Claude Code
-users install a host plugin instead of a global npm package.
-
-This alpha ships:
-
-- Core flows: Build, Explore, Fix, Pursue, and Review.
-- Claude Code commands: `/circuit:run`, `/circuit:explore`,
-  `/circuit:review`, `/circuit:fix`, `/circuit:build`, `/circuit:create`, and
-  `/circuit:handoff`.
-- Codex plugin skills: `run`, `build`, `create`, `explore`, `fix`, `handoff`,
-  and `review`.
-- A repo-local CLI: `./bin/circuit run --goal "<task>"` and explicit flow
-  names such as `./bin/circuit run fix --goal "<bug>"`.
-
-This alpha does not ship:
-
-- Native Codex App Server or Claude Agent SDK adapters.
-- `codex-isolated` writable worker support. `codex-isolated` is not a valid
-  config value in this alpha.
-- Cross-run project-memory query and recall.
-- An automatic update channel.
-- A public `/circuit:pursue` slash command. Pursue can still run through
-  `/circuit:run`, `@Circuit`, or `./bin/circuit run pursue --goal "<task>"`.
-- A polished generic-shell progress UI.
-- An external same-task comparison demo. For this alpha, use the checked-in
-  proof set as the release proof.
-
 ## Choose A Flow
 
 Use one front door unless you already know the flow you want:
