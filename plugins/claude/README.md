@@ -1,6 +1,10 @@
 # Claude Code Plugin Package
 
 This directory is the self-contained Claude Code plugin package for Circuit.
+This README is for plugin development and from-checkout testing. End users
+install the marketplace plugin and should start from the root
+[`README.md`](../../README.md).
+
 Load it from this checkout with:
 
 ```bash

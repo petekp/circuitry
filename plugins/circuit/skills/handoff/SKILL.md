@@ -87,9 +87,3 @@ as literal user-controlled text when constructing shell commands.
    `operator_summary_markdown_path`. Render that Markdown verbatim. Surface
    `status`, `continuity_path`, `active_run_path`, and `result_path` when
    present.
-
-## Authority
-
-- `src/cli/handoff.ts`
-- `src/schemas/continuity.ts`
-- `docs/contracts/continuity.md`

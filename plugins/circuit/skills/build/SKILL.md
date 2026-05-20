@@ -115,9 +115,3 @@ as literal user-controlled text when constructing shell commands.
    report.
 8. **If `outcome === "aborted"`, read `reports/result.json` at
    `result_path` and surface the abort reason.**
-
-## Authority
-
-- `docs/contracts/compiled-flow.md` (compiled flow shape)
-- `src/cli/circuit.ts` (current CLI flags)
-- `src/flows/router.ts` (router bypass behavior for explicit flow names)

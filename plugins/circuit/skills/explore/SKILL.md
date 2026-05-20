@@ -133,8 +133,3 @@ This command runs at standard rigor by default. Use `--rigor lite` for a quick
 look, `--rigor deep` for deeper analysis, and `--tournament` for a bounded
 decision tournament. Add `--autonomous` only when the operator explicitly asks
 for autonomous checkpoint handling.
-
-## Authority
-
-- `src/flows/explore/contract.md` (flow contract + relay semantics)
-- `src/runtime/` (current runner)

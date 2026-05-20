@@ -118,10 +118,3 @@ as literal user-controlled text when constructing shell commands.
    `fix.change` and the verification report) and read those reports.
 9. **If `outcome === "aborted"`, read `reports/result.json` at
    `result_path` and surface the abort reason.**
-
-## Authority
-
-- `src/flows/fix/contract.md` (Fix report contract)
-- `docs/contracts/compiled-flow.md` (compiled flow shape)
-- `src/cli/circuit.ts` (current CLI flags + per-mode flow file resolution)
-- `src/flows/router.ts` (router bypass behavior for explicit flow names)

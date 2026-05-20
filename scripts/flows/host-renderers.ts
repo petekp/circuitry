@@ -185,9 +185,10 @@ function renderCodexNativeSkillBody(body: string): string {
       'Direct Circuit flow skills remain available when the user already knows the flow.',
     )
     .replace(/\n## Direct Flow Bypass\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g, '\n')
+    .replace(/\n## Authority\n[\s\S]*$/g, '\n')
     .replace(/\bslash-command\b/g, 'host-command')
     .replace(/\bslash command\b/gi, 'host command')
-    .trimStart();
+    .trim();
 }
 
 function assertCodexHostSkillHasNoCommandPlaceholders(command: string, content: string): void {

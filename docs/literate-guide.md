@@ -1,10 +1,10 @@
-# Circuit, read as literature
+# Circuit Codebase Walkthrough
 
-A literate guide to Circuit, written so the system can be understood
-end-to-end without first having to puzzle out where things live. Sections are
-numbered with the section sign (§1, §2, …) and cross-reference each other.
-You can read it linearly; the cross-references exist so you can also jump and
-still find your bearings.
+This is a codebase walkthrough written so Circuit can be understood end to end
+without first having to puzzle out where things live. Sections are numbered
+with the section sign (§1, §2, …) and cross-reference each other. You can read
+it linearly; the cross-references exist so you can also jump and still find
+your bearings.
 
 The intended reader is someone with general programming experience who is
 opening this codebase for the first time — a contributor, a curious engineer,

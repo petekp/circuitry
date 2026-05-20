@@ -1,7 +1,8 @@
 # Circuit Host Trial Checklist
 
-Use this checklist before saying the Codex or Claude Code host experience is
-ready for broader use.
+Release QA checklist for validating Codex and Claude Code host behavior before
+saying the host experience is ready for broader use. Operators do not need this
+for normal first-run setup; use `docs/first-run.md` instead.
 
 ## Setup
 

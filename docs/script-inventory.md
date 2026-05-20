@@ -1,15 +1,13 @@
-# Script Inventory And Migration Map
+# Script Ownership Inventory
 
-This records the `scripts/` tree cleanup that landed on `main` in PR #16.
-
-Boundary note: PR #16 combined the `.mjs` to `.ts` conversion with the
-ownership/name/directory cleanup. There is no separate committed "TS-only,
-old-layout" baseline in this repo. For that reason, the before inventory and
-migration map use the PR base commit `1957e041`; the after inventory uses the
-current `origin/main` state after fetching the merge.
+This is the current ownership map for the `scripts/` tree. Use it to decide
+where a script belongs before adding, moving, or renaming one.
 
 Partition criterion: each top-level script directory is named for the behavior
 that owns the scripts, not for file type or incidental implementation detail.
+
+The migration map later in this file records the historical cleanup that
+produced the current layout.
 
 ## Owner Groups
 
@@ -22,6 +20,12 @@ that owns the scripts, not for file type or incidental implementation detail.
 | Release checks | `scripts/release/*` | Emit release truth, check release parity and public claims, capture golden proof runs, and render release reports. |
 
 ## Before Inventory
+
+Historical note: PR #16 combined the `.mjs` to `.ts` conversion with the
+ownership/name/directory cleanup. There is no separate committed "TS-only,
+old-layout" baseline in this repo. For that reason, the before inventory and
+migration map use the PR base commit `1957e041`; the after inventory uses the
+current `origin/main` state after fetching the merge.
 
 Source: `git ls-tree -r --name-only 1957e041 scripts | sort`
 

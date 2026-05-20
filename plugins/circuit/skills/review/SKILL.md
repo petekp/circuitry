@@ -103,9 +103,3 @@ as literal user-controlled text when constructing shell commands.
 
 Review runs at standard rigor. Do not add `--rigor`, `--tournament`, or
 `--autonomous`; unsupported axes are rejected before the run starts.
-
-## Authority
-
-- `src/flows/review/contract.md` (review flow contract)
-- `tests/runner/review-runtime-wiring.test.ts` (default registered review
-  composer writer)

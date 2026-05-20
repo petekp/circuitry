@@ -2,40 +2,62 @@
 
 Start here when you need repo truth without reading every historical note.
 
-## Read Order
+## Read First
 
-1. `README.md` - user-facing product, install, commands, and common operation.
-2. `docs/first-run.md` - first doctor run and safest first Review.
-3. `docs/operator-guide.md` - command, run, verification, and troubleshooting
-   detail.
-4. `docs/configuration.md` - config layers, local skills, Codex worker setup,
-   and connector routing.
-5. `docs/agent-setup.md` - copy-paste setup instructions for coding agents.
-6. `AGENTS.md` - repo operating rules for agents working in this checkout.
-7. `UBIQUITOUS_LANGUAGE.md` - canonical vocabulary for product-facing prose.
-8. `docs/generated-surfaces.md` - generated-file ownership and drift checks.
-9. `docs/script-inventory.md` - script ownership, inventory, and migration map.
-10. `docs/architecture/runtime.md` and
-   `docs/architecture/declarative-flow-architecture.md` - current runtime and
-   flow authoring architecture.
-11. `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, and the specific
-   flow guide you are changing.
-12. `docs/contracts/` - contract details when code, tests, or generated surfaces
-   depend on an invariant.
+1. `README.md` - product shape, install paths, host roles, and first links.
+2. `docs/first-run.md` - doctor, safest Review, expected output, and run folder
+   shape.
+3. `docs/operator-guide.md` - commands, run flow, checkpoints, verification,
+   and troubleshooting.
+4. `docs/configuration.md` - starter config, local skills, Codex host/worker
+   distinction, and connector routing.
+
+## Agent And Contributor Setup
+
+- `docs/agent-setup.md` - copy-paste setup instructions for coding agents.
+- `AGENTS.md` - repo operating rules for agents working in this checkout.
+- `CLAUDE.md` - compatibility pointer to `AGENTS.md`.
+- `UBIQUITOUS_LANGUAGE.md` - product vocabulary and terms to avoid.
+- `docs/literate-guide.md` - codebase walkthrough for contributors opening the
+  repo for the first time.
+
+## Change Flows Or Runtime
+
+- `docs/architecture/runtime.md` and
+  `docs/architecture/declarative-flow-architecture.md` - current runtime and
+  flow authoring architecture.
+- `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, and the specific
+  flow guide you are changing.
+- `docs/contracts/` - contract details when code, tests, or generated surfaces
+  depend on an invariant.
+- `docs/script-inventory.md` - current script ownership and historical migration
+  map.
+
+## Generated, Release, And Evidence
+
+- `docs/generated-surfaces.md` - generated-file ownership and drift checks.
+- `docs/flows/block-catalog.json` - generated block catalog.
+- `generated/**`, `plugins/**`, and `docs/release/**` - generated truth,
+  release truth, host package output, and checked-in proof evidence.
+- `docs/host-trial-checklist.md` - release QA checklist for saying the host
+  experience is ready for broader use.
 
 When docs disagree, prefer code, tests, generated surfaces, and release checks
 over dated plans or audits.
 
 ## Document Classes
 
-| Class | Paths | Use as |
+| Audience / role | Paths | Use as |
 | --- | --- | --- |
-| Canonical | `README.md`, `docs/first-run.md`, `docs/operator-guide.md`, `docs/configuration.md`, `docs/agent-setup.md`, `AGENTS.md`, `CLAUDE.md`, `UBIQUITOUS_LANGUAGE.md`, this file | Entry points, setup guidance, and vocabulary. `CLAUDE.md` is only a compatibility pointer. |
-| Canonical | `docs/architecture/runtime.md`, `docs/architecture/declarative-flow-architecture.md`, `docs/contracts/**`, `docs/flows/authoring-model.md`, `docs/flows/blocks.md`, `docs/flows/pursue.md`, `docs/flows/explore-tournament.md`, `docs/script-inventory.md` | Current architecture, flow authoring, block, flow, contract, and script ownership guidance. |
-| Canonical | `docs/host-trial-checklist.md`, `docs/positioning-and-strategy.md` | Host testing and strategy notes. Check code and release evidence before turning strategy copy into product claims. |
+| Operator entry | `README.md`, `docs/first-run.md`, `docs/operator-guide.md`, `docs/configuration.md` | Current user-facing setup and operation. |
+| Agent setup | `docs/agent-setup.md`, `AGENTS.md`, `CLAUDE.md` | Instructions for coding agents in this checkout. `CLAUDE.md` is only a compatibility pointer. |
+| Vocabulary | `UBIQUITOUS_LANGUAGE.md` | Current product terms for product prose, docs, contracts, and flow authoring notes. |
+| Contributor reference | `docs/literate-guide.md`, `docs/architecture/**`, `docs/contracts/**`, `docs/flows/**`, `docs/script-inventory.md` | Current codebase, flow, block, contract, and script ownership reference. |
 | Generated/evidence | `docs/generated-surfaces.md`, `docs/flows/block-catalog.json`, `generated/**`, `docs/release/**`, `plugins/**` generated mirrors | Generated truth, release truth, or proof evidence. Do not hand-edit generated mirrors. |
+| Release QA | `docs/host-trial-checklist.md` | Checklist for validating host readiness before broader use. |
+| Working strategy | `docs/positioning-and-strategy.md` | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |
 | Research note | `docs/ideas/**`, `docs/learnings/**`, `docs/flows/research-intake.md`, `docs/flows/cloudflare-glasswing-block-review.md` | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |
-| Archived | Completed or historical files in `docs/specs/**` | Dated target specs and design records. Do not treat as active instructions unless a canonical doc links to a live section. |
+| Archived | Completed or historical files in `docs/specs/**` and `docs/internal/archive/**` | Dated target specs, design records, and local-only historical notes. Do not treat as active instructions unless a current doc links to a live section. |
 
 ## Low-Noise Rules
 

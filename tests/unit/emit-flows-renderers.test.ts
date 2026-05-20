@@ -70,5 +70,6 @@ describe('emit-flows host renderers', () => {
     expect(rendered).not.toContain('$ARGUMENTS');
     expect(rendered).not.toContain('/circuit:');
     expect(rendered).not.toContain('slash command');
+    expect(rendered).not.toContain('## Authority');
   });
 });

@@ -54,6 +54,11 @@ Circuit also ships two utilities:
 
 ## How A Run Works
 
+For vocabulary, read `flow` as the kind of work, `stage` as a grouped part of
+that work, `trace` as the ordered record, `report` as typed output, and
+`evidence` as supporting facts or files. The full vocabulary lives in
+[`UBIQUITOUS_LANGUAGE.md`](../UBIQUITOUS_LANGUAGE.md).
+
 1. Circuit selects a flow. In host plugins, the host model may select the flow
    before calling Circuit. In CLI router mode, Circuit's deterministic router
    selects it.
@@ -99,7 +104,9 @@ or `npm run check-flow-drift` as that map directs.
 
 ## Verification
 
-Use focused checks while you work and release checks before public claims:
+`npm run verify` is the full canonical check that CI enforces. Use focused
+checks while you work, `verify:fast` for a faster broad pass, and release
+checks before public claims:
 
 | Command | What it checks |
 | --- | --- |

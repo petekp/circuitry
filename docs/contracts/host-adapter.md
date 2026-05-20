@@ -156,7 +156,9 @@ the generated files it describes.
 
 Generated Codex skills MUST translate slash-command placeholders into
 skill-safe wording; they must not contain `$ARGUMENTS`, `argument-hint`, or
-"substituted below" text.
+"substituted below" text. Codex skills are runnable host instructions, while
+Codex command files are generated mirrors and reference surfaces. Keep both
+unless the Codex plugin contract and emitter change together.
 
 Local development caches can drift from this repo package. Prefer the official
 refresh path when it is available:

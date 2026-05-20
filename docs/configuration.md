@@ -24,6 +24,40 @@ described below.
 Use `schema_version: 1`. The config contract is
 [`docs/contracts/config.md`](contracts/config.md).
 
+## Minimal Starter Config
+
+Start with this if you only need a valid project config:
+
+```yaml
+schema_version: 1
+```
+
+This common project config keeps trusted write-capable work on Claude Code and
+routes reviewer/researcher relays to the read-only Codex worker connector:
+
+```yaml
+schema_version: 1
+
+relay:
+  default: claude-code
+  roles:
+    reviewer: codex
+    researcher: codex
+```
+
+Codex has two separate Circuit roles:
+
+- **Codex host/orchestrator:** you ask `@Circuit` to run a task through the
+  Codex plugin.
+- **Codex worker connector:** Circuit launches `codex exec` for read-only relay
+  steps from any host.
+
+The optional worker connector requires the Codex CLI:
+
+```bash
+npm install -g @openai/codex
+```
+
 ## Local Skills
 
 Circuit can load your own `SKILL.md` files into relay prompts. It scans these
@@ -64,19 +98,13 @@ The skill contract is [`docs/contracts/skill.md`](contracts/skill.md).
 
 ## Codex Host And Codex Worker
 
-Codex can use Circuit in two separate ways:
+The same distinction from the starter section applies throughout config:
 
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
   Codex chooses the best bundled Circuit flow skill and invokes the local
   Circuit engine.
 - **worker connector behavior:** Circuit can relay read-only worker steps
   through the Codex CLI from any host.
-
-The Codex worker connector is optional:
-
-```bash
-npm install -g @openai/codex
-```
 
 When a step uses Codex as its connector, Circuit launches `codex exec` with
 read-only sandbox flags. The Codex subprocess inherits the Circuit process
@@ -92,6 +120,23 @@ each relay step in this order:
 2. `relay.circuits.<flow_id>` mapping for the active flow.
 3. `relay.default`.
 4. Auto-detect, which currently selects `claude-code`.
+
+Example:
+
+```yaml
+schema_version: 1
+
+relay:
+  default: claude-code
+  roles:
+    reviewer: codex
+  circuits:
+    explore: codex
+```
+
+In that config, reviewer steps use `codex` first because role routing wins.
+Other Explore relays use `codex` because the flow-level route wins next. Any
+remaining relay uses `claude-code`.
 
 Built-in connectors:
 

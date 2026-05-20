@@ -15,6 +15,9 @@ evidence in a run folder.
 Use it when you want a repeatable path for bug fixes, implementation, review,
 architecture choices, or a broad goal that needs ordered work.
 
+New here? Start with [`docs/first-run.md`](docs/first-run.md). For the full
+docs map, see [`docs/README.md`](docs/README.md).
+
 ## Start Here
 
 Pick the path that matches your host.
@@ -29,10 +32,11 @@ Install the host plugin:
 /reload-plugins
 ```
 
-Run doctor before the first useful run:
+Run doctor before the first useful run. For the current alpha version, the
+marketplace install path is:
 
 ```bash
-node '<plugin root>/scripts/circuit.ts' doctor
+node "$HOME/.claude/plugins/cache/circuit/circuit/0.1.0-alpha.6/scripts/circuit.ts" doctor
 ```
 
 The doctor output should include `"runtime_source": "bundled"`. That means
@@ -50,11 +54,30 @@ this repo, run `npm install`, install a `circuit` binary, or create a symlink.
 
 ### Codex
 
-From this checkout, refresh the local Codex plugin package and check the cache:
+Codex has two separate Circuit roles:
+
+- As the **host/orchestrator**, Codex starts Circuit through `@Circuit`.
+- As a **worker connector**, Circuit can relay read-only worker steps through
+  the Codex CLI.
+
+For Codex host use from this checkout, refresh the local plugin package and
+check the cache:
 
 ```bash
 npm run sync:codex-plugin-cache
 npm run check:codex-plugin-cache
+```
+
+Then run doctor from the synced package:
+
+```bash
+node "$HOME/.codex/plugins/cache/circuit-local/circuit/0.1.0-alpha.6/scripts/circuit.ts" doctor
+```
+
+Or from this checkout:
+
+```bash
+node plugins/circuit/scripts/circuit.ts doctor
 ```
 
 Then ask Codex to use Circuit:
@@ -66,9 +89,16 @@ Then ask Codex to use Circuit:
 Codex can choose the best bundled Circuit flow skill from your
 natural-language request.
 
-### Local CLI
+Install the Codex CLI only when you also want the optional read-only worker
+connector:
 
-For local development:
+```bash
+npm install -g @openai/codex
+```
+
+### Local Development From Source
+
+For repo development:
 
 ```bash
 git clone https://github.com/petekp/circuit.git
@@ -80,13 +110,40 @@ npm run build
 
 Circuit requires Node.js `22.18.0` or newer.
 
+## Choose A Flow
+
+Use one front door unless you already know the flow you want.
+
+Claude Code:
+
+```text
+/circuit:run the checkout total is wrong when discounts and tax both apply
+```
+
+Codex:
+
+```text
+@Circuit the checkout total is wrong when discounts and tax both apply
+```
+
+CLI:
+
+```bash
+./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"
+```
+
+If the flow choice is obvious, use the direct commands in
+[`docs/operator-guide.md`](docs/operator-guide.md). That guide also covers
+flags, checkpoints, verification, troubleshooting, and older compatibility
+prefixes.
+
 ## What Ships In This Alpha
 
 Circuit `0.1.0-alpha.6` is a plugin-only alpha for Claude Code and Codex. The
 root `circuit` npm package in this checkout remains private, so Claude Code
 users install a host plugin instead of a global npm package.
 
-This alpha ships:
+Ships now:
 
 - Core flows: Build, Explore, Fix, Pursue, and Review.
 - Claude Code commands: `/circuit:run`, `/circuit:explore`,
@@ -94,47 +151,20 @@ This alpha ships:
   `/circuit:handoff`.
 - Codex plugin skills: `run`, `build`, `create`, `explore`, `fix`, `handoff`,
   and `review`.
-- A repo-local CLI: `./bin/circuit run --goal "<task>"` and explicit flow
-  names such as `./bin/circuit run fix --goal "<bug>"`.
+- A repo-local CLI for development and tests.
 
-This alpha does not ship:
+Not shipped in this alpha:
 
 - Native Codex App Server or Claude Agent SDK adapters.
 - `codex-isolated` writable worker support. `codex-isolated` is not a valid
-  config value in this alpha.
+  config value.
 - Cross-run project-memory query and recall.
 - An automatic update channel.
 - A public `/circuit:pursue` slash command. Pursue can still run through
   `/circuit:run`, `@Circuit`, or `./bin/circuit run pursue --goal "<task>"`.
 - A polished generic-shell progress UI.
-- An external same-task comparison demo. For this alpha, use the checked-in
-  proof set as the release proof.
-
-## Choose A Flow
-
-Use one front door unless you already know the flow you want:
-
-| Host | You type | Who chooses the flow |
-| --- | --- | --- |
-| Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host model selects an explicit Circuit flow. |
-| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex chooses the best bundled Circuit flow skill. |
-| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
-
-If the flow choice is obvious, use direct commands such as `/circuit:fix`,
-`/circuit:review`, `/circuit:build`, or `/circuit:explore`. The CLI form is
-`./bin/circuit run <flow> --goal "<task>"`. Use `/circuit:run` for Pursue from
-Claude Code; the CLI can run `pursue` directly.
-
-Create drafts reusable custom flows after explicit confirmation. Handoff saves,
-resumes, clears, briefs, or installs continuity support. See
-[`docs/operator-guide.md`](docs/operator-guide.md) for direct commands, flags,
-checkpoints, verification, and troubleshooting.
-
-**Advanced compatibility:**
-
-The deterministic CLI router still understands old intent prefixes such as
-`fix:`, `review:`, `develop:`, and `decide:`. Keep them for scripts and older
-habits, not for the normal user path.
+- An external same-task comparison demo. Use the checked-in proof set as the
+  release proof for this alpha.
 
 ## Safety Notes
 
@@ -148,6 +178,17 @@ Review collects untracked file paths and sizes by default, but not untracked
 file contents. Add `--include-untracked-content` only after you confirm those
 files are safe to relay.
 
+Built-in worker connectors are **`claude-code`** and **`codex`**. Use
+`claude-code` for trusted same-workspace writes. Use `codex` for read-only
+Codex relays.
+
+Custom connectors use the prompt-file/output-file protocol. stdin is ignored,
+the process inherits the Circuit process environment and current working
+directory, and `capabilities.filesystem: read-only` is a routing signal, not an
+OS sandbox.
+
+## Host And Worker Terms
+
 Codex has two separate roles:
 
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
@@ -156,12 +197,8 @@ Codex has two separate roles:
 - **worker connector behavior:** Circuit can relay read-only worker steps
   through the Codex CLI from any host.
 
-Built-in worker connectors are **`claude-code`** and **`codex`**. Use
-`claude-code` for trusted same-workspace writes. Use `codex` for read-only
-Codex relays. Custom connectors use the prompt-file/output-file protocol;
-stdin is ignored, the process inherits the Circuit process environment and
-current working directory, and `capabilities.filesystem: read-only` is a
-routing signal, not an OS sandbox.
+See [`docs/configuration.md`](docs/configuration.md) for connector routing and
+worker setup.
 
 ## Configuration
 
@@ -175,37 +212,36 @@ overrides. See [`docs/configuration.md`](docs/configuration.md).
 
 ## Give This To A Coding Agent
 
-Paste this into a coding agent when you want it to set up Circuit from a
-checkout safely:
-
-```text
-You are setting up Circuit in this repo: <repo-path>.
-
-Stay inside that checkout. Read README.md and docs/agent-setup.md, then follow
-the setup checklist there. Do not hand-edit generated host output. Preview any
-config YAML before writing it. Use Review as the first real run unless I ask
-for a write-capable flow. Report commands run, files changed, verification
-results, and any blocker.
-```
-
-See [`docs/agent-setup.md`](docs/agent-setup.md) for the full setup checklist.
+Use the canonical copy-paste prompt in
+[`docs/agent-setup.md`](docs/agent-setup.md). It includes the safe setup
+checks, generated-file boundary, Codex cache checks, and first-run guidance.
 
 ## Where To Go Next
 
-- [`docs/first-run.md`](docs/first-run.md): first doctor run and safest first
-  Review.
+Start:
+
+- [`docs/first-run.md`](docs/first-run.md): first doctor run, safest Review,
+  and the run folder shape.
+- [`docs/README.md`](docs/README.md): map of the current docs.
+
+Operate:
+
 - [`docs/operator-guide.md`](docs/operator-guide.md): commands, run flow,
   checkpoints, verification, and troubleshooting.
 - [`docs/configuration.md`](docs/configuration.md): config layers, local
   skills, Codex worker setup, and connector routing.
 - [`docs/agent-setup.md`](docs/agent-setup.md): copy-paste setup instructions
   for a coding agent.
+
+Contribute or verify:
+
 - [`docs/generated-surfaces.md`](docs/generated-surfaces.md): source map for
   generated command, skill, schematic, and plugin output.
-- [`docs/release/proofs/index.yaml`](docs/release/proofs/index.yaml): checked-in
-  proof set covering doing work, deciding, continuity, customization, failure,
-  first run, and plan execution for this alpha.
-- [`docs/README.md`](docs/README.md): map of the current docs.
+- [`docs/literate-guide.md`](docs/literate-guide.md): codebase walkthrough for
+  contributors.
+- [`docs/release/proofs/index.yaml`](docs/release/proofs/index.yaml):
+  checked-in proof set covering doing work, deciding, continuity,
+  customization, failure, first run, and plan execution for this alpha.
 
 ## License
 

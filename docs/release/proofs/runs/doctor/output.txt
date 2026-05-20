@@ -1,4 +1,4 @@
-$ node plugins/circuit/scripts/circuit.mjs doctor
+$ node plugins/circuit/scripts/circuit.ts doctor
 exit: 0
 
 stdout:
@@ -41,7 +41,7 @@ stdout:
     {
       "name": "session_start_hook_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/hooks/session-start.mjs"
+      "detail": "<repo>/plugins/circuit/hooks/session-start.ts"
     },
     {
       "name": "codex_hooks_feature_flag_visible",
@@ -103,7 +103,7 @@ stdout:
     {
       "name": "wrapper_exists",
       "ok": true,
-      "detail": "<repo>/plugins/circuit/scripts/circuit.mjs"
+      "detail": "<repo>/plugins/circuit/scripts/circuit.ts"
     },
     {
       "name": "packaged_flow_root_exists",
@@ -193,7 +193,7 @@ stdout:
     {
       "name": "temp_repo_review_smoke",
       "ok": true,
-      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"3c9f7a0e-328b-4aea-8afb-9ea27d924370\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-19T19:42:08.836Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"3c9f7a0e-328b-4aea-8afb-9ea27d924370\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
+      "detail": "status=0 error=none stderr={\"schema_version\":1,\"type\":\"route.selected\",\"run_id\":\"f60b250a-6910-4f0b-80c8-53442d8c2039\",\"flow_id\":\"review\",\"recorded_at\":\"2026-05-20T02:39:06.307Z\",\"label\":\"Selected review\",\"display\":{\"text\":\"Circuit: Chose review.\",\"importance\":\"major\",\"tone\":\"info\"},\"presentation\":{\"block_id\":\"f60b250a-6910-4f0b-80c8-53442d8c2039\",\"line_mode\":\"append\",\"status_text\":\"Chose review.\"},\"selected_flow\":\"review\",\"routed_by\":\"classifier\",\"router_reason\":\"matched change review request; routed to audit-only review"
     },
     {
       "name": "temp_repo_review_progress",

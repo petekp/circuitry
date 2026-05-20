@@ -184,9 +184,3 @@ as literal user-controlled text when constructing shell commands.
 
 8. **If `outcome === "aborted"`, read `reports/result.json` at
    `result_path` to surface the abort `reason`.**
-
-
-## Authority
-
-- `src/flows/router.ts` (current deterministic classifier)
-- `tests/contracts/flow-router.test.ts` (classifier behavior)

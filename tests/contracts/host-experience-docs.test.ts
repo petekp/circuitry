@@ -91,7 +91,7 @@ describe('host experience docs', () => {
 
   it('teaches one natural-language front door per host in the README', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'README.md'), 'utf8');
-    const advancedIndex = doc.indexOf('**Advanced compatibility:**');
+    const operatorGuide = readFileSync(resolve(REPO_ROOT, 'docs/operator-guide.md'), 'utf8');
 
     expect(doc).toContain(
       '/circuit:run the checkout total is wrong when discounts and tax both apply',
@@ -100,11 +100,11 @@ describe('host experience docs', () => {
     expect(doc).toMatch(/Codex can choose the best bundled Circuit flow\s+skill/);
     expect(doc).toContain('host/orchestrator behavior');
     expect(doc).toContain('worker connector behavior');
-    expect(advancedIndex).toBeGreaterThan(0);
+    expect(doc).toMatch(/older compatibility\s+prefixes/);
 
     for (const prefix of ['fix:', 'develop:', 'decide:']) {
-      const firstIndex = doc.indexOf(prefix);
-      expect(firstIndex).toBeGreaterThan(advancedIndex);
+      expect(doc).not.toContain(prefix);
+      expect(operatorGuide).toContain(prefix);
     }
   });
 
@@ -117,6 +117,6 @@ describe('host experience docs', () => {
     expect(doc).not.toContain('**`agent`**');
     expect(doc).toContain('stdin is ignored');
     expect(doc).toContain('inherits the Circuit process environment');
-    expect(doc).toContain('not an OS sandbox');
+    expect(doc).toMatch(/not an\s+OS sandbox/);
   });
 });

@@ -55,9 +55,3 @@ as literal user-controlled text when constructing shell commands.
    `operator_summary_markdown_path`. Render that Markdown verbatim. Surface
    `status`, `slug`, `draft_path`, `published_path`, `flow_path`, and
    `result_path` when present.
-
-## Authority
-
-- `src/cli/create.ts`
-- `src/schemas/compiled-flow.ts`
-- `docs/flows/authoring-model.md`

@@ -16,6 +16,12 @@ This is the source map for Circuit command surfaces, compiled flow outputs, host
 - Internal flows emit only under `generated/flows/**`; host mirrors for internal flows are stale and fail the drift check.
 - After editing an authored source, run `npm run build && npm run emit-flows`, then verify.
 
+## Codex Host Surface Guidance
+
+The Codex plugin currently ships both `plugins/circuit/commands/<id>.md` and `plugins/circuit/skills/<id>/SKILL.md` generated outputs. The plugin manifest points Codex at `./skills/`, so skill files must stay runnable host instructions. Command files remain generated mirrors and authority/reference surfaces. Do not delete either surface without changing the Codex plugin contract, the emitter, and the drift checks together.
+
+Codex skill files intentionally translate slash-command wording into skill-safe wording. They must not contain `$ARGUMENTS`, `argument-hint`, `/circuit:`, or source-only `## Authority` footers. If the host gains a smaller native presentation wrapper, change `scripts/flows/host-renderers.ts`, regenerate, and run `npm run check-flow-drift`.
+
 ## Surface Inventory
 
 | Surface | Source of truth | Generator | Human-editable | Expected destinations | Validation / drift check | Notes |
@@ -28,7 +34,7 @@ This is the source map for Circuit command surfaces, compiled flow outputs, host
 | Claude plugin flow mirrors | `generated/flows/<id>/*.json` | `scripts/flows/emit.ts` | no | `plugins/claude/skills/<id>/*.json` | `node scripts/flows/emit.ts --check` | Public flows only. Internal flow mirrors are stale and fail drift checks. |
 | Codex plugin flow mirrors | `generated/flows/<id>/*.json` | `scripts/flows/emit.ts` | no | `plugins/circuit/flows/<id>/*.json` | `node scripts/flows/emit.ts --check` | Public flows only. Internal flow mirrors are stale and fail drift checks. |
 | Codex plugin command mirrors | flow-owned command sources or direct command sources | `scripts/flows/emit.ts` | no | `plugins/circuit/commands/<id>.md` | `node scripts/flows/emit.ts --check` | Generated headers are omitted to preserve host command parsing and byte-for-byte mirror checks. |
-| Codex plugin skill surfaces | flow-owned command sources or direct command sources | `scripts/flows/emit.ts` | no | `plugins/circuit/skills/<id>/SKILL.md` | `node scripts/flows/emit.ts --check` | Skill metadata is generated from script-owned metadata plus command source body. |
+| Codex plugin skill surfaces | flow-owned command sources or direct command sources | `scripts/flows/emit.ts` | no | `plugins/circuit/skills/<id>/SKILL.md` | `node scripts/flows/emit.ts --check` | Skill metadata is generated from script-owned metadata plus command source body. The renderer removes slash-command placeholders and source-authority footers for Codex-native invocation. |
 | Command ownership note | `src/commands/README.md` | none | yes | `src/commands/README.md` | normal docs review | Documents direct command source ownership; host command files are generated mirrors. |
 
 ## Flow Outputs

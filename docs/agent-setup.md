@@ -29,9 +29,9 @@ Use Review as the first real run unless I ask for a write-capable flow. Report
 commands run, files changed, verification results, and any blocker.
 ```
 
-## What The Agent Should Check
+## Checks To Run
 
-The agent should gather this evidence before changing anything:
+Gather the blockers before changing anything:
 
 ```bash
 git status --short
@@ -54,14 +54,14 @@ Then prove the repo builds:
 npm run build
 ```
 
-If the task is local Codex host setup, the agent should run:
+If the task is local Codex host setup, sync and check the local plugin cache:
 
 ```bash
 npm run sync:codex-plugin-cache
 npm run check:codex-plugin-cache
 ```
 
-For plugin or public-claim changes, the agent should prefer the checks named in
+For plugin or public-claim changes, use the verification section in
 [`docs/operator-guide.md`](operator-guide.md#verification).
 
 ## Config Boundaries

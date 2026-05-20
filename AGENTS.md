@@ -44,6 +44,9 @@ evidence). Use that vocabulary in product-facing prose.
 
 ## Verification
 
+Use `npm run verify` before claiming a change is done. Use `verify:fast`
+during iteration when you need a faster broad check.
+
 ```bash
 npm run check        # tsc --noEmit
 npm run lint         # biome check
