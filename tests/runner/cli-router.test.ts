@@ -460,6 +460,7 @@ describe('CLI router', () => {
   it('omitted flow positional routes review-like goals through the classifier', async () => {
     const output = await runMainJson(
       [
+        'run',
         '--goal',
         'review this patch for safety problems',
         '--run-folder',
@@ -480,6 +481,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'review-progress-jsonl');
     const { output, progress } = await runMainJsonWithProgress(
       [
+        'run',
         '--goal',
         'review this patch for safety problems',
         '--progress',
@@ -587,6 +589,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'explore-progress-jsonl');
     const { output, progress } = await runMainJsonWithRelayerAndProgress(
       [
+        'run',
         'explore',
         '--goal',
         'explore better internal evals',
@@ -650,7 +653,7 @@ describe('CLI router', () => {
   it('routes decide: through the public CLI to the Explore tournament fixture', async () => {
     const runFolder = join(runFolderBase, 'explore-tournament-cli');
     const output = await runMainJsonWithRelayer(
-      ['--goal', 'decide: React vs Vue', '--run-folder', runFolder],
+      ['run', '--goal', 'decide: React vs Vue', '--run-folder', runFolder],
       tournamentRelayer(),
     );
 
@@ -676,7 +679,7 @@ describe('CLI router', () => {
   it('surfaces actual tournament option labels in checkpoint user input', async () => {
     const runFolder = join(runFolderBase, 'explore-tournament-progress');
     const { output, progress } = await runMainJsonWithRelayerAndProgress(
-      ['--goal', 'decide: React vs Vue', '--run-folder', runFolder, '--progress', 'jsonl'],
+      ['run', '--goal', 'decide: React vs Vue', '--run-folder', runFolder, '--progress', 'jsonl'],
       tournamentRelayer(),
     );
 
@@ -730,6 +733,7 @@ describe('CLI router', () => {
 
     const output = await runMainJson(
       [
+        'run',
         'review',
         '--goal',
         'review this untracked scratch file',
@@ -759,6 +763,7 @@ describe('CLI router', () => {
   it('emits run.aborted progress when a run aborts', async () => {
     const { output, progress } = await runMainJsonWithProgress(
       [
+        'run',
         'review',
         '--goal',
         'review this malformed relay body',
@@ -784,7 +789,13 @@ describe('CLI router', () => {
 
   it('omitted flow positional keeps exploratory goals on explore', async () => {
     const output = await runMainJson(
-      ['--goal', 'map the current project state', '--run-folder', join(runFolderBase, 'explore')],
+      [
+        'run',
+        '--goal',
+        'map the current project state',
+        '--run-folder',
+        join(runFolderBase, 'explore'),
+      ],
       '{"verdict":"accept"}',
     );
 
@@ -798,7 +809,13 @@ describe('CLI router', () => {
   it('omitted flow positional routes build-like goals through the classifier', async () => {
     const projectRoot = createProofProject('build-router-project');
     const output = await runMainJson(
-      ['--goal', 'develop: add a focused feature', '--run-folder', join(runFolderBase, 'build')],
+      [
+        'run',
+        '--goal',
+        'develop: add a focused feature',
+        '--run-folder',
+        join(runFolderBase, 'build'),
+      ],
       '{"verdict":"accept"}',
       { configCwd: projectRoot },
     );
@@ -816,6 +833,7 @@ describe('CLI router', () => {
     const projectRoot = createProofProject('build-router-checkpoint-waiting-project');
     const output = await runMainJson(
       [
+        'run',
         '--goal',
         'develop: add a focused feature that waits for framing',
         '--rigor',
@@ -847,6 +865,7 @@ describe('CLI router', () => {
     const projectRoot = createProofProject('build-router-checkpoint-progress-project');
     const { output, progress } = await runMainJsonWithProgress(
       [
+        'run',
         '--goal',
         'develop: add a focused feature that waits for framing',
         '--rigor',
@@ -918,6 +937,7 @@ describe('CLI router', () => {
   it('omitted flow positional keeps develop-prefixed planning goals on explore', async () => {
     const output = await runMainJson(
       [
+        'run',
         '--goal',
         'develop: create a new endpoint RFC',
         '--run-folder',
@@ -937,6 +957,7 @@ describe('CLI router', () => {
     const projectRoot = createProofProject('plan-execution-project');
     const output = await runMainJson(
       [
+        'run',
         '--goal',
         'Execute this plan: ./docs/specs/headless-engine-host-api-v1.md',
         '--run-folder',
@@ -959,6 +980,7 @@ describe('CLI router', () => {
   it('explicit flow positional bypasses the classifier', async () => {
     const output = await runMainJson(
       [
+        'run',
         'explore',
         '--goal',
         'review this patch for safety problems',
@@ -1054,6 +1076,7 @@ describe('CLI router', () => {
     const { output, progress } = await withStrictruntime(() =>
       runMainJsonWithProgress(
         [
+          'run',
           '--goal',
           'quick fix: restore the missing token edge case',
           '--progress',
@@ -1085,6 +1108,7 @@ describe('CLI router', () => {
     const { output, progress } = await withStrictruntime(() =>
       runMainJsonWithProgress(
         [
+          'run',
           '--goal',
           'fix: restore the missing token regression test',
           '--progress',
@@ -1116,6 +1140,7 @@ describe('CLI router', () => {
     const output = await withStrictruntime(() =>
       runMainJson(
         [
+          'run',
           '--goal',
           'fix: restore the missing token regression test',
           '--rigor',
@@ -1141,6 +1166,7 @@ describe('CLI router', () => {
 
     const output = await runMainJson(
       [
+        'run',
         '--goal',
         'fix: restore the missing token regression test',
         '--rigor',
@@ -1164,6 +1190,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'fix-depth-tournament');
 
     const result = await runMainExit([
+      'run',
       'fix',
       '--goal',
       'fix: a regression bug',
@@ -1183,6 +1210,7 @@ describe('CLI router', () => {
     const projectRoot = createProofProject('build-lite-entry-mode-project');
     const output = await runMainJson(
       [
+        'run',
         'build',
         '--goal',
         'Add a tiny Build feature from the CLI',
@@ -1212,6 +1240,7 @@ describe('CLI router', () => {
     const projectRoot = createProofProject('build-autonomous-axis-project');
     const output = await runMainJson(
       [
+        'run',
         'build',
         '--goal',
         'Add a tiny Build feature from the CLI with autonomous checkpoints',
@@ -1251,6 +1280,7 @@ describe('CLI router', () => {
     await expect(
       main(
         [
+          'run',
           'build',
           '--goal',
           'Try an invalid autonomous fixture',
@@ -1275,6 +1305,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'explore-explicit-tournament-n4');
     const output = await runMainJsonWithRelayer(
       [
+        'run',
         'explore',
         '--goal',
         'decide: React vs Vue',
@@ -1300,6 +1331,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'explore-autonomous-tournament');
     const output = await runMainJsonWithRelayer(
       [
+        'run',
         'explore',
         '--goal',
         'decide: React vs Vue',
@@ -1340,6 +1372,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'explore-autonomous-tournament-winner');
     const output = await runMainJsonWithRelayer(
       [
+        'run',
         'explore',
         '--goal',
         'decide: React vs Vue',
@@ -1428,6 +1461,7 @@ describe('CLI router', () => {
   it('accepts the lower tournament N bound', async () => {
     const output = await runMainJsonWithRelayer(
       [
+        'run',
         'explore',
         '--goal',
         'decide: A vs B',
@@ -1451,6 +1485,7 @@ describe('CLI router', () => {
   it('accepts the default tournament N when omitted', async () => {
     const output = await runMainJsonWithRelayer(
       [
+        'run',
         'explore',
         '--goal',
         'decide: A vs B',
@@ -1471,6 +1506,7 @@ describe('CLI router', () => {
 
   it.each(['1', '5'])('rejects tournament N=%s outside the v1 range', async (n) => {
     const result = await runMainExit([
+      'run',
       'explore',
       '--goal',
       'decide: A vs B',
@@ -1485,8 +1521,9 @@ describe('CLI router', () => {
     expect(result.stderr).toContain('Tournament N must be between 2 and 4');
   });
 
-  it('rejects --mode as an unknown flag', async () => {
+  it('lets Commander reject unknown options', async () => {
     const result = await runMainExit([
+      'run',
       'build',
       '--goal',
       'Add a tiny Build feature from the CLI with an old flag',
@@ -1497,13 +1534,94 @@ describe('CLI router', () => {
     ]);
 
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain('unknown flag: --mode');
+    expect(result.stderr).toContain("unknown option '--mode'");
+  });
+
+  it('requires the explicit run command for routed runs', async () => {
+    const runFolder = join(runFolderBase, 'root-goal-cutover');
+    const result = await runMainExit([
+      '--goal',
+      'review this patch without the run command',
+      '--run-folder',
+      runFolder,
+    ]);
+
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain("unknown option '--goal'");
+    expect(existsSync(runFolder)).toBe(false);
+  });
+
+  it('requires the explicit run command for named flows', async () => {
+    const runFolder = join(runFolderBase, 'bare-flow-cutover');
+    const result = await runMainExit([
+      'build',
+      '--goal',
+      'try the old bare flow shortcut',
+      '--run-folder',
+      runFolder,
+    ]);
+
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain("unknown command 'build'");
+    expect(existsSync(runFolder)).toBe(false);
+  });
+
+  it('accepts equals-form long options through Commander', async () => {
+    const runFolder = join(runFolderBase, 'equals-form-options');
+    const projectRoot = createProofProject('equals-form-project');
+    const output = await runMainJson(
+      [
+        'run',
+        'build',
+        '--goal=Build through equals syntax',
+        '--rigor=deep',
+        `--run-folder=${runFolder}`,
+      ],
+      '{"verdict":"accept"}',
+      { configCwd: projectRoot },
+    );
+
+    expect(output).toMatchObject({
+      flow_id: 'build',
+      selected_flow: 'build',
+      entry_mode: 'deep',
+    });
+  });
+
+  it('keeps --dry-run rejected before runtime work starts', async () => {
+    const result = await runMainExit([
+      'run',
+      'build',
+      '--goal',
+      'Add a tiny Build feature',
+      '--dry-run',
+      '--run-folder',
+      join(runFolderBase, 'dry-run-rejected'),
+    ]);
+
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('--dry-run is not currently implemented and is rejected');
+  });
+
+  it('accepts dash-prefixed value-slot strings through Commander', async () => {
+    const result = await runMainExit([
+      'resume',
+      '--run-folder',
+      join(runFolderBase, 'not-resumable'),
+      '--checkpoint-choice',
+      '--goal',
+    ]);
+
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('run folder is not a resumable Circuit run folder');
+    expect(result.stderr).not.toContain('omit --goal');
   });
 
   it('rejects fixture overrides whose flow id does not match the selected flow', async () => {
     await expect(
       main(
         [
+          'run',
           '--goal',
           'review this patch for safety problems',
           '--fixture',
@@ -1525,6 +1643,7 @@ describe('CLI router', () => {
   it('rejects --entry-mode as an unknown flag before writing a run trace', async () => {
     const runFolder = join(runFolderBase, 'unknown-build-entry-mode');
     const result = await runMainExit([
+      'run',
       'build',
       '--goal',
       'Try a missing Build entry mode',
@@ -1535,7 +1654,7 @@ describe('CLI router', () => {
     ]);
 
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain('unknown flag: --entry-mode');
+    expect(result.stderr).toContain("unknown option '--entry-mode'");
     expect(() => traceEntryLog(runFolder)).toThrow();
   });
 
@@ -1543,7 +1662,7 @@ describe('CLI router', () => {
     const runFolder = join(runFolderBase, 'checkpoint-waiting');
     const projectRoot = createProofProject('checkpoint-waiting-project');
     const output = await runMainJson(
-      ['build', '--goal', 'Frame via CLI', '--rigor', 'deep', '--run-folder', runFolder],
+      ['run', 'build', '--goal', 'Frame via CLI', '--rigor', 'deep', '--run-folder', runFolder],
       '{"verdict":"accept"}',
       { configCwd: projectRoot },
     );
@@ -1618,7 +1737,7 @@ describe('CLI router', () => {
     );
   });
 
-  it('rejects old --depth as an unknown flag', async () => {
+  it('lets Commander reject old --depth as an unknown option', async () => {
     const withDepth = await runMainExit([
       'resume',
       '--run-folder',
@@ -1629,10 +1748,10 @@ describe('CLI router', () => {
       'deep',
     ]);
     expect(withDepth.exit).toBe(2);
-    expect(withDepth.stderr).toMatch(/unknown flag: --depth/);
+    expect(withDepth.stderr).toMatch(/unknown option '--depth'/);
   });
 
-  it('rejects old --mode as an unknown flag on resume too', async () => {
+  it('lets Commander reject old --mode as an unknown option on resume too', async () => {
     const withMode = await runMainExit([
       'resume',
       '--run-folder',
@@ -1643,7 +1762,7 @@ describe('CLI router', () => {
       'lite',
     ]);
     expect(withMode.exit).toBe(2);
-    expect(withMode.stderr).toMatch(/unknown flag: --mode/);
+    expect(withMode.stderr).toMatch(/unknown option '--mode'/);
   });
 
   it('parses --run-folder before rejecting resume-only --rigor', async () => {
@@ -1663,7 +1782,7 @@ describe('CLI router', () => {
     expect(result.stderr).toMatch(/omit --rigor\/--tournament\/--tournament-n\/--autonomous/);
   });
 
-  it('rejects supplying --rigor more than once', async () => {
+  it("uses Commander's last-value-wins behavior for repeated scalar options", async () => {
     const conflict = await runMainExit([
       'resume',
       '--run-folder',
@@ -1676,11 +1795,12 @@ describe('CLI router', () => {
       'deep',
     ]);
     expect(conflict.exit).toBe(2);
-    expect(conflict.stderr).toMatch(/supply --rigor only once/);
+    expect(conflict.stderr).toMatch(/omit --rigor\/--tournament\/--tournament-n\/--autonomous/);
   });
 
   it('rejects --tournament-n without --tournament', async () => {
     const conflict = await runMainExit([
+      'run',
       'explore',
       '--goal',
       'decide: A vs B',
@@ -1693,7 +1813,7 @@ describe('CLI router', () => {
     expect(conflict.stderr).toMatch(/--tournament-n requires --tournament/);
   });
 
-  it('rejects supplying --run-folder more than once', async () => {
+  it("uses Commander's last-value-wins behavior for repeated --run-folder", async () => {
     const conflict = await runMainExit([
       'resume',
       '--run-folder',
@@ -1704,7 +1824,7 @@ describe('CLI router', () => {
       'continue',
     ]);
     expect(conflict.exit).toBe(2);
-    expect(conflict.stderr).toMatch(/supply --run-folder only once/);
+    expect(conflict.stderr).toMatch(/run folder is not a resumable Circuit run folder/);
   });
 
   it('keeps CLI help text aligned with the router-supported flow set', () => {

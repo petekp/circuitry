@@ -318,6 +318,23 @@ describe('utility CLI commands', () => {
     expect(result.stderr).toContain('--publish requires --yes');
   });
 
+  it('accepts equals-form create options through Commander', async () => {
+    const home = tempRoot('circuit-create-equals-');
+    const result = await captureMain([
+      'create',
+      '--name=release-note-flow',
+      '--description=Draft release notes',
+      `--home=${home}`,
+      `--template-flow-root=${resolve('generated/flows')}`,
+    ]);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      status: 'draft_created',
+      slug: 'release-note-flow',
+    });
+  });
+
   it('saves, resumes, and clears standalone continuity', async () => {
     const controlPlane = tempRoot('circuit-handoff-');
     const save = await captureMain([
@@ -364,6 +381,38 @@ describe('utility CLI commands', () => {
     expect(
       ContinuityIndex.parse(JSON.parse(readFileSync(saved.index_path, 'utf8'))).pending_record,
     ).toBeNull();
+  });
+
+  it('accepts equals-form handoff options through Commander', async () => {
+    const controlPlane = tempRoot('circuit-handoff-equals-');
+    const result = await captureMain([
+      'handoff',
+      'save',
+      '--goal=Resume release work',
+      '--next=DO: continue the parity matrix',
+      `--control-plane=${controlPlane}`,
+    ]);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      status: 'saved',
+    });
+  });
+
+  it('keeps bare handoff invocation as save through Commander', async () => {
+    const controlPlane = tempRoot('circuit-handoff-default-save-');
+    const result = await captureMain([
+      'handoff',
+      '--goal=Resume release work',
+      '--next=DO: continue the parity matrix',
+      `--control-plane=${controlPlane}`,
+    ]);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      action: 'save',
+      status: 'saved',
+    });
   });
 
   it('returns a clean invalid envelope and exits non-zero when resuming a malformed record', async () => {

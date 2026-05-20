@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { homedir, tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command, CommanderError } from 'commander';
 import { type PackageTreeComparison, packageTreeStatus } from './package-tree.ts';
 
 export type PublishTarget = 'check' | 'local' | 'release' | 'bump';
@@ -180,55 +181,66 @@ export function parseArgs(argv: string[]): PublishArgs {
     installCodexHook: false,
   };
 
-  function requireValue(input: string[], index: number, flag: string): string {
-    const value = input[index + 1];
-    if (value === undefined || value.startsWith('-')) {
-      throw new Error(`${flag} requires a value`);
-    }
-    return value;
-  }
-
-  const input = [...argv];
-  const first = input[0];
-  if (first !== undefined && TARGETS.has(first as PublishTarget)) {
-    args.target = input.shift() as PublishTarget;
-  } else if (first !== undefined && !first.startsWith('-')) {
-    throw new Error(`unknown publish target: ${first}`);
-  }
-
-  for (let i = 0; i < input.length; i += 1) {
-    const arg = input[i];
-    if (arg === '--yes') {
-      args.yes = true;
-    } else if (arg === '--dry-run') {
-      args.dryRun = true;
-    } else if (arg === '--json') {
-      args.json = true;
-    } else if (arg === '--skip-verify') {
-      args.skipVerify = true;
-    } else if (arg === '--allow-dirty') {
-      args.allowDirty = true;
-    } else if (arg === '--allow-unsafe') {
-      args.allowUnsafe = true;
-    } else if (arg === '--write-generated') {
-      args.writeGenerated = true;
-    } else if (arg === '--install-codex-hook') {
-      args.installCodexHook = true;
-    } else if (arg === '--version') {
-      args.version = requireValue(input, i, '--version');
-      i += 1;
-    } else if (arg === '--codex-source') {
-      args.codexSource = requireValue(input, i, '--codex-source');
-      i += 1;
-    } else if (arg === '--codex-marketplace') {
-      args.codexMarketplace = requireValue(input, i, '--codex-marketplace');
-      i += 1;
-    } else if (arg === '--help' || arg === '-h') {
+  const program = new Command('publish-plugins')
+    .exitOverride()
+    .configureOutput({ writeErr: () => {} })
+    .argument('[target]')
+    .option('--yes')
+    .option('--dry-run')
+    .option('--json')
+    .option('--skip-verify')
+    .option('--allow-dirty')
+    .option('--allow-unsafe')
+    .option('--write-generated')
+    .option('--install-codex-hook')
+    .option('--version <version>')
+    .option('--codex-source <source>')
+    .option('--codex-marketplace <marketplace>')
+    .option('-h, --help');
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') {
       args.help = true;
-    } else {
-      throw new Error(`unknown argument: ${arg}`);
+      return args;
     }
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
   }
+
+  const opts = program.opts<{
+    yes?: boolean;
+    dryRun?: boolean;
+    json?: boolean;
+    skipVerify?: boolean;
+    allowDirty?: boolean;
+    allowUnsafe?: boolean;
+    writeGenerated?: boolean;
+    installCodexHook?: boolean;
+    version?: string;
+    codexSource?: string;
+    codexMarketplace?: string;
+    help?: boolean;
+  }>();
+  const target = program.args[0];
+  if (target !== undefined && TARGETS.has(target as PublishTarget)) {
+    args.target = target as PublishTarget;
+  } else if (target !== undefined) {
+    throw new Error(`unknown publish target: ${target}`);
+  }
+
+  args.yes = opts.yes === true;
+  args.dryRun = opts.dryRun === true;
+  args.json = opts.json === true;
+  args.skipVerify = opts.skipVerify === true;
+  args.allowDirty = opts.allowDirty === true;
+  args.allowUnsafe = opts.allowUnsafe === true;
+  args.writeGenerated = opts.writeGenerated === true;
+  args.installCodexHook = opts.installCodexHook === true;
+  if (opts.version !== undefined) args.version = opts.version;
+  if (opts.codexSource !== undefined) args.codexSource = opts.codexSource;
+  if (opts.codexMarketplace !== undefined) args.codexMarketplace = opts.codexMarketplace;
+  if (opts.help === true) args.help = true;
 
   args.dryRun = args.target === 'release' ? !args.yes : args.dryRun;
   return args;
@@ -986,8 +998,9 @@ function printHumanSummary(report: PublishReport): void {
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === SCRIPT_PATH) {
-  const report = runPublish(process.argv.slice(2));
-  const jsonOnly = process.argv.includes('--json');
+  const argv = process.argv.slice(2);
+  const report = runPublish(argv);
+  const jsonOnly = parseArgs(argv).json;
   if (jsonOnly) {
     console.log(JSON.stringify(report, null, 2));
   } else {

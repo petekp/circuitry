@@ -4,11 +4,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Command } from 'commander';
 import { build } from 'esbuild';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '../..');
-const checkMode = process.argv.includes('--check');
+const program = new Command('runtime-bundle').option('--check');
+program.parse(process.argv.slice(2), { from: 'user' });
+const checkMode = program.opts<{ check?: boolean }>().check === true;
 const entryPoint = resolve(repoRoot, 'dist/cli/circuit.js');
 const versionManifestPath = resolve(repoRoot, 'plugins/version.json');
 const outputPaths = ['plugins/claude/runtime/circuit.js', 'plugins/codex/runtime/circuit.js'];

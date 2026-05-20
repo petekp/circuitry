@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Command, CommanderError } from 'commander';
 import { createResultRoot, repoMetadata } from './shared/metadata.ts';
 import { runSync } from './shared/process.ts';
 import { readJson, writeJson } from './shared/json.ts';
@@ -42,48 +43,41 @@ function usage(): string {
 }
 
 function parseArgs(argv: readonly string[]): MatrixArgs {
-  const args: MatrixArgs = {
-    set: 'held-out',
-    row: undefined,
-    outDir: DEFAULT_OUT_DIR,
-    skipBuild: false,
-    dryRun: false,
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--help' || arg === '-h') {
-      process.stdout.write(usage());
-      process.exit(0);
-    }
-    if (arg === '--set') {
-      args.set = requireValue(argv, i, arg);
-      i += 1;
-    } else if (arg === '--row') {
-      args.row = requireValue(argv, i, arg);
-      i += 1;
-    } else if (arg === '--out-dir') {
-      args.outDir = resolve(requireValue(argv, i, arg));
-      i += 1;
-    } else if (arg === '--skip-build') {
-      args.skipBuild = true;
-    } else if (arg === '--dry-run') {
-      args.dryRun = true;
-    } else {
-      throw new Error(`unknown arg: ${arg}`);
-    }
+  const program = new Command('fix-matrix')
+    .exitOverride()
+    .configureOutput({ writeErr: () => {} })
+    .option('--set <set>')
+    .option('--row <id>')
+    .option('--out-dir <path>')
+    .option('--skip-build')
+    .option('--dry-run');
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
+    throw err;
   }
-  if (!['discovery', 'regression', 'held-out', 'all'].includes(args.set)) {
+  if (program.args.length > 0) throw new Error(`unexpected argument: ${program.args[0]}`);
+
+  const opts = program.opts<{
+    set?: string;
+    row?: string;
+    outDir?: string;
+    skipBuild?: boolean;
+    dryRun?: boolean;
+  }>();
+  const set = opts.set ?? 'held-out';
+  if (!['discovery', 'regression', 'held-out', 'all'].includes(set)) {
     throw new Error('--set must be discovery, regression, held-out, or all');
   }
-  return args;
-}
-
-function requireValue(argv: readonly string[], index: number, flag: string): string {
-  const value = argv[index + 1];
-  if (value === undefined || value.startsWith('--')) {
-    throw new Error(`${flag} requires a value`);
-  }
-  return value;
+  return {
+    set,
+    row: opts.row,
+    outDir: opts.outDir === undefined ? DEFAULT_OUT_DIR : resolve(opts.outDir),
+    skipBuild: opts.skipBuild === true,
+    dryRun: opts.dryRun === true,
+  };
 }
 
 function selectedRows(matrix: FixMatrix, rowId: string | undefined): MatrixRow[] {

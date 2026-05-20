@@ -204,7 +204,14 @@ circuits:
     }
     try {
       const exit = await main(
-        ['review', '--goal', 'prove config reaches selection evidence', '--run-folder', runFolder],
+        [
+          'run',
+          'review',
+          '--goal',
+          'prove config reaches selection evidence',
+          '--run-folder',
+          runFolder,
+        ],
         {
           relayer,
           now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
@@ -277,7 +284,7 @@ circuits:
     };
 
     await expect(
-      main(['explore', '--goal', 'invalid config must stop before relay'], {
+      main(['run', 'explore', '--goal', 'invalid config must stop before relay'], {
         relayer,
         now: deterministicNow(Date.UTC(2026, 3, 24, 23, 30, 0)),
         runId: '86868686-8686-4686-8686-868686868687',

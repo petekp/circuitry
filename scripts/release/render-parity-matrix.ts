@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { Command } from 'commander';
 import {
   formatMarkdown,
   loadJsonWithSchema,
@@ -10,7 +11,9 @@ import {
 } from './shared.ts';
 
 const OUT_REL = 'docs/release/parity-matrix.generated.md';
-const check = process.argv.includes('--check');
+const program = new Command('render-parity-matrix').option('--check');
+program.parse(process.argv.slice(2), { from: 'user' });
+const check = program.opts<{ check?: boolean }>().check === true;
 
 // biome-ignore lint/suspicious/noExplicitAny: release schemas are loaded dynamically from built output.
 type AnyRecord = Record<string, any>;
