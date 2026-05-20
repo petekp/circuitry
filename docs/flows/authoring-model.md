@@ -12,13 +12,15 @@ This is the canonical authoring model for Circuit flows.
 
 Use it with:
 
-- `UBIQUITOUS_LANGUAGE.md` for vocabulary.
+- [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) for vocabulary.
 - `src/schemas/flow-block-definitions.ts` for typed block definitions.
-- `docs/flows/block-catalog.json` for the generated machine-readable block catalog.
+- [docs/flows/block-catalog.json](block-catalog.json) for the generated
+  machine-readable block catalog.
 - `src/schemas/flow-blocks.ts` for the block catalog schema.
 - `src/schemas/flow-schematic.ts` for generated schematic compatibility shape.
 - `src/flows/compile-schematic-to-flow.ts` for schematic to compiled-flow projection.
-- `docs/contracts/compiled-flow.md` for runtime graph invariants.
+- [docs/contracts/compiled-flow.md](../contracts/compiled-flow.md) for runtime
+  graph invariants.
 
 This document is hand-authored because it explains intent and boundaries.
 Do not hand-maintain current flow inventories here. Current flow data comes from
@@ -26,7 +28,8 @@ Do not hand-maintain current flow inventories here. Current flow data comes from
 compiler. Generated compatibility schematics live under
 `src/flows/<id>/schematic.json`, generated compiled outputs live under
 `generated/flows/<id>/`, and generated release surfaces such as
-`docs/release/parity-matrix.generated.md` are derived.
+[docs/release/parity-matrix.generated.md](../release/parity-matrix.generated.md)
+are derived.
 
 ## Short Version
 

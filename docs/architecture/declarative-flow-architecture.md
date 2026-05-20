@@ -41,8 +41,9 @@ Confirmed current source:
 - Every retained flow owns a `data.ts` file typed as `FlowData`.
 - `tests/runner/flow-facts.test.ts` locks the retained flow set, value-owned
   adapters, generated schematic parity, and production flow definitions.
-- `docs/generated-surfaces.md` marks schematic JSON, compiled manifests, host
-  mirrors, command mirrors, and Codex skill mirrors as generated surfaces.
+- [docs/generated-surfaces.md](../generated-surfaces.md) marks schematic JSON,
+  compiled manifests, host mirrors, command mirrors, and Codex skill mirrors as
+  generated surfaces.
 - `node scripts/flows/emit.ts --check` is the generated-surface drift check.
 
 ## What Landed
@@ -74,9 +75,9 @@ interfaces. That is intentional. The graph walk remains plain: enter step, run
 executor, evaluate route, append trace, and move to the next step.
 
 The follow-on direction is captured in
-`docs/architecture/data-first-functional-flow-architecture.md`. Treat that file
-as the next design target, not as a claim that the runtime has already moved to
-Effect or a separate functional kernel.
+[docs/architecture/data-first-functional-flow-architecture.md](data-first-functional-flow-architecture.md).
+Treat that file as the next design target, not as a claim that the runtime has
+already moved to Effect or a separate functional kernel.
 
 ## Generated Surface Policy
 
@@ -101,8 +102,8 @@ Generated or mirrored outputs:
 - `plugins/circuit/flows/**`
 - `plugins/circuit/commands/**`
 - `plugins/circuit/skills/**`
-- `docs/generated-surfaces.md`
-- `docs/flows/block-catalog.json`
+- [docs/generated-surfaces.md](../generated-surfaces.md)
+- [docs/flows/block-catalog.json](../flows/block-catalog.json)
 
 After any authored flow or command change, regenerate surfaces and run the drift
 check before review.

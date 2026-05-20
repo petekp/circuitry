@@ -110,7 +110,7 @@ fixed cycle count is not.
 ## The real disagreement: agent fungibility vs adapter specialization
 
 The flywheel's strongest architectural claim is **agent fungibility**:
-all agents are generalists, all read the same `AGENTS.md`, all are
+all agents are generalists, all read the same [AGENTS.md](../../AGENTS.md), all are
 interchangeable. No specialist roles, no boss agents, no coordinating
 roles that become bottlenecks. Crash recovery is automatic because
 any agent can pick up any bead.

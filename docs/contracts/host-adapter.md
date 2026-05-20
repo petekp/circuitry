@@ -19,7 +19,7 @@ The host is not the worker connector. The host starts Circuit, reads its JSON
 summary and reports, and presents the outcome to the operator.
 
 Support claims for each host adapter are governed by
-`docs/contracts/host-adapter-acceptance.md`.
+[docs/contracts/host-adapter-acceptance.md](host-adapter-acceptance.md).
 
 ## Required Behavior
 
@@ -34,7 +34,8 @@ Every host adapter MUST support:
 - User-input rendering from `user_input.requested` progress events.
 - Report reading from the returned `run_folder` and `result_path`.
 - Verbatim host rendering from `display.text` and
-  `operator_summary_markdown_path` per `docs/contracts/host-rendering.md`.
+  `operator_summary_markdown_path` per
+  [docs/contracts/host-rendering.md](host-rendering.md).
 - Clear failures when the CLI, packaged flows, or installed host files are missing.
 
 ## Flow Selection Authority
@@ -79,7 +80,7 @@ progress event per stderr line and keeps the final result JSON on stdout.
 Hosts should prefer Circuit-authored `presentation` status blocks for major
 progress updates, warnings, errors, checkpoints, and completion. `display.text`
 remains the fallback for older events. Detailed rendering rules live in
-`docs/contracts/host-rendering.md`.
+[docs/contracts/host-rendering.md](host-rendering.md).
 
 Hosts should map `task_list.updated` into a native task or plan surface when one
 exists. Hosts should map `user_input.requested` into a native user-question
@@ -149,7 +150,8 @@ Current adapters:
 
 ## Generated Output
 
-The generated surface source map at `docs/generated-surfaces.md` is the
+The generated surface source map at
+[docs/generated-surfaces.md](../generated-surfaces.md) is the
 source of truth for command sources, compiled flow outputs, host mirrors, and
 edit rules. `scripts/flows/emit.ts --check` drift-checks that map alongside
 the generated files it describes.

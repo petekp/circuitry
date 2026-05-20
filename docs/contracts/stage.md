@@ -19,13 +19,14 @@ Stages may optionally align with the **canonical stage path** —
 `frame → analyze → plan → act → verify → review → close` — or be flow-
 specific. A Stage is an organizational layer over Steps; it does not own
 execution semantics. Step invariants (routing, gating, writes) live in
-`docs/contracts/step.md`.
+[docs/contracts/step.md](step.md).
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical definitions of **Stage**,
-**Step**, and the seven canonical-stage labels. Do not introduce synonyms;
-new vocabulary must land in `UBIQUITOUS_LANGUAGE.md` before use here.
+See [UBIQUITOUS_LANGUAGE.md#core-flow-language](../../UBIQUITOUS_LANGUAGE.md#core-flow-language)
+for canonical definitions of **Stage**, **Step**, and the seven canonical-stage
+labels. Do not introduce synonyms; new vocabulary must land in
+[UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) before use here.
 
 ## Invariants
 
@@ -193,7 +194,8 @@ exist in Stage 2:
   Step-shape dependency from Stage itself; Stage just groups existing
   Steps.
 - **selection-policy** (`src/schemas/selection-policy.ts`) —
-  `UBIQUITOUS_LANGUAGE.md#configuration-language` lists `stage` as a selection
+  [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language)
+  lists `stage` as a selection
   layer, and `SelectionSource` includes `'stage'`. `Stage.selection:
   SelectionOverride.optional()` landed in `selection.md` v0.1 (SEL-I9),
   closing stage.md v0.1 Codex MED #7. Any `SelectionResolution.applied`
@@ -207,7 +209,7 @@ exist in Stage 2:
   `Stage.canonical` was optional with no cross-flow check that
   required canonical labels were present. A malformed flow could
   silently skip `review`, short-circuiting the cross-model-challenger
-  check. `docs/contracts/compiled-flow.md` v0.1 flagged this as
+  check. [docs/contracts/compiled-flow.md](compiled-flow.md) v0.1 flagged this as
   `carry-forward:stage path-policy-too-loose`. Closed by stage-I4.
 
 - `carry-forward:surplus-key-silent-strip` — Prior to this contract,

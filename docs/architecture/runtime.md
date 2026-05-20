@@ -23,7 +23,7 @@ plain: enter step, run executor, evaluate route, append trace, move to the next
 step. Capabilities such as files, trace persistence, clocks, subprocesses,
 connectors, progress, child runs, and worktrees should be supplied at the edge
 and should return typed errors as values. See
-`docs/architecture/data-first-functional-flow-architecture.md`.
+[docs/architecture/data-first-functional-flow-architecture.md](data-first-functional-flow-architecture.md).
 
 The CLI routes supported fresh invocations directly through this runtime.
 Published custom flows carry a manifest entry that maps the custom slug to a

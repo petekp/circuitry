@@ -270,7 +270,8 @@ That future belongs behind a runtime-owned safe apply path. Until then,
 Pursue should not ask parallel agents to share one worktree or trust the
 coordinator's prediction as proof.
 
-See `docs/ideas/sandboxed-parallel-pursuits.md` for the design sketch.
+See [docs/ideas/sandboxed-parallel-pursuits.md](../ideas/sandboxed-parallel-pursuits.md)
+for the design sketch.
 
 ## Source Of Truth
 

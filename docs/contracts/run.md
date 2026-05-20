@@ -37,10 +37,11 @@ to be well-formed? Individual `TraceEntry` variants already validate themselves
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical definitions of **Run**,
-**TraceEntry**, **Snapshot**, **CompiledFlow**, and **Session**. Note the explicit
-Run vs Session distinction: a Session is the human-facing shell; a Run is
-the machine-facing execution.
+See [UBIQUITOUS_LANGUAGE.md#core-flow-language](../../UBIQUITOUS_LANGUAGE.md#core-flow-language)
+for canonical definitions of **Run**, **TraceEntry**, **Snapshot**,
+**CompiledFlow**, and **Session**. Note the explicit Run vs Session
+distinction: a Session is the human-facing shell; a Run is the machine-facing
+execution.
 
 ## Invariants
 

@@ -12,12 +12,13 @@ Circuit owns the text that hosts show while a run is active and when a run
 finishes. Hosts render that text; they do not rewrite it.
 
 Circuit-authored text should follow
-`docs/specs/narration-display-profiles.md`: shared sentence shapes, small
-per-flow display profiles, and debug-only runtime details hidden by default.
+[docs/specs/narration-display-profiles.md](../specs/narration-display-profiles.md):
+shared sentence shapes, small per-flow display profiles, and debug-only runtime
+details hidden by default.
 
 Native host affordances such as task lists and user-question tools are mapped in
-`docs/contracts/host-capabilities.md`. Those affordances must still render
-Circuit-authored text rather than host-authored paraphrases.
+[docs/contracts/host-capabilities.md](host-capabilities.md). Those affordances
+must still render Circuit-authored text rather than host-authored paraphrases.
 
 ## Progress Rendering
 

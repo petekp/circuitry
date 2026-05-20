@@ -4,7 +4,7 @@ Status: historical target spec, last fully code-reconciled on 2026-05-18. The op
 Scope: cross-cutting. Public flows (Review, Fix, Build, Explore, Pursue) and the internal Runtime Proof flow reconcile to this spec.
 
 Archive note: this is a decision ledger. Use code, tests, generated surfaces,
-and `docs/README.md` before treating any implementation snapshot here as
+and [docs/README.md](../README.md) before treating any implementation snapshot here as
 current behavior.
 
 Read this as the target design plus a historical current-code reconciliation.

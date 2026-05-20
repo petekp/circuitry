@@ -26,7 +26,8 @@ concepts:
 - the graph runner keeps step advancement readable as a graph walk.
 
 This is a follow-on direction to
-`docs/architecture/declarative-flow-architecture.md`. The first
+[docs/architecture/declarative-flow-architecture.md](declarative-flow-architecture.md).
+The first
 `FlowDefinition` migration made built-in flows definition-owned. This spec
 hardens the next move: compress authoring around data and pure derivation
 before making any runtime or Effect migration.
@@ -105,7 +106,7 @@ These must remain true through any migration slice derived from this spec.
 | Runtime effects are still concrete classes and functions in the core context. | Confirmed | `src/runtime/run/run-context.ts` threads `RunFileStore`, `TraceStore`, relayer, connector, child-runner, worktree runner, progress reporter, and clock together. |
 | Progress display no longer has to infer every label from prose titles, but it still has fallback heuristics. | Confirmed | `src/runtime/projections/progress.ts` consumes `CompiledFlowProgressSurface`, while `stepDisplay()` falls back to step titles if metadata is absent. Contract tests require public flows to own progress metadata. |
 | Runtime support and progress metadata are package-owned. | Confirmed | `src/flows/runtime-surface.ts` derives a runtime-surface map from `flowPackages`; `src/cli/circuit.ts` reads that metadata for depth support and progress. |
-| Generated surfaces are already treated as generated truth. | Confirmed | `docs/generated-surfaces.md` names `src/flows/<id>/data.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/flows/emit.ts --check` as the drift check. |
+| Generated surfaces are already treated as generated truth. | Confirmed | [docs/generated-surfaces.md](../generated-surfaces.md) names `src/flows/<id>/data.ts` plus `src/flows/<id>/flow.ts` as source, marks schematic JSON and compiled manifests as generated, and names `node scripts/flows/emit.ts --check` as the drift check. |
 | Connector sharing is intentionally narrow. | Confirmed | `src/connectors/shared.ts` exposes neutral relay/hash types only; `src/connectors/subprocess.ts` owns subprocess lifecycle. `tests/contracts/architecture-boundaries.test.ts` ratchets this boundary. |
 | Verification command execution is behind a shared proof-plan boundary. | Confirmed | `src/runtime/executors/verification.ts` calls `runProofPlanCommand()`; `src/shared/proof-plan.ts` owns cwd checks, script preflight, env allowlist, timeout, and output caps. |
 | Current tests already describe many migration safety checks. | Confirmed | `tests/runner/flow-definition-compiler.test.ts`, `tests/contracts/catalog-completeness.test.ts`, `tests/contracts/flow-schematic.test.ts`, `tests/contracts/runtime-context-boundary.test.ts`, `tests/contracts/architecture-boundaries.test.ts`, `tests/runtime/progress-projection.test.ts`, `tests/unit/proof-plan.test.ts`, and `tests/runner/connector-subprocess.test.ts`. |
@@ -117,7 +118,7 @@ These must remain true through any migration slice derived from this spec.
 | --- | --- | --- | --- |
 | Flow identity, visibility, paths | `src/flows/<id>/data.ts` projected through `defineFlowData()` | Paths and visibility are close to the graph, but still package-shaped. | FlowData metadata value. |
 | Step graph | `src/flows/<id>/data.ts` projected through `defineFlowData()` | Authors still spell low-level schematic fields inside one canonical value. | Compact step values that compile to schematic items. |
-| Blocks | `src/schemas/flow-block-definitions.ts`, `docs/flows/block-catalog.json`, `src/schemas/flow-schematic-policy.ts` | Block meaning and execution/stage policy are split. | Typed block definitions own default evidence, legal stages, legal execution kinds, and default checks. |
+| Blocks | `src/schemas/flow-block-definitions.ts`, [docs/flows/block-catalog.json](../flows/block-catalog.json), `src/schemas/flow-schematic-policy.ts` | Block meaning and execution/stage policy are split. | Typed block definitions own default evidence, legal stages, legal execution kinds, and default checks. |
 | Report schemas | `src/flows/<id>/reports.ts` plus package arrays | Schema values are source, but registration is repeated. | Report declarations bind schema, schema name, path, role, writer, relay hint, and primary-result metadata. |
 | Writers | `src/flows/<id>/writers/*` plus package writer arrays | Semantic code is good; array registration is mechanical. | Writer functions remain code; registration derives from report declarations. |
 | Relay hints | `src/flows/<id>/relay-hints.ts` plus package relay report entries | Hint text is semantic; attachment is mechanical. | Hint values remain code/data; attachment derives from report declarations. |

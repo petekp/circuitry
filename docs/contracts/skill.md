@@ -48,9 +48,9 @@ not from frontmatter.
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#skill-and-plugin-language` for canonical definitions
-of **Skill**, **Plugin**, and **Catalog compiler**. This contract adds
-no new vocabulary — it only ratifies the existing entries.
+See [UBIQUITOUS_LANGUAGE.md#skill-and-plugin-language](../../UBIQUITOUS_LANGUAGE.md#skill-and-plugin-language)
+for canonical definitions of **Skill**, **Plugin**, and **Catalog compiler**.
+This contract adds no new vocabulary — it only ratifies the existing entries.
 
 The distinction to keep straight: a **skill** is the capability (what
 the plugin does when invoked); the **descriptor** is the catalog entry
@@ -115,7 +115,7 @@ invariants are enforced via `src/schemas/skill.ts` and tested in
   parse time.
 
   **Semantic asymmetry note.** `SelectionOverride.skills` (see
-  `docs/contracts/selection.md` SEL-I3) uses `[]` meaningfully (an
+  [docs/contracts/selection.md](selection.md) SEL-I3) uses `[]` meaningfully (an
   `override` mode with empty list is a "clear to none" operation).
   `SkillDescriptor.capabilities` does not, because the descriptor is a
   static catalog entry — there is no "clear to none" semantic.
@@ -236,7 +236,7 @@ After a `SkillSlot` is accepted:
 
 - **ids**: `SkillId` — descriptor identity.
 - **selection-policy**: `SkillOverride.skills` (see
-  `docs/contracts/selection.md` SEL-I3) references `SkillId` values
+  [docs/contracts/selection.md](selection.md) SEL-I3) references `SkillId` values
   that must resolve in the user skill registry when selected for relay.
   The contract-level guarantee is that `SkillOverride`,
   `SkillDescriptor`, and `UserSkillEntry` agree on the concrete id shape

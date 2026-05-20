@@ -28,9 +28,9 @@ schema stays strict.
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#continuity-language` for canonical term definitions
-(**continuity record**, **resume contract**). This slice adds to
-`UBIQUITOUS_LANGUAGE.md`:
+See [UBIQUITOUS_LANGUAGE.md#continuity-language](../../UBIQUITOUS_LANGUAGE.md#continuity-language)
+for canonical term definitions (**continuity record**, **resume contract**).
+This slice adds to [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md):
 
 - **Run-attached provenance** — the snapshot-of-state embedded in a
   run-backed continuity record (`current_stage`, `current_step`,

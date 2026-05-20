@@ -38,10 +38,10 @@ non-matching check or writes shape.
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical definitions of **Step**,
-**Check**, **RelayRole**, **ReportRef**, and the six step variants.
-Do not introduce synonyms; new vocabulary must land in `UBIQUITOUS_LANGUAGE.md`
-before use here.
+See [UBIQUITOUS_LANGUAGE.md#core-flow-language](../../UBIQUITOUS_LANGUAGE.md#core-flow-language)
+for canonical definitions of **Step**, **Check**, **RelayRole**, **ReportRef**,
+and the six step variants. Do not introduce synonyms; new vocabulary must land
+in [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) before use here.
 
 ## Invariants
 
@@ -67,8 +67,9 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
 - **STEP-I2 — Non-empty routes.** Every Step declares at least one route
   target. The `routes` record is refined at `src/schemas/step.ts:L20-L22`
   (`Object.keys(m).length > 0`). Route target closure is enforced at the
-  CompiledFlow level (see `docs/contracts/compiled-flow.md` WF-I4), not in the
-  Step contract.
+  CompiledFlow level (see
+  [docs/contracts/compiled-flow.md](compiled-flow.md) WF-I4), not in the Step
+  contract.
 
 - **STEP-I3 — Check source closure (adversarial-review MED #7 closed).**
   `check.source.ref` MUST name a usable slot in the step's `writes`
@@ -119,7 +120,7 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
   MED #4: the Zod-strict enforcement story is now backed by explicit
   `.strict()` calls at `src/schemas/step.ts` and `src/schemas/check.ts`.
   `orchestrator` is an executor, not a role; see
-  `UBIQUITOUS_LANGUAGE.md#relay-language`.
+  [UBIQUITOUS_LANGUAGE.md#relay-language](../../UBIQUITOUS_LANGUAGE.md#relay-language).
 
 - **STEP-I9 — Checkpoint policy and check agreement.** A `CheckpointStep`
   declares the choices an operator or auto-resolver may select in
@@ -212,7 +213,8 @@ Property-based tests will cover:
   type-layer invariant rather than a runtime refinement.
 - **selection-policy** (`src/schemas/selection-policy.ts`) — Step's
   optional `selection: SelectionOverride` participates in the selection
-  layer stack defined in `UBIQUITOUS_LANGUAGE.md#configuration-language`.
+  layer stack defined in
+  [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language).
 - **skill** (`src/schemas/skill.ts`) — Step's `skill_slots` field uses
   `SkillSlot[]`. Slot binding and local skill resolution are relay-time
   concerns owned by config and the user skill registry.
@@ -241,8 +243,9 @@ Property-based tests will cover:
   steps. The confusion is structurally eliminated.
 - `carry-forward:check-source-opacity` — Prior to this contract, check
   sources were opaque strings (adversarial-review MED #7). Closed by
-  STEP-I3 + STEP-I4; see `docs/contracts/compiled-flow.md` "Check source
-  tightening" for the transition record.
+  STEP-I3 + STEP-I4; see
+  [docs/contracts/compiled-flow.md](compiled-flow.md) "Check source tightening"
+  for the transition record.
 
 ## Evolution
 

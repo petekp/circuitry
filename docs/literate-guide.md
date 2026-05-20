@@ -84,7 +84,7 @@ tests. Once you see them, the rest of the architecture is easier to read.
 
 ## §3. The vocabulary
 
-The repository ships a `UBIQUITOUS_LANGUAGE.md` that defines its terms
+The repository ships [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) that defines its terms
 precisely. We will not reproduce it here, but a small core matters for
 everything that follows. Read these once and the rest of the guide stops
 being foggy.
@@ -428,7 +428,7 @@ strip the field and pass through.
 Why this much ceremony? Because the trace is the *only* thing replay can
 trust. If the snapshot file (§17) and the trace disagree about whether a
 step completed, the trace wins — by construction, the snapshot is a
-function of the trace. Every contract in `docs/contracts/run.md` lands
+function of the trace. Every contract in [docs/contracts/run.md](contracts/run.md) lands
 on the same point: anything that could let two runs' entries silently
 merge, or let a typo silently strip a field, is rejected at parse time.
 This is how the engine survives crashes (§17): the trace is the world,
@@ -982,7 +982,7 @@ Adding a flow is therefore a four-step process: create the folder, author
 `data.ts` and the thin `flow.ts` adapter, add the definition to the catalog,
 run `npm run build && node scripts/flows/emit.ts` to regenerate the
 schematic, compiled JSON, and host plugin mirrors. No engine edit. The
-repository's `AGENTS.md` says the rule explicitly: *if you find yourself
+repository's [AGENTS.md](../AGENTS.md) says the rule explicitly: *if you find yourself
 editing engine files to add a flow, the boundary is being violated.*
 
 The catalog also drives drift detection. A CI step,
@@ -1049,7 +1049,7 @@ The runtime's literal "build v0.1.0 closed 6 step(s) for goal …" is a
 fact, but it is not a sentence anyone wants to read. The writer
 rewrites it into a friendlier line. This is a small piece of evidence
 for a much larger principle: *user-facing prose is plain English*. The
-project's `AGENTS.md` enforces this for the operator-facing voice;
+project's [AGENTS.md](../AGENTS.md) enforces this for the operator-facing voice;
 the operator summary writer is where that rule turns into code.
 
 A nice consequence: the same writer produces the summary for both a
@@ -1127,7 +1127,7 @@ a plugin cache. A naive hook would call `process.cwd()` to find the
 project root; that produces a workspace-identity bug because the hook
 is not in the project. The contract requires hooks to read the host's
 stdin JSON for workspace identity and pass an explicit `--project-root`
-to Circuit. The bug is now an explicit rule (§7 in `AGENTS.md`):
+to Circuit. The bug is now an explicit rule (§7 in [AGENTS.md](../AGENTS.md)):
 *"Host hooks use hook input for identity."*
 
 ## §23. Strict by default
@@ -1137,7 +1137,7 @@ Several places in this guide have noted, in passing, that schemas are
 knows" what shape they should be. Step back and you can see this is
 a system-wide commitment.
 
-The clearest articulation lives in `docs/contracts/run.md`, which lists
+The clearest articulation lives in [docs/contracts/run.md](contracts/run.md), which lists
 eight `RUN-I` invariants the runtime enforces. A few of them, paraphrased:
 
 - **RUN-I1.** A trace's first entry is `run.bootstrapped`. The bootstrap
@@ -1216,10 +1216,11 @@ now read it as something other than a list of files.
 
 ---
 
-*Where this guide can lead you next: `UBIQUITOUS_LANGUAGE.md` for the
-canonical vocabulary, `docs/architecture/runtime.md` for the runtime's
-own one-page summary, `docs/contracts/run.md` for the formal RUN-I
-invariants, `docs/contracts/host-adapter.md` for the host adapter
-surface, `docs/flows/blocks.md` for the block catalog and authoring
-model. The definitions under `src/flows/<id>/data.ts` are the clearest
-examples of the data we have been discussing all along.*
+*Where this guide can lead you next: [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md)
+for the canonical vocabulary, [docs/architecture/runtime.md](architecture/runtime.md)
+for the runtime's own one-page summary, [docs/contracts/run.md](contracts/run.md)
+for the formal RUN-I invariants, [docs/contracts/host-adapter.md](contracts/host-adapter.md)
+for the host adapter surface, [docs/flows/blocks.md](flows/blocks.md) for the
+block catalog and authoring model. The definitions under
+`src/flows/<id>/data.ts` are the clearest examples of the data we have been
+discussing all along.*

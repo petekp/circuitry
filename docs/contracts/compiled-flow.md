@@ -20,7 +20,8 @@ It compiles to a stable execution graph the runtime can replay from trace_entrie
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical term definitions.
+See [UBIQUITOUS_LANGUAGE.md#core-flow-language](../../UBIQUITOUS_LANGUAGE.md#core-flow-language)
+for canonical term definitions.
 
 ## Invariants
 
@@ -141,16 +142,17 @@ Property-based tests will cover:
 ## Cross-contract dependencies
 
 - **step**: CompiledFlow embeds `Step[]`. Step variant invariants (WF-depends-
-  on-Step) are in `docs/contracts/step.md`.
+  on-Step) are in [docs/contracts/step.md](step.md).
 - **stage**: CompiledFlow embeds `Stage[]`. Stage invariants in
-  `docs/contracts/stage.md` (ratified v0.1; stage-I1..I5 + stage_path_policy enforcement).
+  [docs/contracts/stage.md](stage.md) (ratified v0.1; stage-I1..I5 +
+  stage_path_policy enforcement).
 - **axes / rigor**: `axes` declares the allowed rigor, tournament, and
   autonomous support for this flow.
 - **change_kind**: `EntryMode.default_change_kind` is optional; when present, must be
   a valid `ChangeKind` literal.
 - **selection-policy**: `CompiledFlow.default_selection` is a
   `SelectionOverride` and obeys selection precedence (see
-  `docs/contracts/selection.md`).
+  [docs/contracts/selection.md](selection.md)).
 - **skill**: `Step.skill_slots` uses `SkillSlot[]`. Concrete
   `SelectionOverride.skills` ids are runtime-resolved local skills;
   optional slots are config-bound local skills.
@@ -168,7 +170,7 @@ Property-based tests will cover:
   modes: `strict` (all seven canonical stages required) and `partial`
   (explicit `omits` + rationale ≥20 chars). Silent skip of `review` or
   `verify` is now rejected at parse time. See
-  `docs/contracts/stage.md` stage-I4. Adversarial-review MED #11 is
+  [docs/contracts/stage.md](stage.md) stage-I4. Adversarial-review MED #11 is
   closed.
 - `carry-forward:built-in-local-skill-coupling` — **Closed in v0.4 by
   WF-I12.** Public built-in flows remain portable by exposing optional
@@ -182,7 +184,7 @@ sources are typed per check variant: `SchemaSectionsCheck.source` is
 `CheckpointResponseSource`, `ResultVerdictCheck.source` is
 `RelayResultSource`. The `Step` discriminated union validates
 `check.source.ref` against the step variant's `writes` slots via
-`superRefine`. See `docs/contracts/step.md` invariants STEP-I3 and
+`superRefine`. See [docs/contracts/step.md](step.md) invariants STEP-I3 and
 STEP-I4.
 
 ## Evolution
@@ -214,7 +216,7 @@ STEP-I4.
   source tightening" section above. stage path policy (v0.1 adversarial
   MED #11) **closed in stage.md v0.1** — `CompiledFlow.stage_path_policy` is a
   required discriminated union enforced in `CompiledFlow.superRefine`. See
-  `docs/contracts/stage.md` stage-I4. **Deferred to v0.3 / Stage 2:**
+  [docs/contracts/stage.md](stage.md) stage-I4. **Deferred to v0.3 / Stage 2:**
   (a) ratified property-test harness registration for the five reserved
   `flow.prop.*` ids (Slice 29 property registry scaffold);
   (b) `fail`-route presence — not part of the narrow runtime-proof
@@ -222,7 +224,7 @@ STEP-I4.
   (c) exact-one-stage step membership (v0.1 bootstrap adversarial
   HIGH #1 subfinding, not closed in this slice — `Stage.steps` closure
   is enforced, but "every `CompiledFlow.steps[]` id appears in exactly one
-  stage" is left for Stage 2 per `docs/contracts/stage.md` §Evolution
+  stage" is left for Stage 2 per [docs/contracts/stage.md](stage.md) §Evolution
   and will be revisited when manifest compilation starts consuming
   `Stage.steps` as an ordered execution plan).
 - **v0.4 (user skill loading slice, this version)**: adds **WF-I12** and

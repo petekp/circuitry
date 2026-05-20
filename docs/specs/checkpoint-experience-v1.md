@@ -3,7 +3,8 @@
 Status: implementation plan
 
 Plan note: this is a design plan, not current behavior. Verify against code,
-tests, generated surfaces, and `docs/README.md` before implementing from it.
+tests, generated surfaces, and [docs/README.md](../README.md) before
+implementing from it.
 
 ## Product Target
 
@@ -30,14 +31,15 @@ resume-time validator, and existing checkpoint runtime coverage.
 - Built-in flows are authored as typed `FlowData` in `src/flows/<id>/data.ts`
   and bound in `src/flows/<id>/flow.ts`; the catalog compiles those definitions
   into runtime registries, generated schematic JSON, generated manifests, and
-  host mirrors. See `docs/architecture/declarative-flow-architecture.md:13-20`.
+  host mirrors. See
+  [docs/architecture/declarative-flow-architecture.md:13-20](../architecture/declarative-flow-architecture.md#L13-L20).
 - Flow-specific behavior belongs in flow packages and registries. Runtime code
   must stay flow-agnostic. See
-  `docs/architecture/declarative-flow-architecture.md:112-127`.
+  [docs/architecture/declarative-flow-architecture.md:112-127](../architecture/declarative-flow-architecture.md#L112-L127).
 - Generated surfaces must not be edited by hand; after authored flow or command
   changes, regenerate surfaces and run the drift check. See
-  `docs/architecture/declarative-flow-architecture.md:83-110` and
-  `docs/generated-surfaces.md:7-18`.
+  [docs/architecture/declarative-flow-architecture.md:83-110](../architecture/declarative-flow-architecture.md#L83-L110)
+  and [docs/generated-surfaces.md:7-18](../generated-surfaces.md#L7-L18).
 - Build's Frame step is already a checkpoint that writes `reports/build/brief.json`,
   `reports/checkpoints/frame-step-request.json`, and
   `reports/checkpoints/frame-step-response.json`. Its only current choice is
@@ -93,18 +95,21 @@ resume-time validator, and existing checkpoint runtime coverage.
   See `src/runtime/projections/progress.ts:658-733`.
 - Pursue V1 deliberately serializes code-changing work and only marks read-only
   discovery as parallel-safe in coordination reports; parallel writes wait on a
-  runtime-owned safe apply path. See `docs/flows/pursue.md:22-28`,
-  `docs/flows/pursue.md:43-67`, and `docs/flows/pursue.md:257-273`.
+  runtime-owned safe apply path. See
+  [docs/flows/pursue.md:22-28](../flows/pursue.md#L22-L28),
+  [docs/flows/pursue.md:43-67](../flows/pursue.md#L43-L67), and
+  [docs/flows/pursue.md:257-273](../flows/pursue.md#L257-L273).
 - Pursue already writes ownership and coordination reports:
   `pursuit.contract@v1` and `pursuit.graph@v1`. See
   `src/flows/pursue/data.ts`.
 - Circuit's project-memory positioning is grounded in typed per-run reports, but
   the repo still names cross-run query/recall and agent-side consumption as
-  gaps. See `docs/positioning-and-strategy.md:158-168`.
+  gaps. See
+  [docs/positioning-and-strategy.md:158-168](../positioning-and-strategy.md#L158-L168).
 - Fix has the clearest proof-carrying precedent for refusing false completion:
   false-done cases are caught by runtime-owned proof evidence, regression
   proof, change-set proof, and regression rerun proof. See
-  `evals/false-done-fix/README.md:5-31`,
+  [evals/false-done-fix/README.md:5-31](../../evals/false-done-fix/README.md#L5-L31),
   `src/flows/fix/reports.ts:315-333`, and
   `src/flows/fix/writers/regression-rerun.ts:1-24`.
 
@@ -323,8 +328,8 @@ Verify:
 - Do not add Build-specific branches to the checkpoint runtime.
 - Do not add non-executable checkpoint choices.
 - Do not hand-edit `src/flows/<id>/schematic.json`, `generated/flows/**`,
-  plugin mirrors, `docs/generated-surfaces.md`, or
-  `docs/flows/block-catalog.json`.
+  plugin mirrors, [docs/generated-surfaces.md](../generated-surfaces.md), or
+  [docs/flows/block-catalog.json](../flows/block-catalog.json).
 - Do not turn the checkpoint surface into a live dashboard.
 - Do not make project memory a silent authority during resume.
 - Do not imply Pursue runs parallel code-writing agents until the safe apply

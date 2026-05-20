@@ -80,18 +80,18 @@ changes need `check-release-infra`.
 | Codex plugin package | `plugins/circuit/` |
 | Direct command sources | `src/commands/<id>.md` |
 | Flow-owned command sources | `src/flows/<id>/command.md` |
-| Generated surface source map | `docs/generated-surfaces.md` |
+| Generated surface source map | [`docs/generated-surfaces.md`](docs/generated-surfaces.md) |
 | CLI entrypoint | `bin/circuit` |
 | Engine source | `src/runtime/`, `src/cli/`, `src/schemas/` |
 | Flow packages | `src/flows/<id>/` (FlowData, schematic, output schemas, command, contract, writers, relay hints) |
 | Flow catalog | `src/flows/catalog.ts` (single source of truth the engine derives from) |
 | Tests | `tests/` |
-| Documentation map | `docs/README.md` |
+| Documentation map | [`docs/README.md`](docs/README.md) |
 | Engine contracts | `docs/contracts/` |
 | Flow design notes | `docs/flows/` |
 | Release proof runs | `docs/release/proofs/runs/` |
-| Ubiquitous language | `UBIQUITOUS_LANGUAGE.md` |
-| Block catalog | `docs/flows/block-catalog.json` |
+| Ubiquitous language | [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md) |
+| Block catalog | [`docs/flows/block-catalog.json`](docs/flows/block-catalog.json) |
 
 Internal file names such as `relay-hints.ts` are intentional runtime names.
 Do not rename them while adding a flow unless there is an explicit

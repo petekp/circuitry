@@ -22,10 +22,10 @@ three related surfaces:
 
 1. **`Config`** — the top-level shape a single layer contributes, combining
    `schema_version`, a `RelayConfig` (see
-   `docs/contracts/connector.md`), a map of per-circuit overrides
+   [docs/contracts/connector.md](connector.md)), a map of per-circuit overrides
    (`CircuitOverride`), a top-level `skills.bindings` map for skill
    slots, and a `defaults` object carrying a `SelectionOverride` (see
-   `docs/contracts/selection.md`).
+   [docs/contracts/selection.md](selection.md)).
 2. **`LayeredConfig`** — the layer-identity wrapper around a `Config`:
    which `ConfigLayer` produced it and (optionally) the source path that
    backs it.
@@ -44,7 +44,7 @@ It does NOT cover:
 
 - Layer **composition semantics** (right-biased merge order; default <
   user-global < project < invocation). Selection-level composition is
-  owned by `docs/contracts/selection.md` SEL-I5..I8; config-file
+  owned by [docs/contracts/selection.md](selection.md) SEL-I5..I8; config-file
   composition for non-selection fields (e.g. merging two layers'
   `relay.roles` maps) is reserved for v0.2 with an explicit ADR.
 - **Discovery and load semantics** beyond the canonical runtime path.
@@ -54,18 +54,18 @@ It does NOT cover:
   policy (alternate filenames, upward project-root search, TOML/JSON
   variants, and recovery UX) remains outside this static shape contract.
 - **Relay resolution** inside `RelayConfig` (precedence and
-  registry closure). Those live in `docs/contracts/connector.md`
+  registry closure). Those live in [docs/contracts/connector.md](connector.md)
   (connector-I7/I8).
 - **Selection override shape** inside `Config.defaults.selection` and
   `CircuitOverride.selection`. That shape is owned by
-  `docs/contracts/selection.md` (SEL-I1..I4).
+  [docs/contracts/selection.md](selection.md) (SEL-I1..I4).
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#configuration-language` for canonical definitions
-of **Config layer**, **Selection layer**, **Selection override**, and
-**Resolved selection**. This contract binds to the existing vocabulary
-and does not introduce new terms.
+See [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language)
+for canonical definitions of **Config layer**, **Selection layer**, **Selection
+override**, and **Resolved selection**. This contract binds to the existing
+vocabulary and does not introduce new terms.
 
 The distinction to keep straight: a **`Config`** is a single layer's
 parsed record (e.g. the contents of a user-global YAML file after
@@ -128,7 +128,8 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
   'invocation']`. The four layers are the persistence-plus-invocation
   set that config-file composition adjudicates over. Adding a fifth
   layer (e.g. `environment`, `remote`) requires an ADR because the
-  precedence order documented in `UBIQUITOUS_LANGUAGE.md#configuration-language`
+  precedence order documented in
+  [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language)
   and the `ConfigLayer` enum must evolve together. Enforced at
   `src/schemas/config.ts` (`ConfigLayer = z.enum([...])`).
 
@@ -207,13 +208,13 @@ After a `Config` is accepted:
 
 - `schema_version === 1` (CONFIG-I6).
 - `relay` satisfies `RelayConfig` invariants
-  (`docs/contracts/connector.md` connector-I1..connector-I11).
+  ([docs/contracts/connector.md](connector.md) connector-I1..connector-I11).
 - `skills.bindings` is present and maps valid `SkillSlotId` keys to
   concrete `SkillId` values.
 - `circuits` is a record whose keys are `CompiledFlowId`s and whose values
   are `CircuitOverride`s.
 - `defaults.selection` (when present) is a `SelectionOverride` per
-  `docs/contracts/selection.md` SEL-I1..SEL-I4.
+  [docs/contracts/selection.md](selection.md) SEL-I1..SEL-I4.
 - No surplus keys in any **declared object shape** under this
   contract's ownership (CONFIG-I1 + CONFIG-I4) or under delegated
   contracts' ownership (connector-I9 transitivity + SEL-I8 nested
@@ -267,13 +268,14 @@ After a `CircuitOverride` is accepted:
 
 - `config.prop.layered_composition_preserves_strictness` — When
   multiple `LayeredConfig`s are composed per the documented
-  precedence vocabulary in `UBIQUITOUS_LANGUAGE.md#configuration-language`,
+  precedence vocabulary in
+  [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language),
   the composed record still rejects surplus keys at every declared
   object shape. A surplus key present in any contributing layer
   taints the composed view. The property is deliberately named
   **composition** rather than **right-biased merge** because
   selection-layer projection IS right-biased (per
-  `docs/contracts/selection.md` SEL-I5..I8) but non-selection
+  [docs/contracts/selection.md](selection.md) SEL-I5..I8) but non-selection
   config-file composition (merging two layers' `relay.roles`
   maps, for instance) is still ADR-pending at v0.2. The strictness
   claim holds under any composition semantics that preserves
@@ -295,7 +297,8 @@ After a `CircuitOverride` is accepted:
 
 ## Cross-contract dependencies
 
-- **connector** (`src/schemas/connector.ts`, `docs/contracts/connector.md`) —
+- **connector** (`src/schemas/connector.ts`,
+  [docs/contracts/connector.md](connector.md)) —
   `Config.relay` is a `RelayConfig`, which owns
   connector-I1..connector-I11. The connector contract's strictness-
   transitivity (connector-I9) composes with CONFIG-I1 at parse time:
@@ -306,7 +309,7 @@ After a `CircuitOverride` is accepted:
   compose without gap.
 
 - **selection-policy** (`src/schemas/selection-policy.ts`,
-  `docs/contracts/selection.md`) — `Config.defaults.selection`
+  [docs/contracts/selection.md](selection.md)) — `Config.defaults.selection`
   (when present) and `CircuitOverride.selection` (when present) are
   `SelectionOverride`s. Selection-layer invariants (SEL-I1..SEL-I4)
   apply. The `default` selection layer in the 7-tuple
@@ -319,7 +322,9 @@ After a `CircuitOverride` is accepted:
   product path discovers only user-global/project YAML and does not yet
   expose plugin default discovery or per-command invocation selection flags.
   This cross-contract mapping between ConfigLayer and SelectionLayer is
-  documented in `UBIQUITOUS_LANGUAGE.md#configuration-language`. Slice 85
+  documented in
+  [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language).
+  Slice 85
   adds the runtime selection resolver for already-loaded layers; Slice
   86 wires the product CLI to produce user-global/project layers from
   the canonical YAML paths. Additional discovery policy remains outside

@@ -36,10 +36,11 @@ single override can assert alone.
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#configuration-language` for canonical definitions of
-**Config layer**, **Selection layer**, **Selection override**, **Resolved
-selection**, **Provider-scoped model**, and **Effort**. Do not introduce
-synonyms; new vocabulary must land in `UBIQUITOUS_LANGUAGE.md` before use here.
+See [UBIQUITOUS_LANGUAGE.md#configuration-language](../../UBIQUITOUS_LANGUAGE.md#configuration-language)
+for canonical definitions of **Config layer**, **Selection layer**, **Selection
+override**, **Resolved selection**, **Provider-scoped model**, and **Effort**.
+Do not introduce synonyms; new vocabulary must land in
+[UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) before use here.
 
 The distinction to keep straight: a **config layer** is a source of Config
 (default, user-global, project, invocation — 4 sources). A **selection
@@ -370,7 +371,7 @@ Stage 2 harness task where noted below.
 
 - **stage** (`src/schemas/stage.ts`) — `Stage.selection:
   SelectionOverride.optional()` (SEL-I9). Cross-references
-  `docs/contracts/stage.md`; the `Stage` schema now imports
+  [docs/contracts/stage.md](stage.md); the `Stage` schema now imports
   `SelectionOverride` and extends `StageBody` with the optional
   `selection` field. stage-I2 `.strict()` still governs surplus-key
   rejection; adding `selection` as a declared field expands what's
@@ -404,7 +405,8 @@ Stage 2 harness task where noted below.
   removed (it accepted arbitrary non-`SkillId` strings); per-circuit
   skill contribution flows through `CircuitOverride.selection.skills`
   via typed `SkillOverride`. Config reorganization is out of scope for
-  this contract; see `docs/contracts/config.md` for layer materialization.
+  this contract; see [docs/contracts/config.md](config.md) for layer
+  materialization.
   `Config.skills.bindings` and `CircuitOverride.skill_bindings` are
   separate from `SelectionOverride.skills`: they bind optional flow
   slots to concrete local skills without adding slot ids to

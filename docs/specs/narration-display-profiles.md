@@ -1,6 +1,7 @@
 # Narration Display Profiles
 
-Status: canonical companion spec for `docs/contracts/host-rendering.md`.
+Status: canonical companion spec for
+[docs/contracts/host-rendering.md](../contracts/host-rendering.md).
 
 Circuit keeps CLI output machine-readable and gives host surfaces a smaller
 presentation path.

@@ -192,7 +192,7 @@ When looking at AI coding tools, ask:
 When the research comes back, do this in order:
 
 1. Extract the ten strongest lessons into the intake template above.
-2. Compare those lessons against `docs/flows/blocks.md`.
+2. Compare those lessons against [docs/flows/blocks.md](blocks.md).
 3. Mark each current block as keep, rename, split, merge, or remove.
 4. Name any missing block.
 5. Decide the first schematic shape worth implementing.

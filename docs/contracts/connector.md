@@ -37,15 +37,16 @@ independently auditable?
 
 ## Ubiquitous language
 
-See `UBIQUITOUS_LANGUAGE.md#relay-language` for canonical definitions of
-**Connector**, **ConnectorRef**, **Role**, and **Relay resolution**. Do
-not introduce synonyms; new vocabulary must land in `UBIQUITOUS_LANGUAGE.md`
-before use here. This slice adds the entry **ConnectorName** (as a regex-
+See [UBIQUITOUS_LANGUAGE.md#relay-language](../../UBIQUITOUS_LANGUAGE.md#relay-language)
+for canonical definitions of **Connector**, **ConnectorRef**, **Role**, and
+**Relay resolution**. Do not introduce synonyms; new vocabulary must land in
+[UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) before use here. This
+slice adds the entry **ConnectorName** (as a regex-
 constrained slug, reserved-name-disjoint from `EnabledConnector`), the
 entry **Custom connector descriptor** (a registered connector with an
 argv command vector), and the entry **Relay resolution source** (the
 category-plus-disambiguator record emitted on every `RelayStartedTraceEntry`)
-to `UBIQUITOUS_LANGUAGE.md`.
+to [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md).
 
 The distinction to keep straight: a **connector** runs a worker
 (Claude Code headless CLI, Codex CLI, custom
@@ -410,7 +411,7 @@ invariant; tested in `tests/contracts/connector-schema.test.ts` and
   (CLI flag, config lookup, or auto-detect) into an object and passing
   it to `ConnectorRef.safeParse`.
 - A `RelayConfig` is produced by layering config files (default,
-  user-global, project, invocation) per `docs/contracts/config.md`
+  user-global, project, invocation) per [docs/contracts/config.md](config.md)
   (pending Stage 1 close Slice 26; tracked as arc-stage-1-close-codex.md §HIGH #3 correlated-miss) and passing the merged record to `RelayConfig.safeParse`.
 - Every `ConnectorName` referenced in a `NamedConnectorRef` or an
   `ConnectorReference` (`kind: 'named'`) must exist in the running
@@ -527,7 +528,7 @@ After a `RelayStartedTraceEntry` is accepted:
   by `RelayConfig.roles` and `RelayStartedTraceEntry.role`. The
   connector contract constrains how roles are consumed; the step
   contract owns role's existence. Cross-reference
-  `docs/contracts/step.md` STEP-I1 for the executor/role distinction.
+  [docs/contracts/step.md](step.md) STEP-I1 for the executor/role distinction.
 
 - **selection-policy** (`src/schemas/selection-policy.ts`) — A step's
   resolved connector and resolved selection are orthogonal dimensions
@@ -551,7 +552,8 @@ After a `RelayStartedTraceEntry` is accepted:
   reservation check (connector-I2) and closure check (connector-I8) are
   implemented in `RelayConfig.superRefine`. Config reorganization
   (layer materialization, merge semantics) is out of scope for this
-  contract; see `docs/contracts/config.md` (pending Stage 1 close Slice 26).
+  contract; see [docs/contracts/config.md](config.md) (pending Stage 1 close
+  Slice 26).
 
 - **flow** (`src/schemas/compiled-flow.ts`) — `RelayConfig.circuits`
   is keyed on `CompiledFlowId`, so flow existence is a soft

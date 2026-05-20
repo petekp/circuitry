@@ -96,16 +96,43 @@ describe('host experience docs', () => {
     expect(doc).toContain(
       '/circuit:run the checkout total is wrong when discounts and tax both apply',
     );
+    expect(doc).toMatch(/with less\s+babysitting/);
+    expect(doc).toContain('Go from this:');
+    expect(doc).toContain('To this:');
     expect(doc).toContain('@Circuit the checkout total is wrong when discounts and tax both apply');
     expect(doc).toMatch(/Codex can choose the best bundled Circuit flow\s+skill/);
     expect(doc).toContain('host/orchestrator behavior');
     expect(doc).toContain('worker connector behavior');
-    expect(doc).toMatch(/older compatibility\s+prefixes/);
+    expect(doc).toContain('docs/first-run.md');
+    expect(doc).not.toContain('runtime_source');
+    expect(doc).not.toContain('scripts/circuit.ts');
+    expect(doc).not.toContain('check:codex-plugin-cache');
+    expect(doc).not.toContain('doctor');
 
     for (const prefix of ['fix:', 'develop:', 'decide:']) {
-      expect(doc).not.toContain(prefix);
       expect(operatorGuide).toContain(prefix);
     }
+  });
+
+  it('links navigation doc references in the docs map', () => {
+    const doc = readFileSync(resolve(REPO_ROOT, 'docs/README.md'), 'utf8');
+
+    for (const linkedReference of [
+      '[README.md](../README.md)',
+      '[docs/first-run.md](first-run.md)',
+      '[docs/operator-guide.md](operator-guide.md)',
+      '[docs/configuration.md](configuration.md)',
+      '[AGENTS.md](../AGENTS.md)',
+      '[UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md)',
+      '[docs/generated-surfaces.md](generated-surfaces.md)',
+    ]) {
+      expect(doc).toContain(linkedReference);
+    }
+
+    const unlinkedDocReferences = doc.match(
+      /`(?:README|AGENTS|CLAUDE|UBIQUITOUS_LANGUAGE|docs\/)[^`]*\.(?:md|json)`/g,
+    );
+    expect(unlinkedDocReferences).toBeNull();
   });
 
   it('keeps README connector names and custom protocol aligned with schemas and runtime', () => {

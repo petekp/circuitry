@@ -15,12 +15,13 @@ assemble into clear flows, rather than a long list of one-off flow
 schematics.
 
 Deep prior-art research should be evaluated through
-`docs/flows/research-intake.md` before it changes this inventory. Typed
-block definitions live in `src/schemas/flow-block-definitions.ts`; the
-machine-readable companion catalog is generated at
-`docs/flows/block-catalog.json`. The authoring model is described in
-`docs/flows/authoring-model.md`. The Pursue and Coordinate Pursuits blocks
-are explained in `docs/flows/pursue.md`.
+[docs/flows/research-intake.md](research-intake.md) before it changes this
+inventory. Typed block definitions live in
+`src/schemas/flow-block-definitions.ts`; the machine-readable companion catalog
+is generated at [docs/flows/block-catalog.json](block-catalog.json). The
+authoring model is described in
+[docs/flows/authoring-model.md](authoring-model.md). The Pursue and Coordinate
+Pursuits blocks are explained in [docs/flows/pursue.md](pursue.md).
 
 ## Core Idea
 

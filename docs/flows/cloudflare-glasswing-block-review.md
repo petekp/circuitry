@@ -12,9 +12,10 @@ status: reviewed
 
 Source: Cloudflare's ["Project Glasswing: what Mythos showed us"](https://blog.cloudflare.com/cyber-frontier-models/) post, published 2026-05-18.
 
-Local context: `docs/learnings/cloudflare-glasswing-harness-confirmation.md`,
-`docs/flows/*`, `src/flows/*`, `docs/ideas/*`, eval notes, and local repo
-search.
+Local context:
+[docs/learnings/cloudflare-glasswing-harness-confirmation.md](../learnings/cloudflare-glasswing-harness-confirmation.md),
+[docs/flows/](./), `src/flows/*`, [docs/ideas/](../ideas/), eval notes, and
+local repo search.
 
 This report treats Cloudflare's harness stages as block-like concepts. The
 Cloudflare post does not define them as Circuit-style blocks. Circuit should
@@ -53,10 +54,11 @@ The Cloudflare post makes five source claims that matter for Circuit:
 The existing local learning note records the same high-level takeaways:
 Cloudflare moved from broad repo prompts to recon, narrow hunt tasks,
 independent validation, requeueing, dedupe, reachability tracing, feedback, and
-structured reports (`docs/learnings/cloudflare-glasswing-harness-confirmation.md:19-34`).
+structured reports
+([docs/learnings/cloudflare-glasswing-harness-confirmation.md:19-34](../learnings/cloudflare-glasswing-harness-confirmation.md#L19-L34)).
 It also explicitly warns that Circuit does not already have Cloudflare's full
 dynamic fanout, gapfill, dedupe, reachability, or scale shape
-(`docs/learnings/cloudflare-glasswing-harness-confirmation.md:104-114`).
+([docs/learnings/cloudflare-glasswing-harness-confirmation.md:104-114](../learnings/cloudflare-glasswing-harness-confirmation.md#L104-L114)).
 
 ## Executive Recommendation
 
@@ -88,14 +90,16 @@ Circuit already has a canonical reusable block catalog. The current documented
 set includes Intake, Route, Frame, Human Decision, Gather Context, Diagnose,
 Plan, Act, Run Verification, Review, Pursue, Coordinate Pursuits, Queue, Batch,
 Risk/Rollback Check, Close With Evidence, and Handoff
-(`docs/flows/blocks.md:72-88`, `docs/flows/block-catalog.json:5-374`).
+([docs/flows/blocks.md:72-88](blocks.md#L72-L88),
+[docs/flows/block-catalog.json:5-374](block-catalog.json#L5-L374)).
 
 The authoring model says a block has stable identity, expected inputs, one
 output contract, valid routes, and evidence requirements
-(`docs/flows/authoring-model.md:64-70`). It also says custom flows should
-compose built-in blocks first (`docs/flows/authoring-model.md:74-75`) and that
+([docs/flows/authoring-model.md:64-70](authoring-model.md#L64-L70)). It also
+says custom flows should compose built-in blocks first
+([docs/flows/authoring-model.md:74-75](authoring-model.md#L74-L75)) and that
 many tiny branches usually mean the block model is missing a better reusable
-block (`docs/flows/authoring-model.md:149-150`).
+block ([docs/flows/authoring-model.md:149-150](authoring-model.md#L149-L150)).
 
 Pursue is Circuit's closest existing match for broad work. It creates an
 ownership contract, coordinates dependencies and conflicts, serializes
@@ -109,11 +113,13 @@ writes, pursuit graphs, batch results, review severity, and close evidence
 
 The important limit: Pursue V1 deliberately serializes code-changing work.
 Current docs allow read-only discovery to be marked parallel-safe, but they do
-not run a separate parallel discovery fanout yet (`docs/flows/pursue.md:24-27`,
-`docs/flows/pursue.md:47-52`). The sandboxed parallel Pursue design says the
-missing piece is safe apply; only Circuit should apply verified change packets
-after isolation and disjointness checks (`docs/ideas/sandboxed-parallel-pursuits.md:18-28`,
-`docs/ideas/sandboxed-parallel-pursuits.md:54-59`).
+not run a separate parallel discovery fanout yet
+([docs/flows/pursue.md:24-27](pursue.md#L24-L27),
+[docs/flows/pursue.md:47-52](pursue.md#L47-L52)). The sandboxed parallel Pursue
+design says the missing piece is safe apply; only Circuit should apply verified
+change packets after isolation and disjointness checks
+([docs/ideas/sandboxed-parallel-pursuits.md:18-28](../ideas/sandboxed-parallel-pursuits.md#L18-L28),
+[docs/ideas/sandboxed-parallel-pursuits.md:54-59](../ideas/sandboxed-parallel-pursuits.md#L54-L59)).
 
 Review is useful but narrower than Cloudflare's Validate. The Review flow is
 audit-only and does not implement, rerun verification, or nest another review
@@ -152,14 +158,16 @@ proof-first posture more than borrowing raw parallelism.
 Cloudflare uses Recon to stop downstream workers from wandering. It creates the
 shared context and initial task queue. Circuit already has Frame and Gather
 Context for narrowing, and Pursue can create a contract with scope, proof plan,
-and touch sets (`docs/flows/blocks.md:76-84`, `src/flows/pursue/reports.ts:46-65`).
+and touch sets ([docs/flows/blocks.md:76-84](blocks.md#L76-L84),
+`src/flows/pursue/reports.ts:46-65`).
 
 What Circuit lacks is a durable coverage object. A context packet says what was
 found. It does not necessarily say what was searched, what was skipped, and
 which surfaces remain unknown. That matters because Cloudflare's main critique
 of a generic coding agent is coverage, not intelligence alone. The existing
 Cloudflare learning note already calls out coverage accounting as a first-class
-Pursue pressure (`docs/learnings/cloudflare-glasswing-harness-confirmation.md:78-89`).
+Pursue pressure
+([docs/learnings/cloudflare-glasswing-harness-confirmation.md:78-89](../learnings/cloudflare-glasswing-harness-confirmation.md#L78-L89)).
 
 Recommendation: add a `coverage-map@v1` report shape before adding a new block.
 Potential fields:
@@ -180,7 +188,8 @@ only be trusted when each covered or partial surface has evidence pointers.
 Cloudflare's Hunt stage works because each worker gets a narrow question: attack
 class plus scope hint. Circuit's closest current primitives are Queue and Batch:
 Queue turns broad work into ordered items, and Batch processes a bounded set
-with completed, skipped, blocked, and failed states (`docs/flows/blocks.md:84-85`).
+with completed, skipped, blocked, and failed states
+([docs/flows/blocks.md:84-85](blocks.md#L84-L85)).
 Pursue adds graph coordination and serial execution for code-changing work
 (`src/flows/pursue/data.ts:178-218`).
 
@@ -199,7 +208,8 @@ into general developer flows.
 
 Adversarial check: High concurrency is not the lesson to borrow first. The
 sandboxed parallel Pursue design explicitly warns that shared worktrees are the
-wrong default for parallel writes (`docs/ideas/sandboxed-parallel-pursuits.md:61-81`).
+wrong default for parallel writes
+([docs/ideas/sandboxed-parallel-pursuits.md:61-81](../ideas/sandboxed-parallel-pursuits.md#L61-L81)).
 Circuit should parallelize read-only probes earlier than writes, and keep write
 application behind safe apply.
 
@@ -210,7 +220,7 @@ This is the strongest adoption candidate.
 Cloudflare's Validate stage is not just "review." It is constrained disproof:
 an independent agent rereads the code, tries to falsify the original finding,
 uses a different prompt, and cannot emit new findings. Circuit's Review block
-independently judges a result (`docs/flows/blocks.md:81`) and the Review flow
+independently judges a result ([docs/flows/blocks.md:81](blocks.md#L81)) and the Review flow
 has reviewer identity separation (`src/flows/review/contract.md:64-72`), but
 Review currently remains an audit surface that can produce findings. It is not
 a one-claim disproof block.
@@ -289,12 +299,15 @@ member finding and explain what would disprove the merge.
 
 Cloudflare's Trace stage asks whether a confirmed finding is reachable from
 outside the system. This is different from Circuit's current word "trace,"
-which means the serialized run record (`UBIQUITOUS_LANGUAGE.md:43-44`). Circuit
+which means the serialized run record
+([UBIQUITOUS_LANGUAGE.md:43-44](../../UBIQUITOUS_LANGUAGE.md#L43-L44)). Circuit
 should avoid naming a new block Trace.
 
 Circuit has adjacent blocks: Gather Context can collect source facts, Review can
 judge risk, and Risk/Rollback Check can decide whether continuing is safe
-(`docs/flows/blocks.md:76`, `docs/flows/blocks.md:81`, `docs/flows/blocks.md:86`).
+([docs/flows/blocks.md:76](blocks.md#L76),
+[docs/flows/blocks.md:81](blocks.md#L81),
+[docs/flows/blocks.md:86](blocks.md#L86)).
 None of these directly answer reachability.
 
 Recommendation: add Reachability Check or Impact Check later. It should run only
@@ -317,7 +330,8 @@ or generated surfaces. Unknown must stay an allowed outcome.
 Cloudflare's Feedback stage turns reachable traces into new hunt tasks. Circuit
 already has route vocabulary and Queue/Batch can represent follow-up work. The
 Pursue design also models blocked and partial work explicitly
-(`docs/flows/pursue.md:134-146`, `src/flows/pursue/reports.ts:230-239`).
+([docs/flows/pursue.md:134-146](pursue.md#L134-L146),
+`src/flows/pursue/reports.ts:230-239`).
 
 Recommendation: do not add Feedback as a block yet. Treat it as route policy:
 validated, bounded new work may go to Queue; unclear work goes to Human
@@ -332,11 +346,12 @@ babysitting by another name.
 Cloudflare's Report stage writes schema-backed output to queryable data. Circuit
 already has typed reports and close evidence as core product machinery. The
 authoring model says reports are useful only when each block writes structured
-facts that later steps consume (`docs/flows/authoring-model.md:178-196`). The
+facts that later steps consume
+([docs/flows/authoring-model.md:178-196](authoring-model.md#L178-L196)). The
 future-proofing notes also argue that proof-carrying claims, schemas, and run
 records become more important as models improve
-(`docs/ideas/future-proofing-circuit.md:25-41`,
-`docs/ideas/future-proofing-circuit.md:134-137`).
+([docs/ideas/future-proofing-circuit.md:25-41](../ideas/future-proofing-circuit.md#L25-L41),
+[docs/ideas/future-proofing-circuit.md:134-137](../ideas/future-proofing-circuit.md#L134-L137)).
 
 Recommendation: keep Report as a strength, but make the new concepts explicit
 when they exist. Do not bury coverage, validation, dedupe, or reachability in

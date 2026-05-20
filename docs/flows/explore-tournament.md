@@ -407,9 +407,10 @@ Minimum tests that clear the release blocker:
 - `generated/release/current-capabilities.json` shows Explore intent hints
   including `decide:`.
 - `generated/flows/explore/tournament.json` exposes the tournament path.
-- `docs/release/proofs/index.yaml` marks `proof:explore-decision` as verified
-  current.
-- `docs/release/readiness-report.generated.md` remains the current release truth
+- [docs/release/proofs/index.yaml](../release/proofs/index.yaml) marks
+  `proof:explore-decision` as verified current.
+- [docs/release/readiness-report.generated.md](../release/readiness-report.generated.md)
+  remains the current release truth
   after regeneration.
 - `check-release-ready` passes unless a future release blocker is introduced.
 
