@@ -80,6 +80,7 @@ function baseStep(step: CompiledStep): BaseStep {
     writes: toWrites(step.writes as Record<string, string | ReportRef | undefined>),
     ...(selection === undefined ? {} : { selection }),
     ...(step.skill_slots === undefined ? {} : { skillSlots: step.skill_slots }),
+    ...(step.route_from_report === undefined ? {} : { routeFromReport: step.route_from_report }),
     check: step.check,
     ...(step.budgets === undefined ? {} : { budgets: step.budgets }),
   };

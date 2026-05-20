@@ -11,6 +11,7 @@ const RETAINED_FLOW_IDS = [
   'prototype',
   'build',
   'explore',
+  'goal',
 ] as const;
 function readSource(path: string): string {
   return readFileSync(path, 'utf8');

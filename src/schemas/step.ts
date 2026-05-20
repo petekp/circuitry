@@ -24,6 +24,13 @@ export const ReportRef = z.object({
 });
 export type ReportRef = z.infer<typeof ReportRef>;
 
+export const RouteFromReport = z
+  .object({
+    path: z.array(z.string().min(1)).min(1),
+  })
+  .strict();
+export type RouteFromReport = z.infer<typeof RouteFromReport>;
+
 const StepBase = z.object({
   id: StepId,
   title: z.string().min(1),
@@ -34,6 +41,7 @@ const StepBase = z.object({
   }),
   selection: SelectionOverride.optional(),
   skill_slots: SkillSlotArray.optional(),
+  route_from_report: RouteFromReport.optional(),
   budgets: z
     .object({
       max_attempts: z.number().int().positive().max(10),

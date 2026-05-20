@@ -37,3 +37,52 @@ describe('operator-summary Prototype projection', () => {
     expect(projection.details).toContain('Captured relay selection evidence: 2.');
   });
 });
+
+describe('operator-summary Goal projection', () => {
+  it('renders Goal results as a compact proof packet instead of a generic run summary', () => {
+    const projection = projectSummary({
+      runFolder: '/tmp/circuit-run',
+      flowId: 'goal',
+      runOutcome: 'complete',
+      resultSummary: 'Circuit run complete.',
+      flowReport: {
+        schema: 'goal.result@v1',
+        outcome: 'complete',
+        summary: 'Goal complete: fix the flaky login test',
+        proven_claims: ['objective-proved'],
+        missing_or_weak_claims: [],
+        recovery_history: [],
+        residual_risks: [],
+        rerun_commands: ['./bin/circuit run goal --goal "fix the flaky login test"'],
+        evidence_links: [
+          {
+            report_id: 'goal.contract',
+            path: 'reports/goal/contract.json',
+            schema: 'goal.contract@v1',
+          },
+          {
+            report_id: 'goal.gate',
+            path: 'reports/goal/gate.json',
+            schema: 'goal.gate@v1',
+          },
+        ],
+        gate: {
+          clean_streak: 2,
+          required_passes: 2,
+          final_verdict: 'gate-pass',
+        },
+      },
+    });
+
+    expect(projection.headline).toBe(
+      'Circuit: Goal complete. Evidence satisfied and gate passed 2/2.',
+    );
+    expect(projection.headline).not.toBe('Circuit run complete.');
+    expect(projection.details).toContain('Proven: objective-proved.');
+    expect(projection.details).toContain('Still weak or missing: none.');
+    expect(projection.details).toContain(
+      'Checks: goal.contract -> reports/goal/contract.json; goal.gate -> reports/goal/gate.json.',
+    );
+    expect(projection.details).toContain('Gate: 2/2 passes; final verdict gate-pass.');
+  });
+});

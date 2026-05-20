@@ -206,6 +206,30 @@ function prototypeDetails(flowReport: JsonObject | undefined): string[] {
   return details;
 }
 
+function goalArrayDetail(flowReport: JsonObject | undefined, field: string, label: string): string {
+  const values = stringArrayField(flowReport, field);
+  return `${label}: ${values.length === 0 ? 'none' : values.join('; ')}.`;
+}
+
+function goalEvidenceDetails(flowReport: JsonObject | undefined): string {
+  const links = arrayField(flowReport, 'evidence_links')
+    .filter(isObject)
+    .map((link) => {
+      const reportId = stringField(link, 'report_id') ?? 'report';
+      const path = stringField(link, 'path') ?? '(missing path)';
+      return `${reportId} -> ${path}`;
+    });
+  return `Checks: ${links.length === 0 ? 'none' : links.join('; ')}.`;
+}
+
+function goalGateDetail(flowReport: JsonObject | undefined): string {
+  const gate = isObject(flowReport?.gate) ? flowReport.gate : undefined;
+  const clean = numberField(gate, 'clean_streak') ?? 0;
+  const required = numberField(gate, 'required_passes') ?? 2;
+  const verdict = stringField(gate, 'final_verdict') ?? 'unknown';
+  return `Gate: ${clean}/${required} passes; final verdict ${verdict}.`;
+}
+
 // Fall back to the run-level outcome when the flow-result file is missing
 // (e.g., the flow hit @stop before close-step ran). Defaulting to 'complete'
 // would let the operator summary silently contradict result.json on any
@@ -254,6 +278,28 @@ const prototypeProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
   return {
     headline,
     details: prototypeDetails(flowReport),
+  } satisfies SummaryProjection;
+};
+
+const goalProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome);
+  const gate = isObject(flowReport?.gate) ? flowReport.gate : undefined;
+  const clean = numberField(gate, 'clean_streak') ?? 0;
+  const required = numberField(gate, 'required_passes') ?? 2;
+  const headline =
+    outcome === 'complete'
+      ? `Circuit: Goal complete. Evidence satisfied and gate passed ${clean}/${required}.`
+      : `Circuit: Goal finished with outcome ${outcome}. Gate passed ${clean}/${required}.`;
+  return {
+    headline,
+    details: [
+      goalArrayDetail(flowReport, 'proven_claims', 'Proven'),
+      goalArrayDetail(flowReport, 'missing_or_weak_claims', 'Still weak or missing'),
+      goalEvidenceDetails(flowReport),
+      goalGateDetail(flowReport),
+      goalArrayDetail(flowReport, 'recovery_history', 'Recovery'),
+      goalArrayDetail(flowReport, 'rerun_commands', 'Next'),
+    ],
   } satisfies SummaryProjection;
 };
 
@@ -314,6 +360,7 @@ export const SUMMARY_PROJECTORS: Partial<Record<string, SummaryProjector>> = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  goal: goalProjector,
   prototype: prototypeProjector,
   pursue: pursueProjector,
   review: reviewProjector,

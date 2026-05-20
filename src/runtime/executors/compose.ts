@@ -41,9 +41,9 @@ async function readOptionalJsonReport(
 async function writeRegisteredComposeReport(
   step: ComposeStep,
   context: ComposeExecutionContext,
-): Promise<boolean> {
+): Promise<unknown | undefined> {
   const report = step.writes?.report;
-  if (report?.schema === undefined) return false;
+  if (report?.schema === undefined) return undefined;
 
   const flow = context.run.packageIndex.flow;
   const indexedStep = context.indexedStep;
@@ -72,7 +72,7 @@ async function writeRegisteredComposeReport(
       inputs,
     });
     await context.ports.runFiles.writeJson(report, body);
-    return true;
+    return body;
   }
 
   const closeBuilder = findCloseBuilder(report.schema);
@@ -94,12 +94,30 @@ async function writeRegisteredComposeReport(
       inputs,
     });
     await context.ports.runFiles.writeJson(report, body);
-    return true;
+    return body;
   }
 
   throw new Error(
     `no compose report writer registered for schema '${report.schema}' at compose step '${step.id}'`,
   );
+}
+
+function readRouteFromReport(body: unknown, path: readonly string[]): string {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) {
+      throw new Error(
+        `route_from_report path '${path.join('.')}' descended into a non-object at '${segment}'`,
+      );
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  if (typeof cursor !== 'string' || cursor.length === 0) {
+    throw new Error(
+      `route_from_report path '${path.join('.')}' must resolve to a non-empty string`,
+    );
+  }
+  return cursor;
 }
 
 export async function executeComposeResult(
@@ -118,7 +136,7 @@ export async function executeComposeWithPorts(
 ): Promise<StepExecutionResult> {
   try {
     if (step.writes?.report?.schema !== undefined) {
-      await writeRegisteredComposeReport(step, context);
+      const body = await writeRegisteredComposeReport(step, context);
       await context.ports.traceLog.append({
         run_id: context.run.runId,
         kind: 'step.report_written',
@@ -127,6 +145,15 @@ export async function executeComposeWithPorts(
         report_path: step.writes.report.path,
         report_schema: step.writes.report.schema,
       });
+      if (step.routeFromReport !== undefined) {
+        const route = readRouteFromReport(body, step.routeFromReport.path);
+        if (!Object.hasOwn(step.routes, route)) {
+          throw new Error(
+            `compose step '${step.id}' route_from_report selected undeclared route '${route}'`,
+          );
+        }
+        return stepExecutionOutcome({ route, details: { writer: step.writer } });
+      }
       return stepExecutionOutcome({ route: 'pass', details: { writer: step.writer } });
     }
 

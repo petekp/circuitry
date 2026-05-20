@@ -83,6 +83,14 @@ const EXPECTED_AXES_BY_FLOW: ReadonlyMap<
     },
   ],
   [
+    'goal',
+    {
+      allowed_rigors: ['lite', 'standard', 'deep'],
+      supports_tournament: false,
+      supports_autonomous: true,
+    },
+  ],
+  [
     'prototype',
     {
       allowed_rigors: ['standard', 'deep'],
@@ -189,7 +197,7 @@ describe('flow catalog completeness', () => {
     const visibilityById = new Map(flowPackages.map((pkg) => [pkg.id, pkg.visibility]));
 
     expect(visibilityById.get('runtime-proof')).toBe('internal');
-    for (const flow of ['build', 'explore', 'fix', 'prototype', 'pursue', 'review']) {
+    for (const flow of ['build', 'explore', 'fix', 'goal', 'prototype', 'pursue', 'review']) {
       expect(visibilityById.get(flow), `${flow} should be host-visible`).toBe('public');
     }
   });

@@ -253,6 +253,7 @@ function compileItem(
     routes,
     ...(item.selection !== undefined ? { selection: item.selection } : {}),
     ...(item.skill_slots.length === 0 ? {} : { skill_slots: item.skill_slots }),
+    ...(item.route_from_report === undefined ? {} : { route_from_report: item.route_from_report }),
   } as const;
 
   switch (item.execution.kind) {

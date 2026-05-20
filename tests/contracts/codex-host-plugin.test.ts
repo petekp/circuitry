@@ -24,6 +24,7 @@ const FLOW_COMMAND_SOURCES: Record<string, string> = {
   build: 'src/flows/build/command.md',
   explore: 'src/flows/explore/command.md',
   fix: 'src/flows/fix/command.md',
+  goal: 'src/flows/goal/command.md',
   prototype: 'src/flows/prototype/command.md',
   review: 'src/flows/review/command.md',
 };
@@ -32,6 +33,7 @@ const EXPECTED_CODEX_COMMANDS = [
   'create',
   'explore',
   'fix',
+  'goal',
   'handoff',
   'prototype',
   'review',
@@ -42,6 +44,7 @@ const EXPECTED_CODEX_SKILL_TITLES: Record<string, string> = {
   create: 'Circuit Create',
   explore: 'Circuit Explore',
   fix: 'Circuit Fix',
+  goal: 'Circuit Goal',
   handoff: 'Circuit Handoff',
   prototype: 'Circuit Prototype',
   review: 'Circuit Review',

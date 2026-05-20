@@ -224,6 +224,34 @@
       }
     },
     {
+      "id": "goal",
+      "title": "Goal",
+      "purpose": "Turn a user objective into a bounded goal contract with proof, recovery, and completion-gate policy.",
+      "input_contracts": ["task.intake@v1", "route.decision@v1"],
+      "alternative_input_contracts": [["task.intake@v1"]],
+      "output_contract": "goal.contract@v1",
+      "action_surface": "orchestrator",
+      "produces_evidence": [
+        "goal contract",
+        "done claims",
+        "proof requirements",
+        "allowed flow targets",
+        "recovery routes",
+        "completion gate policy"
+      ],
+      "check": {
+        "kind": "schema",
+        "description": "The goal contract must preserve the operator objective, declare proof requirements, constrain flow targets, and name recovery and close rules."
+      },
+      "allowed_routes": ["continue", "ask", "stop"],
+      "human_interaction": "optional",
+      "host_capabilities": {
+        "claude": [],
+        "codex": [],
+        "non_interactive": []
+      }
+    },
+    {
       "id": "pursue",
       "title": "Pursue",
       "purpose": "Turn a rough operator idea into a bounded autonomous ownership contract.",

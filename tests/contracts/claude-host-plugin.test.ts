@@ -23,6 +23,7 @@ const EXPECTED_CLAUDE_COMMANDS = [
   'create',
   'explore',
   'fix',
+  'goal',
   'handoff',
   'prototype',
   'review',

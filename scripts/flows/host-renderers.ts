@@ -22,6 +22,11 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
     description:
       'Use when the user wants Circuit to fix a bug, regression, failing test, crash, broken behavior, flaky behavior, or production issue.',
   },
+  goal: {
+    title: 'Circuit Goal',
+    description:
+      'Use when the user wants Circuit to supervise a bounded objective with typed evidence, recovery, and a completion gate.',
+  },
   handoff: {
     title: 'Circuit Handoff',
     description:

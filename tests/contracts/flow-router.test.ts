@@ -8,7 +8,7 @@ describe('flow router classifier', () => {
     // each package's routing.order, not from this array. Asserting set
     // membership keeps the test stable across catalog reordering.
     expect([...ROUTABLE_WORKFLOWS].sort()).toEqual(
-      ['build', 'explore', 'fix', 'prototype', 'pursue', 'review'].sort(),
+      ['build', 'explore', 'fix', 'goal', 'prototype', 'pursue', 'review'].sort(),
     );
   });
 
