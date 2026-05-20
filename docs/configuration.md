@@ -1,0 +1,130 @@
+# Configuration
+
+Circuit reads config at run time. Editing config does not require a plugin
+rebuild.
+
+## Config Files
+
+Circuit reads two config files:
+
+1. `~/.config/circuit/config.yaml` for your personal defaults across projects.
+2. `./.circuit/config.yaml` at the repo root for project-specific overrides.
+
+Both files use the same schema. For selection fields such as model, effort, and
+skills, Circuit composes layers in this order:
+
+```text
+defaults < user-global < project < invocation
+```
+
+Config can set models, effort, local skills, connector routing, and per-flow
+overrides under `circuits.<flow_id>`. Connector routing has its own precedence,
+described below.
+
+Use `schema_version: 1`. The config contract is
+[`docs/contracts/config.md`](contracts/config.md).
+
+## Local Skills
+
+Circuit can load your own `SKILL.md` files into relay prompts. It scans these
+host-native roots in order:
+
+1. `~/.agents/skills/<skill-id>/SKILL.md`
+2. `~/.claude/skills/<skill-id>/SKILL.md`
+
+`~/.agents/skills` wins when both roots contain the same skill id. Built-in
+flows do not require local skills. A built-in flow may expose an optional skill
+slot, and you can bind that slot to one of your skills in config.
+
+```yaml
+schema_version: 1
+
+skills:
+  bindings:
+    review-assistant: react-change-review
+
+circuits:
+  review:
+    skill_bindings:
+      review-assistant: my-review-skill
+    selection:
+      skills:
+        mode: append
+        skills:
+          - tdd
+```
+
+`selection.skills` names concrete local skill ids and must resolve before the
+worker starts. `skills.bindings` and `circuits.<flow>.skill_bindings` bind
+optional flow slots to concrete local skills. Circuit ignores missing unbound
+slots. When Circuit loads a skill, the trace records the skill id, optional
+slot, path, SHA-256, and byte count.
+
+The skill contract is [`docs/contracts/skill.md`](contracts/skill.md).
+
+## Codex Host And Codex Worker
+
+Codex can use Circuit in two separate ways:
+
+- **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
+  Codex chooses the best bundled Circuit flow skill and invokes the local
+  Circuit engine.
+- **worker connector behavior:** Circuit can relay read-only worker steps
+  through the Codex CLI from any host.
+
+The Codex worker connector is optional:
+
+```bash
+npm install -g @openai/codex
+```
+
+When a step uses Codex as its connector, Circuit launches `codex exec` with
+read-only sandbox flags. The Codex subprocess inherits the Circuit process
+environment and current working directory, so configure it only where those
+process settings are appropriate for the worker.
+
+## Connector Routing
+
+Flow schematics do not hard-code a connector. Config chooses the connector for
+each relay step in this order:
+
+1. `relay.roles.<role>` mapping for the step role.
+2. `relay.circuits.<flow_id>` mapping for the active flow.
+3. `relay.default`.
+4. Auto-detect, which currently selects `claude-code`.
+
+Built-in connectors:
+
+- **`claude-code`**: Claude Code CLI subprocess. Use it for trusted
+  same-workspace writes.
+- **`codex`**: Codex CLI subprocess with read-only sandbox flags. Circuit will
+  not route implementer steps to this connector.
+
+`codex-isolated` is not a current config value. Use `codex` for read-only Codex
+relays or `claude-code` for trusted same-workspace writes.
+
+Custom connectors are wrapper executables. Define them under
+`relay.connectors.<name>.command` as a YAML argv array. Circuit appends
+`PROMPT_FILE OUTPUT_FILE` as the final two arguments. The wrapper reads the
+prompt file and writes one JSON response object to the output file.
+
+Treat custom connectors as trusted local processes, not an OS sandbox. For
+custom connectors, stdin is ignored, stdout is debug output, and stderr appears
+in failure messages. Each custom connector inherits the Circuit process
+environment and current working directory. `capabilities.filesystem: read-only`
+tells Circuit to route the connector only to read-only worker roles; it does
+not stop the wrapper process from writing files on its own.
+
+The connector contract is [`docs/contracts/connector.md`](contracts/connector.md).
+
+## Safe Config Checklist
+
+Before writing config:
+
+1. Decide whether the setting is personal or project-specific.
+2. Preview the exact YAML.
+3. Keep `schema_version: 1`.
+4. Use `codex` only for read-only Codex relays.
+5. Use `claude-code` only for trusted same-workspace writes.
+6. Do not use `codex-isolated`; it is planned, not current.
+7. Run the focused command that proves the path you changed.
