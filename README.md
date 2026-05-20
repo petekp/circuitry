@@ -3,7 +3,7 @@
 </p>
 <br />
 
-**Powerful, configurable workflow orchestration for coding agents.**
+**A Workflow Orchestration Plugin for Claude Code and Codex**
 
 Circuit gives your coding agent tools for orchestrating complex, multi-step
 workflows to produce more consistent and reliable results, with less
