@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AcceptanceCriteria } from './acceptance-criteria.js';
 import {
   CheckpointSelectionCheck,
   FanoutAggregateCheck,
@@ -162,6 +163,7 @@ export const RelayStep = StepBase.extend({
   executor: z.literal('worker'),
   kind: z.literal('relay'),
   role: RelayRole,
+  acceptance_criteria: AcceptanceCriteria.optional(),
   writes: z
     .object({
       report: ReportRef.optional(),

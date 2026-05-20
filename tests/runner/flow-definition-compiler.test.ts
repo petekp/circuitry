@@ -361,6 +361,10 @@ describe('FlowDefinition compiler', () => {
     const definition = definitionFor('build');
     const pkg = packageFor('build');
     const frameStep = definition.schematic.items.find((item) => item.id === 'frame-step');
+    const actStep = definition.schematic.items.find((item) => item.id === 'act-step');
+    const compiled = compileSchematicToCompiledFlow(schematicForFlowDefinition(definition));
+    const compiledFlow = compiled.kind === 'single' ? compiled.flow : compiled.flows.get('default');
+    const compiledActStep = compiledFlow?.steps.find((step) => step.id === 'act-step');
 
     expect(pkg.writers.checkpoint.map((writer) => writer.resultSchemaName)).toEqual([
       'build.brief@v1',
@@ -375,6 +379,28 @@ describe('FlowDefinition compiler', () => {
     expect(frameStep?.checkpoint_policy).toMatchObject({
       safe_default_choice: 'continue',
       safe_autonomous_choice: 'continue',
+    });
+    expect(actStep?.acceptance_criteria).toEqual({
+      checks: [
+        {
+          kind: 'report_field',
+          id: 'changed-files-present',
+          path: ['changed_files'],
+          predicate: 'present',
+        },
+        {
+          kind: 'report_field',
+          id: 'evidence-non-empty',
+          path: ['evidence'],
+          predicate: 'non_empty',
+        },
+      ],
+      on_failure: { mode: 'retry-with-feedback' },
+    });
+    expect(compiledActStep).toMatchObject({
+      id: 'act-step',
+      kind: 'relay',
+      acceptance_criteria: actStep?.acceptance_criteria,
     });
   });
 

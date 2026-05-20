@@ -48,6 +48,12 @@ export interface TraceEntryInput {
   readonly route_taken?: RouteName;
   readonly reason?: string;
   readonly check_kind?: string;
+  readonly criterion_id?: string;
+  readonly criterion_kind?: string;
+  readonly exit_code?: number;
+  readonly status?: string;
+  readonly stdout_summary?: string;
+  readonly stderr_summary?: string;
   readonly outcome?: string;
   readonly child_run_id?: RunId;
   readonly child_flow_id?: string;

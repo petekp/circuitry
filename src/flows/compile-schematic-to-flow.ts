@@ -361,6 +361,9 @@ function compileItem(
         executor: 'worker',
         kind: 'relay',
         role,
+        ...(item.acceptance_criteria === undefined
+          ? {}
+          : { acceptance_criteria: item.acceptance_criteria }),
         writes: relayWrites,
         check: {
           kind: 'result_verdict',

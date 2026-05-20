@@ -359,6 +359,23 @@ export const fixFlowData = {
         receiptPath: 'reports/relay/fix-act.receipt.txt',
         resultPath: 'reports/relay/fix-act.result.json',
         pass: ['accept'],
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'changed-files-present',
+              path: ['changed_files'],
+              predicate: 'present',
+            },
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+          on_failure: { mode: 'retry-with-feedback' },
+        },
         routes: {
           continue: 'fix-verify',
           retry: 'fix-act',

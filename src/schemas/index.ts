@@ -17,6 +17,7 @@ export * from './rubric.js';
 export * from './rigor.js';
 export * from './runtime-source.js';
 export * from './axes.js';
+export * from './acceptance-criteria.js';
 export * from './depth.js';
 export * from './role.js';
 export * from './route-policy.js';

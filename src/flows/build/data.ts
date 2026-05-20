@@ -235,6 +235,23 @@ export const buildFlowData = {
         receiptPath: 'reports/relay/build-act.receipt.txt',
         resultPath: 'reports/relay/build-act.result.json',
         pass: ['accept'],
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'changed-files-present',
+              path: ['changed_files'],
+              predicate: 'present',
+            },
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+          on_failure: { mode: 'retry-with-feedback' },
+        },
         routes: {
           continue: 'verify-step',
           retry: 'act-step',

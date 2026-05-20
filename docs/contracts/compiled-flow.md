@@ -1,10 +1,10 @@
 ---
 contract: flow
 status: draft
-version: 0.4
+version: 0.5
 schema_source: src/schemas/compiled-flow.ts
-last_updated: 2026-05-08
-depends_on: [step, stage, axes, rigor, change_kind, selection-policy, skill]
+last_updated: 2026-05-20
+depends_on: [step, stage, axes, rigor, change_kind, selection-policy, skill, acceptance-criteria]
 report_ids:
   - flow.definition
   - flow.scalar_catalog
@@ -64,9 +64,10 @@ inside `CompiledFlow.superRefine` — and tested in
 - **WF-I10 — Pass-route presence.** Every step's `routes` map must
   contain the runtime success key `pass`. The `CheckEvaluatedTraceEntry.outcome` field in
   `src/schemas/trace-entry.ts` is `z.enum(['pass', 'fail'])` — uniform across
-  all three check kinds (`schema_sections`, `checkpoint_selection`,
-  `result_verdict`) — so the runtime's route pick on a successful check
-  outcome looks up `routes['pass']`. A fixture whose routes use
+  all current check kinds (`schema_sections`, `checkpoint_selection`,
+  `result_verdict`, `fanout_aggregate`, `acceptance_criteria`) — so the
+  runtime's route pick on a successful check outcome looks up
+  `routes['pass']`. A fixture whose routes use
   author-friendly aliases like `{ success: '@complete' }` would satisfy
   WF-I8 (the edge labelled `success` reaches a terminal) and still
   stall at runtime because `routes['pass']` is undefined. WF-I10 is
@@ -112,6 +113,8 @@ After a CompiledFlow is accepted:
 - The CompiledFlow's step graph is closed under `WF-I1..4`.
 - Any step-level `skill_slots` are typed `SkillSlot`s and remain optional
   until config binds them.
+- Any relay-step `acceptance_criteria` remain inline, deterministic, and
+  serializable in the compiled manifest snapshot.
 - The CompiledFlow is serializable to the run-folder manifest snapshot.
 
 ## Property ids (reserved for Stage 2 testing)
@@ -156,6 +159,9 @@ Property-based tests will cover:
 - **skill**: `Step.skill_slots` uses `SkillSlot[]`. Concrete
   `SelectionOverride.skills` ids are runtime-resolved local skills;
   optional slots are config-bound local skills.
+- **acceptance-criteria**: Relay `Step.acceptance_criteria` uses the
+  deterministic V1 criteria schema and remains an optional additive compiled
+  flow field.
 
 ## Failure modes (carried from evidence)
 
@@ -226,10 +232,14 @@ STEP-I4.
   stage" is left for Stage 2 per [docs/contracts/stage.md](stage.md) §Evolution
   and will be revisited when manifest compilation starts consuming
   `Stage.steps` as an ordered execution plan).
-- **v0.4 (user skill loading slice, this version)**: adds **WF-I12** and
+- **v0.4 (user skill loading slice)**: adds **WF-I12** and
   step-level `skill_slots` pass-through from schematic to compiled flow.
   Public built-ins must not name concrete local skills in
   `default_selection.skills` or step `selection.skills`; user-authored
   flows may still select concrete skills directly.
+- **v0.5 (per-step acceptance criteria slice, this version)**: adds optional
+  relay `acceptance_criteria` pass-through from schematic to compiled flow.
+  The field is additive on `schema_version: '2'` manifests and remains
+  deterministic-only in V1.
 - **v1.0 (Stage 2)**: ratified invariants + property tests + operator
   documentation.

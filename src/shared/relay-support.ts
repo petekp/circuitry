@@ -1,10 +1,22 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { RuntimeIndexedRelayStep } from '../flows/registries/runtime-index.js';
 import { findRelayShapeHint } from '../flows/registries/shape-hints/registry.js';
+import type { AcceptanceCriterion } from '../schemas/acceptance-criteria.js';
 import { resolveRunRelative } from './run-relative-path.js';
 import type { LoadedRelaySkill } from './skill-loading.js';
 
 export type RelayStep = RuntimeIndexedRelayStep;
+
+export interface RelayAcceptanceRetryFeedback {
+  readonly step_id: string;
+  readonly criterion_id: string;
+  readonly criterion_kind: AcceptanceCriterion['kind'];
+  readonly reason: string;
+  readonly exit_code?: number;
+  readonly status?: 'passed' | 'failed';
+  readonly stdout_summary?: string;
+  readonly stderr_summary?: string;
+}
 
 // Parse connector result_body for the check verdict and evaluate against
 // `step.check.pass`. Result shape: a discriminated union the relay handlers
@@ -74,6 +86,48 @@ function selectedSkillsSection(skills: readonly LoadedRelaySkill[]): string | un
   ].join('\n\n');
 }
 
+function formatAcceptanceCriterion(criterion: AcceptanceCriterion): string {
+  if (criterion.kind === 'report_field') {
+    return `- ${criterion.id}: report field ${criterion.path.join('.')} must be ${criterion.predicate}.`;
+  }
+  return [
+    `- ${criterion.id}: command ${criterion.command.id} must ${criterion.expected_status}.`,
+    `  cwd: ${criterion.command.cwd}`,
+    `  argv: ${JSON.stringify(criterion.command.argv)}`,
+  ].join('\n');
+}
+
+function acceptanceCriteriaSection(step: RelayStep): string | undefined {
+  const criteria = step.acceptance_criteria;
+  if (criteria === undefined) return undefined;
+  return [
+    'Acceptance Criteria:',
+    'Before this step can advance, Circuit will check the relay result against these deterministic criteria.',
+    `Failure policy: ${criteria.on_failure.mode}`,
+    ...criteria.checks.map(formatAcceptanceCriterion),
+  ].join('\n');
+}
+
+function acceptanceRetryFeedbackSection(
+  feedback: RelayAcceptanceRetryFeedback | undefined,
+): string | undefined {
+  if (feedback === undefined) return undefined;
+  return [
+    'Acceptance Criteria Feedback:',
+    `Criterion ${feedback.criterion_id} (${feedback.criterion_kind}) failed.`,
+    `Reason: ${feedback.reason}`,
+    ...(feedback.exit_code === undefined ? [] : [`Exit code: ${feedback.exit_code}`]),
+    ...(feedback.status === undefined ? [] : [`Status: ${feedback.status}`]),
+    ...(feedback.stdout_summary === undefined
+      ? []
+      : [`Stdout summary:\n${feedback.stdout_summary}`]),
+    ...(feedback.stderr_summary === undefined
+      ? []
+      : [`Stderr summary:\n${feedback.stderr_summary}`]),
+    'Revise the result so this criterion passes. Keep the same response contract and accepted verdicts.',
+  ].join('\n');
+}
+
 // v0 prompt composition: name the step, enumerate accepted verdicts, and
 // inline every reads-declared report (or a clear placeholder if the
 // reads report hasn't been written yet).
@@ -81,6 +135,7 @@ export function composeRelayPrompt(
   step: RelayStep,
   runFolder: string,
   loadedSkills: readonly LoadedRelaySkill[] = [],
+  acceptanceRetryFeedback?: RelayAcceptanceRetryFeedback,
 ): string {
   const readsBody =
     step.reads.length === 0
@@ -93,6 +148,8 @@ export function composeRelayPrompt(
           })
           .join('\n\n');
   const skillsSection = selectedSkillsSection(loadedSkills);
+  const criteriaSection = acceptanceCriteriaSection(step);
+  const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -103,6 +160,8 @@ export function composeRelayPrompt(
     readsBody,
     '',
     ...(skillsSection === undefined ? [] : [skillsSection, '']),
+    ...(criteriaSection === undefined ? [] : [criteriaSection, '']),
+    ...(feedbackSection === undefined ? [] : [feedbackSection, '']),
     relayResponseInstruction(step),
   ].join('\n');
 }

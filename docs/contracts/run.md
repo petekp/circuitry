@@ -1,10 +1,10 @@
 ---
 contract: run
 status: ratified-v0.1
-version: 0.2
+version: 0.3
 schema_source: src/schemas/run.ts
-last_updated: 2026-05-08
-depends_on: [trace_entry, snapshot, ids, change_kind, depth, flow, skill]
+last_updated: 2026-05-20
+depends_on: [trace_entry, snapshot, ids, change_kind, depth, flow, skill, acceptance-criteria]
 closes: []
 report_ids:
   - run.trace
@@ -318,6 +318,12 @@ property-test harness + reducer exist in Stage 2.
   enforced in the P2.4 round-trip test and the CI-skip local-smoke
   report), not here — the contract widens the schema; the connector
   contract obligates the writer.
+
+  Per-step acceptance criteria add zero or more `check.evaluated`
+  trace_entries with `check_kind: 'acceptance_criteria'` on the same
+  `(step_id, attempt)` pair after `relay.completed` and before the step
+  terminal trace_entry. Each entry records the criterion id, criterion kind,
+  outcome, and, for command criteria, bounded output summaries.
 
 - `run.prop.report_written_before_check` — For any compose step, every
   `check.evaluated` trace_entry with `outcome: 'pass'` on that step is preceded by

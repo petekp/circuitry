@@ -10,6 +10,7 @@ import type { Axes } from '../../schemas/axes.js';
 import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
 import { isProofPlanBlockedError } from '../../shared/proof-plan.js';
+import { type AcceptanceRetryFeedback, isAcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { TerminalTarget } from '../domain/route.js';
 import type { RunClosedOutcome } from '../domain/run.js';
 import { isWaitingCheckpointStepOutcome } from '../domain/step.js';
@@ -97,6 +98,7 @@ interface ActiveRecovery {
   readonly originStepId: string;
   readonly route: string;
   readonly reason?: string;
+  readonly acceptanceFeedback?: AcceptanceRetryFeedback;
 }
 
 function defaultManifestHash(flow: ExecutableFlow): string {
@@ -419,9 +421,14 @@ async function executeExecutableFlowOutcomeUnsafe(
     let route: string;
     let details: Record<string, unknown>;
     try {
+      const acceptanceRetryFeedback =
+        activeRecovery?.originStepId === step.id && isRecoveryRoute(incomingRouteTaken)
+          ? activeRecovery.acceptanceFeedback
+          : undefined;
       const stepContext: RunContext = {
         ...context,
         activeStepAttempt: attempt,
+        ...(acceptanceRetryFeedback === undefined ? {} : { acceptanceRetryFeedback }),
         ...(isResumedCheckpoint && options.resumeCheckpoint !== undefined
           ? { resumeCheckpoint: options.resumeCheckpoint }
           : {}),
@@ -441,10 +448,22 @@ async function executeExecutableFlowOutcomeUnsafe(
       route = outcome.route;
       details = outcome.details ?? {};
       const recoveryReason = details.reason;
+      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback)
+        ? details.acceptance_feedback
+        : undefined;
       if (isRecoveryRoute(route) && typeof recoveryReason === 'string') {
-        activeRecovery = { originStepId: step.id, route, reason: recoveryReason };
+        activeRecovery = {
+          originStepId: step.id,
+          route,
+          reason: recoveryReason,
+          ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
+        };
       } else if (isRecoveryRoute(route)) {
-        activeRecovery = { originStepId: step.id, route };
+        activeRecovery = {
+          originStepId: step.id,
+          route,
+          ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
+        };
       }
     } catch (error) {
       const message = (error as Error).message;

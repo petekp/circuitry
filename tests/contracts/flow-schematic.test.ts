@@ -108,6 +108,56 @@ describe('flow schematic schema — active Fix schematic', () => {
     ]);
   });
 
+  it('keeps Fix act acceptance criteria on the relay item only', () => {
+    const schematic = parseFixSchematic();
+    const act = schematic.items.find((item) => (item.id as unknown as string) === 'fix-act');
+    if (act === undefined) throw new Error('fix-act missing');
+
+    expect(act.acceptance_criteria).toEqual({
+      checks: [
+        {
+          kind: 'report_field',
+          id: 'changed-files-present',
+          path: ['changed_files'],
+          predicate: 'present',
+        },
+        {
+          kind: 'report_field',
+          id: 'evidence-non-empty',
+          path: ['evidence'],
+          predicate: 'non_empty',
+        },
+      ],
+      on_failure: { mode: 'retry-with-feedback' },
+    });
+  });
+
+  it('rejects acceptance criteria on non-relay schematic items', () => {
+    const raw = readJson(fixSchematicPath);
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error('expected fix schematic object');
+    }
+    const mutated = structuredClone(raw) as {
+      readonly items: Array<Record<string, unknown>>;
+    };
+    mutated.items[0] = {
+      ...mutated.items[0],
+      acceptance_criteria: {
+        checks: [
+          {
+            kind: 'report_field',
+            id: 'not-for-compose',
+            path: ['evidence'],
+            predicate: 'present',
+          },
+        ],
+      },
+    };
+
+    const parsed = FlowSchematic.safeParse(mutated);
+    expect(parsed.success).toBe(false);
+  });
+
   it('keeps Fix close inputs aligned with the evidence path (lite skips review)', () => {
     const schematic = parseFixSchematic();
     const closeLite = schematic.items.find(

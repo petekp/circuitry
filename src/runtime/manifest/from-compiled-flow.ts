@@ -106,6 +106,9 @@ function convertStep(step: CompiledStep): ExecutableStep {
       ...base,
       kind: 'relay',
       role: step.role,
+      ...(step.acceptance_criteria === undefined
+        ? {}
+        : { acceptanceCriteria: step.acceptance_criteria }),
       ...(step.writes.report === undefined ? {} : { report: toRunFileRef(step.writes.report) }),
     };
   }

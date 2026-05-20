@@ -11,7 +11,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const projectRoot = resolve(__dirname, '../..');
 const emitScript = resolve(projectRoot, 'scripts/flows/emit.ts');
@@ -48,6 +48,15 @@ function removeDirIfPresent(path: string) {
   if (planted(path)) rmSync(path, { recursive: true, force: true });
 }
 
+function cleanupPlantedFixtures() {
+  removeStaleSiblingIfPresent(stalePath);
+  removeStaleSiblingIfPresent(claudeStalePath);
+  removeStaleSiblingIfPresent(codexStalePath);
+  removeDirIfPresent(runtimeProofClaudeDir);
+  removeDirIfPresent(runtimeProofCodexDir);
+  removeStaleSiblingIfPresent(rootClaudeObsoleteManifestPath);
+}
+
 describe('emit-flows.ts — stale per-mode sibling guard', () => {
   beforeAll(() => {
     // The script imports from dist/, so make sure it's built before any
@@ -56,103 +65,93 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     execFileSync('npm', ['run', 'build'], { cwd: projectRoot, stdio: 'pipe' });
   });
 
-  afterEach(() => {
-    removeStaleSiblingIfPresent(stalePath);
-    removeStaleSiblingIfPresent(claudeStalePath);
-    removeStaleSiblingIfPresent(codexStalePath);
-    removeDirIfPresent(runtimeProofClaudeDir);
-    removeDirIfPresent(runtimeProofCodexDir);
-    removeStaleSiblingIfPresent(rootClaudeObsoleteManifestPath);
-  });
+  afterAll(cleanupPlantedFixtures);
 
-  it('--check exits 1 and names the stale sibling when one exists', () => {
+  it('detects and removes stale generated siblings and host surfaces', () => {
+    cleanupPlantedFixtures();
+
     plantStaleSibling(stalePath);
     plantStaleSibling(claudeStalePath);
     plantStaleSibling(codexStalePath);
-    const res = spawnSync('node', [emitScript, '--check'], {
+    const staleCheck = spawnSync('node', [emitScript, '--check'], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
-    expect(res.status).toBe(1);
-    const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
-    expect(combined).toContain('generated/flows/build/never-a-mode.json');
-    expect(combined).toContain('plugins/claude/skills/build/never-a-mode.json');
-    expect(combined).toContain('plugins/codex/flows/build/never-a-mode.json');
-    expect(combined).toContain('not in the emit plan');
-  });
+    expect(staleCheck.status).toBe(1);
+    const staleCheckOutput = `${staleCheck.stdout ?? ''}\n${staleCheck.stderr ?? ''}`;
+    expect(staleCheckOutput).toContain('generated/flows/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain('plugins/claude/skills/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain('plugins/codex/flows/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain('not in the emit plan');
 
-  it('emit mode removes a stale sibling on the next run', () => {
+    cleanupPlantedFixtures();
     plantStaleSibling(stalePath);
     plantStaleSibling(claudeStalePath);
     plantStaleSibling(codexStalePath);
     expect(planted(stalePath)).toBe(true);
     expect(planted(claudeStalePath)).toBe(true);
     expect(planted(codexStalePath)).toBe(true);
-    const res = spawnSync('node', [emitScript], {
+    const staleEmit = spawnSync('node', [emitScript], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
-    expect(res.status).toBe(0);
+    expect(staleEmit.status).toBe(0);
     expect(planted(stalePath)).toBe(false);
     expect(planted(claudeStalePath)).toBe(false);
     expect(planted(codexStalePath)).toBe(false);
-    expect(res.stdout ?? '').toContain('removed stale generated/flows/build/never-a-mode.json');
-    expect(res.stdout ?? '').toContain(
+    expect(staleEmit.stdout ?? '').toContain(
+      'removed stale generated/flows/build/never-a-mode.json',
+    );
+    expect(staleEmit.stdout ?? '').toContain(
       'removed stale plugins/claude/skills/build/never-a-mode.json',
     );
-    expect(res.stdout ?? '').toContain('removed stale plugins/codex/flows/build/never-a-mode.json');
-  });
+    expect(staleEmit.stdout ?? '').toContain(
+      'removed stale plugins/codex/flows/build/never-a-mode.json',
+    );
 
-  it('--check exits 1 when an internal flow has stale host mirrors', () => {
+    cleanupPlantedFixtures();
     plantInternalHostMirror(runtimeProofClaudeDir);
     plantInternalHostMirror(runtimeProofCodexDir);
-
-    const res = spawnSync('node', [emitScript, '--check'], {
+    const internalMirrorCheck = spawnSync('node', [emitScript, '--check'], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
+    expect(internalMirrorCheck.status).toBe(1);
+    const internalMirrorOutput = `${internalMirrorCheck.stdout ?? ''}\n${
+      internalMirrorCheck.stderr ?? ''
+    }`;
+    expect(internalMirrorOutput).toContain('plugins/claude/skills/runtime-proof');
+    expect(internalMirrorOutput).toContain('plugins/codex/flows/runtime-proof');
+    expect(internalMirrorOutput).toContain('stale host mirror for internal flow');
 
-    expect(res.status).toBe(1);
-    const combined = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
-    expect(combined).toContain('plugins/claude/skills/runtime-proof');
-    expect(combined).toContain('plugins/codex/flows/runtime-proof');
-    expect(combined).toContain('stale host mirror for internal flow');
-  });
-
-  it('emit mode removes stale host mirrors for internal flows', () => {
-    plantInternalHostMirror(runtimeProofClaudeDir);
-    plantInternalHostMirror(runtimeProofCodexDir);
-
-    const res = spawnSync('node', [emitScript], {
+    const internalMirrorEmit = spawnSync('node', [emitScript], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
-
-    expect(res.status).toBe(0);
+    expect(internalMirrorEmit.status).toBe(0);
     expect(planted(runtimeProofClaudeDir)).toBe(false);
     expect(planted(runtimeProofCodexDir)).toBe(false);
-    expect(res.stdout ?? '').toContain(
+    expect(internalMirrorEmit.stdout ?? '').toContain(
       'removed internal host mirror plugins/claude/skills/runtime-proof',
     );
-    expect(res.stdout ?? '').toContain(
+    expect(internalMirrorEmit.stdout ?? '').toContain(
       'removed internal host mirror plugins/codex/flows/runtime-proof',
     );
-  });
 
-  it('emit mode preserves the root Claude marketplace while removing obsolete root plugin files', () => {
+    cleanupPlantedFixtures();
     const marketplaceBefore = readFileSync(rootClaudeMarketplacePath, 'utf8');
     plantStaleSibling(rootClaudeObsoleteManifestPath);
-
-    const res = spawnSync('node', [emitScript], {
+    const rootEmit = spawnSync('node', [emitScript], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
-
-    expect(res.status).toBe(0);
+    expect(rootEmit.status).toBe(0);
     expect(planted(rootClaudeObsoleteManifestPath)).toBe(false);
     expect(readFileSync(rootClaudeMarketplacePath, 'utf8')).toBe(marketplaceBefore);
-    expect(res.stdout ?? '').toContain(
+    expect(rootEmit.stdout ?? '').toContain(
       'removed obsolete root host surface .claude-plugin/plugin.json',
     );
+
+    cleanupPlantedFixtures();
   });
 });

@@ -61,7 +61,14 @@ function indexedStep(step: ExecutableStep): RuntimeIndexedStep {
     } as unknown as RuntimeIndexedStep;
   }
   if (step.kind === 'relay') {
-    return { ...base, kind: step.kind, role: step.role } as unknown as RuntimeIndexedStep;
+    return {
+      ...base,
+      kind: step.kind,
+      role: step.role,
+      ...(step.acceptanceCriteria === undefined
+        ? {}
+        : { acceptance_criteria: step.acceptanceCriteria }),
+    } as unknown as RuntimeIndexedStep;
   }
   return { ...base, kind: step.kind } as unknown as RuntimeIndexedStep;
 }

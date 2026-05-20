@@ -1,14 +1,14 @@
 ---
 contract: step
 status: draft
-version: 0.3
+version: 0.4
 schema_source: src/schemas/step.ts
-last_updated: 2026-05-08
-depends_on: [ids, check, selection-policy, scalars, skill]
+last_updated: 2026-05-20
+depends_on: [ids, check, selection-policy, scalars, skill, acceptance-criteria]
 report_ids:
   - step.definition
-invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9, STEP-I10]
-property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant, step.prop.skill_slots_unique]
+invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9, STEP-I10, STEP-I11]
+property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant, step.prop.skill_slots_unique, step.prop.relay_acceptance_criteria_shape]
 ---
 
 # Step Contract
@@ -25,7 +25,9 @@ belongs to exactly one of six variants, discriminated by `kind`:
   auto-resolver) under a typed `CheckpointPolicy`; checked by
   `checkpoint_selection` against a `CheckpointResponseSource`.
 - **RelayStep** — worker executes remotely under a `RelayRole`; checked
-  by `result_verdict` against a `RelayResultSource`.
+  by `result_verdict` against a `RelayResultSource`, and may declare
+  deterministic `acceptance_criteria` that gate advancement after the
+  relay result is schema-valid.
 - **SubRunStep** — orchestrator launches a child flow and checks the copied
   child result through `result_verdict`.
 - **FanoutStep** — orchestrator expands static or dynamic branches and checks
@@ -136,6 +138,16 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
   config binds the slot to a concrete local `SkillId`. v1 slots are
   optional only.
 
+- **STEP-I11 — Relay acceptance criteria are deterministic and relay-only.**
+  Only `RelayStep` may carry `acceptance_criteria`. V1 criteria are
+  deterministic: `report_field` checks over the parsed relay result, or
+  `command` checks using the bounded direct-argv verification command shape.
+  The supported failure policies are `hard-fail` and `retry-with-feedback`;
+  LLM-judged criteria and checkpoint edit-criterion behavior are not part of
+  this contract. Enforced by `src/schemas/acceptance-criteria.ts`,
+  `RelayStep` in `src/schemas/step.ts`, and schematic execution-shape
+  validation in `src/schemas/flow-schematic.ts`.
+
 - **STEP-I7 — Protocol required.** Every Step carries a `ProtocolId`
   (`protocol:` field) — no default, no optional. Enforced by `StepBase`
   in `src/schemas/step.ts`. The `ProtocolId` brand is defined in
@@ -181,6 +193,8 @@ After a Step is accepted:
   run folder. Runtime writers still call the run-relative resolver as
   defense-in-depth when typed data is bypassed.
 - `skill_slots`, when present, is an array of typed optional slots.
+- `acceptance_criteria`, when present, belongs to a relay step and is
+  preserved into compiled and runtime flow projections.
 
 ## Property ids (reserved for Stage 2 testing)
 
@@ -205,6 +219,10 @@ Property-based tests will cover:
   present, `max_attempts ∈ [1, 10]`.
 - `step.prop.skill_slots_unique` — For any valid `Step`,
   `skill_slots[].id` values are unique and parse as `SkillSlotId`.
+- `step.prop.relay_acceptance_criteria_shape` — For any valid `Step`,
+  `acceptance_criteria` is absent unless `kind === 'relay'`; when present,
+  every criterion is one of the deterministic V1 kinds and every command uses
+  the bounded verification command shape.
 
 ## Cross-contract dependencies
 
@@ -218,6 +236,9 @@ Property-based tests will cover:
 - **skill** (`src/schemas/skill.ts`) — Step's `skill_slots` field uses
   `SkillSlot[]`. Slot binding and local skill resolution are relay-time
   concerns owned by config and the user skill registry.
+- **acceptance-criteria** (`src/schemas/acceptance-criteria.ts`) — Relay
+  steps may embed deterministic advancement gates; the relay executor records
+  their results as `check.evaluated` trace entries.
 - **flow** (`src/schemas/compiled-flow.ts`) — CompiledFlow-level invariants
   (WF-I1 unique step ids, WF-I4 closed route targets) reference Step
   identity; they are not repeated here.

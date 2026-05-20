@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AcceptanceCriteria } from './acceptance-criteria.js';
 import { FlowAxes } from './axes.js';
 import { ChangeKind } from './change-kind.js';
 import { CheckpointAllowFrom, FanoutJoinPolicy } from './check.js';
@@ -193,6 +194,7 @@ export const SchematicStep = z
     protocol: ProtocolId.optional(),
     writes: StepWrites.optional(),
     check: StepCheck.optional(),
+    acceptance_criteria: AcceptanceCriteria.optional(),
     checkpoint_policy: CheckpointPolicy.optional(),
     fanout: SchematicFanout.optional(),
   })
@@ -246,6 +248,7 @@ function validateExecutionShape(
     execution: StepExecution;
     writes?: StepWrites | undefined;
     check?: StepCheck | undefined;
+    acceptance_criteria?: z.infer<typeof AcceptanceCriteria> | undefined;
     checkpoint_policy?: CheckpointPolicy | undefined;
     fanout?: SchematicFanout | undefined;
   },
@@ -426,6 +429,13 @@ function validateExecutionShape(
       code: z.ZodIssueCode.custom,
       path: ['checkpoint_policy'],
       message: 'checkpoint_policy is only allowed for checkpoint execution',
+    });
+  }
+  if (item.acceptance_criteria !== undefined && kind !== 'relay') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['acceptance_criteria'],
+      message: 'acceptance_criteria is only allowed for relay execution',
     });
   }
   if (kind === 'fanout' && item.fanout === undefined) {
