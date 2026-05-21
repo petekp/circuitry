@@ -2,8 +2,8 @@
 
 Date: 2026-05-20
 
-Status: audit record. This file documents the consolidation decision. It is not
-an active runbook.
+Status: audit record with a 2026-05-21 navigation addendum. This file documents
+the consolidation decision. It is not an active runbook.
 
 ## Scope
 
@@ -55,9 +55,10 @@ documentation-surface tests.
 | Flow command docs | `src/flows/*/command.md` | Keep | Source for generated host command and Codex skill instructions. |
 | Direct command docs | `src/commands/*.md` | Keep | Source for generated host command and Codex skill instructions. |
 | Declarative architecture | `docs/architecture/declarative-flow-architecture.md` | Merge duplicate | Kept architecture decision; replaced generated-surface file lists with source-of-truth pointers. |
-| Literate guide | `docs/literate-guide.md` | Merge duplicate | Kept walkthrough; replaced procedural adding-a-flow checklist with a pointer to the authoring model. |
+| Codebase walkthrough | `docs/architecture/codebase-walkthrough.md` | Move and keep | Moved from `docs/literate-guide.md` so the deep contributor walkthrough sits with architecture references, not operator entry docs. |
 | Pursue guide | `docs/flows/pursue.md` | Keep and align | Kept product shape; updated executable truth to start from `data.ts`/`flow.ts` and generated-surface map. |
-| Script ownership | `docs/script-inventory.md` | Keep | Current script owner map plus historical migration record. Not a general runbook. |
+| Script ownership | `docs/reference/script-inventory.md` | Move and keep | Moved from `docs/script-inventory.md` so script ownership is a reference layer, not a read-first doc. |
+| Repository map | `docs/repository-map.md` | Add | Added the before/after tree map, disclosure principle, migration rationale, and targeted probes for this navigation redesign. |
 | Release proofs | `docs/release/proofs/README.md` | Keep | Release proof lifecycle source of truth. Proof runs remain evidence fixtures. |
 | Host release QA | `docs/host-trial-checklist.md` | Keep | Manual release QA checklist. Operators use `docs/first-run.md` instead. |
 | Release plans | `docs/release/initial-public-release-list.md` and release generated reports | Keep as release records | Current only where release checks and ledgers agree. |

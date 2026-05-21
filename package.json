@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Claude Code plugin that automates common developer flows with per-step configurability (model, effort, skills), grounded in evidence-based prompting research and contract-first + architecture-first + tiny-step-ratcheting methodology.",
+  "description": "Claude Code and Codex plugin that runs structured developer flows with per-step configurability, evidence, checks, traces, and reports.",
   "bin": {
     "circuit": "./bin/circuit"
   },

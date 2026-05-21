@@ -87,6 +87,7 @@ changes need `check-release-infra`.
 | Flow catalog | `src/flows/catalog.ts` (single source of truth the engine derives from) |
 | Tests | `tests/` |
 | Documentation map | [`docs/README.md`](docs/README.md) |
+| Repository map | [`docs/repository-map.md`](docs/repository-map.md) |
 | Engine contracts | `docs/contracts/` |
 | Flow design notes | `docs/flows/` |
 | Release proof runs | `docs/release/proofs/runs/` |

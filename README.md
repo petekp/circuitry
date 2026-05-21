@@ -89,6 +89,7 @@ npm run build
 
 Circuit requires Node.js `22.18.0` or newer.
 For a more careful manual check, use [`docs/first-run.md`](docs/first-run.md).
+For the repo map, use [`docs/repository-map.md`](docs/repository-map.md).
 
 ## Choose A Flow
 
@@ -179,6 +180,8 @@ Start:
 - [`docs/first-run.md`](docs/first-run.md): manual setup check, safest Review,
   and the run folder shape.
 - [`docs/README.md`](docs/README.md): map of the current docs.
+- [`docs/repository-map.md`](docs/repository-map.md): before/after repo map,
+  layer ownership, and migration rationale.
 
 Operate:
 
@@ -193,8 +196,8 @@ Contribute or verify:
 
 - [`docs/generated-surfaces.md`](docs/generated-surfaces.md): source map for
   generated command, skill, schematic, and plugin output.
-- [`docs/literate-guide.md`](docs/literate-guide.md): codebase walkthrough for
-  contributors.
+- [`docs/architecture/codebase-walkthrough.md`](docs/architecture/codebase-walkthrough.md):
+  codebase walkthrough for contributors.
 - [`docs/release/proofs/index.yaml`](docs/release/proofs/index.yaml):
   checked-in proof set covering doing work, deciding, continuity,
   customization, failure, first run, and plan execution for this alpha.

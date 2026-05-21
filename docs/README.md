@@ -1,16 +1,19 @@
 # Documentation Map
 
-Start here when you need repo truth without reading every historical note.
+Start here when you need repo truth without reading every historical note. Read
+only the layer you need, then go deeper when the change touches that layer.
 
 ## Read First
 
 1. [README.md](../README.md) - product shape, install paths, host roles, and
    first links.
-2. [docs/first-run.md](first-run.md) - doctor, safest Review, expected output,
+2. [docs/repository-map.md](repository-map.md) - before/after repo map, layer
+   ownership, and migration rationale.
+3. [docs/first-run.md](first-run.md) - doctor, safest Review, expected output,
    and run folder shape.
-3. [docs/operator-guide.md](operator-guide.md) - commands, run flow,
+4. [docs/operator-guide.md](operator-guide.md) - commands, run flow,
    checkpoints, verification, and troubleshooting.
-4. [docs/configuration.md](configuration.md) - starter config, local skills,
+5. [docs/configuration.md](configuration.md) - starter config, local skills,
    Codex host/worker distinction, and connector routing.
 
 ## Agent And Contributor Setup
@@ -21,8 +24,10 @@ Start here when you need repo truth without reading every historical note.
   checkout.
 - [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) - product vocabulary and
   terms to avoid.
-- [docs/literate-guide.md](literate-guide.md) - codebase walkthrough for
-  contributors opening the repo for the first time.
+- [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md)
+  - codebase walkthrough for contributors opening the repo for the first time.
+- [src/README.md](../src/README.md) - source tree map from CLI, runtime,
+  schemas, flows, generated outputs, and shared helpers.
 
 ## Change Flows Or Runtime
 
@@ -34,8 +39,8 @@ Start here when you need repo truth without reading every historical note.
   changing.
 - [docs/contracts/](contracts/) - contract details when code, tests, or
   generated surfaces depend on an invariant.
-- [docs/script-inventory.md](script-inventory.md) - current script ownership
-  and historical migration map.
+- [docs/reference/script-inventory.md](reference/script-inventory.md) - current
+  script ownership and historical migration map.
 
 ## Generated, Release, And Evidence
 
@@ -46,6 +51,8 @@ Start here when you need repo truth without reading every historical note.
 - [generated/](../generated/), [plugins/](../plugins/), and
   [docs/release/](release/) - generated truth, release truth, host package
   output, and checked-in proof evidence.
+- [plugins/README.md](../plugins/README.md) - host package map for Claude Code
+  and Codex generated mirrors.
 - [docs/host-trial-checklist.md](host-trial-checklist.md) - release QA
   checklist for saying the host experience is ready for broader use.
 
@@ -60,6 +67,7 @@ locations:
 | Guidance | Source of truth |
 | --- | --- |
 | Repo agent operating rules | [AGENTS.md](../AGENTS.md) |
+| Repository layer map and migration rationale | [docs/repository-map.md](repository-map.md) |
 | Coding-agent setup prompt | [docs/agent-setup.md](agent-setup.md) |
 | First install proof | [docs/first-run.md](first-run.md) |
 | Operator commands and verification | [docs/operator-guide.md](operator-guide.md) |
@@ -83,8 +91,8 @@ The 2026-05-20 documentation audit inventory is
 | Operator entry | [README.md](../README.md), [docs/first-run.md](first-run.md), [docs/operator-guide.md](operator-guide.md), [docs/configuration.md](configuration.md) | Current user-facing setup and operation. |
 | Agent setup | [docs/agent-setup.md](agent-setup.md), [AGENTS.md](../AGENTS.md) | Instructions for coding agents in this checkout. |
 | Vocabulary | [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) | Current product terms for product prose, docs, contracts, and flow authoring notes. |
-| Contributor reference | [docs/literate-guide.md](literate-guide.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/script-inventory.md](script-inventory.md) | Current codebase, flow, block, contract, and script ownership reference. |
-| Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Do not hand-edit generated mirrors. |
+| Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md) | Current codebase, flow, block, contract, source tree, and script ownership reference. |
+| Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Generated mirrors are regenerated from source. |
 | Release QA | [docs/host-trial-checklist.md](host-trial-checklist.md) | Checklist for validating host readiness before broader use. |
 | Working strategy | [docs/positioning-and-strategy.md](positioning-and-strategy.md) | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |
 | Research note | [docs/ideas/](ideas/), [docs/learnings/](learnings/), [docs/flows/research-intake.md](flows/research-intake.md), [docs/flows/cloudflare-glasswing-block-review.md](flows/cloudflare-glasswing-block-review.md) | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |

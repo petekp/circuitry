@@ -47,6 +47,7 @@ describe('documentation surface', () => {
     expect(docsMap).toContain('## Approved Active How-To Locations');
     for (const link of [
       '[AGENTS.md](../AGENTS.md)',
+      '[docs/repository-map.md](repository-map.md)',
       '[docs/agent-setup.md](agent-setup.md)',
       '[docs/first-run.md](first-run.md)',
       '[docs/operator-guide.md](operator-guide.md)',
@@ -54,6 +55,7 @@ describe('documentation surface', () => {
       '[docs/flows/authoring-model.md](flows/authoring-model.md)',
       '[docs/generated-surfaces.md](generated-surfaces.md)',
       '[src/commands/README.md](../src/commands/README.md)',
+      '[src/README.md](../src/README.md)',
       '[docs/release/proofs/README.md](release/proofs/README.md)',
       '[docs/host-trial-checklist.md](host-trial-checklist.md)',
     ]) {
@@ -93,7 +95,7 @@ describe('documentation surface', () => {
     for (const pointerFile of [
       'AGENTS.md',
       'docs/architecture/declarative-flow-architecture.md',
-      'docs/literate-guide.md',
+      'docs/architecture/codebase-walkthrough.md',
       'src/commands/README.md',
       'docs/flows/pursue.md',
     ]) {
@@ -121,10 +123,10 @@ describe('documentation surface', () => {
       'docs/flows/blocks.md',
       'docs/flows/explore-tournament.md',
       'docs/flows/pursue.md',
-      'docs/literate-guide.md',
+      'docs/architecture/codebase-walkthrough.md',
       'docs/operator-guide.md',
       'docs/generated-surfaces.md',
-      'docs/script-inventory.md',
+      'docs/reference/script-inventory.md',
       'docs/release/public-announcement-demo-plan.md',
       'src/commands/README.md',
       'src/commands/create.md',
@@ -138,6 +140,49 @@ describe('documentation surface', () => {
       .map(({ path, matches }) => `${path}: ${matches?.[0]}`);
 
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps progressive repository maps wired from docs to source layers', () => {
+    const docsMap = readRepoFile('docs/README.md');
+    const repoMap = readRepoFile('docs/repository-map.md');
+    const sourceMap = readRepoFile('src/README.md');
+    const generatedMap = readRepoFile('docs/generated-surfaces.md');
+
+    for (const link of [
+      '[docs/repository-map.md](repository-map.md)',
+      '[docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md)',
+      '[docs/reference/script-inventory.md](reference/script-inventory.md)',
+      '[plugins/README.md](../plugins/README.md)',
+      '[src/README.md](../src/README.md)',
+    ]) {
+      expect(docsMap).toContain(link);
+    }
+
+    for (const required of [
+      '## Before Map',
+      '## After Map',
+      '## Migration Rationale',
+      'docs/architecture/codebase-walkthrough.md',
+      'docs/reference/script-inventory.md',
+      'src/runtime/README.md',
+      'src/schemas/README.md',
+      'src/flows/README.md',
+      'src/types/README.md',
+    ]) {
+      expect(repoMap).toContain(required);
+    }
+
+    for (const required of [
+      '[src/runtime/README.md](runtime/README.md)',
+      '[src/schemas/README.md](schemas/README.md)',
+      '[src/flows/README.md](flows/README.md)',
+      '[src/types/README.md](types/README.md)',
+      '`src/index.ts`',
+    ]) {
+      expect(sourceMap).toContain(required);
+    }
+
+    expect(generatedMap).toContain('[plugins/README.md](../plugins/README.md)');
   });
 
   it('keeps active how-to markers inside approved locations', () => {

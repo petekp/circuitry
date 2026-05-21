@@ -118,9 +118,10 @@ const EXPECTED_AXES_BY_FLOW: ReadonlyMap<
 ] as const);
 
 // Entries at the flows root that are NOT flow-package directories
-// (catalog, router/compiler, types, and shared flow infrastructure).
+// (catalog, router/compiler, types, shared flow infrastructure, and the local map).
 // Anything else under src/flows/ is expected to be a package.
 const NON_PACKAGE_FILES = new Set([
+  'README.md',
   'axis-selections.ts',
   'block-step-expansion.ts',
   'canonical-stage-policy.ts',
@@ -376,7 +377,7 @@ describe('flow catalog completeness', () => {
     }
     expect(
       offenders,
-      'unexpected file at the flows root: only catalog.ts/types.ts plus package directories belong here',
+      'unexpected file at the flows root: only known shared files, the local README, and package directories belong here',
     ).toEqual([]);
   });
 

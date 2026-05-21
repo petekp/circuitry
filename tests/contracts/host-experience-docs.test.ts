@@ -118,6 +118,7 @@ describe('host experience docs', () => {
 
     for (const linkedReference of [
       '[README.md](../README.md)',
+      '[docs/repository-map.md](repository-map.md)',
       '[docs/first-run.md](first-run.md)',
       '[docs/operator-guide.md](operator-guide.md)',
       '[docs/configuration.md](configuration.md)',

@@ -151,7 +151,7 @@ Source: `git diff --name-status 1957e041..origin/main -- scripts`
 Old path probe:
 
 ```bash
-rg -n "scripts/(emit-flows|build-plugin-runtime|doctor-installed-plugins|plugin-package-tree|publish-plugins|sync-codex-plugin-cache|host-smoke|evals/(check-evals|check-registry|check-fix-manifest|check-results-hygiene|list-evals|run-fix-matrix|lib)|release/lib)" . -g '!node_modules/**' -g '!dist/**' -g '!docs/internal/archive/**' -g '!docs/release/proofs/runs/**' -g '!docs/script-inventory.md'
+rg -n "scripts/(emit-flows|build-plugin-runtime|doctor-installed-plugins|plugin-package-tree|publish-plugins|sync-codex-plugin-cache|host-smoke|evals/(check-evals|check-registry|check-fix-manifest|check-results-hygiene|list-evals|run-fix-matrix|lib)|release/lib)" . -g '!node_modules/**' -g '!dist/**' -g '!docs/internal/archive/**' -g '!docs/release/proofs/runs/**' -g '!docs/reference/script-inventory.md'
 ```
 
 Result: no matches outside this migration report.
