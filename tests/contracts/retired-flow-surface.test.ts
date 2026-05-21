@@ -14,6 +14,7 @@ const RETAINED_FLOW_IDS = [
   'prototype',
   'build',
   'explore',
+  'goal',
 ];
 const SURFACE_ROOTS = [
   'src/flows',

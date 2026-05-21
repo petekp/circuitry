@@ -37,3 +37,4 @@ This matrix compares the checked-in original Circuit snapshot with the current C
 | prototype | autonomous, deep, default, tournament | complete, continue, stop |  |
 | build | autonomous, deep, default, lite | complete, continue, retry, revise, stop |  |
 | explore | autonomous, deep, default, lite, tournament | complete, continue, retry, revise, stop |  |
+| goal | autonomous, deep, default, lite | ask, blocked, build, checkpoint, complete, completion-gate, continue, explore, fix, handoff, pursue, retry, retry-selected-flow, review, run-explore, run-fix, run-review, split-to-pursue, stop | blocked, build, checkpoint, completion-gate, explore, fix, pursue, retry-selected-flow, review, run-explore, run-fix, run-review, split-to-pursue |

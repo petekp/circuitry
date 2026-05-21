@@ -24,6 +24,7 @@ export interface BaseStep {
   readonly writes?: Readonly<Record<string, RunFileRef>>;
   readonly selection?: Selection;
   readonly skillSlots?: readonly unknown[];
+  readonly routeFromReport?: { readonly path: readonly string[] };
   readonly check?: unknown;
   readonly budgets?: unknown;
 }

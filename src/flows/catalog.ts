@@ -11,6 +11,7 @@ import { exploreFlowDefinition } from './explore/flow.js';
 import { fixFlowDefinition } from './fix/flow.js';
 import { compileFlowDefinitions } from './flow-definition.js';
 import type { FlowDefinition } from './flow-definition.js';
+import { goalFlowDefinition } from './goal/flow.js';
 import { prototypeFlowDefinition } from './prototype/flow.js';
 import { pursueFlowDefinition } from './pursue/flow.js';
 import { reviewFlowDefinition } from './review/flow.js';
@@ -25,6 +26,7 @@ export const flowDefinitions: readonly FlowDefinition[] = [
   prototypeFlowDefinition,
   buildFlowDefinition,
   exploreFlowDefinition,
+  goalFlowDefinition,
 ];
 
 export const flowPackages: readonly CompiledFlowPackage[] = compileFlowDefinitions(flowDefinitions);

@@ -277,6 +277,85 @@
       },
       "route_outcomes": ["complete", "continue", "retry", "revise", "stop"],
       "unsupported_route_outcomes": []
+    },
+    {
+      "id": "goal",
+      "source": "src/flows/goal/schematic.json",
+      "command_path": "src/flows/goal/command.md",
+      "routing": {
+        "routable": true,
+        "is_default": false,
+        "order": 5,
+        "signal_labels": ["goal flow request", "goal prefix"]
+      },
+      "axis_support": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
+      "stages": ["Frame", "Act", "Verify", "Review", "Close"],
+      "reports": [
+        "goal.attempt@v1",
+        "goal.child-build-result@v1",
+        "goal.child-explore-result@v1",
+        "goal.child-fix-result@v1",
+        "goal.child-pursue-result@v1",
+        "goal.child-review-result@v1",
+        "goal.contract@v1",
+        "goal.evidence-evaluation@v1",
+        "goal.gate-pass@v1",
+        "goal.gate@v1",
+        "goal.recovery@v1",
+        "goal.result@v1"
+      ],
+      "writers": {
+        "compose": 4,
+        "close": 1,
+        "verification": 0,
+        "checkpoint": 0
+      },
+      "route_outcomes": [
+        "ask",
+        "blocked",
+        "build",
+        "checkpoint",
+        "complete",
+        "completion-gate",
+        "continue",
+        "explore",
+        "fix",
+        "handoff",
+        "pursue",
+        "retry",
+        "retry-selected-flow",
+        "review",
+        "run-explore",
+        "run-fix",
+        "run-review",
+        "split-to-pursue",
+        "stop"
+      ],
+      "unsupported_route_outcomes": [
+        "blocked",
+        "build",
+        "checkpoint",
+        "completion-gate",
+        "explore",
+        "fix",
+        "pursue",
+        "retry-selected-flow",
+        "review",
+        "run-explore",
+        "run-fix",
+        "run-review",
+        "split-to-pursue"
+      ]
     }
   ],
   "router_intents": [
@@ -321,9 +400,29 @@
   ],
   "commands": {
     "source": ["create", "handoff", "run"],
-    "claude_plugin": ["build", "create", "explore", "fix", "handoff", "prototype", "review", "run"],
-    "codex_plugin": ["build", "create", "explore", "fix", "handoff", "prototype", "review", "run"],
-    "claude_plugin_skills": ["build", "explore", "fix", "prototype", "pursue", "review"]
+    "claude_plugin": [
+      "build",
+      "create",
+      "explore",
+      "fix",
+      "goal",
+      "handoff",
+      "prototype",
+      "review",
+      "run"
+    ],
+    "codex_plugin": [
+      "build",
+      "create",
+      "explore",
+      "fix",
+      "goal",
+      "handoff",
+      "prototype",
+      "review",
+      "run"
+    ],
+    "claude_plugin_skills": ["build", "explore", "fix", "goal", "prototype", "pursue", "review"]
   },
   "connectors": [
     {
@@ -434,6 +533,21 @@
       "status": "implemented",
       "summary": "Command fix is present for claude-code.",
       "evidence": ["plugins/claude/commands/fix.md"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "command:goal",
+      "kind": "flow",
+      "title": "claude-code command goal",
+      "status": "implemented",
+      "summary": "Command goal is present for claude-code.",
+      "evidence": ["plugins/claude/commands/goal.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -683,6 +797,38 @@
         "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
         "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder.",
         "proof": "Fix golden run with regression evidence."
+      }
+    },
+    {
+      "id": "flow:goal",
+      "kind": "flow",
+      "title": "goal flow",
+      "status": "implemented",
+      "summary": "Flow goal is registered in the catalog.",
+      "evidence": ["src/flows/goal/schematic.json", "generated/flows/goal/circuit.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": ["autonomous", "deep", "default", "lite"],
+        "stage_path": ["Frame", "Act", "Verify", "Review", "Close"],
+        "outputs": [
+          "goal.attempt@v1",
+          "goal.child-build-result@v1",
+          "goal.child-explore-result@v1",
+          "goal.child-fix-result@v1",
+          "goal.child-pursue-result@v1",
+          "goal.child-review-result@v1",
+          "goal.contract@v1",
+          "goal.evidence-evaluation@v1",
+          "goal.gate-pass@v1",
+          "goal.gate@v1",
+          "goal.recovery@v1",
+          "goal.result@v1"
+        ],
+        "checkpoint": "Compiled checkpoints can pause, auto-resolve safe defaults, or resume from operator input.",
+        "review": "Compiled review stages or reviewer relays are present.",
+        "worker_handoff": "Compiled worker handoffs write request, receipt, result, and report evidence where applicable.",
+        "continuity": "Runs persist manifest, trace, result, and checkpoint resume data in the run folder."
       }
     },
     {
@@ -1015,6 +1161,66 @@
       "status": "implemented",
       "summary": "fix supports the lite axis selection.",
       "evidence": ["generated/flows/fix"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:goal:autonomous",
+      "kind": "mode",
+      "title": "goal autonomous",
+      "status": "implemented",
+      "summary": "goal supports the autonomous axis selection.",
+      "evidence": ["generated/flows/goal"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:goal:deep",
+      "kind": "mode",
+      "title": "goal deep",
+      "status": "implemented",
+      "summary": "goal supports the deep axis selection.",
+      "evidence": ["generated/flows/goal"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:goal:default",
+      "kind": "mode",
+      "title": "goal default",
+      "status": "implemented",
+      "summary": "goal supports the default axis selection.",
+      "evidence": ["generated/flows/goal"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "mode:goal:lite",
+      "kind": "mode",
+      "title": "goal lite",
+      "status": "implemented",
+      "summary": "goal supports the lite axis selection.",
+      "evidence": ["generated/flows/goal"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -1420,6 +1626,291 @@
       "status": "implemented",
       "summary": "stop maps to an executable compiled route.",
       "evidence": ["src/flows/fix/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:ask",
+      "kind": "route_outcome",
+      "title": "goal route ask",
+      "status": "implemented",
+      "summary": "ask maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:blocked",
+      "kind": "route_outcome",
+      "title": "goal route blocked",
+      "status": "partial",
+      "summary": "blocked is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:build",
+      "kind": "route_outcome",
+      "title": "goal route build",
+      "status": "partial",
+      "summary": "build is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:checkpoint",
+      "kind": "route_outcome",
+      "title": "goal route checkpoint",
+      "status": "partial",
+      "summary": "checkpoint is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:complete",
+      "kind": "route_outcome",
+      "title": "goal route complete",
+      "status": "implemented",
+      "summary": "complete maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:completion-gate",
+      "kind": "route_outcome",
+      "title": "goal route completion-gate",
+      "status": "partial",
+      "summary": "completion-gate is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:continue",
+      "kind": "route_outcome",
+      "title": "goal route continue",
+      "status": "implemented",
+      "summary": "continue maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:explore",
+      "kind": "route_outcome",
+      "title": "goal route explore",
+      "status": "partial",
+      "summary": "explore is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:fix",
+      "kind": "route_outcome",
+      "title": "goal route fix",
+      "status": "partial",
+      "summary": "fix is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:handoff",
+      "kind": "route_outcome",
+      "title": "goal route handoff",
+      "status": "implemented",
+      "summary": "handoff maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:pursue",
+      "kind": "route_outcome",
+      "title": "goal route pursue",
+      "status": "partial",
+      "summary": "pursue is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:retry",
+      "kind": "route_outcome",
+      "title": "goal route retry",
+      "status": "implemented",
+      "summary": "retry maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:retry-selected-flow",
+      "kind": "route_outcome",
+      "title": "goal route retry-selected-flow",
+      "status": "partial",
+      "summary": "retry-selected-flow is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:review",
+      "kind": "route_outcome",
+      "title": "goal route review",
+      "status": "partial",
+      "summary": "review is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:run-explore",
+      "kind": "route_outcome",
+      "title": "goal route run-explore",
+      "status": "partial",
+      "summary": "run-explore is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:run-fix",
+      "kind": "route_outcome",
+      "title": "goal route run-fix",
+      "status": "partial",
+      "summary": "run-fix is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:run-review",
+      "kind": "route_outcome",
+      "title": "goal route run-review",
+      "status": "partial",
+      "summary": "run-review is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:split-to-pursue",
+      "kind": "route_outcome",
+      "title": "goal route split-to-pursue",
+      "status": "partial",
+      "summary": "split-to-pursue is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:stop",
+      "kind": "route_outcome",
+      "title": "goal route stop",
+      "status": "implemented",
+      "summary": "stop maps to an executable compiled route.",
+      "evidence": ["src/flows/goal/schematic.json"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],

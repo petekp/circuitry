@@ -36,6 +36,7 @@ import {
   FanoutFailurePolicy,
   FanoutRubric,
   RelayRole,
+  RouteFromReport,
 } from './step.js';
 
 export const FlowSchematicStatus = z.enum(['candidate', 'active', 'deprecated']);
@@ -187,6 +188,7 @@ export const SchematicStep = z
       return Object.keys(routes).length > 0;
     }, 'schematic item must declare at least one route'),
     route_overrides: z.record(z.string(), SchematicRouteModeOverrides).default({}),
+    route_from_report: RouteFromReport.optional(),
     // The fields below are required by the schematic → CompiledFlow compiler. They
     // are optional for candidate schematics so drafts remain parseable while
     // they are being shaped. Active schematics require them at parse time; the
@@ -251,6 +253,7 @@ function validateExecutionShape(
     acceptance_criteria?: z.infer<typeof AcceptanceCriteria> | undefined;
     checkpoint_policy?: CheckpointPolicy | undefined;
     fanout?: SchematicFanout | undefined;
+    route_from_report?: z.infer<typeof RouteFromReport> | undefined;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -436,6 +439,13 @@ function validateExecutionShape(
       code: z.ZodIssueCode.custom,
       path: ['acceptance_criteria'],
       message: 'acceptance_criteria is only allowed for relay execution',
+    });
+  }
+  if (item.route_from_report !== undefined && kind !== 'compose') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['route_from_report'],
+      message: 'route_from_report is only allowed for compose execution',
     });
   }
   if (kind === 'fanout' && item.fanout === undefined) {

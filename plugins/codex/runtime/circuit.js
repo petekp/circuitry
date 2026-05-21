@@ -10767,7 +10767,7 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync15, readFileSync as readFileSync29 } from "node:fs";
+import { existsSync as existsSync18, readFileSync as readFileSync32 } from "node:fs";
 import { dirname as dirname9, resolve as resolve13 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
@@ -10789,7 +10789,7 @@ var {
 } = import_index.default;
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync20 } from "node:fs";
+import { readFileSync as readFileSync23 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function buildBuilderRegistry(packages, slot, pluck) {
@@ -25758,6 +25758,7 @@ var FLOW_BLOCK_IDS = [
   "act",
   "run-verification",
   "review",
+  "goal",
   "pursue",
   "coordinate-pursuits",
   "queue",
@@ -25777,7 +25778,23 @@ var FlowRoute = external_exports.enum([
   "stop",
   "handoff",
   "escalate",
-  "complete"
+  "complete",
+  "fix",
+  "build",
+  "review",
+  "explore",
+  "pursue",
+  "completion-gate",
+  "retry-selected-flow",
+  "run-fix",
+  "run-review",
+  "run-explore",
+  "split-to-pursue",
+  "checkpoint",
+  "blocked",
+  "recover",
+  "run-next-gate-pass",
+  "close"
 ]);
 var FlowBlockActionSurface = external_exports.enum(["orchestrator", "worker", "host", "mixed"]);
 var FlowBlockCheckKind = external_exports.enum([
@@ -26384,6 +26401,38 @@ var FLOW_BLOCK_DEFINITION_INPUTS = [
     }
   },
   {
+    id: "goal",
+    title: "Goal",
+    purpose: "Turn a user objective into a bounded goal contract with proof, recovery, and completion-gate policy.",
+    input_contracts: ["task.intake@v1", "route.decision@v1"],
+    alternative_input_contracts: [["task.intake@v1"]],
+    output_contract: "goal.contract@v1",
+    action_surface: "orchestrator",
+    produces_evidence: [
+      "goal contract",
+      "done claims",
+      "proof requirements",
+      "allowed flow targets",
+      "recovery routes",
+      "completion gate policy"
+    ],
+    check: {
+      kind: "schema",
+      description: "The goal contract must preserve the operator objective, declare proof requirements, constrain flow targets, and name recovery and close rules."
+    },
+    allowed_routes: ["continue", "ask", "stop"],
+    human_interaction: "optional",
+    host_capabilities: {
+      claude: [],
+      codex: [],
+      non_interactive: []
+    },
+    schematicPolicy: {
+      executionKinds: ["compose", "checkpoint", "sub-run"],
+      stages: ["frame"]
+    }
+  },
+  {
     id: "pursue",
     title: "Pursue",
     purpose: "Turn a rough operator idea into a bounded autonomous ownership contract.",
@@ -26806,6 +26855,9 @@ var ReportRef = external_exports.object({
   path: RunRelativePath,
   schema: external_exports.string().min(1)
 });
+var RouteFromReport = external_exports.object({
+  path: external_exports.array(external_exports.string().min(1)).min(1)
+}).strict();
 var StepBase = external_exports.object({
   id: StepId,
   title: external_exports.string().min(1),
@@ -26816,6 +26868,7 @@ var StepBase = external_exports.object({
   }),
   selection: SelectionOverride.optional(),
   skill_slots: SkillSlotArray.optional(),
+  route_from_report: RouteFromReport.optional(),
   budgets: external_exports.object({
     max_attempts: external_exports.number().int().positive().max(10),
     wall_clock_ms: external_exports.number().int().positive().optional()
@@ -27293,6 +27346,7 @@ var SchematicStep = external_exports.object({
     return Object.keys(routes).length > 0;
   }, "schematic item must declare at least one route"),
   route_overrides: external_exports.record(external_exports.string(), SchematicRouteModeOverrides).default({}),
+  route_from_report: RouteFromReport.optional(),
   // The fields below are required by the schematic → CompiledFlow compiler. They
   // are optional for candidate schematics so drafts remain parseable while
   // they are being shaped. Active schematics require them at parse time; the
@@ -27517,6 +27571,13 @@ function validateExecutionShape(item, ctx) {
       code: external_exports.ZodIssueCode.custom,
       path: ["acceptance_criteria"],
       message: "acceptance_criteria is only allowed for relay execution"
+    });
+  }
+  if (item.route_from_report !== void 0 && kind !== "compose") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["route_from_report"],
+      message: "route_from_report is only allowed for compose execution"
     });
   }
   if (kind === "fanout" && item.fanout === void 0) {
@@ -33284,44 +33345,6 @@ var fixFlowData = {
 // dist/flows/fix/flow.js
 var fixFlowDefinition = defineFlowData(fixFlowData);
 
-// dist/flows/prototype/relay-hints.js
-var prototypeArtifactShapeHint = {
-  kind: "schema",
-  schema: "prototype.artifact@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<accept|blocked>", "summary": "<what prototype files were created or why blocked>", "prototype_root": "<project-relative prototype directory>", "created_files": ["<project-relative path under prototype_root>"], "entry_points": ["<project-relative path under prototype_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "claim_limits": ["not production", "not deployed"] }',
-    "Create only disposable prototype files under the prototype_root from the plan. Do not edit production application code, generated host packages, or release metadata.",
-    'Use verdict "accept" only when the entry points and created files exist under prototype_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
-    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
-    "The runtime parses your response with JSON.parse, rejects verdicts outside the accepted-verdicts list, validates the full report body against prototype.artifact@v1, and verifies reported artifact paths before writing the final Prototype result."
-  ].join(" ")
-};
-var prototypeVariantArtifactShapeHint = {
-  kind: "schema",
-  schema: "prototype.variant-artifact@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<accept|blocked>", "variant_id": "<the assigned variant_id>", "variant_label": "<the assigned label>", "summary": "<what this variant created or why blocked>", "prototype_root": "<shared prototype root>", "variant_root": "<prototype_root/variants/variant_id>", "created_files": ["<project-relative path under variant_root>"], "entry_points": ["<project-relative path under variant_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "rubric_model_judgments": { "evidence_rigor": "<pass|concern|fail>", "actionability": "<pass|concern|fail>", "coverage_adequacy": "<pass|concern|fail>", "scope_discipline": "<pass|concern|fail>", "honest_calibration": "<pass|concern|fail>", "project_specificity": "<pass|concern|fail>", "insight_density": "<pass|concern|fail>", "branch_distinctness": "<pass|concern|fail>" }, "claim_limits": ["not production", "not deployed"] }',
-    "Create only disposable prototype files under variant_root. Do not edit production application code, generated host packages, release metadata, or sibling variants.",
-    'Use verdict "accept" only when the entry points and created files exist under variant_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
-    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. The provider/model comparison evidence is captured by the runtime trace, not by this report.",
-    "The runtime validates this response against prototype.variant-artifact@v1.",
-    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
-  ].join(" ")
-};
-var prototypeVariantReviewShapeHint = {
-  kind: "schema",
-  schema: "prototype.variant-review@v1",
-  instruction: [
-    "Respond with a single raw JSON object whose top-level shape is exactly:",
-    '{ "verdict": "<recommend|no-clear-winner|needs-operator>", "recommended_variant_id": "<variant id from the aggregate>", "comparison_summary": "<plain-language comparison grounded in the variant reports>", "strengths": [{ "variant_id": "<variant id>", "note": "<specific strength>" }], "risks": ["<risk or limitation>"], "missing_evidence": ["<missing evidence, if any>"], "confidence": "<low|medium|high>" }',
-    "Compare only the local prototype artifacts, verification report, provider evidence report, and aggregate evidence. Do not claim any provider or model actually ran unless the provider evidence report captured it from relay.started trace entries.",
-    "The runtime validates this response against prototype.variant-review@v1.",
-    "Do not claim deployment, production readiness, branch previews, screenshots, hosted URLs, or production fitness. Do not include extra top-level keys or Markdown."
-  ].join(" ")
-};
-
 // dist/schemas/connector.js
 var EnabledConnector = external_exports.enum(["claude-code", "codex"]);
 var FilesystemCapability = external_exports.enum(["read-only", "trusted-write", "isolated-write"]);
@@ -33386,8 +33409,1617 @@ var RelayResolutionSource = external_exports.discriminatedUnion("source", [
   AutoResolutionSource
 ]);
 
-// dist/flows/prototype/reports.js
+// dist/schemas/trace-entry.js
+var TraceEntryBase = external_exports.object({
+  schema_version: external_exports.literal(1),
+  sequence: external_exports.number().int().nonnegative(),
+  recorded_at: external_exports.string().datetime(),
+  run_id: RunId
+});
+var HEX642 = /^[0-9a-f]{64}$/;
+var ContentHash = external_exports.string().regex(HEX642, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RunBootstrappedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("run.bootstrapped"),
+  flow_id: CompiledFlowId,
+  invocation_id: InvocationId.optional(),
+  depth: Depth,
+  goal: external_exports.string().min(1),
+  change_kind: ChangeKindDeclaration,
+  manifest_hash: external_exports.string().min(1)
+}).strict();
+var StepEnteredTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.entered"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive()
+}).strict();
+var StepReportWrittenTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.report_written"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  report_path: external_exports.string().min(1),
+  report_schema: external_exports.string().min(1)
+}).strict();
+var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("check.evaluated"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  check_kind: external_exports.enum([
+    "schema_sections",
+    "checkpoint_selection",
+    "result_verdict",
+    "fanout_aggregate",
+    "acceptance_criteria"
+  ]),
+  outcome: external_exports.enum(["pass", "fail"]),
+  criterion_id: external_exports.string().min(1).optional(),
+  criterion_kind: external_exports.enum(["command", "report_field"]).optional(),
+  exit_code: external_exports.number().int().nonnegative().optional(),
+  status: external_exports.enum(["passed", "failed"]).optional(),
+  stdout_summary: external_exports.string().optional(),
+  stderr_summary: external_exports.string().optional(),
+  missing_sections: external_exports.array(external_exports.string()).optional(),
+  reason: external_exports.string().optional()
+}).strict();
+var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("checkpoint.requested"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  options: external_exports.array(external_exports.string()).min(1),
+  request_path: external_exports.string().min(1),
+  request_report_hash: ContentHash,
+  auto_resolved: external_exports.boolean().optional()
+}).strict();
+var CheckpointResolvedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("checkpoint.resolved"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  selection: external_exports.string().min(1),
+  auto_resolved: external_exports.boolean(),
+  resolution_source: external_exports.enum(["safe-default", "operator", "safe-autonomous"]),
+  response_path: external_exports.string().min(1)
+}).strict();
+var RelayStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  connector: ResolvedConnector,
+  role: RelayRole,
+  resolved_selection: ResolvedSelection,
+  resolved_from: RelayResolutionSource
+}).strict();
+var LoadedSkillEvidence = external_exports.object({
+  id: SkillId,
+  slot: SkillSlotId.optional(),
+  path: external_exports.string().min(1),
+  sha256: ContentHash,
+  bytes: external_exports.number().int().nonnegative()
+}).strict();
+var SkillsLoadedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("skills.loaded"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  skills: external_exports.array(LoadedSkillEvidence).min(1)
+}).strict();
+var RelayCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  result_path: external_exports.string().min(1),
+  receipt_path: external_exports.string().min(1)
+}).strict();
+var RelayRequestTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.request"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  request_payload_hash: ContentHash
+}).strict();
+var RelayFailedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.failed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  connector: ResolvedConnector,
+  role: RelayRole,
+  resolved_selection: ResolvedSelection,
+  resolved_from: RelayResolutionSource,
+  request_payload_hash: ContentHash,
+  reason: external_exports.string().min(1)
+}).strict();
+var RelayReceiptTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.receipt"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  cli_version: external_exports.string().min(1),
+  receipt_id: external_exports.string().min(1).refine((s) => s.trim().length > 0, {
+    message: "receipt_id must contain at least one non-whitespace character"
+  })
+}).strict();
+var RelayResultTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("relay.result"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  result_report_hash: ContentHash
+}).strict();
+var StepCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  route_taken: external_exports.string().min(1)
+}).strict();
+var StepAbortedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("step.aborted"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  reason: external_exports.string().min(1)
+}).strict();
+var RunClosedOutcome = external_exports.enum(["complete", "aborted", "handoff", "stopped", "escalated"]);
+var SubRunStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("sub_run.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  child_run_id: RunId,
+  child_flow_id: CompiledFlowId,
+  child_entry_mode: external_exports.string().regex(/^[a-z][a-z0-9-]*$/),
+  child_depth: Depth
+}).strict();
+var SubRunCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("sub_run.completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  child_run_id: RunId,
+  child_outcome: RunClosedOutcome,
+  // Verdict admitted from the child's terminal result body. NO_VERDICT_SENTINEL
+  // when the child closed without a parseable result body — mirrors the
+  // existing relay.completed sentinel pattern.
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  // Where the child's result.json was copied into the parent run-folder.
+  result_path: external_exports.string().min(1)
+}).strict();
+var FanoutStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  // Resolved branch list AT EXPANSION TIME. For static branches this
+  // mirrors the schematic's authored list. For dynamic branches this is the
+  // result of template expansion against the source report, so an
+  // auditor can see exactly which N branches were spawned without
+  // reconstructing the expansion themselves.
+  branch_ids: external_exports.array(external_exports.string().min(1)).min(1),
+  on_child_failure: FanoutFailurePolicy
+}).strict();
+var FanoutBranchStartedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.branch_started"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId,
+  // Worktree path provisioned for this branch (relative to project root).
+  // Records where the per-branch isolation lived for postmortem auditing.
+  worktree_path: external_exports.string().min(1)
+}).strict();
+var FanoutBranchCompletedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.branch_completed"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId,
+  child_outcome: RunClosedOutcome,
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative(),
+  result_path: external_exports.string().min(1)
+}).strict();
+var FanoutJoinedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("fanout.joined"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  // The join policy that ran; mirrors the FanoutAggregateCheck.join.policy
+  // field but echoed into the trace_entry so the audit log is self-contained
+  // (no need to cross-reference the schematic to interpret outcomes).
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
+  // For pick-winner: the selected branch_id. Absent for the other policies.
+  selected_branch_id: external_exports.string().min(1).optional(),
+  // Path to the runtime-built aggregate report.
+  aggregate_path: external_exports.string().min(1),
+  // Count of branches that closed 'complete' vs other outcomes — quick
+  // health summary readable without reconstructing per-branch trace_entries.
+  branches_completed: external_exports.number().int().nonnegative(),
+  branches_failed: external_exports.number().int().nonnegative()
+}).strict();
+var RunClosedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("run.closed"),
+  outcome: RunClosedOutcome,
+  reason: external_exports.string().optional()
+}).strict();
+var TraceEntry = external_exports.discriminatedUnion("kind", [
+  RunBootstrappedTraceEntry,
+  StepEnteredTraceEntry,
+  StepReportWrittenTraceEntry,
+  CheckEvaluatedTraceEntry,
+  CheckpointRequestedTraceEntry,
+  CheckpointResolvedTraceEntry,
+  RelayStartedTraceEntry,
+  SkillsLoadedTraceEntry,
+  RelayRequestTraceEntry,
+  RelayFailedTraceEntry,
+  RelayReceiptTraceEntry,
+  RelayResultTraceEntry,
+  RelayCompletedTraceEntry,
+  SubRunStartedTraceEntry,
+  SubRunCompletedTraceEntry,
+  FanoutStartedTraceEntry,
+  FanoutBranchStartedTraceEntry,
+  FanoutBranchCompletedTraceEntry,
+  FanoutJoinedTraceEntry,
+  StepCompletedTraceEntry,
+  StepAbortedTraceEntry,
+  RunClosedTraceEntry
+]).superRefine((ev, ctx) => {
+  if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
+    return;
+  if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolved_from", "role"],
+      message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
+    });
+  }
+});
+
+// dist/schemas/result.js
+var RunResult = external_exports.object({
+  schema_version: external_exports.literal(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  goal: external_exports.string().min(1),
+  outcome: RunClosedOutcome,
+  summary: external_exports.string().min(1),
+  closed_at: external_exports.string().datetime(),
+  trace_entries_observed: external_exports.number().int().nonnegative(),
+  manifest_hash: external_exports.string().min(1),
+  reason: external_exports.string().min(1).optional(),
+  verdict: external_exports.string().min(1).optional()
+}).strict();
+
+// dist/flows/goal/relay-hints.js
+var goalGateShapeHint = {
+  kind: "schema",
+  schema: "goal.gate@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "schema": "goal.gate@v1", "verdict": "gate-pass|blocked", "clean_streak": 0, "required_passes": 2, "blocking_findings": [], "low_findings": [], "passes": [], "next_route": "run-next-gate-pass|recover|close" }',
+    "Blocking findings are severities critical, high, or medium. Any blocking finding must set verdict to blocked, clean_streak to 0, and next_route to recover.",
+    "A gate-pass verdict must have no blocking findings. Use next_route close only when clean_streak is at least 2. Use run-next-gate-pass when this pass is clean but another clean pass is still required.",
+    "Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
+  ].join(" ")
+};
+var goalGatePassShapeHint = {
+  kind: "schema",
+  schema: "goal.gate-pass@v1",
+  instruction: [
+    "Respond with a single raw JSON object for goal.gate-pass@v1 whose top-level shape is exactly:",
+    '{ "schema": "goal.gate@v1", "verdict": "gate-pass|blocked", "clean_streak": 0, "required_passes": 2, "blocking_findings": [], "low_findings": [], "passes": [], "next_route": "run-next-gate-pass|recover|close" }',
+    "The report is bound as goal.gate-pass@v1, but the JSON schema field remains goal.gate@v1 so both gate passes share the same body validator.",
+    "Blocking findings are severities critical, high, or medium. Any blocking finding must set verdict to blocked, clean_streak to 0, and next_route to recover.",
+    "A gate-pass verdict must have no blocking findings. Use next_route run-next-gate-pass when this pass is clean but another clean pass is still required.",
+    "Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
+  ].join(" ")
+};
+
+// dist/flows/goal/reports.js
 var NonEmptyStringArray3 = external_exports.array(external_exports.string().min(1)).min(1);
+var GoalFlowTarget = external_exports.enum(["fix", "build", "review", "explore", "pursue"]);
+var GoalRequiredEvidenceKind = external_exports.enum([
+  "command",
+  "report",
+  "review",
+  "source",
+  "checkpoint"
+]);
+var GoalRecoveryRoute = external_exports.enum([
+  "retry-selected-flow",
+  "run-fix",
+  "run-review",
+  "run-explore",
+  "split-to-pursue",
+  "checkpoint",
+  "handoff",
+  "blocked"
+]);
+var GoalEvaluationRoute = external_exports.enum(["completion-gate", ...GoalRecoveryRoute.options]);
+var GoalBlockingSeverity = external_exports.enum(["critical", "high", "medium"]);
+var GoalGateRecoveryRoute = external_exports.enum([
+  "retry-selected-flow",
+  "run-fix",
+  "run-review",
+  "run-explore",
+  "split-to-pursue",
+  "checkpoint",
+  "blocked"
+]);
+var REQUIRED_GATE_PASSES = 2;
+var GoalRequiredEvidence = external_exports.object({
+  kind: GoalRequiredEvidenceKind,
+  description: external_exports.string().min(1),
+  required: external_exports.boolean()
+}).strict();
+var GoalDoneClaim = external_exports.object({
+  id: external_exports.string().min(1),
+  claim: external_exports.string().min(1),
+  required_evidence: external_exports.array(GoalRequiredEvidence).min(1)
+}).strict().superRefine((claim, ctx) => {
+  if (!claim.required_evidence.some((entry) => entry.required)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["required_evidence"],
+      message: "each done_when item must include at least one required evidence entry"
+    });
+  }
+});
+var GoalContract = external_exports.object({
+  schema: external_exports.literal("goal.contract@v1"),
+  objective: external_exports.string().min(1),
+  source_of_truth: external_exports.literal("circuit-run-folder"),
+  scope: external_exports.object({
+    in: external_exports.array(external_exports.string().min(1)),
+    out: external_exports.array(external_exports.string().min(1)),
+    assumptions: external_exports.array(external_exports.string().min(1))
+  }).strict(),
+  constraints: external_exports.array(external_exports.string().min(1)),
+  done_when: external_exports.array(GoalDoneClaim).min(1),
+  allowed_flow_targets: external_exports.array(GoalFlowTarget).min(1),
+  selected_flow_target: GoalFlowTarget,
+  recovery_policy: external_exports.object({
+    max_attempts: external_exports.number().int().positive().max(10),
+    routes: external_exports.array(GoalRecoveryRoute).min(1)
+  }).strict(),
+  check_in_triggers: NonEmptyStringArray3,
+  stop_conditions: external_exports.array(external_exports.string().min(1)),
+  completion_gate: external_exports.object({
+    required_passes: external_exports.literal(REQUIRED_GATE_PASSES),
+    blocking_severities: external_exports.array(GoalBlockingSeverity).min(1),
+    reset_on_blocking_finding: external_exports.literal(true)
+  }).strict()
+}).strict().superRefine((contract, ctx) => {
+  if (!contract.allowed_flow_targets.includes(contract.selected_flow_target)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["selected_flow_target"],
+      message: "selected_flow_target must be present in allowed_flow_targets"
+    });
+  }
+});
+var GoalAttempt = external_exports.object({
+  schema: external_exports.literal("goal.attempt@v1"),
+  attempt_id: external_exports.string().min(1),
+  flow_target: GoalFlowTarget,
+  child_result_path: external_exports.string().min(1),
+  child_report_paths: external_exports.array(external_exports.string().min(1)),
+  outcome: external_exports.enum(["complete", "needs_attention", "blocked", "failed", "handoff"]),
+  summary: external_exports.string().min(1)
+}).strict();
+var GoalClaimResult = external_exports.object({
+  claim_id: external_exports.string().min(1),
+  status: external_exports.enum(["proved", "missing", "contradicted", "blocked"]),
+  evidence: external_exports.array(external_exports.string().min(1)),
+  gap: external_exports.string().min(1).nullable()
+}).strict();
+var GoalEvidenceEvaluation = external_exports.object({
+  schema: external_exports.literal("goal.evidence-evaluation@v1"),
+  verdict: external_exports.enum(["satisfied", "missing-evidence", "contradicted", "blocked"]),
+  claim_results: external_exports.array(GoalClaimResult).min(1),
+  next_route: GoalEvaluationRoute
+}).strict().superRefine((evaluation, ctx) => {
+  const allProved = evaluation.claim_results.every((claim) => claim.status === "proved");
+  if (evaluation.verdict === "satisfied" && !allProved) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["claim_results"],
+      message: "verdict 'satisfied' requires every claim result to be proved"
+    });
+  }
+  if (evaluation.next_route === "completion-gate" && evaluation.verdict !== "satisfied") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "next_route 'completion-gate' is allowed only when verdict is satisfied"
+    });
+  }
+  if (evaluation.verdict === "satisfied" && evaluation.next_route !== "completion-gate") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "verdict 'satisfied' must route to completion-gate"
+    });
+  }
+  if (evaluation.verdict === "missing-evidence") {
+    const hasGap = evaluation.claim_results.some((claim) => claim.status === "missing" && claim.gap !== null);
+    if (!hasGap) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["claim_results"],
+        message: "missing-evidence must name at least one missing claim gap"
+      });
+    }
+  }
+  if ((evaluation.verdict === "contradicted" || evaluation.verdict === "blocked") && evaluation.next_route === "completion-gate") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: `${evaluation.verdict} must not route directly to completion-gate`
+    });
+  }
+});
+var GoalRecovery = external_exports.object({
+  schema: external_exports.literal("goal.recovery@v1"),
+  reason: external_exports.enum([
+    "missing-evidence",
+    "verification-failed",
+    "review-blocked",
+    "scope-drift",
+    "child-blocked",
+    "attempt-limit"
+  ]),
+  selected_route: GoalRecoveryRoute,
+  rationale: external_exports.string().min(1),
+  attempt_count: external_exports.number().int().nonnegative(),
+  operator_input_required: external_exports.boolean()
+}).strict();
+var GoalGateFinding = external_exports.object({
+  severity: GoalBlockingSeverity,
+  text: external_exports.string().min(1),
+  refs: external_exports.array(external_exports.string().min(1)),
+  recovery_route: GoalGateRecoveryRoute
+}).strict();
+var GoalGateLowFinding = external_exports.object({
+  text: external_exports.string().min(1),
+  refs: external_exports.array(external_exports.string().min(1))
+}).strict();
+var GoalGatePass = external_exports.object({
+  pass_id: external_exports.string().min(1),
+  attack_lens: external_exports.enum([
+    "contract-and-proof",
+    "false-done-and-recovery",
+    "scope-and-host-boundary"
+  ]),
+  evidence_checked: NonEmptyStringArray3,
+  verdict: external_exports.enum(["gate-pass", "blocked"])
+}).strict();
+var GoalGate = external_exports.object({
+  schema: external_exports.literal("goal.gate@v1"),
+  verdict: external_exports.enum(["gate-pass", "blocked"]),
+  clean_streak: external_exports.number().int().nonnegative(),
+  required_passes: external_exports.literal(REQUIRED_GATE_PASSES),
+  blocking_findings: external_exports.array(GoalGateFinding),
+  low_findings: external_exports.array(GoalGateLowFinding),
+  passes: external_exports.array(GoalGatePass).min(1),
+  next_route: external_exports.enum(["run-next-gate-pass", "recover", "close"])
+}).strict().superRefine((gate, ctx) => {
+  const attackLenses = /* @__PURE__ */ new Set();
+  const cleanPassCount = gate.passes.filter((pass) => pass.verdict === "gate-pass").length;
+  for (const [index, pass] of gate.passes.entries()) {
+    if (attackLenses.has(pass.attack_lens)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["passes", index, "attack_lens"],
+        message: "gate passes in the same report must use distinct attack lenses"
+      });
+    }
+    attackLenses.add(pass.attack_lens);
+  }
+  if (gate.clean_streak > cleanPassCount) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["clean_streak"],
+      message: "clean_streak must not exceed the number of recorded gate-pass passes"
+    });
+  }
+  if (gate.blocking_findings.length > 0 && gate.clean_streak !== 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["clean_streak"],
+      message: "any blocking finding resets clean_streak to 0"
+    });
+  }
+  if (gate.verdict === "gate-pass" && gate.blocking_findings.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["blocking_findings"],
+      message: "gate-pass requires no blocking findings"
+    });
+  }
+  if (gate.verdict === "blocked" && gate.blocking_findings.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["blocking_findings"],
+      message: "blocked requires at least one blocking finding"
+    });
+  }
+  if (gate.verdict === "blocked" && gate.next_route !== "recover") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "blocked gate verdict must route to 'recover'"
+    });
+  }
+  if (gate.verdict === "gate-pass" && gate.next_route === "recover") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "gate-pass must not route to recover"
+    });
+  }
+  if (gate.next_route === "close" && gate.clean_streak < gate.required_passes) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["clean_streak"],
+      message: "close requires clean_streak >= required_passes"
+    });
+  }
+  if (gate.next_route === "close" && cleanPassCount < gate.required_passes) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["passes"],
+      message: "close requires recorded gate-pass passes to meet required_passes"
+    });
+  }
+  if (gate.next_route === "close" && gate.verdict !== "gate-pass") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["verdict"],
+      message: "close requires final gate verdict 'gate-pass'"
+    });
+  }
+  if (gate.next_route === "run-next-gate-pass" && gate.verdict !== "gate-pass") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "run-next-gate-pass requires a gate-pass verdict"
+    });
+  }
+  if (gate.next_route === "run-next-gate-pass" && gate.clean_streak >= gate.required_passes) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["next_route"],
+      message: "run-next-gate-pass is allowed only before the required pass streak is met"
+    });
+  }
+});
+var GoalResultReportId = external_exports.enum([
+  "goal.contract",
+  "goal.attempt",
+  "goal.evidence-evaluation",
+  "goal.recovery",
+  "goal.gate"
+]);
+var GOAL_RESULT_SCHEMA_BY_REPORT_ID = {
+  "goal.contract": "goal.contract@v1",
+  "goal.attempt": "goal.attempt@v1",
+  "goal.evidence-evaluation": "goal.evidence-evaluation@v1",
+  "goal.recovery": "goal.recovery@v1",
+  "goal.gate": "goal.gate@v1"
+};
+var GoalResultEvidenceLink = external_exports.object({
+  report_id: GoalResultReportId,
+  path: external_exports.string().min(1),
+  schema: external_exports.string().min(1)
+}).strict().superRefine((link, ctx) => {
+  const expected = GOAL_RESULT_SCHEMA_BY_REPORT_ID[link.report_id];
+  if (link.schema !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["schema"],
+      message: `schema must be '${expected}' for report_id '${link.report_id}'`
+    });
+  }
+});
+var GoalResult = external_exports.object({
+  schema: external_exports.literal("goal.result@v1"),
+  outcome: external_exports.enum(["complete", "needs_attention", "blocked", "failed", "handoff"]),
+  summary: external_exports.string().min(1),
+  proven_claims: external_exports.array(external_exports.string().min(1)),
+  missing_or_weak_claims: external_exports.array(external_exports.string().min(1)),
+  recovery_history: external_exports.array(external_exports.string().min(1)),
+  residual_risks: external_exports.array(external_exports.string().min(1)),
+  rerun_commands: external_exports.array(external_exports.string().min(1)),
+  evidence_links: external_exports.array(GoalResultEvidenceLink).min(1),
+  gate: external_exports.object({
+    clean_streak: external_exports.number().int().nonnegative(),
+    required_passes: external_exports.literal(REQUIRED_GATE_PASSES),
+    final_verdict: external_exports.enum(["gate-pass", "blocked"])
+  }).strict()
+}).strict().superRefine((result, ctx) => {
+  if (result.outcome === "complete") {
+    if (result.missing_or_weak_claims.length > 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["missing_or_weak_claims"],
+        message: "complete requires no missing or weak claims"
+      });
+    }
+    if (result.gate.clean_streak < result.gate.required_passes) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["gate", "clean_streak"],
+        message: "complete requires gate.clean_streak >= 2"
+      });
+    }
+    if (result.gate.final_verdict !== "gate-pass") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["gate", "final_verdict"],
+        message: "complete requires final gate verdict 'gate-pass'"
+      });
+    }
+  }
+  if (["blocked", "failed", "handoff"].includes(result.outcome)) {
+    const hasUsefulAction = result.summary.toLowerCase().includes(result.outcome) || result.rerun_commands.length > 0;
+    if (!hasUsefulAction) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["summary"],
+        message: `${result.outcome} must include a reason or next useful operator action`
+      });
+    }
+  }
+});
+
+// dist/flows/goal/writers/attempt.js
+import { existsSync as existsSync4, readFileSync as readFileSync11 } from "node:fs";
+var CHILD_RESULT_PATHS = {
+  fix: "reports/goal/child-results/fix-result.json",
+  build: "reports/goal/child-results/build-result.json",
+  review: "reports/goal/child-results/review-result.json",
+  explore: "reports/goal/child-results/explore-result.json",
+  pursue: "reports/goal/child-results/pursue-result.json"
+};
+function readChildResult(runFolder, target) {
+  const relPath = CHILD_RESULT_PATHS[target];
+  const absPath = resolveRunRelative(runFolder, relPath);
+  if (!existsSync4(absPath))
+    return void 0;
+  return JSON.parse(readFileSync11(absPath, "utf8"));
+}
+function mapChildOutcome(outcome) {
+  if (outcome === "complete")
+    return "complete";
+  if (outcome === "handoff")
+    return "handoff";
+  if (outcome === "stopped")
+    return "needs_attention";
+  if (outcome === "aborted")
+    return "failed";
+  return "blocked";
+}
+var goalAttemptBuilder = {
+  resultSchemaName: "goal.attempt@v1",
+  reads: [{ name: "contract", schema: "goal.contract@v1", required: true }],
+  build(context) {
+    const contract = GoalContract.parse(context.inputs.contract);
+    const target = contract.selected_flow_target;
+    const childRaw = readChildResult(context.runFolder, target);
+    const child = childRaw === void 0 ? void 0 : RunResult.parse(childRaw);
+    const childResultPath = CHILD_RESULT_PATHS[target];
+    return {
+      schema: "goal.attempt@v1",
+      attempt_id: "attempt-1",
+      flow_target: target,
+      child_result_path: childResultPath,
+      child_report_paths: child === void 0 ? [] : [childResultPath],
+      outcome: mapChildOutcome(child?.outcome),
+      summary: child === void 0 ? `No child result was available for the selected ${target} flow.` : child.summary
+    };
+  }
+};
+
+// dist/flows/goal/writers/close.js
+var RESULT_POINTERS = [
+  { report_id: "goal.contract", schema: "goal.contract@v1", optional: false },
+  { report_id: "goal.attempt", schema: "goal.attempt@v1", optional: false },
+  {
+    report_id: "goal.evidence-evaluation",
+    schema: "goal.evidence-evaluation@v1",
+    optional: false
+  },
+  { report_id: "goal.recovery", schema: "goal.recovery@v1", optional: true },
+  { report_id: "goal.gate", schema: "goal.gate@v1", optional: true }
+];
+var goalCloseBuilder = {
+  resultSchemaName: "goal.result@v1",
+  reads: [
+    { name: "contract", schema: "goal.contract@v1", required: true },
+    { name: "attempt", schema: "goal.attempt@v1", required: true },
+    { name: "evaluation", schema: "goal.evidence-evaluation@v1", required: true },
+    { name: "recovery", schema: "goal.recovery@v1", required: false },
+    { name: "gate", schema: "goal.gate@v1", required: false }
+  ],
+  build(context) {
+    const contract = GoalContract.parse(context.inputs.contract);
+    const attempt = GoalAttempt.parse(context.inputs.attempt);
+    const evaluation = GoalEvidenceEvaluation.parse(context.inputs.evaluation);
+    const recovery = context.inputs.recovery === void 0 ? void 0 : GoalRecovery.parse(context.inputs.recovery);
+    const gate = context.inputs.gate === void 0 ? void 0 : GoalGate.parse(context.inputs.gate);
+    const provenClaims = evaluation.claim_results.filter((claim) => claim.status === "proved").map((claim) => claim.claim_id);
+    const weakClaims = evaluation.claim_results.filter((claim) => claim.status !== "proved").map((claim) => `${claim.claim_id}: ${claim.gap ?? claim.status}`);
+    const gateClean = gate?.verdict === "gate-pass" && gate.clean_streak >= 2;
+    const lowGateFindings = gate?.low_findings.map((finding) => finding.text) ?? [];
+    const outcome = evaluation.verdict === "satisfied" && gateClean && lowGateFindings.length === 0 ? "complete" : recovery?.selected_route === "handoff" ? "handoff" : recovery?.selected_route === "blocked" ? "blocked" : attempt.outcome === "failed" ? "failed" : "needs_attention";
+    const links = RESULT_POINTERS.flatMap((pointer) => {
+      if (pointer.optional && context.inputs[pointer.report_id.split(".")[1] ?? ""] === void 0) {
+        return [];
+      }
+      return [
+        {
+          report_id: pointer.report_id,
+          schema: pointer.schema,
+          path: reportPathForSchemaInRuntimeFlow(context.flow, pointer.schema)
+        }
+      ];
+    });
+    return {
+      schema: "goal.result@v1",
+      outcome,
+      summary: outcome === "complete" ? `Goal complete: ${contract.objective}` : `Goal ${outcome}: ${recovery?.rationale ?? "required evidence or gate proof is incomplete."}`,
+      proven_claims: provenClaims,
+      missing_or_weak_claims: weakClaims,
+      recovery_history: recovery === void 0 ? [] : [recovery.rationale],
+      residual_risks: [...lowGateFindings],
+      rerun_commands: [`./bin/circuit run goal --goal ${JSON.stringify(contract.objective)}`],
+      evidence_links: links,
+      gate: {
+        clean_streak: gate?.clean_streak ?? 0,
+        required_passes: 2,
+        final_verdict: gate?.verdict ?? "blocked"
+      }
+    };
+  }
+};
+
+// dist/flows/goal/writers/contract.js
+var ALL_TARGETS = ["fix", "build", "review", "explore", "pursue"];
+var REVIEW_INTENT = /\b(review|audit|inspect|assess|findings?)\b/i;
+var EXPLORE_INTENT = /\b(explore|compare|decide|decision|tradeoff|options?)\b/i;
+var PURSUE_INTENT = /\b(pursue|coordinate|multiple|batch|broad|cleanup)\b/i;
+var FIX_INTENT = /\b(fix|bug|failing|failure|regression|crash|broken|flaky)\b/i;
+var BUILD_INTENT = /\b(build|implement|add|change|update|ship|create|refactor|wire|integrate|test)\b/i;
+function hasCodeChangingIntent(goal) {
+  return FIX_INTENT.test(goal) || BUILD_INTENT.test(goal) || PURSUE_INTENT.test(goal);
+}
+function selectFlowTarget(goal) {
+  const codeChanging = hasCodeChangingIntent(goal);
+  if (PURSUE_INTENT.test(goal))
+    return "pursue";
+  if (FIX_INTENT.test(goal))
+    return "fix";
+  if (BUILD_INTENT.test(goal))
+    return "build";
+  if (REVIEW_INTENT.test(goal) && !codeChanging)
+    return "review";
+  if (EXPLORE_INTENT.test(goal) && !codeChanging)
+    return "explore";
+  if (REVIEW_INTENT.test(goal))
+    return "review";
+  if (EXPLORE_INTENT.test(goal))
+    return "explore";
+  return "build";
+}
+function proofKindForTarget(target) {
+  if (target === "review" || target === "explore")
+    return "review";
+  if (target === "pursue")
+    return "report";
+  return "command";
+}
+var goalContractBuilder = {
+  resultSchemaName: "goal.contract@v1",
+  build(context) {
+    const objective = context.goal.trim();
+    const selected = selectFlowTarget(objective);
+    const proofKind = proofKindForTarget(selected);
+    return {
+      schema: "goal.contract@v1",
+      objective,
+      source_of_truth: "circuit-run-folder",
+      scope: {
+        in: ["The operator objective and the evidence needed to prove it."],
+        out: [
+          "Project-level goal ledgers",
+          "Cross-run recall",
+          "Native host /goal as an authority layer",
+          "Arbitrary dynamic child-flow loading"
+        ],
+        assumptions: ["The current run folder is the authoritative Goal V1 state."]
+      },
+      constraints: [
+        "Use only statically authored child flow targets.",
+        "Do not close complete without satisfied evidence and the required gate streak.",
+        "Escalate through recovery or checkpoint instead of guessing when proof is ambiguous."
+      ],
+      done_when: [
+        {
+          id: "objective-proved",
+          claim: objective,
+          required_evidence: [
+            {
+              kind: proofKind,
+              description: `The selected ${selected} child flow produces report-backed evidence for the objective.`,
+              required: true
+            }
+          ]
+        }
+      ],
+      allowed_flow_targets: [...ALL_TARGETS],
+      selected_flow_target: selected,
+      recovery_policy: {
+        max_attempts: 2,
+        routes: [
+          "retry-selected-flow",
+          "run-fix",
+          "run-review",
+          "checkpoint",
+          "handoff",
+          "blocked"
+        ]
+      },
+      check_in_triggers: [
+        "Scope expands beyond the contract.",
+        "Required evidence is missing, contradicted, or ambiguous.",
+        "A medium-or-above gate finding needs operator judgment."
+      ],
+      stop_conditions: [
+        "The attempt limit is reached without required evidence.",
+        "The child flow blocks on information or permissions Circuit cannot infer."
+      ],
+      completion_gate: {
+        required_passes: 2,
+        blocking_severities: ["critical", "high", "medium"],
+        reset_on_blocking_finding: true
+      }
+    };
+  }
+};
+
+// dist/flows/goal/writers/evidence-evaluation.js
+import { existsSync as existsSync5, readFileSync as readFileSync12 } from "node:fs";
+var PROOF_ELIGIBLE_VERDICTS = {
+  fix: ["accept"],
+  build: ["accept"],
+  review: ["NO_ISSUES_FOUND", "ISSUES_FOUND"],
+  explore: ["accept"],
+  pursue: ["clean"]
+};
+function readChildRunResult(runFolder, path) {
+  const absPath = resolveRunRelative(runFolder, path);
+  if (!existsSync5(absPath))
+    return void 0;
+  return RunResult.parse(JSON.parse(readFileSync12(absPath, "utf8")));
+}
+function childResultIsProofEligible(input) {
+  const allowedVerdicts = PROOF_ELIGIBLE_VERDICTS[input.target];
+  return input.result.outcome === "complete" && allowedVerdicts.includes(input.result.verdict ?? "");
+}
+function proofEligibilityGap(input) {
+  if (input.result === void 0) {
+    return "The selected child flow did not leave a child result path in the Goal run folder.";
+  }
+  const verdict = input.result.verdict ?? "<missing verdict>";
+  return [
+    `The selected ${input.target} child flow closed with outcome ${input.attempt.outcome}`,
+    `and verdict ${verdict}, but Goal requires outcome complete with verdict`,
+    PROOF_ELIGIBLE_VERDICTS[input.target].join(" or "),
+    "before treating the done claim as proved."
+  ].join(" ");
+}
+function claimResult(input) {
+  if (input.attempt.child_report_paths.length > 0 && input.childResult !== void 0 && childResultIsProofEligible({ target: input.target, result: input.childResult })) {
+    return {
+      claim_id: input.claimId,
+      status: "proved",
+      evidence: input.attempt.child_report_paths,
+      gap: null
+    };
+  }
+  return {
+    claim_id: input.claimId,
+    status: input.attempt.outcome === "blocked" ? "blocked" : "missing",
+    evidence: input.attempt.child_report_paths,
+    gap: proofEligibilityGap({
+      target: input.target,
+      result: input.childResult,
+      attempt: input.attempt
+    })
+  };
+}
+var goalEvidenceEvaluationBuilder = {
+  resultSchemaName: "goal.evidence-evaluation@v1",
+  reads: [
+    { name: "contract", schema: "goal.contract@v1", required: true },
+    { name: "attempt", schema: "goal.attempt@v1", required: true }
+  ],
+  build(context) {
+    const contract = GoalContract.parse(context.inputs.contract);
+    const attempt = GoalAttempt.parse(context.inputs.attempt);
+    const childResult = readChildRunResult(context.runFolder, attempt.child_result_path);
+    const claimResults = contract.done_when.map((claim) => claimResult({
+      claimId: claim.id,
+      target: contract.selected_flow_target,
+      attempt,
+      childResult
+    }));
+    const allProved = claimResults.every((claim) => claim.status === "proved");
+    if (allProved) {
+      return {
+        schema: "goal.evidence-evaluation@v1",
+        verdict: "satisfied",
+        claim_results: claimResults,
+        next_route: "completion-gate"
+      };
+    }
+    return {
+      schema: "goal.evidence-evaluation@v1",
+      verdict: claimResults.some((claim) => claim.status === "blocked") ? "blocked" : "missing-evidence",
+      claim_results: claimResults,
+      next_route: attempt.outcome === "failed" ? "run-fix" : "checkpoint"
+    };
+  }
+};
+
+// dist/flows/goal/writers/recovery.js
+import { existsSync as existsSync6, readFileSync as readFileSync13 } from "node:fs";
+function routeFromEvaluation(evaluation) {
+  if (evaluation.verdict === "missing-evidence") {
+    return {
+      reason: "missing-evidence",
+      selected_route: evaluation.next_route === "completion-gate" ? "checkpoint" : evaluation.next_route,
+      rationale: "Required evidence is missing, so Goal cannot close complete."
+    };
+  }
+  if (evaluation.verdict === "contradicted") {
+    return {
+      reason: "verification-failed",
+      selected_route: "run-fix",
+      rationale: "Evidence contradicted a done claim and needs a fixing pass."
+    };
+  }
+  return {
+    reason: "child-blocked",
+    selected_route: "checkpoint",
+    rationale: "The child result blocked or could not prove the contract without judgment."
+  };
+}
+function routeFromGate(gate) {
+  const firstFinding = gate.blocking_findings[0];
+  if (firstFinding === void 0)
+    return void 0;
+  return {
+    reason: "review-blocked",
+    selected_route: firstFinding.recovery_route,
+    rationale: firstFinding.text
+  };
+}
+function readLatestGate(runFolder) {
+  for (const path of ["reports/goal/gate.json", "reports/goal/gate-pass-1.json"]) {
+    const absolutePath = resolveRunRelative(runFolder, path);
+    if (!existsSync6(absolutePath))
+      continue;
+    return GoalGate.parse(JSON.parse(readFileSync13(absolutePath, "utf8")));
+  }
+  return void 0;
+}
+var goalRecoveryBuilder = {
+  resultSchemaName: "goal.recovery@v1",
+  reads: [
+    { name: "evaluation", schema: "goal.evidence-evaluation@v1", required: true },
+    { name: "attempt", schema: "goal.attempt@v1", required: false }
+  ],
+  build(context) {
+    const evaluation = GoalEvidenceEvaluation.parse(context.inputs.evaluation);
+    const attempt = context.inputs.attempt === void 0 ? void 0 : GoalAttempt.parse(context.inputs.attempt);
+    const gate = readLatestGate(context.runFolder);
+    const decision2 = gate === void 0 ? routeFromEvaluation(evaluation) : routeFromGate(gate) ?? routeFromEvaluation(evaluation);
+    return {
+      schema: "goal.recovery@v1",
+      reason: decision2.reason,
+      selected_route: decision2.selected_route,
+      rationale: decision2.rationale,
+      attempt_count: attempt === void 0 ? 0 : 1,
+      operator_input_required: decision2.selected_route !== "retry-selected-flow"
+    };
+  }
+};
+
+// dist/flows/goal/data.js
+var GOAL_SIGNALS = [
+  { label: "goal prefix", pattern: /^\s*(?:goal|supervise)\s*:/i },
+  { label: "goal flow request", pattern: /\b(?:goal flow|long-running goal)\b/i }
+];
+var CHILD_PASS_VERDICTS = [
+  "accept",
+  "accept-with-fixes",
+  "accept-with-fold-ins",
+  "NO_ISSUES_FOUND",
+  "ISSUES_FOUND",
+  "clean",
+  "needs-followup",
+  "decided"
+];
+var childGoal = "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.";
+function childRunStep(input) {
+  return {
+    id: input.id,
+    title: input.title,
+    stage: "act",
+    block: "goal",
+    input: {
+      contract: "goal.contract@v1"
+    },
+    output: input.output,
+    evidence_requirements: ["static child flow target", "child result file", "parent trace link"],
+    execution: {
+      kind: "sub-run",
+      flow_ref: { flow_id: input.flowId, entry_mode: "default" },
+      goal: childGoal,
+      depth: "standard"
+    },
+    protocol: `${input.id}@v1`,
+    writes: {
+      result_path: input.resultPath
+    },
+    check: {
+      pass: [...CHILD_PASS_VERDICTS]
+    },
+    routes: {
+      continue: "goal-attempt",
+      stop: "@stop"
+    }
+  };
+}
+var goalFlowData = {
+  id: "goal",
+  visibility: "public",
+  paths: {
+    schematic: "src/flows/goal/schematic.json",
+    command: "src/flows/goal/command.md"
+  },
+  routing: {
+    order: 5,
+    signals: GOAL_SIGNALS,
+    reasonForMatch(signal) {
+      return `matched ${signal.label}; routed to Goal supervisor flow`;
+    }
+  },
+  schematic: {
+    schema_version: "1",
+    id: "goal",
+    title: "Goal Schematic",
+    purpose: "Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.",
+    status: "active",
+    version: "0.1.0",
+    starts_at: "goal-contract",
+    initial_contracts: ["task.intake@v1", "route.decision@v1", "flow.question@v1"],
+    contract_aliases: [
+      { generic: "goal.contract@v1", actual: "goal.child-fix-result@v1" },
+      { generic: "goal.contract@v1", actual: "goal.child-build-result@v1" },
+      { generic: "goal.contract@v1", actual: "goal.child-review-result@v1" },
+      { generic: "goal.contract@v1", actual: "goal.child-explore-result@v1" },
+      { generic: "goal.contract@v1", actual: "goal.child-pursue-result@v1" },
+      { generic: "goal.contract@v1", actual: "goal.attempt@v1" },
+      { generic: "goal.contract@v1", actual: "goal.evidence-evaluation@v1" },
+      { generic: "goal.contract@v1", actual: "goal.recovery@v1" },
+      { generic: "goal.contract@v1", actual: "goal.gate-pass@v1" },
+      { generic: "goal.contract@v1", actual: "goal.gate@v1" },
+      { generic: "goal.contract@v1", actual: "goal.result@v1" }
+    ],
+    entry: {
+      signals: {
+        include: ["goal", "supervise"],
+        exclude: []
+      },
+      intent_prefixes: ["goal", "supervise"]
+    },
+    axes: {
+      allowed_rigors: ["lite", "standard", "deep"],
+      supports_tournament: false,
+      supports_autonomous: true,
+      default: {
+        rigor: "standard",
+        tournament: false,
+        tournament_n: 3,
+        autonomous: false
+      }
+    },
+    stage_path_policy: {
+      mode: "partial",
+      omits: ["analyze", "plan"],
+      rationale: "Goal supervises a child flow through Frame, Act, Verify, Review, and Close. Analyze and Plan are delegated to the selected static child flow."
+    },
+    stages: [
+      { id: "goal-frame-stage", canonical: "frame", title: "Frame" },
+      { id: "goal-act-stage", canonical: "act", title: "Act" },
+      { id: "goal-verify-stage", canonical: "verify", title: "Verify" },
+      { id: "goal-review-stage", canonical: "review", title: "Review" },
+      { id: "goal-close-stage", canonical: "close", title: "Close" }
+    ],
+    items: [
+      {
+        id: "goal-contract",
+        title: "Goal - write contract and select static target",
+        stage: "frame",
+        block: "goal",
+        input: {
+          task: "task.intake@v1",
+          route: "route.decision@v1"
+        },
+        output: "goal.contract@v1",
+        evidence_requirements: [
+          "goal contract",
+          "done claims",
+          "proof requirements",
+          "allowed flow targets",
+          "recovery routes",
+          "completion gate policy"
+        ],
+        execution: { kind: "compose" },
+        protocol: "goal-contract@v1",
+        writes: {
+          report_path: "reports/goal/contract.json"
+        },
+        check: {
+          required: ["schema", "objective", "done_when", "selected_flow_target"]
+        },
+        route_from_report: {
+          path: ["selected_flow_target"]
+        },
+        routes: {
+          continue: "goal-run-build",
+          fix: "goal-run-fix",
+          build: "goal-run-build",
+          review: "goal-run-review",
+          explore: "goal-run-explore",
+          pursue: "goal-run-pursue",
+          ask: "goal-recovery-checkpoint",
+          stop: "@stop"
+        }
+      },
+      childRunStep({
+        id: "goal-run-fix",
+        title: "Child Flow - run Fix",
+        flowId: "fix",
+        output: "goal.child-fix-result@v1",
+        resultPath: "reports/goal/child-results/fix-result.json"
+      }),
+      childRunStep({
+        id: "goal-run-build",
+        title: "Child Flow - run Build",
+        flowId: "build",
+        output: "goal.child-build-result@v1",
+        resultPath: "reports/goal/child-results/build-result.json"
+      }),
+      childRunStep({
+        id: "goal-run-review",
+        title: "Child Flow - run Review",
+        flowId: "review",
+        output: "goal.child-review-result@v1",
+        resultPath: "reports/goal/child-results/review-result.json"
+      }),
+      childRunStep({
+        id: "goal-run-explore",
+        title: "Child Flow - run Explore",
+        flowId: "explore",
+        output: "goal.child-explore-result@v1",
+        resultPath: "reports/goal/child-results/explore-result.json"
+      }),
+      childRunStep({
+        id: "goal-run-pursue",
+        title: "Child Flow - run Pursue",
+        flowId: "pursue",
+        output: "goal.child-pursue-result@v1",
+        resultPath: "reports/goal/child-results/pursue-result.json"
+      }),
+      {
+        id: "goal-attempt",
+        title: "Attempt - summarize child result",
+        stage: "act",
+        block: "goal",
+        input: {
+          contract: "goal.contract@v1"
+        },
+        output: "goal.attempt@v1",
+        evidence_requirements: ["child result path", "child report paths", "attempt outcome"],
+        execution: { kind: "compose" },
+        protocol: "goal-attempt@v1",
+        writes: {
+          report_path: "reports/goal/attempts/attempt-1.json"
+        },
+        check: {
+          required: ["schema", "attempt_id", "flow_target", "outcome"]
+        },
+        routes: {
+          continue: "goal-evidence-evaluation",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-evidence-evaluation",
+        title: "Evaluate - compare attempt evidence to done claims",
+        stage: "verify",
+        block: "goal",
+        input: {
+          contract: "goal.contract@v1",
+          attempt: "goal.attempt@v1"
+        },
+        output: "goal.evidence-evaluation@v1",
+        evidence_requirements: ["claim results", "evidence gaps", "next typed route"],
+        execution: { kind: "compose" },
+        protocol: "goal-evidence-evaluation@v1",
+        writes: {
+          report_path: "reports/goal/evidence-evaluation.json"
+        },
+        check: {
+          required: ["schema", "verdict", "claim_results", "next_route"]
+        },
+        route_from_report: {
+          path: ["next_route"]
+        },
+        routes: {
+          continue: "goal-gate-pass-1",
+          "completion-gate": "goal-gate-pass-1",
+          "retry-selected-flow": "goal-recovery",
+          "run-fix": "goal-recovery",
+          "run-review": "goal-recovery",
+          "run-explore": "goal-recovery",
+          "split-to-pursue": "goal-recovery",
+          checkpoint: "goal-recovery",
+          handoff: "@handoff",
+          blocked: "goal-recovery",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-recovery",
+        title: "Recovery - choose typed next action",
+        stage: "verify",
+        block: "goal",
+        input: {
+          evaluation: "goal.evidence-evaluation@v1",
+          attempt: "goal.attempt@v1"
+        },
+        output: "goal.recovery@v1",
+        evidence_requirements: ["recovery reason", "selected route", "operator input need"],
+        execution: { kind: "compose" },
+        protocol: "goal-recovery@v1",
+        writes: {
+          report_path: "reports/goal/recovery.json"
+        },
+        check: {
+          required: ["schema", "reason", "selected_route", "rationale"]
+        },
+        route_from_report: {
+          path: ["selected_route"]
+        },
+        routes: {
+          continue: "goal-recovery-checkpoint",
+          "retry-selected-flow": "goal-recovery-checkpoint",
+          "run-fix": "goal-recovery-checkpoint",
+          "run-review": "goal-recovery-checkpoint",
+          "run-explore": "goal-recovery-checkpoint",
+          "split-to-pursue": "goal-recovery-checkpoint",
+          checkpoint: "goal-recovery-checkpoint",
+          blocked: "goal-close",
+          handoff: "@handoff",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-recovery-checkpoint",
+        title: "Checkpoint - operator judgment required",
+        stage: "verify",
+        block: "human-decision",
+        input: {
+          question: "flow.question@v1",
+          evidence: "goal.recovery@v1"
+        },
+        output: "decision.answer@v1",
+        evidence_requirements: [
+          "question",
+          "available options",
+          "selected option",
+          "answer source"
+        ],
+        execution: { kind: "checkpoint" },
+        protocol: "goal-recovery-checkpoint@v1",
+        writes: {
+          checkpoint_request_path: "reports/checkpoints/goal-recovery-request.json",
+          checkpoint_response_path: "reports/checkpoints/goal-recovery-response.json"
+        },
+        check: {
+          allow: ["continue", "blocked", "handoff"]
+        },
+        checkpoint_policy: {
+          prompt: "Goal needs operator judgment before continuing.",
+          choices: [
+            { id: "continue", label: "Continue" },
+            { id: "blocked", label: "Close Blocked" },
+            { id: "handoff", label: "Hand Off" }
+          ],
+          safe_default_choice: "blocked",
+          safe_autonomous_choice: "blocked"
+        },
+        routes: {
+          continue: "goal-close",
+          blocked: "goal-close",
+          handoff: "@handoff",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-gate-pass-1",
+        title: "Gate - adversarial pass 1",
+        stage: "review",
+        block: "review",
+        input: {
+          contract: "goal.contract@v1",
+          evaluation: "goal.evidence-evaluation@v1"
+        },
+        output: "goal.gate-pass@v1",
+        evidence_requirements: ["gate pass", "attack lens", "evidence checked"],
+        execution: { kind: "relay", role: "reviewer" },
+        protocol: "goal-gate-pass-1@v1",
+        writes: {
+          report_path: "reports/goal/gate-pass-1.json",
+          request_path: "reports/relay/goal-gate-pass-1.request.json",
+          receipt_path: "reports/relay/goal-gate-pass-1.receipt.txt",
+          result_path: "reports/relay/goal-gate-pass-1.result.json"
+        },
+        check: {
+          pass: ["gate-pass"]
+        },
+        routes: {
+          continue: "goal-gate-pass-2",
+          retry: "goal-recovery",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-gate-pass-2",
+        title: "Gate - adversarial pass 2",
+        stage: "review",
+        block: "review",
+        input: {
+          contract: "goal.contract@v1",
+          evaluation: "goal.evidence-evaluation@v1",
+          gate: "goal.gate-pass@v1"
+        },
+        output: "goal.gate@v1",
+        evidence_requirements: ["gate pass", "attack lens", "evidence checked"],
+        execution: { kind: "relay", role: "reviewer" },
+        protocol: "goal-gate-pass-2@v1",
+        writes: {
+          report_path: "reports/goal/gate.json",
+          request_path: "reports/relay/goal-gate-pass-2.request.json",
+          receipt_path: "reports/relay/goal-gate-pass-2.receipt.txt",
+          result_path: "reports/relay/goal-gate-pass-2.result.json"
+        },
+        check: {
+          pass: ["gate-pass"]
+        },
+        routes: {
+          continue: "goal-close",
+          retry: "goal-recovery",
+          stop: "@stop"
+        }
+      },
+      {
+        id: "goal-close",
+        title: "Close - emit Goal result",
+        stage: "close",
+        block: "close-with-evidence",
+        input: {
+          contract: "goal.contract@v1",
+          attempt: "goal.attempt@v1",
+          evaluation: "goal.evidence-evaluation@v1",
+          recovery: "goal.recovery@v1",
+          gate: "goal.gate@v1"
+        },
+        output: "goal.result@v1",
+        evidence_requirements: ["outcome", "evidence pointers", "residual risks", "follow-ups"],
+        execution: { kind: "compose" },
+        protocol: "goal-close@v1",
+        writes: {
+          report_path: "reports/goal-result.json"
+        },
+        check: {
+          required: ["schema", "outcome", "summary", "evidence_links", "gate"]
+        },
+        routes: {
+          complete: "@complete",
+          stop: "@stop"
+        }
+      }
+    ]
+  },
+  canonicalStagePolicy: {
+    kind: "enforce",
+    canonicals: ["frame", "act", "verify", "review", "close"],
+    omits: ["analyze", "plan"],
+    optional_canonicals: [],
+    variants: [],
+    title: "Frame -> Act -> Verify -> Review -> Close",
+    authority: "docs/specs/goal-block-v1.md \xA7V1 Flow Shape"
+  },
+  reports: [
+    {
+      schemaName: "goal.contract@v1",
+      channel: "report",
+      schema: GoalContract,
+      writers: { compose: [goalContractBuilder] }
+    },
+    {
+      schemaName: "goal.child-fix-result@v1",
+      channel: "report",
+      schema: RunResult
+    },
+    {
+      schemaName: "goal.child-build-result@v1",
+      channel: "report",
+      schema: RunResult
+    },
+    {
+      schemaName: "goal.child-review-result@v1",
+      channel: "report",
+      schema: RunResult
+    },
+    {
+      schemaName: "goal.child-explore-result@v1",
+      channel: "report",
+      schema: RunResult
+    },
+    {
+      schemaName: "goal.child-pursue-result@v1",
+      channel: "report",
+      schema: RunResult
+    },
+    {
+      schemaName: "goal.attempt@v1",
+      channel: "report",
+      schema: GoalAttempt,
+      writers: { compose: [goalAttemptBuilder] }
+    },
+    {
+      schemaName: "goal.evidence-evaluation@v1",
+      channel: "report",
+      schema: GoalEvidenceEvaluation,
+      writers: { compose: [goalEvidenceEvaluationBuilder] }
+    },
+    {
+      schemaName: "goal.recovery@v1",
+      channel: "report",
+      schema: GoalRecovery,
+      writers: { compose: [goalRecoveryBuilder] }
+    },
+    {
+      schemaName: "goal.gate-pass@v1",
+      channel: "relay",
+      schema: GoalGate,
+      relayHint: goalGatePassShapeHint.instruction
+    },
+    {
+      schemaName: "goal.gate@v1",
+      channel: "relay",
+      schema: GoalGate,
+      relayHint: goalGateShapeHint.instruction
+    },
+    {
+      schemaName: "goal.result@v1",
+      channel: "report",
+      schema: GoalResult,
+      writers: { close: [goalCloseBuilder] }
+    }
+  ],
+  runtimeSurface: {
+    primaryResult: {
+      schemaName: "goal.result@v1",
+      path: "reports/goal-result.json",
+      label: "Goal result"
+    },
+    progress: {
+      steps: [
+        {
+          stepId: "goal-contract",
+          taskTitle: "Write the goal contract",
+          activeText: "Writing the goal contract"
+        },
+        { stepId: "goal-run-fix", taskTitle: "Run Fix", activeText: "Running Fix" },
+        { stepId: "goal-run-build", taskTitle: "Run Build", activeText: "Running Build" },
+        { stepId: "goal-run-review", taskTitle: "Run Review", activeText: "Running Review" },
+        { stepId: "goal-run-explore", taskTitle: "Run Explore", activeText: "Running Explore" },
+        { stepId: "goal-run-pursue", taskTitle: "Run Pursue", activeText: "Running Pursue" },
+        {
+          stepId: "goal-attempt",
+          taskTitle: "Record the attempt",
+          activeText: "Recording the attempt"
+        },
+        {
+          stepId: "goal-evidence-evaluation",
+          taskTitle: "Evaluate evidence",
+          activeText: "Evaluating evidence"
+        },
+        { stepId: "goal-recovery", taskTitle: "Choose recovery", activeText: "Choosing recovery" },
+        {
+          stepId: "goal-recovery-checkpoint",
+          taskTitle: "Ask for judgment",
+          activeText: "Waiting on judgment"
+        },
+        {
+          stepId: "goal-gate-pass-1",
+          taskTitle: "Run gate pass 1",
+          activeText: "Running gate pass 1",
+          relayRole: "reviewer",
+          relayStartedText: "Asking the reviewer to attack the proof...",
+          relayCompletedText: "Finished gate pass 1."
+        },
+        {
+          stepId: "goal-gate-pass-2",
+          taskTitle: "Run gate pass 2",
+          activeText: "Running gate pass 2",
+          relayRole: "reviewer",
+          relayStartedText: "Asking the reviewer to attack the proof again...",
+          relayCompletedText: "Finished gate pass 2."
+        },
+        { stepId: "goal-close", taskTitle: "Wrap up", activeText: "Wrapping up" }
+      ]
+    }
+  }
+};
+
+// dist/flows/goal/flow.js
+var goalFlowDefinition = defineFlowData(goalFlowData);
+
+// dist/flows/prototype/relay-hints.js
+var prototypeArtifactShapeHint = {
+  kind: "schema",
+  schema: "prototype.artifact@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<accept|blocked>", "summary": "<what prototype files were created or why blocked>", "prototype_root": "<project-relative prototype directory>", "created_files": ["<project-relative path under prototype_root>"], "entry_points": ["<project-relative path under prototype_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "claim_limits": ["not production", "not deployed"] }',
+    "Create only disposable prototype files under the prototype_root from the plan. Do not edit production application code, generated host packages, or release metadata.",
+    'Use verdict "accept" only when the entry points and created files exist under prototype_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
+    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.",
+    "The runtime parses your response with JSON.parse, rejects verdicts outside the accepted-verdicts list, validates the full report body against prototype.artifact@v1, and verifies reported artifact paths before writing the final Prototype result."
+  ].join(" ")
+};
+var prototypeVariantArtifactShapeHint = {
+  kind: "schema",
+  schema: "prototype.variant-artifact@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<accept|blocked>", "variant_id": "<the assigned variant_id>", "variant_label": "<the assigned label>", "summary": "<what this variant created or why blocked>", "prototype_root": "<shared prototype root>", "variant_root": "<prototype_root/variants/variant_id>", "created_files": ["<project-relative path under variant_root>"], "entry_points": ["<project-relative path under variant_root>"], "preview_instructions": "<how to inspect locally>", "known_limitations": ["<honest limitation>"], "evidence": ["<file or check evidence>"], "rubric_model_judgments": { "evidence_rigor": "<pass|concern|fail>", "actionability": "<pass|concern|fail>", "coverage_adequacy": "<pass|concern|fail>", "scope_discipline": "<pass|concern|fail>", "honest_calibration": "<pass|concern|fail>", "project_specificity": "<pass|concern|fail>", "insight_density": "<pass|concern|fail>", "branch_distinctness": "<pass|concern|fail>" }, "claim_limits": ["not production", "not deployed"] }',
+    "Create only disposable prototype files under variant_root. Do not edit production application code, generated host packages, release metadata, or sibling variants.",
+    'Use verdict "accept" only when the entry points and created files exist under variant_root. Use verdict "blocked" when you cannot create the artifact, and still report any evidence you gathered.',
+    "Do not claim deployment, production readiness, provider behavior, model behavior, branch previews, screenshots, or hosted URLs. The provider/model comparison evidence is captured by the runtime trace, not by this report.",
+    "The runtime validates this response against prototype.variant-artifact@v1.",
+    "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
+  ].join(" ")
+};
+var prototypeVariantReviewShapeHint = {
+  kind: "schema",
+  schema: "prototype.variant-review@v1",
+  instruction: [
+    "Respond with a single raw JSON object whose top-level shape is exactly:",
+    '{ "verdict": "<recommend|no-clear-winner|needs-operator>", "recommended_variant_id": "<variant id from the aggregate>", "comparison_summary": "<plain-language comparison grounded in the variant reports>", "strengths": [{ "variant_id": "<variant id>", "note": "<specific strength>" }], "risks": ["<risk or limitation>"], "missing_evidence": ["<missing evidence, if any>"], "confidence": "<low|medium|high>" }',
+    "Compare only the local prototype artifacts, verification report, provider evidence report, and aggregate evidence. Do not claim any provider or model actually ran unless the provider evidence report captured it from relay.started trace entries.",
+    "The runtime validates this response against prototype.variant-review@v1.",
+    "Do not claim deployment, production readiness, branch previews, screenshots, hosted URLs, or production fitness. Do not include extra top-level keys or Markdown."
+  ].join(" ")
+};
+
+// dist/flows/prototype/reports.js
+var NonEmptyStringArray4 = external_exports.array(external_exports.string().min(1)).min(1);
 var StringArray = external_exports.array(external_exports.string().min(1));
 var PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID = {
   "prototype.brief": "prototype.brief@v1",
@@ -33471,12 +35103,12 @@ function validatePrototypeClaimLimits(claimLimits, ctx, path) {
 var PrototypeBrief = external_exports.object({
   objective: external_exports.string().min(1),
   prototype_scope: external_exports.string().min(1),
-  out_of_scope: NonEmptyStringArray3,
+  out_of_scope: NonEmptyStringArray4,
   target_user: external_exports.string().min(1),
-  success_criteria: NonEmptyStringArray3,
+  success_criteria: NonEmptyStringArray4,
   prototype_root: PrototypeRootPath,
   verification_command_candidates: external_exports.array(VerificationCommand),
-  claim_limits: NonEmptyStringArray3
+  claim_limits: NonEmptyStringArray4
 }).strict().superRefine((brief, ctx) => {
   validatePrototypeClaimLimits(brief.claim_limits, ctx, ["claim_limits"]);
 });
@@ -33491,8 +35123,8 @@ var PrototypePlan = external_exports.object({
     commands: external_exports.array(VerificationCommand)
   }).strict(),
   build_followup_prompt: external_exports.string().min(1),
-  risks: NonEmptyStringArray3,
-  claim_limits: NonEmptyStringArray3
+  risks: NonEmptyStringArray4,
+  claim_limits: NonEmptyStringArray4
 }).strict().superRefine((plan, ctx) => {
   validatePathsUnderRoot({
     ctx,
@@ -33522,8 +35154,8 @@ var PrototypeArtifact = external_exports.object({
   entry_points: external_exports.array(PrototypeProjectRelativePath),
   preview_instructions: external_exports.string().min(1),
   known_limitations: StringArray,
-  evidence: NonEmptyStringArray3,
-  claim_limits: NonEmptyStringArray3
+  evidence: NonEmptyStringArray4,
+  claim_limits: NonEmptyStringArray4
 }).strict().superRefine((artifact, ctx) => {
   validatePathsUnderRoot({
     ctx,
@@ -33612,7 +35244,7 @@ var PrototypeVariantOptions = external_exports.object({
   prototype_root: PrototypeRootPath,
   variant_count: external_exports.number().int().min(2).max(4),
   variants: external_exports.array(PrototypeVariantOption).min(2).max(4),
-  claim_limits: NonEmptyStringArray3
+  claim_limits: NonEmptyStringArray4
 }).strict().superRefine((options, ctx) => {
   validatePrototypeClaimLimits(options.claim_limits, ctx, ["claim_limits"]);
   if (options.variant_count !== options.variants.length) {
@@ -33644,9 +35276,9 @@ var PrototypeVariantArtifact = external_exports.object({
   entry_points: external_exports.array(PrototypeProjectRelativePath),
   preview_instructions: external_exports.string().min(1),
   known_limitations: StringArray,
-  evidence: NonEmptyStringArray3,
+  evidence: NonEmptyStringArray4,
   rubric_model_judgments: PrototypeRubricModelJudgments,
-  claim_limits: NonEmptyStringArray3
+  claim_limits: NonEmptyStringArray4
 }).strict().superRefine((artifact, ctx) => {
   const expectedRoot = `${artifact.prototype_root}/variants/${artifact.variant_id}`;
   if (artifact.variant_root !== expectedRoot) {
@@ -33891,7 +35523,7 @@ var PrototypeResultBase = external_exports.object({
   preview_instructions: external_exports.string().min(1),
   residual_risks: StringArray,
   next_step: external_exports.string().min(1),
-  claim_limits: NonEmptyStringArray3,
+  claim_limits: NonEmptyStringArray4,
   evidence_links: external_exports.array(PrototypeResultReportPointer).min(3)
 });
 var PrototypeSingleArtifactResult = PrototypeResultBase.extend({
@@ -34062,7 +35694,7 @@ var prototypeBriefComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/close.js
-import { existsSync as existsSync4, readFileSync as readFileSync11 } from "node:fs";
+import { existsSync as existsSync7, readFileSync as readFileSync14 } from "node:fs";
 var CheckpointResponse = external_exports.object({
   schema_version: external_exports.literal(1),
   step_id: external_exports.literal("prototype-checkpoint-step"),
@@ -34101,9 +35733,9 @@ function readCheckpointResponse(context) {
     return void 0;
   const responsePath = step.writes.response;
   const abs = resolveRunRelative(context.runFolder, responsePath);
-  if (!existsSync4(abs))
+  if (!existsSync7(abs))
     return void 0;
-  const raw = JSON.parse(readFileSync11(abs, "utf8"));
+  const raw = JSON.parse(readFileSync14(abs, "utf8"));
   return { path: responsePath, response: CheckpointResponse.parse(raw) };
 }
 function readVariantCheckpointResponse(context) {
@@ -34112,9 +35744,9 @@ function readVariantCheckpointResponse(context) {
     return void 0;
   const responsePath = step.writes.response;
   const abs = resolveRunRelative(context.runFolder, responsePath);
-  if (!existsSync4(abs))
+  if (!existsSync7(abs))
     return void 0;
-  const raw = JSON.parse(readFileSync11(abs, "utf8"));
+  const raw = JSON.parse(readFileSync14(abs, "utf8"));
   return { path: responsePath, response: VariantCheckpointResponse.parse(raw) };
 }
 function existingCheckpointRequestPath(context) {
@@ -34122,14 +35754,14 @@ function existingCheckpointRequestPath(context) {
   if (step === void 0)
     return void 0;
   const requestPath = step.writes.request;
-  return existsSync4(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
+  return existsSync7(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
 }
 function existingVariantCheckpointRequestPath(context) {
   const step = checkpointStep(context, "prototype-variant-checkpoint-step");
   if (step === void 0)
     return void 0;
   const requestPath = step.writes.request;
-  return existsSync4(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
+  return existsSync7(resolveRunRelative(context.runFolder, requestPath)) ? requestPath : void 0;
 }
 function evidenceLinks(context, checkpointResponse) {
   const links = BASE_SINGLE_POINTERS.map((pointer) => ({
@@ -34162,14 +35794,14 @@ function evidenceLinks(context, checkpointResponse) {
 }
 function reportExists(context, schemaName) {
   const path = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
-  return existsSync4(resolveRunRelative(context.runFolder, path));
+  return existsSync7(resolveRunRelative(context.runFolder, path));
 }
 function readOptionalReport(context, schemaName, parse3) {
   const path = reportPathForSchemaInRuntimeFlow(context.flow, schemaName);
   const abs = resolveRunRelative(context.runFolder, path);
-  if (!existsSync4(abs))
+  if (!existsSync7(abs))
     return void 0;
-  return parse3(JSON.parse(readFileSync11(abs, "utf8")));
+  return parse3(JSON.parse(readFileSync14(abs, "utf8")));
 }
 function variantEvidenceLinks(context, checkpointResponse) {
   const links = BASE_VARIANT_POINTERS.map((pointer) => ({
@@ -34648,13 +36280,13 @@ var prototypeVariantOptionsComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/variant-provider-evidence.js
-import { existsSync as existsSync5, readFileSync as readFileSync12 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync15 } from "node:fs";
 import { join as join3 } from "node:path";
 function readTraceEntries(runFolder) {
   const tracePath = join3(runFolder, "trace.ndjson");
-  if (!existsSync5(tracePath))
+  if (!existsSync8(tracePath))
     return [];
-  return readFileSync12(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
+  return readFileSync15(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
 }
 function isRelayStarted(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) && value.kind === "relay.started";
@@ -34719,7 +36351,7 @@ var prototypeVariantProviderEvidenceComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/variant-verification.js
-import { readFileSync as readFileSync13 } from "node:fs";
+import { readFileSync as readFileSync16 } from "node:fs";
 var VARIANT_INTEGRITY_SCRIPT = [
   "const fs = require('node:fs')",
   "const path = require('node:path')",
@@ -34760,7 +36392,7 @@ function readReport(context, schemaName, parse3) {
   if (!context.step.reads.includes(reportPath)) {
     throw new Error(`prototype.variant-verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
   }
-  return parse3(JSON.parse(readFileSync13(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+  return parse3(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, reportPath), "utf8")));
 }
 function aggregate(context) {
   return readReport(context, "prototype.variant-aggregate@v1", (raw) => PrototypeVariantAggregate.parse(raw));
@@ -34843,7 +36475,7 @@ var prototypeVariantVerificationWriter = {
 };
 
 // dist/flows/prototype/writers/verification.js
-import { readFileSync as readFileSync14 } from "node:fs";
+import { readFileSync as readFileSync17 } from "node:fs";
 var ARTIFACT_INTEGRITY_SCRIPT = [
   "const fs = require('node:fs')",
   "const path = require('node:path')",
@@ -34881,7 +36513,7 @@ function readReport2(context, schemaName, parse3) {
   if (!context.step.reads.includes(reportPath)) {
     throw new Error(`prototype.verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
   }
-  return parse3(JSON.parse(readFileSync14(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+  return parse3(JSON.parse(readFileSync17(resolveRunRelative(context.runFolder, reportPath), "utf8")));
 }
 function artifactIntegrityCommand(input) {
   const payload = {
@@ -35724,7 +37356,7 @@ var PURSUIT_RESULT_PATH_BY_REPORT_ID = {
   "pursuit.verification": "reports/pursuit/verification.json",
   "pursuit.review": "reports/pursuit/review.json"
 };
-var NonEmptyStringArray4 = external_exports.array(external_exports.string().min(1)).min(1);
+var NonEmptyStringArray5 = external_exports.array(external_exports.string().min(1)).min(1);
 var PursuitId = external_exports.string().min(1).regex(/^[a-z0-9][a-z0-9-]*$/);
 var PursuitRisk = external_exports.enum(["low", "medium", "high"]);
 var PursuitTouchSet = external_exports.object({
@@ -35740,8 +37372,8 @@ var PursuitContractItem = external_exports.object({
   scope: external_exports.string().min(1),
   assumptions: external_exports.array(external_exports.string().min(1)),
   estimated_touch_set: PursuitTouchSet,
-  proof_plan: NonEmptyStringArray4,
-  check_in_triggers: NonEmptyStringArray4,
+  proof_plan: NonEmptyStringArray5,
+  check_in_triggers: NonEmptyStringArray5,
   rollback_notes: external_exports.array(external_exports.string().min(1)),
   risk: PursuitRisk
 }).strict();
@@ -35886,7 +37518,7 @@ var PursuitBatch = external_exports.object({
   blocked: external_exports.array(PursuitBatchItem),
   failed: external_exports.array(PursuitBatchItem),
   actual_touch_set: PursuitTouchSet,
-  proof_evidence: NonEmptyStringArray4
+  proof_evidence: NonEmptyStringArray5
 }).strict().superRefine((batch, ctx) => {
   for (const [field, expectedStatus] of [
     ["completed", "completed"],
@@ -36316,7 +37948,7 @@ var pursuitGraphComposeBuilder = {
 };
 
 // dist/flows/pursue/writers/verification.js
-import { readFileSync as readFileSync15 } from "node:fs";
+import { readFileSync as readFileSync18 } from "node:fs";
 
 // dist/flows/pursue/writers/verification-projection.js
 function projectPursuitVerification(observations) {
@@ -36344,7 +37976,7 @@ var pursuitVerificationWriter = {
     if (!context.step.reads.includes(contractPath)) {
       throw new Error(`pursuit.verification@v1 requires step '${context.step.id}' to read ${contractPath}`);
     }
-    const contract = PursuitContract.parse(JSON.parse(readFileSync15(resolveRunRelative(context.runFolder, contractPath), "utf8")));
+    const contract = PursuitContract.parse(JSON.parse(readFileSync18(resolveRunRelative(context.runFolder, contractPath), "utf8")));
     return contract.verification_command_candidates;
   },
   buildResult(observations) {
@@ -37195,7 +38827,7 @@ var reviewIntakeComposeBuilder = {
 };
 
 // dist/flows/review/writers/result.js
-import { readFileSync as readFileSync16 } from "node:fs";
+import { readFileSync as readFileSync19 } from "node:fs";
 
 // dist/flows/review/writers/result-projection.js
 function evidenceSummary(evidence) {
@@ -37252,8 +38884,8 @@ var reviewResultComposeBuilder = {
   // its own resolution.
   build(context) {
     const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, path), "utf8")));
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync19(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync19(resolveRunRelative(context.runFolder, path), "utf8")));
     return projectReviewResult({ intake, relayResult });
   }
 };
@@ -37636,7 +39268,8 @@ var flowDefinitions = [
   runtimeProofFlowDefinition,
   prototypeFlowDefinition,
   buildFlowDefinition,
-  exploreFlowDefinition
+  exploreFlowDefinition,
+  goalFlowDefinition
 ];
 var flowPackages = compileFlowDefinitions(flowDefinitions);
 var PACKAGES_BY_ID = (() => {
@@ -37781,7 +39414,7 @@ var TERMINAL_TARGETS = [
 ];
 
 // dist/runtime/run-files/paths.js
-import { existsSync as existsSync6, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
+import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
 import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4, sep } from "node:path";
 function isInsideOrSame3(root, target) {
   const fromRoot = relative6(root, target);
@@ -37825,7 +39458,7 @@ function resolveRunFilePath(runDir, runRelativePath) {
   if (validation.length > 0) {
     throw new Error(`run file path ${validation[0]}: ${runRelativePath}`);
   }
-  if (existsSync6(root)) {
+  if (existsSync9(root)) {
     if (lstatSync4(root).isSymbolicLink()) {
       throw new Error(`run file path crosses symlink: ${runRelativePath}`);
     }
@@ -37833,7 +39466,7 @@ function resolveRunFilePath(runDir, runRelativePath) {
     let cursor = root;
     for (const segment of runRelativePath.split("/")) {
       cursor = resolve4(cursor, segment);
-      if (!existsSync6(cursor))
+      if (!existsSync9(cursor))
         break;
       if (lstatSync4(cursor).isSymbolicLink()) {
         throw new Error(`run file path crosses symlink: ${runRelativePath}`);
@@ -38032,6 +39665,7 @@ function baseStep(step) {
     writes: toWrites(step.writes),
     ...selection === void 0 ? {} : { selection },
     ...step.skill_slots === void 0 ? {} : { skillSlots: step.skill_slots },
+    ...step.route_from_report === void 0 ? {} : { routeFromReport: step.route_from_report },
     check: step.check,
     ...step.budgets === void 0 ? {} : { budgets: step.budgets }
   };
@@ -38117,270 +39751,6 @@ function fromCompiledFlow(flow) {
 // dist/runtime/trace/trace-store.js
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { join as join4 } from "node:path";
-
-// dist/schemas/trace-entry.js
-var TraceEntryBase = external_exports.object({
-  schema_version: external_exports.literal(1),
-  sequence: external_exports.number().int().nonnegative(),
-  recorded_at: external_exports.string().datetime(),
-  run_id: RunId
-});
-var HEX642 = /^[0-9a-f]{64}$/;
-var ContentHash = external_exports.string().regex(HEX642, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
-var RunBootstrappedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("run.bootstrapped"),
-  flow_id: CompiledFlowId,
-  invocation_id: InvocationId.optional(),
-  depth: Depth,
-  goal: external_exports.string().min(1),
-  change_kind: ChangeKindDeclaration,
-  manifest_hash: external_exports.string().min(1)
-}).strict();
-var StepEnteredTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.entered"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive()
-}).strict();
-var StepReportWrittenTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.report_written"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  report_path: external_exports.string().min(1),
-  report_schema: external_exports.string().min(1)
-}).strict();
-var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("check.evaluated"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  check_kind: external_exports.enum([
-    "schema_sections",
-    "checkpoint_selection",
-    "result_verdict",
-    "fanout_aggregate",
-    "acceptance_criteria"
-  ]),
-  outcome: external_exports.enum(["pass", "fail"]),
-  criterion_id: external_exports.string().min(1).optional(),
-  criterion_kind: external_exports.enum(["command", "report_field"]).optional(),
-  exit_code: external_exports.number().int().nonnegative().optional(),
-  status: external_exports.enum(["passed", "failed"]).optional(),
-  stdout_summary: external_exports.string().optional(),
-  stderr_summary: external_exports.string().optional(),
-  missing_sections: external_exports.array(external_exports.string()).optional(),
-  reason: external_exports.string().optional()
-}).strict();
-var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("checkpoint.requested"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  options: external_exports.array(external_exports.string()).min(1),
-  request_path: external_exports.string().min(1),
-  request_report_hash: ContentHash,
-  auto_resolved: external_exports.boolean().optional()
-}).strict();
-var CheckpointResolvedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("checkpoint.resolved"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  selection: external_exports.string().min(1),
-  auto_resolved: external_exports.boolean(),
-  resolution_source: external_exports.enum(["safe-default", "operator", "safe-autonomous"]),
-  response_path: external_exports.string().min(1)
-}).strict();
-var RelayStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  connector: ResolvedConnector,
-  role: RelayRole,
-  resolved_selection: ResolvedSelection,
-  resolved_from: RelayResolutionSource
-}).strict();
-var LoadedSkillEvidence = external_exports.object({
-  id: SkillId,
-  slot: SkillSlotId.optional(),
-  path: external_exports.string().min(1),
-  sha256: ContentHash,
-  bytes: external_exports.number().int().nonnegative()
-}).strict();
-var SkillsLoadedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("skills.loaded"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  skills: external_exports.array(LoadedSkillEvidence).min(1)
-}).strict();
-var RelayCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  result_path: external_exports.string().min(1),
-  receipt_path: external_exports.string().min(1)
-}).strict();
-var RelayRequestTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.request"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  request_payload_hash: ContentHash
-}).strict();
-var RelayFailedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.failed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  connector: ResolvedConnector,
-  role: RelayRole,
-  resolved_selection: ResolvedSelection,
-  resolved_from: RelayResolutionSource,
-  request_payload_hash: ContentHash,
-  reason: external_exports.string().min(1)
-}).strict();
-var RelayReceiptTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.receipt"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  cli_version: external_exports.string().min(1),
-  receipt_id: external_exports.string().min(1).refine((s) => s.trim().length > 0, {
-    message: "receipt_id must contain at least one non-whitespace character"
-  })
-}).strict();
-var RelayResultTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("relay.result"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  result_report_hash: ContentHash
-}).strict();
-var StepCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  route_taken: external_exports.string().min(1)
-}).strict();
-var StepAbortedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("step.aborted"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  reason: external_exports.string().min(1)
-}).strict();
-var RunClosedOutcome = external_exports.enum(["complete", "aborted", "handoff", "stopped", "escalated"]);
-var SubRunStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("sub_run.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  child_run_id: RunId,
-  child_flow_id: CompiledFlowId,
-  child_entry_mode: external_exports.string().regex(/^[a-z][a-z0-9-]*$/),
-  child_depth: Depth
-}).strict();
-var SubRunCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("sub_run.completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  child_run_id: RunId,
-  child_outcome: RunClosedOutcome,
-  // Verdict admitted from the child's terminal result body. NO_VERDICT_SENTINEL
-  // when the child closed without a parseable result body — mirrors the
-  // existing relay.completed sentinel pattern.
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  // Where the child's result.json was copied into the parent run-folder.
-  result_path: external_exports.string().min(1)
-}).strict();
-var FanoutStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  // Resolved branch list AT EXPANSION TIME. For static branches this
-  // mirrors the schematic's authored list. For dynamic branches this is the
-  // result of template expansion against the source report, so an
-  // auditor can see exactly which N branches were spawned without
-  // reconstructing the expansion themselves.
-  branch_ids: external_exports.array(external_exports.string().min(1)).min(1),
-  on_child_failure: FanoutFailurePolicy
-}).strict();
-var FanoutBranchStartedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.branch_started"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId,
-  // Worktree path provisioned for this branch (relative to project root).
-  // Records where the per-branch isolation lived for postmortem auditing.
-  worktree_path: external_exports.string().min(1)
-}).strict();
-var FanoutBranchCompletedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.branch_completed"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId,
-  child_outcome: RunClosedOutcome,
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative(),
-  result_path: external_exports.string().min(1)
-}).strict();
-var FanoutJoinedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("fanout.joined"),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  // The join policy that ran; mirrors the FanoutAggregateCheck.join.policy
-  // field but echoed into the trace_entry so the audit log is self-contained
-  // (no need to cross-reference the schematic to interpret outcomes).
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
-  // For pick-winner: the selected branch_id. Absent for the other policies.
-  selected_branch_id: external_exports.string().min(1).optional(),
-  // Path to the runtime-built aggregate report.
-  aggregate_path: external_exports.string().min(1),
-  // Count of branches that closed 'complete' vs other outcomes — quick
-  // health summary readable without reconstructing per-branch trace_entries.
-  branches_completed: external_exports.number().int().nonnegative(),
-  branches_failed: external_exports.number().int().nonnegative()
-}).strict();
-var RunClosedTraceEntry = TraceEntryBase.extend({
-  kind: external_exports.literal("run.closed"),
-  outcome: RunClosedOutcome,
-  reason: external_exports.string().optional()
-}).strict();
-var TraceEntry = external_exports.discriminatedUnion("kind", [
-  RunBootstrappedTraceEntry,
-  StepEnteredTraceEntry,
-  StepReportWrittenTraceEntry,
-  CheckEvaluatedTraceEntry,
-  CheckpointRequestedTraceEntry,
-  CheckpointResolvedTraceEntry,
-  RelayStartedTraceEntry,
-  SkillsLoadedTraceEntry,
-  RelayRequestTraceEntry,
-  RelayFailedTraceEntry,
-  RelayReceiptTraceEntry,
-  RelayResultTraceEntry,
-  RelayCompletedTraceEntry,
-  SubRunStartedTraceEntry,
-  SubRunCompletedTraceEntry,
-  FanoutStartedTraceEntry,
-  FanoutBranchStartedTraceEntry,
-  FanoutBranchCompletedTraceEntry,
-  FanoutJoinedTraceEntry,
-  StepCompletedTraceEntry,
-  StepAbortedTraceEntry,
-  RunClosedTraceEntry
-]).superRefine((ev, ctx) => {
-  if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
-    return;
-  if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolved_from", "role"],
-      message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
-    });
-  }
-});
-
-// dist/runtime/trace/trace-store.js
 var TraceStore = class {
   runDir;
   options;
@@ -39569,7 +40939,7 @@ async function readOptionalJsonReport(context, path, required2) {
 async function writeRegisteredComposeReport(step, context) {
   const report = step.writes?.report;
   if (report?.schema === void 0)
-    return false;
+    return void 0;
   const flow = context.run.packageIndex.flow;
   const indexedStep2 = context.indexedStep;
   const composeBuilder = findComposeBuilder(report.schema);
@@ -39591,7 +40961,7 @@ async function writeRegisteredComposeReport(step, context) {
       inputs
     });
     await context.ports.runFiles.writeJson(report, body);
-    return true;
+    return body;
   }
   const closeBuilder = findCloseBuilder(report.schema);
   if (closeBuilder !== void 0) {
@@ -39609,9 +40979,22 @@ async function writeRegisteredComposeReport(step, context) {
       inputs
     });
     await context.ports.runFiles.writeJson(report, body);
-    return true;
+    return body;
   }
   throw new Error(`no compose report writer registered for schema '${report.schema}' at compose step '${step.id}'`);
+}
+function readRouteFromReport(body, path) {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
+      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
+    }
+    cursor = cursor[segment];
+  }
+  if (typeof cursor !== "string" || cursor.length === 0) {
+    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
+  }
+  return cursor;
 }
 async function executeComposeResult(step, context) {
   return executeComposeWithPorts(step, stepExecutionContextFromContext(context, step.id, "compose"));
@@ -39619,7 +41002,7 @@ async function executeComposeResult(step, context) {
 async function executeComposeWithPorts(step, context) {
   try {
     if (step.writes?.report?.schema !== void 0) {
-      await writeRegisteredComposeReport(step, context);
+      const body2 = await writeRegisteredComposeReport(step, context);
       await context.ports.traceLog.append({
         run_id: context.run.runId,
         kind: "step.report_written",
@@ -39628,6 +41011,13 @@ async function executeComposeWithPorts(step, context) {
         report_path: step.writes.report.path,
         report_schema: step.writes.report.schema
       });
+      if (step.routeFromReport !== void 0) {
+        const route = readRouteFromReport(body2, step.routeFromReport.path);
+        if (!Object.hasOwn(step.routes, route)) {
+          throw new Error(`compose step '${step.id}' route_from_report selected undeclared route '${route}'`);
+        }
+        return stepExecutionOutcome({ route, details: { writer: step.writer } });
+      }
       return stepExecutionOutcome({ route: "pass", details: { writer: step.writer } });
     }
     const body = step.body ?? { stepId: step.id, writer: step.writer };
@@ -39876,21 +41266,6 @@ function parseReport(schemaName, resultBody) {
   }
   return { kind: "ok" };
 }
-
-// dist/schemas/result.js
-var RunResult = external_exports.object({
-  schema_version: external_exports.literal(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  goal: external_exports.string().min(1),
-  outcome: RunClosedOutcome,
-  summary: external_exports.string().min(1),
-  closed_at: external_exports.string().datetime(),
-  trace_entries_observed: external_exports.number().int().nonnegative(),
-  manifest_hash: external_exports.string().min(1),
-  reason: external_exports.string().min(1).optional(),
-  verdict: external_exports.string().min(1).optional()
-}).strict();
 
 // dist/shared/json-extraction.js
 function extractJsonObject(text) {
@@ -40841,7 +42216,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync7, readFileSync as readFileSync17 } from "node:fs";
+import { existsSync as existsSync10, readFileSync as readFileSync20 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -40955,10 +42330,10 @@ ${feedback.stderr_summary}`],
 function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
-    if (!existsSync7(abs))
+    if (!existsSync10(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync17(abs, "utf8")}`;
+${readFileSync20(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   const criteriaSection = acceptanceCriteriaSection(step);
@@ -40982,7 +42357,7 @@ ${readFileSync17(abs, "utf8")}`;
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash as createHash4 } from "node:crypto";
-import { existsSync as existsSync8, readFileSync as readFileSync18, readdirSync } from "node:fs";
+import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join6, resolve as resolve5 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
@@ -41027,7 +42402,7 @@ function discoverCandidates(roots) {
   const candidates = /* @__PURE__ */ new Map();
   for (const root of roots) {
     const rootAbs = resolve5(root);
-    if (!existsSync8(rootAbs))
+    if (!existsSync11(rootAbs))
       continue;
     for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
       if (!entry.isDirectory())
@@ -41039,7 +42414,7 @@ function discoverCandidates(roots) {
       if (candidates.has(key))
         continue;
       const skillPath = join6(rootAbs, entry.name, "SKILL.md");
-      if (!existsSync8(skillPath))
+      if (!existsSync11(skillPath))
         continue;
       candidates.set(key, {
         id: id.data,
@@ -41053,7 +42428,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync18(candidate.path, "utf8");
+    text = readFileSync21(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -42876,7 +44251,7 @@ async function writeRuntimeRunResult(files, result) {
 }
 
 // dist/runtime/run/run-boundary.js
-import { readFileSync as readFileSync19 } from "node:fs";
+import { readFileSync as readFileSync22 } from "node:fs";
 import { lstat, mkdir as mkdir4, readdir } from "node:fs/promises";
 
 // dist/runtime/projections/progress.js
@@ -44042,7 +45417,7 @@ async function openRunBoundary(options) {
     files: {
       readText(path) {
         try {
-          return readFileSync19(path, "utf8");
+          return readFileSync22(path, "utf8");
         } catch {
           return void 0;
         }
@@ -44638,7 +46013,7 @@ function readCheckpointRequestContextResult(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
   let requestText;
   try {
-    requestText = readFileSync20(requestAbs, "utf8");
+    requestText = readFileSync23(requestAbs, "utf8");
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
@@ -44982,7 +46357,7 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync9, readFileSync as readFileSync21 } from "node:fs";
+import { existsSync as existsSync12, readFileSync as readFileSync24 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join12, resolve as resolve6 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
@@ -45002,9 +46377,9 @@ function parseConfigYaml(text, sourcePath) {
 }
 function loadConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve6(sourcePath);
-  if (!existsSync9(abs))
+  if (!existsSync12(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync21(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync24(abs, "utf8"), abs);
   try {
     return LayeredConfig.parse({
       layer,
@@ -45270,7 +46645,7 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync11, mkdirSync, readFileSync as readFileSync23, rmSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, rmSync, writeFileSync } from "node:fs";
 import { dirname as dirname5, isAbsolute as isAbsolute8, join as join13, relative as relative8, resolve as resolve8 } from "node:path";
 
 // dist/schemas/operator-summary.js
@@ -46380,15 +47755,15 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync10, readFileSync as readFileSync22 } from "node:fs";
+import { existsSync as existsSync13, readFileSync as readFileSync25 } from "node:fs";
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync10(path))
+  if (!existsSync13(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync22(path, "utf8"));
+  const parsed = JSON.parse(readFileSync25(path, "utf8"));
   return isObject3(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -46783,6 +48158,25 @@ function prototypeDetails(flowReport) {
     details.push(`Next step: ${nextStep}`);
   return details;
 }
+function goalArrayDetail(flowReport, field, label) {
+  const values = stringArrayField(flowReport, field);
+  return `${label}: ${values.length === 0 ? "none" : values.join("; ")}.`;
+}
+function goalEvidenceDetails(flowReport) {
+  const links = arrayField(flowReport, "evidence_links").filter(isObject3).map((link) => {
+    const reportId = stringField2(link, "report_id") ?? "report";
+    const path = stringField2(link, "path") ?? "(missing path)";
+    return `${reportId} -> ${path}`;
+  });
+  return `Checks: ${links.length === 0 ? "none" : links.join("; ")}.`;
+}
+function goalGateDetail(flowReport) {
+  const gate = isObject3(flowReport?.gate) ? flowReport.gate : void 0;
+  const clean = numberField(gate, "clean_streak") ?? 0;
+  const required2 = numberField(gate, "required_passes") ?? 2;
+  const verdict = stringField2(gate, "final_verdict") ?? "unknown";
+  return `Gate: ${clean}/${required2} passes; final verdict ${verdict}.`;
+}
 function flowOutcomeOrRunFallback(flowReport, runOutcome2) {
   return stringField2(flowReport, "outcome") ?? runOutcome2;
 }
@@ -46827,6 +48221,24 @@ var prototypeProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
     details: prototypeDetails(flowReport)
   };
 };
+var goalProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
+  const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
+  const gate = isObject3(flowReport?.gate) ? flowReport.gate : void 0;
+  const clean = numberField(gate, "clean_streak") ?? 0;
+  const required2 = numberField(gate, "required_passes") ?? 2;
+  const headline = outcome === "complete" ? `Circuit: Goal complete. Evidence satisfied and gate passed ${clean}/${required2}.` : `Circuit: Goal finished with outcome ${outcome}. Gate passed ${clean}/${required2}.`;
+  return {
+    headline,
+    details: [
+      goalArrayDetail(flowReport, "proven_claims", "Proven"),
+      goalArrayDetail(flowReport, "missing_or_weak_claims", "Still weak or missing"),
+      goalEvidenceDetails(flowReport),
+      goalGateDetail(flowReport),
+      goalArrayDetail(flowReport, "recovery_history", "Recovery"),
+      goalArrayDetail(flowReport, "rerun_commands", "Next")
+    ]
+  };
+};
 var fixProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
   const verification = stringField2(flowReport, "verification_status") ?? "unknown";
@@ -46867,6 +48279,7 @@ var SUMMARY_PROJECTORS = {
   build: buildProjector,
   explore: exploreSummaryProjector,
   fix: fixProjector,
+  goal: goalProjector,
   prototype: prototypeProjector,
   pursue: pursueProjector,
   review: reviewProjector
@@ -46879,10 +48292,10 @@ function projectSummary(input) {
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
   const path = join13(runFolder, "reports", "operator-summary.json");
-  if (!existsSync11(path))
+  if (!existsSync14(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync23(path, "utf8"));
+    const raw = JSON.parse(readFileSync26(path, "utf8"));
     if (!isObject3(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -46918,10 +48331,10 @@ function readCheckpointRequest(runFolder, checkpoint) {
   }
   if (!isInsideOrSame4(resolve8(runFolder), requestPath))
     return void 0;
-  if (!existsSync11(requestPath))
+  if (!existsSync14(requestPath))
     return void 0;
   try {
-    const parsed = JSON.parse(readFileSync23(requestPath, "utf8"));
+    const parsed = JSON.parse(readFileSync26(requestPath, "utf8"));
     return isObject3(parsed) ? parsed : void 0;
   } catch {
     return void 0;
@@ -46971,10 +48384,10 @@ function evidenceLinks2(runFolder, report) {
 }
 function readAutoResolutions(runFolder) {
   const tracePath = join13(runFolder, "trace.ndjson");
-  if (!existsSync11(tracePath))
+  if (!existsSync14(tracePath))
     return [];
   const records = [];
-  for (const line of readFileSync23(tracePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync26(tracePath, "utf8").split(/\r?\n/)) {
     if (line.trim().length === 0)
       continue;
     let entry;
@@ -47107,14 +48520,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync11(candidateHtmlPath))
+    if (existsSync14(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
       writeFileSync(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync11(candidateHtmlPath))
+      if (existsSync14(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -47197,12 +48610,12 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync12, mkdirSync as mkdirSync2, readFileSync as readFileSync25, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync15, mkdirSync as mkdirSync2, readFileSync as readFileSync28, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname7, join as join14, resolve as resolve10 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync24 } from "node:fs";
+import { readFileSync as readFileSync27 } from "node:fs";
 import { dirname as dirname6, relative as relative9, resolve as resolve9 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
@@ -47236,7 +48649,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync24(resolve9(dirname6(resolve9(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync27(resolve9(dirname6(resolve9(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -47407,9 +48820,9 @@ function candidateTemplatePaths(args) {
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync12(candidate))
+    if (!existsSync15(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync25(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync28(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -47488,8 +48901,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync12(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync25(manifestPath(input.home), "utf8"));
+  if (existsSync15(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync28(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -47533,23 +48946,23 @@ function writeDraft(input) {
 }
 function loadDraftFlow(home, slug) {
   const path = join14(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync25(path, "utf8")));
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync28(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync12(join14(draft, "SKILL.md"))) {
+  if (!existsSync15(join14(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
   const customFlowRoot = join14(flowRoot(input.home), input.slug);
   mkdirSync2(skillRoot, { recursive: true });
   mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join14(skillRoot, "SKILL.md"), readFileSync25(join14(draft, "SKILL.md"), "utf8"));
-  writeText(join14(skillRoot, "circuit.yaml"), readFileSync25(join14(draft, "circuit.yaml"), "utf8"));
-  writeText(join14(customFlowRoot, "circuit.json"), readFileSync25(join14(draft, "circuit.json"), "utf8"));
-  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync25(join14(draft, "command.md"), "utf8"));
+  writeText(join14(skillRoot, "SKILL.md"), readFileSync28(join14(draft, "SKILL.md"), "utf8"));
+  writeText(join14(skillRoot, "circuit.yaml"), readFileSync28(join14(draft, "circuit.yaml"), "utf8"));
+  writeText(join14(customFlowRoot, "circuit.json"), readFileSync28(join14(draft, "circuit.json"), "utf8"));
+  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync28(join14(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -47613,11 +49026,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync12(join14(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync15(join14(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync12(join14(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync15(join14(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -47683,7 +49096,7 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync14, mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync17, mkdirSync as mkdirSync3, readFileSync as readFileSync31, writeFileSync as writeFileSync4 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import { dirname as dirname8, join as join18, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -47693,13 +49106,13 @@ import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve11 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync26, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync29, writeFileSync as writeFileSync3 } from "node:fs";
 import { join as join15 } from "node:path";
 function manifestSnapshotPath(runFolder) {
   return join15(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync26(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync29(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -47708,7 +49121,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync13 } from "node:fs";
+import { existsSync as existsSync16 } from "node:fs";
 import { join as join16 } from "node:path";
 
 // dist/schemas/run-status.js
@@ -47870,9 +49283,9 @@ function optionalReportPaths(runFolder) {
   const operatorSummary = join16(runFolder, "reports", "operator-summary.json");
   const operatorSummaryMarkdown = join16(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync13(result) ? { result_path: result } : {},
-    ...existsSync13(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync13(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync16(result) ? { result_path: result } : {},
+    ...existsSync16(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync16(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -47887,14 +49300,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync27 } from "node:fs";
+import { readFileSync as readFileSync30 } from "node:fs";
 import { join as join17 } from "node:path";
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
   const tracePath = join17(runFolder, "trace.ndjson");
-  const text = readFileSync27(tracePath, "utf8");
+  const text = readFileSync30(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -48079,7 +49492,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync27(requestAbs, "utf8");
+    requestText = readFileSync30(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -48140,7 +49553,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync27(join17(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync30(join17(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -48724,23 +50137,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync14(indexAbs))
+  if (!existsSync17(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync28(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync31(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync14(recordAbs)) {
+  if (!existsSync17(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
   try {
-    record2 = ContinuityRecord.parse(JSON.parse(readFileSync28(recordAbs, "utf8")));
+    record2 = ContinuityRecord.parse(JSON.parse(readFileSync31(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -48773,7 +50186,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync28(0, "utf8");
+  const raw = readFileSync31(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -48866,7 +50279,7 @@ function resolveHooksFileArg(args) {
 }
 function resolveLauncherArg(args) {
   const launcher = resolve12(args.launcher ?? defaultLauncherPath());
-  if (!existsSync14(launcher)) {
+  if (!existsSync17(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -48892,9 +50305,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync14(path))
+  if (!existsSync17(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync28(path, "utf8"));
+  const parsed = JSON.parse(readFileSync31(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -49004,9 +50417,9 @@ function launcherPathFromCircuitHookCommand(command) {
 function writeHooksConfig(path, config2) {
   mkdirSync3(dirname8(path), { recursive: true });
   let backupPath;
-  if (existsSync14(path)) {
+  if (existsSync17(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync14(candidate)) {
+    if (!existsSync17(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
@@ -49057,7 +50470,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync14(hooksPath)) {
+  if (!existsSync17(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -49096,7 +50509,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync14(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync17(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -49127,7 +50540,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync14(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync17(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -49151,7 +50564,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync14(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync17(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -49349,7 +50762,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync28(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync31(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -49375,7 +50788,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync14(indexAbs)) {
+  if (!existsSync17(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -49413,7 +50826,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync14(recordAbs)) {
+  if (!existsSync17(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -49698,7 +51111,7 @@ function readSourceVersion() {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync29(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync32(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -49897,7 +51310,7 @@ function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   const root = resolve13(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
     const perMode = resolve13(root, flowName, `${modeName}.json`);
-    if (existsSync15(perMode))
+    if (existsSync18(perMode))
       return perMode;
   }
   return resolve13(root, flowName, "circuit.json");
@@ -50038,10 +51451,10 @@ function validateAutonomousCheckpointPolicies(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync15(fixturePath)) {
+  if (!existsSync18(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync29(fixturePath);
+  const bytes = readFileSync32(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -50134,7 +51547,7 @@ async function main(argv, options = {}) {
         ...progress2 === void 0 ? {} : { progress: progress2 },
         progressSurfaceForFlowId
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync32(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -50290,7 +51703,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync29(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync32(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,
