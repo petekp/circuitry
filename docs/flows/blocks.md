@@ -73,6 +73,7 @@ be a separate schematic step so the skipped-review path stays visible.
 | Intake | Capture the user's goal and requested mode. | Goal text, explicit flow, entry mode, project context. | Normalized task intake. | Route, Frame, Human Decision. |
 | Route | Choose the flow or block sequence. | Intake, known flow catalog, shortcut rules. | Route decision with reason. | Frame, Human Decision, Stop. |
 | Frame | Define the work boundary and proof needed. | Intake, selected flow, constraints, known context. | Brief with scope, constraints, proof plan. | Human Decision, Plan, Diagnose, Act. |
+| Clarify | Turn a rough request into a clear task for the selected flow. | Intake, selected flow, target guidance. | Clarified task with outcome, proof, constraints, scope, assumptions, and stop conditions. | Flow-specific contract, Human Decision, Stop. |
 | Human Decision | Pause for an operator choice and record it. | Question, options, default policy, mode policy, current evidence. | Decision report with selected option and source. | Continue, revise, stop, hand off, escalate. |
 | Gather Context | Collect facts before deciding or acting. | Brief, target paths, search instructions, allowed tools. | Context packet with sources and confidence. | Plan, Diagnose, Review, Human Decision. |
 | Diagnose | Explain what is wrong or unknown. | Brief, context packet, repro instructions, observed behavior. | Diagnosis with cause, confidence, repro status, diagnostic path. | Act, Gather Context, Human Decision, Stop. |

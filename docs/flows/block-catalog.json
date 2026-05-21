@@ -69,6 +69,37 @@
       }
     },
     {
+      "id": "clarify",
+      "title": "Clarify",
+      "purpose": "Turn a rough operator request into a clear task for the selected flow.",
+      "input_contracts": ["task.intake@v1", "route.decision@v1"],
+      "alternative_input_contracts": [["task.intake@v1"]],
+      "output_contract": "clarified.task@v1",
+      "action_surface": "worker",
+      "produces_evidence": [
+        "original request",
+        "clarified task",
+        "desired outcome",
+        "proof needed",
+        "constraints",
+        "scope",
+        "assumptions",
+        "missing information",
+        "stop conditions"
+      ],
+      "check": {
+        "kind": "schema",
+        "description": "The clarified task must preserve the operator request, name the outcome, identify proof, and separate assumptions from missing information."
+      },
+      "allowed_routes": ["continue", "ask", "stop"],
+      "human_interaction": "optional",
+      "host_capabilities": {
+        "claude": [],
+        "codex": [],
+        "non_interactive": []
+      }
+    },
+    {
       "id": "human-decision",
       "title": "Human Decision",
       "purpose": "Ask the operator a bounded question and record the answer as flow evidence.",

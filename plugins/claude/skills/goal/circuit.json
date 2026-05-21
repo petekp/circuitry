@@ -21,13 +21,13 @@
       "autonomous": false
     }
   },
-  "starts_at": "goal-contract",
+  "starts_at": "clarify-goal",
   "stages": [
     {
       "id": "goal-frame-stage",
       "title": "Frame",
       "canonical": "frame",
-      "steps": ["goal-contract"]
+      "steps": ["clarify-goal", "goal-contract"]
     },
     {
       "id": "goal-act-stage",
@@ -68,10 +68,45 @@
   },
   "steps": [
     {
+      "id": "clarify-goal",
+      "title": "Clarify - shape Goal task",
+      "protocol": "goal-clarify@v1",
+      "reads": [],
+      "routes": {
+        "continue": "goal-contract",
+        "pass": "goal-contract",
+        "ask": "@stop",
+        "stop": "@stop"
+      },
+      "route_from_report": {
+        "path": ["verdict"]
+      },
+      "executor": "worker",
+      "kind": "relay",
+      "role": "researcher",
+      "writes": {
+        "report": {
+          "path": "reports/goal/clarified-task.json",
+          "schema": "goal.clarified-task@v1"
+        },
+        "request": "reports/relay/goal-clarify.request.json",
+        "receipt": "reports/relay/goal-clarify.receipt.txt",
+        "result": "reports/relay/goal-clarify.result.json"
+      },
+      "check": {
+        "kind": "result_verdict",
+        "source": {
+          "kind": "relay_result",
+          "ref": "result"
+        },
+        "pass": ["continue", "ask", "stop"]
+      }
+    },
+    {
       "id": "goal-contract",
       "title": "Goal - write contract and select static target",
       "protocol": "goal-contract@v1",
-      "reads": [],
+      "reads": ["reports/goal/clarified-task.json"],
       "routes": {
         "continue": "goal-run-build",
         "pass": "goal-run-build",

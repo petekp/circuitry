@@ -4,6 +4,7 @@ export const FLOW_BLOCK_IDS = [
   'intake',
   'route',
   'frame',
+  'clarify',
   'human-decision',
   'gather-context',
   'diagnose',

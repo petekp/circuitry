@@ -229,6 +229,24 @@ function timeoutMs(step: RelayStep): number | undefined {
   return typeof wallClock === 'number' ? wallClock : undefined;
 }
 
+function readRouteFromReportBody(body: unknown, path: readonly string[]): string {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) {
+      throw new Error(
+        `route_from_report path '${path.join('.')}' descended into a non-object at '${segment}'`,
+      );
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  if (typeof cursor !== 'string' || cursor.length === 0) {
+    throw new Error(
+      `route_from_report path '${path.join('.')}' must resolve to a non-empty string`,
+    );
+  }
+  return cursor;
+}
+
 function suppliedConnectorFromRelayer(context: RunContext): RelayConnector | undefined {
   if (context.relayer === undefined) return undefined;
   return {
@@ -395,6 +413,7 @@ export async function executeProductionRelayAttempt(input: {
     context.runDir,
     loadedSkills,
     context.acceptanceRetryFeedback,
+    context.goal,
   );
 
   const request = step.writes?.request;
@@ -526,6 +545,13 @@ export async function executeProductionRelayAttempt(input: {
     failureKind = validation.failureKind;
     acceptance = validation.acceptance;
   }
+  if (checkEvaluation.kind === 'pass' && evaluation.kind === 'pass' && parsedBody === undefined) {
+    try {
+      parsedBody = JSON.parse(relayResult.result_body) as unknown;
+    } catch {
+      parsedBody = undefined;
+    }
+  }
 
   const relayCompletedVerdict =
     evaluation.kind === 'pass'
@@ -550,13 +576,6 @@ export async function executeProductionRelayAttempt(input: {
     let reportBody: unknown;
     if (checkEvaluation.kind === 'pass' && evaluation.kind === 'pass') {
       reportBody = parsedBody;
-      if (reportBody === undefined) {
-        try {
-          reportBody = JSON.parse(relayResult.result_body) as unknown;
-        } catch {
-          reportBody = undefined;
-        }
-      }
     } else if (checkEvaluation.kind === 'fail' && step.report.schema !== undefined) {
       const parseResult = parseReport(step.report.schema, relayResult.result_body);
       if (parseResult.kind === 'ok') {
@@ -704,8 +723,18 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   }
 
   const { evaluation } = relayAttempt;
-  if (evaluation.kind === 'pass')
+  if (evaluation.kind === 'pass') {
+    if (step.routeFromReport !== undefined) {
+      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      if (!Object.hasOwn(step.routes, route)) {
+        throw new Error(
+          `relay step '${step.id}' route_from_report selected undeclared route '${route}'`,
+        );
+      }
+      return { route, details: { verdict: evaluation.verdict } };
+    }
     return { route: 'pass', details: { verdict: evaluation.verdict } };
+  }
 
   if (relayAttempt.acceptance_failure !== undefined) {
     const failure = relayAttempt.acceptance_failure;

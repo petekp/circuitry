@@ -10,6 +10,7 @@ Use this directory with care:
 | `3-axis-rigor-tournament-autonomous-v1.md` | Archived | Historical target spec. Current CLI and flow-axis behavior lives in code and generated surfaces. |
 | `checkpoint-experience-v1.md` | Research note | Checkpoint UX target. Verify current behavior against code before acting. |
 | `codex-first-class-writable-worker-v1.md` | Implemented V1 record | Source-backed spec for migrating the public `codex` worker connector to a first-class write-capable worker and removing the separate `codex-isolated` built-in. Current behavior is defined by code, tests, generated surfaces, config, and contracts. |
+| [clarify-block-v1.md](clarify-block-v1.md) | Implementation spec | Plan for adding the reusable Clarify block and wiring it into Goal first, then Pursue after direct-run and Goal-child proof. Not current behavior. |
 | `explore-intent-v1.md` | Research note | Upstream product intent for Explore. Not reconciled as current implementation. |
 | `headless-engine-host-api-v1.md` | Research note | Used by local plan-execution proof paths. Not a shipped host API unless code and contracts agree. |
 | [narration-display-profiles.md](narration-display-profiles.md) | Canonical | Companion to [docs/contracts/host-rendering.md](../contracts/host-rendering.md); covered by host experience tests. |

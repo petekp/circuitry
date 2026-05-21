@@ -4,9 +4,13 @@
   "title": "Goal Schematic",
   "purpose": "Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.",
   "status": "active",
-  "starts_at": "goal-contract",
+  "starts_at": "clarify-goal",
   "initial_contracts": ["task.intake@v1", "route.decision@v1", "flow.question@v1"],
   "contract_aliases": [
+    {
+      "generic": "clarified.task@v1",
+      "actual": "goal.clarified-task@v1"
+    },
     {
       "generic": "goal.contract@v1",
       "actual": "goal.child-fix-result@v1"
@@ -54,13 +58,60 @@
   ],
   "items": [
     {
+      "id": "clarify-goal",
+      "block": "clarify",
+      "title": "Clarify - shape Goal task",
+      "stage": "frame",
+      "input": {
+        "task": "task.intake@v1",
+        "route": "route.decision@v1"
+      },
+      "output": "goal.clarified-task@v1",
+      "evidence_requirements": [
+        "original request",
+        "clarified task",
+        "desired outcome",
+        "proof needed",
+        "constraints",
+        "scope",
+        "assumptions",
+        "missing information",
+        "stop conditions"
+      ],
+      "execution": {
+        "kind": "relay",
+        "role": "researcher"
+      },
+      "skill_slots": [],
+      "routes": {
+        "continue": "goal-contract",
+        "ask": "@stop",
+        "stop": "@stop"
+      },
+      "route_overrides": {},
+      "route_from_report": {
+        "path": ["verdict"]
+      },
+      "protocol": "goal-clarify@v1",
+      "writes": {
+        "report_path": "reports/goal/clarified-task.json",
+        "request_path": "reports/relay/goal-clarify.request.json",
+        "receipt_path": "reports/relay/goal-clarify.receipt.txt",
+        "result_path": "reports/relay/goal-clarify.result.json"
+      },
+      "check": {
+        "pass": ["continue", "ask", "stop"]
+      }
+    },
+    {
       "id": "goal-contract",
       "block": "goal",
       "title": "Goal - write contract and select static target",
       "stage": "frame",
       "input": {
         "task": "task.intake@v1",
-        "route": "route.decision@v1"
+        "route": "route.decision@v1",
+        "clarified": "goal.clarified-task@v1"
       },
       "output": "goal.contract@v1",
       "evidence_requirements": [

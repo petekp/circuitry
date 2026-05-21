@@ -45,6 +45,129 @@ export type GoalGateRecoveryRoute = z.infer<typeof GoalGateRecoveryRoute>;
 
 const REQUIRED_GATE_PASSES = 2;
 
+export const GoalClarifiedTaskProofKind = z.enum([
+  'command',
+  'report',
+  'review',
+  'source',
+  'checkpoint',
+]);
+export type GoalClarifiedTaskProofKind = z.infer<typeof GoalClarifiedTaskProofKind>;
+
+export const GoalClarifiedTask = z
+  .object({
+    schema: z.literal('goal.clarified-task@v1'),
+    verdict: z.enum(['continue', 'ask', 'stop']),
+    original_request: z.string().min(1),
+    target: z
+      .object({
+        kind: z.literal('flow'),
+        id: z.literal('goal'),
+      })
+      .strict(),
+    guide_id: z.literal('goal-v1'),
+    clarified_prompt: z.string().min(1),
+    objective: z.string().min(1),
+    desired_outcome: z.string().min(1),
+    proof_needed: z
+      .array(
+        z
+          .object({
+            kind: GoalClarifiedTaskProofKind,
+            description: z.string().min(1),
+            required: z.boolean(),
+          })
+          .strict(),
+      )
+      .min(1),
+    constraints: z.array(z.string().min(1)),
+    scope: z
+      .object({
+        in_bounds: z.array(z.string().min(1)),
+        out_of_bounds: z.array(z.string().min(1)),
+      })
+      .strict(),
+    assumptions: z.array(z.string().min(1)),
+    missing_information: z.array(
+      z
+        .object({
+          question: z.string().min(1),
+          why_it_matters: z.string().min(1),
+          safe_default: z.string().min(1).optional(),
+        })
+        .strict(),
+    ),
+    iteration_policy: NonEmptyStringArray,
+    stop_conditions: z.array(z.string().min(1)),
+    suggested_parts: z.array(
+      z
+        .object({
+          title: z.string().min(1),
+          objective: z.string().min(1),
+          proof_needed: z.array(z.string().min(1)),
+          risk_notes: z.array(z.string().min(1)),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .superRefine((task, ctx) => {
+    if (!task.proof_needed.some((proof) => proof.required)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['proof_needed'],
+        message: 'Goal Clarify requires at least one required proof entry',
+      });
+    }
+    if (task.verdict === 'ask' && task.missing_information.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['missing_information'],
+        message: 'Goal Clarify ask verdict requires missing information',
+      });
+    }
+    if (task.verdict === 'stop' && task.stop_conditions.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['stop_conditions'],
+        message: 'Goal Clarify stop verdict requires a stop condition',
+      });
+    }
+    const clarifyAuthoredText = [
+      task.clarified_prompt,
+      task.objective,
+      task.desired_outcome,
+      ...task.proof_needed.map((proof) => proof.description),
+      ...task.constraints,
+      ...task.scope.in_bounds,
+      ...task.scope.out_of_bounds,
+      ...task.assumptions,
+      ...task.missing_information.flatMap((item) => [
+        item.question,
+        item.why_it_matters,
+        item.safe_default ?? '',
+      ]),
+      ...task.iteration_policy,
+      ...task.stop_conditions,
+      ...task.suggested_parts.flatMap((part) => [
+        part.title,
+        part.objective,
+        ...part.proof_needed,
+        ...part.risk_notes,
+      ]),
+    ];
+    const forbiddenReviewText =
+      /before completion[\s\S]{0,120}adversarially review|two consecutive(?:\s+\w+){0,3}\s+(?:reviews?|passes?)|two[-\s]+clean[-\s]+reviews?|medium-or-above\s+(?:gate|completion|finding ceremony|gate finding)/i;
+    if (clarifyAuthoredText.some((text) => forbiddenReviewText.test(text))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['clarified_prompt'],
+        message: 'Goal Clarify must not include the adversarial review loop',
+      });
+    }
+  });
+export type GoalClarifiedTask = z.infer<typeof GoalClarifiedTask>;
+
 const GoalRequiredEvidence = z
   .object({
     kind: GoalRequiredEvidenceKind,

@@ -441,11 +441,11 @@ function validateExecutionShape(
       message: 'acceptance_criteria is only allowed for relay execution',
     });
   }
-  if (item.route_from_report !== undefined && kind !== 'compose') {
+  if (item.route_from_report !== undefined && kind !== 'compose' && kind !== 'relay') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['route_from_report'],
-      message: 'route_from_report is only allowed for compose execution',
+      message: 'route_from_report is only allowed for compose or relay execution',
     });
   }
   if (kind === 'fanout' && item.fanout === undefined) {
