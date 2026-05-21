@@ -9,10 +9,12 @@
 # (`npm run emit-flows`) writes the generated outputs.
 
 plugins/claude/commands/*.md linguist-generated=true
+plugins/claude/runtime/circuit.js linguist-generated=true
 plugins/claude/skills/**/*.json linguist-generated=true
 
 plugins/codex/commands/*.md linguist-generated=true
 plugins/codex/flows/**/*.json linguist-generated=true
+plugins/codex/runtime/circuit.js linguist-generated=true
 plugins/codex/skills/**/SKILL.md linguist-generated=true
 
 generated/flows/**/*.json linguist-generated=true
