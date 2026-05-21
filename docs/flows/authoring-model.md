@@ -25,7 +25,7 @@ Use it with:
 - [docs/contracts/compiled-flow.md](../contracts/compiled-flow.md) for runtime
   graph invariants.
 
-This document is hand-authored because it explains intent and boundaries.
+Hand-authored intent and boundaries live here.
 Do not hand-maintain current flow inventories here. Current flow data comes from
 `src/flows/<id>/data.ts`; `src/flows/<id>/flow.ts` binds that plain value to the
 compiler. Generated schematics live under

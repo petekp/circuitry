@@ -2,9 +2,8 @@
 // synthetic mini-catalogs so the assertions don't depend on incidental
 // properties of the live flow set.
 //
-// What this file is NOT: a duplicate of tests/contracts/flow-router.test.ts.
-// That test exercises the live classifier against real-world phrases.
-// This test isolates the three mechanisms the live test conflates:
+// Unlike tests/contracts/flow-router.test.ts, which exercises the live
+// classifier against real-world phrases, these tests isolate:
 //   - routing.order precedence
 //   - isDefault selection
 //   - skipOnPlanningReport suppression

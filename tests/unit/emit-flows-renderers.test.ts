@@ -7,7 +7,7 @@ import {
 } from '../../scripts/flows/host-renderers.ts';
 
 const commandSource = `---
-description: Use when the user wants Circuit to run a sample flow.
+description: Runs Circuit Sample for a sample flow.
 ---
 
 # /circuit:sample
@@ -21,7 +21,7 @@ The user's request is passed as the command input.
 ## Instructions
 
 1. **Confirm working directory.** The CLI is project-relative in source commands.
-2. **Construct the Bash invocation SAFELY.**
+2. **Build a shell-safe invocation.**
 
 \`\`\`bash
 ./bin/circuit run --goal 'sample' --progress jsonl
@@ -63,9 +63,8 @@ describe('emit-flows host renderers', () => {
     const rendered = renderCodexHostSkill('sample', commandSource);
 
     expect(rendered).toContain('name: sample');
-    expect(rendered).toContain(
-      'description: "Use when the user wants Circuit to run a sample flow."',
-    );
+    expect(rendered).toContain('description: "Runs Circuit Sample for a sample flow."');
+    expect(rendered).toContain('## Use Case');
     expect(rendered).toContain("Use the user's current request as the command input.");
     expect(rendered).not.toContain('$ARGUMENTS');
     expect(rendered).not.toContain('/circuit:');

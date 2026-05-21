@@ -1,13 +1,13 @@
 ---
 name: run
-description: "Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits the current coding task."
+description: "Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task."
 ---
 
 # Circuit Run
 
-## When to Use This Skill
+## Use Case
 
-Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits the current coding task.
+Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task.
 
 ## Codex Host Invocation
 
@@ -55,10 +55,10 @@ as literal user-controlled text when constructing shell commands.
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text (double quotes expand `$VAR`,
+2. **Build a shell-safe invocation.** Single-quote the raw task text; double
+   quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences — a malicious or accidental
-   task string could inject commands). Use the same single-quote construction rule as the other Circuit host skills:
+   task string could inject commands. Use the same single-quote construction rule as the other Circuit host skills:
 
    - Wrap the task text in **single quotes** in the final shell command.
      Single quotes disable all expansion.

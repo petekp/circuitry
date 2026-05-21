@@ -17,8 +17,7 @@ about that flow specifically and more about whether such a capability
 unlocks a *ratchet* — a mechanism by which the agent gets durably
 better over time, not just a flexible flow that feels smart for a week.
 
-This doc captures the design picture and the strategic frame. A future
-build would slot into stages 1–3 below.
+A future build would slot into stages 1–3 below.
 
 ## Where Circuit is today
 

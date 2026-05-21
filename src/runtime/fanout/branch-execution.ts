@@ -1,9 +1,6 @@
-// Fanout branch execution.
-//
-// This file owns the per-branch runtime work after fanout branches have been
-// expanded. Keep production relay attempts, injected connector compatibility,
-// and sub-run worktree execution distinct so trace and report outputs stay
-// comparable across branch kinds.
+// Per-branch runtime work after fanout expansion. Keep production relay
+// attempts, injected connector compatibility, and sub-run worktree execution
+// distinct so trace and report outputs stay comparable across branch kinds.
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';

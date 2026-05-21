@@ -74,6 +74,8 @@ locations:
 | Config and connector routing | [docs/configuration.md](configuration.md) |
 | Flow and block authoring | [docs/flows/authoring-model.md](flows/authoring-model.md) and [docs/flows/blocks.md](flows/blocks.md) |
 | Generated command, skill, schematic, manifest, and plugin output ownership | [docs/generated-surfaces.md](generated-surfaces.md) |
+| Host package maps | [plugins/README.md](../plugins/README.md), [plugins/claude/README.md](../plugins/claude/README.md), and [plugins/codex/README.md](../plugins/codex/README.md) |
+| Source tree and layer maps | [src/README.md](../src/README.md), [src/runtime/README.md](../src/runtime/README.md), [src/schemas/README.md](../src/schemas/README.md), [src/flows/README.md](../src/flows/README.md), [src/shared/README.md](../src/shared/README.md), and [src/types/README.md](../src/types/README.md) |
 | Direct command source ownership | [src/commands/README.md](../src/commands/README.md) |
 | Release proof lifecycle | [docs/release/proofs/README.md](release/proofs/README.md) |
 | Host release QA checklist | [docs/host-trial-checklist.md](host-trial-checklist.md) |
@@ -91,7 +93,7 @@ The 2026-05-20 documentation audit inventory is
 | Operator entry | [README.md](../README.md), [docs/first-run.md](first-run.md), [docs/operator-guide.md](operator-guide.md), [docs/configuration.md](configuration.md) | Current user-facing setup and operation. |
 | Agent setup | [docs/agent-setup.md](agent-setup.md), [AGENTS.md](../AGENTS.md) | Instructions for coding agents in this checkout. |
 | Vocabulary | [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) | Current product terms for product prose, docs, contracts, and flow authoring notes. |
-| Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md) | Current codebase, flow, block, contract, source tree, and script ownership reference. |
+| Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md), [plugins/README.md](../plugins/README.md) | Current codebase, flow, block, contract, source tree, host package, and script ownership reference. |
 | Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Generated mirrors are regenerated from source. |
 | Release QA | [docs/host-trial-checklist.md](host-trial-checklist.md) | Checklist for validating host readiness before broader use. |
 | Working strategy | [docs/positioning-and-strategy.md](positioning-and-strategy.md) | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |

@@ -54,6 +54,9 @@ describe('documentation surface', () => {
       '[docs/configuration.md](configuration.md)',
       '[docs/flows/authoring-model.md](flows/authoring-model.md)',
       '[docs/generated-surfaces.md](generated-surfaces.md)',
+      '[plugins/README.md](../plugins/README.md)',
+      '[plugins/codex/README.md](../plugins/codex/README.md)',
+      '[src/shared/README.md](../src/shared/README.md)',
       '[src/commands/README.md](../src/commands/README.md)',
       '[src/README.md](../src/README.md)',
       '[docs/release/proofs/README.md](release/proofs/README.md)',
@@ -67,11 +70,20 @@ describe('documentation surface', () => {
       '| Agent operating rules | `AGENTS.md` | Merge duplicate |',
       '| Flow authoring | `docs/flows/authoring-model.md` | Keep and expand |',
       '| Generated ownership | `docs/generated-surfaces.md` | Keep generated |',
+      '| Host package maps | `plugins/README.md`, `plugins/claude/README.md`, `plugins/codex/README.md` | Keep thin |',
+      '| Source layer maps | `src/README.md`, `src/runtime/README.md`, `src/schemas/README.md`, `src/flows/README.md`, `src/shared/README.md`, `src/types/README.md` | Keep thin |',
       '| Retired Claude guide | `CLAUDE.md` | Remove |',
       '| Generated host mirrors | `plugins/claude/**`, `plugins/codex/**` | Generated |',
     ]) {
       expect(inventory).toContain(decision);
     }
+
+    expect(inventory).toContain(
+      'rg --files README.md AGENTS.md UBIQUITOUS_LANGUAGE.md docs plugins src/README.md src/*/README.md src/commands src/flows',
+    );
+    expect(inventory).toContain(
+      'plugins/README.md plugins/claude/README.md plugins/codex/README.md src/README.md src/*/README.md',
+    );
   });
 
   it('keeps the host-ready flow-authoring playbook centralized', () => {
@@ -164,9 +176,11 @@ describe('documentation surface', () => {
       '## Migration Rationale',
       'docs/architecture/codebase-walkthrough.md',
       'docs/reference/script-inventory.md',
+      'plugins/codex/README.md',
       'src/runtime/README.md',
       'src/schemas/README.md',
       'src/flows/README.md',
+      'src/shared/README.md',
       'src/types/README.md',
     ]) {
       expect(repoMap).toContain(required);
@@ -176,6 +190,7 @@ describe('documentation surface', () => {
       '[src/runtime/README.md](runtime/README.md)',
       '[src/schemas/README.md](schemas/README.md)',
       '[src/flows/README.md](flows/README.md)',
+      '[src/shared/README.md](shared/README.md)',
       '[src/types/README.md](types/README.md)',
       '`src/index.ts`',
     ]) {
@@ -183,6 +198,14 @@ describe('documentation surface', () => {
     }
 
     expect(generatedMap).toContain('[plugins/README.md](../plugins/README.md)');
+
+    const pluginMap = readRepoFile('plugins/README.md');
+    expect(pluginMap).toContain('[`plugins/claude/`](claude/)');
+    expect(pluginMap).toContain('[`plugins/codex/`](codex/)');
+    expect(readRepoFile('plugins/codex/README.md')).toContain(
+      'Codex skills are generated host instructions',
+    );
+    expect(readRepoFile('src/shared/README.md')).toContain('used across source layers');
   });
 
   it('keeps active how-to markers inside approved locations', () => {

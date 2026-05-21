@@ -8,8 +8,7 @@ generated host plugin packages under `plugins/`, the flow packages
 under `src/flows/`, the engine contracts under `docs/contracts/`,
 and the flow design notes under `docs/flows/`.
 
-This file is the agent-facing operating doc. Keep it short. If something
-isn't here, it isn't a rule.
+Only this guide defines agent rules. Anything else is context.
 
 See [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md) for the canonical product
 vocabulary (flow, schematic, block, route, relay, check, trace, report,
@@ -105,8 +104,7 @@ as the flow-authoring playbook. It covers package files, command ownership,
 `paths.command`, generated Claude and Codex command/skill surfaces, Codex cache
 sync, release metadata, and verification.
 
-Keep this file as the short operating guide. Do not copy the full flow playbook
-here.
+Keep this guide short. Link deeper flow playbooks instead of copying them.
 
 The engine (`src/runtime/`) does not need edits for normal flow additions —
 registries derive from the catalog. If you find yourself editing engine files

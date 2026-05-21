@@ -38,7 +38,7 @@ const CHILD_PASS_VERDICTS = [
 ] as const;
 
 const childGoal =
-  'Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.';
+  'Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.';
 
 function childRunStep(input: {
   readonly id: string;

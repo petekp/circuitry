@@ -9,10 +9,9 @@ authority: guidance
 
 # Flow Research Intake
 
-This document is the landing pad for the deep prior-art research now in flight.
-Its job is to keep the research useful. We are not looking for a bigger list of
-tools; we are looking for lessons that help Circuit become a better flow
-system.
+Prior-art research should change Circuit design decisions, not grow a bigger
+tool list. The useful output is a lesson that helps Circuit become a better
+flow system.
 
 ## What We Are Trying To Learn
 
@@ -62,7 +61,7 @@ Less useful findings look like this:
 
 Those can still be sources, but we need the concrete lesson underneath.
 
-## Research Intake Template
+## Research Intake
 
 Use this shape when importing the research result into our own notes.
 

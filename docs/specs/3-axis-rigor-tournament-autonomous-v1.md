@@ -17,9 +17,8 @@ the goal.
 
 Current implementation now has `axes` in compiled flow fixtures and parses
 `--rigor`, `--tournament`, `--tournament-n`, and `--autonomous` in the CLI.
-This spec remains useful as the decision ledger for the broader axis design,
-but its current-code appendix is stale where it says axes and target flags are
-absent.
+Keep this as the broader axis design ledger. Its current-code appendix is stale
+where it says axes and target flags are absent.
 
 ## 0. Why this spec exists
 

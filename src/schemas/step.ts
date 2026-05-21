@@ -346,7 +346,7 @@ export type FanoutBranchTemplate = z.infer<typeof FanoutBranchTemplate>;
 
 // Note: cross-field refinements (static branch_id uniqueness, dynamic
 // template `$item` requirement) are hoisted to the Step union refinement
-// at the bottom of this file. `discriminatedUnion('kind', [...])` requires
+// at the final Step refinement. `discriminatedUnion('kind', [...])` requires
 // ZodObject members; wrapping these variants in `.superRefine(...)` would
 // produce ZodEffects and break discrimination.
 export const FanoutBranchesStatic = z

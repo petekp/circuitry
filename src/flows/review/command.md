@@ -22,8 +22,7 @@ metacharacters:
    (`./bin/circuit`), not a globally installed binary. If the user
    invoked this command outside a Circuit repo checkout, tell them so
    and ask them to `cd` into one.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw scope text. Double quotes expand `$VAR`,
+2. **Build a shell-safe invocation.** Single-quote the raw scope text. Double quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences from user-controlled input.
 
    - Wrap the scope in **single quotes** in the final shell command.

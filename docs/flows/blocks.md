@@ -8,9 +8,7 @@ status: active
 
 # Flow Blocks
 
-This document names the reusable flow blocks Circuit should build toward.
-
-The system aims for a small set of reusable blocks that operators can
+Circuit should build toward a small set of reusable blocks that operators can
 assemble into clear flows, rather than a long list of one-off flow
 schematics.
 

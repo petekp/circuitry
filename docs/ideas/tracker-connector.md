@@ -197,9 +197,8 @@ investigation question), while Repair can use the tracker as a bug queue.
 The defaults below reflect that:
 
 ```yaml
-# user-global circuit config (location TBD — see deferred slice on
-# consumer-config story; this sketch assumes a yaml file the user
-# authors directly until that lands)
+# user-global circuit config (future consumer-config location; this sketch
+# assumes a yaml file the user authors directly until that lands)
 
 tracker:
   # Which connector implementation. Omit to disable tracker

@@ -275,8 +275,7 @@ for the design sketch.
 
 ## Source Of Truth
 
-This guide explains the product shape. The current executable truth lives
-in:
+Product shape above. Current executable truth lives in:
 
 - `src/flows/pursue/data.ts`;
 - `src/flows/pursue/flow.ts`;

@@ -5,47 +5,46 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   build: {
     title: 'Circuit Build',
     description:
-      'Use when the user wants Circuit to add, change, implement, refactor, document, or test code and the task is not primarily a bug fix.',
+      'Runs Circuit Build for code or documentation changes that are not primarily bug fixes.',
   },
   create: {
     title: 'Circuit Create',
-    description:
-      'Use when the user wants Circuit to draft, validate, or publish a reusable custom flow.',
+    description: 'Runs Circuit Create to draft, validate, or publish a reusable custom flow.',
   },
   explore: {
     title: 'Circuit Explore',
     description:
-      'Use when the user wants Circuit to investigate, explain, compare options, analyze architecture, or make a decision before editing code.',
+      'Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions.',
   },
   fix: {
     title: 'Circuit Fix',
     description:
-      'Use when the user wants Circuit to fix a bug, regression, failing test, crash, broken behavior, flaky behavior, or production issue.',
+      'Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues.',
   },
   goal: {
     title: 'Circuit Goal',
     description:
-      'Use when the user wants Circuit to supervise a bounded objective with typed evidence, recovery, and a completion gate.',
+      'Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a completion gate.',
   },
   handoff: {
     title: 'Circuit Handoff',
     description:
-      'Use when the user wants Circuit to save, resume, clear, brief, or install continuity handoff support across sessions.',
+      'Runs Circuit Handoff to save, resume, clear, brief, or install continuity support across sessions.',
   },
   prototype: {
     title: 'Circuit Prototype',
     description:
-      'Use when the user wants Circuit to create disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison prototype variants before Build.',
+      'Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build.',
   },
   review: {
     title: 'Circuit Review',
     description:
-      'Use when the user wants Circuit to audit existing code, a diff, PR, implementation, plan, report, or risk surface without implementing changes.',
+      'Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes.',
   },
   run: {
     title: 'Circuit Run',
     description:
-      'Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits the current coding task.',
+      'Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task.',
   },
 };
 
@@ -102,12 +101,12 @@ export function renderClaudeHostCommand(sourceContent: string): string {
       stripMarkdownComments(sourceContent)
         .replaceAll('./bin/circuit', CLAUDE_PLUGIN_WRAPPER_COMMAND)
         .replace(
-          /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
+          /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*(?:Build a shell-safe invocation|Construct the Bash invocation [A-Z]+)\.\*\*/s,
           [
             '1. **Resolve plugin root.** Claude Code substitutes',
             '   `${CLAUDE_PLUGIN_ROOT}` with the installed Circuit plugin directory.',
             "   Do not use a path relative to the user's project.",
-            '2. **Construct the Bash invocation SAFELY.**',
+            '2. **Build a shell-safe invocation.**',
           ].join('\n'),
         )
         .replace(
@@ -126,13 +125,13 @@ export function renderCodexHostCommand(sourceContent: string): string {
   return stripMarkdownComments(sourceContent)
     .replaceAll('./bin/circuit', CODEX_PLUGIN_WRAPPER_COMMAND)
     .replace(
-      /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*Construct the Bash invocation SAFELY\.\*\*/s,
+      /1\. \*\*Confirm working directory\.\*\* The CLI is.*?2\. \*\*(?:Build a shell-safe invocation|Construct the Bash invocation [A-Z]+)\.\*\*/s,
       [
         '1. **Resolve plugin root.** Use the absolute path to the installed',
         '   Circuit plugin directory, the directory that contains',
         '   `.codex-plugin/plugin.json`. Do not use a path relative to the',
         "   user's project.",
-        '2. **Construct the Bash invocation SAFELY.**',
+        '2. **Build a shell-safe invocation.**',
       ].join('\n'),
     )
     .replace(
@@ -219,7 +218,7 @@ export function renderCodexHostSkill(command: string, sourceContent: string): st
     title: `Circuit ${command}`,
     description:
       frontmatterValue(sourceParts.frontmatter, 'description') ??
-      `Use when the user wants Circuit to run the ${command} flow from Codex.`,
+      `Runs the Circuit ${command} flow from Codex.`,
   };
   const nativeBody = renderCodexNativeSkillBody(codexParts.body);
   const content = [
@@ -230,7 +229,7 @@ export function renderCodexHostSkill(command: string, sourceContent: string): st
     '',
     `# ${metadata.title}`,
     '',
-    '## When to Use This Skill',
+    '## Use Case',
     '',
     metadata.description,
     '',

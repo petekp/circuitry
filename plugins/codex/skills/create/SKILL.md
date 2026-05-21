@@ -1,13 +1,13 @@
 ---
 name: create
-description: "Use when the user wants Circuit to draft, validate, or publish a reusable custom flow."
+description: "Runs Circuit Create to draft, validate, or publish a reusable custom flow."
 ---
 
 # Circuit Create
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to draft, validate, or publish a reusable custom flow.
+Runs Circuit Create to draft, validate, or publish a reusable custom flow.
 
 ## Codex Host Invocation
 

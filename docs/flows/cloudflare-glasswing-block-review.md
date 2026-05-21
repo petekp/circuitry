@@ -17,9 +17,9 @@ Local context:
 [docs/flows/](./), `src/flows/*`, [docs/ideas/](../ideas/), eval notes, and
 local repo search.
 
-This report treats Cloudflare's harness stages as block-like concepts. The
-Cloudflare post does not define them as Circuit-style blocks. Circuit should
-therefore borrow the useful shapes without copying the names blindly.
+Cloudflare's harness stages map loosely to Circuit block concepts. The
+Cloudflare post does not define them as Circuit-style blocks, so Circuit should
+borrow useful shapes without copying names blindly.
 
 This is a design report only. It does not request or assume any runtime behavior
 change.

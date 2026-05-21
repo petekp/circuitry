@@ -10,8 +10,8 @@
 // nothing matches, the router returns the unique default package.
 //
 // The example-based tests in tests/contracts/flow-router.test.ts
-// pin behaviour against the live catalog. This file exercises the
-// classifier as a pure function over synthetic routables, varying:
+// pin behaviour against the live catalog. Synthetic routables exercise
+// the classifier as a pure function, varying:
 //
 //   - the number and `order` of routables
 //   - which signals each routable claims (token sets)

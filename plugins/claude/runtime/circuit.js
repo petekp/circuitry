@@ -32683,7 +32683,7 @@ var fixFlowData = {
     schema_version: "1",
     id: "fix",
     title: "Fix Schematic",
-    purpose: "Fix flow: capture problem boundary, prove the pre-fix regression before any specialist relay can edit the checkout, gather context, diagnose, apply a focused change, verify, review (in standard depth), and close with evidence. If the standard reviewer connector is unavailable after proof passes, Fix closes with proof evidence and marks review skipped. Lite mode skips the review relay and closes immediately after verification via the fix-verify route_overrides.continue.lite override. fix-no-repro-decision and fix-handoff remain in the schematic as authoring intent for future ask/handoff routing in the runtime; they are unreachable at compile and do not appear in the emitted compiled flows.",
+    purpose: "Fix captures the problem boundary, proves the pre-fix regression before a specialist relay edits the checkout, gathers context, diagnoses, applies a focused change, verifies, reviews at standard depth, and closes with evidence. If the reviewer connector is unavailable after proof passes, Fix closes with proof evidence and marks review skipped. Lite mode skips the review relay after verification. fix-no-repro-decision and fix-handoff remain as future ask/handoff routing intent; they are unreachable at compile time and omitted from compiled flows.",
     status: "active",
     version: "0.1.0",
     starts_at: "fix-frame",
@@ -34648,7 +34648,7 @@ var CHILD_PASS_VERDICTS = [
   "needs-followup",
   "decided"
 ];
-var childGoal = "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.";
+var childGoal = "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.";
 function childRunStep(input) {
   return {
     id: input.id,

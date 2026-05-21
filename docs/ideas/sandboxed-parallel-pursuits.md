@@ -220,9 +220,8 @@ pursuit.parallel_apply@v1 = {
 }
 ```
 
-This report is the operator's proof packet. It should answer: what ran,
-what changed, what was applied, what was rejected, and what proved the
-combined result.
+The operator proof packet answers: what ran, what changed, what was applied,
+what was rejected, and what proved the combined result.
 
 ## Sandbox runner API
 

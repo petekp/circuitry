@@ -6,12 +6,10 @@
 //   flow.prop.terminal_target_coverage (WF-I8)
 //   flow.prop.no_dead_steps          (WF-I9)
 //
-// The example-based test at tests/contracts/flow-graph-schema.test.ts
-// pins one accept + one reject witness per invariant. This file adds
-// width: a deterministic generator emits diverse CompiledFlow payloads,
-// each property's predicted answer is computed from the spec, and the
-// assertion is that `CompiledFlow.safeParse` agrees with the prediction
-// across the whole sample.
+// tests/contracts/flow-graph-schema.test.ts pins one accept + one reject
+// witness per invariant. These property tests add breadth with deterministic
+// CompiledFlow payloads and check `CompiledFlow.safeParse` against the
+// spec-derived prediction.
 //
 // Each describe block isolates one law: the spec is built so every
 // other closure invariant is satisfied, and the law-of-interest is the

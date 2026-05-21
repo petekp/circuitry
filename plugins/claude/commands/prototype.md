@@ -24,8 +24,7 @@ metacharacters:
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw prototype goal. Use the same safe construction
+1. **Build a shell-safe invocation.** Single-quote the raw prototype goal. Use the same safe construction
    rule as the other Circuit host commands:
 
    - Wrap the prototype goal in **single quotes** in the final shell command.

@@ -11,7 +11,7 @@ first, then follow that layer's local README.
 | `src/flows/` | Built-in flow packages, flow catalog, compiler support, and flow-owned writers. | Flow package README and generated surfaces. |
 | `src/runtime/` | Engine mechanics for executing compiled flows. | Runtime README and runtime tests. |
 | `src/schemas/` | Zod schemas for contracts, config, traces, reports, and generated manifests. | Schema README and contract tests. |
-| `src/shared/` | Cross-layer helpers used by CLI, flows, runtime, and summaries. | Import direction and caller ownership. |
+| `src/shared/` | Cross-layer helpers used by CLI, flows, runtime, and summaries. | Shared README, import direction, and caller ownership. |
 | `src/run-status/` | Run status projections and run-folder lookup helpers. | Status projection tests. |
 | `src/release/` | Release metadata helpers. | Release infrastructure checks. |
 | `src/types/` | Hand-written TypeScript-only helpers that cannot be inferred cleanly from schemas. | Types README and contract parity tests. |
@@ -34,6 +34,7 @@ first, then follow that layer's local README.
 2. Source ownership: this file.
 3. Runtime changes: [src/runtime/README.md](runtime/README.md).
 4. Schema changes: [src/schemas/README.md](schemas/README.md).
-5. Type-only changes: [src/types/README.md](types/README.md).
-6. Flow changes: [src/flows/README.md](flows/README.md) and
+5. Shared helper changes: [src/shared/README.md](shared/README.md).
+6. Type-only changes: [src/types/README.md](types/README.md).
+7. Flow changes: [src/flows/README.md](flows/README.md) and
    [docs/flows/authoring-model.md](../docs/flows/authoring-model.md).

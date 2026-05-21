@@ -4,9 +4,9 @@
 //
 // The example-based tests in tests/runtime/fanout.test.ts
 // pin one or two witnesses per policy through the full async runner
-// harness. This file adds width by table-driving the pure helper with
-// hundreds of deterministically-generated outcome sets per policy and
-// confirming the helper's decision matches the policy's law:
+// harness. Table-driven helper checks add width with hundreds of
+// deterministically-generated outcome sets per policy and confirm the
+// helper's decision matches the policy's law:
 //
 //   pick-winner       : winner is the first admit-order verdict that
 //                       at least one `complete` branch produced; if no

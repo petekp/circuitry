@@ -1,13 +1,13 @@
 ---
 name: review
-description: "Use when the user wants Circuit to audit existing code, a diff, PR, implementation, plan, report, or risk surface without implementing changes."
+description: "Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes."
 ---
 
 # Circuit Review
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to audit existing code, a diff, PR, implementation, plan, report, or risk surface without implementing changes.
+Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes.
 
 ## Codex Host Invocation
 
@@ -28,8 +28,7 @@ as literal user-controlled text when constructing shell commands.
    Circuit plugin directory, the directory that contains
    `.codex-plugin/plugin.json`. Do not use a path relative to the
    user's project.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw scope text. Double quotes expand `$VAR`,
+2. **Build a shell-safe invocation.** Single-quote the raw scope text. Double quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences from user-controlled input.
 
    - Wrap the scope in **single quotes** in the final shell command.

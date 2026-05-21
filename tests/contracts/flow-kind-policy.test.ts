@@ -186,8 +186,7 @@ function reviewPolicyOnlyPayload(overrides: Record<string, unknown> = {}): Recor
   return {
     schema_version: '2',
     id: 'review',
-    // Deliberately policy/invariant-only: the real review fixture and
-    // runtime compose behavior are exercised by the review flow tests.
+    // Policy fixture only; review flow tests cover the real fixture and runtime compose behavior.
     stages: [
       { title: 'Intake', canonical: 'frame', steps: ['intake-step'] },
       { title: 'Independent Audit', canonical: 'analyze', steps: ['audit-step'] },
@@ -217,8 +216,7 @@ function buildPolicyOnlyPayload(overrides: Record<string, unknown> = {}): Record
   return {
     schema_version: '2',
     id: 'build',
-    // Deliberately policy-only: the real Build fixture waits for the
-    // checkpoint and relay slices.
+    // Policy fixture only; the real Build fixture waits for checkpoint and relay slices.
     stages: [
       { title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { title: 'Plan', canonical: 'plan', steps: ['plan-step'] },
@@ -249,8 +247,7 @@ function fixPolicyOnlyPayload(overrides: Record<string, unknown> = {}): Record<s
   return {
     schema_version: '2',
     id: 'fix',
-    // Deliberately policy-only: the real Fix fixture waits for the report
-    // schemas and runtime substrate widenings.
+    // Policy fixture only; the real Fix fixture waits for report schemas and runtime support changes.
     stages: [
       { title: 'Frame', canonical: 'frame', steps: ['frame-step'] },
       { title: 'Analyze', canonical: 'analyze', steps: ['analyze-step'] },

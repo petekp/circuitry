@@ -69,7 +69,7 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
     // harmless one — forces a contract-test update alongside, which
     // forces reviewer attention on whether the new token widens the
     // capability surface. Without this pin, adding `--full-auto` would
-    // pass all named negative checks but slip past this file.
+    // pass all named negative checks but miss the length check.
     expect([...CODEX_WRITE_FLAGS]).toHaveLength(8);
   });
 

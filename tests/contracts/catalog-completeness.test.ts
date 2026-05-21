@@ -14,7 +14,7 @@
 //   throws fire at module load when the real `flowPackages` is
 //   imported, so the real-catalog assertions here would crash before
 //   running. We rely on the derivation tests for the failure-case
-//   coverage and use this file for the cross-cutting structural
+//   coverage. Real-catalog assertions cover cross-cutting structural
 //   invariants the derivation tests can't see (file layout, schema-
 //   identity, cross-validator scope).
 

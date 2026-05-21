@@ -1,13 +1,13 @@
 ---
 name: prototype
-description: "Use when the user wants Circuit to create disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison prototype variants before Build."
+description: "Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build."
 ---
 
 # Circuit Prototype
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to create disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison prototype variants before Build.
+Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build.
 
 ## Codex Host Invocation
 
@@ -30,8 +30,7 @@ as literal user-controlled text when constructing shell commands.
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw prototype goal. Use the same safe construction
+1. **Build a shell-safe invocation.** Single-quote the raw prototype goal. Use the same safe construction
    rule as the other Circuit host commands:
 
    - Wrap the prototype goal in **single quotes** in the final shell command.

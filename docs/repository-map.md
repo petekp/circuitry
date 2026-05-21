@@ -1,8 +1,7 @@
 # Repository Map
 
-This map is the top-down path through the repo. It is intentionally shorter
-than the codebase walkthrough. Use it to decide which layer to open next, then
-switch to the layer-owned docs.
+Top-down path through the repo. Use it to choose the next layer, then switch to
+the layer-owned docs.
 
 ## Disclosure Principle
 
@@ -102,12 +101,15 @@ on them, then adds maps at the boundaries where readers had to infer ownership:
 +-- plugins/
 |   +-- README.md
 |   +-- claude/
+|   |   +-- README.md
 |   +-- codex/
+|       +-- README.md
 +-- src/
     +-- README.md
     +-- runtime/README.md
     +-- schemas/README.md
     +-- flows/README.md
+    +-- shared/README.md
     +-- types/README.md
 ```
 
@@ -124,7 +126,7 @@ docs/repository-map.md -> src/README.md -> src/<layer>/README.md -> code
 ```
 
 Layer maps live at `src/runtime/README.md`, `src/schemas/README.md`,
-`src/flows/README.md`, and `src/types/README.md`.
+`src/flows/README.md`, `src/shared/README.md`, and `src/types/README.md`.
 
 ## Migration Rationale
 
@@ -133,7 +135,8 @@ Layer maps live at `src/runtime/README.md`, `src/schemas/README.md`,
 | `docs/literate-guide.md` -> `docs/architecture/codebase-walkthrough.md` | The file is a deep architecture walkthrough, not an operator entry doc. Putting it under architecture reduces first-level docs noise and matches its audience. | Docs-only path move. |
 | `docs/script-inventory.md` -> `docs/reference/script-inventory.md` | Script ownership is maintenance reference material. It should sit behind the docs map, not beside first-run and operator docs. | Docs-only path move. |
 | Added `plugins/README.md` | Generated host packages need a parent map before readers enter Claude Code or Codex-specific output. | Docs-only addition. |
-| Added `src/README.md` and layer READMEs | Runtime, schema, flow, and type ownership can be learned locally without reading the long walkthrough first. | Docs-only addition. |
+| Added `plugins/codex/README.md` | Codex needed the same package-level map Claude Code already had, especially because Codex has both generated skill instructions and command mirrors. | Docs-only addition. |
+| Added `src/README.md` and layer READMEs | Runtime, schema, flow, shared-helper, and type ownership can be learned locally without reading the long walkthrough first. | Docs-only addition. |
 | Kept `docs/generated-surfaces.md` in place | The flow emitter owns this generated file path, and tests plus release docs already use it as the generated ownership anchor. Moving it would add churn without improving the first navigation step. | No generated ownership change. |
 | Kept runtime, schema, and flow code paths in place | The source tree already separates engine mechanics, schemas, and flow packages. A code move would churn imports and generated references before there is evidence of a deeper ownership bug. | No runtime behavior change. |
 

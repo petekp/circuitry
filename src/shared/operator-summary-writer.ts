@@ -1,16 +1,6 @@
-// Operator summary projection — orchestration layer.
-//
-// This file orchestrates the operator-summary write:
-//   - Resolves the per-flow result report path and runs the flow's projection
-//     through SUMMARY_PROJECTORS in operator-summary/projections.ts.
-//   - Drives HTML emission through HTML_PROJECTORS in shared/html/.
-//   - Overlays cross-flow concerns on top of the projection: worker
-//     disclosure, run note, evidence warnings, abort reason, checkpoint
-//     detail, and the report_paths list.
-//   - Builds the OperatorSummary schema, writes JSON + markdown + HTML.
-//
-// Per-flow projection logic lives in src/shared/operator-summary/. Schema-
-// loose JSON helpers and friendly-* text projections live there too.
+// Operator summary write path: resolve the per-flow result report, run the
+// projection, emit HTML, add cross-flow details, then write JSON, markdown, and
+// HTML siblings. Per-flow projection logic lives in src/shared/operator-summary/.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';

@@ -439,9 +439,9 @@ Checks:
 
 Written by an orchestrator compose writer after review.
 
-This report exists because checkpoint `choices_from` reads one report. It should
-merge variant options, aggregate, provider evidence, verification, and review
-into the exact list of choices the checkpoint may offer.
+Checkpoint `choices_from` reads one report. It should merge variant options,
+aggregate, provider evidence, verification, and review into the exact list of
+choices the checkpoint may offer.
 
 Fields:
 

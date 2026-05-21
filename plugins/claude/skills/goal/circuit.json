@@ -154,7 +154,7 @@
         "flow_id": "fix",
         "entry_mode": "default"
       },
-      "goal": "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.",
+      "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
       "depth": "standard",
       "writes": {
         "result": "reports/goal/child-results/fix-result.json",
@@ -197,7 +197,7 @@
         "flow_id": "build",
         "entry_mode": "default"
       },
-      "goal": "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.",
+      "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
       "depth": "standard",
       "writes": {
         "result": "reports/goal/child-results/build-result.json",
@@ -240,7 +240,7 @@
         "flow_id": "review",
         "entry_mode": "default"
       },
-      "goal": "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.",
+      "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
       "depth": "standard",
       "writes": {
         "result": "reports/goal/child-results/review-result.json",
@@ -283,7 +283,7 @@
         "flow_id": "explore",
         "entry_mode": "default"
       },
-      "goal": "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.",
+      "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
       "depth": "standard",
       "writes": {
         "result": "reports/goal/child-results/explore-result.json",
@@ -326,7 +326,7 @@
         "flow_id": "pursue",
         "entry_mode": "default"
       },
-      "goal": "Run the selected child flow for the Goal contract in reports/goal/contract.json. Preserve the operator objective, produce the child flow proof packet, and do not claim completion without report-backed evidence.",
+      "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
       "depth": "standard",
       "writes": {
         "result": "reports/goal/child-results/pursue-result.json",

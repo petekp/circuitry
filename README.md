@@ -1,10 +1,10 @@
 <div align="center">
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </div>
-<h3 align="center"><strong>A Workflow Orchestration Plugin for Claude Code and Codex</strong></h3>
+<h3 align="center"><strong>A Flow Runner for Claude Code and Codex</strong></h3>
 <br />
 Circuit gives your coding agent tools for orchestrating complex, multi-step
-workflows to produce more consistent and reliable results, with less
+flows. It helps produce more consistent and reliable results, with less
 babysitting.
 
 Go from this:
@@ -204,4 +204,4 @@ Contribute or verify:
 
 ## License
 
-TBD
+No reuse license has been selected yet.

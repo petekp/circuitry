@@ -1,13 +1,13 @@
 ---
 name: explore
-description: "Use when the user wants Circuit to investigate, explain, compare options, analyze architecture, or make a decision before editing code."
+description: "Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions."
 ---
 
 # Circuit Explore
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to investigate, explain, compare options, analyze architecture, or make a decision before editing code.
+Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions.
 
 ## Codex Host Invocation
 
@@ -29,10 +29,10 @@ as literal user-controlled text when constructing shell commands.
    Circuit plugin directory, the directory that contains
    `.codex-plugin/plugin.json`. Do not use a path relative to the
    user's project.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw goal (double quotes expand `$VAR`, `` `cmd` ``,
+2. **Build a shell-safe invocation.** Single-quote the raw goal; double quotes
+   expand `$VAR`, `` `cmd` ``,
    `$(cmd)`, and `\` sequences — a malicious or accidental goal could inject
-   commands). The safe construction rule:
+   commands. The safe construction rule:
 
    - Wrap the goal in **single quotes** in the final shell command. Single
      quotes disable all expansion.
@@ -129,7 +129,7 @@ as literal user-controlled text when constructing shell commands.
 
 ## Axes
 
-This command runs at standard rigor by default. Use `--rigor lite` for a quick
-look, `--rigor deep` for deeper analysis, and `--tournament` for a bounded
-decision tournament. Add `--autonomous` only when the operator explicitly asks
-for autonomous checkpoint handling.
+Default rigor is standard. Use `--rigor lite` for a quick look, `--rigor deep`
+for deeper analysis, and `--tournament` for a bounded decision tournament. Add
+`--autonomous` only when the operator explicitly asks for autonomous checkpoint
+handling.

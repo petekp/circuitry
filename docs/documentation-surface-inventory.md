@@ -2,8 +2,8 @@
 
 Date: 2026-05-20
 
-Status: audit record with a 2026-05-21 navigation addendum. This file documents
-the consolidation decision. It is not an active runbook.
+Status: audit record with a 2026-05-21 navigation addendum. Records the
+consolidation decision; not an active runbook.
 
 ## Scope
 
@@ -51,6 +51,8 @@ documentation-surface tests.
 | Flow authoring | `docs/flows/authoring-model.md` | Keep and expand | Now owns the host-ready flow-authoring checklist: package files, command ownership, `paths.command`, generated Claude/Codex command and skill surfaces, Codex cache sync, release metadata, and verification. |
 | Block authoring | `docs/flows/blocks.md` | Keep | Product-level block catalog narrative. Machine-readable catalog remains generated. |
 | Generated ownership | `docs/generated-surfaces.md` | Keep generated | Generated source map. Do not edit by hand. Drift check owns it. |
+| Host package maps | `plugins/README.md`, `plugins/claude/README.md`, `plugins/codex/README.md` | Keep thin | Package-level maps separate hand-authored manifests, hooks, and scripts from generated commands, skills, flow mirrors, and runtime bundles. |
+| Source layer maps | `src/README.md`, `src/runtime/README.md`, `src/schemas/README.md`, `src/flows/README.md`, `src/shared/README.md`, `src/types/README.md` | Keep thin | Source maps route contributors to the right layer before they open implementation files. |
 | Command source note | `src/commands/README.md` | Keep thin | Kept only direct command ownership and pointers to generated-surface and flow-authoring docs. |
 | Flow command docs | `src/flows/*/command.md` | Keep | Source for generated host command and Codex skill instructions. |
 | Direct command docs | `src/commands/*.md` | Keep | Source for generated host command and Codex skill instructions. |
@@ -75,20 +77,19 @@ documentation-surface tests.
 Initial active-doc inventory:
 
 ```bash
-find docs -type f | sort
-find src/commands src/flows plugins/claude plugins/codex -maxdepth 4 -type f \( -name '*.md' -o -name 'SKILL.md' \) | sort
+rg --files README.md AGENTS.md UBIQUITOUS_LANGUAGE.md docs plugins src/README.md src/*/README.md src/commands src/flows | sort
 ```
 
 Keyword probe for duplicate-prone guidance:
 
 ```bash
-rg -n -i "runbook|playbook|how-to|how to|guide|adding a flow|add a flow|flow author|authoring|generated surface|generated-surfaces|cache sync|release metadata|command ownership|paths\.command|host-ready|slash command|skill surface|source of truth|source-of-truth" AGENTS.md README.md UBIQUITOUS_LANGUAGE.md docs src/commands src/flows plugins/claude/commands plugins/codex/commands plugins/codex/skills
+rg -n -i "runbook|playbook|how-to|how to|guide|adding a flow|add a flow|flow author|authoring|generated surface|generated-surfaces|cache sync|release metadata|command ownership|paths\.command|host-ready|slash command|skill surface|source of truth|source-of-truth" AGENTS.md README.md UBIQUITOUS_LANGUAGE.md docs plugins/README.md plugins/claude/README.md plugins/codex/README.md src/README.md src/*/README.md src/commands src/flows plugins/claude/commands plugins/codex/commands plugins/codex/skills
 ```
 
 Focused orphan-playbook check after consolidation:
 
 ```bash
-rg -l -i "(^# .*Runbook|^# .*Playbook|## Adding A Flow|## Adding a flow|Safe setup steps for coding agents|Copy-Paste Prompt|Release QA checklist|source map for Circuit command surfaces|Do not hand-edit generated host output)" README.md AGENTS.md docs src/commands src/flows -g "*.md" -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/ideas/**" -g "!docs/learnings/**" -g "!docs/documentation-surface-inventory.md"
+rg -l -i "(^# .*Runbook|^# .*Playbook|## Adding A Flow|## Adding a flow|Safe setup steps for coding agents|Copy-Paste Prompt|Release QA checklist|source map for Circuit command surfaces|Do not hand-edit generated host output)" README.md AGENTS.md docs plugins/README.md plugins/claude/README.md plugins/codex/README.md src/README.md src/*/README.md src/commands src/flows -g "*.md" -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/ideas/**" -g "!docs/learnings/**" -g "!docs/documentation-surface-inventory.md"
 ```
 
 Expected result: every hit is either in the approved list in `docs/README.md`

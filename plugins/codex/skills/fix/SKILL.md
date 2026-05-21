@@ -1,13 +1,13 @@
 ---
 name: fix
-description: "Use when the user wants Circuit to fix a bug, regression, failing test, crash, broken behavior, flaky behavior, or production issue."
+description: "Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues."
 ---
 
 # Circuit Fix
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to fix a bug, regression, failing test, crash, broken behavior, flaky behavior, or production issue.
+Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues.
 
 ## Codex Host Invocation
 
@@ -19,7 +19,7 @@ flow first. Use this when the operator already knows they want Circuit to
 take a concrete problem, understand it, make the smallest safe change, prove
 it, and close with evidence.
 
-Circuit runs the Fix flow: it reproduces the issue, isolates the cause,
+Circuit Fix reproduces the issue, isolates the cause,
 relays a focused change to a worker, runs verification checks, asks for
 review when required, and closes with a report and evidence.
 
@@ -28,8 +28,7 @@ as literal user-controlled text when constructing shell commands.
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text. Use the same safe construction rule as the other Circuit host skills:
+1. **Build a shell-safe invocation.** Single-quote the raw task text. Use the same safe construction rule as the other Circuit host skills:
 
    - Wrap the task text in **single quotes** in the final shell command.
      Single quotes disable all expansion.

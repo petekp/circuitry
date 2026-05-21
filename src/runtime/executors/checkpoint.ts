@@ -1,9 +1,6 @@
-// Checkpoint executor.
-//
-// This file owns the runtime side of checkpoint requests: writing the request,
-// emitting trace evidence, deciding whether depth waits or auto-resolves, and
-// applying an operator resume selection. Resume validation lives in the run
-// resume path, not here.
+// Runtime side of checkpoint requests: write the request, emit trace evidence,
+// decide whether depth waits or auto-resolves, and apply an operator resume
+// selection. Resume validation lives in the run resume path.
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import type { OperatorAutoResolution } from '../../schemas/operator-summary.js';

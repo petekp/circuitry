@@ -51,10 +51,10 @@ metacharacters:
    when the user explicitly asks Circuit/the engine to choose mechanically, the
    host cannot confidently choose, or the task is intentionally exercising the
    automatic router path.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text (double quotes expand `$VAR`,
+2. **Build a shell-safe invocation.** Single-quote the raw task text; double
+   quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences — a malicious or accidental
-   task string could inject commands). The safe construction rule matches
+   task string could inject commands. The safe construction rule matches
    `/circuit:explore` and `/circuit:review`:
 
    - Wrap the task text in **single quotes** in the final shell command.

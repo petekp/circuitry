@@ -1,13 +1,13 @@
 ---
 name: handoff
-description: "Use when the user wants Circuit to save, resume, clear, brief, or install continuity handoff support across sessions."
+description: "Runs Circuit Handoff to save, resume, clear, brief, or install continuity support across sessions."
 ---
 
 # Circuit Handoff
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to save, resume, clear, brief, or install continuity handoff support across sessions.
+Runs Circuit Handoff to save, resume, clear, brief, or install continuity support across sessions.
 
 ## Codex Host Invocation
 

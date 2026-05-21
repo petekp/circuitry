@@ -1,13 +1,13 @@
 ---
 name: build
-description: "Use when the user wants Circuit to add, change, implement, refactor, document, or test code and the task is not primarily a bug fix."
+description: "Runs Circuit Build for code or documentation changes that are not primarily bug fixes."
 ---
 
 # Circuit Build
 
-## When to Use This Skill
+## Use Case
 
-Use when the user wants Circuit to add, change, implement, refactor, document, or test code and the task is not primarily a bug fix.
+Runs Circuit Build for code or documentation changes that are not primarily bug fixes.
 
 ## Codex Host Invocation
 
@@ -27,8 +27,7 @@ as literal user-controlled text when constructing shell commands.
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text. Use the same safe construction rule as the other Circuit host skills:
+1. **Build a shell-safe invocation.** Single-quote the raw task text. Use the same safe construction rule as the other Circuit host skills:
 
    - Wrap the task text in **single quotes** in the final shell command.
      Single quotes disable all expansion.

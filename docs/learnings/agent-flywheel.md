@@ -6,8 +6,7 @@ methodology for orchestrating a swarm of fungible coding agents to ship
 software fast, by spending ~85% of the work in upstream planning and
 ~15% in mostly-mechanical execution.
 
-This file captures what's worth lifting into Circuit, what isn't,
-and the one place the two methodologies actually disagree.
+Relevant takeaways for Circuit:
 
 ## What the source is
 

@@ -21,8 +21,7 @@ metacharacters:
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text. Use the same safe construction rule as
+1. **Build a shell-safe invocation.** Single-quote the raw task text. Use the same safe construction rule as
    `/circuit:run`, `/circuit:explore`, and `/circuit:review`:
 
    - Wrap the task text in **single quotes** in the final shell command.

@@ -7,8 +7,7 @@ explicit `/orchestrate <goal>` invocation. A root planner fans out
 subplanners, workers, and verifiers; coordination happens through
 structured handoffs and a JSON state file.
 
-This file captures what's worth lifting into Circuit, what isn't,
-and the architectural disagreement between the two systems.
+Relevant takeaways for Circuit:
 
 ## What the source is
 

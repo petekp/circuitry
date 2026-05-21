@@ -2,8 +2,8 @@
 //
 // Companion to fix-false-done-bar.test.ts. Where that file stubs the
 // verification executor for fix-baseline-snapshot and fix-change-set so the
-// scenarios are deterministic regardless of the host repo, this file runs
-// the writers AGAINST A REAL TEMP GIT REPO. Each test:
+// scenarios are deterministic regardless of the host repo, these tests run
+// the writers against a real temp git repo. Each test:
 //
 //   1. Creates a fresh temp directory + `git init` + initial commit
 //   2. Optionally pre-mutates the working tree to simulate operator dirt

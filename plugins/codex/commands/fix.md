@@ -10,7 +10,7 @@ flow first. Use this when the operator already knows they want Circuit to
 take a concrete problem, understand it, make the smallest safe change, prove
 it, and close with evidence.
 
-Circuit runs the Fix flow: it reproduces the issue, isolates the cause,
+Circuit Fix reproduces the issue, isolates the cause,
 relays a focused change to a worker, runs verification checks, asks for
 review when required, and closes with a report and evidence.
 
@@ -22,8 +22,7 @@ metacharacters:
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw task text. Use the same safe construction rule as
+1. **Build a shell-safe invocation.** Single-quote the raw task text. Use the same safe construction rule as
    `/circuit:run`, `/circuit:explore`, `/circuit:review`, and `/circuit:build`:
 
    - Wrap the task text in **single quotes** in the final shell command.

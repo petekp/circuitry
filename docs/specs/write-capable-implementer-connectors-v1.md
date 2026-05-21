@@ -17,10 +17,9 @@ by a different implementer:
 - Claude Opus 4.7 with max effort through Claude Code.
 - Gemini 3.5 Flash through Cursor CLI.
 
-This spec records the earlier smallest safe contract changes. It originally
-kept the existing `codex` connector read-only and added separate write-capable
-paths for Codex and Cursor. Current Codex behavior now uses the public `codex`
-connector name.
+Earlier smallest-safe contract changes kept the existing `codex` connector
+read-only and added separate write-capable paths for Codex and Cursor. Current
+Codex behavior now uses the public `codex` connector name.
 
 ## Confirmed Source Facts
 

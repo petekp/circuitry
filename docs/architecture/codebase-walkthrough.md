@@ -41,16 +41,10 @@ worker doing the actual code-writing is an LLM, but the orchestration is
 not; the engine is plain TypeScript that happens to call out to an LLM at
 specific, controlled boundaries.
 
-We will spend most of this guide explaining what that costs and what it
-buys. The short version: it costs a lot of vocabulary and a fair amount of
-discipline, and it buys (a) the ability to *resume* a run after a crash,
-(b) the ability to swap out *which* worker runs *which* step without
-touching the flow, and (c) the ability to read a finished run end-to-end —
-inputs, outputs, decisions — from files on disk, days later, without
-trusting anyone's memory.
-
-That last property is the one that matters. The rest of the guide is, in a
-sense, an extended argument for why it is worth the price.
+The cost is vocabulary and discipline. The payoff is (a) resuming a run after a
+crash, (b) swapping which worker runs which step without touching the flow, and
+(c) reading a finished run end-to-end from files on disk days later: inputs,
+outputs, and decisions, without trusting anyone's memory.
 
 ## §2. Two foundational choices
 
@@ -1228,22 +1222,18 @@ because flows are data. The host adapters are interchangeable because
 they speak a stable protocol to the same engine. The schemas are
 strict because the trace must be honest.
 
-If you came to this guide cold and now have a sense of *why* the
-codebase is shaped the way it is — why there is a `RunFileStore` that
-forbids parent-segment paths, why `relay.failed` repeats the
-`relay.started` provenance, why `bindsExecutionDepthToRelaySelection`
-is an opt-in flag rather than a default, why custom connectors must be
-named in `connectors` and referenced by name — then the literate guide
-has done its job. The code itself is the rest of the story; you can
-now read it as something other than a list of files.
+The same commitment explains the codebase shape: `RunFileStore` forbids
+parent-segment paths, `relay.failed` repeats `relay.started` provenance,
+`bindsExecutionDepthToRelaySelection` is an opt-in flag, and custom connectors
+are named once in `connectors` and referenced by name.
 
 ---
 
-*Where this guide can lead you next: [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md)
-for the canonical vocabulary, [docs/architecture/runtime.md](runtime.md)
-for the runtime's own one-page summary, [docs/contracts/run.md](../contracts/run.md)
-for the formal RUN-I invariants, [docs/contracts/host-adapter.md](../contracts/host-adapter.md)
-for the host adapter surface, [docs/flows/blocks.md](../flows/blocks.md) for the
+Next: [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md)
+for canonical vocabulary, [docs/architecture/runtime.md](runtime.md)
+for the runtime summary, [docs/contracts/run.md](../contracts/run.md)
+for RUN-I invariants, [docs/contracts/host-adapter.md](../contracts/host-adapter.md)
+for the host adapter surface, and [docs/flows/blocks.md](../flows/blocks.md) for the
 block catalog and authoring model. The definitions under
 `src/flows/<id>/data.ts` are the clearest examples of the data we have been
 discussing all along.*

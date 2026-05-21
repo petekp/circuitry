@@ -108,6 +108,7 @@ describe('host experience docs', () => {
     expect(doc).not.toContain('scripts/circuit.ts');
     expect(doc).not.toContain('check:codex-plugin-cache');
     expect(doc).not.toContain('doctor');
+    expect(doc).not.toMatch(/\b[Ww]orkflow(s)?\b/);
 
     expect(operatorGuide).not.toContain('old intent prefixes');
     expect(operatorGuide).not.toContain('develop:');

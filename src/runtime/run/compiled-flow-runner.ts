@@ -1,9 +1,7 @@
-// Runtime entry adapter for compiled-flow bytes.
-//
-// This file parses the saved or generated manifest bytes, chooses the
-// requested axis depth, then hands the normalized executable graph to
-// graph-runner.ts. Keep manifest parsing and depth selection here so
-// graph-runner.ts can stay focused on step advancement and trace writes.
+// Runtime entry adapter for compiled-flow bytes. Parse the saved or generated
+// manifest, choose the requested axis depth, then hand the normalized
+// executable graph to graph-runner.ts. Keep graph-runner.ts focused on step
+// advancement and trace writes.
 
 import type { Axes } from '../../schemas/axes.js';
 import {

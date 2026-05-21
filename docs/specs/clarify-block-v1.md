@@ -332,7 +332,7 @@ The hints must tell the worker:
 - include `verdict`;
 - preserve the original request;
 - do not include adversarial review instructions;
-- do not claim completion;
+- make no completion claim;
 - do not choose dynamic child flows;
 - do not wrap JSON in Markdown.
 

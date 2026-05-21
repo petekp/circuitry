@@ -12,8 +12,8 @@
 //
 // Both are validated by the Zod schemas at parse time. The
 // example-based tests in tests/contracts/step-schema.test.ts pin one
-// witness per failure mode. This file adds width via deterministic
-// generators that vary the failure dimensions independently.
+// witness per failure mode. Deterministic generators add width by
+// varying the failure dimensions independently.
 
 import { describe, expect, it } from 'vitest';
 

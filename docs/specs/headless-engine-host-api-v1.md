@@ -15,9 +15,9 @@ The V1 promise is:
 > Given a Circuit run folder, Circuit can produce a stable status object that a
 > host can render and act on.
 
-This spec is intentionally narrow. It does not turn Circuit into a full
-platform, a cockpit, a memory system, or a Capacitor backend. It gives those
-things one dependable engine surface to build on later.
+The scope is narrow: a dependable engine surface for hosts. It does not turn
+Circuit into a full platform, a cockpit, a memory system, or a Capacitor
+backend.
 
 ## Non-Goals
 

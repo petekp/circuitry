@@ -313,9 +313,8 @@ export const FixVerification = z
 export type FixVerification = z.infer<typeof FixVerification>;
 
 // Runtime-owned regression proof. The brief's regression contract states the
-// model's *intent* — what test should reproduce the bug. This report records
-// what the runtime actually observed when it executed that test before the fix
-// was applied:
+// model's *intent* — what test should reproduce the bug. The runtime records
+// what it observed when it executed that test before the fix was applied:
 //   - 'proved'     — runtime ran the regression command and observed it fail
 //                    (matching the brief's failing-before-fix expectation, so
 //                    the test does reproduce the bug).
@@ -456,10 +455,10 @@ export const FixHiddenIndexFlag = z
   .strict();
 export type FixHiddenIndexFlag = z.infer<typeof FixHiddenIndexFlag>;
 
-// Runtime-owned pre-fix-act snapshot of git state. Captured immediately before
-// the implementer touches the working tree, this report is the baseline that
-// the post-verify change-set step diffs against. The change-set step compares
-// the entries it observes after the fix against this snapshot's entries:
+// Runtime-owned pre-fix-act snapshot of git state. Captured before the
+// implementer touches the working tree, the snapshot becomes the baseline for
+// the post-verify change-set step. The change-set step compares entries it
+// observes after the fix against this snapshot's entries:
 //   - paths in the post snapshot but not in baseline = newly-dirty paths
 //     (introduced by fix-act)
 //   - paths in baseline whose post fingerprint differs = pre-existing dirt

@@ -270,9 +270,9 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain('name: run');
     expect(skill).not.toContain('name: circuit-run');
     expect(skill).toContain('# Circuit Run');
-    expect(skill).toContain('## When to Use This Skill');
+    expect(skill).toContain('## Use Case');
     expect(skill).toContain(
-      'Use when the user asks Circuit to choose the flow, or when no direct Circuit flow clearly fits',
+      'Chooses and runs the best Circuit flow when no direct flow clearly fits',
     );
     expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run --goal");
     expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run fix --goal");
@@ -808,10 +808,8 @@ describe('Codex host plugin package', () => {
 
       expect(skill).toContain(`name: ${command}`);
       expect(skill).toContain(`# ${EXPECTED_CODEX_SKILL_TITLES[command]}`);
-      expect(skill).toContain('## When to Use This Skill');
-      expect(skill).toMatch(
-        /description: "Use when the user wants Circuit|description: "Use when the user asks Circuit/,
-      );
+      expect(skill).toContain('## Use Case');
+      expect(skill).toMatch(/description: "(Runs Circuit|Chooses and runs)/);
       expect(skill).toContain("node '<plugin root>/scripts/circuit.ts'");
       expect(skill).toContain('--progress jsonl');
       expect(skill).toContain('presentation');

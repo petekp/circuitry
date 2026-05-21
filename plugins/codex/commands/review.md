@@ -22,8 +22,7 @@ metacharacters:
    Circuit plugin directory, the directory that contains
    `.codex-plugin/plugin.json`. Do not use a path relative to the
    user's project.
-2. **Construct the Bash invocation SAFELY.** Do NOT build the shell command
-   by double-quoting the raw scope text. Double quotes expand `$VAR`,
+2. **Build a shell-safe invocation.** Single-quote the raw scope text. Double quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences from user-controlled input.
 
    - Wrap the scope in **single quotes** in the final shell command.

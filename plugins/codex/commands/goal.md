@@ -1,14 +1,14 @@
 ---
-description: Use when the user wants Circuit to supervise a bounded objective with typed evidence, recovery, and a completion gate.
+description: Runs Circuit Goal for a bounded objective with typed evidence, recovery, and a completion gate.
 argument-hint: <goal>
 ---
 
 # /circuit:goal — direct Goal flow
 
 Runs a long-running objective through the Goal flow without asking the router to
-choose a flow first. Use this when the operator wants Circuit to supervise a
-bounded objective until typed evidence proves it, recovery is needed, or a
-blocked result is more honest than continuing.
+choose a flow first. Goal supervises a bounded objective until typed evidence
+proves it, recovery is needed, or a blocked result is more honest than
+continuing.
 
 Circuit writes a Goal contract, dispatches to one statically authored child
 flow target, evaluates the child evidence, runs two adversarial gate passes, and
@@ -21,8 +21,8 @@ literal input - it is user-controlled and MAY contain shell metacharacters:
 
 ## Instructions
 
-1. **Construct the Bash invocation SAFELY.** Do NOT build the shell command by
-   double-quoting the raw goal text.
+1. **Build a shell-safe invocation.** Single-quote the raw goal text instead of
+   double-quoting it.
 
    - Wrap the goal text in **single quotes** in the final shell command.
      Single quotes disable all expansion.
@@ -68,8 +68,8 @@ literal input - it is user-controlled and MAY contain shell metacharacters:
    `run_folder`, `trace_entries_observed`, `operator_summary_path`,
    `operator_summary_markdown_path`, and `operator_summary_html_path` when
    present.
-5. **If `outcome === "checkpoint_waiting"`, do not claim completion.** Render
-   the checkpoint summary and the exact resume command:
+5. **If `outcome === "checkpoint_waiting"`, render the checkpoint.** Include
+   the summary and exact resume command:
 
    ```bash
    node '<plugin root>/scripts/circuit.ts' resume --run-folder '<run_folder>' --checkpoint-choice '<choice>' --progress jsonl
