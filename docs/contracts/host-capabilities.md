@@ -42,12 +42,9 @@ steps.
 | Worker connector | Current status | Filesystem posture | First-run wording |
 | --- | --- | --- | --- |
 | `claude-code` | Supported and the auto default | Trusted same-workspace writes with `bypassPermissions` | Disclose before Build or Fix can run an implementer step. |
-| `codex` | Supported for read-only relays | Codex CLI read-only sandbox; cannot run implementer steps | Safe to present as the read-only Codex worker. |
+| `codex` | Supported for write-capable implementer relays | Codex CLI workspace-write boundary with pinned argv and ignored user config/rules | Say this is the first-class Codex worker connector. |
+| `cursor-agent` | Supported for write-capable implementer relays | Cursor CLI trusted same-workspace writes | Disclose before Prototype tournament branches can edit files. |
 | custom connector | Supported for read-only registered wrappers | Trusted local process; Circuit only routes it to read-only roles | Say it inherits cwd/env and is not an OS sandbox. |
-
-`codex-isolated` is planned but not current. It must stay out of public config
-examples and fail config parsing until an isolated writable implementation is
-tested.
 
 ## Current Host Mappings
 

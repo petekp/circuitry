@@ -15,6 +15,7 @@ export interface RelayResult {
 export interface ConnectorRelayInput {
   prompt: string;
   timeoutMs?: number;
+  cwd?: string;
   resolvedSelection?: ResolvedSelection;
   // JSON Schema (draft-07) describing the worker's final response shape.
   // Connectors that support a native structured-output flag (claude-code's

@@ -13,7 +13,8 @@ normal project checkout. Keep three concepts separate:
 
 - host/orchestrator: `generic-shell`, `codex`, or `claude-code`
 - flow: `explore`, `review`, `fix`, `build`, `pursue`, or a custom flow
-- worker connector: `claude-code`, `codex`, or a custom connector
+- worker connector: `claude-code`, `codex`, `cursor-agent`, or a custom
+  connector
 
 The host is not the worker connector. The host starts Circuit, reads its JSON
 summary and reports, and presents the outcome to the operator.
@@ -212,7 +213,8 @@ The doctor returns JSON on stdout and checks:
 Hosts MUST preserve the distinction between:
 
 - host/orchestrator, such as Codex or Claude Code
-- worker connector, such as `claude-code`, `codex`, or a custom connector
+- worker connector, such as `claude-code`, `codex`, `cursor-agent`, or a
+  custom connector
 
 Host result JSON should retain `selected_flow`, `routed_by`, `router_reason`,
 `outcome`, `run_folder`, `trace_entries_observed`, and `result_path` when

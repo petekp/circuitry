@@ -103,7 +103,8 @@ Checkpoint results include these paths even when `result_path` is absent.
 Hosts must preserve the distinction between:
 
 - host/orchestrator: Codex, Claude Code, or generic shell
-- worker connector: `claude-code`, `codex`, or a custom connector
+- worker connector: `claude-code`, `codex`, `cursor-agent`, or a custom
+  connector
 
 Progress display text may mention the worker connector. Hosts should not
 replace that with the host/orchestrator name.

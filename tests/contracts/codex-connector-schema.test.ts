@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import {
   CODEX_EXECUTABLE,
   CODEX_FORBIDDEN_ARGV_TOKENS,
-  CODEX_NO_WRITE_FLAGS,
   CODEX_REASONING_EFFORT_CONFIG_KEY,
   CODEX_SUPPORTED_EFFORTS,
+  CODEX_WRITE_FLAGS,
   type CodexRelayResult,
   assertCodexSpawnArgvBoundary,
   buildCodexArgs,
@@ -42,86 +42,88 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
     expect(CODEX_EXECUTABLE).toBe('codex');
   });
 
-  it('CODEX_NO_WRITE_FLAGS places "-s" immediately followed by "read-only"', () => {
-    // The argv-constant assertion relies on `-s read-only` appearing as
+  it('CODEX_WRITE_FLAGS places "-s" immediately followed by "workspace-write"', () => {
+    // The argv-constant assertion relies on `-s workspace-write` appearing as
     // a contiguous pair so Codex's argv parser receives them as a
     // single --sandbox policy declaration. A regression that separated
     // the two (e.g. flag reorder that shoved a different flag between)
     // would silently leave `-s` dangling and Codex might default to a
     // different policy.
-    const flags = [...CODEX_NO_WRITE_FLAGS];
+    const flags = [...CODEX_WRITE_FLAGS];
     const sIdx = flags.indexOf('-s');
     expect(sIdx).toBeGreaterThanOrEqual(0);
-    expect(flags[sIdx + 1]).toBe('read-only');
+    expect(flags[sIdx + 1]).toBe('workspace-write');
   });
 
-  it('CODEX_NO_WRITE_FLAGS includes --json, --ephemeral, --skip-git-repo-check', () => {
-    expect(CODEX_NO_WRITE_FLAGS).toContain('--json');
-    expect(CODEX_NO_WRITE_FLAGS).toContain('--ephemeral');
-    expect(CODEX_NO_WRITE_FLAGS).toContain('--skip-git-repo-check');
+  it('CODEX_WRITE_FLAGS includes the connector-owned execution flags', () => {
+    expect(CODEX_WRITE_FLAGS).toContain('--json');
+    expect(CODEX_WRITE_FLAGS).toContain('--ephemeral');
+    expect(CODEX_WRITE_FLAGS).toContain('--skip-git-repo-check');
+    expect(CODEX_WRITE_FLAGS).toContain('--ignore-user-config');
+    expect(CODEX_WRITE_FLAGS).toContain('--ignore-rules');
   });
 
-  it('CODEX_NO_WRITE_FLAGS contains exactly 6 tokens (pinned surface — additions require contract-test update)', () => {
+  it('CODEX_WRITE_FLAGS contains exactly 8 tokens (pinned surface — additions require contract-test update)', () => {
     // Authoring note: an exact-length pin so that
-    // adding ANY new token to CODEX_NO_WRITE_FLAGS — even an ostensibly
+    // adding ANY new token to CODEX_WRITE_FLAGS — even an ostensibly
     // harmless one — forces a contract-test update alongside, which
     // forces reviewer attention on whether the new token widens the
     // capability surface. Without this pin, adding `--full-auto` would
     // pass all named negative checks but slip past this file.
-    expect([...CODEX_NO_WRITE_FLAGS]).toHaveLength(6);
+    expect([...CODEX_WRITE_FLAGS]).toHaveLength(8);
   });
 
-  it('CODEX_NO_WRITE_FLAGS does NOT contain --dangerously-bypass-approvals-and-sandbox', () => {
+  it('CODEX_WRITE_FLAGS does NOT contain --dangerously-bypass-approvals-and-sandbox', () => {
     // Capability-boundary anchor. If this flag ever enters the constant,
-    // the OS-level no-write sandbox is bypassed and the connector's
-    // capability-boundary claim collapses.
-    expect([...CODEX_NO_WRITE_FLAGS]).not.toContain('--dangerously-bypass-approvals-and-sandbox');
+    // Codex runs outside the connector-owned sandbox and the boundary claim
+    // collapses.
+    expect([...CODEX_WRITE_FLAGS]).not.toContain('--dangerously-bypass-approvals-and-sandbox');
   });
 
-  it('CODEX_NO_WRITE_FLAGS does NOT contain --full-auto or --add-dir (write-capable aliases)', () => {
-    // `--full-auto` aliases to `--sandbox workspace-write`; `--add-dir`
-    // extends writable directories. Both would undermine read-only.
-    const flags = [...CODEX_NO_WRITE_FLAGS];
+  it('CODEX_WRITE_FLAGS does NOT contain --full-auto or --add-dir (widening aliases)', () => {
+    // `--full-auto` changes approvals/sandbox outside the pinned contract;
+    // `--add-dir` extends writable directories.
+    const flags = [...CODEX_WRITE_FLAGS];
     expect(flags).not.toContain('--full-auto');
     expect(flags).not.toContain('--add-dir');
   });
 
-  it('CODEX_NO_WRITE_FLAGS does NOT contain -o / --output-last-message (CLI-side write path)', () => {
+  it('CODEX_WRITE_FLAGS does NOT contain -o / --output-last-message (CLI-side write path)', () => {
     // Authoring note: Codex's `-o <FILE>` writes the
     // final message to a caller-chosen path. Unlike shell writes from
     // inside the model, `-o` is a CLI wrapper write that bypasses the
-    // `-s read-only` model sandbox because it runs in the Codex CLI
+    // connector-owned workspace because it runs in the Codex CLI
     // process itself.
-    const flags = [...CODEX_NO_WRITE_FLAGS];
+    const flags = [...CODEX_WRITE_FLAGS];
     expect(flags).not.toContain('-o');
     expect(flags).not.toContain('--output-last-message');
   });
 
-  it('CODEX_NO_WRITE_FLAGS does NOT contain -c / --config / -p / --profile (config-layer bypass)', () => {
-    // Authoring note: `-c sandbox_mode="workspace-write"`
-    // or a profile loaded via `-p name` can reintroduce write
-    // capability at the config layer while `-s read-only` still appears
-    // in argv. The forbidden-token set covers both surfaces.
-    const flags = [...CODEX_NO_WRITE_FLAGS];
+  it('CODEX_WRITE_FLAGS does NOT contain -c / --config / -p / --profile (config-layer bypass)', () => {
+    // Authoring note: `-c sandbox_mode="danger-full-access"`
+    // or a profile loaded via `-p name` can widen capability at the config
+    // layer while `-s workspace-write` still appears in argv. The final argv
+    // assertion permits only the connector-owned effort override.
+    const flags = [...CODEX_WRITE_FLAGS];
     expect(flags).not.toContain('-c');
     expect(flags).not.toContain('--config');
     expect(flags).not.toContain('-p');
     expect(flags).not.toContain('--profile');
   });
 
-  it('CODEX_NO_WRITE_FLAGS starts with the "exec" subcommand', () => {
+  it('CODEX_WRITE_FLAGS starts with the "exec" subcommand', () => {
     // If `exec` drifts to a later position or disappears, the
     // subprocess is no longer running the non-interactive exec mode
     // and the `--json` stream semantics do not apply.
-    expect([...CODEX_NO_WRITE_FLAGS][0]).toBe('exec');
+    expect([...CODEX_WRITE_FLAGS][0]).toBe('exec');
   });
 
-  it('CODEX_FORBIDDEN_ARGV_TOKENS enumerates the argv surfaces that bypass -s read-only', () => {
+  it('CODEX_FORBIDDEN_ARGV_TOKENS enumerates the argv surfaces that bypass the connector boundary', () => {
     // Authoring note: the exported forbidden-token set
     // is the module-load runtime assertion's deny-list. Every surface
     // listed here has been empirically (or documentary) shown to widen
     // the sandbox. A future regression that tries to smuggle one of
-    // these into CODEX_NO_WRITE_FLAGS fires the module-load throw.
+    // these into CODEX_WRITE_FLAGS fires the module-load throw.
     const forbidden = [...CODEX_FORBIDDEN_ARGV_TOKENS];
     expect(forbidden).toContain('--dangerously-bypass-approvals-and-sandbox');
     expect(forbidden).toContain('--full-auto');
@@ -150,6 +152,30 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
     expect(args.slice(-5)).toEqual([
       '-m',
       'gpt-5.4',
+      '-c',
+      `${CODEX_REASONING_EFFORT_CONFIG_KEY}="xhigh"`,
+      'hello',
+    ]);
+  });
+
+  it('buildCodexArgs threads the runtime cwd through --cd before model and prompt args', () => {
+    const args = buildCodexArgs({
+      cwd: '/tmp/circuit-workspace',
+      prompt: 'hello',
+      resolvedSelection: {
+        model: { provider: 'openai', model: 'gpt-5.5' },
+        effort: 'xhigh',
+        skills: [],
+        invocation_options: {},
+      },
+    });
+
+    expect(args).toEqual([
+      ...CODEX_WRITE_FLAGS,
+      '--cd',
+      '/tmp/circuit-workspace',
+      '-m',
+      'gpt-5.5',
       '-c',
       `${CODEX_REASONING_EFFORT_CONFIG_KEY}="xhigh"`,
       'hello',
@@ -186,7 +212,7 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
 
   it('buildCodexArgs rejects effort tiers the Codex CLI cannot honor before spawn', () => {
     expect([...CODEX_SUPPORTED_EFFORTS]).toEqual(['low', 'medium', 'high', 'xhigh']);
-    for (const effort of ['none', 'minimal'] as const) {
+    for (const effort of ['none', 'minimal', 'max'] as const) {
       expect(() =>
         buildCodexArgs({
           prompt: 'hello',
@@ -202,7 +228,7 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
 
   it('assertCodexSpawnArgvBoundary allows only one model_reasoning_effort -c override', () => {
     const safeArgs = [
-      ...CODEX_NO_WRITE_FLAGS,
+      ...CODEX_WRITE_FLAGS,
       '-c',
       `${CODEX_REASONING_EFFORT_CONFIG_KEY}="high"`,
       'hello',
@@ -210,7 +236,7 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
     expect(() => assertCodexSpawnArgvBoundary(safeArgs)).not.toThrow();
     expect(() =>
       assertCodexSpawnArgvBoundary([
-        ...CODEX_NO_WRITE_FLAGS,
+        ...CODEX_WRITE_FLAGS,
         '-c',
         `${CODEX_REASONING_EFFORT_CONFIG_KEY}="high"`,
         '-c',
@@ -220,7 +246,7 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
     ).toThrow(/at most one allowlisted -c override/);
     expect(() =>
       assertCodexSpawnArgvBoundary([
-        ...CODEX_NO_WRITE_FLAGS,
+        ...CODEX_WRITE_FLAGS,
         '-c',
         'sandbox_mode="workspace-write"',
         'hello',
@@ -231,25 +257,20 @@ describe('Codex connector — src/connectors/codex.ts module shape', () => {
   it('assertCodexSpawnArgvBoundary rejects config/profile/sandbox rewidening tokens in final argv', () => {
     expect(() =>
       assertCodexSpawnArgvBoundary([
-        ...CODEX_NO_WRITE_FLAGS,
+        ...CODEX_WRITE_FLAGS,
         '--config=sandbox_mode="workspace-write"',
         'hello',
       ]),
     ).toThrow(/forbidden argv token "--config=sandbox_mode/);
     expect(() =>
-      assertCodexSpawnArgvBoundary([
-        ...CODEX_NO_WRITE_FLAGS,
-        '--profile',
-        'write-enabled',
-        'hello',
-      ]),
+      assertCodexSpawnArgvBoundary([...CODEX_WRITE_FLAGS, '--profile', 'write-enabled', 'hello']),
     ).toThrow(/forbidden argv token "--profile"/);
     expect(() =>
-      assertCodexSpawnArgvBoundary([...CODEX_NO_WRITE_FLAGS, '--sandbox=workspace-write', 'hello']),
+      assertCodexSpawnArgvBoundary([...CODEX_WRITE_FLAGS, '--sandbox=workspace-write', 'hello']),
     ).toThrow(/forbidden argv token "--sandbox=workspace-write"/);
     expect(() =>
-      assertCodexSpawnArgvBoundary([...CODEX_NO_WRITE_FLAGS, '-s', 'workspace-write', 'hello']),
-    ).toThrow(/exactly one "-s read-only"/);
+      assertCodexSpawnArgvBoundary([...CODEX_WRITE_FLAGS, '-s', 'read-only', 'hello']),
+    ).toThrow(/exactly one "-s workspace-write"/);
   });
 });
 
@@ -339,8 +360,8 @@ describe('Codex connector — parseCodexStdout NDJSON parser branches', () => {
     // incremental progress beacon for a long-running command_execution.
     // The event type must pass the top-level allowlist, and the inner
     // item.type is gated by the same KNOWN_CODEX_ITEM_TYPES set as
-    // item.completed so a novel write-capable item type cannot smuggle
-    // in via the update channel either.
+    // item.completed so a novel protocol item type cannot smuggle in via the
+    // update channel either.
     const stdout =
       `${JSON.stringify({ type: 'thread.started', thread_id: 'thread-128' })}\n` +
       `${JSON.stringify({ type: 'turn.started' })}\n` +

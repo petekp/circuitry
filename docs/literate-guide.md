@@ -654,28 +654,30 @@ settings could otherwise re-enter Circuit recursively. `--settings '{}'`
 seals it.
 
 The `codex` connector is similar in purpose but different in mechanism.
-Codex's CLI does not allow per-tool surface configuration; instead, it
-relies on an OS-level sandbox (Seatbelt on macOS, Landlock on Linux):
+Codex's CLI does not allow per-tool surface configuration; instead, Circuit
+owns the argv boundary it gives to the Codex subprocess:
 
 ```ts
 // src/connectors/codex.ts
-export const CODEX_NO_WRITE_FLAGS = Object.freeze([
-  'exec', '--json', '-s', 'read-only', '--ephemeral', '--skip-git-repo-check',
+export const CODEX_WRITE_FLAGS = Object.freeze([
+  'exec',
+  '--json',
+  '-s',
+  'workspace-write',
+  '--ephemeral',
+  '--skip-git-repo-check',
+  '--ignore-user-config',
+  '--ignore-rules',
 ] as const);
 ```
 
-`-s read-only` is the capability anchor. Two flags would defeat it —
-`--dangerously-bypass-approvals-and-sandbox` and `--full-auto` (which
-silently widens the sandbox to writable) — and the connector explicitly
-forbids them in argv before spawn. There is also a forbidden `--add-dir`
-(extends writable roots), `-o` (writes the final message to a file),
-and `-c` overrides for sandbox keys. The connector validates the final
-spawn argv before launch.
-
-The Codex connector cannot run an `implementer` role, because read-only
-workers cannot write files. The relay resolver (§15) enforces this:
-asking for an implementer relay through Codex fails closed at resolution
-time, before the subprocess spawns.
+`-s workspace-write` is the write-capable sandbox anchor. The connector also
+ignores user config and rules, forbids bypass flags such as
+`--dangerously-bypass-approvals-and-sandbox`, forbids writable-root widening
+such as `--add-dir`, and permits only the allowlisted
+`model_reasoning_effort` config override. The relay resolver (§15) still
+rejects connector/provider/effort pairings the Codex CLI cannot honor before
+the subprocess spawns.
 
 The *custom* connector path lets operators register a wrapper executable
 under `relay.connectors.<name>` in their config. The contract is

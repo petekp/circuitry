@@ -18,6 +18,10 @@ import { SkillSlotArray } from './skill.js';
 export const RelayRole = z.enum(['researcher', 'implementer', 'reviewer']);
 export type RelayRole = z.infer<typeof RelayRole>;
 
+const RelayConnectorName = z.string().regex(/^[a-z][a-z0-9-]*$/, {
+  message: 'connector must be a kebab-case connector name',
+});
+
 export const ReportRef = z.object({
   path: RunRelativePath,
   schema: z.string().min(1),
@@ -171,6 +175,7 @@ export const RelayStep = StepBase.extend({
   executor: z.literal('worker'),
   kind: z.literal('relay'),
   role: RelayRole,
+  connector: RelayConnectorName.optional(),
   acceptance_criteria: AcceptanceCriteria.optional(),
   writes: z
     .object({
@@ -293,6 +298,7 @@ export const FanoutRelayBranch = z
       .max(64)
       .regex(FANOUT_BRANCH_ID_REGEX, { message: 'branch_id must be a kebab-case slug' }),
     execution: FanoutRelayBranchExecution,
+    connector: RelayConnectorName.optional(),
     selection: SelectionOverride.optional(),
   })
   .strict();
@@ -326,6 +332,7 @@ export const FanoutRelayBranchTemplate = z
   .object({
     branch_id: z.string().min(1).max(64),
     execution: FanoutRelayBranchExecution,
+    connector: z.string().min(1).optional(),
     selection: z.unknown().optional(),
   })
   .strict();

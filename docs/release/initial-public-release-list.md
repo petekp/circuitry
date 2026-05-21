@@ -82,7 +82,6 @@ These are the extra proof points from the execution-plan gap review:
 | ID | Item | Why it is not in the initial release |
 | --- | --- | --- |
 | REL-PUB-011 | Native Codex App Server and Claude Agent SDK adapters. | These are not current roadmap items. Release truth should not list them as planned capabilities, and public copy should not imply they are pending support. |
-| REL-PUB-012 | `codex-isolated` writable worker support. | [README.md](../../README.md), [docs/contracts/connector.md](../contracts/connector.md), and [docs/release/claims/public-claims.yaml](claims/public-claims.yaml) all say `codex-isolated` is planned, not current. |
 | REL-PUB-013 | Cross-run project-memory query and recall surfaces. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) treats structured project-memory records as real, but cross-run query and recall surfaces as gaps. Do not claim them as shipping. |
 | REL-PUB-014 | Keep-up-for-you update channel. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) says the update-channel claim is not yet supported. Do not use launch copy that implies automatic methodology updates. |
 | REL-PUB-015 | Public `/circuit:pursue` slash command. | Pursue is a public routable flow and has generated flow mirrors, but [docs/generated-surfaces.md](../generated-surfaces.md) and `src/commands/run.md` say it has no dedicated command surface yet. |

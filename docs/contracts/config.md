@@ -3,7 +3,7 @@ contract: config
 status: ratified-v0.1
 version: 0.2
 schema_source: src/schemas/config.ts
-last_updated: 2026-05-08
+last_updated: 2026-05-20
 depends_on: [ids, selection-policy, connector, step, skill]
 report_ids:
   - config.root
@@ -30,8 +30,9 @@ three related surfaces:
    which `ConfigLayer` produced it and (optionally) the source path that
    backs it.
 3. **`CircuitOverride`** — the per-flow slot stored in `Config.circuits`,
-   reserving a stable authoring surface for per-circuit selection tweaks
-   and per-flow skill-slot bindings.
+   reserving a stable authoring surface for per-circuit selection tweaks,
+   per-flow skill-slot bindings, and Prototype tournament variant model
+   matrices.
 
 The contract answers: what must be true of a `Config`, a `LayeredConfig`,
 and a `CircuitOverride` for config composition to be structurally sound,
@@ -105,11 +106,13 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
 
 - **CONFIG-I3 — `CircuitOverride` rejects surplus keys at parse time
   (`.strict()`).** A per-circuit slot admits only the documented
-  override fields (`selection` and `skill_bindings`, with the old
-  top-level `skills` shortcut removed per Codex HIGH #5 fold-in on the
-  connector contract). A typo or an attempt to smuggle a new override
-  category through a circuit slot without going through the contract is
-  rejected. Enforced at `src/schemas/config.ts` via `.strict()` on the
+  override fields (`selection`, `skill_bindings`, and `variant_models`, with
+  the old top-level `skills` shortcut removed per Codex HIGH #5 fold-in on the
+  connector contract). `variant_models` is the typed Prototype tournament
+  matrix: each entry has an id, label, optional connector reference, and
+  required model/effort selection. A typo or an attempt to smuggle a new
+  override category through a circuit slot without going through the contract
+  is rejected. Enforced at `src/schemas/config.ts` via `.strict()` on the
   `CircuitOverride` `z.object`.
 
 - **CONFIG-I4 — Nested `Config.defaults` rejects surplus keys at parse
@@ -247,6 +250,10 @@ After a `CircuitOverride` is accepted:
 - `selection` (when present) is a `SelectionOverride`.
 - `skill_bindings` is present and maps valid `SkillSlotId` keys to
   concrete `SkillId` values.
+- `variant_models` (when present) is a 2-4 entry matrix. Each variant id is a
+  fanout-safe kebab-case slug, each variant selection includes both
+  `selection.model` and `selection.effort`, and `connector` is a strict
+  `ConnectorReference` when present.
 - No surplus keys (CONFIG-I3). Specifically, the v0.0 drafting's
   top-level `skills?: string[]` shortcut is rejected at this slice
   (already removed in Codex HIGH #5 fold-in on the connector contract;

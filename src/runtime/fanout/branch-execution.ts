@@ -15,7 +15,6 @@ import {
   type ProductionRelayAttemptValidationInput,
   type RelayConnector,
   executeProductionRelayAttempt,
-  relayWithResolvedConnector,
   resolveRelayExecution,
 } from '../executors/relay.js';
 import type { FanoutStep, RelayStep } from '../manifest/executable-flow.js';
@@ -109,6 +108,7 @@ function syntheticRelayStep(
     },
     kind: 'relay',
     role: branch.role,
+    ...(branch.connector === undefined ? {} : { connector: branch.connector }),
     report: { path: `${branchDirRel}/report.json`, schema: branch.report_schema },
   };
 }
@@ -129,6 +129,7 @@ function syntheticCompiledRelayStepV1(
     executor: 'worker',
     kind: 'relay',
     role: branch.role as never,
+    ...(branch.connector === undefined ? {} : { connector: branch.connector as never }),
     writes: {
       request: `${branchDirRel}/request.txt` as never,
       receipt: `${branchDirRel}/receipt.txt` as never,
@@ -285,25 +286,19 @@ export async function executeRelayFanoutBranch(
       flowId: context.flow.id,
       role: branch.role,
       selection: branch.selection,
-      ...(relayConnector === undefined ? {} : { suppliedConnector: relayConnector }),
+      ...(branch.connector === undefined ? {} : { stepConnector: branch.connector }),
+      suppliedConnector: relayConnector,
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { configLayers: context.selectionConfigLayers }),
     });
-    const response =
-      relayConnector === undefined
-        ? (
-            await relayWithResolvedConnector(relayExecution.connector, {
-              prompt: branch.goal,
-            })
-          ).result_body
-        : await relayConnector.relay({
-            runId: context.runId,
-            stepId: `${step.id}-${branch.branch_id}`,
-            role: relayExecution.role,
-            prompt: branch.goal,
-            connector: relayExecution.connectorName,
-          });
+    const response = await relayConnector.relay({
+      runId: context.runId,
+      stepId: `${step.id}-${branch.branch_id}`,
+      role: relayExecution.role,
+      prompt: branch.goal,
+      connector: relayExecution.connectorName,
+    });
     const reportBody = parseConnectorResponse(response);
     const provenanceFailure = relayBranchProvenanceFailure(branch, reportBody);
     const evaluation = branchResult(reportBody, admitList(step));

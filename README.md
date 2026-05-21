@@ -124,9 +124,10 @@ Review collects untracked file paths and sizes by default, but not untracked
 file contents. Add `--include-untracked-content` only after you confirm those
 files are safe to relay.
 
-Built-in worker connectors are **`claude-code`** and **`codex`**. Use
-`claude-code` for trusted same-workspace writes. Use `codex` for read-only
-Codex relays.
+Built-in worker connectors are **`claude-code`**, **`codex`**, and
+**`cursor-agent`**. Use `claude-code` for trusted Claude Code writes, `codex`
+for first-class Codex worker writes, and `cursor-agent` for Cursor CLI
+implementer work.
 
 Custom connectors use the prompt-file/output-file protocol. stdin is ignored,
 the process inherits the Circuit process environment and current working

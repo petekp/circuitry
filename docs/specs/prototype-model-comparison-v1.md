@@ -1,7 +1,11 @@
 # Prototype Model-Comparison V1 Spec
 
-Status: implementation spec. This is not current behavior until the
-source, generated surfaces, tests, and proof run described here exist.
+Status: implemented V1 record. Current behavior is defined by the source,
+generated surfaces, tests, config, and contracts. The original same-connector
+V1 was extended on 2026-05-20 by
+[`write-capable-implementer-connectors-v1.md`](write-capable-implementer-connectors-v1.md)
+so Prototype tournaments can route variants across connector-aware
+implementers.
 
 ## Goal
 
@@ -122,15 +126,13 @@ production app.
 3. **Compose writers cannot see selection config layers.** A deterministic
    variant-options writer needs access to the configured model matrix. Today
    `executeCompose` does not pass `selectionConfigLayers` into compose builders.
-4. **No per-branch connector override.** Branch `selection` can vary model,
-   effort, skills, depth, and invocation options. It cannot choose a connector.
-   Connector routing is role/flow/default/auto. V1 can compare different models
-   that are compatible with the same write-capable connector. Cross-connector
-   provider comparison is a follow-up.
-5. **Codex cannot produce artifact branches today.** The built-in Codex worker
-   is read-only and the resolver rejects read-only connectors for implementer
-   steps. Any branch that writes prototype files must use a write-capable
-   connector.
+4. **Per-branch connector override is now supported.** Variant options emit the
+   requested connector reference, resolved connector name, and resolution
+   source; the tournament fanout template passes the resolved connector into
+   each relay branch.
+5. **Codex is now the writable Codex worker connector.**
+   A Prototype branch that should write through Codex uses the public `codex`
+   connector with the OpenAI provider and a supported Codex effort.
 6. **Current HTML is single-artifact.** `prototype-checkpoint.ts` renders the
    current keep/save/discard checkpoint. A variant comparison needs a different
    checkpoint surface.
@@ -279,6 +281,9 @@ Fields:
   - `provider`
   - `model`
   - `effort`
+  - optional `connector`
+  - `connector_name`
+  - `connector_source`
   - `prototype_root`
   - `variant_root`
   - `entry_point_hint`
@@ -297,7 +302,8 @@ Checks:
 - Every `selection.model` is present.
 - Every variant exposes top-level `provider`, `model`, and `effort` strings for
   dynamic fanout substitution, and those strings match `selection`.
-- Every selection is compatible with the resolved implementer connector.
+- Every selection is compatible with that variant's resolved implementer
+  connector.
 - Claim limits include `not production` and `not deployed`.
 
 ### `prototype.variant-artifact@v1`
@@ -350,26 +356,31 @@ Written by an orchestrator compose writer after fanout.
 
 Fields:
 
-- `variant_count`
-- `evidence[]`
+- `required_captured_count`
+- `captured_count`
+- `variants[]`
   - `variant_id`
+  - `label`
   - `relay_step_id`
-  - `connector`
-  - `resolved_selection.model.provider`
-  - `resolved_selection.model.model`
-  - optional `resolved_selection.effort`
-  - `resolved_from`
-  - `trace_entry_kind`: `relay.started`
-  - `evidence_status`: `captured` or `missing`
+  - `status`: `captured` or `missing`
+  - `connector_name` when captured
+  - `provider` when captured
+  - `model` when captured
+  - `effort` when captured
+  - `trace_sequence` when captured
+  - `trace_entry_kind`: `relay.started` when captured
+  - `resolved_from` when captured
 - `missing_evidence[]`
 
 Checks:
 
-- Each admitted branch must have one matching production `relay.started` trace
+- `required_captured_count` must equal the number of configured variants.
+- Each configured variant should have one matching production `relay.started` trace
   entry for synthetic step id
   `variant-fanout-step-<variant_id>`.
-- Each entry must include `resolved_selection.model.provider` and
-  `resolved_selection.model.model`.
+- Each captured entry must include connector name,
+  `resolved_selection.model.provider`, `resolved_selection.model.model`,
+  `resolved_selection.effort`, trace sequence, and `resolved_from`.
 - If fewer than two admitted variants have captured model evidence, the
   variant-verification step must fail and route to a `needs_attention` close
   before the checkpoint. The run must not present itself as model-comparison.
@@ -743,13 +754,13 @@ Use `npm run verify:fast` during iteration. Do not claim done until full
 
 1. **CLI model-matrix shorthand.** Add a safer run-time flag or prompt flow for
    operators who do not want to edit config before running Prototype.
-2. **Cross-connector variants.** Extend fanout branch execution to allow a
-   branch-scoped connector reference, with capability and provider compatibility
-   checks before spawn.
-3. **Proposal-first comparison.** Let read-only connectors create proposal
+2. **Branch-local isolation for writable relay branches.** Current connector-
+   aware relay fanouts serialize writable branches as the safe fallback. A later
+   slice can add branch-local worktrees or another isolation mechanism.
+3. **Proposal-first comparison.** Let read-only custom connectors create proposal
    branches, then materialize the selected proposal through a write-capable
-   implementer. This is useful for Codex-vs-Claude comparison without asking
-   read-only Codex to write files.
+   implementer. This is useful for wrapper-based comparison without making
+   arbitrary custom connectors write-capable.
 4. **Branch preview retention.** Preserve branch-built previews only after the
    runtime has a durable branch-artifact retention and cleanup policy.
 5. **Screenshot evidence.** Add screenshots only with a typed screenshot report
@@ -768,9 +779,9 @@ Use `npm run verify:fast` during iteration. Do not claim done until full
 2. **Decision: no implicit matrix.** Prototype must refuse tournament mode
    without an explicit model matrix. A same-model variant fallback can be a later
    non-model-comparison mode.
-3. **Decision: same-connector V1.** Comparing different models on one
-   write-capable connector is enough for V1. Cross-connector provider comparison
-   waits for branch-scoped connector selection.
+3. **Decision: connector-aware V1.** Prototype can compare variants routed
+   through `codex`, `claude-code`, and `cursor-agent`, with
+   connector/provider/effort compatibility checked before branch execution.
 4. **Decision: autonomous gate.** Autonomous model-comparison is allowed only
    when highest-score evidence and verification both pass.
 5. **Decision: review connector.** The variant reviewer may use a read-only

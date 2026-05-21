@@ -310,6 +310,7 @@ export const prototypeFlowData = {
                 report_schema: 'prototype.variant-artifact@v1',
                 provenance_field: 'variant_id',
               },
+              connector: '$item.connector_name',
               selection: {
                 model: {
                   provider: '$item.provider',

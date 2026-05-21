@@ -1,11 +1,5 @@
 schema_version: 1
 exceptions:
-  - id: EX-REL-002-CODEX-ISOLATED
-    capability_id: connector:codex-isolated
-    status: approved_exception
-    readiness_ref: REL-002
-    rationale: codex-isolated is intentionally absent from the current config schema until isolated writable Codex support is implemented and tested.
-    public_wording: Isolated writable Codex worker support is planned, not current.
   - id: EX-REL-004-FIX-INTENT-MODE
     capability_id: router:intent:fix
     status: approved_exception

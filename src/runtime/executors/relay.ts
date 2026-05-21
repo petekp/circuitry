@@ -1,5 +1,6 @@
 import { relayClaudeCode } from '../../connectors/claude-code.js';
 import { relayCodex } from '../../connectors/codex.js';
+import { relayCursorAgent } from '../../connectors/cursor-agent.js';
 import { relayCustom } from '../../connectors/custom.js';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
 import { findReportZodSchema, parseReport } from '../../flows/registries/report-schemas.js';
@@ -63,7 +64,7 @@ export function createStubRelayConnector(response: unknown = { ok: true }): Rela
 }
 
 function builtinConnector(name: string): ResolvedConnector | undefined {
-  if (name === 'claude-code' || name === 'codex') {
+  if (name === 'claude-code' || name === 'codex' || name === 'cursor-agent') {
     return { kind: 'builtin', name };
   }
   return undefined;
@@ -193,6 +194,7 @@ export async function relayWithResolvedConnector(
   input: {
     readonly prompt: string;
     readonly timeoutMs?: number;
+    readonly cwd?: string;
     readonly resolvedSelection?: unknown;
     readonly responseSchema?: Record<string, unknown>;
   },
@@ -200,6 +202,7 @@ export async function relayWithResolvedConnector(
   const relayInput = {
     prompt: input.prompt,
     ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
     ...(input.resolvedSelection === undefined
       ? {}
       : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) }),
@@ -210,6 +213,9 @@ export async function relayWithResolvedConnector(
   }
   if (connector.kind === 'builtin' && connector.name === 'codex') {
     return relayCodex(relayInput);
+  }
+  if (connector.kind === 'builtin' && connector.name === 'cursor-agent') {
+    return relayCursorAgent(relayInput);
   }
   if (connector.kind === 'custom') {
     return relayCustom({ ...relayInput, descriptor: connector });
@@ -450,12 +456,15 @@ export async function executeProductionRelayAttempt(input: {
         ? await relayWithResolvedConnector(relayExecution.connector, {
             prompt,
             ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
+            ...(context.projectRoot === undefined ? {} : { cwd: context.projectRoot }),
             resolvedSelection,
             ...(responseSchema === undefined ? {} : { responseSchema }),
           })
         : await context.relayer.relay({
             prompt,
+            connector: relayExecution.connectorName,
             ...(relayTimeoutMs === undefined ? {} : { timeoutMs: relayTimeoutMs }),
+            ...(context.projectRoot === undefined ? {} : { cwd: context.projectRoot }),
             resolvedSelection,
             ...(responseSchema === undefined ? {} : { responseSchema }),
           });
@@ -627,11 +636,10 @@ async function executeRelayInternal(
   if (connector === undefined) {
     return executeProductionRelay(step, context);
   }
-  const suppliedConnector = connector ?? createStubRelayConnector();
   const relayExecution = resolveRelayExecution({
     flowId: context.flow.id,
     role: step.role,
-    suppliedConnector,
+    suppliedConnector: connector,
     ...(context.selectionConfigLayers === undefined
       ? {}
       : { configLayers: context.selectionConfigLayers }),
@@ -646,7 +654,7 @@ async function executeRelayInternal(
     prompt: step.prompt ?? '',
     connector: relayExecution.connectorName,
   };
-  const response = await suppliedConnector.relay(request);
+  const response = await connector.relay(request);
 
   const writes = step.writes ?? {};
   await Promise.all(

@@ -107,6 +107,7 @@ function convertStep(step: CompiledStep): ExecutableStep {
       ...base,
       kind: 'relay',
       role: step.role,
+      ...(step.connector === undefined ? {} : { connector: step.connector }),
       ...(step.acceptance_criteria === undefined
         ? {}
         : { acceptanceCriteria: step.acceptance_criteria }),

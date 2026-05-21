@@ -14,9 +14,10 @@ export const ProviderScopedModel = z
   .strict();
 export type ProviderScopedModel = z.infer<typeof ProviderScopedModel>;
 
-// Effort tier. OpenAI's 6-tier vocabulary, chosen for cross-provider
+// Effort tier. OpenAI's 6-tier vocabulary plus Claude Code's `max`,
+// chosen for cross-provider
 // portability — connectors map non-OpenAI effort levels onto this set.
-export const Effort = z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']);
+export const Effort = z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 export type Effort = z.infer<typeof Effort>;
 
 // Skill arrays enforce uniqueness. Set-algebra composition (union,

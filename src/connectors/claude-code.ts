@@ -81,7 +81,7 @@ export const CLAUDE_CODE_DISPATCH_FLAGS = [
 ] as const;
 
 export const CLAUDE_CODE_EXECUTABLE = 'claude';
-export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
+export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 
 // Default wall-clock budget for a single relay. With the open tool
 // surface, workers do real file inspection / edits / verification before

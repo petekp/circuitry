@@ -12,96 +12,43 @@ import {
   runConnectorSubprocess,
 } from './subprocess.js';
 
-// Codex CLI connector. Invokes Codex as a Node subprocess (no external
-// SDK dependency; Node stdlib only). Mirrors the claude-code.ts template.
-//
-// Capability boundary — OS-level sandbox.
-//
-// Where the claude-code connector enforces its boundary at the declarative
-// tool layer (`claude -p` with `--tools ""`, `--strict-mcp-config`,
-// `--disable-slash-commands`, plus a parse-time assertion against the
-// subprocess's init trace_entry), the Codex connector relies on Codex's
-// OS-level sandbox (Seatbelt on macOS, Landlock on Linux) via
-// `codex exec -s read-only`. The sandbox blocks write syscalls at the
-// process level, not at the tool level, so the parse-time assertion
-// shape doesn't transfer — Codex's --json stream does not emit an init
-// trace_entry enumerating tool surfaces.
-//
-// Capability-boundary proof is therefore two-layered:
-//
-//   (a) Argv-constant assertion at spawn time — CODEX_NO_WRITE_FLAGS
-//       must include `-s read-only` and must NOT include
-//       `--dangerously-bypass-approvals-and-sandbox`. Both facts are
-//       provable at module-load time (assertions fire on a frozen
-//       constant) and pinned by contract tests at
-//       tests/contracts/codex-connector-schema.test.ts.
-//
-//   (b) TraceEntry-stream capability discipline — parseCodexStdout() is
-//       fail-closed against missing `thread.started` trace_entries (no
-//       session identifier available), missing or malformed terminal
-//       `agent_message`, or `item.completed` trace_entries carrying
-//       unexpected item.type values. A future Codex CLI that reintroduces
-//       a write-capable tool trace_entry would surface as an unexpected
-//       item type and be rejected rather than silently passed through.
-//
-// Each flag in CODEX_NO_WRITE_FLAGS is load-bearing:
-//   'exec'                      — subcommand selecting non-interactive
-//                                 run.
-//   '--json'                    — JSONL trace_entries on stdout (one
-//                                 object per line). Pure stream; stderr
-//                                 carries Codex's skills-loader tracing
-//                                 noise separately.
-//   '-s', 'read-only'           — sandbox policy. The capability-boundary
-//                                 anchor. `workspace-write` and
-//                                 `danger-full-access` are the other two
-//                                 values; both are forbidden by this
-//                                 connector.
-//   '--ephemeral'               — no session file persisted under
-//                                 ~/.codex/sessions/**. Analog of the
-//                                 claude-code connector's
-//                                 --no-session-persistence.
-//   '--skip-git-repo-check'     — allow running outside a git repo (the
-//                                 subprocess cwd passed by the runtime
-//                                 may or may not be a worktree; Codex
-//                                 defaults to refusing non-repo cwd).
-//
-// If any of these assumptions change upstream (Codex CLI version bumps,
-// sandbox enum grows a new value that bypasses read-only, --json format
-// changes shape), this connector's contract is broken and the relevant
-// guardrail above will catch it.
-export const CODEX_NO_WRITE_FLAGS = Object.freeze([
+// Codex CLI connector. Invokes Codex as a Node subprocess (no external SDK
+// dependency; Node stdlib only). Codex is a first-class write-capable worker,
+// but Circuit still owns the subprocess boundary: user config/rules are
+// ignored, dangerous bypass flags are denied, and the only permitted config
+// override is model_reasoning_effort.
+export const CODEX_WRITE_FLAGS = Object.freeze([
   'exec',
   '--json',
   '-s',
-  'read-only',
+  'workspace-write',
   '--ephemeral',
   '--skip-git-repo-check',
+  '--ignore-user-config',
+  '--ignore-rules',
 ] as const);
 
 export const CODEX_EXECUTABLE = 'codex';
 
-// Forbidden flag / prefix set. Any of these in the spawn argv would
-// undermine the `-s read-only` capability boundary:
+// Forbidden flag / prefix set. Any of these in the spawn argv would undermine
+// the connector-owned `-s workspace-write` boundary:
 //
 //   --dangerously-bypass-approvals-and-sandbox
 //     Skips all confirmations AND disables the sandbox entirely.
 //   --full-auto
-//     Codex convenience alias for `-a on-request --sandbox workspace-
-//     write`; silently widens the sandbox to writable.
+//     Codex convenience alias that changes approvals/sandbox outside the pinned
+//     connector contract.
 //   --add-dir <DIR>
-//     Extends the writable root set — any directory passed here
-//     becomes writable even under `-s read-only`.
+//     Extends the writable root set outside the runtime-supplied cwd.
 //   -o / --output-last-message <FILE>
 //     Codex CLI native write path: Codex writes the final message to
 //     the named file regardless of model sandbox. This is a direct
-//     repo-write surface that bypasses the `-s read-only` model
-//     sandbox because it is performed by the Codex CLI wrapper, not
-//     by a sandboxed model-invoked shell command.
+//     repo-write surface outside Circuit's request/receipt/result files.
 //   -c / --config <key=value>
 //     Can override `sandbox_mode` / `sandbox_permissions` /
 //     `shell_environment_policy` / `approval_policy` and therefore
 //     disable the boundary from inside config rather than argv. There is
-//     one controlled exception outside CODEX_NO_WRITE_FLAGS:
+//     one controlled exception outside CODEX_WRITE_FLAGS:
 //     buildCodexArgs may emit `-c model_reasoning_effort="<effort>"`
 //     from the connector-owned effort allowlist. assertCodexSpawnArgvBoundary()
 //     validates the final spawn argv so no caller-authored config key is
@@ -112,18 +59,18 @@ export const CODEX_EXECUTABLE = 'codex';
 //     that re-widen the surface outside the module's visibility.
 //   --sandbox <MODE>
 //     Long-form sandbox override. The one allowed sandbox declaration is
-//     the base `-s read-only` pair in CODEX_NO_WRITE_FLAGS; any later
+//     the base `-s workspace-write` pair in CODEX_WRITE_FLAGS; any later
 //     sandbox flag would let argv order re-widen the boundary.
 //
 // The module-load assertion below rejects any of these as either an
 // exact token match or a prefix (the `<arg>` variants like
 // `--add-dir` take the next argv slot, but a `-c sandbox_mode="..."`
 // reaching this assertion would still fire on the `-c` match if it were
-// added to CODEX_NO_WRITE_FLAGS).
+// added to CODEX_WRITE_FLAGS).
 //
 // The forbidden-token set above covers `--full-auto`, `--add-dir`,
 // `-c sandbox_mode=workspace-write`, `--profile`, and `-o` — all of
-// which break the boundary while preserving `-s read-only`.
+// which break the connector-owned boundary.
 export const CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
   '--dangerously-bypass-approvals-and-sandbox',
   '--full-auto',
@@ -139,7 +86,7 @@ export const CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
 export const CODEX_REASONING_EFFORT_CONFIG_KEY = 'model_reasoning_effort';
 export const CODEX_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
 
-// Fail-closed module-load assertion. The `CODEX_NO_WRITE_FLAGS` constant
+// Fail-closed module-load assertion. The `CODEX_WRITE_FLAGS` constant
 // is frozen (see `Object.freeze` above) so this is a static-shape
 // invariant: the connector refuses to load if the flags drift away from
 // the capability-boundary-preserving set.
@@ -147,23 +94,28 @@ export const CODEX_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as con
 // Why assert here rather than at first relay: catches a regression
 // on `import` so a test suite that imports the module but skips the
 // CODEX_SMOKE path still surfaces the invariant break.
-if (!CODEX_NO_WRITE_FLAGS.includes('-s') || !CODEX_NO_WRITE_FLAGS.includes('read-only')) {
+if (
+  !CODEX_WRITE_FLAGS.includes('-s') ||
+  !CODEX_WRITE_FLAGS.includes('workspace-write') ||
+  !CODEX_WRITE_FLAGS.includes('--ignore-user-config') ||
+  !CODEX_WRITE_FLAGS.includes('--ignore-rules')
+) {
   throw new Error(
-    'CODEX_NO_WRITE_FLAGS capability-boundary invariant broken: must include "-s read-only"',
+    'CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"',
   );
 }
-const flagsAsStringArray: readonly string[] = CODEX_NO_WRITE_FLAGS;
+const flagsAsStringArray: readonly string[] = CODEX_WRITE_FLAGS;
 for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
   if (flagsAsStringArray.includes(forbidden)) {
     throw new Error(
-      `CODEX_NO_WRITE_FLAGS capability-boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`,
+      `CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`,
     );
   }
 }
 
 // Default wall-clock budget for a single relay. A step's
 // `budgets.wall_clock_ms` overrides this when present.
-const DEFAULT_TIMEOUT_MS = 120_000;
+const DEFAULT_TIMEOUT_MS = 600_000;
 
 // Grace period between SIGTERM and SIGKILL, modeled on claude-code.ts.
 const SIGTERM_TO_SIGKILL_GRACE_MS = 2_000;
@@ -180,15 +132,6 @@ const STDERR_MAX_BYTES = 1024 * 1024;
 // indefinitely.
 const VERSION_CAPTURE_TIMEOUT_MS = 5_000;
 
-// `CodexRelayInput` does NOT carry a cwd field at v0. The codex
-// subprocess inherits the parent Node process's cwd via `spawn`'s
-// default behavior. This is intentional: `docs/contracts/connector.md`
-// connector-I1 codex bullet says the connector runs "in the operator's
-// current session context," which at v0 is the parent cwd. If future
-// work needs per-relay cwd override (distinct-UID sandbox, git
-// worktree routing, flow-scoped directories), the field is added
-// here and threaded into the `spawn` options below. Noted as
-// deferred-by-design, not oversight.
 export interface CodexRelayInput extends ConnectorRelayInput {}
 
 // The `CodexRelayResult` name parallels `ClaudeCodeRelayResult` —
@@ -259,7 +202,9 @@ function selectedOpenAIModel(selection: ResolvedSelection | undefined): string |
   return model.model;
 }
 
-function codexReasoningEffortConfigValue(effort: (typeof CODEX_SUPPORTED_EFFORTS)[number]): string {
+export function codexReasoningEffortConfigValue(
+  effort: (typeof CODEX_SUPPORTED_EFFORTS)[number],
+): string {
   return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
 }
 
@@ -286,10 +231,10 @@ export function assertCodexSpawnArgvBoundary(args: readonly string[]): void {
   if (
     sandboxFlagIndexes.length !== 1 ||
     sandboxFlagIndex === undefined ||
-    args[sandboxFlagIndex + 1] !== 'read-only'
+    args[sandboxFlagIndex + 1] !== 'workspace-write'
   ) {
     throw new Error(
-      'codex spawn argv boundary broken: exactly one "-s read-only" pair is required',
+      'codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required',
     );
   }
 
@@ -320,7 +265,10 @@ export function assertCodexSpawnArgvBoundary(args: readonly string[]): void {
 }
 
 export function buildCodexArgs(input: CodexRelayInput, schemaPath?: string): string[] {
-  const args: string[] = [...CODEX_NO_WRITE_FLAGS];
+  const args: string[] = [...CODEX_WRITE_FLAGS];
+  if (input.cwd !== undefined) {
+    args.push('--cd', input.cwd);
+  }
   const model = selectedOpenAIModel(input.resolvedSelection);
   if (model !== undefined) {
     args.push('-m', model);
@@ -330,10 +278,6 @@ export function buildCodexArgs(input: CodexRelayInput, schemaPath?: string): str
     assertCodexEffort(effort);
     args.push('-c', codexReasoningEffortConfigValue(effort));
   }
-  // Structured-output enforcement. `--output-schema` is not in
-  // CODEX_FORBIDDEN_ARGV_TOKENS, so this passes assertCodexSpawnArgvBoundary
-  // without widening the read-only sandbox. The path itself is also a
-  // benign arg from the boundary check's perspective.
   if (schemaPath !== undefined) {
     args.push('--output-schema', schemaPath);
   }
@@ -351,15 +295,88 @@ export function buildCodexArgs(input: CodexRelayInput, schemaPath?: string): str
 // Exported for direct test coverage of the cleanup-on-throw path; not a
 // stable runtime surface.
 //
+const CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS: ReadonlySet<string> = new Set([
+  '$id',
+  '$ref',
+  '$schema',
+  '$defs',
+  'allOf',
+  'anyOf',
+  'const',
+  'contains',
+  'definitions',
+  'dependentRequired',
+  'dependentSchemas',
+  'exclusiveMaximum',
+  'exclusiveMinimum',
+  'format',
+  'if',
+  'maxContains',
+  'maxItems',
+  'maxLength',
+  'maxProperties',
+  'maximum',
+  'minContains',
+  'minItems',
+  'minLength',
+  'minProperties',
+  'minimum',
+  'multipleOf',
+  'not',
+  'oneOf',
+  'pattern',
+  'patternProperties',
+  'propertyNames',
+  'then',
+  'uniqueItems',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function everyObjectPropertyIsRequired(schema: Record<string, unknown>): boolean {
+  if (!isRecord(schema.properties)) return true;
+  if (!Array.isArray(schema.required)) return false;
+  const required = new Set(
+    schema.required.filter((value): value is string => typeof value === 'string'),
+  );
+  const propertyNames = Object.keys(schema.properties);
+  return (
+    propertyNames.length === required.size &&
+    propertyNames.every((property) => required.has(property))
+  );
+}
+
+function isCodexOutputSchemaNodeCompatible(node: unknown): boolean {
+  if (Array.isArray(node)) return node.every(isCodexOutputSchemaNodeCompatible);
+  if (!isRecord(node)) return true;
+
+  for (const key of Object.keys(node)) {
+    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key)) return false;
+  }
+
+  if (Array.isArray(node.type)) return false;
+  if (node.type === 'object') {
+    if (node.additionalProperties !== undefined && node.additionalProperties !== false) {
+      return false;
+    }
+    if (!everyObjectPropertyIsRequired(node)) return false;
+  }
+
+  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
+}
+
 // Probe whether a JSON Schema can be passed to codex's `--output-schema`.
-// The OpenAI Responses API backs that flag with the `response_format`
-// slot, which requires a root of `type: "object"` (no top-level
-// `anyOf`/`oneOf`/array/primitive). When this returns false, the caller
-// must skip the flag and rely on the prose shape hint instead.
+// Codex forwards that flag into the OpenAI structured-output path, which accepts
+// a narrower schema subset than draft-07. If a flow report schema carries
+// validation-only constraints such as minLength, pattern, propertyNames, or
+// additionalProperties-as-schema, skip the flag and rely on the prose shape hint
+// plus the runtime Zod parse instead of letting the CLI fail before generation.
 //
 // Exported for direct test coverage; not a stable runtime surface.
-export function isPlainObjectTypeRoot(schema: Record<string, unknown>): boolean {
-  return schema.type === 'object';
+export function isCodexOutputSchemaCompatible(schema: Record<string, unknown>): boolean {
+  return schema.type === 'object' && isCodexOutputSchemaNodeCompatible(schema);
 }
 
 export async function writeSchemaTempFile(
@@ -401,15 +418,11 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
   let tempDir: string | undefined;
   let schemaPath: string | undefined;
   try {
-    // Codex's `--output-schema` is backed by the OpenAI Responses API
-    // `response_format` slot, which rejects any root that is not
-    // `type: "object"` (top-level `anyOf`, `oneOf`, arrays, primitives,
-    // etc. all fail with `invalid_json_schema`). Discriminated unions
-    // from Zod surface as top-level `anyOf` here. Degrade gracefully:
-    // when the schema's root is not a plain object, skip the flag and
-    // fall back to the prose shape hint already embedded in the prompt.
-    // The downstream runtime Zod check still validates worker output.
-    if (input.responseSchema !== undefined && isPlainObjectTypeRoot(input.responseSchema)) {
+    // Degrade gracefully for schemas outside Codex's structured-output subset:
+    // skip the flag and fall back to the prose shape hint already embedded in
+    // the prompt. The downstream runtime Zod check still validates worker
+    // output.
+    if (input.responseSchema !== undefined && isCodexOutputSchemaCompatible(input.responseSchema)) {
       const allocated = await writeSchemaTempFile(input.responseSchema);
       tempDir = allocated.dir;
       schemaPath = allocated.path;
@@ -428,6 +441,7 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
         stderrMaxBytes: STDERR_MAX_BYTES,
         sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
         env: process.env,
+        ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
       });
     } catch (error) {
       if (isConnectorSubprocessSpawnError(error)) {
@@ -438,13 +452,17 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
     }
 
     if (result.timedOut) {
+      const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
+      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
       throw new Error(
-        `codex subprocess timed out after ${timeoutMs}ms; group-kill ${result.killGroupSucceeded ? 'sent' : 'failed'}; final signal=${result.signal ?? 'none'}; stderr[:500]=${result.stderr.slice(0, 500)}`,
+        `codex subprocess timed out after ${timeoutMs}ms; group-kill ${result.killGroupSucceeded ? 'sent' : 'failed'}; final signal=${result.signal ?? 'none'}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2000)}${stderrSuffix}`,
       );
     }
     if (result.code !== 0) {
+      const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
+      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
       throw new Error(
-        `codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ''}; stderr[:500]=${result.stderr.slice(0, 500)}`,
+        `codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ''}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2000)}${stderrSuffix}`,
       );
     }
     if (result.stdoutCapped) {
@@ -466,21 +484,21 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
 }
 
 // Known `item.completed` `item.type` values at Codex CLI 0.118-0.125. The
-// connector accepts model narration plus read-only command execution
+// connector accepts model narration plus command execution
 // events and rejects anything else — an unknown type may represent a new
 // capability surface that bypasses the sandbox's intent and needs to be
 // explicitly reviewed before we start emitting it into the relay transcript.
 //
 // A future CLI bump that introduces a genuinely-sandboxed item type
 // (e.g., a reasoning variant) can extend this list; a bump that
-// introduces a write-capable item type breaks the read-only boundary
-// and must be reviewed before this allowlist is extended.
+// introduces a new capability surface and must be reviewed before this
+// allowlist is extended.
 const KNOWN_CODEX_ITEM_TYPES = new Set<string>(['agent_message', 'command_execution', 'reasoning']);
 
 // Top-level trace_entry types the parser expects at Codex CLI 0.118-0.128 —
 // grounded in the `tests/fixtures/codex-smoke/protocol/happy-path-
 // ok.jsonl` real capture, a 0.125 manual smoke that emitted
-// `item.started` before a read-only `command_execution`, and a 0.128
+// `item.started` before a `command_execution`, and a 0.128
 // observation of `item.updated` carrying incremental progress on a
 // `command_execution`. An trace_entry whose `type` is outside this set
 // is rejected: the connector refuses to admit unfamiliar protocol
@@ -583,7 +601,7 @@ export function parseCodexStdout(
   // Collect `item.completed` trace_entries. Each carries an `item` object
   // with an `id`, `type`, and type-specific fields. Reject any item whose
   // type is not in KNOWN_CODEX_ITEM_TYPES: a silent pass-through of a
-  // novel write-capable item would bypass the read-only sandbox proof.
+  // novel item type would bypass the reviewed protocol surface.
   // New Codex item types must be reviewed before extending the allowlist.
   const itemCompleted = trace_entries.filter((e) => e.type === 'item.completed');
   for (const [idx, e] of itemCompleted.entries()) {

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CompiledFlowId } from './ids.js';
 import { RelayRole } from './step.js';
 
-export const EnabledConnector = z.enum(['claude-code', 'codex']);
+export const EnabledConnector = z.enum(['claude-code', 'codex', 'cursor-agent']);
 export type EnabledConnector = z.infer<typeof EnabledConnector>;
 
 export const FilesystemCapability = z.enum(['read-only', 'trusted-write', 'isolated-write']);
@@ -33,7 +33,8 @@ export const BUILTIN_CONNECTOR_CAPABILITIES: Readonly<
   Record<EnabledConnector, ConnectorCapabilities>
 > = {
   'claude-code': { filesystem: 'trusted-write', structured_output: 'json' },
-  codex: { filesystem: 'read-only', structured_output: 'json' },
+  codex: { filesystem: 'trusted-write', structured_output: 'json' },
+  'cursor-agent': { filesystem: 'trusted-write', structured_output: 'json' },
 } as const;
 
 // connector-I2: the `'auto'` literal is a reserved sentinel for

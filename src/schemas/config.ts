@@ -135,6 +135,7 @@ export const CircuitVariantModel = z
   .object({
     id: CircuitVariantModelId,
     label: z.string().min(1),
+    connector: ConnectorReference.optional(),
     selection: SelectionOverride,
   })
   .strict()

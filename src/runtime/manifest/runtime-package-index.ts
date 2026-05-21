@@ -65,6 +65,7 @@ function indexedStep(step: ExecutableStep): RuntimeIndexedStep {
       ...base,
       kind: step.kind,
       role: step.role,
+      ...(step.connector === undefined ? {} : { connector: step.connector }),
       ...(step.acceptanceCriteria === undefined
         ? {}
         : { acceptance_criteria: step.acceptanceCriteria }),

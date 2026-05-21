@@ -1,6 +1,7 @@
 import {
   assertConnectorSelectionCompatible,
   resolveConnectorForRelay,
+  resolveConnectorReference,
 } from '../../../runtime/connectors/resolver.js';
 import type {
   CircuitVariantModels,
@@ -51,19 +52,41 @@ function validateVariantModelMatrix(input: {
       `prototype.variant-options@v1 requires exactly axes.tournament_n (${input.expectedCount}) variant_models entries; found ${input.variants.length}`,
     );
   }
-  const relay = resolveConnectorForRelay({
-    flowId: 'prototype',
-    role: 'implementer',
-    ...(input.selectionConfigLayers === undefined
-      ? {}
-      : { configLayers: input.selectionConfigLayers }),
-  });
   for (const variant of input.variants) {
+    const relay = resolveVariantRelay({
+      variant,
+      ...(input.selectionConfigLayers === undefined
+        ? {}
+        : { selectionConfigLayers: input.selectionConfigLayers }),
+    });
     assertConnectorSelectionCompatible(
       relay.connectorName,
       resolvedSelectionForCompatibility(variant.selection),
     );
   }
+}
+
+function resolveVariantRelay(input: {
+  readonly variant: ConfiguredVariantModel;
+  readonly selectionConfigLayers?: readonly LayeredConfigValue[];
+}) {
+  const explicitConnector =
+    input.variant.connector === undefined
+      ? undefined
+      : resolveConnectorReference({
+          ref: input.variant.connector,
+          ...(input.selectionConfigLayers === undefined
+            ? {}
+            : { configLayers: input.selectionConfigLayers }),
+        });
+  return resolveConnectorForRelay({
+    flowId: 'prototype',
+    role: 'implementer',
+    ...(explicitConnector === undefined ? {} : { explicitConnector }),
+    ...(input.selectionConfigLayers === undefined
+      ? {}
+      : { configLayers: input.selectionConfigLayers }),
+  });
 }
 
 export const prototypeVariantOptionsComposeBuilder: ComposeBuilder = {
@@ -104,12 +127,21 @@ export const prototypeVariantOptionsComposeBuilder: ComposeBuilder = {
           );
         }
         const artifactRoot = `${plan.prototype_root}/variants/${variant.id}`;
+        const relay = resolveVariantRelay({
+          variant,
+          ...(context.selectionConfigLayers === undefined
+            ? {}
+            : { selectionConfigLayers: context.selectionConfigLayers }),
+        });
         return {
           variant_id: variant.id,
           label: variant.label,
           provider: model.provider,
           model: model.model,
           effort,
+          ...(variant.connector === undefined ? {} : { connector: variant.connector }),
+          connector_name: relay.connectorName,
+          connector_source: relay.resolvedFrom,
           prototype_root: plan.prototype_root,
           variant_root: artifactRoot,
           entry_point_hint: `${artifactRoot}/index.html`,

@@ -34,16 +34,19 @@ claims:
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: Users following docs must be able to build a compatible connector.
     readiness_refs: [REL-001]
-  - id: CLAIM-CODEX-ISOLATED
-    claim: codex-isolated is not a current config value until isolated writable Codex support is implemented and tested.
+  - id: CLAIM-CODEX-WRITABLE
+    claim: codex is the first-class write-capable Codex worker connector.
     type: connector
     status: verified_current
-    surfaces: [README.md, docs/contracts/connector.md, docs/contracts/host-capabilities.md]
+    surfaces: [README.md, docs/contracts/connector.md, docs/contracts/host-capabilities.md, docs/configuration.md]
     backing:
+      capability_ids: [connector:codex]
       test_paths:
         - tests/contracts/connector-schema.test.ts
+        - tests/contracts/codex-connector-schema.test.ts
+        - tests/runtime/connectors.test.ts
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
-    user_risk: Users may trust an isolation guarantee that runtime does not provide.
+    user_risk: Users may route Codex work incorrectly if the writable connector contract drifts from docs or tests.
     readiness_refs: [REL-002]
   - id: CLAIM-RICH-ROUTES
     claim: Rich recovery routes are emitted into compiled flows and checkpoint selections can execute them.

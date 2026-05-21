@@ -287,6 +287,26 @@ export type SubRunCompletedTraceEntry = z.infer<typeof SubRunCompletedTraceEntry
 // Fanout has a richer trace_entry surface because the parent must record per-
 // branch lifecycle. The shape mirrors sub_run.* but with a branch_id added
 // so the parent log captures which branch produced each outcome.
+const FanoutConcurrencyLimit = z.union([z.number().int().positive(), z.literal('unbounded')]);
+
+const FanoutExecutionPolicy = z
+  .object({
+    configured_concurrency: FanoutConcurrencyLimit,
+    effective_concurrency: FanoutConcurrencyLimit,
+    writable_relay_branches_serialized: z.boolean(),
+    reason: z.string().min(1).optional(),
+  })
+  .strict()
+  .superRefine((policy, ctx) => {
+    if (policy.writable_relay_branches_serialized && policy.reason === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reason'],
+        message: 'serialized writable relay fanouts require a reason',
+      });
+    }
+  });
+
 export const FanoutStartedTraceEntry = TraceEntryBase.extend({
   kind: z.literal('fanout.started'),
   step_id: StepId,
@@ -298,6 +318,7 @@ export const FanoutStartedTraceEntry = TraceEntryBase.extend({
   // reconstructing the expansion themselves.
   branch_ids: z.array(z.string().min(1)).min(1),
   on_child_failure: FanoutFailurePolicy,
+  execution_policy: FanoutExecutionPolicy.optional(),
 }).strict();
 export type FanoutStartedTraceEntry = z.infer<typeof FanoutStartedTraceEntry>;
 

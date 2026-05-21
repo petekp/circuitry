@@ -3,7 +3,7 @@ contract: connector
 status: ratified-v0.1
 version: 0.1
 schema_source: src/schemas/connector.ts
-last_updated: 2026-04-29
+last_updated: 2026-05-20
 depends_on: [ids, step, selection-policy]
 enforces_also_in: [src/schemas/config.ts, src/schemas/trace-entry.ts]
 report_ids:
@@ -66,13 +66,15 @@ The runtime MUST reject any `EnabledConnector`, `ConnectorName`,
 `RelayConfig`, or `RelayStartedTraceEntry.resolved_from` that
 violates these. All invariants are enforced via `src/schemas/connector.ts`
 and — for the cross-schema invariants — the schema files named per
-invariant; tested in `tests/contracts/connector-schema.test.ts` and
-`tests/contracts/codex-connector-schema.test.ts`.
+invariant; tested in `tests/contracts/connector-schema.test.ts`,
+`tests/contracts/codex-connector-schema.test.ts`,
+`tests/contracts/cursor-agent-connector-schema.test.ts`.
 
-- **connector-I1 — `EnabledConnector` is a closed 2-variant enum with
+- **connector-I1 — `EnabledConnector` is a closed 3-variant enum with
   declared semantic distinctions; adding a built-in is a breaking
-  change.** The enum is the frozen tuple `['claude-code', 'codex']`.
-  The two built-ins mean:
+  change.** The enum is the frozen tuple
+  `['claude-code', 'codex', 'cursor-agent']`.
+  The three built-ins mean:
   - `claude-code` — the Claude Code headless CLI (`claude -p` print-mode or
     equivalent), invoked as a **subprocess** of the Node.js runtime per
     ADR-0009 §1 (v0 invocation-pattern decision: subprocess-per-connector).
@@ -85,60 +87,41 @@ invariant; tested in `tests/contracts/connector-schema.test.ts` and
     ADR-0009 §4 Check 28 enforces this at package.json level. Slice 87
     wires resolved selection into this connector: compatible Anthropic
     model ids are passed with `--model`; supported efforts (`low`,
-    `medium`, `high`, `xhigh`) are passed with `--effort`; incompatible
+    `medium`, `high`, `xhigh`, `max`) are passed with `--effort`; incompatible
     providers or unsupported built-in effort tiers fail before spawn.
   - `codex` — the Codex CLI relayed via `codex exec` as a
     **subprocess** of the Node.js runtime (same invocation pattern as
     `claude-code` per ADR-0009 §1) in the operator's current session context.
     Same host session as `claude-code`; distinct model vendor; distinct
-    subprocess. Capability-boundary mechanism **differs** from `claude-code`:
-    where `claude-code` uses declarative tool-list flags (`--tools ""`,
-    `--strict-mcp-config`, `--disable-slash-commands`) with a parse-time
-    assertion over the subprocess's init trace_entry, `codex` uses an OS-level
-    sandbox (Seatbelt on macOS, Landlock on Linux) via `codex exec -s
-    read-only` that checks write syscalls at the process level. Codex's
-    `--json` stream does not emit an init trace_entry enumerating tool
-    surfaces, so the parse-time `tools=[]` / `mcp_servers=[]` /
-    `slash_commands=[]` assertion shape from `claude-code` does not transfer;
-    the `codex` boundary is therefore a single mechanism (OS-level
-    sandbox) with two supporting disciplines: (i) argv-constant
-    assertion at spawn time over `CODEX_NO_WRITE_FLAGS` (must include
-    `-s read-only`; must NOT include any token in
-    `CODEX_FORBIDDEN_ARGV_TOKENS` — Codex Slice 45 HIGH 2 fold-in
-    expanded this to cover `--dangerously-bypass-approvals-and-sandbox`,
-    `--full-auto`, `--add-dir`, `-o` / `--output-last-message`, `-c` /
-    `--config`, `-p` / `--profile`) — this is the deny-list for argv
-    surfaces that would silently widen the sandbox or reach a repo-write
-    path outside sandbox scope; and (ii) trace_entry-stream **protocol drift
-    detection** (`parseCodexStdout()` rejects top-level trace_entries outside
-    `KNOWN_CODEX_EVENT_TYPES`, `item.completed` trace_entries whose `item.type`
-    is outside the known-types allowlist, and failure trace_entries
-    `turn.failed`/`error` with named error messages) — this is drift
-    detection, NOT the capability boundary itself. The boundary is the
-    OS sandbox + argv enforcement; the item-type discipline is a
-    protocol hygiene layer that catches new Codex capability surfaces
-    (write-tool trace_entries, apply-patch trace_entries) before they land in the
-    relay transcript implicitly. Slice 87 wires resolved selection
-    into this connector: compatible OpenAI model ids are passed with `-m`;
-    effort is passed through the single allowlisted config override
-    `model_reasoning_effort`; a final spawn-argv boundary check allows
-    only that config override and rejects incompatible providers or
-    unsupported effort tiers before spawn.
+    subprocess. Codex is a write-capable worker connector. It pins the Codex
+    CLI to `codex exec --json -s workspace-write --ephemeral
+    --skip-git-repo-check --ignore-user-config --ignore-rules`, threads the
+    runtime workspace through `--cd` and subprocess `cwd`, and rejects argv
+    surfaces that bypass or widen the connector-owned boundary
+    (`--dangerously-bypass-approvals-and-sandbox`, `--full-auto`, `--add-dir`,
+    `-o` / `--output-last-message`, arbitrary `-c` / `--config`, `-p` /
+    `--profile`, and later `--sandbox` overrides). The only allowed `-c`
+    override is `model_reasoning_effort=<supported effort>`.
+    Compatible OpenAI model ids are passed with `-m`; supported efforts are
+    `low`, `medium`, `high`, and `xhigh`; `max` fails before spawn.
+    `parseCodexStdout()` still rejects unknown Codex JSONL event/item shapes
+    and named failure entries so protocol drift fails closed.
     Slice 45 (P2.6) binds the mechanism and lands
     `src/connectors/codex.ts`; ADR-0009 §Consequences.Enabling is
     the governance authority (§Enabling explicitly names `codex` as the
     next connector after `claude-code`).
-  `codex-isolated` is a planned future connector, not a current
-  `EnabledConnector` value. Until a git-worktree or distinct-UID isolation
-  implementation lands with tests, configs that name `codex-isolated` must
-  fail at parse time instead of reaching relay-time and failing late.
-  The two current built-ins are NOT interchangeable: `codex` is read-only,
-  while `claude-code` is trusted same-workspace write-capable. Adding a third
+  - `cursor-agent` — the Cursor CLI relayed in headless print mode for
+    write-capable implementer work. It is a dedicated built-in path so Circuit
+    does not need to make arbitrary custom connectors write-capable. The
+    current support matrix is Gemini provider only with `effort: none`.
+  The built-ins are NOT interchangeable: `claude-code`, `codex`, and
+  `cursor-agent` each have connector-owned provider, effort, subprocess, and
+  filesystem behavior. Adding a
   built-in is a schema-level change that forces all
   consumers (`RelayConfig.default`, `relay.roles`,
   `relay.circuits`, the connector-bridge relayer, and every
   contract test) to coordinate. Enforced at `src/schemas/connector.ts`
-  (`EnabledConnector = z.enum(['claude-code', 'codex'])`).
+  (`EnabledConnector = z.enum(['claude-code', 'codex', 'cursor-agent'])`).
 
 - **connector-I2 — `ConnectorName` regex + reserved-name disjointness.**
   `ConnectorName` matches `^[a-z][a-z0-9-]*$`: lowercase letter + optional

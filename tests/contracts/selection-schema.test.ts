@@ -195,14 +195,13 @@ describe('ProviderScopedModel (SEL-I4)', () => {
 });
 
 describe('Effort (SEL-I4)', () => {
-  it('accepts the 6-tier OpenAI vocabulary', () => {
-    for (const e of ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const) {
+  it('accepts the shared effort vocabulary', () => {
+    for (const e of ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const) {
       expect(Effort.safeParse(e).success).toBe(true);
     }
   });
 
   it('rejects legacy or provider-specific labels', () => {
-    expect(Effort.safeParse('max').success).toBe(false);
     expect(Effort.safeParse('reasoning-high').success).toBe(false);
   });
 });

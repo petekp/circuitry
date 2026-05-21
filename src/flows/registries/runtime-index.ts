@@ -61,6 +61,7 @@ export interface RuntimeIndexedCheckpointStep extends RuntimeIndexedStepBase {
 export interface RuntimeIndexedRelayStep extends RuntimeIndexedStepBase {
   readonly kind: 'relay';
   readonly role: 'researcher' | 'implementer' | 'reviewer';
+  readonly connector?: string | undefined;
   readonly acceptance_criteria?: AcceptanceCriteria | undefined;
   readonly check: {
     readonly kind?: string | undefined;

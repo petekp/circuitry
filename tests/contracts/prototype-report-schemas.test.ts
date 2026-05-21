@@ -122,6 +122,8 @@ function variantOptions(overrides: Record<string, unknown> = {}) {
         provider: 'anthropic',
         model: 'local-fixture-a',
         effort: 'medium',
+        connector_name: 'claude-code',
+        connector_source: { source: 'auto' },
         prototype_root: PROTOTYPE_ROOT,
         variant_root: `${PROTOTYPE_ROOT}/variants/variant-a`,
         entry_point_hint: `${PROTOTYPE_ROOT}/variants/variant-a/index.html`,
@@ -138,6 +140,8 @@ function variantOptions(overrides: Record<string, unknown> = {}) {
         provider: 'anthropic',
         model: 'local-fixture-b',
         effort: 'high',
+        connector_name: 'claude-code',
+        connector_source: { source: 'auto' },
         prototype_root: PROTOTYPE_ROOT,
         variant_root: `${PROTOTYPE_ROOT}/variants/variant-b`,
         entry_point_hint: `${PROTOTYPE_ROOT}/variants/variant-b/index.html`,
@@ -398,6 +402,7 @@ describe('Prototype report schemas', () => {
       ],
     });
     const providerEvidence = variantProviderEvidence({
+      required_captured_count: 3,
       variants: [
         ...(variantProviderEvidence().variants as unknown[]),
         {

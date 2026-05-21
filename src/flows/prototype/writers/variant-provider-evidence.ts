@@ -81,7 +81,7 @@ export const prototypeVariantProviderEvidenceComposeBuilder: ComposeBuilder = {
     return PrototypeVariantProviderEvidence.parse({
       schema_version: 1,
       evidence_source: 'relay.started resolved_selection trace entries',
-      required_captured_count: 2,
+      required_captured_count: variants.length,
       captured_count: variants.filter((variant) => variant.status === 'captured').length,
       variants,
       missing_evidence: missingEvidence,

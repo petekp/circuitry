@@ -51,8 +51,27 @@ describe('runtime connector safety', () => {
 
   it('rejects read-only connectors for implementer roles', () => {
     expect(() =>
-      assertConnectorCanRunRole({ kind: 'builtin', name: 'codex' }, 'implementer'),
+      assertConnectorCanRunRole(
+        CustomConnectorDescriptor.parse({
+          kind: 'custom',
+          name: 'local-readonly',
+          command: ['node', 'readonly.js'],
+          prompt_transport: 'prompt-file',
+          output: { kind: 'output-file' },
+          capabilities: { filesystem: 'read-only', structured_output: 'json' },
+        }),
+        'implementer',
+      ),
     ).toThrow(/read-only/);
+  });
+
+  it('accepts write-capable built-ins for implementer roles', () => {
+    expect(() =>
+      assertConnectorCanRunRole({ kind: 'builtin', name: 'codex' }, 'implementer'),
+    ).not.toThrow();
+    expect(() =>
+      assertConnectorCanRunRole({ kind: 'builtin', name: 'cursor-agent' }, 'implementer'),
+    ).not.toThrow();
   });
 
   it('resolves declared custom connectors by role without losing identity', () => {
@@ -128,14 +147,59 @@ describe('runtime connector safety', () => {
     expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
   });
 
-  it('rejects read-only step connectors without a supplied relay connector', () => {
+  it('honors the codex step connector for implementer roles', () => {
+    const decision = resolveRelayExecution({
+      flowId: 'prototype',
+      role: 'implementer',
+      stepConnector: 'codex',
+      selection: { model: { provider: 'openai', model: 'gpt-5.5' }, effort: 'xhigh' },
+    });
+
+    expect(decision.connectorName).toBe('codex');
+    expect(decision.connector).toEqual({ kind: 'builtin', name: 'codex' });
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
+  });
+
+  it('honors the cursor-agent step connector for Gemini implementer roles', () => {
+    const decision = resolveRelayExecution({
+      flowId: 'prototype',
+      role: 'implementer',
+      stepConnector: 'cursor-agent',
+      selection: { model: { provider: 'gemini', model: 'gemini-3.5-flash' }, effort: 'none' },
+    });
+
+    expect(decision.connectorName).toBe('cursor-agent');
+    expect(decision.connector).toEqual({ kind: 'builtin', name: 'cursor-agent' });
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
+  });
+
+  it('rejects read-only custom step connectors without a supplied relay connector', () => {
+    const custom = CustomConnectorDescriptor.parse({
+      kind: 'custom',
+      name: 'local-readonly',
+      command: ['node', 'readonly.js'],
+      prompt_transport: 'prompt-file',
+      output: { kind: 'output-file' },
+      capabilities: { filesystem: 'read-only', structured_output: 'json' },
+    });
+    const layer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        relay: {
+          connectors: { 'local-readonly': custom },
+        },
+      },
+    });
+
     expect(() =>
       resolveRelayExecution({
         flowId: 'build',
         role: 'implementer',
-        stepConnector: 'codex',
+        stepConnector: 'local-readonly',
+        configLayers: [layer],
       }),
-    ).toThrow(/connector 'codex' is read-only/);
+    ).toThrow(/connector 'local-readonly' is read-only/);
   });
 
   it('resolves a custom step connector from config layers without a supplied relay connector', () => {
@@ -287,17 +351,61 @@ describe('runtime connector safety', () => {
         invocation_options: {},
       }),
     ).toThrow(/cannot honor effort 'minimal'/);
+
+    expect(() =>
+      assertConnectorSelectionCompatible('codex', {
+        effort: 'max',
+        skills: [],
+        invocation_options: {},
+      }),
+    ).toThrow(/cannot honor effort 'max'/);
+
+    expect(() =>
+      assertConnectorSelectionCompatible('cursor-agent', {
+        model: { provider: 'openai', model: 'gpt-5.5' },
+        effort: 'none',
+        skills: [],
+        invocation_options: {},
+      }),
+    ).toThrow(/expected provider 'gemini'/);
+
+    expect(() =>
+      assertConnectorSelectionCompatible('cursor-agent', {
+        model: { provider: 'gemini', model: 'gemini-3.5-flash' },
+        effort: 'low',
+        skills: [],
+        invocation_options: {},
+      }),
+    ).toThrow(/cannot honor effort 'low'/);
+
+    expect(() =>
+      assertConnectorSelectionCompatible('claude-code', {
+        model: { provider: 'anthropic', model: 'claude-opus-4-7' },
+        effort: 'max',
+        skills: [],
+        invocation_options: {},
+      }),
+    ).not.toThrow();
   });
 
   it('enforces connector write capability before runtime relay invocation', async () => {
     let relayCalls = 0;
+    const readOnlyConnector = CustomConnectorDescriptor.parse({
+      kind: 'custom',
+      name: 'local-readonly',
+      command: ['node', 'readonly.js'],
+      prompt_transport: 'prompt-file',
+      output: { kind: 'output-file' },
+      capabilities: { filesystem: 'read-only', structured_output: 'json' },
+    });
 
     const result = await executeExecutableFlow(relaySafetyFlow(), {
       runDir: join(tempDir, 'read-only-implementer'),
       runId: '11111111-1111-4111-8111-111111111111',
       goal: 'prove runtime connector safety',
       relayConnector: {
-        connectorName: 'codex',
+        connectorName: 'local-readonly',
+        connector: readOnlyConnector,
         async relay() {
           relayCalls += 1;
           return { ok: true };
@@ -306,7 +414,7 @@ describe('runtime connector safety', () => {
     });
 
     expect(result.outcome).toBe('aborted');
-    expect(result.reason).toContain("connector 'codex' is read-only");
+    expect(result.reason).toContain("connector 'local-readonly' is read-only");
     expect(relayCalls).toBe(0);
   });
 

@@ -191,15 +191,18 @@ What exists:
 
 - Selection supports provider-scoped models with provider values `openai`,
   `anthropic`, `gemini`, and `custom`; built-in connectors currently honor
-  Anthropic models for `claude-code` and OpenAI models for `codex`
+  Anthropic models for `claude-code`, OpenAI models for `codex`, and Gemini
+  models for `cursor-agent`
   (`docs/contracts/selection.md:126-143`).
 - `claude-code` is a trusted-write subprocess connector. It can receive
   `--model` and `--effort` after provider validation
   (`docs/contracts/connector.md:72-90`, `src/connectors/claude-code.ts:110-141`).
-- `codex` is a read-only subprocess connector. It can receive `-m` and the
-  allowed reasoning-effort config after provider validation, while preserving
-  the read-only sandbox boundary (`docs/contracts/connector.md:90-141`,
-  `src/connectors/codex.ts:251-335`).
+- `codex` is the first-class Codex write-capable subprocess connector. It can
+  receive `-m` and the allowed reasoning-effort config after provider
+  validation, while preserving the connector-owned workspace-write argv
+  boundary.
+- `cursor-agent` is the Cursor CLI subprocess connector for Gemini implementer
+  branches, currently with `effort: none`.
 - Custom connectors are represented in release capability truth as implemented
   JSON prompt-file wrappers
   (`generated/release/current-capabilities.json:281-309`,

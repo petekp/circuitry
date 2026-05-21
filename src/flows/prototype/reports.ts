@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ConnectorReference } from '../../schemas/config.js';
 import { RelayResolutionSource } from '../../schemas/connector.js';
 import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
 import { Effort, ProviderScopedModel } from '../../schemas/selection-policy.js';
@@ -287,6 +288,9 @@ export const PrototypeVariantOption = z
     provider: ProviderScopedModel.shape.provider,
     model: ProviderScopedModel.shape.model,
     effort: Effort,
+    connector: ConnectorReference.optional(),
+    connector_name: z.string().min(1),
+    connector_source: RelayResolutionSource,
     prototype_root: PrototypeRootPath,
     variant_root: PrototypeRootPath,
     entry_point_hint: PrototypeProjectRelativePath,
@@ -530,13 +534,20 @@ export const PrototypeVariantProviderEvidence = z
   .object({
     schema_version: z.literal(1),
     evidence_source: z.literal('relay.started resolved_selection trace entries'),
-    required_captured_count: z.literal(2),
+    required_captured_count: z.number().int().min(2),
     captured_count: z.number().int().nonnegative(),
     variants: z.array(PrototypeVariantProviderEvidenceItem).min(2),
     missing_evidence: z.array(PrototypeVariantMissingEvidence),
   })
   .strict()
   .superRefine((report, ctx) => {
+    if (report.required_captured_count !== report.variants.length) {
+      addPathIssue(
+        ctx,
+        ['required_captured_count'],
+        'required_captured_count must equal variants length',
+      );
+    }
     const captured = report.variants.filter((variant) => variant.status === 'captured').length;
     if (report.captured_count !== captured) {
       addPathIssue(ctx, ['captured_count'], 'captured_count must equal captured variants length');

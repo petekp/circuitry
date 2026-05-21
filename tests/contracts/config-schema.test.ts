@@ -135,6 +135,7 @@ describe('CircuitOverride strict surface (CONFIG-I3)', () => {
         {
           id: 'variant-a',
           label: 'Variant A',
+          connector: { kind: 'builtin', name: 'claude-code' },
           selection: {
             model: { provider: 'anthropic', model: 'local-fixture-a' },
             effort: 'medium',
@@ -146,6 +147,41 @@ describe('CircuitOverride strict surface (CONFIG-I3)', () => {
           selection: {
             model: { provider: 'anthropic', model: 'local-fixture-b' },
             effort: 'high',
+          },
+        },
+      ],
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it('accepts connector-aware Prototype tournament defaults', () => {
+    const ok = CircuitOverride.safeParse({
+      variant_models: [
+        {
+          id: 'codex-55-xhigh',
+          label: 'Codex 5.5 xhigh',
+          connector: { kind: 'builtin', name: 'codex' },
+          selection: {
+            model: { provider: 'openai', model: 'gpt-5.5' },
+            effort: 'xhigh',
+          },
+        },
+        {
+          id: 'opus-47-max',
+          label: 'Claude Opus 4.7 max',
+          connector: { kind: 'builtin', name: 'claude-code' },
+          selection: {
+            model: { provider: 'anthropic', model: 'claude-opus-4-7' },
+            effort: 'max',
+          },
+        },
+        {
+          id: 'gemini-35-flash-cursor',
+          label: 'Gemini 3.5 Flash via Cursor',
+          connector: { kind: 'builtin', name: 'cursor-agent' },
+          selection: {
+            model: { provider: 'gemini', model: 'gemini-3.5-flash' },
+            effort: 'none',
           },
         },
       ],

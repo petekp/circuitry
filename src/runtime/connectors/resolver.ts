@@ -3,23 +3,27 @@
 // Relay connector choice is layered: explicit invocation, role config, flow
 // config, default config, then the auto fallback. Keep capability and provider
 // checks here so executors can assume the selected connector can run the role.
+import { CLAUDE_CODE_SUPPORTED_EFFORTS } from '../../connectors/claude-code.js';
+import { CODEX_SUPPORTED_EFFORTS } from '../../connectors/codex.js';
+import { CURSOR_AGENT_SUPPORTED_EFFORTS } from '../../connectors/cursor-agent.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import type { ConnectorReference } from '../../schemas/config.js';
 import type {
   ConnectorCapabilities,
+  EnabledConnector,
   RelayResolutionSource,
   ResolvedConnector,
 } from '../../schemas/connector.js';
-import { BUILTIN_CONNECTOR_CAPABILITIES } from '../../schemas/connector.js';
+import {
+  BUILTIN_CONNECTOR_CAPABILITIES,
+  EnabledConnector as EnabledConnectorSchema,
+} from '../../schemas/connector.js';
 import type { CompiledFlowId } from '../../schemas/ids.js';
 import type { ResolvedSelection } from '../../schemas/selection-policy.js';
 import type { RelayRole } from '../../schemas/step.js';
 import type { ResolvedConnectorDecision } from './connector.js';
 
 type RelayConfigValue = LayeredConfigValue['config']['relay'];
-
-export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
-export const CODEX_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
 
 function mergedRelayConfig(layers: readonly LayeredConfigValue[] | undefined): RelayConfigValue {
   const merged: RelayConfigValue = {
@@ -65,11 +69,22 @@ function resolvedConnectorFromReference(
   return descriptor;
 }
 
+export function resolveConnectorReference(input: {
+  readonly ref: ConnectorReference;
+  readonly configLayers?: readonly LayeredConfigValue[];
+}): ResolvedConnector {
+  return resolvedConnectorFromReference(input.ref, mergedRelayConfig(input.configLayers));
+}
+
+function isEnabledConnector(value: string): value is EnabledConnector {
+  return (EnabledConnectorSchema.options as readonly string[]).includes(value);
+}
+
 function resolvedConnectorFromDefault(
   defaultRef: RelayConfigValue['default'],
   relay: RelayConfigValue,
 ): ResolvedConnector {
-  if (defaultRef === 'claude-code' || defaultRef === 'codex') {
+  if (isEnabledConnector(defaultRef)) {
     return { kind: 'builtin', name: defaultRef };
   }
   const descriptor = relay.connectors[defaultRef];
@@ -139,9 +154,17 @@ export function resolveConnectorForRelay(input: {
   return decision({ kind: 'builtin', name: 'claude-code' }, { source: 'auto' }, input.role);
 }
 
-function expectedProvider(connectorName: string): 'anthropic' | 'openai' | undefined {
+function expectedProvider(connectorName: string): 'anthropic' | 'openai' | 'gemini' | undefined {
   if (connectorName === 'claude-code') return 'anthropic';
   if (connectorName === 'codex') return 'openai';
+  if (connectorName === 'cursor-agent') return 'gemini';
+  return undefined;
+}
+
+function supportedEfforts(connectorName: string): readonly string[] | undefined {
+  if (connectorName === 'claude-code') return CLAUDE_CODE_SUPPORTED_EFFORTS;
+  if (connectorName === 'codex') return CODEX_SUPPORTED_EFFORTS;
+  if (connectorName === 'cursor-agent') return CURSOR_AGENT_SUPPORTED_EFFORTS;
   return undefined;
 }
 
@@ -158,13 +181,8 @@ export function assertConnectorSelectionCompatible(
   }
   const effort = selection?.effort;
   if (effort === undefined) return;
-  const supported =
-    connectorName === 'claude-code'
-      ? CLAUDE_CODE_SUPPORTED_EFFORTS
-      : connectorName === 'codex'
-        ? CODEX_SUPPORTED_EFFORTS
-        : undefined;
-  if (supported !== undefined && !(supported as readonly string[]).includes(effort)) {
+  const supported = supportedEfforts(connectorName);
+  if (supported !== undefined && !supported.includes(effort)) {
     throw new Error(
       `${connectorName} connector cannot honor effort '${effort}'; supported efforts: ${supported.join(', ')}`,
     );

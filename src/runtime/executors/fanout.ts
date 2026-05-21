@@ -2,6 +2,7 @@ import { join as joinPath } from 'node:path';
 import { FanoutFailurePolicy } from '../../schemas/step.js';
 import { buildFanoutAggregate } from '../../shared/fanout-aggregate-report.js';
 import { evaluateFanoutJoinPolicy } from '../../shared/fanout-join-policy.js';
+import { connectorCapabilities } from '../connectors/resolver.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepOutcome } from '../domain/step.js';
 import {
@@ -10,11 +11,11 @@ import {
   executeSubRunFanoutBranch,
 } from '../fanout/branch-execution.js';
 import { expandFanoutBranches } from '../fanout/branch-expansion.js';
-import type { BranchOutcome, FanoutJoinPolicy } from '../fanout/types.js';
+import type { BranchOutcome, FanoutJoinPolicy, ResolvedBranch } from '../fanout/types.js';
 import { gitWorktreeRunner } from '../fanout/worktree.js';
 import type { FanoutStep } from '../manifest/executable-flow.js';
 import type { RunContext } from '../run/run-context.js';
-import type { RelayConnector } from './relay.js';
+import { type RelayConnector, resolveRelayExecution } from './relay.js';
 import {
   type StepExecutionResult,
   stepExecutionFailedFrom,
@@ -57,13 +58,71 @@ function admitOrder(step: FanoutStep): readonly string[] {
     : [];
 }
 
-function concurrencyLimit(step: FanoutStep): number | 'unbounded' {
+type FanoutConcurrencyLimit = number | 'unbounded';
+
+const WRITABLE_RELAY_SERIALIZATION_REASON =
+  'Writable relay fanout branches are serialized because relay branches share the parent checkout and no branch-local relay write root is provisioned.';
+
+function concurrencyLimit(step: FanoutStep): FanoutConcurrencyLimit {
   const concurrency = step.concurrency as { readonly kind?: unknown; readonly max?: unknown };
   if (concurrency?.kind === 'unbounded') return 'unbounded';
   if (concurrency?.kind === 'bounded' && typeof concurrency.max === 'number') {
     return concurrency.max;
   }
   return 4;
+}
+
+function branchUsesWritableConnector(
+  branch: ResolvedBranch,
+  context: RunContext,
+  relayConnector: RelayConnector | undefined,
+): boolean {
+  if (branch.kind !== 'relay') return false;
+  try {
+    const decision = resolveRelayExecution({
+      flowId: context.flow.id,
+      role: branch.role,
+      ...(branch.connector === undefined ? {} : { stepConnector: branch.connector }),
+      ...(branch.selection === undefined ? {} : { selection: branch.selection }),
+      ...(relayConnector === undefined ? {} : { suppliedConnector: relayConnector }),
+      ...(context.selectionConfigLayers === undefined
+        ? {}
+        : { configLayers: context.selectionConfigLayers }),
+    });
+    return connectorCapabilities(decision.connector).filesystem !== 'read-only';
+  } catch {
+    return false;
+  }
+}
+
+function fanoutExecutionPolicy(
+  step: FanoutStep,
+  branches: readonly ResolvedBranch[],
+  context: RunContext,
+  relayConnector: RelayConnector | undefined,
+): {
+  readonly configuredConcurrency: FanoutConcurrencyLimit;
+  readonly effectiveConcurrency: FanoutConcurrencyLimit;
+  readonly writableRelayBranchesSerialized: boolean;
+  readonly serializationReason?: string;
+} {
+  const configuredConcurrency = concurrencyLimit(step);
+  const writableRelayBranchesSerialized = branches.some((branch) =>
+    branchUsesWritableConnector(branch, context, relayConnector),
+  );
+  if (writableRelayBranchesSerialized) {
+    return {
+      configuredConcurrency,
+      effectiveConcurrency: 1,
+      writableRelayBranchesSerialized,
+      serializationReason: WRITABLE_RELAY_SERIALIZATION_REASON,
+    };
+  }
+  return {
+    configuredConcurrency,
+    effectiveConcurrency: configuredConcurrency,
+    writableRelayBranchesSerialized,
+  };
 }
 
 function outcomesInBranchOrder(
@@ -124,6 +183,7 @@ async function executeFanoutInternal(
     );
   }
   const branchIds = branches.map((branch) => branch.branch_id);
+  const executionPolicy = fanoutExecutionPolicy(step, branches, context, relayConnector);
   await context.trace.append({
     run_id: context.runId,
     kind: 'fanout.started',
@@ -131,6 +191,16 @@ async function executeFanoutInternal(
     attempt,
     branch_ids: branchIds,
     on_child_failure: FanoutFailurePolicy.parse(step.onChildFailure ?? 'abort-all'),
+    ...(executionPolicy.writableRelayBranchesSerialized
+      ? {
+          execution_policy: {
+            configured_concurrency: executionPolicy.configuredConcurrency,
+            effective_concurrency: executionPolicy.effectiveConcurrency,
+            writable_relay_branches_serialized: true,
+            reason: executionPolicy.serializationReason,
+          },
+        }
+      : {}),
   });
 
   const worktreeRunner = context.worktreeRunner ?? gitWorktreeRunner;
@@ -141,49 +211,53 @@ async function executeFanoutInternal(
   let branchFilesError: string | undefined;
 
   try {
-    await runWithConcurrency(branches, concurrencyLimit(step), async (branch, abortSignal) => {
-      if (abortSignal.value) return;
-      const branchDirRel = `${branchDirRoot}/${branch.branch_id}`;
-      const branchDirAbs = context.files.resolve(branchDirRel);
-      let outcome: BranchOutcome;
-      if (branch.kind === 'relay') {
-        outcome = await executeRelayFanoutBranch(
-          step,
-          context,
-          branch,
-          relayConnector,
-          branchDirRel,
-          branchDirAbs,
-        );
-      } else {
-        if (context.projectRoot === undefined) {
-          throw new Error(
-            `fanout step '${step.id}': projectRoot is required to anchor per-branch worktrees`,
+    await runWithConcurrency(
+      branches,
+      executionPolicy.effectiveConcurrency,
+      async (branch, abortSignal) => {
+        if (abortSignal.value) return;
+        const branchDirRel = `${branchDirRoot}/${branch.branch_id}`;
+        const branchDirAbs = context.files.resolve(branchDirRel);
+        let outcome: BranchOutcome;
+        if (branch.kind === 'relay') {
+          outcome = await executeRelayFanoutBranch(
+            step,
+            context,
+            branch,
+            relayConnector,
+            branchDirRel,
+            branchDirAbs,
+          );
+        } else {
+          if (context.projectRoot === undefined) {
+            throw new Error(
+              `fanout step '${step.id}': projectRoot is required to anchor per-branch worktrees`,
+            );
+          }
+          const worktreePath = joinPath(
+            context.projectRoot,
+            '.circuit',
+            'worktrees',
+            context.runId,
+            step.id,
+            branch.branch_id,
+          );
+          if (branchNeedsWorktree(branch)) provisioned.push(worktreePath);
+          outcome = await executeSubRunFanoutBranch(
+            step,
+            context,
+            branch,
+            worktreeRunner,
+            branchDirRel,
+            worktreePath,
           );
         }
-        const worktreePath = joinPath(
-          context.projectRoot,
-          '.circuit',
-          'worktrees',
-          context.runId,
-          step.id,
-          branch.branch_id,
-        );
-        if (branchNeedsWorktree(branch)) provisioned.push(worktreePath);
-        outcome = await executeSubRunFanoutBranch(
-          step,
-          context,
-          branch,
-          worktreeRunner,
-          branchDirRel,
-          worktreePath,
-        );
-      }
-      outcomes.push(outcome);
-      if (!outcome.admitted && onChildFailure === 'abort-all') {
-        abortSignal.value = true;
-      }
-    });
+        outcomes.push(outcome);
+        if (!outcome.admitted && onChildFailure === 'abort-all') {
+          abortSignal.value = true;
+        }
+      },
+    );
 
     if (policy === 'disjoint-merge' && outcomes.every((outcome) => outcome.admitted)) {
       try {

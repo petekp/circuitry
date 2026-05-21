@@ -278,6 +278,14 @@ describe('relay connector resolution precedence', () => {
   it('read-only role connector is rejected for implementer relay steps', async () => {
     const { flow } = loadFixture();
     const step = relayStep(flow, 'implementer');
+    const readOnlyConnector = {
+      kind: 'custom' as const,
+      name: 'local-readonly',
+      command: ['node', 'readonly.js'],
+      prompt_transport: 'prompt-file' as const,
+      output: { kind: 'output-file' as const },
+      capabilities: { filesystem: 'read-only' as const, structured_output: 'json' as const },
+    };
 
     expect(() =>
       resolveConnectorForRelay({
@@ -291,9 +299,9 @@ describe('relay connector resolution precedence', () => {
               host: { kind: 'generic-shell' },
               relay: {
                 default: 'claude-code',
-                roles: { implementer: { kind: 'builtin', name: 'codex' } },
+                roles: { implementer: { kind: 'named', name: 'local-readonly' } },
                 circuits: {},
-                connectors: {},
+                connectors: { 'local-readonly': readOnlyConnector },
               },
               skills: { bindings: {} },
               circuits: {},
@@ -308,6 +316,14 @@ describe('relay connector resolution precedence', () => {
   it('read-only default connector is rejected for implementer relay steps', async () => {
     const { flow } = loadFixture();
     const step = relayStep(flow, 'implementer');
+    const readOnlyConnector = {
+      kind: 'custom' as const,
+      name: 'local-readonly',
+      command: ['node', 'readonly.js'],
+      prompt_transport: 'prompt-file' as const,
+      output: { kind: 'output-file' as const },
+      capabilities: { filesystem: 'read-only' as const, structured_output: 'json' as const },
+    };
 
     expect(() =>
       resolveConnectorForRelay({
@@ -320,10 +336,10 @@ describe('relay connector resolution precedence', () => {
               schema_version: 1,
               host: { kind: 'generic-shell' },
               relay: {
-                default: 'codex',
+                default: 'local-readonly',
                 roles: {},
                 circuits: {},
-                connectors: {},
+                connectors: { 'local-readonly': readOnlyConnector },
               },
               skills: { bindings: {} },
               circuits: {},

@@ -14,12 +14,11 @@ import { sha256Hex } from '../../src/shared/connector-relay.js';
 // developer runs stay green without it.
 //
 // Capability-boundary empirical proof: the argv-constant assertion in
-// `CODEX_NO_WRITE_FLAGS` is module-load-bound; the OS-level `-s
-// read-only` sandbox prevents repo writes at the process level
-// regardless of model behavior. This smoke test is the positive
+// `CODEX_WRITE_FLAGS` is module-load-bound; the connector pins
+// `-s workspace-write`, ignores user config/rules, and blocks bypass
+// tokens regardless of model behavior. This smoke test is the positive
 // end-to-end regression guard: if a future change loosens
-// `CODEX_NO_WRITE_FLAGS` (e.g., swapping `read-only` for
-// `workspace-write`), the module-load assertion fires before the smoke
+// `CODEX_WRITE_FLAGS`, the module-load assertion fires before the smoke
 // test even starts.
 
 const CODEX_SMOKE = process.env.CODEX_SMOKE === '1';

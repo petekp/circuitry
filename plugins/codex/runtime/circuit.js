@@ -25955,7 +25955,7 @@ var ProviderScopedModel = external_exports.object({
   provider: external_exports.enum(["openai", "anthropic", "gemini", "custom"]),
   model: external_exports.string().min(1)
 }).strict();
-var Effort = external_exports.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
+var Effort = external_exports.enum(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
 var UniqueSkillArray = external_exports.array(SkillId).superRefine((arr, ctx) => {
   const duplicates = [...new Set(arr.filter((skill, index) => arr.indexOf(skill) !== index))];
   if (duplicates.length === 0)
@@ -26851,6 +26851,9 @@ var CheckpointChoiceSource = ReportItemsSource.extend({
 
 // dist/schemas/step.js
 var RelayRole = external_exports.enum(["researcher", "implementer", "reviewer"]);
+var RelayConnectorName = external_exports.string().regex(/^[a-z][a-z0-9-]*$/, {
+  message: "connector must be a kebab-case connector name"
+});
 var ReportRef = external_exports.object({
   path: RunRelativePath,
   schema: external_exports.string().min(1)
@@ -26965,6 +26968,7 @@ var RelayStep = StepBase.extend({
   executor: external_exports.literal("worker"),
   kind: external_exports.literal("relay"),
   role: RelayRole,
+  connector: RelayConnectorName.optional(),
   acceptance_criteria: AcceptanceCriteria.optional(),
   writes: external_exports.object({
     report: ReportRef.optional(),
@@ -27025,6 +27029,7 @@ var FanoutRelayBranchExecution = external_exports.object({
 var FanoutRelayBranch = external_exports.object({
   branch_id: external_exports.string().min(1).max(64).regex(FANOUT_BRANCH_ID_REGEX, { message: "branch_id must be a kebab-case slug" }),
   execution: FanoutRelayBranchExecution,
+  connector: RelayConnectorName.optional(),
   selection: SelectionOverride.optional()
 }).strict();
 var FanoutBranch = external_exports.union([FanoutSubRunBranch, FanoutRelayBranch]);
@@ -27041,6 +27046,7 @@ var FanoutSubRunBranchTemplate = external_exports.object({
 var FanoutRelayBranchTemplate = external_exports.object({
   branch_id: external_exports.string().min(1).max(64),
   execution: FanoutRelayBranchExecution,
+  connector: external_exports.string().min(1).optional(),
   selection: external_exports.unknown().optional()
 }).strict();
 var FanoutBranchTemplate = external_exports.union([
@@ -33346,7 +33352,7 @@ var fixFlowData = {
 var fixFlowDefinition = defineFlowData(fixFlowData);
 
 // dist/schemas/connector.js
-var EnabledConnector = external_exports.enum(["claude-code", "codex"]);
+var EnabledConnector = external_exports.enum(["claude-code", "codex", "cursor-agent"]);
 var FilesystemCapability = external_exports.enum(["read-only", "trusted-write", "isolated-write"]);
 var StructuredOutputCapability = external_exports.enum(["json"]);
 var ConnectorCapabilities = external_exports.object({
@@ -33359,7 +33365,8 @@ var ConnectorOutputExtraction = external_exports.object({
 }).strict();
 var BUILTIN_CONNECTOR_CAPABILITIES = {
   "claude-code": { filesystem: "trusted-write", structured_output: "json" },
-  codex: { filesystem: "read-only", structured_output: "json" }
+  codex: { filesystem: "trusted-write", structured_output: "json" },
+  "cursor-agent": { filesystem: "trusted-write", structured_output: "json" }
 };
 var RESERVED_ADAPTER_NAMES = [
   ...EnabledConnector.options,
@@ -33579,6 +33586,21 @@ var SubRunCompletedTraceEntry = TraceEntryBase.extend({
   // Where the child's result.json was copied into the parent run-folder.
   result_path: external_exports.string().min(1)
 }).strict();
+var FanoutConcurrencyLimit = external_exports.union([external_exports.number().int().positive(), external_exports.literal("unbounded")]);
+var FanoutExecutionPolicy = external_exports.object({
+  configured_concurrency: FanoutConcurrencyLimit,
+  effective_concurrency: FanoutConcurrencyLimit,
+  writable_relay_branches_serialized: external_exports.boolean(),
+  reason: external_exports.string().min(1).optional()
+}).strict().superRefine((policy2, ctx) => {
+  if (policy2.writable_relay_branches_serialized && policy2.reason === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason"],
+      message: "serialized writable relay fanouts require a reason"
+    });
+  }
+});
 var FanoutStartedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("fanout.started"),
   step_id: StepId,
@@ -33589,7 +33611,8 @@ var FanoutStartedTraceEntry = TraceEntryBase.extend({
   // auditor can see exactly which N branches were spawned without
   // reconstructing the expansion themselves.
   branch_ids: external_exports.array(external_exports.string().min(1)).min(1),
-  on_child_failure: FanoutFailurePolicy
+  on_child_failure: FanoutFailurePolicy,
+  execution_policy: FanoutExecutionPolicy.optional()
 }).strict();
 var FanoutBranchStartedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("fanout.branch_started"),
@@ -35018,6 +35041,116 @@ var prototypeVariantReviewShapeHint = {
   ].join(" ")
 };
 
+// dist/schemas/host.js
+var HostKind = external_exports.enum(["generic-shell", "claude-code", "codex"]);
+var HostConfig = external_exports.object({
+  kind: HostKind.default("generic-shell")
+}).strict();
+
+// dist/schemas/config.js
+var ConnectorReference = external_exports.discriminatedUnion("kind", [
+  external_exports.object({ kind: external_exports.literal("builtin"), name: EnabledConnector }).strict(),
+  external_exports.object({ kind: external_exports.literal("named"), name: ConnectorName }).strict()
+]);
+var RelayConfigBody = external_exports.object({
+  default: external_exports.union([EnabledConnector, external_exports.literal("auto"), ConnectorName]).default("auto"),
+  roles: external_exports.partialRecord(RelayRole, ConnectorReference).default({}),
+  circuits: external_exports.record(CompiledFlowId, ConnectorReference).default({}),
+  connectors: external_exports.record(ConnectorName, CustomConnectorDescriptor).default({})
+}).strict();
+var issueAt2 = (ctx, path, message) => {
+  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+};
+var RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
+  const ownConnectorKeys = Object.keys(cfg.connectors);
+  const registered = new Set(ownConnectorKeys);
+  const reserved = new Set(RESERVED_ADAPTER_NAMES);
+  for (const name of ownConnectorKeys) {
+    if (reserved.has(name)) {
+      issueAt2(ctx, ["connectors", name], `connector name '${name}' is reserved (built-in or 'auto') and cannot be used as a custom connector key`);
+    }
+    const descriptor = cfg.connectors[name];
+    if (descriptor && descriptor.name !== name) {
+      issueAt2(ctx, ["connectors", name, "name"], `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`);
+    }
+  }
+  const known = /* @__PURE__ */ new Set(["auto", ...EnabledConnector.options, ...ownConnectorKeys]);
+  if (typeof cfg.default === "string" && !known.has(cfg.default)) {
+    issueAt2(ctx, ["default"], `relay.default references unknown connector: ${cfg.default}`);
+  }
+  for (const [role, ref] of Object.entries(cfg.roles)) {
+    if (ref && ref.kind === "named" && !registered.has(ref.name)) {
+      issueAt2(ctx, ["roles", role], `role connector not registered: ${ref.name}`);
+    }
+    if (role === "implementer" && ref && ref.kind === "named") {
+      const descriptor = cfg.connectors[ref.name];
+      if (descriptor?.capabilities.filesystem === "read-only") {
+        issueAt2(ctx, ["roles", role], `custom connector '${ref.name}' is read-only and cannot be used for implementer relay steps`);
+      }
+    }
+  }
+  for (const [circuit, ref] of Object.entries(cfg.circuits)) {
+    if (ref && ref.kind === "named" && !registered.has(ref.name)) {
+      issueAt2(ctx, ["circuits", circuit], `circuit connector not registered: ${ref.name}`);
+    }
+  }
+});
+var SkillBindings = external_exports.record(SkillSlotId, SkillId);
+var SkillsConfig = external_exports.object({
+  bindings: SkillBindings.default({})
+}).strict();
+var CircuitVariantModelId = external_exports.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, {
+  message: "variant model id must be a fanout-safe kebab-case slug"
+});
+var CircuitVariantModel = external_exports.object({
+  id: CircuitVariantModelId,
+  label: external_exports.string().min(1),
+  connector: ConnectorReference.optional(),
+  selection: SelectionOverride
+}).strict().superRefine((variant, ctx) => {
+  if (variant.selection.model === void 0) {
+    issueAt2(ctx, ["selection", "model"], "variant model selection.model is required");
+  }
+  if (variant.selection.effort === void 0) {
+    issueAt2(ctx, ["selection", "effort"], "variant model selection.effort is required");
+  }
+});
+var CircuitVariantModels = external_exports.array(CircuitVariantModel).min(2).max(4).superRefine((variants, ctx) => {
+  const seen = /* @__PURE__ */ new Set();
+  for (const [index, variant] of variants.entries()) {
+    if (seen.has(variant.id)) {
+      issueAt2(ctx, [index, "id"], `duplicate variant model id '${variant.id}'`);
+    }
+    seen.add(variant.id);
+  }
+});
+var CircuitOverride = external_exports.object({
+  selection: SelectionOverride.optional(),
+  skill_bindings: SkillBindings.default({}),
+  variant_models: CircuitVariantModels.optional()
+}).strict();
+var Config = external_exports.object({
+  schema_version: external_exports.literal(1),
+  host: HostConfig.default({ kind: "generic-shell" }),
+  relay: RelayConfig.default({
+    default: "auto",
+    roles: {},
+    circuits: {},
+    connectors: {}
+  }),
+  skills: SkillsConfig.default({ bindings: {} }),
+  circuits: external_exports.record(CompiledFlowId, CircuitOverride).default({}),
+  defaults: external_exports.object({
+    selection: SelectionOverride.optional()
+  }).strict().default({})
+}).strict();
+var ConfigLayer = external_exports.enum(["default", "user-global", "project", "invocation"]);
+var LayeredConfig = external_exports.object({
+  layer: ConfigLayer,
+  source_path: external_exports.string().optional(),
+  config: Config
+}).strict();
+
 // dist/flows/prototype/reports.js
 var NonEmptyStringArray4 = external_exports.array(external_exports.string().min(1)).min(1);
 var StringArray = external_exports.array(external_exports.string().min(1));
@@ -35215,6 +35348,9 @@ var PrototypeVariantOption = external_exports.object({
   provider: ProviderScopedModel.shape.provider,
   model: ProviderScopedModel.shape.model,
   effort: Effort,
+  connector: ConnectorReference.optional(),
+  connector_name: external_exports.string().min(1),
+  connector_source: RelayResolutionSource,
   prototype_root: PrototypeRootPath,
   variant_root: PrototypeRootPath,
   entry_point_hint: PrototypeProjectRelativePath,
@@ -35383,11 +35519,14 @@ var PrototypeVariantMissingEvidence = external_exports.object({
 var PrototypeVariantProviderEvidence = external_exports.object({
   schema_version: external_exports.literal(1),
   evidence_source: external_exports.literal("relay.started resolved_selection trace entries"),
-  required_captured_count: external_exports.literal(2),
+  required_captured_count: external_exports.number().int().min(2),
   captured_count: external_exports.number().int().nonnegative(),
   variants: external_exports.array(PrototypeVariantProviderEvidenceItem).min(2),
   missing_evidence: external_exports.array(PrototypeVariantMissingEvidence)
 }).strict().superRefine((report, ctx) => {
+  if (report.required_captured_count !== report.variants.length) {
+    addPathIssue(ctx, ["required_captured_count"], "required_captured_count must equal variants length");
+  }
   const captured = report.variants.filter((variant) => variant.status === "captured").length;
   if (report.captured_count !== captured) {
     addPathIssue(ctx, ["captured_count"], "captured_count must equal captured variants length");
@@ -36083,9 +36222,862 @@ var prototypeVariantChoiceOptionsComposeBuilder = {
   }
 };
 
-// dist/runtime/connectors/resolver.js
-var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+// dist/shared/json-extraction.js
+function extractJsonObject(text) {
+  let cursor = 0;
+  while (cursor < text.length) {
+    const start = text.indexOf("{", cursor);
+    if (start === -1)
+      break;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (inString) {
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"')
+          inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{")
+        depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+    if (end === -1)
+      break;
+    const candidate = text.slice(start, end);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      cursor = start + 1;
+    }
+  }
+  return text;
+}
+
+// dist/connectors/subprocess.js
+import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
+var ConnectorSubprocessSpawnError = class extends Error {
+  phase;
+  constructor(phase, message) {
+    super(message);
+    this.phase = phase;
+    this.name = "ConnectorSubprocessSpawnError";
+  }
+};
+function isConnectorSubprocessSpawnError(error51) {
+  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
+}
+function appendCapped(current, currentBytes, chunk, maxBytes) {
+  const chunkBytes = Buffer.byteLength(chunk, "utf8");
+  if (currentBytes + chunkBytes <= maxBytes) {
+    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
+  }
+  const remaining = maxBytes - currentBytes;
+  if (remaining <= 0) {
+    return { text: current, bytes: currentBytes, capped: true };
+  }
+  return {
+    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
+    bytes: maxBytes,
+    capped: true
+  };
+}
+async function runConnectorSubprocess(input) {
+  const start = performance.now();
+  return await new Promise((resolve14, reject) => {
+    let child;
+    try {
+      child = spawn(input.executable, [...input.args], {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: input.env ?? process.env,
+        detached: true,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
+      return;
+    }
+    let stdout = "";
+    let stdoutBytes = 0;
+    let stderr = "";
+    let stderrBytes = 0;
+    let stdoutCapped = false;
+    let stderrCapped = false;
+    let timedOut = false;
+    let killGroupSucceeded = false;
+    const killProcessGroup = (signal) => {
+      const pid = child.pid;
+      if (typeof pid !== "number")
+        return false;
+      try {
+        process.kill(-pid, signal);
+        return true;
+      } catch {
+        try {
+          child.kill(signal);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+    let killGraceTimer;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killGroupSucceeded = killProcessGroup("SIGTERM");
+      killGraceTimer = setTimeout(() => {
+        killProcessGroup("SIGKILL");
+        killGraceTimer = void 0;
+      }, input.sigtermToSigkillGraceMs);
+    }, input.timeoutMs);
+    const clearAllTimers = () => {
+      clearTimeout(timer);
+      if (killGraceTimer !== void 0) {
+        clearTimeout(killGraceTimer);
+        killGraceTimer = void 0;
+      }
+    };
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk) => {
+      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
+      stdout = next.text;
+      stdoutBytes = next.bytes;
+      stdoutCapped = stdoutCapped || next.capped;
+    });
+    child.stderr?.on("data", (chunk) => {
+      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
+      stderr = next.text;
+      stderrBytes = next.bytes;
+      stderrCapped = stderrCapped || next.capped;
+    });
+    child.on("error", (error51) => {
+      clearAllTimers();
+      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
+    });
+    child.on("close", (code, signal) => {
+      clearAllTimers();
+      resolve14({
+        stdout,
+        stderr,
+        stdoutCapped,
+        stderrCapped,
+        timedOut,
+        killGroupSucceeded,
+        code,
+        signal,
+        durationMs: performance.now() - start
+      });
+    });
+  });
+}
+
+// dist/connectors/claude-code.js
+var CLAUDE_CODE_DISPATCH_FLAGS = [
+  "-p",
+  "--permission-mode",
+  "bypassPermissions",
+  "--strict-mcp-config",
+  "--disable-slash-commands",
+  "--setting-sources",
+  "",
+  "--settings",
+  "{}",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--no-session-persistence"
+];
+var CLAUDE_CODE_EXECUTABLE = "claude";
+var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+var DEFAULT_TIMEOUT_MS = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
+var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES = 1024 * 1024;
+function selectedAnthropicModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "anthropic") {
+    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
+  }
+  return model.model;
+}
+function assertClaudeCodeEffort(effort) {
+  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildClaudeCodeArgs(input) {
+  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
+  const model = selectedAnthropicModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertClaudeCodeEffort(effort);
+    args.push("--effort", effort);
+  }
+  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
+    args.push("--json-schema", JSON.stringify(input.responseSchema));
+  }
+  args.push(input.prompt);
+  return args;
+}
+function claudeCodeStdoutDiagnostic(stdout) {
+  try {
+    parseClaudeCodeStdout(stdout, "", 0);
+    return void 0;
+  } catch (error51) {
+    return error51 instanceof Error ? error51.message : String(error51);
+  }
+}
+function isClaudeCodeStructuredOutputCompatible(schema) {
+  return schema.type === "object";
+}
+async function relayClaudeCode(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const args = buildClaudeCodeArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CLAUDE_CODE_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES,
+      stderrMaxBytes: STDERR_MAX_BYTES,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
+      env: process.env
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
+    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
+    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+  }
+  try {
+    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
+  } catch (error51) {
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+  }
+}
+function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    throw new Error("stream-json stdout is empty");
+  }
+  const trace_entries = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
+    }
+    trace_entries.push(parsed);
+  }
+  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
+  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
+  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
+  if (initTraceEntry === void 0) {
+    throw new Error("system/init trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry === void 0) {
+    throw new Error("result trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry.is_error === true) {
+    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
+    throw new Error(`subprocess reported is_error: ${message}`);
+  }
+  const mcpServers = initTraceEntry.mcp_servers;
+  const slashCommands = initTraceEntry.slash_commands;
+  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
+    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
+  }
+  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
+    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
+  }
+  const receipt_id = initTraceEntry.session_id;
+  const cli_version = initTraceEntry.claude_code_version;
+  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
+    throw new Error("init.session_id missing or empty");
+  }
+  if (typeof cli_version !== "string" || cli_version.length === 0) {
+    throw new Error("init.claude_code_version missing or empty");
+  }
+  const structuredOutput = resultTraceEntry.structured_output;
+  let result_body;
+  if (structuredOutput !== void 0 && structuredOutput !== null) {
+    if (typeof structuredOutput !== "object") {
+      throw new Error("result.structured_output present but not an object");
+    }
+    result_body = JSON.stringify(structuredOutput);
+  } else {
+    const result_body_raw = resultTraceEntry.result;
+    if (typeof result_body_raw !== "string") {
+      throw new Error("result.result missing or not a string");
+    }
+    result_body = extractJsonObject(result_body_raw);
+  }
+  return {
+    request_payload: prompt,
+    receipt_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/codex.js
+import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
+var CODEX_WRITE_FLAGS = Object.freeze([
+  "exec",
+  "--json",
+  "-s",
+  "workspace-write",
+  "--ephemeral",
+  "--skip-git-repo-check",
+  "--ignore-user-config",
+  "--ignore-rules"
+]);
+var CODEX_EXECUTABLE = "codex";
+var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
+  "--dangerously-bypass-approvals-and-sandbox",
+  "--full-auto",
+  "--add-dir",
+  "-o",
+  "--output-last-message",
+  "-c",
+  "--config",
+  "-p",
+  "--profile",
+  "--sandbox"
+]);
+var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
 var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+if (!CODEX_WRITE_FLAGS.includes("-s") || !CODEX_WRITE_FLAGS.includes("workspace-write") || !CODEX_WRITE_FLAGS.includes("--ignore-user-config") || !CODEX_WRITE_FLAGS.includes("--ignore-rules")) {
+  throw new Error('CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"');
+}
+var flagsAsStringArray = CODEX_WRITE_FLAGS;
+for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
+  if (flagsAsStringArray.includes(forbidden)) {
+    throw new Error(`CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
+  }
+}
+var DEFAULT_TIMEOUT_MS2 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
+var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES2 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
+var cachedCodexVersion;
+function captureCodexVersion() {
+  if (cachedCodexVersion !== void 0)
+    return cachedCodexVersion;
+  let stdout;
+  try {
+    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`codex --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("codex --version produced empty output");
+  }
+  cachedCodexVersion = version2;
+  return version2;
+}
+function assertCodexEffort(effort) {
+  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function selectedOpenAIModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "openai") {
+    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
+  }
+  return model.model;
+}
+function codexReasoningEffortConfigValue(effort) {
+  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
+}
+function isForbiddenCodexArg(arg) {
+  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
+    if (token === "-c")
+      return false;
+    if (arg === token)
+      return true;
+    return token.startsWith("--") && arg.startsWith(`${token}=`);
+  });
+}
+function isAllowedCodexConfigOverride(value) {
+  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
+}
+function assertCodexSpawnArgvBoundary(args) {
+  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
+  const sandboxFlagIndex = sandboxFlagIndexes[0];
+  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "workspace-write") {
+    throw new Error('codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required');
+  }
+  let configOverrideCount = 0;
+  for (let idx = 0; idx < args.length; idx += 1) {
+    const arg = args[idx];
+    if (arg === void 0)
+      continue;
+    if (arg === "-c") {
+      configOverrideCount += 1;
+      if (configOverrideCount > 1) {
+        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
+      }
+      const value = args[idx + 1];
+      if (!isAllowedCodexConfigOverride(value)) {
+        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
+      }
+      idx += 1;
+      continue;
+    }
+    if (isForbiddenCodexArg(arg)) {
+      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
+    }
+  }
+}
+function buildCodexArgs(input, schemaPath) {
+  const args = [...CODEX_WRITE_FLAGS];
+  if (input.cwd !== void 0) {
+    args.push("--cd", input.cwd);
+  }
+  const model = selectedOpenAIModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("-m", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCodexEffort(effort);
+    args.push("-c", codexReasoningEffortConfigValue(effort));
+  }
+  if (schemaPath !== void 0) {
+    args.push("--output-schema", schemaPath);
+  }
+  args.push(input.prompt);
+  assertCodexSpawnArgvBoundary(args);
+  return args;
+}
+var CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
+  "$id",
+  "$ref",
+  "$schema",
+  "$defs",
+  "allOf",
+  "anyOf",
+  "const",
+  "contains",
+  "definitions",
+  "dependentRequired",
+  "dependentSchemas",
+  "exclusiveMaximum",
+  "exclusiveMinimum",
+  "format",
+  "if",
+  "maxContains",
+  "maxItems",
+  "maxLength",
+  "maxProperties",
+  "maximum",
+  "minContains",
+  "minItems",
+  "minLength",
+  "minProperties",
+  "minimum",
+  "multipleOf",
+  "not",
+  "oneOf",
+  "pattern",
+  "patternProperties",
+  "propertyNames",
+  "then",
+  "uniqueItems"
+]);
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function everyObjectPropertyIsRequired(schema) {
+  if (!isRecord(schema.properties))
+    return true;
+  if (!Array.isArray(schema.required))
+    return false;
+  const required2 = new Set(schema.required.filter((value) => typeof value === "string"));
+  const propertyNames = Object.keys(schema.properties);
+  return propertyNames.length === required2.size && propertyNames.every((property) => required2.has(property));
+}
+function isCodexOutputSchemaNodeCompatible(node) {
+  if (Array.isArray(node))
+    return node.every(isCodexOutputSchemaNodeCompatible);
+  if (!isRecord(node))
+    return true;
+  for (const key of Object.keys(node)) {
+    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key))
+      return false;
+  }
+  if (Array.isArray(node.type))
+    return false;
+  if (node.type === "object") {
+    if (node.additionalProperties !== void 0 && node.additionalProperties !== false) {
+      return false;
+    }
+    if (!everyObjectPropertyIsRequired(node))
+      return false;
+  }
+  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
+}
+function isCodexOutputSchemaCompatible(schema) {
+  return schema.type === "object" && isCodexOutputSchemaNodeCompatible(schema);
+}
+async function writeSchemaTempFile(schema) {
+  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
+  try {
+    const path = joinPath(dir, "schema.json");
+    await writeFile(path, JSON.stringify(schema), "utf8");
+    return { dir, path };
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
+    throw err;
+  }
+}
+async function cleanupSchemaTempDir(dir) {
+  if (dir === void 0)
+    return;
+  try {
+    await rm(dir, { recursive: true, force: true });
+  } catch {
+  }
+}
+async function relayCodex(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
+  const cli_version = captureCodexVersion();
+  let tempDir;
+  let schemaPath;
+  try {
+    if (input.responseSchema !== void 0 && isCodexOutputSchemaCompatible(input.responseSchema)) {
+      const allocated = await writeSchemaTempFile(input.responseSchema);
+      tempDir = allocated.dir;
+      schemaPath = allocated.path;
+    }
+    const args = buildCodexArgs(input, schemaPath);
+    let result;
+    try {
+      result = await runConnectorSubprocess({
+        executable: CODEX_EXECUTABLE,
+        args,
+        timeoutMs: timeoutMs2,
+        stdoutMaxBytes: STDOUT_MAX_BYTES2,
+        stderrMaxBytes: STDERR_MAX_BYTES2,
+        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
+        env: process.env,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      if (isConnectorSubprocessSpawnError(error51)) {
+        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
+      }
+      throw error51;
+    }
+    if (result.timedOut) {
+      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.code !== 0) {
+      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.stdoutCapped) {
+      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+    }
+    try {
+      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
+    } catch (error51) {
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+    }
+  } finally {
+    await cleanupSchemaTempDir(tempDir);
+  }
+}
+var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set(["agent_message", "command_execution", "reasoning"]);
+var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "thread.started",
+  "turn.started",
+  "item.started",
+  "item.updated",
+  "item.completed",
+  "turn.completed"
+]);
+var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
+function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    throw new Error("codex --json stdout is empty");
+  }
+  const trace_entries = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
+    }
+    trace_entries.push(parsed);
+  }
+  for (const [idx, trace_entry] of trace_entries.entries()) {
+    const type = trace_entry.type;
+    if (typeof type !== "string") {
+      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
+    }
+    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
+      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
+      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
+    }
+    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
+      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
+    }
+  }
+  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
+  if (threadStarted === void 0) {
+    throw new Error("thread.started trace_entry missing from codex --json stdout");
+  }
+  const thread_id = threadStarted.thread_id;
+  if (typeof thread_id !== "string" || thread_id.length === 0) {
+    throw new Error("thread.started.thread_id missing or empty");
+  }
+  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
+  if (turnCompleted === void 0) {
+    throw new Error("turn.completed trace_entry missing from codex --json stdout");
+  }
+  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
+  for (const [idx, e] of itemCompleted.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.completed[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.completed[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
+  for (const [idx, e] of itemUpdated.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.updated[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.updated[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const agentMessages = itemCompleted.filter((e) => {
+    const item2 = e.item;
+    return item2.type === "agent_message";
+  });
+  const terminalMessage = agentMessages[agentMessages.length - 1];
+  if (terminalMessage === void 0) {
+    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
+  }
+  const item = terminalMessage.item;
+  const result_body_raw = item.text;
+  if (typeof result_body_raw !== "string") {
+    throw new Error("terminal agent_message item.text missing or not a string");
+  }
+  const result_body = extractJsonObject(result_body_raw);
+  return {
+    request_payload: prompt,
+    receipt_id: thread_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/cursor-agent.js
+import { execFileSync as execFileSync2 } from "node:child_process";
+var CURSOR_AGENT_EXECUTABLE = "cursor-agent";
+var CURSOR_AGENT_SUPPORTED_EFFORTS = ["none"];
+var CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
+  "--print",
+  "--output-format",
+  "text",
+  "--trust",
+  "--force"
+]);
+var DEFAULT_TIMEOUT_MS3 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
+var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES3 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS2 = 5e3;
+var cachedCursorAgentVersion;
+function captureCursorAgentVersion() {
+  if (cachedCursorAgentVersion !== void 0)
+    return cachedCursorAgentVersion;
+  let stdout;
+  try {
+    stdout = execFileSync2(CURSOR_AGENT_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS2,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`cursor-agent --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("cursor-agent --version produced empty output");
+  }
+  cachedCursorAgentVersion = version2;
+  return version2;
+}
+function selectedGeminiModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "gemini") {
+    throw new Error(`cursor-agent connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'gemini'`);
+  }
+  return model.model;
+}
+function assertCursorAgentEffort(effort) {
+  if (!CURSOR_AGENT_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`cursor-agent connector cannot honor effort '${effort}'; supported efforts: ${CURSOR_AGENT_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildCursorAgentArgs(input) {
+  const args = [...CURSOR_AGENT_DISPATCH_FLAGS];
+  const model = selectedGeminiModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCursorAgentEffort(effort);
+  }
+  if (input.cwd !== void 0) {
+    args.push("--workspace", input.cwd);
+  }
+  args.push(input.prompt);
+  return args;
+}
+async function relayCursorAgent(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
+  const cliVersion = captureCursorAgentVersion();
+  const args = buildCursorAgentArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CURSOR_AGENT_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES3,
+      stderrMaxBytes: STDERR_MAX_BYTES3,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
+      env: process.env,
+      ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+      throw new Error(`cursor-agent subprocess ${verb}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`cursor-agent subprocess stdout exceeded ${STDOUT_MAX_BYTES3} bytes; connector output cannot be evaluated on truncated stream`);
+  }
+  const resultBodyRaw = result.stdout.trim();
+  if (resultBodyRaw.length === 0) {
+    throw new Error("cursor-agent stdout is empty");
+  }
+  return {
+    request_payload: input.prompt,
+    receipt_id: sha256Hex(resultBodyRaw),
+    result_body: extractJsonObject(resultBodyRaw),
+    duration_ms: result.durationMs,
+    cli_version: cliVersion
+  };
+}
+
+// dist/runtime/connectors/resolver.js
 function mergedRelayConfig(layers) {
   const merged = {
     default: "auto",
@@ -36123,8 +37115,14 @@ function resolvedConnectorFromReference(ref, relay) {
   }
   return descriptor;
 }
+function resolveConnectorReference(input) {
+  return resolvedConnectorFromReference(input.ref, mergedRelayConfig(input.configLayers));
+}
+function isEnabledConnector(value) {
+  return EnabledConnector.options.includes(value);
+}
 function resolvedConnectorFromDefault(defaultRef, relay) {
-  if (defaultRef === "claude-code" || defaultRef === "codex") {
+  if (isEnabledConnector(defaultRef)) {
     return { kind: "builtin", name: defaultRef };
   }
   const descriptor = relay.connectors[defaultRef];
@@ -36171,6 +37169,17 @@ function expectedProvider(connectorName) {
     return "anthropic";
   if (connectorName === "codex")
     return "openai";
+  if (connectorName === "cursor-agent")
+    return "gemini";
+  return void 0;
+}
+function supportedEfforts(connectorName) {
+  if (connectorName === "claude-code")
+    return CLAUDE_CODE_SUPPORTED_EFFORTS;
+  if (connectorName === "codex")
+    return CODEX_SUPPORTED_EFFORTS;
+  if (connectorName === "cursor-agent")
+    return CURSOR_AGENT_SUPPORTED_EFFORTS;
   return void 0;
 }
 function assertConnectorSelectionCompatible(connectorName, selection) {
@@ -36182,7 +37191,7 @@ function assertConnectorSelectionCompatible(connectorName, selection) {
   const effort = selection?.effort;
   if (effort === void 0)
     return;
-  const supported = connectorName === "claude-code" ? CLAUDE_CODE_SUPPORTED_EFFORTS : connectorName === "codex" ? CODEX_SUPPORTED_EFFORTS : void 0;
+  const supported = supportedEfforts(connectorName);
   if (supported !== void 0 && !supported.includes(effort)) {
     throw new Error(`${connectorName} connector cannot honor effort '${effort}'; supported efforts: ${supported.join(", ")}`);
   }
@@ -36212,14 +37221,25 @@ function validateVariantModelMatrix(input) {
   if (input.variants.length !== input.expectedCount) {
     throw new Error(`prototype.variant-options@v1 requires exactly axes.tournament_n (${input.expectedCount}) variant_models entries; found ${input.variants.length}`);
   }
-  const relay = resolveConnectorForRelay({
-    flowId: "prototype",
-    role: "implementer",
-    ...input.selectionConfigLayers === void 0 ? {} : { configLayers: input.selectionConfigLayers }
-  });
   for (const variant of input.variants) {
+    const relay = resolveVariantRelay({
+      variant,
+      ...input.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: input.selectionConfigLayers }
+    });
     assertConnectorSelectionCompatible(relay.connectorName, resolvedSelectionForCompatibility(variant.selection));
   }
+}
+function resolveVariantRelay(input) {
+  const explicitConnector = input.variant.connector === void 0 ? void 0 : resolveConnectorReference({
+    ref: input.variant.connector,
+    ...input.selectionConfigLayers === void 0 ? {} : { configLayers: input.selectionConfigLayers }
+  });
+  return resolveConnectorForRelay({
+    flowId: "prototype",
+    role: "implementer",
+    ...explicitConnector === void 0 ? {} : { explicitConnector },
+    ...input.selectionConfigLayers === void 0 ? {} : { configLayers: input.selectionConfigLayers }
+  });
 }
 var prototypeVariantOptionsComposeBuilder = {
   resultSchemaName: "prototype.variant-options@v1",
@@ -36253,12 +37273,19 @@ var prototypeVariantOptionsComposeBuilder = {
           throw new Error(`prototype.variant-options@v1 variant '${variant.id}' requires selection.model and selection.effort`);
         }
         const artifactRoot = `${plan.prototype_root}/variants/${variant.id}`;
+        const relay = resolveVariantRelay({
+          variant,
+          ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers }
+        });
         return {
           variant_id: variant.id,
           label: variant.label,
           provider: model.provider,
           model: model.model,
           effort,
+          ...variant.connector === void 0 ? {} : { connector: variant.connector },
+          connector_name: relay.connectorName,
+          connector_source: relay.resolvedFrom,
           prototype_root: plan.prototype_root,
           variant_root: artifactRoot,
           entry_point_hint: `${artifactRoot}/index.html`,
@@ -36342,7 +37369,7 @@ var prototypeVariantProviderEvidenceComposeBuilder = {
     return PrototypeVariantProviderEvidence.parse({
       schema_version: 1,
       evidence_source: "relay.started resolved_selection trace entries",
-      required_captured_count: 2,
+      required_captured_count: variants.length,
       captured_count: variants.filter((variant) => variant.status === "captured").length,
       variants,
       missing_evidence: missingEvidence
@@ -36835,6 +37862,7 @@ var prototypeFlowData = {
                 report_schema: "prototype.variant-artifact@v1",
                 provenance_field: "variant_id"
               },
+              connector: "$item.connector_name",
               selection: {
                 model: {
                   provider: "$item.provider",
@@ -39296,115 +40324,6 @@ function findCheckpointBriefBuilder(resultSchemaName) {
   return REGISTRY.get(resultSchemaName);
 }
 
-// dist/schemas/host.js
-var HostKind = external_exports.enum(["generic-shell", "claude-code", "codex"]);
-var HostConfig = external_exports.object({
-  kind: HostKind.default("generic-shell")
-}).strict();
-
-// dist/schemas/config.js
-var ConnectorReference = external_exports.discriminatedUnion("kind", [
-  external_exports.object({ kind: external_exports.literal("builtin"), name: EnabledConnector }).strict(),
-  external_exports.object({ kind: external_exports.literal("named"), name: ConnectorName }).strict()
-]);
-var RelayConfigBody = external_exports.object({
-  default: external_exports.union([EnabledConnector, external_exports.literal("auto"), ConnectorName]).default("auto"),
-  roles: external_exports.partialRecord(RelayRole, ConnectorReference).default({}),
-  circuits: external_exports.record(CompiledFlowId, ConnectorReference).default({}),
-  connectors: external_exports.record(ConnectorName, CustomConnectorDescriptor).default({})
-}).strict();
-var issueAt2 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
-};
-var RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
-  const ownConnectorKeys = Object.keys(cfg.connectors);
-  const registered = new Set(ownConnectorKeys);
-  const reserved = new Set(RESERVED_ADAPTER_NAMES);
-  for (const name of ownConnectorKeys) {
-    if (reserved.has(name)) {
-      issueAt2(ctx, ["connectors", name], `connector name '${name}' is reserved (built-in or 'auto') and cannot be used as a custom connector key`);
-    }
-    const descriptor = cfg.connectors[name];
-    if (descriptor && descriptor.name !== name) {
-      issueAt2(ctx, ["connectors", name, "name"], `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`);
-    }
-  }
-  const known = /* @__PURE__ */ new Set(["auto", ...EnabledConnector.options, ...ownConnectorKeys]);
-  if (typeof cfg.default === "string" && !known.has(cfg.default)) {
-    issueAt2(ctx, ["default"], `relay.default references unknown connector: ${cfg.default}`);
-  }
-  for (const [role, ref] of Object.entries(cfg.roles)) {
-    if (ref && ref.kind === "named" && !registered.has(ref.name)) {
-      issueAt2(ctx, ["roles", role], `role connector not registered: ${ref.name}`);
-    }
-    if (role === "implementer" && ref && ref.kind === "named") {
-      const descriptor = cfg.connectors[ref.name];
-      if (descriptor?.capabilities.filesystem === "read-only") {
-        issueAt2(ctx, ["roles", role], `custom connector '${ref.name}' is read-only and cannot be used for implementer relay steps`);
-      }
-    }
-  }
-  for (const [circuit, ref] of Object.entries(cfg.circuits)) {
-    if (ref && ref.kind === "named" && !registered.has(ref.name)) {
-      issueAt2(ctx, ["circuits", circuit], `circuit connector not registered: ${ref.name}`);
-    }
-  }
-});
-var SkillBindings = external_exports.record(SkillSlotId, SkillId);
-var SkillsConfig = external_exports.object({
-  bindings: SkillBindings.default({})
-}).strict();
-var CircuitVariantModelId = external_exports.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, {
-  message: "variant model id must be a fanout-safe kebab-case slug"
-});
-var CircuitVariantModel = external_exports.object({
-  id: CircuitVariantModelId,
-  label: external_exports.string().min(1),
-  selection: SelectionOverride
-}).strict().superRefine((variant, ctx) => {
-  if (variant.selection.model === void 0) {
-    issueAt2(ctx, ["selection", "model"], "variant model selection.model is required");
-  }
-  if (variant.selection.effort === void 0) {
-    issueAt2(ctx, ["selection", "effort"], "variant model selection.effort is required");
-  }
-});
-var CircuitVariantModels = external_exports.array(CircuitVariantModel).min(2).max(4).superRefine((variants, ctx) => {
-  const seen = /* @__PURE__ */ new Set();
-  for (const [index, variant] of variants.entries()) {
-    if (seen.has(variant.id)) {
-      issueAt2(ctx, [index, "id"], `duplicate variant model id '${variant.id}'`);
-    }
-    seen.add(variant.id);
-  }
-});
-var CircuitOverride = external_exports.object({
-  selection: SelectionOverride.optional(),
-  skill_bindings: SkillBindings.default({}),
-  variant_models: CircuitVariantModels.optional()
-}).strict();
-var Config = external_exports.object({
-  schema_version: external_exports.literal(1),
-  host: HostConfig.default({ kind: "generic-shell" }),
-  relay: RelayConfig.default({
-    default: "auto",
-    roles: {},
-    circuits: {},
-    connectors: {}
-  }),
-  skills: SkillsConfig.default({ bindings: {} }),
-  circuits: external_exports.record(CompiledFlowId, CircuitOverride).default({}),
-  defaults: external_exports.object({
-    selection: SelectionOverride.optional()
-  }).strict().default({})
-}).strict();
-var ConfigLayer = external_exports.enum(["default", "user-global", "project", "invocation"]);
-var LayeredConfig = external_exports.object({
-  layer: ConfigLayer,
-  source_path: external_exports.string().optional(),
-  config: Config
-}).strict();
-
 // dist/runtime/domain/route.js
 var TERMINAL_TARGETS = [
   "@complete",
@@ -39691,6 +40610,7 @@ function convertStep(step) {
       ...base,
       kind: "relay",
       role: step.role,
+      ...step.connector === void 0 ? {} : { connector: step.connector },
       ...step.acceptance_criteria === void 0 ? {} : { acceptanceCriteria: step.acceptance_criteria },
       ...step.writes.report === void 0 ? {} : { report: toRunFileRef(step.writes.report) }
     };
@@ -41066,7 +41986,7 @@ function rubricResultFields(rubric, resultBody) {
 }
 function buildRubricResult(rubric, resultBody) {
   const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
-  if (!isRecord(rawJudgments)) {
+  if (!isRecord2(rawJudgments)) {
     throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
   }
   const dims = {};
@@ -41100,12 +42020,12 @@ function runtimeSignalForSource(resultBody, source) {
 }
 function readPath(source, path) {
   return path.split(".").reduce((current, segment) => {
-    if (!isRecord(current))
+    if (!isRecord2(current))
       return void 0;
     return current[segment];
   }, source);
 }
-function isRecord(value) {
+function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isRubricJudgment(value) {
@@ -41267,677 +42187,15 @@ function parseReport(schemaName, resultBody) {
   return { kind: "ok" };
 }
 
-// dist/shared/json-extraction.js
-function extractJsonObject(text) {
-  let cursor = 0;
-  while (cursor < text.length) {
-    const start = text.indexOf("{", cursor);
-    if (start === -1)
-      break;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    let end = -1;
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i];
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (inString) {
-        if (ch === "\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === '"')
-          inString = false;
-        continue;
-      }
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-      if (ch === "{")
-        depth++;
-      else if (ch === "}") {
-        depth--;
-        if (depth === 0) {
-          end = i + 1;
-          break;
-        }
-      }
-    }
-    if (end === -1)
-      break;
-    const candidate = text.slice(start, end);
-    try {
-      JSON.parse(candidate);
-      return candidate;
-    } catch {
-      cursor = start + 1;
-    }
-  }
-  return text;
-}
-
-// dist/connectors/subprocess.js
-import { spawn } from "node:child_process";
-import { performance } from "node:perf_hooks";
-var ConnectorSubprocessSpawnError = class extends Error {
-  phase;
-  constructor(phase, message) {
-    super(message);
-    this.phase = phase;
-    this.name = "ConnectorSubprocessSpawnError";
-  }
-};
-function isConnectorSubprocessSpawnError(error51) {
-  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
-}
-function appendCapped(current, currentBytes, chunk, maxBytes) {
-  const chunkBytes = Buffer.byteLength(chunk, "utf8");
-  if (currentBytes + chunkBytes <= maxBytes) {
-    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
-  }
-  const remaining = maxBytes - currentBytes;
-  if (remaining <= 0) {
-    return { text: current, bytes: currentBytes, capped: true };
-  }
-  return {
-    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
-    bytes: maxBytes,
-    capped: true
-  };
-}
-async function runConnectorSubprocess(input) {
-  const start = performance.now();
-  return await new Promise((resolve14, reject) => {
-    let child;
-    try {
-      child = spawn(input.executable, [...input.args], {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: input.env ?? process.env,
-        detached: true,
-        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-      });
-    } catch (error51) {
-      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
-      return;
-    }
-    let stdout = "";
-    let stdoutBytes = 0;
-    let stderr = "";
-    let stderrBytes = 0;
-    let stdoutCapped = false;
-    let stderrCapped = false;
-    let timedOut = false;
-    let killGroupSucceeded = false;
-    const killProcessGroup = (signal) => {
-      const pid = child.pid;
-      if (typeof pid !== "number")
-        return false;
-      try {
-        process.kill(-pid, signal);
-        return true;
-      } catch {
-        try {
-          child.kill(signal);
-          return true;
-        } catch {
-          return false;
-        }
-      }
-    };
-    let killGraceTimer;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroupSucceeded = killProcessGroup("SIGTERM");
-      killGraceTimer = setTimeout(() => {
-        killProcessGroup("SIGKILL");
-        killGraceTimer = void 0;
-      }, input.sigtermToSigkillGraceMs);
-    }, input.timeoutMs);
-    const clearAllTimers = () => {
-      clearTimeout(timer);
-      if (killGraceTimer !== void 0) {
-        clearTimeout(killGraceTimer);
-        killGraceTimer = void 0;
-      }
-    };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (chunk) => {
-      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
-      stdout = next.text;
-      stdoutBytes = next.bytes;
-      stdoutCapped = stdoutCapped || next.capped;
-    });
-    child.stderr?.on("data", (chunk) => {
-      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
-      stderr = next.text;
-      stderrBytes = next.bytes;
-      stderrCapped = stderrCapped || next.capped;
-    });
-    child.on("error", (error51) => {
-      clearAllTimers();
-      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
-    });
-    child.on("close", (code, signal) => {
-      clearAllTimers();
-      resolve14({
-        stdout,
-        stderr,
-        stdoutCapped,
-        stderrCapped,
-        timedOut,
-        killGroupSucceeded,
-        code,
-        signal,
-        durationMs: performance.now() - start
-      });
-    });
-  });
-}
-
-// dist/connectors/claude-code.js
-var CLAUDE_CODE_DISPATCH_FLAGS = [
-  "-p",
-  "--permission-mode",
-  "bypassPermissions",
-  "--strict-mcp-config",
-  "--disable-slash-commands",
-  "--setting-sources",
-  "",
-  "--settings",
-  "{}",
-  "--output-format",
-  "stream-json",
-  "--verbose",
-  "--no-session-persistence"
-];
-var CLAUDE_CODE_EXECUTABLE = "claude";
-var CLAUDE_CODE_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
-var DEFAULT_TIMEOUT_MS = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
-var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES = 1024 * 1024;
-function selectedAnthropicModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "anthropic") {
-    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
-  }
-  return model.model;
-}
-function assertClaudeCodeEffort(effort) {
-  if (!CLAUDE_CODE_SUPPORTED_EFFORTS2.includes(effort)) {
-    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS2.join(", ")}`);
-  }
-}
-function buildClaudeCodeArgs(input) {
-  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
-  const model = selectedAnthropicModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("--model", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertClaudeCodeEffort(effort);
-    args.push("--effort", effort);
-  }
-  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
-    args.push("--json-schema", JSON.stringify(input.responseSchema));
-  }
-  args.push(input.prompt);
-  return args;
-}
-function claudeCodeStdoutDiagnostic(stdout) {
-  try {
-    parseClaudeCodeStdout(stdout, "", 0);
-    return void 0;
-  } catch (error51) {
-    return error51 instanceof Error ? error51.message : String(error51);
-  }
-}
-function isClaudeCodeStructuredOutputCompatible(schema) {
-  return schema.type === "object";
-}
-async function relayClaudeCode(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const args = buildClaudeCodeArgs(input);
-  let result;
-  try {
-    result = await runConnectorSubprocess({
-      executable: CLAUDE_CODE_EXECUTABLE,
-      args,
-      timeoutMs: timeoutMs2,
-      stdoutMaxBytes: STDOUT_MAX_BYTES,
-      stderrMaxBytes: STDERR_MAX_BYTES,
-      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
-      env: process.env
-    });
-  } catch (error51) {
-    if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
-    }
-    throw error51;
-  }
-  if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
-    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
-    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.stdoutCapped) {
-    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-  }
-  try {
-    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
-  } catch (error51) {
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-  }
-}
-function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("stream-json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
-  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
-  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
-  if (initTraceEntry === void 0) {
-    throw new Error("system/init trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry === void 0) {
-    throw new Error("result trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry.is_error === true) {
-    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
-    throw new Error(`subprocess reported is_error: ${message}`);
-  }
-  const mcpServers = initTraceEntry.mcp_servers;
-  const slashCommands = initTraceEntry.slash_commands;
-  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
-    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
-  }
-  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
-    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
-  }
-  const receipt_id = initTraceEntry.session_id;
-  const cli_version = initTraceEntry.claude_code_version;
-  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
-    throw new Error("init.session_id missing or empty");
-  }
-  if (typeof cli_version !== "string" || cli_version.length === 0) {
-    throw new Error("init.claude_code_version missing or empty");
-  }
-  const structuredOutput = resultTraceEntry.structured_output;
-  let result_body;
-  if (structuredOutput !== void 0 && structuredOutput !== null) {
-    if (typeof structuredOutput !== "object") {
-      throw new Error("result.structured_output present but not an object");
-    }
-    result_body = JSON.stringify(structuredOutput);
-  } else {
-    const result_body_raw = resultTraceEntry.result;
-    if (typeof result_body_raw !== "string") {
-      throw new Error("result.result missing or not a string");
-    }
-    result_body = extractJsonObject(result_body_raw);
-  }
-  return {
-    request_payload: prompt,
-    receipt_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
-// dist/connectors/codex.js
-import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join as joinPath } from "node:path";
-var CODEX_NO_WRITE_FLAGS = Object.freeze([
-  "exec",
-  "--json",
-  "-s",
-  "read-only",
-  "--ephemeral",
-  "--skip-git-repo-check"
-]);
-var CODEX_EXECUTABLE = "codex";
-var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
-  "--dangerously-bypass-approvals-and-sandbox",
-  "--full-auto",
-  "--add-dir",
-  "-o",
-  "--output-last-message",
-  "-c",
-  "--config",
-  "-p",
-  "--profile",
-  "--sandbox"
-]);
-var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
-var CODEX_SUPPORTED_EFFORTS2 = ["low", "medium", "high", "xhigh"];
-if (!CODEX_NO_WRITE_FLAGS.includes("-s") || !CODEX_NO_WRITE_FLAGS.includes("read-only")) {
-  throw new Error('CODEX_NO_WRITE_FLAGS capability-boundary invariant broken: must include "-s read-only"');
-}
-var flagsAsStringArray = CODEX_NO_WRITE_FLAGS;
-for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
-  if (flagsAsStringArray.includes(forbidden)) {
-    throw new Error(`CODEX_NO_WRITE_FLAGS capability-boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
-  }
-}
-var DEFAULT_TIMEOUT_MS2 = 12e4;
-var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
-var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES2 = 1024 * 1024;
-var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
-var cachedCodexVersion;
-function captureCodexVersion() {
-  if (cachedCodexVersion !== void 0)
-    return cachedCodexVersion;
-  let stdout;
-  try {
-    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
-      encoding: "utf8",
-      timeout: VERSION_CAPTURE_TIMEOUT_MS,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (err) {
-    throw new Error(`codex --version failed: ${err.message}`);
-  }
-  const version2 = stdout.trim();
-  if (version2.length === 0) {
-    throw new Error("codex --version produced empty output");
-  }
-  cachedCodexVersion = version2;
-  return version2;
-}
-function assertCodexEffort(effort) {
-  if (!CODEX_SUPPORTED_EFFORTS2.includes(effort)) {
-    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS2.join(", ")}`);
-  }
-}
-function selectedOpenAIModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "openai") {
-    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
-  }
-  return model.model;
-}
-function codexReasoningEffortConfigValue(effort) {
-  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
-}
-function isForbiddenCodexArg(arg) {
-  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
-    if (token === "-c")
-      return false;
-    if (arg === token)
-      return true;
-    return token.startsWith("--") && arg.startsWith(`${token}=`);
-  });
-}
-function isAllowedCodexConfigOverride(value) {
-  return value !== void 0 && CODEX_SUPPORTED_EFFORTS2.some((effort) => value === codexReasoningEffortConfigValue(effort));
-}
-function assertCodexSpawnArgvBoundary(args) {
-  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
-  const sandboxFlagIndex = sandboxFlagIndexes[0];
-  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "read-only") {
-    throw new Error('codex spawn argv boundary broken: exactly one "-s read-only" pair is required');
-  }
-  let configOverrideCount = 0;
-  for (let idx = 0; idx < args.length; idx += 1) {
-    const arg = args[idx];
-    if (arg === void 0)
-      continue;
-    if (arg === "-c") {
-      configOverrideCount += 1;
-      if (configOverrideCount > 1) {
-        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
-      }
-      const value = args[idx + 1];
-      if (!isAllowedCodexConfigOverride(value)) {
-        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
-      }
-      idx += 1;
-      continue;
-    }
-    if (isForbiddenCodexArg(arg)) {
-      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
-    }
-  }
-}
-function buildCodexArgs(input, schemaPath) {
-  const args = [...CODEX_NO_WRITE_FLAGS];
-  const model = selectedOpenAIModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("-m", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertCodexEffort(effort);
-    args.push("-c", codexReasoningEffortConfigValue(effort));
-  }
-  if (schemaPath !== void 0) {
-    args.push("--output-schema", schemaPath);
-  }
-  args.push(input.prompt);
-  assertCodexSpawnArgvBoundary(args);
-  return args;
-}
-function isPlainObjectTypeRoot(schema) {
-  return schema.type === "object";
-}
-async function writeSchemaTempFile(schema) {
-  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
-  try {
-    const path = joinPath(dir, "schema.json");
-    await writeFile(path, JSON.stringify(schema), "utf8");
-    return { dir, path };
-  } catch (err) {
-    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
-    throw err;
-  }
-}
-async function cleanupSchemaTempDir(dir) {
-  if (dir === void 0)
-    return;
-  try {
-    await rm(dir, { recursive: true, force: true });
-  } catch {
-  }
-}
-async function relayCodex(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
-  const cli_version = captureCodexVersion();
-  let tempDir;
-  let schemaPath;
-  try {
-    if (input.responseSchema !== void 0 && isPlainObjectTypeRoot(input.responseSchema)) {
-      const allocated = await writeSchemaTempFile(input.responseSchema);
-      tempDir = allocated.dir;
-      schemaPath = allocated.path;
-    }
-    const args = buildCodexArgs(input, schemaPath);
-    let result;
-    try {
-      result = await runConnectorSubprocess({
-        executable: CODEX_EXECUTABLE,
-        args,
-        timeoutMs: timeoutMs2,
-        stdoutMaxBytes: STDOUT_MAX_BYTES2,
-        stderrMaxBytes: STDERR_MAX_BYTES2,
-        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
-        env: process.env
-      });
-    } catch (error51) {
-      if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
-      }
-      throw error51;
-    }
-    if (result.timedOut) {
-      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stderr[:500]=${result.stderr.slice(0, 500)}`);
-    }
-    if (result.code !== 0) {
-      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stderr[:500]=${result.stderr.slice(0, 500)}`);
-    }
-    if (result.stdoutCapped) {
-      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-    }
-    try {
-      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
-    } catch (error51) {
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-    }
-  } finally {
-    await cleanupSchemaTempDir(tempDir);
-  }
-}
-var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set(["agent_message", "command_execution", "reasoning"]);
-var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "thread.started",
-  "turn.started",
-  "item.started",
-  "item.updated",
-  "item.completed",
-  "turn.completed"
-]);
-var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
-function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("codex --json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  for (const [idx, trace_entry] of trace_entries.entries()) {
-    const type = trace_entry.type;
-    if (typeof type !== "string") {
-      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
-    }
-    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
-      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
-      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
-    }
-    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
-      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
-    }
-  }
-  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
-  if (threadStarted === void 0) {
-    throw new Error("thread.started trace_entry missing from codex --json stdout");
-  }
-  const thread_id = threadStarted.thread_id;
-  if (typeof thread_id !== "string" || thread_id.length === 0) {
-    throw new Error("thread.started.thread_id missing or empty");
-  }
-  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
-  if (turnCompleted === void 0) {
-    throw new Error("turn.completed trace_entry missing from codex --json stdout");
-  }
-  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
-  for (const [idx, e] of itemCompleted.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.completed[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.completed[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
-  for (const [idx, e] of itemUpdated.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.updated[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.updated[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const agentMessages = itemCompleted.filter((e) => {
-    const item2 = e.item;
-    return item2.type === "agent_message";
-  });
-  const terminalMessage = agentMessages[agentMessages.length - 1];
-  if (terminalMessage === void 0) {
-    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
-  }
-  const item = terminalMessage.item;
-  const result_body_raw = item.text;
-  if (typeof result_body_raw !== "string") {
-    throw new Error("terminal agent_message item.text missing or not a string");
-  }
-  const result_body = extractJsonObject(result_body_raw);
-  return {
-    request_payload: prompt,
-    receipt_id: thread_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
 // dist/connectors/custom.js
 import { mkdtemp as mkdtemp2, readFile as readFile2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir as tmpdir2 } from "node:os";
 import { join as join5 } from "node:path";
-var DEFAULT_TIMEOUT_MS3 = 12e4;
-var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
+var DEFAULT_TIMEOUT_MS4 = 12e4;
+var SIGTERM_TO_SIGKILL_GRACE_MS4 = 2e3;
 var OUTPUT_MAX_BYTES = 16 * 1024 * 1024;
-var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES3 = 1024 * 1024;
+var STDOUT_MAX_BYTES4 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES4 = 1024 * 1024;
 async function extractConfiguredOutput(descriptor, outputFile) {
   const outputStats = await stat(outputFile);
   if (outputStats.size > OUTPUT_MAX_BYTES) {
@@ -41966,7 +42224,7 @@ async function relayCustom(input) {
   const outputFile = join5(tempDir, "output.txt");
   await writeFile2(promptFile, input.prompt, "utf8");
   const args = [...baseArgs, promptFile, outputFile];
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS4;
   try {
     let result;
     try {
@@ -41974,9 +42232,9 @@ async function relayCustom(input) {
         executable,
         args,
         timeoutMs: timeoutMs2,
-        stdoutMaxBytes: STDOUT_MAX_BYTES3,
-        stderrMaxBytes: STDERR_MAX_BYTES3,
-        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
+        stdoutMaxBytes: STDOUT_MAX_BYTES4,
+        stderrMaxBytes: STDERR_MAX_BYTES4,
+        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS4,
         env: process.env
       });
     } catch (error51) {
@@ -42529,20 +42787,20 @@ ${err.message}`);
 }
 
 // dist/shared/zod-to-response-schema.js
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function normalizeSchemaNode(node) {
-  if (!isRecord2(node))
+  if (!isRecord3(node))
     return;
   if (Array.isArray(node.oneOf) && node.anyOf === void 0) {
     node.anyOf = node.oneOf;
     Reflect.deleteProperty(node, "oneOf");
   }
-  if (node.type === "object" && isRecord2(node.properties) && node.additionalProperties === void 0) {
+  if (node.type === "object" && isRecord3(node.properties) && node.additionalProperties === void 0) {
     node.additionalProperties = false;
   }
-  if (isRecord2(node.additionalProperties) && Object.keys(node.additionalProperties).length === 0) {
+  if (isRecord3(node.additionalProperties) && Object.keys(node.additionalProperties).length === 0) {
     node.additionalProperties = true;
   }
   for (const value of Object.values(node)) {
@@ -42555,7 +42813,7 @@ function normalizeSchemaNode(node) {
   }
 }
 function assertNoReferenceSyntax(node) {
-  if (!isRecord2(node))
+  if (!isRecord3(node))
     return;
   for (const [key, value] of Object.entries(node)) {
     if (key === "$ref" || key === "$defs" || key === "definitions") {
@@ -42585,15 +42843,8 @@ function responseJsonSchemaFromZod(schema) {
 }
 
 // dist/runtime/executors/relay.js
-function createStubRelayConnector(response = { ok: true }) {
-  return {
-    async relay() {
-      return response;
-    }
-  };
-}
 function builtinConnector(name) {
-  if (name === "claude-code" || name === "codex") {
+  if (name === "claude-code" || name === "codex" || name === "cursor-agent") {
     return { kind: "builtin", name };
   }
   return void 0;
@@ -42672,6 +42923,7 @@ async function relayWithResolvedConnector(connector, input) {
   const relayInput = {
     prompt: input.prompt,
     ...input.timeoutMs === void 0 ? {} : { timeoutMs: input.timeoutMs },
+    ...input.cwd === void 0 ? {} : { cwd: input.cwd },
     ...input.resolvedSelection === void 0 ? {} : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) },
     ...input.responseSchema === void 0 ? {} : { responseSchema: input.responseSchema }
   };
@@ -42680,6 +42932,9 @@ async function relayWithResolvedConnector(connector, input) {
   }
   if (connector.kind === "builtin" && connector.name === "codex") {
     return relayCodex(relayInput);
+  }
+  if (connector.kind === "builtin" && connector.name === "cursor-agent") {
+    return relayCursorAgent(relayInput);
   }
   if (connector.kind === "custom") {
     return relayCustom({ ...relayInput, descriptor: connector });
@@ -42840,11 +43095,14 @@ async function executeProductionRelayAttempt(input) {
     relayResult = context.relayer === void 0 ? await relayWithResolvedConnector(relayExecution.connector, {
       prompt,
       ...relayTimeoutMs === void 0 ? {} : { timeoutMs: relayTimeoutMs },
+      ...context.projectRoot === void 0 ? {} : { cwd: context.projectRoot },
       resolvedSelection,
       ...responseSchema === void 0 ? {} : { responseSchema }
     }) : await context.relayer.relay({
       prompt,
+      connector: relayExecution.connectorName,
       ...relayTimeoutMs === void 0 ? {} : { timeoutMs: relayTimeoutMs },
+      ...context.projectRoot === void 0 ? {} : { cwd: context.projectRoot },
       resolvedSelection,
       ...responseSchema === void 0 ? {} : { responseSchema }
     });
@@ -42982,11 +43240,10 @@ async function executeRelayInternal(step, context, connector) {
   if (connector === void 0) {
     return executeProductionRelay(step, context);
   }
-  const suppliedConnector = connector ?? createStubRelayConnector();
   const relayExecution = resolveRelayExecution({
     flowId: context.flow.id,
     role: step.role,
-    suppliedConnector,
+    suppliedConnector: connector,
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
     ...step.selection === void 0 ? {} : { selection: step.selection },
     ...step.connector === void 0 ? {} : { stepConnector: step.connector }
@@ -42998,7 +43255,7 @@ async function executeRelayInternal(step, context, connector) {
     prompt: step.prompt ?? "",
     connector: relayExecution.connectorName
   };
-  const response = await suppliedConnector.relay(request);
+  const response = await connector.relay(request);
   const writes = step.writes ?? {};
   await Promise.all(Object.values(writes).map((ref) => context.files.writeJson(ref, {
     stepId: step.id,
@@ -43119,6 +43376,7 @@ function syntheticRelayStep(step, branch, branchDirRel) {
     },
     kind: "relay",
     role: branch.role,
+    ...branch.connector === void 0 ? {} : { connector: branch.connector },
     report: { path: `${branchDirRel}/report.json`, schema: branch.report_schema }
   };
 }
@@ -43134,6 +43392,7 @@ function syntheticCompiledRelayStepV1(step, branch, branchDirRel) {
     executor: "worker",
     kind: "relay",
     role: branch.role,
+    ...branch.connector === void 0 ? {} : { connector: branch.connector },
     writes: {
       request: `${branchDirRel}/request.txt`,
       receipt: `${branchDirRel}/receipt.txt`,
@@ -43262,12 +43521,11 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
       flowId: context.flow.id,
       role: branch.role,
       selection: branch.selection,
-      ...relayConnector === void 0 ? {} : { suppliedConnector: relayConnector },
+      ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
+      suppliedConnector: relayConnector,
       ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
     });
-    const response = relayConnector === void 0 ? (await relayWithResolvedConnector(relayExecution.connector, {
-      prompt: branch.goal
-    })).result_body : await relayConnector.relay({
+    const response = await relayConnector.relay({
       runId: context.runId,
       stepId: `${step.id}-${branch.branch_id}`,
       role: relayExecution.role,
@@ -43495,6 +43753,7 @@ function resolveBranch(branch) {
     goal: branch.execution.goal,
     report_schema: branch.execution.report_schema,
     ...branch.execution.provenance_field === void 0 ? {} : { provenance_field: branch.execution.provenance_field },
+    ...branch.connector === void 0 ? {} : { connector: branch.connector },
     ...branch.selection === void 0 ? {} : { selection: branch.selection }
   };
 }
@@ -43589,6 +43848,7 @@ function admitOrder(step) {
   const admit = step.check.verdicts?.admit;
   return Array.isArray(admit) ? admit.filter((entry) => typeof entry === "string") : [];
 }
+var WRITABLE_RELAY_SERIALIZATION_REASON = "Writable relay fanout branches are serialized because relay branches share the parent checkout and no branch-local relay write root is provisioned.";
 function concurrencyLimit(step) {
   const concurrency = step.concurrency;
   if (concurrency?.kind === "unbounded")
@@ -43597,6 +43857,40 @@ function concurrencyLimit(step) {
     return concurrency.max;
   }
   return 4;
+}
+function branchUsesWritableConnector(branch, context, relayConnector) {
+  if (branch.kind !== "relay")
+    return false;
+  try {
+    const decision2 = resolveRelayExecution({
+      flowId: context.flow.id,
+      role: branch.role,
+      ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
+      ...branch.selection === void 0 ? {} : { selection: branch.selection },
+      ...relayConnector === void 0 ? {} : { suppliedConnector: relayConnector },
+      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
+    });
+    return connectorCapabilities(decision2.connector).filesystem !== "read-only";
+  } catch {
+    return false;
+  }
+}
+function fanoutExecutionPolicy(step, branches, context, relayConnector) {
+  const configuredConcurrency = concurrencyLimit(step);
+  const writableRelayBranchesSerialized = branches.some((branch) => branchUsesWritableConnector(branch, context, relayConnector));
+  if (writableRelayBranchesSerialized) {
+    return {
+      configuredConcurrency,
+      effectiveConcurrency: 1,
+      writableRelayBranchesSerialized,
+      serializationReason: WRITABLE_RELAY_SERIALIZATION_REASON
+    };
+  }
+  return {
+    configuredConcurrency,
+    effectiveConcurrency: configuredConcurrency,
+    writableRelayBranchesSerialized
+  };
 }
 function outcomesInBranchOrder(outcomes, branchIds) {
   const byId = new Map(outcomes.map((outcome) => [outcome.branch_id, outcome]));
@@ -43640,13 +43934,22 @@ async function executeFanoutInternal(step, context, relayConnector) {
     throw new Error(`fanout step '${step.id}': disjoint-merge is only supported for sub-run branches with worktrees`);
   }
   const branchIds = branches.map((branch) => branch.branch_id);
+  const executionPolicy = fanoutExecutionPolicy(step, branches, context, relayConnector);
   await context.trace.append({
     run_id: context.runId,
     kind: "fanout.started",
     step_id: step.id,
     attempt,
     branch_ids: branchIds,
-    on_child_failure: FanoutFailurePolicy.parse(step.onChildFailure ?? "abort-all")
+    on_child_failure: FanoutFailurePolicy.parse(step.onChildFailure ?? "abort-all"),
+    ...executionPolicy.writableRelayBranchesSerialized ? {
+      execution_policy: {
+        configured_concurrency: executionPolicy.configuredConcurrency,
+        effective_concurrency: executionPolicy.effectiveConcurrency,
+        writable_relay_branches_serialized: true,
+        reason: executionPolicy.serializationReason
+      }
+    } : {}
   });
   const worktreeRunner = context.worktreeRunner ?? gitWorktreeRunner;
   const provisioned = [];
@@ -43655,7 +43958,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
   let branchFiles;
   let branchFilesError;
   try {
-    await runWithConcurrency(branches, concurrencyLimit(step), async (branch, abortSignal) => {
+    await runWithConcurrency(branches, executionPolicy.effectiveConcurrency, async (branch, abortSignal) => {
       if (abortSignal.value)
         return;
       const branchDirRel = `${branchDirRoot}/${branch.branch_id}`;
@@ -44143,6 +44446,7 @@ function indexedStep(step) {
       ...base,
       kind: step.kind,
       role: step.role,
+      ...step.connector === void 0 ? {} : { connector: step.connector },
       ...step.acceptanceCriteria === void 0 ? {} : { acceptance_criteria: step.acceptanceCriteria }
     };
   }
@@ -44526,7 +44830,7 @@ function flowMayInvokeWriteCapableWorker(flowId) {
 }
 
 // dist/runtime/projections/tournament-checkpoint-context.js
-function isRecord3(value) {
+function isRecord4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function boundedText(value, max) {
@@ -44536,11 +44840,11 @@ function boundedText(value, max) {
 }
 function optionPresentationById(readJson2) {
   const raw = readJson2("reports/decision-options.json");
-  if (!isRecord3(raw) || !Array.isArray(raw.options))
+  if (!isRecord4(raw) || !Array.isArray(raw.options))
     return /* @__PURE__ */ new Map();
   const entries = [];
   for (const option of raw.options) {
-    if (!isRecord3(option))
+    if (!isRecord4(option))
       continue;
     const id = option.id;
     const label = option.label;
@@ -44560,7 +44864,7 @@ function optionPresentationById(readJson2) {
 }
 function tournamentQuestion(readJson2) {
   const raw = readJson2("reports/tournament-review.json");
-  if (!isRecord3(raw))
+  if (!isRecord4(raw))
     return void 0;
   const question = raw.tradeoff_question;
   return typeof question === "string" && question.trim().length > 0 ? boundedText(question.trim(), 240) : void 0;
@@ -45947,7 +46251,7 @@ function checkpointResumeValid(value) {
 function isCheckpointResumeRejectedResult(result) {
   return result.kind === "rejected";
 }
-function isRecord4(value) {
+function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function traceString(entry, key) {
@@ -46026,7 +46330,7 @@ function readCheckpointRequestContextResult(input) {
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
-  if (!isRecord4(raw)) {
+  if (!isRecord5(raw)) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request for '${input.step.id}' is invalid`);
   }
   if (raw.schema_version !== 1 || raw.step_id !== input.step.id) {
@@ -46038,7 +46342,7 @@ function readCheckpointRequestContextResult(input) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request choices for '${input.step.id}' are stale`);
   }
   const context = raw.execution_context;
-  if (!isRecord4(context)) {
+  if (!isRecord5(context)) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request for '${input.step.id}' has no execution context`);
   }
   const projectRoot = context.project_root;
@@ -49302,7 +49606,7 @@ function stepMetadata(flow, stepId) {
 // dist/run-status/runtime-run-folder.js
 import { readFileSync as readFileSync30 } from "node:fs";
 import { join as join17 } from "node:path";
-function isRecord5(value) {
+function isRecord6(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
@@ -49313,7 +49617,7 @@ function readRawTraceEntries(runFolder) {
     return [];
   const entries = trimmed.split("\n").map((line, index) => {
     const parsed = JSON.parse(line);
-    if (!isRecord5(parsed)) {
+    if (!isRecord6(parsed)) {
       throw new Error("trace entry is not a JSON object");
     }
     const entry = TraceEntry.parse(parsed);
@@ -49354,7 +49658,7 @@ function sameStringArray2(left, right) {
 }
 function isRuntimeTrace(log) {
   const bootstrap = log[0];
-  return bootstrap !== void 0 && bootstrap.kind === "run.bootstrapped" && bootstrap.schema_version === 1 && isRecord5(bootstrap.change_kind) && traceString2(bootstrap, "manifest_hash") !== void 0;
+  return bootstrap !== void 0 && bootstrap.kind === "run.bootstrapped" && bootstrap.schema_version === 1 && isRecord6(bootstrap.change_kind) && traceString2(bootstrap, "manifest_hash") !== void 0;
 }
 function runtimeLastEvent(log) {
   const entry = log[log.length - 1];
@@ -49514,7 +49818,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestRecord;
   try {
     const parsed = JSON.parse(requestText);
-    if (!isRecord5(parsed))
+    if (!isRecord6(parsed))
       throw new Error("request is not a JSON object");
     requestRecord = parsed;
   } catch (err) {

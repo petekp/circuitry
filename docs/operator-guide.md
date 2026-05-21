@@ -151,8 +151,8 @@ explicit development override, or set `CIRCUIT_DEV=1` to allow repo-local and
 **Node is too old.** Upgrade to Node.js `22.18.0` or newer.
 
 **Codex is missing.** The Codex worker connector is optional. The `claude-code`
-connector works without Codex. Install Codex only if you want a separate
-read-only Codex worker process per relay.
+connector works without Codex. Install Codex only if you want Circuit to route
+worker relays through the Codex CLI.
 
 **A run is waiting at a checkpoint.** Resume it with the run folder and one of
 the allowed checkpoint choices:

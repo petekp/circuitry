@@ -33,7 +33,7 @@ schema_version: 1
 ```
 
 This common project config keeps trusted write-capable work on Claude Code and
-routes reviewer/researcher relays to the read-only Codex worker connector:
+routes reviewer/researcher relays to the Codex worker connector:
 
 ```yaml
 schema_version: 1
@@ -141,12 +141,14 @@ remaining relay uses `claude-code`.
 Built-in connectors:
 
 - **`claude-code`**: Claude Code CLI subprocess. Use it for trusted
-  same-workspace writes.
-- **`codex`**: Codex CLI subprocess with read-only sandbox flags. Circuit will
-  not route implementer steps to this connector.
-
-`codex-isolated` is not a current config value. Use `codex` for read-only Codex
-relays or `claude-code` for trusted same-workspace writes.
+  same-workspace writes. Supports Anthropic models and `low`, `medium`,
+  `high`, `xhigh`, and `max` effort.
+- **`codex`**: Codex CLI subprocess for write-capable implementer steps. It
+  uses a connector-owned `workspace-write` argv boundary, ignores user
+  config/rules, and supports OpenAI models with `low`, `medium`, `high`, and
+  `xhigh` effort.
+- **`cursor-agent`**: Cursor CLI subprocess for write-capable implementer
+  steps. The current support matrix is Gemini models with `effort: none`.
 
 Custom connectors are wrapper executables. Define them under
 `relay.connectors.<name>.command` as a YAML argv array. Circuit appends
@@ -162,6 +164,50 @@ not stop the wrapper process from writing files on its own.
 
 The connector contract is [`docs/contracts/connector.md`](contracts/connector.md).
 
+## Prototype Tournament Variants
+
+Prototype tournament mode reads `circuits.prototype.variant_models`. Each
+variant chooses its model/effort and may choose its connector. Circuit validates
+the connector/provider/effort pairing before any branch starts.
+
+```yaml
+schema_version: 1
+
+circuits:
+  prototype:
+    variant_models:
+      - id: codex-55-xhigh
+        label: Codex 5.5 xhigh
+        connector:
+          kind: builtin
+          name: codex
+        selection:
+          model:
+            provider: openai
+            model: gpt-5.5
+          effort: xhigh
+      - id: opus-47-max
+        label: Claude Opus 4.7 max
+        connector:
+          kind: builtin
+          name: claude-code
+        selection:
+          model:
+            provider: anthropic
+            model: claude-opus-4-7
+          effort: max
+      - id: gemini-35-flash-cursor
+        label: Gemini 3.5 Flash via Cursor
+        connector:
+          kind: builtin
+          name: cursor-agent
+        selection:
+          model:
+            provider: gemini
+            model: gemini-3.5-flash
+          effort: none
+```
+
 ## Safe Config Checklist
 
 Before writing config:
@@ -169,7 +215,8 @@ Before writing config:
 1. Decide whether the setting is personal or project-specific.
 2. Preview the exact YAML.
 3. Keep `schema_version: 1`.
-4. Use `codex` only for read-only Codex relays.
+4. Use `codex` for first-class Codex worker relays.
 5. Use `claude-code` only for trusted same-workspace writes.
-6. Do not use `codex-isolated`; it is planned, not current.
+6. Use `cursor-agent` only when you want Cursor CLI to run Gemini implementer
+   branches.
 7. Run the focused command that proves the path you changed.

@@ -25,6 +25,7 @@ export interface ResolvedRelayBranch {
   readonly goal: string;
   readonly report_schema: string;
   readonly provenance_field?: string;
+  readonly connector?: string;
   readonly selection?: unknown;
 }
 

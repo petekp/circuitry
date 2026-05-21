@@ -13,9 +13,9 @@ import {
   buildCodexArgs as neutralBuildCodexArgs,
   CODEX_EXECUTABLE as neutralCodexExecutable,
   CODEX_FORBIDDEN_ARGV_TOKENS as neutralCodexForbiddenArgvTokens,
-  CODEX_NO_WRITE_FLAGS as neutralCodexNoWriteFlags,
   CODEX_REASONING_EFFORT_CONFIG_KEY as neutralCodexReasoningEffortConfigKey,
   CODEX_SUPPORTED_EFFORTS as neutralCodexSupportedEfforts,
+  CODEX_WRITE_FLAGS as neutralCodexWriteFlags,
   parseCodexStdout as neutralParseCodexStdout,
   relayCodex as neutralRelayCodex,
 } from '../../src/connectors/codex.js';
@@ -35,7 +35,7 @@ describe('connector relay exports', () => {
     expect(neutralParseCodexStdout).toEqual(expect.any(Function));
     expect(neutralBuildCodexArgs).toEqual(expect.any(Function));
     expect(neutralAssertCodexSpawnArgvBoundary).toEqual(expect.any(Function));
-    expect(neutralCodexNoWriteFlags.length).toBeGreaterThan(0);
+    expect(neutralCodexWriteFlags.length).toBeGreaterThan(0);
     expect(neutralCodexForbiddenArgvTokens.length).toBeGreaterThan(0);
     expect(neutralCodexExecutable).toBe('codex');
     expect(neutralCodexReasoningEffortConfigKey).toBe('model_reasoning_effort');

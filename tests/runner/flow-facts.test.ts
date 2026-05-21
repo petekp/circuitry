@@ -53,4 +53,32 @@ describe('value-owned retained flow authoring', () => {
     expect(retainedIds).toEqual(RETAINED_FLOW_IDS);
     expect(packageIds).toEqual(retainedIds);
   });
+
+  it('passes connector and selection through Prototype tournament fanout branches', () => {
+    const prototypeSchematic = JSON.parse(readSource('src/flows/prototype/schematic.json')) as {
+      readonly items: readonly {
+        readonly id: string;
+        readonly fanout?: {
+          readonly branches?: {
+            readonly template?: {
+              readonly connector?: string;
+              readonly selection?: unknown;
+            };
+          };
+        };
+      }[];
+    };
+    const fanoutStep = prototypeSchematic.items.find((item) => item.id === 'variant-fanout-step');
+
+    expect(fanoutStep?.fanout?.branches?.template).toMatchObject({
+      connector: '$item.connector_name',
+      selection: {
+        model: {
+          provider: '$item.provider',
+          model: '$item.model',
+        },
+        effort: '$item.effort',
+      },
+    });
+  });
 });

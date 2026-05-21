@@ -28,6 +28,7 @@ function resolveBranch(branch: FanoutBranch): ResolvedBranch {
     ...(branch.execution.provenance_field === undefined
       ? {}
       : { provenance_field: branch.execution.provenance_field }),
+    ...(branch.connector === undefined ? {} : { connector: branch.connector }),
     ...(branch.selection === undefined ? {} : { selection: branch.selection }),
   };
 }

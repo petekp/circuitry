@@ -89,6 +89,91 @@ describe('TraceEntry has change_kind + manifest_hash at bootstrap', () => {
   });
 });
 
+describe('RelayStartedTraceEntry accepts resolved write-capable built-ins', () => {
+  const base = {
+    schema_version: 1 as const,
+    sequence: 1,
+    recorded_at: '2026-04-18T05:00:01.000Z',
+    run_id: RUN_A,
+    kind: 'relay.started' as const,
+    step_id: 'variant-fanout-step-codex',
+    attempt: 1,
+    role: 'implementer' as const,
+    resolved_selection: { skills: [] },
+    resolved_from: { source: 'explicit' as const },
+  };
+
+  it('accepts codex and cursor-agent as resolved built-ins', () => {
+    for (const name of ['codex', 'cursor-agent'] as const) {
+      const ok = TraceEntry.safeParse({
+        ...base,
+        connector: { kind: 'builtin', name },
+      });
+      expect(ok.success).toBe(true);
+    }
+  });
+
+  it('rejects stale codex-isolated as a resolved built-in', () => {
+    const bad = TraceEntry.safeParse({
+      ...base,
+      connector: { kind: 'builtin', name: 'codex-isolated' },
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('still rejects unresolved named connector references', () => {
+    const bad = TraceEntry.safeParse({
+      ...base,
+      connector: { kind: 'named', name: 'cursor-agent' },
+    });
+    expect(bad.success).toBe(false);
+  });
+});
+
+describe('FanoutStartedTraceEntry records writable relay serialization', () => {
+  it('accepts an explicit serialization reason', () => {
+    const ok = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 1,
+      recorded_at: '2026-04-18T05:00:01.000Z',
+      run_id: RUN_A,
+      kind: 'fanout.started',
+      step_id: 'variant-fanout-step',
+      attempt: 1,
+      branch_ids: ['codex-55-xhigh', 'opus-47-max'],
+      on_child_failure: 'continue-others',
+      execution_policy: {
+        configured_concurrency: 2,
+        effective_concurrency: 1,
+        writable_relay_branches_serialized: true,
+        reason:
+          'Writable relay fanout branches are serialized because relay branches share the parent checkout and no branch-local relay write root is provisioned.',
+      },
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects silent writable relay serialization', () => {
+    const bad = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 1,
+      recorded_at: '2026-04-18T05:00:01.000Z',
+      run_id: RUN_A,
+      kind: 'fanout.started',
+      step_id: 'variant-fanout-step',
+      attempt: 1,
+      branch_ids: ['codex-55-xhigh', 'opus-47-max'],
+      on_child_failure: 'continue-others',
+      execution_policy: {
+        configured_concurrency: 2,
+        effective_concurrency: 1,
+        writable_relay_branches_serialized: true,
+      },
+    });
+    expect(bad.success).toBe(false);
+  });
+});
+
 describe('Snapshot requires change_kind + manifest_hash', () => {
   const validChangeKind = {
     change_kind: 'discovery' as const,

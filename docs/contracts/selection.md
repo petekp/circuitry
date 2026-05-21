@@ -132,14 +132,16 @@ Closes Codex LOW #12 (enforcement-location claim drift).
   schema concern; new model releases do not require a Circuit
   schema change. Slice 87 gives the current built-in connectors narrow
   handling: `claude-code` accepts provider `anthropic` and passes the model to
-  Claude's `--model`; `codex` accepts provider `openai` and passes the
-  model to Codex's `-m`. Provider mismatches fail before subprocess
-  spawn. **Effort** is the closed 6-tier enum `none | minimal | low |
-  medium | high | xhigh` (OpenAI vocabulary, chosen for cross-provider
-  portability). The current built-ins honor `low | medium | high | xhigh`;
-  `none` and `minimal` fail before
-  subprocess spawn until a connector has explicit support for those
-  values. Enforced at `src/schemas/selection-policy.ts` for shape and
+  Claude's `--model`; `codex` accepts provider `openai` and passes the model to
+  Codex's `-m`; `cursor-agent` accepts provider
+  `gemini` and passes the model to Cursor's `--model`. Provider mismatches
+  fail before subprocess spawn. **Effort** is the closed 7-tier enum
+  `none | minimal | low | medium | high | xhigh | max`. The current connector
+  support matrix is explicit: `claude-code` honors `low | medium | high |
+  xhigh | max`; `codex` honors `low | medium | high | xhigh`;
+  `cursor-agent` currently honors `none`. Other effort/provider
+  pairings fail before subprocess spawn until a connector has explicit support.
+  Enforced at `src/schemas/selection-policy.ts` for shape and
   `src/connectors/*.ts` for connector-specific honoring.
 
 - **SEL-I5 — `ResolvedSelection` is the effective record at relay

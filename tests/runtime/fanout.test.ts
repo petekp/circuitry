@@ -12,6 +12,7 @@ import type { GraphRunResult } from '../../src/runtime/run/graph-runner.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
+import { CustomConnectorDescriptor } from '../../src/schemas/connector.js';
 import { RunResult } from '../../src/schemas/result.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
@@ -54,6 +55,7 @@ afterEach(async () => {
 function dynamicRelayFanoutFlow(
   options: {
     readonly role?: string;
+    readonly connector?: unknown;
     readonly selection?: unknown;
     readonly joinPolicy?:
       | 'aggregate-only'
@@ -94,6 +96,7 @@ function dynamicRelayFanoutFlow(
           items_path: 'options',
           template: {
             branch_id: '$item.id',
+            ...(options.connector === undefined ? {} : { connector: options.connector }),
             ...(options.selection === undefined ? {} : { selection: options.selection }),
             execution: {
               kind: 'relay',
@@ -1424,12 +1427,21 @@ describe('runtime fanout executor', () => {
   it('rejects read-only connectors for implementer relay fanout branches before callback invocation', async () => {
     const runDir = join(baseDir, 'relay-fanout-read-only-run');
     let relayCalls = 0;
+    const readOnlyConnector = CustomConnectorDescriptor.parse({
+      kind: 'custom',
+      name: 'local-readonly',
+      command: ['node', 'readonly.js'],
+      prompt_transport: 'prompt-file',
+      output: { kind: 'output-file' },
+      capabilities: { filesystem: 'read-only', structured_output: 'json' },
+    });
     const result = await executeExecutableFlow(dynamicRelayFanoutFlow({ role: 'implementer' }), {
       runDir,
       runId: randomUUID(),
       goal: 'fanout goal',
       relayConnector: {
-        connectorName: 'codex',
+        connectorName: 'local-readonly',
+        connector: readOnlyConnector,
         async relay() {
           relayCalls += 1;
           return { verdict: 'accept', option_id: 'option-one' };
@@ -1447,7 +1459,7 @@ describe('runtime fanout executor', () => {
     });
 
     expect(result.outcome).toBe('aborted');
-    expect(result.reason).toContain("connector 'codex' is read-only");
+    expect(result.reason).toContain("connector 'local-readonly' is read-only");
     expect(relayCalls).toBe(0);
     const entries = await trace(runDir);
     expect(entries.filter((entry) => entry.kind === 'fanout.branch_started')).toHaveLength(1);
@@ -1494,6 +1506,91 @@ describe('runtime fanout executor', () => {
     const completed = entries.filter((entry) => entry.kind === 'fanout.branch_completed');
     expect(completed).toHaveLength(1);
     expect(completed[0]?.child_outcome).toBe('aborted');
+  });
+
+  it('routes relay fanout branches through their requested connector and serializes writable branches', async () => {
+    const runDir = join(baseDir, 'relay-fanout-connector-aware-run');
+    const calls: { readonly stepId: string; readonly connector: string | undefined }[] = [];
+    let active = 0;
+    let maxActive = 0;
+
+    const result = await executeExecutableFlow(
+      dynamicRelayFanoutFlow({
+        role: 'implementer',
+        connector: '$item.connector_name',
+        selection: {
+          model: {
+            provider: '$item.provider',
+            model: '$item.model',
+          },
+          effort: '$item.effort',
+        },
+      }),
+      {
+        runDir,
+        runId: randomUUID(),
+        goal: 'fanout goal',
+        relayConnector: {
+          async relay(request) {
+            active += 1;
+            maxActive = Math.max(maxActive, active);
+            calls.push({ stepId: request.stepId, connector: request.connector });
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            active -= 1;
+
+            const optionId = request.stepId.slice('fanout-'.length);
+            return JSON.parse(validProposalBody(optionId)) as unknown;
+          },
+        },
+        executors: {
+          compose: async (_step, context) => {
+            await context.files.writeJson('reports/options.json', {
+              options: [
+                {
+                  id: 'option-1',
+                  prompt: 'argue for codex 5.5 xhigh',
+                  connector_name: 'codex',
+                  provider: 'openai',
+                  model: 'gpt-5.5',
+                  effort: 'xhigh',
+                },
+                {
+                  id: 'option-2',
+                  prompt: 'argue for opus 4.7 max',
+                  connector_name: 'claude-code',
+                  provider: 'anthropic',
+                  model: 'claude-opus-4-7',
+                  effort: 'max',
+                },
+                {
+                  id: 'option-3',
+                  prompt: 'argue for gemini 3.5 flash via cursor',
+                  connector_name: 'cursor-agent',
+                  provider: 'gemini',
+                  model: 'gemini-3.5-flash',
+                  effort: 'none',
+                },
+              ],
+            });
+            return { route: 'pass' };
+          },
+        },
+        now: () => new Date('2026-05-03T00:00:00.000Z'),
+      },
+    );
+
+    expect(result.outcome).toBe('complete');
+    expect(calls.map((call) => call.connector)).toEqual(['codex', 'claude-code', 'cursor-agent']);
+    expect(maxActive).toBe(1);
+    const entries = await trace(runDir);
+    expect(entries.find((entry) => entry.kind === 'fanout.started')).toMatchObject({
+      execution_policy: {
+        configured_concurrency: 2,
+        effective_concurrency: 1,
+        writable_relay_branches_serialized: true,
+        reason: expect.stringContaining('serialized'),
+      },
+    });
   });
 
   it('rejects relay fanout connector identity mismatch before callback invocation', async () => {

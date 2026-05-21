@@ -38,9 +38,8 @@ function loadFixture(): { bytes: Buffer } {
   } = JSON.parse(bytes.toString('utf8'));
   const relayStep = raw.steps.find((step) => step.id === 'relay-step' && step.kind === 'relay');
   if (relayStep === undefined) throw new Error('runtime-proof relay step not found');
-  // Runtime correctly rejects the read-only Codex connector for implementer
-  // steps. This test is only about descriptor identity, so use a read-only
-  // reviewer role.
+  // This test is only about descriptor identity, so use a reviewer role and
+  // avoid implementer write behavior.
   relayStep.role = 'reviewer';
   return { bytes: Buffer.from(JSON.stringify(raw)) };
 }

@@ -96,9 +96,9 @@ Every normal run writes the same kind of evidence under a run folder:
 
 ## 3. Know What Can Write
 
-Build and Fix may invoke a write-capable Claude Code worker:
+Build and Fix may invoke a write-capable worker:
 
 > A worker can edit this checkout.
 
-Use `codex` only for read-only Codex relays. Use `claude-code` for trusted
-same-workspace writes. `codex-isolated` is planned, not current.
+Use `claude-code` for trusted Claude Code writes, `codex` for first-class Codex
+worker writes, and `cursor-agent` for Cursor CLI implementer branches.

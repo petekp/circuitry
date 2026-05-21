@@ -13,6 +13,7 @@ export interface RelayFn {
 }
 
 export interface RelayInput extends ConnectorRelayInput {
+  readonly connector?: string;
   readonly resolvedSelection?: ResolvedSelection;
 }
 

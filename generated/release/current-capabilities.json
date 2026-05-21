@@ -437,10 +437,19 @@
     {
       "id": "codex",
       "status": "implemented",
-      "filesystem": "read-only",
+      "filesystem": "trusted-write",
       "structured_output": "json",
       "protocol": "builtin-json",
       "summary": "codex is a built-in connector.",
+      "readiness_refs": []
+    },
+    {
+      "id": "cursor-agent",
+      "status": "implemented",
+      "filesystem": "trusted-write",
+      "structured_output": "json",
+      "protocol": "builtin-json",
+      "summary": "cursor-agent is a built-in connector.",
       "readiness_refs": []
     },
     {
@@ -642,6 +651,26 @@
       "title": "codex connector",
       "status": "implemented",
       "summary": "codex is a built-in connector.",
+      "evidence": [
+        "src/schemas/connector.ts",
+        "src/runtime/executors/relay.ts",
+        "src/shared/relay-selection.ts"
+      ],
+      "readiness_refs": [],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": [],
+        "worker_handoff": "builtin-json"
+      }
+    },
+    {
+      "id": "connector:cursor-agent",
+      "kind": "connector",
+      "title": "cursor-agent connector",
+      "status": "implemented",
+      "summary": "cursor-agent is a built-in connector.",
       "evidence": [
         "src/schemas/connector.ts",
         "src/runtime/executors/relay.ts",
