@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/project-run-folder.js';
+import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import type { StepOutcome } from '../../src/runtime/domain/step.js';
 import type { TraceEntry } from '../../src/runtime/domain/trace.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';

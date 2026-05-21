@@ -408,7 +408,7 @@ const FLOW_BLOCK_DEFINITION_INPUTS = [
     id: 'goal',
     title: 'Goal',
     purpose:
-      'Turn a user objective into a bounded goal contract with proof, recovery, and completion-gate policy.',
+      'Turn a user objective into a bounded goal contract with proof, recovery, and safety-review policy.',
     input_contracts: ['task.intake@v1', 'route.decision@v1'],
     alternative_input_contracts: [['task.intake@v1']],
     output_contract: 'goal.contract@v1',
@@ -419,7 +419,7 @@ const FLOW_BLOCK_DEFINITION_INPUTS = [
       'proof requirements',
       'allowed flow targets',
       'recovery routes',
-      'completion gate policy',
+      'safety review policy',
     ],
     check: {
       kind: 'schema',

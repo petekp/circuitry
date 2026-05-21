@@ -48,6 +48,7 @@ import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const FIX_LITE_FIXTURE_PATH = resolve('generated/flows/fix/lite.json');
+const LIVE_FALSE_DONE_TIMEOUT_MS = 20_000;
 
 function loadLiteFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIX_LITE_FIXTURE_PATH) };
@@ -242,185 +243,209 @@ afterEach(() => {
 });
 
 describe('Live False-Done Fix bar', () => {
-  it("denies 'fixed' when fix-act mutates a baseline-dirty file but omits it from changed_files", async () => {
-    // Pre-dirty: src/preexisting.ts is committed, then operator-dirtied.
-    // Fix-act declares only ['src/a.ts'] but ALSO appends to
-    // src/preexisting.ts (pretending the operator's earlier edit owns the
-    // dirt). The fingerprint check in fix.change-set@v1 catches the further
-    // mutation as an undeclared extra.
-    const repo = initRepo({
-      initialFiles: { 'src/preexisting.ts': 'export const initial = 1;\n' },
-    });
-    repos.push(repo);
-    appendRepoFile(repo, 'src/preexisting.ts', '// operator was investigating\n');
+  it(
+    "denies 'fixed' when fix-act mutates a baseline-dirty file but omits it from changed_files",
+    async () => {
+      // Pre-dirty: src/preexisting.ts is committed, then operator-dirtied.
+      // Fix-act declares only ['src/a.ts'] but ALSO appends to
+      // src/preexisting.ts (pretending the operator's earlier edit owns the
+      // dirt). The fingerprint check in fix.change-set@v1 catches the further
+      // mutation as an undeclared extra.
+      const repo = initRepo({
+        initialFiles: { 'src/preexisting.ts': 'export const initial = 1;\n' },
+      });
+      repos.push(repo);
+      appendRepoFile(repo, 'src/preexisting.ts', '// operator was investigating\n');
 
-    const outcome = await runCompiledFlow({
-      runDir: join(runFolderBase, 'pre-dirty'),
-      flowBytes: loadLiteFixture().bytes,
-      runId: 'f1000000-0000-0000-0000-0000000000bb',
-      goal: 'fix the broken initialization',
-      depth: 'lite',
-      now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
-      relayer: relayer(repo, {
-        declaredChangedFiles: ['src/a.ts'],
-        mutate: (r) => {
-          writeRepoFile(r, 'src/a.ts', 'export const a = 1;\n');
-          // The undeclared mutation: appending to the baseline-dirty file.
-          appendRepoFile(r, 'src/preexisting.ts', '// fix-act snuck a change in\n');
-        },
-      }),
-      executors: frameOverrideExecutors({
+      const outcome = await runCompiledFlow({
+        runDir: join(runFolderBase, 'pre-dirty'),
+        flowBytes: loadLiteFixture().bytes,
+        runId: 'f1000000-0000-0000-0000-0000000000bb',
         goal: 'fix the broken initialization',
-        regression: {
-          expected_behavior: 'initialization completes',
-          actual_behavior: 'initialization throws',
-          repro: { kind: 'not-reproducible', deferred_reason: 'live bar uses no real repro' },
-          regression_test: { status: 'deferred', deferred_reason: 'live bar uses no rerun' },
-        },
-      }),
-      projectRoot: repo,
-    });
+        depth: 'lite',
+        now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
+        relayer: relayer(repo, {
+          declaredChangedFiles: ['src/a.ts'],
+          mutate: (r) => {
+            writeRepoFile(r, 'src/a.ts', 'export const a = 1;\n');
+            // The undeclared mutation: appending to the baseline-dirty file.
+            appendRepoFile(r, 'src/preexisting.ts', '// fix-act snuck a change in\n');
+          },
+        }),
+        executors: frameOverrideExecutors({
+          goal: 'fix the broken initialization',
+          regression: {
+            expected_behavior: 'initialization completes',
+            actual_behavior: 'initialization throws',
+            repro: { kind: 'not-reproducible', deferred_reason: 'live bar uses no real repro' },
+            regression_test: { status: 'deferred', deferred_reason: 'live bar uses no rerun' },
+          },
+        }),
+        projectRoot: repo,
+      });
 
-    // The chain should abort because fix.change-set@v1 keeps failing on the
-    // undeclared mutation; recovery routes to retry until attempts are
-    // exhausted.
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason ?? '').toMatch(/change-set|undeclared|recovery|attempts/i);
-  });
+      // The chain should abort because fix.change-set@v1 keeps failing on the
+      // undeclared mutation; recovery routes to retry until attempts are
+      // exhausted.
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason ?? '').toMatch(/change-set|undeclared|recovery|attempts/i);
+    },
+    LIVE_FALSE_DONE_TIMEOUT_MS,
+  );
 
-  it("denies 'fixed' when fix-act commits the declared change mid-run (HEAD diverges)", async () => {
-    // Working tree is clean post-commit; baseline_head_sha != head_sha.
-    // The change-set writer flags HEAD divergence as fail even with
-    // otherwise-clean path sets.
-    const repo = initRepo();
-    repos.push(repo);
+  it(
+    "denies 'fixed' when fix-act commits the declared change mid-run (HEAD diverges)",
+    async () => {
+      // Working tree is clean post-commit; baseline_head_sha != head_sha.
+      // The change-set writer flags HEAD divergence as fail even with
+      // otherwise-clean path sets.
+      const repo = initRepo();
+      repos.push(repo);
 
-    const outcome = await runCompiledFlow({
-      runDir: join(runFolderBase, 'mid-run-commit'),
-      flowBytes: loadLiteFixture().bytes,
-      runId: 'f1000000-0000-0000-0000-0000000000cc',
-      goal: 'fix the parser',
-      depth: 'lite',
-      now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
-      relayer: relayer(repo, {
-        declaredChangedFiles: ['src/parser.ts'],
-        mutate: (r) => {
-          writeRepoFile(r, 'src/parser.ts', 'export const parse = (x) => x;\n');
-          git(r, ['add', 'src/parser.ts']);
-          git(r, ['commit', '-m', 'fix-act committed mid-run', '--quiet']);
-        },
-      }),
-      executors: frameOverrideExecutors({
+      const outcome = await runCompiledFlow({
+        runDir: join(runFolderBase, 'mid-run-commit'),
+        flowBytes: loadLiteFixture().bytes,
+        runId: 'f1000000-0000-0000-0000-0000000000cc',
         goal: 'fix the parser',
-        regression: {
-          expected_behavior: 'parser handles input',
-          actual_behavior: 'parser throws',
-          repro: { kind: 'not-reproducible', deferred_reason: 'live bar uses no real repro' },
-          regression_test: { status: 'deferred', deferred_reason: 'live bar uses no rerun' },
-        },
-      }),
-      projectRoot: repo,
-    });
+        depth: 'lite',
+        now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
+        relayer: relayer(repo, {
+          declaredChangedFiles: ['src/parser.ts'],
+          mutate: (r) => {
+            writeRepoFile(r, 'src/parser.ts', 'export const parse = (x) => x;\n');
+            git(r, ['add', 'src/parser.ts']);
+            git(r, ['commit', '-m', 'fix-act committed mid-run', '--quiet']);
+          },
+        }),
+        executors: frameOverrideExecutors({
+          goal: 'fix the parser',
+          regression: {
+            expected_behavior: 'parser handles input',
+            actual_behavior: 'parser throws',
+            repro: { kind: 'not-reproducible', deferred_reason: 'live bar uses no real repro' },
+            regression_test: { status: 'deferred', deferred_reason: 'live bar uses no rerun' },
+          },
+        }),
+        projectRoot: repo,
+      });
 
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason ?? '').toMatch(/change-set|HEAD|recovery|attempts/i);
-  });
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason ?? '').toMatch(/change-set|HEAD|recovery|attempts/i);
+    },
+    LIVE_FALSE_DONE_TIMEOUT_MS,
+  );
 
-  it("denies 'fixed' when the regression command still fails post-fix", async () => {
-    // Brief declares a real failing regression command. Fix-act writes a
-    // change to a different file (so fix.change-set passes — declared
-    // matches observed) but does NOT touch the file the regression command
-    // checks. fix.regression-rerun reruns the command, which still fails,
-    // and the chain aborts via recovery routing.
-    const repo = initRepo({
-      initialFiles: { 'src/buggy.ts': 'export const v = "broken";\n' },
-    });
-    repos.push(repo);
-    const expectedFixedContent = 'export const v = "fixed";\n';
-    const regression = regressionCommandThatChecksFile(repo, 'src/buggy.ts', expectedFixedContent);
-
-    const outcome = await runCompiledFlow({
-      runDir: join(runFolderBase, 'regression-still-failing'),
-      flowBytes: loadLiteFixture().bytes,
-      runId: 'f1000000-0000-0000-0000-0000000000dd',
-      goal: 'fix the bug in v',
-      depth: 'lite',
-      now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
-      relayer: relayer(repo, {
-        // Declare an unrelated file so change-set passes; the regression
-        // command checks src/buggy.ts which we never touch — that's the
-        // false-done.
-        declaredChangedFiles: ['src/notes.ts'],
-        mutate: (r) => {
-          writeRepoFile(r, 'src/notes.ts', '// notes\n');
-        },
-      }),
-      executors: frameOverrideExecutors({
-        goal: 'fix the bug in v',
-        regression: {
-          expected_behavior: 'v is "fixed"',
-          actual_behavior: 'v is "broken"',
-          repro: { kind: 'command', command: regression },
-          regression_test: { status: 'failing-before-fix', command: regression },
-        },
-      }),
-      projectRoot: repo,
-    });
-
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason ?? '').toMatch(/regression|recovery|attempts/i);
-  });
-
-  it("permits 'fixed' on a clean live run (sanity: the pillars don't false-positive)", async () => {
-    // Sanity case: brief declares a real failing regression command, fix-act
-    // makes the exact change the regression command checks for and declares
-    // it correctly. All pillars should pass and the run should close as
-    // 'fixed'. If this test starts failing, the new gating is too strict.
-    const repo = initRepo({
-      initialFiles: { 'src/buggy.ts': 'export const v = "broken";\n' },
-    });
-    repos.push(repo);
-    const expectedFixedContent = 'export const v = "fixed";\n';
-    const regression = regressionCommandThatChecksFile(repo, 'src/buggy.ts', expectedFixedContent);
-
-    const outcome = await runCompiledFlow({
-      runDir: join(runFolderBase, 'clean-fixed'),
-      flowBytes: loadLiteFixture().bytes,
-      runId: 'f1000000-0000-0000-0000-0000000000ee',
-      goal: 'fix the bug in v cleanly',
-      depth: 'lite',
-      now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
-      relayer: relayer(repo, {
-        declaredChangedFiles: ['src/buggy.ts'],
-        mutate: (r) => {
-          writeRepoFile(r, 'src/buggy.ts', expectedFixedContent);
-        },
-      }),
-      executors: frameOverrideExecutors({
-        goal: 'fix the bug in v cleanly',
-        regression: {
-          expected_behavior: 'v is "fixed"',
-          actual_behavior: 'v is "broken"',
-          repro: { kind: 'command', command: regression },
-          regression_test: { status: 'failing-before-fix', command: regression },
-        },
-      }),
-      projectRoot: repo,
-    });
-
-    if (outcome.outcome !== 'complete') {
-      throw new Error(
-        `expected complete, got ${outcome.outcome}: ${outcome.reason ?? '<no reason>'}`,
+  it(
+    "denies 'fixed' when the regression command still fails post-fix",
+    async () => {
+      // Brief declares a real failing regression command. Fix-act writes a
+      // change to a different file (so fix.change-set passes — declared
+      // matches observed) but does NOT touch the file the regression command
+      // checks. fix.regression-rerun reruns the command, which still fails,
+      // and the chain aborts via recovery routing.
+      const repo = initRepo({
+        initialFiles: { 'src/buggy.ts': 'export const v = "broken";\n' },
+      });
+      repos.push(repo);
+      const expectedFixedContent = 'export const v = "fixed";\n';
+      const regression = regressionCommandThatChecksFile(
+        repo,
+        'src/buggy.ts',
+        expectedFixedContent,
       );
-    }
-    const result = FixResult.parse(
-      JSON.parse(
-        readFileSync(join(runFolderBase, 'clean-fixed', 'reports/fix-result.json'), 'utf8'),
-      ),
-    );
-    expect(result.outcome).toBe('fixed');
-    expect(result.regression_status).toBe('proved');
-    expect(result.regression_rerun_status).toBe('cleared');
-    expect(result.change_set_status).toBe('pass');
-  });
+
+      const outcome = await runCompiledFlow({
+        runDir: join(runFolderBase, 'regression-still-failing'),
+        flowBytes: loadLiteFixture().bytes,
+        runId: 'f1000000-0000-0000-0000-0000000000dd',
+        goal: 'fix the bug in v',
+        depth: 'lite',
+        now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
+        relayer: relayer(repo, {
+          // Declare an unrelated file so change-set passes; the regression
+          // command checks src/buggy.ts which we never touch — that's the
+          // false-done.
+          declaredChangedFiles: ['src/notes.ts'],
+          mutate: (r) => {
+            writeRepoFile(r, 'src/notes.ts', '// notes\n');
+          },
+        }),
+        executors: frameOverrideExecutors({
+          goal: 'fix the bug in v',
+          regression: {
+            expected_behavior: 'v is "fixed"',
+            actual_behavior: 'v is "broken"',
+            repro: { kind: 'command', command: regression },
+            regression_test: { status: 'failing-before-fix', command: regression },
+          },
+        }),
+        projectRoot: repo,
+      });
+
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason ?? '').toMatch(/regression|recovery|attempts/i);
+    },
+    LIVE_FALSE_DONE_TIMEOUT_MS,
+  );
+
+  it(
+    "permits 'fixed' on a clean live run (sanity: the pillars don't false-positive)",
+    async () => {
+      // Sanity case: brief declares a real failing regression command, fix-act
+      // makes the exact change the regression command checks for and declares
+      // it correctly. All pillars should pass and the run should close as
+      // 'fixed'. If this test starts failing, the new gating is too strict.
+      const repo = initRepo({
+        initialFiles: { 'src/buggy.ts': 'export const v = "broken";\n' },
+      });
+      repos.push(repo);
+      const expectedFixedContent = 'export const v = "fixed";\n';
+      const regression = regressionCommandThatChecksFile(
+        repo,
+        'src/buggy.ts',
+        expectedFixedContent,
+      );
+
+      const outcome = await runCompiledFlow({
+        runDir: join(runFolderBase, 'clean-fixed'),
+        flowBytes: loadLiteFixture().bytes,
+        runId: 'f1000000-0000-0000-0000-0000000000ee',
+        goal: 'fix the bug in v cleanly',
+        depth: 'lite',
+        now: deterministicNow(Date.UTC(2026, 4, 10, 12, 0, 0)),
+        relayer: relayer(repo, {
+          declaredChangedFiles: ['src/buggy.ts'],
+          mutate: (r) => {
+            writeRepoFile(r, 'src/buggy.ts', expectedFixedContent);
+          },
+        }),
+        executors: frameOverrideExecutors({
+          goal: 'fix the bug in v cleanly',
+          regression: {
+            expected_behavior: 'v is "fixed"',
+            actual_behavior: 'v is "broken"',
+            repro: { kind: 'command', command: regression },
+            regression_test: { status: 'failing-before-fix', command: regression },
+          },
+        }),
+        projectRoot: repo,
+      });
+
+      if (outcome.outcome !== 'complete') {
+        throw new Error(
+          `expected complete, got ${outcome.outcome}: ${outcome.reason ?? '<no reason>'}`,
+        );
+      }
+      const result = FixResult.parse(
+        JSON.parse(
+          readFileSync(join(runFolderBase, 'clean-fixed', 'reports/fix-result.json'), 'utf8'),
+        ),
+      );
+      expect(result.outcome).toBe('fixed');
+      expect(result.regression_status).toBe('proved');
+      expect(result.regression_rerun_status).toBe('cleared');
+      expect(result.change_set_status).toBe('pass');
+    },
+    LIVE_FALSE_DONE_TIMEOUT_MS,
+  );
 });

@@ -24,7 +24,7 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   goal: {
     title: 'Circuit Goal',
     description:
-      'Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a completion gate.',
+      'Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review.',
   },
   handoff: {
     title: 'Circuit Handoff',
@@ -34,7 +34,7 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   prototype: {
     title: 'Circuit Prototype',
     description:
-      'Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build.',
+      'Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build.',
   },
   review: {
     title: 'Circuit Review',

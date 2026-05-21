@@ -78,7 +78,7 @@ export const goalCloseBuilder: CloseBuilder = {
       summary:
         outcome === 'complete'
           ? `Goal complete: ${contract.objective}`
-          : `Goal ${outcome}: ${recovery?.rationale ?? 'required evidence or gate proof is incomplete.'}`,
+          : `Goal ${outcome}: ${recovery?.rationale ?? 'required evidence or safety-review proof is incomplete.'}`,
       proven_claims: provenClaims,
       missing_or_weak_claims: weakClaims,
       recovery_history: recovery === undefined ? [] : [recovery.rationale],

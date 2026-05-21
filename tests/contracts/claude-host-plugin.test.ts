@@ -411,12 +411,19 @@ describe('Claude Code host plugin package', () => {
         });
       });
       const progressBeforeExit = await new Promise<boolean>((resolveProgress) => {
-        const timer = setTimeout(() => resolveProgress(false), 700);
+        let settled = false;
+        const finish = (value: boolean) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolveProgress(value);
+        };
+        const timer = setTimeout(() => finish(false), 5_000);
+        childProcess.once('close', () => finish(false));
         stdoutPipe.on('data', (chunk: Buffer) => {
           stdout += chunk.toString('utf8');
           if (stdout.includes('Circuit started explore.')) {
-            clearTimeout(timer);
-            resolveProgress(!closed);
+            finish(!closed);
           }
         });
       });

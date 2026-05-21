@@ -96,7 +96,7 @@ export const goalFlowData = {
     id: 'goal',
     title: 'Goal Schematic',
     purpose:
-      'Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.',
+      'Goal flow. Circuit writes a bounded goal contract, runs one statically authored child flow target, evaluates evidence, runs a two-pass safety review, and closes from typed Goal reports.',
     status: 'active',
     version: '0.1.0',
     starts_at: 'clarify-goal',
@@ -205,7 +205,7 @@ export const goalFlowData = {
           'proof requirements',
           'allowed flow targets',
           'recovery routes',
-          'completion gate policy',
+          'safety review policy',
         ],
         execution: { kind: 'compose' },
         protocol: 'goal-contract@v1',
@@ -402,7 +402,7 @@ export const goalFlowData = {
       },
       {
         id: 'goal-gate-pass-1',
-        title: 'Gate - adversarial pass 1',
+        title: 'Safety review - pass 1',
         stage: 'review',
         block: 'review',
         input: {
@@ -410,7 +410,7 @@ export const goalFlowData = {
           evaluation: 'goal.evidence-evaluation@v1',
         },
         output: 'goal.gate-pass@v1',
-        evidence_requirements: ['gate pass', 'attack lens', 'evidence checked'],
+        evidence_requirements: ['safety review pass', 'review lens', 'evidence checked'],
         execution: { kind: 'relay', role: 'reviewer' },
         protocol: 'goal-gate-pass-1@v1',
         writes: {
@@ -430,7 +430,7 @@ export const goalFlowData = {
       },
       {
         id: 'goal-gate-pass-2',
-        title: 'Gate - adversarial pass 2',
+        title: 'Safety review - pass 2',
         stage: 'review',
         block: 'review',
         input: {
@@ -439,7 +439,7 @@ export const goalFlowData = {
           gate: 'goal.gate-pass@v1',
         },
         output: 'goal.gate@v1',
-        evidence_requirements: ['gate pass', 'attack lens', 'evidence checked'],
+        evidence_requirements: ['safety review pass', 'review lens', 'evidence checked'],
         execution: { kind: 'relay', role: 'reviewer' },
         protocol: 'goal-gate-pass-2@v1',
         writes: {
@@ -614,19 +614,19 @@ export const goalFlowData = {
         },
         {
           stepId: 'goal-gate-pass-1',
-          taskTitle: 'Run gate pass 1',
-          activeText: 'Running gate pass 1',
+          taskTitle: 'Run review pass 1',
+          activeText: 'Running review pass 1',
           relayRole: 'reviewer',
-          relayStartedText: 'Asking the reviewer to attack the proof...',
-          relayCompletedText: 'Finished gate pass 1.',
+          relayStartedText: 'Asking the reviewer to check the proof...',
+          relayCompletedText: 'Finished review pass 1.',
         },
         {
           stepId: 'goal-gate-pass-2',
-          taskTitle: 'Run gate pass 2',
-          activeText: 'Running gate pass 2',
+          taskTitle: 'Run review pass 2',
+          activeText: 'Running review pass 2',
           relayRole: 'reviewer',
-          relayStartedText: 'Asking the reviewer to attack the proof again...',
-          relayCompletedText: 'Finished gate pass 2.',
+          relayStartedText: 'Asking the reviewer to check the proof again...',
+          relayCompletedText: 'Finished review pass 2.',
         },
         { stepId: 'goal-close', taskTitle: 'Wrap up', activeText: 'Wrapping up' },
       ],

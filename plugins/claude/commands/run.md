@@ -34,8 +34,8 @@ metacharacters:
      report, implementation, or risk surface. Do not implement changes.
    - **Build** — implementation, refactor, docs, tests, or focused
      product/code changes that are not primarily bug fixes.
-   - **Prototype** — disposable local prototypes, mockups, sketches, UI
-     artifacts, model-comparison variants, or throwaway evidence before Build.
+   - **Prototype** — disposable local prototypes, mockups, UI sketches,
+     model-comparison variants, or throwaway evidence before Build.
    - **Explore** — investigation, explanation, architecture analysis, tradeoff
      comparison, or a decision before editing.
    - **Pursue** — broad operator goals with multiple coordinated pieces of

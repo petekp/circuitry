@@ -3,7 +3,7 @@ import {
   ConnectorName,
   CustomConnectorDescriptor,
   EnabledConnector,
-  RESERVED_ADAPTER_NAMES,
+  RESERVED_CONNECTOR_NAMES,
 } from './connector.js';
 import { HostConfig } from './host.js';
 import { CompiledFlowId, SkillId, SkillSlotId } from './ids.js';
@@ -61,7 +61,7 @@ export const RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
   // when no own property exists.
   const ownConnectorKeys = Object.keys(cfg.connectors);
   const registered = new Set<string>(ownConnectorKeys);
-  const reserved = new Set<string>(RESERVED_ADAPTER_NAMES);
+  const reserved = new Set<string>(RESERVED_CONNECTOR_NAMES);
   for (const name of ownConnectorKeys) {
     if (reserved.has(name)) {
       issueAt(

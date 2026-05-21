@@ -75,7 +75,7 @@ describe('operator-summary Goal projection', () => {
     });
 
     expect(projection.headline).toBe(
-      'Circuit: Goal complete. Evidence satisfied and gate passed 2/2.',
+      'Circuit: Goal complete. Evidence satisfied and safety review passed 2/2.',
     );
     expect(projection.headline).not.toBe('Circuit run complete.');
     expect(projection.details).toContain('Proven: objective-proved.');
@@ -83,6 +83,6 @@ describe('operator-summary Goal projection', () => {
     expect(projection.details).toContain(
       'Checks: goal.contract -> reports/goal/contract.json; goal.gate -> reports/goal/gate.json.',
     );
-    expect(projection.details).toContain('Gate: 2/2 passes; final verdict gate-pass.');
+    expect(projection.details).toContain('Safety review: 2/2 passes; final verdict gate-pass.');
   });
 });

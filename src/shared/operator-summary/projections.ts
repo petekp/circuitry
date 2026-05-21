@@ -227,7 +227,7 @@ function goalGateDetail(flowReport: JsonObject | undefined): string {
   const clean = numberField(gate, 'clean_streak') ?? 0;
   const required = numberField(gate, 'required_passes') ?? 2;
   const verdict = stringField(gate, 'final_verdict') ?? 'unknown';
-  return `Gate: ${clean}/${required} passes; final verdict ${verdict}.`;
+  return `Safety review: ${clean}/${required} passes; final verdict ${verdict}.`;
 }
 
 // Fall back to the run-level outcome when the flow-result file is missing
@@ -288,8 +288,8 @@ const goalProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
   const required = numberField(gate, 'required_passes') ?? 2;
   const headline =
     outcome === 'complete'
-      ? `Circuit: Goal complete. Evidence satisfied and gate passed ${clean}/${required}.`
-      : `Circuit: Goal finished with outcome ${outcome}. Gate passed ${clean}/${required}.`;
+      ? `Circuit: Goal complete. Evidence satisfied and safety review passed ${clean}/${required}.`
+      : `Circuit: Goal finished with outcome ${outcome}. Safety review passed ${clean}/${required}.`;
   return {
     headline,
     details: [

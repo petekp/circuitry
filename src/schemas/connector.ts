@@ -39,7 +39,7 @@ export const BUILTIN_CONNECTOR_CAPABILITIES: Readonly<
 
 // connector-I2: the `'auto'` literal is a reserved sentinel for
 // `RelayConfig.default`; connector names must not collide with it.
-export const RESERVED_ADAPTER_NAMES: readonly string[] = [
+export const RESERVED_CONNECTOR_NAMES: readonly string[] = [
   ...EnabledConnector.options,
   'auto',
 ] as const;

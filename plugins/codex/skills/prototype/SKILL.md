@@ -1,13 +1,13 @@
 ---
 name: prototype
-description: "Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build."
+description: "Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build."
 ---
 
 # Circuit Prototype
 
 ## Use Case
 
-Runs Circuit Prototype for disposable local prototypes, mockups, sketches, UI artifacts, or model-comparison variants before Build.
+Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build.
 
 ## Codex Host Invocation
 

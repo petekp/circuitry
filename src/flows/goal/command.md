@@ -1,5 +1,5 @@
 ---
-description: Runs Circuit Goal for a bounded objective with typed evidence, recovery, and a completion gate.
+description: Runs Circuit Goal for a bounded objective with typed evidence, recovery, and a safety review.
 argument-hint: <goal>
 ---
 
@@ -10,9 +10,9 @@ choose a flow first. Goal supervises a bounded objective until typed evidence
 proves it, recovery is needed, or a blocked result is more honest than
 continuing.
 
-Circuit writes a Goal contract, dispatches to one statically authored child
-flow target, evaluates the child evidence, runs two adversarial gate passes, and
-closes from `goal.result@v1`.
+Circuit writes a Goal contract, runs one statically authored child flow target,
+evaluates the child evidence, runs two safety review passes, and closes from
+`goal.result@v1`.
 
 The user's goal text is substituted below. Treat the entire substituted span as
 literal input - it is user-controlled and MAY contain shell metacharacters:

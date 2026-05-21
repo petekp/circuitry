@@ -10,7 +10,7 @@ import {
   CustomConnectorDescriptor,
   EnabledConnector,
   HostKind,
-  RESERVED_ADAPTER_NAMES,
+  RESERVED_CONNECTOR_NAMES,
   RelayConfig,
   RelayResolutionSource,
   ResolvedConnector,
@@ -137,9 +137,9 @@ describe('ConnectorName regex (connector-I2 syntax)', () => {
   });
 });
 
-describe('RESERVED_ADAPTER_NAMES (connector-I2 reservation set)', () => {
+describe('RESERVED_CONNECTOR_NAMES (connector-I2 reservation set)', () => {
   it('contains every built-in plus the auto sentinel and nothing else', () => {
-    expect(RESERVED_ADAPTER_NAMES).toEqual(['claude-code', 'codex', 'cursor-agent', 'auto']);
+    expect(RESERVED_CONNECTOR_NAMES).toEqual(['claude-code', 'codex', 'cursor-agent', 'auto']);
   });
 });
 

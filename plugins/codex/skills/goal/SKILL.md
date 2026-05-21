@@ -1,13 +1,13 @@
 ---
 name: goal
-description: "Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a completion gate."
+description: "Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review."
 ---
 
 # Circuit Goal
 
 ## Use Case
 
-Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a completion gate.
+Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review.
 
 ## Codex Host Invocation
 
@@ -19,9 +19,9 @@ choose a flow first. Goal supervises a bounded objective until typed evidence
 proves it, recovery is needed, or a blocked result is more honest than
 continuing.
 
-Circuit writes a Goal contract, dispatches to one statically authored child
-flow target, evaluates the child evidence, runs two adversarial gate passes, and
-closes from `goal.result@v1`.
+Circuit writes a Goal contract, runs one statically authored child flow target,
+evaluates the child evidence, runs two safety review passes, and closes from
+`goal.result@v1`.
 
 Use the user's current request as the command input. Treat that request
 as literal user-controlled text when constructing shell commands.

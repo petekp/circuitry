@@ -88,7 +88,7 @@ export const goalContractBuilder: ComposeBuilder = {
       constraints: nonEmptyUnique([
         ...clarified.constraints,
         'Use only statically authored child flow targets.',
-        'Do not close complete without satisfied evidence and the required gate streak.',
+        'Do not close complete without satisfied evidence and the required safety-review streak.',
         'Escalate through recovery or checkpoint instead of guessing when proof is ambiguous.',
       ]),
       done_when: [
@@ -124,7 +124,7 @@ export const goalContractBuilder: ComposeBuilder = {
         ...clarified.missing_information.map((item) => `${item.question} ${item.why_it_matters}`),
         'Scope expands beyond the contract.',
         'Required evidence is missing, contradicted, or ambiguous.',
-        'A medium-or-above gate finding needs operator judgment.',
+        'A medium-or-above safety-review finding needs operator judgment.',
       ]),
       stop_conditions: nonEmptyUnique([
         ...clarified.stop_conditions,

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/project-run-folder.js';
+import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import type { RelayConnector } from '../../src/runtime/executors/relay.js';
 import { resumeCompiledFlow } from '../../src/runtime/run/checkpoint-resume.js';
 import { runCompiledFlowWithWaiting } from '../../src/runtime/run/compiled-flow-runner.js';

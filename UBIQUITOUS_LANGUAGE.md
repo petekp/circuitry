@@ -27,8 +27,40 @@ code, contracts, generated surfaces, or troubleshooting docs.
 | **Report** | A typed output written by a step or close stage. | Artifact, output blob |
 | **Evidence** | Supporting facts, files, checks, and reports produced or consumed by a run. | Artifact, proof blob |
 | **Run folder** | The directory where a run stores its trace, reports, evidence, and resume state. | Run root, run directory |
-| **Depth** | The requested thoroughness for a run or step. | Rigor |
-| **Mode** | A named flow entry option, often paired with a depth. | Change kind |
+| **Depth** | The compiled thoroughness value a run or step uses after Circuit combines rigor with mode flags such as tournament or autonomous. | Effort |
+| **Mode** | A named flow entry option, often paired with a depth. | Safety classification, change kind |
+
+## Identifier Language
+
+These ids are defined in `src/schemas/ids.ts`. They are not decorative labels;
+they tell you what kind of name a field expects.
+
+| Term | Definition |
+| --- | --- |
+| **CompiledFlowId** | The flow package id, such as `fix`, `build`, or `explore`. |
+| **StageId** | A kebab-case stage id inside a schematic. |
+| **StepId** | A kebab-case step id inside a schematic. |
+| **RunId** | The UUID for one run. |
+| **InvocationId** | The `inv_<hex>` id for one CLI invocation inside a run. |
+| **SkillId** | The id for a discoverable skill. |
+| **SkillSlotId** | The placeholder id a flow may expose for operator-bound skills. |
+| **ProtocolId** | A versioned protocol id such as `goal-contract@v1`. |
+
+## Route Target Language
+
+Routes can point to another step or to a terminal target. Terminal targets use
+an `@` prefix so they cannot be confused with step ids.
+
+| Target | Closed-run outcome |
+| --- | --- |
+| `@complete` | `complete` |
+| `@stop` | `stopped` |
+| `@handoff` | `handoff` |
+| `@escalate` | `escalated` |
+
+Keep route values such as `completion-gate` and `run-next-gate-pass` stable
+unless there is an explicit schema migration. In operator prose, describe what
+the route does instead of teaching the serialized route name first.
 
 ## Runtime Language
 
@@ -52,6 +84,46 @@ instructions.
 | **Snapshot** | A derived runtime projection from trace entries and the compiled flow. | Run state |
 | **Fixture** | A saved example or test input. | Example, proof file |
 | **Runtime proof** | An internal flow used as a runtime proof and test surface. | Public flow |
+| **Project** | Produce a narrower status or report shape from richer runtime data. Unrelated to the noun "project" meaning the working directory. | Derive, render |
+
+## Trace Kind Language
+
+Trace kinds use `<subject>.<event>` names. Group them by subject when explaining
+a run:
+
+- **run**: `run.bootstrapped`, `run.closed`
+- **step**: `step.entered`, `step.report_written`, `step.completed`,
+  `step.aborted`
+- **check**: `check.evaluated`
+- **checkpoint**: `checkpoint.requested`, `checkpoint.resolved`
+- **relay**: `relay.started`, `relay.request`, `relay.receipt`,
+  `relay.result`, `relay.completed`, `relay.failed`
+- **skills**: `skills.loaded`
+- **sub_run**: `sub_run.started`, `sub_run.completed`
+- **fanout**: `fanout.started`, `fanout.branch_started`,
+  `fanout.branch_completed`, `fanout.joined`
+
+## Goal Safety Review Bridge
+
+Goal operator prose calls the final two reviewer passes **safety review passes**.
+The run folder still uses the internal gate names so existing run files and
+schema names stay stable:
+`reports/relay/goal-gate-pass-{1,2}.{request,receipt,result}.json`,
+`reports/goal/gate-pass-1.json`, `reports/goal/gate.json`,
+`goal.gate-pass@v1`, and `goal.gate@v1`. Treat those as serialized names for
+the same safety review, not as a new product metaphor.
+
+## Fanout, Rubric, And Tournament Language
+
+| Term | Definition | Product-facing term |
+| --- | --- | --- |
+| **Fanout step** | A step that runs multiple branches and joins their outputs. Branches may be child flows or relay requests. | Parallel branches |
+| **Rubric** | The scoring sheet that compares fanout branches. | Scoring sheet |
+| **Dim** | One rubric row being scored. | Scoring row |
+| **Runtime signal** | Runtime evidence for whether a dim was proved, missing, or not applicable. | Runtime evidence |
+| **Model judgment** | The reviewer judgment for a dim: pass, concern, or fail. | Reviewer judgment |
+| **runtime_vetoed** | A flag showing the runtime evidence overrode a model judgment to fail. | Runtime override |
+| **Tournament** | Explore's pattern for generating multiple candidate answers and selecting one. | Model comparison |
 
 ## Relay Language
 
@@ -80,6 +152,8 @@ instructions.
 | **Selection resolution** | The resolved selection plus provenance for which layers contributed it. | Audit record |
 | **Provider-scoped model** | A model named with its provider. | Model string |
 | **Effort** | Provider-level reasoning allocation. | Depth |
+| **Rigor** | Operator-facing care axis for `--rigor` and `axes.allowed_rigors`: `lite`, `standard`, or `deep`. | Depth when describing compiled runtime thoroughness |
+| **change_kind** | Serialized safety classification for a run or change, such as `ratchet-advance`, `equivalence-refactor`, or `disposable`. Keep the field name exact in schemas and traces. | Mode, Depth |
 
 ## Continuity Language
 
@@ -93,6 +167,19 @@ instructions.
 | **Attached-run pointer** | The index entry naming the currently live run. | Active run |
 | **Dangling reference** | A pointer to a missing continuity record. | Missing handoff |
 
+When reading a run folder:
+
+- **Run-attached provenance** is the saved state embedded in
+  `continuity.record.json` for a live-run handoff, including fields such as
+  `run_id`, `current_stage`, `current_step`, and `runtime_status`.
+- **Pending-record pointer** is the `continuity.index.json` entry naming the
+  continuity record to resume next, including `record_id` and
+  `continuity_kind`.
+- **Attached-run pointer** is the index entry naming the currently attached live
+  run, including `run_id`, `current_stage`, `current_step`, and `attached_at`.
+- **Dangling reference** means the index points at a record id that no longer
+  exists on disk.
+
 ## Skill And Plugin Language
 
 | Term | Definition | Aliases to avoid |
@@ -100,8 +187,18 @@ instructions.
 | **Skill** | A discoverable capability with trigger metadata and optional supporting files. In config, local operator skills live under `~/.agents/skills` or `~/.claude/skills`; in the Codex plugin package, generated `plugins/codex/skills/<id>/SKILL.md` files are host invocation surfaces. Do not rename the generated directory without checking the Codex plugin contract. | Tool, command |
 | **Skill slot** | An optional flow-authored placeholder that an operator may bind to one of their local skills. | Required skill, built-in skill |
 | **Plugin** | The host-installable surface Circuit ships into Claude Code or Codex. | Package |
-| **Catalog compiler** | The build-time tool that regenerates command and skill outputs from source-of-truth files. | Generator, sync script |
+| **Emit script** | The build-time script that regenerates command, skill, schematic, block-catalog, and compiled-flow outputs from source-of-truth files. See `scripts/flows/emit.ts`. | Catalog compiler, generator, sync script |
 | **Generated surface** | A committed output regenerated from source files by an emit script. | Hand-authored doc |
+
+## Release Infrastructure Language
+
+| Term | Definition |
+| --- | --- |
+| **Parity matrix** | A table showing each flow, host, and proof combination and whether rendered output matches the recorded golden run. |
+| **Readiness report** | The release summary for proof coverage, parity, and marketplace safety. |
+| **Proof coverage** | Whether every public capability claim has checked-in proof. |
+| **Marketplace-safe** | The file and path safety property required for plugin marketplace publication. |
+| **Golden run** | A recorded sample run used as expected output for release checks. |
 
 ## Deprecated Or Methodology Terms
 
@@ -110,7 +207,6 @@ inside historical docs, tests, or migration notes when the context is explicit.
 
 | Term | Replacement | Notes |
 | --- | --- | --- |
-| **change_kind** | **Mode** or **Depth** | Keep only where serialized schemas still require it. |
 | **runtime-proof** | **Runtime proof** | Internal test flow, not a visible user flow. |
 | **recipe** | **Schematic** | Older authored-flow term. |
 | **scalar** | **Block** or schema-specific name | Avoid for flow composition. |
@@ -120,7 +216,6 @@ inside historical docs, tests, or migration notes when the context is explicit.
 | **artifact** | **Report** or **evidence** | Pick the concrete surface. |
 | **event log** | **Trace** | The serialized run record is a trace. |
 | **run root** | **Run folder** | Also avoid `--run-root` in product prose. |
-| **rigor** | **Depth** | Depth is the product term. |
 | **phase** | **Stage** | Stage is the flow grouping term. |
 
 ## Relationships
@@ -135,7 +230,9 @@ inside historical docs, tests, or migration notes when the context is explicit.
 - **Acceptance criteria** can make a **Relay** retry or stop before its
   report becomes accepted evidence.
 - A **Checkpoint** is a step-level pause, not a separate flow.
-- A **Depth** describes product thoroughness; an **Effort** describes model reasoning allocation.
+- A **Rigor** describes operator-requested care; **Depth** is the compiled
+  runtime thoroughness derived from rigor and mode flags; **Effort** describes
+  provider-level reasoning allocation.
 - A **Plugin** exposes **Skills**, commands, and generated compiled-flow outputs.
 
 ## Example Dialogue
@@ -157,7 +254,9 @@ inside historical docs, tests, or migration notes when the context is explicit.
 - **CompiledFlow** can sound like the product flow. Use **Flow** for the product and **CompiledFlow** only for the runtime schema.
 - **Report** can mean a typed output or a vague file. Use **Report** for typed outputs and **Evidence** for supporting proof.
 - **Relay** can name product delegation or serialized `relay.*` trace entries. Use **Relay** in prose and keep serialized names in code or backticks.
-- **Depth** and **Effort** both describe intensity. Use **Depth** for run thoroughness and **Effort** for provider-level reasoning allocation.
+- **Rigor**, **Depth**, and **Effort** all describe intensity at different layers.
+  Use **Rigor** for the operator care axis, **Depth** for compiled runtime
+  thoroughness, and **Effort** for provider-level reasoning allocation.
 - **Stage** appears in both product prose and runtime fields. The term is canonical in both places, but runtime field names should stay in backticks when discussing serialization.
 - **Fixture** is useful in tests, but it should not describe product-facing generated flows.
 - **Runtime proof** is an internal proof flow, not a public capability.

@@ -10792,7 +10792,7 @@ var {
 import { readFileSync as readFileSync23 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
-function buildBuilderRegistry(packages, slot, pluck) {
+function collectBuilderRegistry(packages, slot, pluck) {
   const map2 = /* @__PURE__ */ new Map();
   for (const pkg of packages) {
     for (const builder of pluck(pkg)) {
@@ -10805,16 +10805,16 @@ function buildBuilderRegistry(packages, slot, pluck) {
   return map2;
 }
 function buildComposeRegistry(packages) {
-  return buildBuilderRegistry(packages, "compose", (pkg) => pkg.writers.compose);
+  return collectBuilderRegistry(packages, "compose", (pkg) => pkg.writers.compose);
 }
 function buildCloseRegistry(packages) {
-  return buildBuilderRegistry(packages, "close", (pkg) => pkg.writers.close);
+  return collectBuilderRegistry(packages, "close", (pkg) => pkg.writers.close);
 }
 function buildVerificationRegistry(packages) {
-  return buildBuilderRegistry(packages, "verification", (pkg) => pkg.writers.verification);
+  return collectBuilderRegistry(packages, "verification", (pkg) => pkg.writers.verification);
 }
 function buildCheckpointRegistry(packages) {
-  return buildBuilderRegistry(packages, "checkpoint", (pkg) => pkg.writers.checkpoint);
+  return collectBuilderRegistry(packages, "checkpoint", (pkg) => pkg.writers.checkpoint);
 }
 function buildReportSchemaRegistry(packages, fixtures = {}) {
   const out = { ...fixtures };
@@ -26439,7 +26439,7 @@ var FLOW_BLOCK_DEFINITION_INPUTS = [
   {
     id: "goal",
     title: "Goal",
-    purpose: "Turn a user objective into a bounded goal contract with proof, recovery, and completion-gate policy.",
+    purpose: "Turn a user objective into a bounded goal contract with proof, recovery, and safety-review policy.",
     input_contracts: ["task.intake@v1", "route.decision@v1"],
     alternative_input_contracts: [["task.intake@v1"]],
     output_contract: "goal.contract@v1",
@@ -26450,7 +26450,7 @@ var FLOW_BLOCK_DEFINITION_INPUTS = [
       "proof requirements",
       "allowed flow targets",
       "recovery routes",
-      "completion gate policy"
+      "safety review policy"
     ],
     check: {
       kind: "schema",
@@ -33404,7 +33404,7 @@ var BUILTIN_CONNECTOR_CAPABILITIES = {
   codex: { filesystem: "trusted-write", structured_output: "json" },
   "cursor-agent": { filesystem: "trusted-write", structured_output: "json" }
 };
-var RESERVED_ADAPTER_NAMES = [
+var RESERVED_CONNECTOR_NAMES = [
   ...EnabledConnector.options,
   "auto"
 ];
@@ -34333,7 +34333,7 @@ var goalCloseBuilder = {
     return {
       schema: "goal.result@v1",
       outcome,
-      summary: outcome === "complete" ? `Goal complete: ${contract.objective}` : `Goal ${outcome}: ${recovery?.rationale ?? "required evidence or gate proof is incomplete."}`,
+      summary: outcome === "complete" ? `Goal complete: ${contract.objective}` : `Goal ${outcome}: ${recovery?.rationale ?? "required evidence or safety-review proof is incomplete."}`,
       proven_claims: provenClaims,
       missing_or_weak_claims: weakClaims,
       recovery_history: recovery === void 0 ? [] : [recovery.rationale],
@@ -34435,7 +34435,7 @@ var goalContractBuilder = {
       constraints: nonEmptyUnique([
         ...clarified.constraints,
         "Use only statically authored child flow targets.",
-        "Do not close complete without satisfied evidence and the required gate streak.",
+        "Do not close complete without satisfied evidence and the required safety-review streak.",
         "Escalate through recovery or checkpoint instead of guessing when proof is ambiguous."
       ]),
       done_when: [
@@ -34468,7 +34468,7 @@ var goalContractBuilder = {
         ...clarified.missing_information.map((item) => `${item.question} ${item.why_it_matters}`),
         "Scope expands beyond the contract.",
         "Required evidence is missing, contradicted, or ambiguous.",
-        "A medium-or-above gate finding needs operator judgment."
+        "A medium-or-above safety-review finding needs operator judgment."
       ]),
       stop_conditions: nonEmptyUnique([
         ...clarified.stop_conditions,
@@ -34697,7 +34697,7 @@ var goalFlowData = {
     schema_version: "1",
     id: "goal",
     title: "Goal Schematic",
-    purpose: "Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.",
+    purpose: "Goal flow. Circuit writes a bounded goal contract, runs one statically authored child flow target, evaluates evidence, runs a two-pass safety review, and closes from typed Goal reports.",
     status: "active",
     version: "0.1.0",
     starts_at: "clarify-goal",
@@ -34805,7 +34805,7 @@ var goalFlowData = {
           "proof requirements",
           "allowed flow targets",
           "recovery routes",
-          "completion gate policy"
+          "safety review policy"
         ],
         execution: { kind: "compose" },
         protocol: "goal-contract@v1",
@@ -35002,7 +35002,7 @@ var goalFlowData = {
       },
       {
         id: "goal-gate-pass-1",
-        title: "Gate - adversarial pass 1",
+        title: "Safety review - pass 1",
         stage: "review",
         block: "review",
         input: {
@@ -35010,7 +35010,7 @@ var goalFlowData = {
           evaluation: "goal.evidence-evaluation@v1"
         },
         output: "goal.gate-pass@v1",
-        evidence_requirements: ["gate pass", "attack lens", "evidence checked"],
+        evidence_requirements: ["safety review pass", "review lens", "evidence checked"],
         execution: { kind: "relay", role: "reviewer" },
         protocol: "goal-gate-pass-1@v1",
         writes: {
@@ -35030,7 +35030,7 @@ var goalFlowData = {
       },
       {
         id: "goal-gate-pass-2",
-        title: "Gate - adversarial pass 2",
+        title: "Safety review - pass 2",
         stage: "review",
         block: "review",
         input: {
@@ -35039,7 +35039,7 @@ var goalFlowData = {
           gate: "goal.gate-pass@v1"
         },
         output: "goal.gate@v1",
-        evidence_requirements: ["gate pass", "attack lens", "evidence checked"],
+        evidence_requirements: ["safety review pass", "review lens", "evidence checked"],
         execution: { kind: "relay", role: "reviewer" },
         protocol: "goal-gate-pass-2@v1",
         writes: {
@@ -35214,19 +35214,19 @@ var goalFlowData = {
         },
         {
           stepId: "goal-gate-pass-1",
-          taskTitle: "Run gate pass 1",
-          activeText: "Running gate pass 1",
+          taskTitle: "Run review pass 1",
+          activeText: "Running review pass 1",
           relayRole: "reviewer",
-          relayStartedText: "Asking the reviewer to attack the proof...",
-          relayCompletedText: "Finished gate pass 1."
+          relayStartedText: "Asking the reviewer to check the proof...",
+          relayCompletedText: "Finished review pass 1."
         },
         {
           stepId: "goal-gate-pass-2",
-          taskTitle: "Run gate pass 2",
-          activeText: "Running gate pass 2",
+          taskTitle: "Run review pass 2",
+          activeText: "Running review pass 2",
           relayRole: "reviewer",
-          relayStartedText: "Asking the reviewer to attack the proof again...",
-          relayCompletedText: "Finished gate pass 2."
+          relayStartedText: "Asking the reviewer to check the proof again...",
+          relayCompletedText: "Finished review pass 2."
         },
         { stepId: "goal-close", taskTitle: "Wrap up", activeText: "Wrapping up" }
       ]
@@ -35298,7 +35298,7 @@ var issueAt2 = (ctx, path, message) => {
 var RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
   const ownConnectorKeys = Object.keys(cfg.connectors);
   const registered = new Set(ownConnectorKeys);
-  const reserved = new Set(RESERVED_ADAPTER_NAMES);
+  const reserved = new Set(RESERVED_CONNECTOR_NAMES);
   for (const name of ownConnectorKeys) {
     if (reserved.has(name)) {
       issueAt2(ctx, ["connectors", name], `connector name '${name}' is reserved (built-in or 'auto') and cannot be used as a custom connector key`);
@@ -48747,7 +48747,7 @@ function goalGateDetail(flowReport) {
   const clean = numberField(gate, "clean_streak") ?? 0;
   const required2 = numberField(gate, "required_passes") ?? 2;
   const verdict = stringField2(gate, "final_verdict") ?? "unknown";
-  return `Gate: ${clean}/${required2} passes; final verdict ${verdict}.`;
+  return `Safety review: ${clean}/${required2} passes; final verdict ${verdict}.`;
 }
 function flowOutcomeOrRunFallback(flowReport, runOutcome2) {
   return stringField2(flowReport, "outcome") ?? runOutcome2;
@@ -48798,7 +48798,7 @@ var goalProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const gate = isObject3(flowReport?.gate) ? flowReport.gate : void 0;
   const clean = numberField(gate, "clean_streak") ?? 0;
   const required2 = numberField(gate, "required_passes") ?? 2;
-  const headline = outcome === "complete" ? `Circuit: Goal complete. Evidence satisfied and gate passed ${clean}/${required2}.` : `Circuit: Goal finished with outcome ${outcome}. Gate passed ${clean}/${required2}.`;
+  const headline = outcome === "complete" ? `Circuit: Goal complete. Evidence satisfied and safety review passed ${clean}/${required2}.` : `Circuit: Goal finished with outcome ${outcome}. Safety review passed ${clean}/${required2}.`;
   return {
     headline,
     details: [
@@ -49673,7 +49673,7 @@ import { homedir as homedir4 } from "node:os";
 import { dirname as dirname8, join as join18, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
-// dist/run-status/project-run-folder.js
+// dist/run-status/run-folder-projector.js
 import { constants, accessSync, statSync } from "node:fs";
 import { resolve as resolve11 } from "node:path";
 
@@ -50297,7 +50297,7 @@ function projectRuntimeRunStatusFromRunFolder(runFolder, manifest) {
   });
 }
 
-// dist/run-status/project-run-folder.js
+// dist/run-status/run-folder-projector.js
 var RunStatusFolderError = class extends Error {
   code;
   runFolder;

@@ -27,10 +27,10 @@ describe('connector subprocess lifecycle boundary', () => {
           'setInterval(() => {}, 1000);',
         ].join(' '),
       ],
-      timeoutMs: 250,
+      timeoutMs: 3_000,
       stdoutMaxBytes: 1_000,
       stderrMaxBytes: 1_000,
-      sigtermToSigkillGraceMs: 10,
+      sigtermToSigkillGraceMs: 50,
       cwd: tempDir,
     });
 

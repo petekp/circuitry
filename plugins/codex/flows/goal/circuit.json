@@ -2,7 +2,7 @@
   "schema_version": "2",
   "id": "goal",
   "version": "0.1.0",
-  "purpose": "Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.",
+  "purpose": "Goal flow. Circuit writes a bounded goal contract, runs one statically authored child flow target, evaluates evidence, runs a two-pass safety review, and closes from typed Goal reports.",
   "entry": {
     "signals": {
       "include": ["goal", "supervise"],
@@ -505,7 +505,7 @@
     },
     {
       "id": "goal-gate-pass-1",
-      "title": "Gate - adversarial pass 1",
+      "title": "Safety review - pass 1",
       "protocol": "goal-gate-pass-1@v1",
       "reads": ["reports/goal/contract.json", "reports/goal/evidence-evaluation.json"],
       "routes": {
@@ -537,7 +537,7 @@
     },
     {
       "id": "goal-gate-pass-2",
-      "title": "Gate - adversarial pass 2",
+      "title": "Safety review - pass 2",
       "protocol": "goal-gate-pass-2@v1",
       "reads": [
         "reports/goal/contract.json",

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/project-run-folder.js';
+import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import { writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';

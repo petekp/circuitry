@@ -16,10 +16,10 @@ import type {
   CompiledFlowRuntimeSurface,
 } from './types.js';
 
-// Build a Map keyed by builder.resultSchemaName from one writer slot
+// Collect a Map keyed by builder.resultSchemaName from one writer slot
 // across all packages. Throws on duplicate keys with a message that
 // names both the slot and the offending flow id.
-function buildBuilderRegistry<B extends { readonly resultSchemaName: string }>(
+function collectBuilderRegistry<B extends { readonly resultSchemaName: string }>(
   packages: readonly CompiledFlowPackage[],
   slot: 'compose' | 'close' | 'verification' | 'checkpoint',
   pluck: (pkg: CompiledFlowPackage) => readonly B[],
@@ -41,25 +41,25 @@ function buildBuilderRegistry<B extends { readonly resultSchemaName: string }>(
 export function buildComposeRegistry(
   packages: readonly CompiledFlowPackage[],
 ): ReadonlyMap<string, ComposeBuilder> {
-  return buildBuilderRegistry(packages, 'compose', (pkg) => pkg.writers.compose);
+  return collectBuilderRegistry(packages, 'compose', (pkg) => pkg.writers.compose);
 }
 
 export function buildCloseRegistry(
   packages: readonly CompiledFlowPackage[],
 ): ReadonlyMap<string, CloseBuilder> {
-  return buildBuilderRegistry(packages, 'close', (pkg) => pkg.writers.close);
+  return collectBuilderRegistry(packages, 'close', (pkg) => pkg.writers.close);
 }
 
 export function buildVerificationRegistry(
   packages: readonly CompiledFlowPackage[],
 ): ReadonlyMap<string, VerificationBuilder> {
-  return buildBuilderRegistry(packages, 'verification', (pkg) => pkg.writers.verification);
+  return collectBuilderRegistry(packages, 'verification', (pkg) => pkg.writers.verification);
 }
 
 export function buildCheckpointRegistry(
   packages: readonly CompiledFlowPackage[],
 ): ReadonlyMap<string, CheckpointBriefBuilder> {
-  return buildBuilderRegistry(packages, 'checkpoint', (pkg) => pkg.writers.checkpoint);
+  return collectBuilderRegistry(packages, 'checkpoint', (pkg) => pkg.writers.checkpoint);
 }
 
 // Compose the relay-report zod registry from the catalog plus an
