@@ -36857,7 +36857,13 @@ async function relayCodex(input) {
     await cleanupSchemaTempDir(tempDir);
   }
 }
-var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set(["agent_message", "command_execution", "reasoning"]);
+var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set([
+  "agent_message",
+  "command_execution",
+  "reasoning",
+  "file_change",
+  "todo_list"
+]);
 var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
   "thread.started",
   "turn.started",

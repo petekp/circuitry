@@ -355,6 +355,31 @@ describe('Codex connector — parseCodexStdout NDJSON parser branches', () => {
     expect(parsed.result_body).toBe('response');
   });
 
+  it('accepts file_change items emitted by write-capable Codex before the terminal agent_message', () => {
+    const stdout = ndjson({
+      items: [
+        { type: 'command_execution', id: 'item_0' },
+        { type: 'file_change', id: 'item_1' },
+        { type: 'agent_message', id: 'item_2', text: '{"verdict":"accept"}' },
+      ],
+    });
+    const parsed = parseCodexStdout(stdout, 'p', 0, 'codex-cli 0.130.0');
+    expect(JSON.parse(parsed.result_body)).toEqual({ verdict: 'accept' });
+  });
+
+  it('accepts todo_list items emitted by current Codex before the terminal agent_message', () => {
+    const stdout = ndjson({
+      items: [
+        { type: 'todo_list', id: 'item_0' },
+        { type: 'command_execution', id: 'item_1' },
+        { type: 'file_change', id: 'item_2' },
+        { type: 'agent_message', id: 'item_3', text: '{"verdict":"accept"}' },
+      ],
+    });
+    const parsed = parseCodexStdout(stdout, 'p', 0, 'codex-cli 0.130.0');
+    expect(JSON.parse(parsed.result_body)).toEqual({ verdict: 'accept' });
+  });
+
   it('accepts Codex 0.128 item.updated trace_entries between item.started and item.completed', () => {
     // Regression for codex-cli 0.128 emitting `item.updated` as an
     // incremental progress beacon for a long-running command_execution.

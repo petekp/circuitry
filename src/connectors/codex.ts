@@ -483,17 +483,23 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
   }
 }
 
-// Known `item.completed` `item.type` values at Codex CLI 0.118-0.125. The
-// connector accepts model narration plus command execution
-// events and rejects anything else — an unknown type may represent a new
-// capability surface that bypasses the sandbox's intent and needs to be
-// explicitly reviewed before we start emitting it into the relay transcript.
+// Known `item.completed` `item.type` values at Codex CLI 0.118-0.130. The
+// connector accepts model narration, planning/progress items, command
+// execution, reasoning, and write receipts. It rejects anything else: an
+// unknown type may represent a new capability surface that bypasses the
+// connector-owned contract and needs to be explicitly reviewed before we
+// start admitting it.
 //
-// A future CLI bump that introduces a genuinely-sandboxed item type
-// (e.g., a reasoning variant) can extend this list; a bump that
-// introduces a new capability surface and must be reviewed before this
-// allowlist is extended.
-const KNOWN_CODEX_ITEM_TYPES = new Set<string>(['agent_message', 'command_execution', 'reasoning']);
+// A future CLI bump that introduces another reviewed protocol item type can
+// extend this list; a bump that introduces a new capability surface must be
+// reviewed before this allowlist is extended.
+const KNOWN_CODEX_ITEM_TYPES = new Set<string>([
+  'agent_message',
+  'command_execution',
+  'reasoning',
+  'file_change',
+  'todo_list',
+]);
 
 // Top-level trace_entry types the parser expects at Codex CLI 0.118-0.128 —
 // grounded in the `tests/fixtures/codex-smoke/protocol/happy-path-

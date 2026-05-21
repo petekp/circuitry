@@ -140,8 +140,8 @@ Codex has two separate roles:
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
   Codex chooses the best bundled Circuit flow skill and invokes the local
   Circuit engine.
-- **worker connector behavior:** Circuit can relay read-only worker steps
-  through the Codex CLI from any host.
+- **worker connector behavior:** Circuit can relay worker steps through the
+  Codex CLI from any host, including write-capable implementer steps.
 
 See [`docs/configuration.md`](docs/configuration.md) for connector routing and
 worker setup.
