@@ -121,7 +121,6 @@ const NON_PACKAGE_FILES = new Set([
   'compile-schematic-to-flow.ts',
   'flow-definition.ts',
   'report-declarations.ts',
-  'runtime-surface.ts',
   'router.ts',
   'stage-policy.ts',
   'types.ts',

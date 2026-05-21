@@ -20,8 +20,8 @@ import {
 import { RunResult } from '../schemas/result.js';
 import { Rigor, type Rigor as RigorValue } from '../schemas/rigor.js';
 
+import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import { classifyCompiledFlowTask } from '../flows/router.js';
-import { findFlowRuntimeSurfaceById } from '../flows/runtime-surface.js';
 import { discoverConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';

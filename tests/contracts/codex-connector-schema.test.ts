@@ -568,7 +568,7 @@ describe('Codex connector — parseCodexStdout against real Codex 0.118 JSONL fi
 describe('Codex connector — cross-connector shape parity (RelayResult uniformity)', () => {
   it('CodexRelayResult has the same field set as the shared RelayResult', async () => {
     // Structural assertion: both connectors' result types alias the shared
-    // `RelayResult` from `./shared.js`, so the materializer at
+    // `RelayResult` from `src/shared/connector-relay.ts`, so the materializer at
     // `relay-materializer.ts` can consume them without branching on
     // connector name. The field set is fixed at 5 fields:
     //   request_payload, receipt_id, result_body, duration_ms, cli_version.

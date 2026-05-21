@@ -5,8 +5,8 @@ import type { RunId, StepId } from '../schemas/ids.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import type { RelayRole } from '../schemas/step.js';
 import type { TraceEntry } from '../schemas/trace-entry.js';
+import { type RelayResult, sha256Hex } from '../shared/connector-relay.js';
 import { resolveRunRelative } from '../shared/run-relative-path.js';
-import { type RelayResult, sha256Hex } from './shared.js';
 
 // Relay materialization glue between a connector's raw subprocess
 // output and the five-trace_entry relay transcript + report
@@ -21,7 +21,7 @@ import { type RelayResult, sha256Hex } from './shared.js';
 // on a single `(step_id, attempt)` pair. This module builds that
 // sequence deterministically from a single `RelayResult` (shared
 // shape produced by both the `agent` and `codex` connectors per
-// `./shared.ts`), writes the four on-disk transcript slots (request
+// `../shared/connector-relay.ts`), writes the four on-disk transcript slots (request
 // payload, receipt, result bytes, materialized report), and returns
 // the trace_entry array for the caller to append through the runtime
 // `TraceStore`.

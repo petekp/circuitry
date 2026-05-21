@@ -14,7 +14,7 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { findFlowRuntimeSurfaceById } from '../flows/runtime-surface.js';
+import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import {
   OperatorAutoResolution,
   type OperatorAutoResolution as OperatorAutoResolutionValue,

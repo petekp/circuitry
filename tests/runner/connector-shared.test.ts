@@ -21,18 +21,9 @@ import {
 } from '../../src/connectors/codex.js';
 import { relayCustom as neutralRelayCustom } from '../../src/connectors/custom.js';
 import { materializeRelay as neutralMaterializeRelay } from '../../src/connectors/relay-materializer.js';
-import { sha256Hex as neutralSha256Hex } from '../../src/connectors/shared.js';
-import { sha256Hex as sharedSha256Hex } from '../../src/shared/connector-relay.js';
 
-describe('connector shared relay surface', () => {
-  it('keeps sha256Hex identical through the shared and neutral paths', () => {
-    const payload = 'circuit connector relay payload';
-
-    expect(sharedSha256Hex(payload)).toBe(neutralSha256Hex(payload));
-    expect(sharedSha256Hex(payload)).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('keeps neutral connector barrel exports bound to the implementation modules', () => {
+describe('connector relay exports', () => {
+  it('keeps connector exports bound to the implementation modules', () => {
     expect(neutralRelayClaudeCode).toEqual(expect.any(Function));
     expect(neutralParseClaudeCodeStdout).toEqual(expect.any(Function));
     expect(neutralBuildClaudeCodeArgs).toEqual(expect.any(Function));
