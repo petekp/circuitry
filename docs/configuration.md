@@ -49,8 +49,8 @@ Codex has two separate Circuit roles:
 
 - **Codex host/orchestrator:** you ask `@Circuit` to run a task through the
   Codex plugin.
-- **Codex worker connector:** Circuit launches `codex exec` for read-only relay
-  steps from any host.
+- **Codex worker connector:** Circuit launches `codex exec` for worker relay
+  steps from any host, including write-capable implementer steps.
 
 The optional worker connector requires the Codex CLI:
 
@@ -103,13 +103,13 @@ The same distinction from the starter section applies throughout config:
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
   Codex chooses the best bundled Circuit flow skill and invokes the local
   Circuit engine.
-- **worker connector behavior:** Circuit can relay read-only worker steps
-  through the Codex CLI from any host.
+- **worker connector behavior:** Circuit can relay worker steps through the
+  Codex CLI from any host, including write-capable implementer steps.
 
 When a step uses Codex as its connector, Circuit launches `codex exec` with
-read-only sandbox flags. The Codex subprocess inherits the Circuit process
-environment and current working directory, so configure it only where those
-process settings are appropriate for the worker.
+connector-owned `workspace-write` flags. The Codex subprocess inherits the
+Circuit process environment and current working directory, so configure it only
+where those process settings are appropriate for the worker.
 
 ## Connector Routing
 
