@@ -8,14 +8,12 @@ function read(path: string): string {
 describe('architecture boundary ratchets', () => {
   it('keeps connector sharing limited to subprocess lifecycle mechanics', () => {
     const lifecycle = read('src/connectors/subprocess.ts');
-    const connectorBarrel = read('src/connectors/shared.ts');
 
     expect(lifecycle).toContain('runConnectorSubprocess');
+    expect(existsSync('src/connectors/shared.ts')).toBe(false);
     expect(existsSync('src/shared/connector-helpers.ts')).toBe(false);
     expect(lifecycle).not.toContain('../schemas/');
     expect(lifecycle).not.toContain('connector-helpers');
-    expect(connectorBarrel).not.toContain('connector-helpers');
-    expect(connectorBarrel).not.toContain('selectedModelForProvider');
 
     for (const path of [
       'src/connectors/claude-code.ts',
@@ -30,6 +28,15 @@ describe('architecture boundary ratchets', () => {
         /\bspawn\(/,
       );
     }
+  });
+
+  it('derives runtime trace domain types from the schema source of truth', () => {
+    const traceDomain = read('src/runtime/domain/trace.ts');
+
+    expect(traceDomain).toContain('../../schemas/trace-entry.js');
+    expect(traceDomain).toContain('z.input<typeof TraceEntrySchema>');
+    expect(traceDomain).not.toContain('export interface TraceEntryInput');
+    expect(traceDomain).not.toContain("readonly kind: 'run.bootstrapped'");
   });
 
   it('keeps verification command execution behind the shared proof-plan boundary', () => {

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join as joinPath } from 'node:path';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
+import type { ConnectorRelayInput, RelayResult } from '../shared/connector-relay.js';
 import { extractJsonObject } from '../shared/json-extraction.js';
-import type { ConnectorRelayInput, RelayResult } from './shared.js';
 import {
   type ConnectorSubprocessResult,
   isConnectorSubprocessSpawnError,

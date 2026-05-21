@@ -7,8 +7,8 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CustomConnectorDescriptor } from '../schemas/connector.js';
+import type { ConnectorRelayInput, RelayResult } from '../shared/connector-relay.js';
 import { extractJsonObject } from '../shared/json-extraction.js';
-import type { ConnectorRelayInput, RelayResult } from './shared.js';
 import {
   type ConnectorSubprocessResult,
   isConnectorSubprocessSpawnError,

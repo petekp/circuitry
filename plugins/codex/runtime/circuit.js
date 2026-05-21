@@ -37649,8 +37649,12 @@ var PACKAGES_BY_ID = (() => {
   }
   return map2;
 })();
+var RUNTIME_SURFACES = buildRuntimeSurfaceRegistry(flowPackages);
 function findCompiledFlowPackageById(id) {
   return PACKAGES_BY_ID.get(id);
+}
+function findFlowRuntimeSurfaceById(flowId) {
+  return RUNTIME_SURFACES.get(flowId);
 }
 
 // dist/flows/registries/checkpoint-writers/registry.js
@@ -44974,12 +44978,6 @@ function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
 }
 function classifyCompiledFlowTask(taskText) {
   return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
-}
-
-// dist/flows/runtime-surface.js
-var RUNTIME_SURFACES = buildRuntimeSurfaceRegistry(flowPackages);
-function findFlowRuntimeSurfaceById(flowId) {
-  return RUNTIME_SURFACES.get(flowId);
 }
 
 // dist/shared/config-loader.js

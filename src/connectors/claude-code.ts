@@ -1,7 +1,11 @@
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
+import {
+  type ConnectorRelayInput,
+  type RelayResult,
+  sha256Hex,
+} from '../shared/connector-relay.js';
 import { extractJsonObject } from '../shared/json-extraction.js';
-import { type ConnectorRelayInput, type RelayResult, sha256Hex } from './shared.js';
 import {
   type ConnectorSubprocessResult,
   isConnectorSubprocessSpawnError,
@@ -13,7 +17,8 @@ export { sha256Hex };
 // Real claude-code connector. Invokes the Claude Code CLI as a subprocess of the
 // Node.js runtime (subprocess-per-connector at v0). No external SDK
 // dependency; Node stdlib only (`node:child_process` + `node:perf_hooks`
-// here; `node:crypto` via `./shared.ts` for the shared `sha256Hex` helper).
+// here; `node:crypto` via `../shared/connector-relay.ts` for the shared
+// `sha256Hex` helper).
 //
 // Tool surface: the subprocess receives Claude Code's default tool surface
 // — Read, Write, Edit, Bash, Glob, Grep, etc. The runtime check (Zod
@@ -102,9 +107,9 @@ export interface ClaudeCodeRelayInput extends ConnectorRelayInput {}
 
 // The `ClaudeCodeRelayResult` name is kept as the connector-specific
 // alias for call sites that want a name bound to the `claude-code` connector's
-// producer contract. The shape lives in `./shared.ts` `RelayResult`
-// so the `codex` connector produces the same shape and the materializer
-// consumes it uniformly.
+// producer contract. The shape lives in `../shared/connector-relay.ts`
+// `RelayResult` so the `codex` connector produces the same shape and
+// the materializer consumes it uniformly.
 export type ClaudeCodeRelayResult = RelayResult;
 
 function selectedAnthropicModel(selection: ResolvedSelection | undefined): string | undefined {
