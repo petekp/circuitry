@@ -25751,6 +25751,7 @@ var FLOW_BLOCK_IDS = [
   "intake",
   "route",
   "frame",
+  "clarify",
   "human-decision",
   "gather-context",
   "diagnose",
@@ -26219,6 +26220,41 @@ var FLOW_BLOCK_DEFINITION_INPUTS = [
     },
     schematicPolicy: {
       executionKinds: ["compose", "checkpoint", "sub-run", "fanout"],
+      stages: ["frame"]
+    }
+  },
+  {
+    id: "clarify",
+    title: "Clarify",
+    purpose: "Turn a rough operator request into a clear task for the selected flow.",
+    input_contracts: ["task.intake@v1", "route.decision@v1"],
+    alternative_input_contracts: [["task.intake@v1"]],
+    output_contract: "clarified.task@v1",
+    action_surface: "worker",
+    produces_evidence: [
+      "original request",
+      "clarified task",
+      "desired outcome",
+      "proof needed",
+      "constraints",
+      "scope",
+      "assumptions",
+      "missing information",
+      "stop conditions"
+    ],
+    check: {
+      kind: "schema",
+      description: "The clarified task must preserve the operator request, name the outcome, identify proof, and separate assumptions from missing information."
+    },
+    allowed_routes: ["continue", "ask", "stop"],
+    human_interaction: "optional",
+    host_capabilities: {
+      claude: [],
+      codex: [],
+      non_interactive: []
+    },
+    schematicPolicy: {
+      executionKinds: ["relay"],
       stages: ["frame"]
     }
   },
@@ -27579,11 +27615,11 @@ function validateExecutionShape(item, ctx) {
       message: "acceptance_criteria is only allowed for relay execution"
     });
   }
-  if (item.route_from_report !== void 0 && kind !== "compose") {
+  if (item.route_from_report !== void 0 && kind !== "compose" && kind !== "relay") {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["route_from_report"],
-      message: "route_from_report is only allowed for compose execution"
+      message: "route_from_report is only allowed for compose or relay execution"
     });
   }
   if (kind === "fanout" && item.fanout === void 0) {
@@ -33710,6 +33746,19 @@ var RunResult = external_exports.object({
 }).strict();
 
 // dist/flows/goal/relay-hints.js
+var goalClarifiedTaskShapeHint = {
+  kind: "schema",
+  schema: "goal.clarified-task@v1",
+  instruction: [
+    "Respond with a single raw JSON object for goal.clarified-task@v1 whose top-level shape is exactly:",
+    '{ "schema": "goal.clarified-task@v1", "verdict": "continue|ask|stop", "original_request": "...", "target": { "kind": "flow", "id": "goal" }, "guide_id": "goal-v1", "clarified_prompt": "...", "objective": "...", "desired_outcome": "...", "proof_needed": [{ "kind": "command|report|review|source|checkpoint", "description": "...", "required": true }], "constraints": [], "scope": { "in_bounds": [], "out_of_bounds": [] }, "assumptions": [], "missing_information": [], "iteration_policy": [], "stop_conditions": [], "suggested_parts": [] }',
+    "Borrow only the useful Goal prompt ingredients: outcome, proof, constraints, boundaries, iteration policy, and blocked stop condition.",
+    "Do not include adversarial review instructions, two-clean-review language, or medium-or-above finding ceremony; Goal gate steps own that later.",
+    "Do not claim completion. Do not select or invent dynamic child flows. Preserve the operator request and keep the clarified prompt compact.",
+    "Use verdict ask only when missing information makes the Goal unsafe or impossible to verify. Use verdict stop only when this is not a durable, checkable Goal-shaped task.",
+    "Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object."
+  ].join(" ")
+};
 var goalGateShapeHint = {
   kind: "schema",
   schema: "goal.gate@v1",
@@ -33766,6 +33815,103 @@ var GoalGateRecoveryRoute = external_exports.enum([
   "blocked"
 ]);
 var REQUIRED_GATE_PASSES = 2;
+var GoalClarifiedTaskProofKind = external_exports.enum([
+  "command",
+  "report",
+  "review",
+  "source",
+  "checkpoint"
+]);
+var GoalClarifiedTask = external_exports.object({
+  schema: external_exports.literal("goal.clarified-task@v1"),
+  verdict: external_exports.enum(["continue", "ask", "stop"]),
+  original_request: external_exports.string().min(1),
+  target: external_exports.object({
+    kind: external_exports.literal("flow"),
+    id: external_exports.literal("goal")
+  }).strict(),
+  guide_id: external_exports.literal("goal-v1"),
+  clarified_prompt: external_exports.string().min(1),
+  objective: external_exports.string().min(1),
+  desired_outcome: external_exports.string().min(1),
+  proof_needed: external_exports.array(external_exports.object({
+    kind: GoalClarifiedTaskProofKind,
+    description: external_exports.string().min(1),
+    required: external_exports.boolean()
+  }).strict()).min(1),
+  constraints: external_exports.array(external_exports.string().min(1)),
+  scope: external_exports.object({
+    in_bounds: external_exports.array(external_exports.string().min(1)),
+    out_of_bounds: external_exports.array(external_exports.string().min(1))
+  }).strict(),
+  assumptions: external_exports.array(external_exports.string().min(1)),
+  missing_information: external_exports.array(external_exports.object({
+    question: external_exports.string().min(1),
+    why_it_matters: external_exports.string().min(1),
+    safe_default: external_exports.string().min(1).optional()
+  }).strict()),
+  iteration_policy: NonEmptyStringArray3,
+  stop_conditions: external_exports.array(external_exports.string().min(1)),
+  suggested_parts: external_exports.array(external_exports.object({
+    title: external_exports.string().min(1),
+    objective: external_exports.string().min(1),
+    proof_needed: external_exports.array(external_exports.string().min(1)),
+    risk_notes: external_exports.array(external_exports.string().min(1))
+  }).strict())
+}).strict().superRefine((task, ctx) => {
+  if (!task.proof_needed.some((proof) => proof.required)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["proof_needed"],
+      message: "Goal Clarify requires at least one required proof entry"
+    });
+  }
+  if (task.verdict === "ask" && task.missing_information.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["missing_information"],
+      message: "Goal Clarify ask verdict requires missing information"
+    });
+  }
+  if (task.verdict === "stop" && task.stop_conditions.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["stop_conditions"],
+      message: "Goal Clarify stop verdict requires a stop condition"
+    });
+  }
+  const clarifyAuthoredText = [
+    task.clarified_prompt,
+    task.objective,
+    task.desired_outcome,
+    ...task.proof_needed.map((proof) => proof.description),
+    ...task.constraints,
+    ...task.scope.in_bounds,
+    ...task.scope.out_of_bounds,
+    ...task.assumptions,
+    ...task.missing_information.flatMap((item) => [
+      item.question,
+      item.why_it_matters,
+      item.safe_default ?? ""
+    ]),
+    ...task.iteration_policy,
+    ...task.stop_conditions,
+    ...task.suggested_parts.flatMap((part) => [
+      part.title,
+      part.objective,
+      ...part.proof_needed,
+      ...part.risk_notes
+    ])
+  ];
+  const forbiddenReviewText = /before completion[\s\S]{0,120}adversarially review|two consecutive(?:\s+\w+){0,3}\s+(?:reviews?|passes?)|two[-\s]+clean[-\s]+reviews?|medium-or-above\s+(?:gate|completion|finding ceremony|gate finding)/i;
+  if (clarifyAuthoredText.some((text) => forbiddenReviewText.test(text))) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["clarified_prompt"],
+      message: "Goal Clarify must not include the adversarial review loop"
+    });
+  }
+});
 var GoalRequiredEvidence = external_exports.object({
   kind: GoalRequiredEvidenceKind,
   description: external_exports.string().min(1),
@@ -34238,42 +34384,71 @@ function proofKindForTarget(target) {
     return "report";
   return "command";
 }
+function nonEmptyUnique(values) {
+  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+function normalizeTaskText(value) {
+  return value.trim().replace(/\s+/g, " ");
+}
 var goalContractBuilder = {
   resultSchemaName: "goal.contract@v1",
+  reads: [{ name: "clarified", schema: "goal.clarified-task@v1", required: true }],
   build(context) {
-    const objective = context.goal.trim();
-    const selected = selectFlowTarget(objective);
+    const clarified = GoalClarifiedTask.parse(context.inputs.clarified);
+    if (normalizeTaskText(clarified.original_request) !== normalizeTaskText(context.goal)) {
+      throw new Error("Goal Clarify original_request must preserve the operator request");
+    }
+    const objective = clarified.objective.trim();
+    const selected = selectFlowTarget([
+      context.goal,
+      clarified.original_request,
+      clarified.objective,
+      clarified.clarified_prompt
+    ].join("\n"));
     const proofKind = proofKindForTarget(selected);
+    const requiredEvidence = clarified.proof_needed.map((proof) => ({
+      kind: proof.kind,
+      description: proof.description,
+      required: proof.required
+    }));
     return {
       schema: "goal.contract@v1",
       objective,
       source_of_truth: "circuit-run-folder",
       scope: {
-        in: ["The operator objective and the evidence needed to prove it."],
-        out: [
+        in: nonEmptyUnique([
+          ...clarified.scope.in_bounds,
+          "The operator objective and the evidence needed to prove it."
+        ]),
+        out: nonEmptyUnique([
+          ...clarified.scope.out_of_bounds,
           "Project-level goal ledgers",
           "Cross-run recall",
           "Native host /goal as an authority layer",
           "Arbitrary dynamic child-flow loading"
-        ],
-        assumptions: ["The current run folder is the authoritative Goal V1 state."]
+        ]),
+        assumptions: nonEmptyUnique([
+          ...clarified.assumptions,
+          "The current run folder is the authoritative Goal V1 state."
+        ])
       },
-      constraints: [
+      constraints: nonEmptyUnique([
+        ...clarified.constraints,
         "Use only statically authored child flow targets.",
         "Do not close complete without satisfied evidence and the required gate streak.",
         "Escalate through recovery or checkpoint instead of guessing when proof is ambiguous."
-      ],
+      ]),
       done_when: [
         {
           id: "objective-proved",
-          claim: objective,
-          required_evidence: [
+          claim: clarified.desired_outcome,
+          required_evidence: requiredEvidence.length === 0 ? [
             {
               kind: proofKind,
               description: `The selected ${selected} child flow produces report-backed evidence for the objective.`,
               required: true
             }
-          ]
+          ] : requiredEvidence
         }
       ],
       allowed_flow_targets: [...ALL_TARGETS],
@@ -34289,15 +34464,17 @@ var goalContractBuilder = {
           "blocked"
         ]
       },
-      check_in_triggers: [
+      check_in_triggers: nonEmptyUnique([
+        ...clarified.missing_information.map((item) => `${item.question} ${item.why_it_matters}`),
         "Scope expands beyond the contract.",
         "Required evidence is missing, contradicted, or ambiguous.",
         "A medium-or-above gate finding needs operator judgment."
-      ],
-      stop_conditions: [
+      ]),
+      stop_conditions: nonEmptyUnique([
+        ...clarified.stop_conditions,
         "The attempt limit is reached without required evidence.",
         "The child flow blocks on information or permissions Circuit cannot infer."
-      ],
+      ]),
       completion_gate: {
         required_passes: 2,
         blocking_severities: ["critical", "high", "medium"],
@@ -34523,9 +34700,10 @@ var goalFlowData = {
     purpose: "Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.",
     status: "active",
     version: "0.1.0",
-    starts_at: "goal-contract",
+    starts_at: "clarify-goal",
     initial_contracts: ["task.intake@v1", "route.decision@v1", "flow.question@v1"],
     contract_aliases: [
+      { generic: "clarified.task@v1", actual: "goal.clarified-task@v1" },
       { generic: "goal.contract@v1", actual: "goal.child-fix-result@v1" },
       { generic: "goal.contract@v1", actual: "goal.child-build-result@v1" },
       { generic: "goal.contract@v1", actual: "goal.child-review-result@v1" },
@@ -34570,13 +34748,55 @@ var goalFlowData = {
     ],
     items: [
       {
+        id: "clarify-goal",
+        title: "Clarify - shape Goal task",
+        stage: "frame",
+        block: "clarify",
+        input: {
+          task: "task.intake@v1",
+          route: "route.decision@v1"
+        },
+        output: "goal.clarified-task@v1",
+        evidence_requirements: [
+          "original request",
+          "clarified task",
+          "desired outcome",
+          "proof needed",
+          "constraints",
+          "scope",
+          "assumptions",
+          "missing information",
+          "stop conditions"
+        ],
+        execution: { kind: "relay", role: "researcher" },
+        protocol: "goal-clarify@v1",
+        writes: {
+          report_path: "reports/goal/clarified-task.json",
+          request_path: "reports/relay/goal-clarify.request.json",
+          receipt_path: "reports/relay/goal-clarify.receipt.txt",
+          result_path: "reports/relay/goal-clarify.result.json"
+        },
+        check: {
+          pass: ["continue", "ask", "stop"]
+        },
+        route_from_report: {
+          path: ["verdict"]
+        },
+        routes: {
+          continue: "goal-contract",
+          ask: "@stop",
+          stop: "@stop"
+        }
+      },
+      {
         id: "goal-contract",
         title: "Goal - write contract and select static target",
         stage: "frame",
         block: "goal",
         input: {
           task: "task.intake@v1",
-          route: "route.decision@v1"
+          route: "route.decision@v1",
+          clarified: "goal.clarified-task@v1"
         },
         output: "goal.contract@v1",
         evidence_requirements: [
@@ -34877,6 +35097,12 @@ var goalFlowData = {
   },
   reports: [
     {
+      schemaName: "goal.clarified-task@v1",
+      channel: "relay",
+      schema: GoalClarifiedTask,
+      relayHint: goalClarifiedTaskShapeHint.instruction
+    },
+    {
       schemaName: "goal.contract@v1",
       channel: "report",
       schema: GoalContract,
@@ -34952,6 +35178,14 @@ var goalFlowData = {
     },
     progress: {
       steps: [
+        {
+          stepId: "clarify-goal",
+          taskTitle: "Clarify the goal",
+          activeText: "Clarifying the goal",
+          relayRole: "researcher",
+          relayStartedText: "Asking the researcher to clarify the goal...",
+          relayCompletedText: "Finished clarifying the goal."
+        },
         {
           stepId: "goal-contract",
           taskTitle: "Write the goal contract",
@@ -42585,7 +42819,7 @@ ${feedback.stderr_summary}`],
     "Revise the result so this criterion passes. Keep the same response contract and accepted verdicts."
   ].join("\n");
 }
-function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback) {
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
     if (!existsSync10(abs))
@@ -42602,6 +42836,7 @@ ${readFileSync20(abs, "utf8")}`;
     `Role: ${step.role}`,
     `Accepted verdicts: ${step.check.pass.join(", ")}`,
     "",
+    ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
     "Context (from reads):",
     readsBody,
     "",
@@ -42945,6 +43180,19 @@ function timeoutMs(step) {
   const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === "number" ? wallClock : void 0;
 }
+function readRouteFromReportBody(body, path) {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
+      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
+    }
+    cursor = cursor[segment];
+  }
+  if (typeof cursor !== "string" || cursor.length === 0) {
+    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
+  }
+  return cursor;
+}
 function suppliedConnectorFromRelayer(context) {
   if (context.relayer === void 0)
     return void 0;
@@ -43043,7 +43291,7 @@ async function executeProductionRelayAttempt(input) {
     resolvedSelection,
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
   });
-  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback);
+  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback, context.goal);
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
   const result = step.writes?.result;
@@ -43158,6 +43406,13 @@ async function executeProductionRelayAttempt(input) {
     failureKind = validation.failureKind;
     acceptance = validation.acceptance;
   }
+  if (checkEvaluation.kind === "pass" && evaluation.kind === "pass" && parsedBody === void 0) {
+    try {
+      parsedBody = JSON.parse(relayResult.result_body);
+    } catch {
+      parsedBody = void 0;
+    }
+  }
   const relayCompletedVerdict = evaluation.kind === "pass" ? evaluation.verdict : evaluation.observedVerdict ?? NO_VERDICT_SENTINEL;
   const durationMs = Math.max(0, Date.now() - startMs);
   let writtenReportPath;
@@ -43165,13 +43420,6 @@ async function executeProductionRelayAttempt(input) {
     let reportBody;
     if (checkEvaluation.kind === "pass" && evaluation.kind === "pass") {
       reportBody = parsedBody;
-      if (reportBody === void 0) {
-        try {
-          reportBody = JSON.parse(relayResult.result_body);
-        } catch {
-          reportBody = void 0;
-        }
-      }
     } else if (checkEvaluation.kind === "fail" && step.report.schema !== void 0) {
       const parseResult = parseReport(step.report.schema, relayResult.result_body);
       if (parseResult.kind === "ok") {
@@ -43287,8 +43535,16 @@ async function executeProductionRelay(step, context) {
     throw new Error(relayAttempt.reason);
   }
   const { evaluation } = relayAttempt;
-  if (evaluation.kind === "pass")
+  if (evaluation.kind === "pass") {
+    if (step.routeFromReport !== void 0) {
+      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      if (!Object.hasOwn(step.routes, route)) {
+        throw new Error(`relay step '${step.id}' route_from_report selected undeclared route '${route}'`);
+      }
+      return { route, details: { verdict: evaluation.verdict } };
+    }
     return { route: "pass", details: { verdict: evaluation.verdict } };
+  }
   if (relayAttempt.acceptance_failure !== void 0) {
     const failure = relayAttempt.acceptance_failure;
     if (failure.on_failure.mode === "retry-with-feedback") {
@@ -44906,7 +45162,7 @@ function connectorFromTrace(entry) {
 }
 function relayRoleFromTrace(entry) {
   const role = entry.role;
-  return role === "reviewer" || role === "implementer" ? role : void 0;
+  return role === "researcher" || role === "reviewer" || role === "implementer" ? role : void 0;
 }
 function stepTitle(input) {
   if (input.stepId === void 0)
@@ -44917,12 +45173,18 @@ function flowLabel(flowId) {
   return flowId.split("-").filter((part) => part.length > 0).map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 function fallbackRelayStartedStatusText(role) {
+  if (role === "researcher") {
+    return "Asking the researcher to clarify the task...";
+  }
   if (role === "reviewer") {
     return "Asking the reviewer to check the result...";
   }
   return "Asking the specialist to make the change...";
 }
 function fallbackRelayCompletedStatusText(role) {
+  if (role === "researcher") {
+    return "Finished clarifying the task.";
+  }
   if (role === "reviewer") {
     return "Finished checking the result.";
   }

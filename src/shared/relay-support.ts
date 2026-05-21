@@ -136,6 +136,7 @@ export function composeRelayPrompt(
   runFolder: string,
   loadedSkills: readonly LoadedRelaySkill[] = [],
   acceptanceRetryFeedback?: RelayAcceptanceRetryFeedback,
+  operatorGoal?: string,
 ): string {
   const readsBody =
     step.reads.length === 0
@@ -156,6 +157,9 @@ export function composeRelayPrompt(
     `Role: ${step.role}`,
     `Accepted verdicts: ${step.check.pass.join(', ')}`,
     '',
+    ...(operatorGoal === undefined || operatorGoal.length === 0
+      ? []
+      : ['Operator Goal:', operatorGoal, '']),
     'Context (from reads):',
     readsBody,
     '',

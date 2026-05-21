@@ -1,5 +1,19 @@
 import type { SchemaShapeHint } from '../registries/shape-hints/types.js';
 
+export const goalClarifiedTaskShapeHint: SchemaShapeHint = {
+  kind: 'schema',
+  schema: 'goal.clarified-task@v1',
+  instruction: [
+    'Respond with a single raw JSON object for goal.clarified-task@v1 whose top-level shape is exactly:',
+    '{ "schema": "goal.clarified-task@v1", "verdict": "continue|ask|stop", "original_request": "...", "target": { "kind": "flow", "id": "goal" }, "guide_id": "goal-v1", "clarified_prompt": "...", "objective": "...", "desired_outcome": "...", "proof_needed": [{ "kind": "command|report|review|source|checkpoint", "description": "...", "required": true }], "constraints": [], "scope": { "in_bounds": [], "out_of_bounds": [] }, "assumptions": [], "missing_information": [], "iteration_policy": [], "stop_conditions": [], "suggested_parts": [] }',
+    'Borrow only the useful Goal prompt ingredients: outcome, proof, constraints, boundaries, iteration policy, and blocked stop condition.',
+    'Do not include adversarial review instructions, two-clean-review language, or medium-or-above finding ceremony; Goal gate steps own that later.',
+    'Do not claim completion. Do not select or invent dynamic child flows. Preserve the operator request and keep the clarified prompt compact.',
+    'Use verdict ask only when missing information makes the Goal unsafe or impossible to verify. Use verdict stop only when this is not a durable, checkable Goal-shaped task.',
+    'Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
+  ].join(' '),
+};
+
 export const goalGateShapeHint: SchemaShapeHint = {
   kind: 'schema',
   schema: 'goal.gate@v1',

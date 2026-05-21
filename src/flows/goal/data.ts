@@ -1,9 +1,14 @@
 import { RunResult } from '../../schemas/result.js';
 import type { FlowData } from '../flow-definition.js';
 import type { CompiledFlowSignal } from '../types.js';
-import { goalGatePassShapeHint, goalGateShapeHint } from './relay-hints.js';
+import {
+  goalClarifiedTaskShapeHint,
+  goalGatePassShapeHint,
+  goalGateShapeHint,
+} from './relay-hints.js';
 import {
   GoalAttempt,
+  GoalClarifiedTask,
   GoalContract,
   GoalEvidenceEvaluation,
   GoalGate,
@@ -94,9 +99,10 @@ export const goalFlowData = {
       'Goal flow. Circuit writes a bounded goal contract, dispatches through one statically authored child flow target, evaluates evidence, runs a two-pass adversarial completion gate, and closes from typed Goal reports.',
     status: 'active',
     version: '0.1.0',
-    starts_at: 'goal-contract',
+    starts_at: 'clarify-goal',
     initial_contracts: ['task.intake@v1', 'route.decision@v1', 'flow.question@v1'],
     contract_aliases: [
+      { generic: 'clarified.task@v1', actual: 'goal.clarified-task@v1' },
       { generic: 'goal.contract@v1', actual: 'goal.child-fix-result@v1' },
       { generic: 'goal.contract@v1', actual: 'goal.child-build-result@v1' },
       { generic: 'goal.contract@v1', actual: 'goal.child-review-result@v1' },
@@ -142,6 +148,47 @@ export const goalFlowData = {
     ],
     items: [
       {
+        id: 'clarify-goal',
+        title: 'Clarify - shape Goal task',
+        stage: 'frame',
+        block: 'clarify',
+        input: {
+          task: 'task.intake@v1',
+          route: 'route.decision@v1',
+        },
+        output: 'goal.clarified-task@v1',
+        evidence_requirements: [
+          'original request',
+          'clarified task',
+          'desired outcome',
+          'proof needed',
+          'constraints',
+          'scope',
+          'assumptions',
+          'missing information',
+          'stop conditions',
+        ],
+        execution: { kind: 'relay', role: 'researcher' },
+        protocol: 'goal-clarify@v1',
+        writes: {
+          report_path: 'reports/goal/clarified-task.json',
+          request_path: 'reports/relay/goal-clarify.request.json',
+          receipt_path: 'reports/relay/goal-clarify.receipt.txt',
+          result_path: 'reports/relay/goal-clarify.result.json',
+        },
+        check: {
+          pass: ['continue', 'ask', 'stop'],
+        },
+        route_from_report: {
+          path: ['verdict'],
+        },
+        routes: {
+          continue: 'goal-contract',
+          ask: '@stop',
+          stop: '@stop',
+        },
+      },
+      {
         id: 'goal-contract',
         title: 'Goal - write contract and select static target',
         stage: 'frame',
@@ -149,6 +196,7 @@ export const goalFlowData = {
         input: {
           task: 'task.intake@v1',
           route: 'route.decision@v1',
+          clarified: 'goal.clarified-task@v1',
         },
         output: 'goal.contract@v1',
         evidence_requirements: [
@@ -449,6 +497,12 @@ export const goalFlowData = {
   },
   reports: [
     {
+      schemaName: 'goal.clarified-task@v1',
+      channel: 'relay',
+      schema: GoalClarifiedTask,
+      relayHint: goalClarifiedTaskShapeHint.instruction,
+    },
+    {
       schemaName: 'goal.contract@v1',
       channel: 'report',
       schema: GoalContract,
@@ -524,6 +578,14 @@ export const goalFlowData = {
     },
     progress: {
       steps: [
+        {
+          stepId: 'clarify-goal',
+          taskTitle: 'Clarify the goal',
+          activeText: 'Clarifying the goal',
+          relayRole: 'researcher',
+          relayStartedText: 'Asking the researcher to clarify the goal...',
+          relayCompletedText: 'Finished clarifying the goal.',
+        },
         {
           stepId: 'goal-contract',
           taskTitle: 'Write the goal contract',

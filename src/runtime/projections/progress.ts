@@ -56,9 +56,11 @@ function connectorFromTrace(entry: TraceEntry): ResolvedConnector | undefined {
   return undefined;
 }
 
-function relayRoleFromTrace(entry: TraceEntry): 'reviewer' | 'implementer' | undefined {
+type ProgressRelayRole = 'researcher' | 'reviewer' | 'implementer';
+
+function relayRoleFromTrace(entry: TraceEntry): ProgressRelayRole | undefined {
   const role = entry.role;
-  return role === 'reviewer' || role === 'implementer' ? role : undefined;
+  return role === 'researcher' || role === 'reviewer' || role === 'implementer' ? role : undefined;
 }
 
 function stepTitle(input: {
@@ -77,14 +79,20 @@ function flowLabel(flowId: string): string {
     .join(' ');
 }
 
-function fallbackRelayStartedStatusText(role: 'reviewer' | 'implementer'): string {
+function fallbackRelayStartedStatusText(role: ProgressRelayRole): string {
+  if (role === 'researcher') {
+    return 'Asking the researcher to clarify the task...';
+  }
   if (role === 'reviewer') {
     return 'Asking the reviewer to check the result...';
   }
   return 'Asking the specialist to make the change...';
 }
 
-function fallbackRelayCompletedStatusText(role: 'reviewer' | 'implementer'): string {
+function fallbackRelayCompletedStatusText(role: ProgressRelayRole): string {
+  if (role === 'researcher') {
+    return 'Finished clarifying the task.';
+  }
   if (role === 'reviewer') {
     return 'Finished checking the result.';
   }
@@ -92,14 +100,14 @@ function fallbackRelayCompletedStatusText(role: 'reviewer' | 'implementer'): str
 }
 
 function relayStartedTextFor(input: {
-  readonly role: 'reviewer' | 'implementer';
+  readonly role: ProgressRelayRole;
   readonly display: ReturnType<typeof stepDisplay>;
 }): string {
   return input.display.relayStartedText ?? fallbackRelayStartedStatusText(input.role);
 }
 
 function relayCompletedTextFor(input: {
-  readonly role: 'reviewer' | 'implementer';
+  readonly role: ProgressRelayRole;
   readonly display: ReturnType<typeof stepDisplay>;
 }): string {
   return input.display.relayCompletedText ?? fallbackRelayCompletedStatusText(input.role);
@@ -375,7 +383,7 @@ function stepDisplay(input: {
   readonly title: string;
   readonly taskTitle: string;
   readonly activeText: string;
-  readonly relayRole?: 'implementer' | 'reviewer';
+  readonly relayRole?: ProgressRelayRole;
   readonly relayStartedText?: string;
   readonly relayCompletedText?: string;
 } {

@@ -8,6 +8,7 @@ import { compileSchematicToCompiledFlow } from '../../src/flows/compile-schemati
 import { schematicForFlowDefinition } from '../../src/flows/flow-definition.js';
 import {
   GoalAttempt,
+  GoalClarifiedTask,
   GoalContract,
   GoalEvidenceEvaluation,
   GoalGate,
@@ -60,6 +61,43 @@ function childRunResult(
     trace_entries_observed: 1,
     manifest_hash: `${step.flowRef}-hash`,
     verdict,
+  });
+}
+
+function clarifiedTask(
+  goal: string,
+  overrides: Partial<ReturnType<typeof GoalClarifiedTask.parse>> = {},
+): ReturnType<typeof GoalClarifiedTask.parse> {
+  return GoalClarifiedTask.parse({
+    schema: 'goal.clarified-task@v1',
+    verdict: 'continue',
+    original_request: goal,
+    target: {
+      kind: 'flow',
+      id: 'goal',
+    },
+    guide_id: 'goal-v1',
+    clarified_prompt: goal,
+    objective: goal,
+    desired_outcome: goal,
+    proof_needed: [
+      {
+        kind: 'command',
+        description: 'Use the selected child flow proof and verification evidence.',
+        required: true,
+      },
+    ],
+    constraints: ['Preserve the operator request and current flow behavior.'],
+    scope: {
+      in_bounds: ['The operator objective and its proof.'],
+      out_of_bounds: ['Dynamic child flow loading.'],
+    },
+    assumptions: ['The current run folder is the authoritative Goal state.'],
+    missing_information: [],
+    iteration_policy: ['Inspect evidence after each step and choose the next safe route.'],
+    stop_conditions: ['Stop if required proof cannot be obtained.'],
+    suggested_parts: [],
+    ...overrides,
   });
 }
 
@@ -147,7 +185,11 @@ function happyPathExecutors(): Partial<ExecutorRegistry> {
     relay: async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
       if (step.kind !== 'relay') throw new Error(`unexpected step kind ${step.kind}`);
       const report = step.writes?.report;
-      if (report === undefined) throw new Error('Goal gate step must write a report');
+      if (report === undefined) throw new Error('Goal relay step must write a report');
+      if (step.id === 'clarify-goal') {
+        await context.files.writeJson(report, clarifiedTask(context.goal));
+        return { route: 'continue', details: { verdict: 'continue' } };
+      }
       await context.files.writeJson(report, gateReport(step.id));
       return { route: 'pass', details: { verdict: 'gate-pass' } };
     },
@@ -159,6 +201,12 @@ function blockedGateExecutors(): Partial<ExecutorRegistry> {
     ...happyPathExecutors(),
     relay: async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
       if (step.kind !== 'relay') throw new Error(`unexpected step kind ${step.kind}`);
+      if (step.id === 'clarify-goal') {
+        const report = step.writes?.report;
+        if (report === undefined) throw new Error('Goal Clarify step must write a report');
+        await context.files.writeJson(report, clarifiedTask(context.goal));
+        return { route: 'continue', details: { verdict: 'continue' } };
+      }
       if (step.id !== 'goal-gate-pass-1') {
         throw new Error(`blocked-gate fixture should not reach ${step.id}`);
       }
@@ -172,6 +220,14 @@ function blockedGateExecutors(): Partial<ExecutorRegistry> {
 
 function weakChildProofExecutors(): Partial<ExecutorRegistry> {
   return {
+    relay: async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
+      if (step.kind !== 'relay') throw new Error(`unexpected step kind ${step.kind}`);
+      if (step.id !== 'clarify-goal') throw new Error(`unexpected relay step ${step.id}`);
+      const report = step.writes?.report;
+      if (report === undefined) throw new Error('Goal Clarify step must write a report');
+      await context.files.writeJson(report, clarifiedTask(context.goal));
+      return { route: 'continue', details: { verdict: 'continue' } };
+    },
     'sub-run': async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
       if (step.kind !== 'sub-run') throw new Error(`unexpected step kind ${step.kind}`);
       if (step.flowRef !== 'build') {
@@ -187,6 +243,14 @@ function weakChildProofExecutors(): Partial<ExecutorRegistry> {
 
 function missingEvidenceExecutors(): Partial<ExecutorRegistry> {
   return {
+    relay: async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
+      if (step.kind !== 'relay') throw new Error(`unexpected step kind ${step.kind}`);
+      if (step.id !== 'clarify-goal') throw new Error(`unexpected relay step ${step.id}`);
+      const report = step.writes?.report;
+      if (report === undefined) throw new Error('Goal Clarify step must write a report');
+      await context.files.writeJson(report, clarifiedTask(context.goal));
+      return { route: 'continue', details: { verdict: 'continue' } };
+    },
     'sub-run': async (step: ExecutableStep): Promise<StepOutcome> => {
       if (step.kind !== 'sub-run') throw new Error(`unexpected step kind ${step.kind}`);
       return { route: 'pass', details: { omitted_child_result: true } };
@@ -209,6 +273,18 @@ describe('Goal flow package', () => {
     const flow = goalCompiledFlow();
     const subRuns = flow.steps.filter((step) => step.kind === 'sub-run');
 
+    expect(flow.starts_at).toBe('clarify-goal');
+    const clarify = flow.steps.find((step) => step.id === 'clarify-goal');
+    expect(clarify?.kind).toBe('relay');
+    if (clarify === undefined || clarify.kind !== 'relay') {
+      throw new Error('Goal flow must include a relay clarify step');
+    }
+    expect(clarify?.route_from_report).toEqual({ path: ['verdict'] });
+    expect(clarify.writes.report).toEqual({
+      path: 'reports/goal/clarified-task.json',
+      schema: 'goal.clarified-task@v1',
+    });
+
     expect(subRuns.map((step) => step.id).sort()).toEqual(
       CHILD_TARGETS.map((target) => `goal-run-${target}`).sort(),
     );
@@ -216,10 +292,50 @@ describe('Goal flow package', () => {
     expect(subRuns.every((step) => step.flow_ref.entry_mode === 'default')).toBe(true);
 
     const contract = flow.steps.find((step) => step.id === 'goal-contract');
+    expect(contract?.reads).toContain('reports/goal/clarified-task.json');
     expect(contract?.route_from_report).toEqual({ path: ['selected_flow_target'] });
     for (const target of CHILD_TARGETS) {
       expect(contract?.routes[target]).toBe(`goal-run-${target}`);
     }
+  });
+
+  it('rejects Goal Clarify reports that smuggle completion-gate ceremony', () => {
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Build the dashboard filter'),
+        clarified_prompt:
+          'Build the dashboard filter. Before completion, adversarially review the result.',
+      }),
+    ).toThrow(/adversarial review loop/);
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Build the dashboard filter'),
+        stop_conditions: ['Before completion, require two consecutive clean reviews.'],
+      }),
+    ).toThrow(/adversarial review loop/);
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Build the dashboard filter'),
+        iteration_policy: ['Do the work, then require two clean reviews.'],
+      }),
+    ).toThrow(/adversarial review loop/);
+  });
+
+  it('rejects Goal Clarify ask or stop verdicts without recovery context', () => {
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Build the dashboard filter'),
+        verdict: 'ask',
+        missing_information: [],
+      }),
+    ).toThrow(/missing information/);
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Build the dashboard filter'),
+        verdict: 'stop',
+        stop_conditions: [],
+      }),
+    ).toThrow(/stop condition/);
   });
 
   it('uses Review only for audit-only goals, not mixed implementation goals', async () => {
@@ -242,6 +358,43 @@ describe('Goal flow package', () => {
       const contract = GoalContract.parse(readJson(runFolder, 'reports/goal/contract.json'));
       expect(contract.selected_flow_target).toBe(expectedTarget);
     }
+  });
+
+  it('keeps the original request authoritative when Clarify narrows a mixed goal', async () => {
+    const runFolder = join(runFolderBase, 'clarify-narrowed-target');
+    await runCompiledFlowWithWaiting({
+      flowBytes: goalFlowBytes(),
+      runDir: runFolder,
+      runId: '00000000-0000-0000-0000-000000000303',
+      goal: 'Review and fix the flaky login bug',
+      depth: 'deep',
+      now: () => new Date('2026-05-20T12:00:00.000Z'),
+      executors: {
+        relay: async (step: ExecutableStep, context: RunContext): Promise<StepOutcome> => {
+          if (step.kind !== 'relay') throw new Error(`unexpected step kind ${step.kind}`);
+          if (step.id !== 'clarify-goal') throw new Error(`unexpected relay step ${step.id}`);
+          const report = step.writes?.report;
+          if (report === undefined) throw new Error('Goal Clarify step must write a report');
+          await context.files.writeJson(
+            report,
+            clarifiedTask(context.goal, {
+              clarified_prompt: 'Review the flaky login report',
+              objective: 'Review the flaky login report',
+              desired_outcome: 'A review report exists for the flaky login report.',
+            }),
+          );
+          return { route: 'continue', details: { verdict: 'continue' } };
+        },
+        'sub-run': async (step: ExecutableStep): Promise<StepOutcome> => {
+          if (step.kind !== 'sub-run') throw new Error(`unexpected step kind ${step.kind}`);
+          return { route: 'pass', details: { omitted_child_result: true } };
+        },
+      },
+      maxSteps: 20,
+    });
+
+    const contract = GoalContract.parse(readJson(runFolder, 'reports/goal/contract.json'));
+    expect(contract.selected_flow_target).toBe('fix');
   });
 
   it('completes only after a satisfied evaluation and two gate passes', async () => {

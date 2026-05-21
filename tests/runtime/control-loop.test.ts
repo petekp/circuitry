@@ -48,6 +48,7 @@ type RelayFlowFixtureOptions = {
   readonly routes?: Record<string, string>;
   readonly budgets?: { readonly max_attempts: number };
   readonly report?: { readonly path: string; readonly schema: string };
+  readonly routeFromReport?: { readonly path: readonly string[] };
   readonly acceptanceCriteria?: unknown;
 };
 
@@ -101,6 +102,9 @@ function relayFlowBytes(options: readonly string[] | RelayFlowFixtureOptions = [
           protocol: 'runtime-relay-check@v1',
           reads: [],
           routes,
+          ...(fixtureOptions.routeFromReport === undefined
+            ? {}
+            : { route_from_report: fixtureOptions.routeFromReport }),
           ...(fixtureOptions.budgets === undefined ? {} : { budgets: fixtureOptions.budgets }),
           executor: 'worker',
           kind: 'relay',
@@ -677,6 +681,29 @@ describe('runtime control-loop parity twins', () => {
           step_id: 'relay-step',
           check_kind: 'result_verdict',
           outcome: 'pass',
+        }),
+      ]),
+    );
+  });
+
+  it('uses relay route_from_report to choose the declared route from the report body', async () => {
+    const { result, trace } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        pass: ['continue'],
+        routes: { pass: '@stop', continue: '@complete' },
+        routeFromReport: { path: ['verdict'] },
+      }),
+      resultBody: '{"verdict":"continue"}',
+      runId: 'aaaaaaaa-1212-4aaa-8aaa-aaaaaaaa1212',
+    });
+
+    expect(result.outcome).toBe('complete');
+    expect(trace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'step.completed',
+          step_id: 'relay-step',
+          route_taken: 'continue',
         }),
       ]),
     );
