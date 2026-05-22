@@ -12,6 +12,7 @@ export type GuardedPatchApplyInput = {
   readonly patchPath: string;
   readonly expectedPatchSha256: Sha256;
   readonly baseRef?: string;
+  readonly expectedBaseTreeHash?: Sha256;
   readonly keepTempRoot?: boolean;
 };
 
@@ -36,6 +37,10 @@ export type GuardedPatchApplyResult =
 
 function sha256File(path: string): Sha256 {
   return createHash('sha256').update(readFileSync(path)).digest('hex') as Sha256;
+}
+
+function sha256Text(text: string): Sha256 {
+  return createHash('sha256').update(text).digest('hex') as Sha256;
 }
 
 function runGit(cwd: string, args: readonly string[]): void {
@@ -165,6 +170,20 @@ export function guardedApplyPatch(input: GuardedPatchApplyInput): GuardedPatchAp
         return rejectBeforeTempRoot(
           'base_mismatch',
           `base mismatch: expected ${expectedBase}, got ${actualBase}`,
+        );
+      }
+    } catch (error) {
+      return rejectBeforeTempRoot('base_mismatch', errorMessage(error));
+    }
+  }
+
+  if (input.expectedBaseTreeHash !== undefined) {
+    try {
+      const actualTreeHash = sha256Text(readGitRaw(projectRoot, ['ls-tree', '-r', '-z', 'HEAD']));
+      if (actualTreeHash !== input.expectedBaseTreeHash) {
+        return rejectBeforeTempRoot(
+          'base_mismatch',
+          `base tree mismatch: expected ${input.expectedBaseTreeHash}, got ${actualTreeHash}`,
         );
       }
     } catch (error) {

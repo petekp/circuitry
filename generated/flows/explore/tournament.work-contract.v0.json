@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/explore/tournament.work-contract.v0.json",
-    "sha256": "c7973186e54675c2b749af11c10b8e688f9ee5de20266c9b21d118f73336bf68",
+    "sha256": "a4d09d427691ea056b078c07d51719ac5448837b3634cae2ca5e24b0995c1d07",
     "flow_id": "explore"
   },
   "work_contract": {
@@ -653,6 +653,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -712,6 +713,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -742,6 +744,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -772,6 +775,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -827,6 +831,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -857,6 +862,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -887,6 +893,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -917,6 +924,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",

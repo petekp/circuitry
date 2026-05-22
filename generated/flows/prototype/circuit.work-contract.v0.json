@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/prototype/circuit.work-contract.v0.json",
-    "sha256": "c4c8d64570ab02908cea5d6dc46269200690243d809d0a678881e380fc03bff3",
+    "sha256": "f7bfc3b7e5c50b3cc07fcf929dede2754a47531482b81355ccdb05b2d1a41d47",
     "flow_id": "prototype"
   },
   "work_contract": {
@@ -151,6 +151,21 @@
           "step_id": "prototype-checkpoint-step",
           "route_id": "stop",
           "target": "@stop"
+        },
+        {
+          "step_id": "prototype-checkpoint-step",
+          "route_id": "keep-prototype",
+          "target": "close-step"
+        },
+        {
+          "step_id": "prototype-checkpoint-step",
+          "route_id": "save-build-input",
+          "target": "close-step"
+        },
+        {
+          "step_id": "prototype-checkpoint-step",
+          "route_id": "discard-prototype",
+          "target": "close-step"
         },
         {
           "step_id": "close-step",
@@ -303,7 +318,10 @@
         "routes": {
           "continue": "close-step",
           "pass": "close-step",
-          "stop": "@stop"
+          "stop": "@stop",
+          "keep-prototype": "close-step",
+          "save-build-input": "close-step",
+          "discard-prototype": "close-step"
         }
       },
       {
@@ -470,6 +488,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -489,7 +508,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/frame-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       },
@@ -500,6 +519,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -519,7 +539,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/plan-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       },
@@ -530,6 +550,7 @@
         "route_target": "close-step",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -549,7 +570,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/act-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       },
@@ -560,6 +581,7 @@
         "route_target": "close-step",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -579,7 +601,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/verify-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       },
@@ -590,6 +612,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -609,7 +632,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/prototype-checkpoint-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       },
@@ -620,6 +643,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -639,7 +663,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/close-step/routes/stop",
-          "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+          "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
           "flow_id": "prototype"
         }
       }
@@ -656,7 +680,7 @@
       {
         "kind": "work_contract",
         "ref": "compiled-flow/steps/prototype-checkpoint-step/policy/safe_default_choice",
-        "sha256": "f92d08e0620d42dbe0bfc496169df130d8d0c5c6bab1bc8576e6d3b5131fd539",
+        "sha256": "5041b48541af87013670392e09b6ae71f813f0a1c7d8e86c36ba9443b1b7267f",
         "flow_id": "prototype"
       }
     ],

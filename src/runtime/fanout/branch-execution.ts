@@ -12,10 +12,10 @@ import {
   type ProductionRelayAttemptValidationInput,
   type RelayConnector,
   executeProductionRelayAttempt,
-  resolveRelayExecution,
 } from '../executors/relay.js';
 import type { FanoutStep, RelayStep } from '../manifest/executable-flow.js';
 import type { WorktreeRunner } from '../run/child-runner.js';
+import { resolveRelayExecution } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
   type BranchOutcome,
@@ -288,6 +288,7 @@ export async function executeRelayFanoutBranch(
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { configLayers: context.selectionConfigLayers }),
+      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
     });
     const response = await relayConnector.relay({
       runId: context.runId,

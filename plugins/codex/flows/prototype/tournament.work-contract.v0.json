@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/prototype/tournament.work-contract.v0.json",
-    "sha256": "1abfe24c04465bda1b5738d050c480cda3126b8ef471448c2b342fe56b727393",
+    "sha256": "50caf97adc9bb287d0d882aa4a06ec73938b25eb33259dd017368b753a4557c3",
     "flow_id": "prototype"
   },
   "work_contract": {
@@ -777,6 +777,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -807,6 +808,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -837,6 +839,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -867,6 +870,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -897,6 +901,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -927,6 +932,7 @@
         "route_target": "close-model-comparison-step",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -957,6 +963,7 @@
         "route_target": "close-model-comparison-step",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -987,6 +994,7 @@
         "route_target": "close-model-comparison-step",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1017,6 +1025,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1047,6 +1056,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",

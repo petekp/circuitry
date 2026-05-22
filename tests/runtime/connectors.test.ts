@@ -9,11 +9,12 @@ import {
   classifyRelayWriteMode,
   resolveConnectorForRelay,
 } from '../../src/runtime/connectors/resolver.js';
-import { resolveRelayExecution } from '../../src/runtime/executors/relay.js';
 import type { ExecutableFlow, RelayStep } from '../../src/runtime/manifest/executable-flow.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
+import { resolveRelayExecution } from '../../src/runtime/run/relay-guidance.js';
 import { LayeredConfig } from '../../src/schemas/config.js';
 import { CustomConnectorDescriptor } from '../../src/schemas/connector.js';
+import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 
 describe('runtime connector safety', () => {
   let tempDir: string;
@@ -168,6 +169,215 @@ describe('runtime connector safety', () => {
 
     expect(decision.connectorName).toBe('codex');
     expect(decision.resolvedFrom).toEqual({ source: 'default' });
+  });
+
+  it('uses PolicyEnvelope flow connector hints before legacy v1 flow routing', () => {
+    const legacyLayer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        relay: {
+          default: 'codex',
+          roles: {},
+          circuits: {
+            review: { kind: 'builtin', name: 'codex' },
+          },
+          connectors: {},
+        },
+      },
+    });
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          preferences: {
+            relay: {
+              flow_connector_hints: [
+                {
+                  flow_id: 'review',
+                  prefer_connector: { kind: 'builtin', name: 'claude-code' },
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const decision = resolveRelayExecution({
+      flowId: 'review',
+      role: 'reviewer',
+      configLayers: [legacyLayer],
+      policyLayers: [policyLayer],
+    });
+
+    expect(decision.connectorName).toBe('claude-code');
+    expect(decision.resolvedFrom).toEqual({ source: 'circuit', flow_id: 'review' });
+  });
+
+  it('uses PolicyEnvelope connector defaults before legacy v1 relay defaults', () => {
+    const legacyLayer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        relay: {
+          default: 'codex',
+        },
+      },
+    });
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          defaults: {
+            connector: { kind: 'builtin', name: 'claude-code' },
+          },
+        },
+      },
+    });
+
+    const decision = resolveRelayExecution({
+      flowId: 'review',
+      role: 'reviewer',
+      configLayers: [legacyLayer],
+      policyLayers: [policyLayer],
+    });
+
+    expect(decision.connectorName).toBe('claude-code');
+    expect(decision.resolvedFrom).toEqual({ source: 'default' });
+  });
+
+  it('resolves custom step connector capabilities from PolicyEnvelope before legacy config', () => {
+    const legacyCustom = CustomConnectorDescriptor.parse({
+      kind: 'custom',
+      name: 'local-reviewer',
+      command: ['node', 'legacy-reviewer.js'],
+      prompt_transport: 'prompt-file',
+      output: { kind: 'output-file' },
+      capabilities: { filesystem: 'read-only', structured_output: 'json' },
+    });
+    const policyCustom = CustomConnectorDescriptor.parse({
+      kind: 'custom',
+      name: 'local-reviewer',
+      command: ['node', 'policy-reviewer.js'],
+      prompt_transport: 'prompt-file',
+      output: { kind: 'output-file' },
+      capabilities: { filesystem: 'read-only', structured_output: 'json' },
+    });
+    const legacyLayer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        relay: {
+          connectors: { 'local-reviewer': legacyCustom },
+        },
+      },
+    });
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          rules: {
+            connectors: {
+              registry: { 'local-reviewer': policyCustom },
+            },
+          },
+        },
+      },
+    });
+
+    const decision = resolveRelayExecution({
+      flowId: 'review',
+      role: 'reviewer',
+      stepConnector: 'local-reviewer',
+      configLayers: [legacyLayer],
+      policyLayers: [policyLayer],
+    });
+
+    expect(decision.connectorName).toBe('local-reviewer');
+    expect(decision.connector).toEqual(policyCustom);
+    expect(decision.resolvedFrom).toEqual({ source: 'explicit' });
+  });
+
+  it('applies PolicyEnvelope connector rules to explicit relay connectors', () => {
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          rules: {
+            connectors: {
+              allow: ['codex'],
+            },
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      resolveRelayExecution({
+        flowId: 'review',
+        role: 'reviewer',
+        stepConnector: 'claude-code',
+        policyLayers: [policyLayer],
+      }),
+    ).toThrow("PolicyEnvelope disallows connector 'claude-code'");
+  });
+
+  it('applies PolicyEnvelope provider rules to explicit relay selection', () => {
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          rules: {
+            models: {
+              deny_providers: ['openai'],
+            },
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      resolveRelayExecution({
+        flowId: 'review',
+        role: 'reviewer',
+        stepConnector: 'codex',
+        selection: { model: { provider: 'openai', model: 'gpt-5' }, effort: 'medium' },
+        policyLayers: [policyLayer],
+      }),
+    ).toThrow("PolicyEnvelope disallows provider 'openai'");
+  });
+
+  it('applies PolicyEnvelope effort limits to explicit relay selection', () => {
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          limits: {
+            max_effort: 'medium',
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      resolveRelayExecution({
+        flowId: 'review',
+        role: 'reviewer',
+        stepConnector: 'claude-code',
+        selection: {
+          model: { provider: 'anthropic', model: 'claude-opus-4-7' },
+          effort: 'high',
+        },
+        policyLayers: [policyLayer],
+      }),
+    ).toThrow("PolicyEnvelope disallows effort 'high'");
   });
 
   it('honors a builtin step connector without a supplied relay connector', () => {

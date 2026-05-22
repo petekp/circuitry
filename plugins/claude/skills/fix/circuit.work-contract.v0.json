@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/fix/circuit.work-contract.v0.json",
-    "sha256": "e1e6a8e62707d8c51ec75314f0d46a75e304180aa156d32cce09f58ca86f229a",
+    "sha256": "5bebf9c92b2cebd1c3a9351f8aed2c71c1c14c4c546f5cbae8628e178cf749f1",
     "flow_id": "fix"
   },
   "work_contract": {
@@ -1169,6 +1169,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1258,6 +1259,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1343,6 +1345,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1398,6 +1401,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1503,6 +1507,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1533,6 +1538,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1622,6 +1628,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1732,6 +1739,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1787,6 +1795,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1842,6 +1851,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -1977,6 +1987,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -2007,6 +2018,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -2087,6 +2099,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",

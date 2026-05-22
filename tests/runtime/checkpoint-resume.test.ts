@@ -573,6 +573,40 @@ describe('runtime checkpoint pause/resume fixture', () => {
     });
   });
 
+  it('rejects checkpoint requests when a static choice has no declared route', async () => {
+    const runDir = join(tempDir, 'missing-choice-route');
+    const result = await runCompiledFlowWithWaiting({
+      flowBytes: fixtureBytes(
+        checkpointFixtureFlow({
+          checkpointRoutes: {
+            pass: 'relay-step',
+            stop: '@stop',
+          },
+        }),
+      ),
+      runDir,
+      runId: RUN_ID,
+      goal: GOAL,
+      entryModeName: 'deep',
+      depth: 'standard',
+      projectRoot: runDir,
+      selectionConfigLayers: [selectionLayer()],
+      now: deterministicNow(Date.UTC(2026, 0, 3)),
+      relayer: fixtureRelayer(),
+      executors: fixtureExecutors(),
+    });
+
+    expect(isGraphCheckpointWaitingResult(result)).toBe(false);
+    if (isGraphCheckpointWaitingResult(result)) throw new Error('expected aborted result');
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain(
+      "checkpoint choice 'continue' on step 'checkpoint-step' has no explicit declared route",
+    );
+    const trace = await readTrace(runDir);
+    expect(trace.some((entry) => entry.kind === 'checkpoint.requested')).toBe(false);
+    expect(trace.some((entry) => entry.kind === 'checkpoint.resolved')).toBe(false);
+  });
+
   it('preserves PolicyEnvelope layers across checkpoint resume', async () => {
     const runDir = join(tempDir, 'resume-policy-v2');
     await createWaitingFixture({

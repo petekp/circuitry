@@ -3,8 +3,13 @@ import type {
   RuntimeIndexedRelayStep,
 } from '../../flows/registries/runtime-index.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
+import type { RelayResolutionSource } from '../../schemas/connector.js';
 import type { Depth } from '../../schemas/depth.js';
 import type { CompiledFlowId } from '../../schemas/ids.js';
+import type {
+  PolicyConnectorRef,
+  PolicyLayer as PolicyLayerValue,
+} from '../../schemas/policy-envelope.js';
 import {
   ResolvedSelection,
   type ResolvedSelection as ResolvedSelectionValue,
@@ -15,6 +20,7 @@ import { composePolicyHardConstraints } from '../../shared/policy-envelope.js';
 import { deriveResolvedSelection } from '../../shared/relay-selection.js';
 import { type LoadedRelaySkill, resolveLoadedRelaySkills } from '../../shared/skill-loading.js';
 import {
+  assertConnectorCanRunRole,
   assertConnectorSelectionCompatible,
   resolveConnectorForRelay,
 } from '../connectors/resolver.js';
@@ -44,10 +50,32 @@ function configLayerConnector(
   return descriptor;
 }
 
+function policyLayerConnector(
+  name: string,
+  policyLayers: readonly PolicyLayerValue[] | undefined,
+): ResolvedConnector | undefined {
+  let descriptor: ResolvedConnector | undefined;
+  for (const layer of policyLayers ?? []) {
+    descriptor = layer.envelope.policy.rules.connectors.registry[name] ?? descriptor;
+  }
+  return descriptor;
+}
+
+function connectorFromPolicyRef(
+  ref: PolicyConnectorRef,
+  policyLayers: readonly PolicyLayerValue[] | undefined,
+): ResolvedConnector {
+  if (ref.kind === 'builtin') return ref;
+  const descriptor = policyLayerConnector(ref.name, policyLayers);
+  if (descriptor !== undefined) return descriptor;
+  throw new Error(`policy connector '${ref.name}' is referenced but not declared`);
+}
+
 function requestedConnectorForRelay(input: {
   readonly stepConnector?: string;
   readonly suppliedConnector?: RelayConnector;
   readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
+  readonly policyLayers?: readonly PolicyLayerValue[];
 }): ResolvedConnector | undefined {
   const suppliedResolved = input.suppliedConnector?.connector;
   const suppliedResolvedName = resolvedConnectorName(suppliedResolved);
@@ -83,12 +111,84 @@ function requestedConnectorForRelay(input: {
     return suppliedResolved;
   }
 
+  const policyConfigured = policyLayerConnector(requested, input.policyLayers);
+  if (policyConfigured !== undefined) return policyConfigured;
+
   const configured = configLayerConnector(requested, input.configLayers);
   if (configured !== undefined) return configured;
 
   throw new Error(
     `relay connector '${requested}' requires resolved connector capabilities before execution`,
   );
+}
+
+function relayDecision(
+  connector: ResolvedConnector,
+  resolvedFrom: RelayResolutionSource,
+  role: RelayRole,
+): {
+  readonly role: string;
+  readonly connectorName: string;
+  readonly connector: ResolvedConnector;
+  readonly resolvedFrom: RelayResolutionSource;
+} {
+  assertConnectorCanRunRole(connector, role);
+  return {
+    role,
+    connectorName: connector.name,
+    connector,
+    resolvedFrom,
+  };
+}
+
+function policyConnectorChoice(input: {
+  readonly flowId: string;
+  readonly role: RelayRole;
+  readonly policyLayers?: readonly PolicyLayerValue[];
+}): ReturnType<typeof relayDecision> | undefined {
+  if ((input.policyLayers?.length ?? 0) === 0) return undefined;
+
+  let roleRef: PolicyConnectorRef | undefined;
+  let flowRef: PolicyConnectorRef | undefined;
+  let defaultRef: PolicyConnectorRef | 'auto' | undefined;
+  const flowId = input.flowId as CompiledFlowId;
+
+  for (const layer of input.policyLayers ?? []) {
+    roleRef =
+      layer.envelope.policy.preferences.relay.roles[input.role]?.prefer_connector ?? roleRef;
+    for (const hint of layer.envelope.policy.preferences.relay.flow_connector_hints) {
+      if (hint.flow_id === flowId) {
+        flowRef = hint.prefer_connector;
+      }
+    }
+    defaultRef = layer.envelope.policy.defaults.connector ?? defaultRef;
+  }
+
+  if (roleRef !== undefined) {
+    return relayDecision(
+      connectorFromPolicyRef(roleRef, input.policyLayers),
+      { source: 'role', role: input.role },
+      input.role,
+    );
+  }
+
+  if (flowRef !== undefined) {
+    return relayDecision(
+      connectorFromPolicyRef(flowRef, input.policyLayers),
+      { source: 'circuit', flow_id: flowId },
+      input.role,
+    );
+  }
+
+  if (defaultRef !== undefined && defaultRef !== 'auto') {
+    return relayDecision(
+      connectorFromPolicyRef(defaultRef, input.policyLayers),
+      { source: 'default' },
+      input.role,
+    );
+  }
+
+  return undefined;
 }
 
 function selectionForCompatibility(selection: unknown) {
@@ -123,49 +223,67 @@ function assertPolicyAllowsRelayPlan(input: {
   readonly loadedSkills: readonly LoadedRelaySkill[];
 }): void {
   const policyLayers = input.context.policyLayers ?? [];
+  assertPolicyAllowsRelayExecutionInput({
+    policyLayers,
+    role: input.role,
+    connectorName: input.connectorName,
+    resolvedSelection: input.resolvedSelection,
+  });
   if (policyLayers.length === 0) return;
 
   const constraints = composePolicyHardConstraints(policyLayers.map((layer) => layer.envelope));
-  const { connectorName } = input;
-  const allowedConnectors = constraints.connectors.allow;
-  if (allowedConnectors !== undefined && !allowedConnectors.includes(connectorName)) {
-    throw new Error(
-      `PolicyEnvelope disallows connector '${connectorName}': not in allowed connectors`,
-    );
-  }
-  if (constraints.connectors.deny.includes(connectorName)) {
-    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': connector is denied`);
-  }
-  if (
-    input.role === 'implementer' &&
-    constraints.connectors.deny_for_write.includes(connectorName)
-  ) {
-    throw new Error(
-      `PolicyEnvelope disallows connector '${connectorName}': connector is denied for write-capable relays`,
-    );
-  }
-
-  const provider = input.resolvedSelection.model?.provider;
-  if (provider !== undefined && constraints.models.deny_providers.includes(provider)) {
-    throw new Error(`PolicyEnvelope disallows provider '${provider}': provider is denied`);
-  }
-  const requiredProvider = constraints.models.require_provider_for_connector[connectorName];
-  if (requiredProvider !== undefined && provider !== requiredProvider) {
-    throw new Error(
-      `PolicyEnvelope requires connector '${connectorName}' to use provider '${requiredProvider}'`,
-    );
-  }
-
-  if (effortExceedsMax(input.resolvedSelection.effort, constraints.limits.max_effort)) {
-    throw new Error(
-      `PolicyEnvelope disallows effort '${input.resolvedSelection.effort}': max effort is '${constraints.limits.max_effort}'`,
-    );
-  }
-
   const deniedSkills = new Set(constraints.skills.deny);
   const deniedLoadedSkill = input.loadedSkills.find((skill) => deniedSkills.has(skill.id));
   if (deniedLoadedSkill !== undefined) {
     throw new Error(`PolicyEnvelope disallows skill '${deniedLoadedSkill.id}': skill is denied`);
+  }
+}
+
+function assertPolicyAllowsRelayExecutionInput(input: {
+  readonly policyLayers?: readonly PolicyLayerValue[];
+  readonly role: RelayRole;
+  readonly connectorName: string;
+  readonly resolvedSelection?: ResolvedSelectionValue;
+}): void {
+  const policyLayers = input.policyLayers ?? [];
+  if (policyLayers.length === 0) return;
+
+  const constraints = composePolicyHardConstraints(policyLayers.map((layer) => layer.envelope));
+  const allowedConnectors = constraints.connectors.allow;
+  if (allowedConnectors !== undefined && !allowedConnectors.includes(input.connectorName)) {
+    throw new Error(
+      `PolicyEnvelope disallows connector '${input.connectorName}': not in allowed connectors`,
+    );
+  }
+  if (constraints.connectors.deny.includes(input.connectorName)) {
+    throw new Error(
+      `PolicyEnvelope disallows connector '${input.connectorName}': connector is denied`,
+    );
+  }
+  if (
+    input.role === 'implementer' &&
+    constraints.connectors.deny_for_write.includes(input.connectorName)
+  ) {
+    throw new Error(
+      `PolicyEnvelope disallows connector '${input.connectorName}': connector is denied for write-capable relays`,
+    );
+  }
+
+  const provider = input.resolvedSelection?.model?.provider;
+  if (provider !== undefined && constraints.models.deny_providers.includes(provider)) {
+    throw new Error(`PolicyEnvelope disallows provider '${provider}': provider is denied`);
+  }
+  const requiredProvider = constraints.models.require_provider_for_connector[input.connectorName];
+  if (requiredProvider !== undefined && provider !== requiredProvider) {
+    throw new Error(
+      `PolicyEnvelope requires connector '${input.connectorName}' to use provider '${requiredProvider}'`,
+    );
+  }
+
+  if (effortExceedsMax(input.resolvedSelection?.effort, constraints.limits.max_effort)) {
+    throw new Error(
+      `PolicyEnvelope disallows effort '${input.resolvedSelection?.effort}': max effort is '${constraints.limits.max_effort}'`,
+    );
   }
 }
 
@@ -176,11 +294,12 @@ export function resolveRelayExecution(input: {
   readonly stepConnector?: string;
   readonly suppliedConnector?: RelayConnector;
   readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
+  readonly policyLayers?: readonly PolicyLayerValue[];
 }): {
   readonly role: string;
   readonly connectorName: string;
   readonly connector: ResolvedConnector;
-  readonly resolvedFrom: ReturnType<typeof resolveConnectorForRelay>['resolvedFrom'];
+  readonly resolvedFrom: RelayResolutionSource;
 } {
   const role = RelayRole.parse(input.role);
   const explicitConnector = requestedConnectorForRelay({
@@ -189,18 +308,35 @@ export function resolveRelayExecution(input: {
       ? {}
       : { suppliedConnector: input.suppliedConnector }),
     ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
+    ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
   });
-  const resolved = resolveConnectorForRelay({
-    flowId: input.flowId,
-    role,
-    ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
-    ...(explicitConnector === undefined ? {} : { explicitConnector }),
-  });
+  const resolved =
+    explicitConnector === undefined
+      ? (policyConnectorChoice({
+          flowId: input.flowId,
+          role,
+          ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
+        }) ??
+        resolveConnectorForRelay({
+          flowId: input.flowId,
+          role,
+          ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
+        }))
+      : resolveConnectorForRelay({
+          flowId: input.flowId,
+          role,
+          ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
+          explicitConnector,
+        });
   const resolvedConnector = resolved.connector;
-  assertConnectorSelectionCompatible(
-    resolvedConnector.name,
-    selectionForCompatibility(input.selection),
-  );
+  const resolvedSelection = selectionForCompatibility(input.selection);
+  assertConnectorSelectionCompatible(resolvedConnector.name, resolvedSelection);
+  assertPolicyAllowsRelayExecutionInput({
+    ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
+    role,
+    connectorName: resolvedConnector.name,
+    ...(resolvedSelection === undefined ? {} : { resolvedSelection }),
+  });
   return {
     role,
     connectorName: resolvedConnector.name,
@@ -242,6 +378,7 @@ export function planRelayGuidanceDecision(input: {
     ...(context.selectionConfigLayers === undefined
       ? {}
       : { configLayers: context.selectionConfigLayers }),
+    ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
     ...(step.selection === undefined ? {} : { selection: step.selection }),
     ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
   });

@@ -14,8 +14,9 @@ import { expandFanoutBranches } from '../fanout/branch-expansion.js';
 import type { BranchOutcome, FanoutJoinPolicy, ResolvedBranch } from '../fanout/types.js';
 import { gitWorktreeRunner } from '../fanout/worktree.js';
 import type { FanoutStep } from '../manifest/executable-flow.js';
+import { resolveRelayExecution } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
-import { type RelayConnector, resolveRelayExecution } from './relay.js';
+import type { RelayConnector } from './relay.js';
 import {
   type StepExecutionResult,
   stepExecutionFailedFrom,
@@ -88,6 +89,7 @@ function branchUsesWritableConnector(
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { configLayers: context.selectionConfigLayers }),
+      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
     });
     return connectorCapabilities(decision.connector).filesystem !== 'read-only';
   } catch {

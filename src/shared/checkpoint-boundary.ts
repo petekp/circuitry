@@ -53,28 +53,13 @@ function rejectOldAuthority(
   return { path, field, reason };
 }
 
-function routeForChoice(
-  step: CheckpointStep,
-  choiceId: string,
-  rejectedOldAuthority: CheckpointBoundaryRejectedAuthority[],
-): CheckpointBoundaryRoute {
+function routeForChoice(step: CheckpointStep, choiceId: string): CheckpointBoundaryRoute {
   const directTarget = step.routes[choiceId];
   if (directTarget !== undefined) {
     return { id: choiceId, target: directTarget as CheckpointBoundaryRoute['target'] };
   }
-  const passTarget = step.routes.pass;
-  if (passTarget !== undefined) {
-    rejectedOldAuthority.push(
-      rejectOldAuthority(
-        `compiled-flow/steps/${step.id}/routes/pass`,
-        'implicit_pass_route',
-        `checkpoint choice '${choiceId}' would currently fall through to route 'pass'; future boundaries require an explicit choice route`,
-      ),
-    );
-    return { id: 'pass', target: passTarget as CheckpointBoundaryRoute['target'] };
-  }
   throw new CheckpointBoundaryProjectionError(
-    `checkpoint choice '${choiceId}' on step '${step.id}' has no matching route and no pass fallback`,
+    `checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`,
   );
 }
 
@@ -90,23 +75,13 @@ function consequenceForChoice(choice: {
   );
 }
 
-function dynamicRouteFamily(
-  step: CheckpointStep,
-  rejectedOldAuthority: CheckpointBoundaryRejectedAuthority[],
-): CheckpointBoundaryRoute {
+function dynamicRouteFamily(step: CheckpointStep): CheckpointBoundaryRoute {
   const selectTarget = step.routes.select;
   if (selectTarget !== undefined) {
     return { id: 'select', target: selectTarget as CheckpointBoundaryRoute['target'] };
   }
   const passTarget = step.routes.pass;
   if (passTarget !== undefined) {
-    rejectedOldAuthority.push(
-      rejectOldAuthority(
-        `compiled-flow/steps/${step.id}/routes/pass`,
-        'implicit_pass_route',
-        'dynamic checkpoint choices would currently fall through to route pass; future boundaries require a route family',
-      ),
-    );
     return { id: 'pass', target: passTarget as CheckpointBoundaryRoute['target'] };
   }
   throw new CheckpointBoundaryProjectionError(
@@ -114,10 +89,7 @@ function dynamicRouteFamily(
   );
 }
 
-function staticChoices(
-  step: CheckpointStep,
-  rejectedOldAuthority: CheckpointBoundaryRejectedAuthority[],
-): CheckpointBoundaryChoice[] {
+function staticChoices(step: CheckpointStep): CheckpointBoundaryChoice[] {
   const choices = step.policy.choices;
   if (choices === undefined) {
     throw new CheckpointBoundaryProjectionError(
@@ -128,7 +100,7 @@ function staticChoices(
     id: choice.id,
     ...(choice.label === undefined ? {} : { label: choice.label }),
     ...(choice.description === undefined ? {} : { description: choice.description }),
-    route: routeForChoice(step, choice.id, rejectedOldAuthority),
+    route: routeForChoice(step, choice.id),
     consequence: consequenceForChoice(choice),
   }));
 }
@@ -154,10 +126,10 @@ export function projectCheckpointBoundaryV0(
     step.policy.choices !== undefined
       ? {
           kind: 'static' as const,
-          items: staticChoices(step, rejectedOldAuthority),
+          items: staticChoices(step),
         }
       : (() => {
-          const routeFamily = dynamicRouteFamily(step, rejectedOldAuthority);
+          const routeFamily = dynamicRouteFamily(step);
           return {
             kind: 'dynamic' as const,
             source: step.policy.choices_from,

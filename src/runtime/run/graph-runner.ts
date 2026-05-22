@@ -263,6 +263,23 @@ function recoveryCauseAllowed(
   return binding.allowed_failure_causes.includes(cause);
 }
 
+function missingRecoveryBindingReason(input: {
+  readonly stepId: string;
+  readonly route: string;
+  readonly cause: RecoveryFailureCause;
+}): string {
+  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
+}
+
+function recoveryCauseNotAllowedReason(input: {
+  readonly stepId: string;
+  readonly route: string;
+  readonly cause: RecoveryFailureCause;
+  readonly binding: RecoveryRouteBindingV0;
+}): string {
+  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(', ')}`;
+}
+
 function isActiveRecoveryRoute(
   activeRecovery: ActiveRecovery | undefined,
   route: string | undefined,
@@ -383,30 +400,89 @@ function resolveManifestHash(flow: ExecutableFlow, options: GraphRunnerOptions):
   return computed;
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function traceScope(entry: TraceEntry): Record<string, unknown> {
+  return recordValue(entry.scope);
+}
+
+function proofPolicyRequirementKey(entry: TraceEntry): string {
+  const scope = traceScope(entry);
+  const selected = recordValue(entry.selected);
+  return JSON.stringify({
+    flow_id: scope.flow_id,
+    step_id: scope.step_id,
+    proof_profile: selected.proof_profile,
+    required_claim_kinds: selected.required_claim_kinds,
+    required_evidence_kinds: selected.required_evidence_kinds,
+  });
+}
+
+function completeCloseProofGap(context: RunContext): string | undefined {
+  const entries = context.trace.getAll();
+  const latestRequiredProofByRequirement = new Map<
+    string,
+    { readonly entry: TraceEntry; readonly index: number }
+  >();
+  for (const [index, entry] of entries.entries()) {
+    if (entry.kind !== 'guidance.decision' || entry.subject !== 'proof_policy') continue;
+    const selected = recordValue(entry.selected);
+    if (selected.close_requires_proven !== true) continue;
+    latestRequiredProofByRequirement.set(proofPolicyRequirementKey(entry), { entry, index });
+  }
+  for (const { entry, index } of latestRequiredProofByRequirement.values()) {
+    const guidanceScope = traceScope(entry);
+    const hasPassingProof = entries.some((candidate, proofIndex) => {
+      if (proofIndex <= index || candidate.kind !== 'proof.assessed') return false;
+      const proofScope = traceScope(candidate);
+      return (
+        candidate.proof_policy_decision_id === entry.decision_id &&
+        candidate.overall_status === 'proven' &&
+        candidate.close_allowed === true &&
+        proofScope.flow_id === guidanceScope.flow_id &&
+        proofScope.step_id === guidanceScope.step_id &&
+        proofScope.attempt === guidanceScope.attempt
+      );
+    });
+    if (!hasPassingProof) {
+      return `run.closed complete requires passing proof.assessed for proof_policy decision '${String(entry.decision_id)}'`;
+    }
+  }
+  return undefined;
+}
+
 async function closeRun(
   context: RunContext,
   outcome: RunClosedOutcome,
   terminalTarget?: TerminalTarget,
   reason?: string,
 ): Promise<GraphClosedOutcome> {
+  const proofGap = outcome === 'complete' ? completeCloseProofGap(context) : undefined;
+  const finalOutcome: RunClosedOutcome = proofGap === undefined ? outcome : 'aborted';
+  const finalReason = proofGap ?? reason;
+  const finalTerminalTarget = proofGap === undefined ? terminalTarget : undefined;
   await context.trace.append({
     run_id: context.runId,
     kind: 'run.closed',
-    outcome,
-    ...(reason === undefined ? {} : { reason }),
+    outcome: finalOutcome,
+    ...(finalReason === undefined ? {} : { reason: finalReason }),
   });
-  const verdict = outcome === 'complete' ? latestAdmittedVerdict(context) : undefined;
+  const verdict = finalOutcome === 'complete' ? latestAdmittedVerdict(context) : undefined;
   const result: RuntimeRunResult = {
     schema_version: 1,
     run_id: context.runId,
     flow_id: context.flow.id,
     goal: context.goal,
-    outcome,
-    summary: resultSummary(outcome, terminalTarget),
+    outcome: finalOutcome,
+    summary: resultSummary(finalOutcome, finalTerminalTarget),
     closed_at: context.now().toISOString(),
     trace_entries_observed: context.trace.getAll().length,
     manifest_hash: context.manifestHash,
-    ...(reason === undefined ? {} : { reason }),
+    ...(finalReason === undefined ? {} : { reason: finalReason }),
     ...(verdict === undefined ? {} : { verdict }),
   };
   const resultPath = await writeRuntimeRunResult(context.files, result);
@@ -440,6 +516,9 @@ async function executeExecutableFlowOutcomeUnsafe(
     goal: options.goal ?? `Run ${flow.id}`,
     manifestHash: resolveManifestHash(flow, options),
     ...(options.workContractRef === undefined ? {} : { workContractRef: options.workContractRef }),
+    ...(options.recoveryRouteBindings === undefined
+      ? {}
+      : { recoveryRouteBindings: options.recoveryRouteBindings }),
     ...(options.entryModeName === undefined ? {} : { entryModeName: options.entryModeName }),
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(options.axes === undefined ? {} : { axes: options.axes }),
@@ -631,6 +710,46 @@ async function executeExecutableFlowOutcomeUnsafe(
       step,
       route,
     });
+    const recoveryFailure = latestRecoveryFailureEvidence({
+      context,
+      stepId: step.id,
+      attempt,
+      details,
+    });
+
+    if (context.workContractRef !== undefined && recoveryFailure !== undefined) {
+      if (recoveryBinding === undefined) {
+        const reason = missingRecoveryBindingReason({
+          stepId: step.id,
+          route,
+          cause: recoveryFailure.cause,
+        });
+        await trace.append({
+          run_id: runId,
+          kind: 'step.aborted',
+          step_id: step.id,
+          attempt,
+          reason,
+        });
+        return await closeRun(context, 'aborted', undefined, reason);
+      }
+      if (!recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
+        const reason = recoveryCauseNotAllowedReason({
+          stepId: step.id,
+          route,
+          cause: recoveryFailure.cause,
+          binding: recoveryBinding,
+        });
+        await trace.append({
+          run_id: runId,
+          kind: 'step.aborted',
+          step_id: step.id,
+          attempt,
+          reason,
+        });
+        return await closeRun(context, 'aborted', undefined, reason);
+      }
+    }
 
     if (target.kind === 'step' && target.stepId === step.id && route === 'pass') {
       const reason = `route cycle detected: step '${step.id}' routes via '${route}' to itself`;
@@ -702,15 +821,17 @@ async function executeExecutableFlowOutcomeUnsafe(
     }
 
     if (recoveryBinding !== undefined) {
-      const failure = latestRecoveryFailureEvidence({ context, stepId: step.id, attempt, details });
-      if (failure !== undefined && recoveryCauseAllowed(recoveryBinding, failure.cause)) {
+      if (
+        recoveryFailure !== undefined &&
+        recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)
+      ) {
         await appendRecoveryRouteGuidance(context, {
           stepId: step.id,
           attempt,
           routeId: route,
           recoveryKind: recoveryBinding.kind,
-          failureCause: failure.cause,
-          failureRef: failure.ref,
+          failureCause: recoveryFailure.cause,
+          failureRef: recoveryFailure.ref,
           bindingRef: recoveryBinding.source_ref,
         });
       }

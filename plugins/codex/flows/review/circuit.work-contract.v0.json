@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/review/circuit.work-contract.v0.json",
-    "sha256": "3a7214b495f0e6a9fb82cdf328c298463ff6d877c4b75814faecabbe895b4da8",
+    "sha256": "1fb80418bceff86973d8e1b345074bbcb2d434d55afc8c63cc8c8b65e2107712",
     "flow_id": "review"
   },
   "work_contract": {
@@ -261,6 +261,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -320,6 +321,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",
@@ -350,6 +352,7 @@
         "route_target": "@stop",
         "kind": "stop_unsafe",
         "allowed_failure_causes": [
+          "failed_check",
           "contradicted_evidence",
           "scope_drift",
           "budget_exceeded",

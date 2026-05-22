@@ -50,6 +50,10 @@ type CheckpointResolution =
   | { readonly kind: 'waiting' }
   | { readonly kind: 'failed'; readonly reason: string };
 
+type CheckpointRouteResolution =
+  | { readonly kind: 'resolved'; readonly routeId: string }
+  | { readonly kind: 'failed'; readonly reason: string };
+
 type CheckpointBoundaryProjection = ReturnType<typeof projectCheckpointBoundaryV0>;
 
 function policy(step: CheckpointStep) {
@@ -72,9 +76,11 @@ async function materializePolicy(
   readonly prompt: string;
   readonly safe_default_choice?: string;
   readonly choices: readonly CheckpointChoice[];
+  readonly choice_source: 'static' | 'dynamic';
   readonly auto_resolution?: AutoResolutionPolicy;
 }> {
   const stepPolicy = policy(step);
+  const choiceSource = stepPolicy.choices_from === undefined ? 'static' : 'dynamic';
   const choices =
     stepPolicy.choices ??
     (stepPolicy.choices_from === undefined
@@ -91,6 +97,7 @@ async function materializePolicy(
   return {
     prompt: stepPolicy.prompt,
     choices,
+    choice_source: choiceSource,
     ...(stepPolicy.safe_default_choice === undefined
       ? {}
       : { safe_default_choice: stepPolicy.safe_default_choice }),
@@ -104,7 +111,7 @@ function projectRuntimeCheckpointBoundary(input: {
   readonly step: CheckpointStep;
   readonly stepPolicy: Awaited<ReturnType<typeof materializePolicy>>;
   readonly context: RunContext;
-}): CheckpointBoundaryProjection | undefined {
+}): CheckpointBoundaryProjection {
   const indexedStep = requireRuntimeIndexedStep(
     input.context.packageIndex,
     input.step.id,
@@ -168,7 +175,9 @@ function projectRuntimeCheckpointBoundary(input: {
     });
   } catch (error) {
     if (error instanceof ZodError || error instanceof CheckpointBoundaryProjectionError) {
-      return undefined;
+      throw new Error(
+        `checkpoint step '${input.step.id}' authority boundary projection failed: ${error.message}`,
+      );
     }
     throw error;
   }
@@ -272,11 +281,29 @@ async function resolveAutoResolution(
   }
 }
 
+function checkpointRouteIdForResolution(input: {
+  readonly step: CheckpointStep;
+  readonly stepPolicy: Awaited<ReturnType<typeof materializePolicy>>;
+  readonly selection: string;
+}): CheckpointRouteResolution {
+  if (Object.hasOwn(input.step.routes, input.selection)) {
+    return { kind: 'resolved', routeId: input.selection };
+  }
+  if (input.stepPolicy.choice_source === 'dynamic') {
+    if (Object.hasOwn(input.step.routes, 'select')) return { kind: 'resolved', routeId: 'select' };
+    if (Object.hasOwn(input.step.routes, 'pass')) return { kind: 'resolved', routeId: 'pass' };
+  }
+  return {
+    kind: 'failed',
+    reason: `checkpoint step '${input.step.id}' selected '${input.selection}' but no declared route matches that checkpoint choice`,
+  };
+}
+
 function checkpointRequestBody(input: {
   readonly step: CheckpointStep;
   readonly context: RunContext;
   readonly stepPolicy: Awaited<ReturnType<typeof materializePolicy>>;
-  readonly boundary?: CheckpointBoundaryProjection;
+  readonly boundary: CheckpointBoundaryProjection;
   readonly checkpointReportSha256?: string;
 }) {
   const stepPolicy = input.stepPolicy;
@@ -296,12 +323,8 @@ function checkpointRequestBody(input: {
       ...(input.context.workContractRef === undefined
         ? {}
         : { work_contract_ref: input.context.workContractRef }),
-      ...(input.boundary === undefined
-        ? {}
-        : {
-            checkpoint_boundary_ref: input.boundary.request_trace.boundary_ref,
-            checkpoint_boundary_hash: input.boundary.request_trace.boundary_hash,
-          }),
+      checkpoint_boundary_ref: input.boundary.request_trace.boundary_ref,
+      checkpoint_boundary_hash: input.boundary.request_trace.boundary_hash,
       selection_config_layers: input.context.selectionConfigLayers ?? [],
       policy_layers: input.context.policyLayers ?? [],
       ...(input.checkpointReportSha256 === undefined
@@ -364,7 +387,7 @@ export async function executeCheckpointResult(
         step,
         context,
         stepPolicy,
-        ...(boundary === undefined ? {} : { boundary }),
+        boundary,
         ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
       });
       await context.files.writeJson(request, requestBody);
@@ -377,12 +400,8 @@ export async function executeCheckpointResult(
         attempt,
         request_path: request.path,
         request_report_hash: checkpointRequestSha256,
-        ...(boundary === undefined
-          ? {}
-          : {
-              boundary_ref: boundary.request_trace.boundary_ref,
-              boundary_hash: boundary.request_trace.boundary_hash,
-            }),
+        boundary_ref: boundary.request_trace.boundary_ref,
+        boundary_hash: boundary.request_trace.boundary_hash,
         options: stepPolicy.choices.map((choice) => choice.id),
         ...(resolution.kind === 'waiting' ? { auto_resolved: false } : {}),
       });
@@ -430,9 +449,15 @@ export async function executeCheckpointResult(
         `checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${effectiveAllowed.join(', ')}]`,
       );
     }
-    const routeId = Object.hasOwn(step.routes, effectiveResolution.selection)
-      ? effectiveResolution.selection
-      : 'pass';
+    const routeResult = checkpointRouteIdForResolution({
+      step,
+      stepPolicy,
+      selection: effectiveResolution.selection,
+    });
+    if (routeResult.kind === 'failed') {
+      return stepExecutionFailed(routeResult.reason);
+    }
+    const routeId = routeResult.routeId;
     if (checkpointRequestSha256 === undefined) {
       checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
     }

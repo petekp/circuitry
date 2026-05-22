@@ -133,6 +133,35 @@ describe('compileSchematicToCompiledFlow — failure modes', () => {
     expect(schematicOutcomeToRuntimeRoute('retry')).toBeUndefined();
   });
 
+  it('projects static checkpoint choices into explicit compiled routes', () => {
+    const schematic = loadBuildSchematic();
+    const mutated = {
+      ...schematic,
+      items: schematic.items.map((item) =>
+        item.id === ('frame-step' as unknown as typeof item.id)
+          ? {
+              ...item,
+              check: { allow: ['approve'] },
+              checkpoint_policy: {
+                ...item.checkpoint_policy,
+                choices: [{ id: 'approve', label: 'Approve' }],
+                safe_default_choice: 'approve',
+              },
+            }
+          : item,
+      ),
+    };
+
+    const compiled = compileSchematicToCompiledFlow(FlowSchematic.parse(mutated));
+    expect(compiled.kind).toBe('single');
+    if (compiled.kind !== 'single') return;
+    const checkpoint = compiled.flow.steps.find((step) => step.id === 'frame-step');
+    expect(checkpoint?.routes).toMatchObject({
+      pass: 'plan-step',
+      approve: 'plan-step',
+    });
+  });
+
   it('passes optional step skill slots through to the compiled flow', () => {
     const schematic = loadBuildSchematic();
     const mutated = {

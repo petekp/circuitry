@@ -89,6 +89,7 @@ function checkpointFlow(
     steps: [
       {
         id: 'checkpoint-step',
+        protocol: 'checkpoint-result@v1',
         kind: 'checkpoint',
         choices: ['continue'],
         policy,
@@ -100,7 +101,11 @@ function checkpointFlow(
           request: { path: 'reports/checkpoint-request.json' },
           response: { path: 'reports/checkpoint-response.json' },
         },
-        check: { allow: ['continue'] },
+        check: {
+          kind: 'checkpoint_selection',
+          source: { kind: 'checkpoint_response', ref: 'response' },
+          allow: ['continue'],
+        },
       },
     ],
   };

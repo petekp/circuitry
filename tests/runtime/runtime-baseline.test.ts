@@ -17,8 +17,9 @@ import {
   writeRuntimeManifestSnapshot,
 } from '../../src/runtime/run/manifest-snapshot.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
-import { CompiledFlowId } from '../../src/schemas/ids.js';
+import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
+import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
 
 const change_kind = {
@@ -115,6 +116,41 @@ function compiledFlowBytesForSnapshot(flowId = 'baseline'): Buffer {
       ],
     }),
   );
+}
+
+function runtimeWorkContractRef(flowId: string) {
+  return {
+    kind: 'work_contract' as const,
+    ref: `runtime/work-contract/${flowId}/test.json`,
+    sha256: 'a'.repeat(64),
+    flow_id: CompiledFlowId.parse(flowId),
+  };
+}
+
+function narrowScopeRecoveryBinding(
+  overrides: Partial<RecoveryRouteBindingV0> = {},
+): RecoveryRouteBindingV0 {
+  return {
+    schema_version: 0,
+    step_id: StepId.parse('compose'),
+    route_id: 'revise',
+    route_target: '@stop',
+    kind: 'narrow_scope',
+    allowed_failure_causes: ['failed_check'],
+    required_refs: ['failed_check', 'trace'],
+    operator_authority: 'not_required',
+    attempt_budget: {
+      consumes_step_attempt: false,
+      must_respect_max_attempts: true,
+      retry_target: 'declared_step',
+    },
+    guidance: {
+      subject: 'recovery_route',
+      must_match_step_completed: true,
+    },
+    source_ref: runtimeWorkContractRef('bound-recovery-route'),
+    ...overrides,
+  };
 }
 
 describe('runtime baseline', () => {
@@ -750,6 +786,143 @@ describe('runtime baseline', () => {
             reason: "route 'revise' for step 'compose' exhausted max_attempts=1",
           }),
         ]),
+      );
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'guidance.decision',
+          subject: 'recovery_route',
+        }),
+      );
+    });
+  });
+
+  it('rejects a failed step recovery route with no WorkContract binding', async () => {
+    await withTempRun(async (runDir) => {
+      const result = await executeExecutableFlow(
+        {
+          id: 'unbound-recovery-route',
+          version: '0.1.0',
+          entry: 'compose',
+          stages: [{ id: 'main', stepIds: ['compose'] }],
+          steps: [
+            {
+              id: 'compose',
+              kind: 'compose',
+              writer: 'failure-route',
+              routes: {
+                pass: { kind: 'terminal', target: '@complete' },
+                revise: { kind: 'terminal', target: '@stop' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000107',
+          workContractRef: runtimeWorkContractRef('unbound-recovery-route'),
+          recoveryRouteBindings: [],
+          executors: {
+            compose: async (_step, context) => {
+              await context.trace.append({
+                run_id: context.runId,
+                kind: 'check.evaluated',
+                step_id: 'compose',
+                attempt: context.activeStepAttempt ?? 1,
+                check_kind: 'schema_sections',
+                outcome: 'fail',
+                reason: 'required proof was missing',
+              });
+              return { route: 'revise', details: { reason: 'required proof was missing' } };
+            },
+          },
+        },
+      );
+
+      const entries = await new TraceStore(runDir).load();
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason:
+          "step 'compose' selected recovery route 'revise' after failed_check but the WorkContract does not declare a matching recovery binding",
+      });
+      expect(entries).toContainEqual(
+        expect.objectContaining({
+          kind: 'step.aborted',
+          step_id: 'compose',
+          attempt: 1,
+          reason:
+            "step 'compose' selected recovery route 'revise' after failed_check but the WorkContract does not declare a matching recovery binding",
+        }),
+      );
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'step.completed',
+          step_id: 'compose',
+          route_taken: 'revise',
+        }),
+      );
+    });
+  });
+
+  it('rejects a failed step recovery route when the binding does not allow the failure cause', async () => {
+    await withTempRun(async (runDir) => {
+      const result = await executeExecutableFlow(
+        {
+          id: 'bound-recovery-route',
+          version: '0.1.0',
+          entry: 'compose',
+          stages: [{ id: 'main', stepIds: ['compose'] }],
+          steps: [
+            {
+              id: 'compose',
+              kind: 'compose',
+              writer: 'failure-route',
+              routes: {
+                pass: { kind: 'terminal', target: '@complete' },
+                revise: { kind: 'terminal', target: '@stop' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000108',
+          workContractRef: runtimeWorkContractRef('bound-recovery-route'),
+          recoveryRouteBindings: [
+            narrowScopeRecoveryBinding({
+              allowed_failure_causes: ['weak_proof'],
+            }),
+          ],
+          executors: {
+            compose: async (_step, context) => {
+              await context.trace.append({
+                run_id: context.runId,
+                kind: 'check.evaluated',
+                step_id: 'compose',
+                attempt: context.activeStepAttempt ?? 1,
+                check_kind: 'schema_sections',
+                outcome: 'fail',
+                reason: 'required proof was missing',
+              });
+              return { route: 'revise', details: { reason: 'required proof was missing' } };
+            },
+          },
+        },
+      );
+
+      const entries = await new TraceStore(runDir).load();
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason:
+          "step 'compose' selected recovery route 'revise' for failed_check, but its WorkContract binding only allows: weak_proof",
+      });
+      expect(entries).toContainEqual(
+        expect.objectContaining({
+          kind: 'step.aborted',
+          step_id: 'compose',
+          attempt: 1,
+          reason:
+            "step 'compose' selected recovery route 'revise' for failed_check, but its WorkContract binding only allows: weak_proof",
+        }),
       );
       expect(entries).not.toContainEqual(
         expect.objectContaining({

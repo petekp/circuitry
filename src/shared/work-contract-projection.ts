@@ -190,7 +190,13 @@ const CAUSES_BY_KIND: Readonly<Record<RecoveryRouteKind, readonly RecoveryFailur
     'protected_file_touched',
     'generated_surface_drift',
   ],
-  stop_unsafe: ['contradicted_evidence', 'scope_drift', 'budget_exceeded', 'unknown_failure'],
+  stop_unsafe: [
+    'failed_check',
+    'contradicted_evidence',
+    'scope_drift',
+    'budget_exceeded',
+    'unknown_failure',
+  ],
   escalate: ['relay_connector_failed', 'budget_exceeded', 'unknown_failure'],
   handoff: ['checkpoint_boundary', 'budget_exceeded', 'unknown_failure'],
 };

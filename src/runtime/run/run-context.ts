@@ -1,5 +1,6 @@
 import type { RuntimePackageIndex } from '../../flows/registries/runtime-index.js';
 import type { Axes } from '../../schemas/axes.js';
+import type { RecoveryRouteBindingV0 } from '../../schemas/recovery-route-kind.js';
 import type { Ref } from '../../schemas/ref.js';
 import type { AcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { RunId } from '../domain/run.js';
@@ -18,6 +19,7 @@ export interface RunContext
   readonly goal: string;
   readonly manifestHash: string;
   readonly workContractRef?: Ref;
+  readonly recoveryRouteBindings?: readonly RecoveryRouteBindingV0[];
   readonly entryModeName?: string;
   readonly depth?: string;
   readonly axes?: Axes;

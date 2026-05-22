@@ -1,8 +1,8 @@
 # Generated Host Surface Reframing
 
-Status: implementation-spec direction for the Circuit pivot. This is
-future-facing. It does not describe current host copy until the matching runtime,
-source commands, renderers, generated mirrors, manifests, docs, and tests change.
+Status: implementation-spec direction and cutover record for the Circuit pivot.
+The source commands, generated mirrors, plugin manifests, and framing tests now
+use the V0 host-surface framing described here.
 
 `Generated Host Surface Reframing` is the spec name. In product prose, say
 host surfaces, commands, skills, or plugin copy.
@@ -43,8 +43,8 @@ change when the runtime can support the pivot.
 | [Flow command sources](../../../src/flows/build/command.md) | Current direct flow sources now describe expert controls that start from a known flow and still run through trace, reports, evidence, checkpoints, and recovery. Some surfaces still teach `--rigor` or `--autonomous` entry flags. See `src/flows/build/command.md:1-20`, `src/flows/fix/command.md:1-20`, and `src/flows/prototype/command.md:1-82`. |
 | [host renderers](../../../scripts/flows/host-renderers.ts) | Codex skill metadata and renderer replacements are script-owned. The renderer already removes slash-command tokens from skills and asserts forbidden placeholders. See `scripts/flows/host-renderers.ts:1-49`, `scripts/flows/host-renderers.ts:167-245`. |
 | [emit script](../../../scripts/flows/emit.ts) | `HOST_DIRECT_COMMANDS` currently emits `create`, `handoff`, and `run`; public flow commands emit Claude commands, Codex command mirrors, and Codex skills; check mode verifies drift, stale mirrors, stale skill dirs, and obsolete root host surfaces. See `scripts/flows/emit.ts:104-110`, `scripts/flows/emit.ts:164-207`, and `scripts/flows/emit.ts:867-997`. |
-| [plugin manifests](../../../plugins/codex/.codex-plugin/plugin.json) | Current Claude and Codex manifest copy still says Circuit chooses/runs flows and mentions direct flow skills as available when the operator knows the flow. See `plugins/claude/.claude-plugin/plugin.json:1-8` and `plugins/codex/.codex-plugin/plugin.json:1-28`. |
-| [host surface tests](../../../tests/contracts/codex-host-plugin.test.ts) | Current tests assert the old Codex run-skill wording and also enforce useful skill safety rules: no `/circuit:` tokens, no `$ARGUMENTS`, no `argument-hint`, and no slash-command wording in Codex skills. See `tests/contracts/codex-host-plugin.test.ts:261-294` and `tests/contracts/codex-host-plugin.test.ts:804-831`. |
+| [plugin manifests](../../../plugins/codex/.codex-plugin/plugin.json) | Current Claude and Codex manifest copy is intent-first and marks direct flow commands or skills as expert controls. See `plugins/claude/.claude-plugin/plugin.json:1-8` and `plugins/codex/.codex-plugin/plugin.json:1-28`. |
+| [host surface tests](../../../tests/contracts/generated-surface-framing.test.ts) | Current framing tests assert the intent-front-door wording, expert-control wording, no bypass claim, and intent-first manifest copy. See `tests/contracts/generated-surface-framing.test.ts:35-77`. Codex host tests still enforce useful skill safety rules: no `/circuit:` tokens, no `$ARGUMENTS`, no `argument-hint`, and no slash-command wording in Codex skills. |
 | [generated surface tests](../../../tests/contracts/catalog-completeness.test.ts) | Current tests prove command surface ownership is documented and matches `emit.ts`. See `tests/contracts/catalog-completeness.test.ts:430-474`. |
 | [Claude host tests](../../../tests/contracts/claude-host-plugin.test.ts) | Current tests list expected Claude commands and assert the manifest/package shape. See `tests/contracts/claude-host-plugin.test.ts:21-31` and `tests/contracts/claude-host-plugin.test.ts:82-94`. |
 
@@ -189,9 +189,9 @@ Target manifest copy should say:
 - direct flow skills or commands exist as expert controls, not the main story;
 - write-capable work is subject to proof and safe apply once SafeApply exists.
 
-Do not make manifests promise runtime behavior before that behavior exists. Until
-then, leave current manifest copy or mark the pivot language as future-facing in
-docs only.
+Do not make manifests promise runtime behavior before that behavior exists.
+Current manifest copy stays intent-first and avoids promising SafeApply as a
+shipped host behavior.
 
 ### Generated Flow Manifests And Mirrors
 
@@ -235,7 +235,7 @@ After reframing, it should add acceptance rules for product wording:
 | Old entry flags | Some current surfaces teach `--rigor` and `--autonomous`. See `src/commands/run.md:124-133`, `src/flows/build/command.md:70-72`, and `src/flows/prototype/command.md:76-82`. | Future surfaces use policy, proof, checkpoint, and default language once those runtime flags are replaced. |
 | Codex skill rendering | Renderer already removes `/circuit:`, `$ARGUMENTS`, and source-only footers from Codex skills. See `scripts/flows/host-renderers.ts:167-245`. | Keep these guardrails and add framing checks. |
 | Generated ownership | Generated surface map says authored sources own command copy and host mirrors are generated. See `docs/generated-surfaces.md:7-18` and `docs/generated-surfaces.md:29-70`. | Keep source ownership. Change sources and renderers, regenerate mirrors, then run drift checks. |
-| Tests | Current tests assert old run-skill wording but also enforce useful no-placeholder rules. See `tests/contracts/codex-host-plugin.test.ts:261-294` and `tests/contracts/codex-host-plugin.test.ts:804-831`. | Replace old wording assertions with intent-first assertions and keep no-placeholder assertions. |
+| Tests | Current framing tests assert the new intent-first wording and no-bypass wording. Codex host tests keep the no-placeholder rules. See `tests/contracts/generated-surface-framing.test.ts:35-77`. | Keep wording assertions intent-first and keep no-placeholder assertions. |
 
 ## Target Wording Patterns
 
@@ -361,12 +361,12 @@ work should happen in this order:
 
 | Death test | Likely test or check |
 | --- | --- |
-| Public run source does not title itself as a flow selector. | `tests/generated/generated-surface-framing.test.ts` or docs audit |
-| Public run source does not say the host makes the final flow choice before Circuit. | `tests/generated/generated-surface-framing.test.ts` |
-| Public run source has no "Direct Flow Bypass" section. | `tests/generated/generated-surface-framing.test.ts` |
-| Direct flow source files do not say they skip guidance, proof, recovery, trace, or Circuit's recorded decision. | `tests/generated/generated-surface-framing.test.ts` |
-| Direct flow source files say they are expert controls or deliberate starting points. | `tests/generated/generated-surface-framing.test.ts` |
-| Direct flow source files say the same contract/guidance/proof/recovery/trace rules still apply. | `tests/generated/generated-surface-framing.test.ts` |
+| Public run source does not title itself as a flow selector. | `tests/contracts/generated-surface-framing.test.ts` or docs audit |
+| Public run source does not say the host makes the final flow choice before Circuit. | `tests/contracts/generated-surface-framing.test.ts` |
+| Public run source has no "Direct Flow Bypass" section. | `tests/contracts/generated-surface-framing.test.ts` |
+| Direct flow source files do not say they skip guidance, proof, recovery, trace, or Circuit's recorded decision. | `tests/contracts/generated-surface-framing.test.ts` |
+| Direct flow source files say they are expert controls or deliberate starting points. | `tests/contracts/generated-surface-framing.test.ts` |
+| Direct flow source files say the same contract/guidance/proof/recovery/trace rules still apply. | `tests/contracts/generated-surface-framing.test.ts` |
 | Product surfaces do not describe Circuit primarily as a flow runner. | `scripts/release/audit-public-docs.ts` or framing test |
 
 ### Host Runtime Claims
@@ -469,7 +469,8 @@ For the generated-surface implementation slice:
 5. Run the new generated-surface framing tests.
 6. Run full `npm run verify`.
 
-For this docs-only spec, do not run emit or modify generated outputs.
+When this spec changes, run the same drift and framing checks used for host
+surface implementation work.
 
 ## Still Unsettled
 

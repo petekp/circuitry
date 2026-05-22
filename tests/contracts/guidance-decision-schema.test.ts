@@ -491,6 +491,92 @@ describe('GuidanceDecisionTraceEntry schema', () => {
     expect(
       GuidanceDecisionTraceEntry.safeParse({
         ...relayDecision(),
+        reason_codes: ['write_step_requires_worker', 'memory_hint_used'],
+      }).success,
+      'memory reason codes require memory_refs',
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+      }).success,
+      'memory_refs require a memory reason code',
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_conflicts_with_policy'],
+        rejected_options: [
+          {
+            option: { connector: 'old-memory-choice' },
+            reason_code: 'memory_conflicts_with_policy',
+            blocked_by: policyRef,
+          },
+        ],
+      }).success,
+    ).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_conflicts_with_contract'],
+        rejected_options: [
+          {
+            option: { route: 'old-memory-route' },
+            reason_code: 'memory_conflicts_with_contract',
+            blocked_by: workContractRef,
+          },
+        ],
+      }).success,
+    ).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_conflicts_with_policy'],
+        rejected_options: [
+          {
+            option: { connector: 'old-memory-choice' },
+            reason_code: 'memory_conflicts_with_policy',
+            blocked_by: workContractRef,
+          },
+        ],
+      }).success,
+      'policy conflicts must name the policy ref that won',
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_conflicts_with_contract'],
+        rejected_options: [
+          {
+            option: { route: 'old-memory-route' },
+            reason_code: 'memory_conflicts_with_contract',
+            blocked_by: policyRef,
+          },
+        ],
+      }).success,
+      'contract conflicts must name the work contract ref that won',
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_conflicts_with_policy'],
         rejected_options: [
           {
             option: { connector: 'old-memory-choice' },

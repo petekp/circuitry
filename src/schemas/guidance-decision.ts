@@ -176,6 +176,10 @@ function sameRef(a: RefValue, b: RefValue): boolean {
   );
 }
 
+function isMemoryReasonCode(reasonCode: string): boolean {
+  return reasonCode.startsWith('memory_');
+}
+
 function addScopedRefIssues(
   ctx: z.RefinementCtx,
   path: (string | number)[],
@@ -294,12 +298,51 @@ export function refineGuidanceDecisionTraceEntry(
       });
     }
   }
+  const rejectedOptionMemoryReasonCodes =
+    entry.rejected_options?.filter((option) => isMemoryReasonCode(option.reason_code)) ?? [];
+  const hasMemoryReasonCode =
+    entry.reason_codes.some(isMemoryReasonCode) || rejectedOptionMemoryReasonCodes.length > 0;
+  const hasMemoryRefs = (entry.memory_refs?.length ?? 0) > 0;
+  if (hasMemoryReasonCode && !hasMemoryRefs) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['memory_refs'],
+      message: 'memory reason codes require memory_refs',
+    });
+  }
+  if (hasMemoryRefs && !hasMemoryReasonCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['reason_codes'],
+      message: 'memory_refs require a memory reason code',
+    });
+  }
   for (const [index, option] of entry.rejected_options?.entries() ?? []) {
     if (option.blocked_by?.kind === 'memory') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['rejected_options', index, 'blocked_by', 'kind'],
         message: 'memory refs cannot block guidance options',
+      });
+    }
+    if (
+      option.reason_code === 'memory_conflicts_with_policy' &&
+      option.blocked_by?.kind !== 'policy'
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rejected_options', index, 'blocked_by', 'kind'],
+        message: 'memory policy conflicts must be blocked by policy refs',
+      });
+    }
+    if (
+      option.reason_code === 'memory_conflicts_with_contract' &&
+      option.blocked_by?.kind !== 'work_contract'
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rejected_options', index, 'blocked_by', 'kind'],
+        message: 'memory contract conflicts must be blocked by work_contract refs',
       });
     }
   }

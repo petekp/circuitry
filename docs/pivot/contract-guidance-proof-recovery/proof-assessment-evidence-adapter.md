@@ -210,7 +210,7 @@ type ProofAssessmentResult = {
   evidence_refs: EvidenceId[];
   missing: string[];
   contradictions: string[];
-  recovery: {
+  recovery?: {
     route_id: DeclaredRouteId;
     kind: RecoveryRouteKind;
     reason_code: string;
@@ -230,6 +230,10 @@ Rules:
 - A proof assessment must reference the matching `proof_policy`
   GuidanceDecision.
 - Recovery route ids must be declared by the WorkContract.
+- A proven result does not list recovery. A weak, contradicted, or unproved
+  result lists recovery only when the WorkContract declares a matching recovery
+  route; otherwise `missing` or `contradictions` must say that no declared
+  recovery route exists.
 
 ## Claim Coverage
 
@@ -572,6 +576,10 @@ If the WorkContract does not declare a matching recovery route, guidance must
 route to a declared stop, escalation, ask, or contract-missing path. It must not
 invent a new route.
 
+The V0 assessment may omit `recovery` when no declared route matches. That is
+not permission to continue; it is an explicit proof gap that the next recovery
+slice must route to a declared stop, escalation, ask, or contract-missing path.
+
 ## Write-Capable Close Rules
 
 Write-capable work can close as complete only when the WorkContract marks the
@@ -693,7 +701,10 @@ Schema tests:
   trace refs.
 - `ProofAssessment` rejects `close_allowed: true` unless all required claims are
   proven and no required claim is contradicted.
-- `ProofAssessment` rejects recovery route ids not declared by WorkContract.
+- `ProofAssessment` rejects recovery on proven results.
+- Runtime proof assessment never invents route ids. If no WorkContract recovery
+  route matches the proof outcome, the result omits `recovery` and records that
+  no declared recovery route covers the outcome.
 
 Acceptance adapter tests:
 

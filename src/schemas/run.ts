@@ -277,6 +277,17 @@ function isPassingSafeApplyResult(entry: SafeApplyResultEntry): boolean {
   );
 }
 
+function proofPolicyCloseGateKey(guidance: GuidanceTraceEntry): string {
+  const selected = selectedRecord(guidance);
+  return JSON.stringify({
+    flow_id: guidance.scope.flow_id,
+    step_id: guidance.scope.step_id,
+    proof_profile: selected.proof_profile,
+    required_claim_kinds: selected.required_claim_kinds,
+    required_evidence_kinds: selected.required_evidence_kinds,
+  });
+}
+
 function validateCompleteCloseGates(
   traceEntries: readonly ParsedTraceEntry[],
   ctx: z.RefinementCtx,
@@ -286,6 +297,10 @@ function validateCompleteCloseGates(
   );
   if (closeIndex < 0) return;
 
+  const latestRequiredProofByRequirement = new Map<
+    string,
+    { readonly guidance: GuidanceTraceEntry; readonly index: number }
+  >();
   for (let index = 0; index < closeIndex; index += 1) {
     const guidance = traceEntries[index];
     if (
@@ -295,6 +310,10 @@ function validateCompleteCloseGates(
     ) {
       continue;
     }
+    latestRequiredProofByRequirement.set(proofPolicyCloseGateKey(guidance), { guidance, index });
+  }
+
+  for (const { guidance, index } of latestRequiredProofByRequirement.values()) {
     const hasPassingProof = traceEntries.some((entry, proofIndex) => {
       return (
         proofIndex > index &&

@@ -45,6 +45,7 @@ function checkpointFlow(): ExecutableFlow {
     steps: [
       {
         id: 'checkpoint-step',
+        protocol: 'typed-checkpoint@v1',
         kind: 'checkpoint',
         choices: ['continue'],
         policy: {
@@ -61,6 +62,8 @@ function checkpointFlow(): ExecutableFlow {
           response: { path: 'reports/checkpoint-response.json' },
         },
         check: {
+          kind: 'checkpoint_selection',
+          source: { kind: 'checkpoint_response', ref: 'response' },
           allow: ['continue'],
         },
       },

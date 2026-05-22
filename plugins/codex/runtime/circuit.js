@@ -33785,6 +33785,9 @@ var NonEmptyRefs = external_exports.array(Ref).min(1);
 function sameRef(a, b) {
   return a.kind === b.kind && a.ref === b.ref && a.sha256 === b.sha256 && a.run_id === b.run_id && a.flow_id === b.flow_id && a.step_id === b.step_id && a.attempt === b.attempt && a.sequence === b.sequence;
 }
+function isMemoryReasonCode(reasonCode) {
+  return reasonCode.startsWith("memory_");
+}
 function addScopedRefIssues(ctx, path, label, ref, entry) {
   if (ref.run_id !== entry.run_id) {
     ctx.addIssue({
@@ -33888,12 +33891,43 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       });
     }
   }
+  const rejectedOptionMemoryReasonCodes = entry.rejected_options?.filter((option) => isMemoryReasonCode(option.reason_code)) ?? [];
+  const hasMemoryReasonCode = entry.reason_codes.some(isMemoryReasonCode) || rejectedOptionMemoryReasonCodes.length > 0;
+  const hasMemoryRefs = (entry.memory_refs?.length ?? 0) > 0;
+  if (hasMemoryReasonCode && !hasMemoryRefs) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["memory_refs"],
+      message: "memory reason codes require memory_refs"
+    });
+  }
+  if (hasMemoryRefs && !hasMemoryReasonCode) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "memory_refs require a memory reason code"
+    });
+  }
   for (const [index, option] of entry.rejected_options?.entries() ?? []) {
     if (option.blocked_by?.kind === "memory") {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory refs cannot block guidance options"
+      });
+    }
+    if (option.reason_code === "memory_conflicts_with_policy" && option.blocked_by?.kind !== "policy") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["rejected_options", index, "blocked_by", "kind"],
+        message: "memory policy conflicts must be blocked by policy refs"
+      });
+    }
+    if (option.reason_code === "memory_conflicts_with_contract" && option.blocked_by?.kind !== "work_contract") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["rejected_options", index, "blocked_by", "kind"],
+        message: "memory contract conflicts must be blocked by work_contract refs"
       });
     }
   }
@@ -34694,8 +34728,23 @@ var ProofAssessmentResult = external_exports.object({
   evidence_refs: external_exports.array(EvidenceId),
   missing: external_exports.array(external_exports.string().min(1)),
   contradictions: external_exports.array(external_exports.string().min(1)),
-  recovery: ProofRecovery
-}).strict();
+  recovery: ProofRecovery.optional()
+}).strict().superRefine((result, ctx) => {
+  if (result.status === "proven" && result.recovery !== void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["recovery"],
+      message: "proven claims must not declare a recovery route"
+    });
+  }
+  if (result.status !== "proven" && result.recovery === void 0 && result.missing.length === 0 && result.contradictions.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["recovery"],
+      message: "non-proven claims without recovery must explain the missing or contradicted proof"
+    });
+  }
+});
 var ProofScope = external_exports.object({
   run_id: RunId,
   flow_id: CompiledFlowId,
@@ -43244,7 +43293,13 @@ var CAUSES_BY_KIND = {
     "protected_file_touched",
     "generated_surface_drift"
   ],
-  stop_unsafe: ["contradicted_evidence", "scope_drift", "budget_exceeded", "unknown_failure"],
+  stop_unsafe: [
+    "failed_check",
+    "contradicted_evidence",
+    "scope_drift",
+    "budget_exceeded",
+    "unknown_failure"
+  ],
   escalate: ["relay_connector_failed", "budget_exceeded", "unknown_failure"],
   handoff: ["checkpoint_boundary", "budget_exceeded", "unknown_failure"]
 };
@@ -44889,34 +44944,28 @@ function sha2562(value) {
 function rejectOldAuthority(path, field, reason) {
   return { path, field, reason };
 }
-function routeForChoice2(step, choiceId, rejectedOldAuthority) {
+function routeForChoice2(step, choiceId) {
   const directTarget = step.routes[choiceId];
   if (directTarget !== void 0) {
     return { id: choiceId, target: directTarget };
   }
-  const passTarget = step.routes.pass;
-  if (passTarget !== void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/routes/pass`, "implicit_pass_route", `checkpoint choice '${choiceId}' would currently fall through to route 'pass'; future boundaries require an explicit choice route`));
-    return { id: "pass", target: passTarget };
-  }
-  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no matching route and no pass fallback`);
+  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`);
 }
 function consequenceForChoice(choice) {
   return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
 }
-function dynamicRouteFamily(step, rejectedOldAuthority) {
+function dynamicRouteFamily(step) {
   const selectTarget = step.routes.select;
   if (selectTarget !== void 0) {
     return { id: "select", target: selectTarget };
   }
   const passTarget = step.routes.pass;
   if (passTarget !== void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/routes/pass`, "implicit_pass_route", "dynamic checkpoint choices would currently fall through to route pass; future boundaries require a route family"));
     return { id: "pass", target: passTarget };
   }
   throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
 }
-function staticChoices(step, rejectedOldAuthority) {
+function staticChoices(step) {
   const choices = step.policy.choices;
   if (choices === void 0) {
     throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
@@ -44925,7 +44974,7 @@ function staticChoices(step, rejectedOldAuthority) {
     id: choice.id,
     ...choice.label === void 0 ? {} : { label: choice.label },
     ...choice.description === void 0 ? {} : { description: choice.description },
-    route: routeForChoice2(step, choice.id, rejectedOldAuthority),
+    route: routeForChoice2(step, choice.id),
     consequence: consequenceForChoice(choice)
   }));
 }
@@ -44938,9 +44987,9 @@ function projectCheckpointBoundaryV0(input) {
   }
   const choices = step.policy.choices !== void 0 ? {
     kind: "static",
-    items: staticChoices(step, rejectedOldAuthority)
+    items: staticChoices(step)
   } : (() => {
-    const routeFamily = dynamicRouteFamily(step, rejectedOldAuthority);
+    const routeFamily = dynamicRouteFamily(step);
     return {
       kind: "dynamic",
       source: step.policy.choices_from,
@@ -45237,20 +45286,20 @@ function policyRefsForConfigLayers(layers) {
   const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
   for (const [index, layer] of (layers ?? []).entries()) {
     const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
-    let sha2563;
+    let sha2564;
     try {
       const projection = projectConfigV1ToPolicyEnvelopeV2({
         config: layer.config,
         source: policyLayerSourceForConfigLayer(layer.layer)
       });
-      sha2563 = sha256Json(projection.policy_envelope);
+      sha2564 = sha256Json(projection.policy_envelope);
     } catch {
-      sha2563 = sha256Json({ schema_version: 1, config: layer.config });
+      sha2564 = sha256Json({ schema_version: 1, config: layer.config });
     }
     refs.push({
       kind: "policy",
       ref,
-      sha256: sha2563
+      sha256: sha2564
     });
   }
   return refs;
@@ -45531,6 +45580,37 @@ async function appendRecoveryRouteGuidance(context, input) {
     reason_codes: ["recovery_route_selected"]
   });
 }
+async function appendProofPolicyGuidance(context, input) {
+  const bounds = guidanceBounds(context);
+  if (bounds === void 0)
+    return;
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  const stepId = StepId.parse(input.stepId);
+  return await context.trace.append({
+    run_id: context.runId,
+    kind: "guidance.decision",
+    decision_id: `gd-proof-${idPart(stepId)}-${input.attempt}`,
+    subject: "proof_policy",
+    scope: {
+      run_id: context.runId,
+      flow_id: flowId,
+      step_id: stepId,
+      attempt: input.attempt
+    },
+    source: "deterministic",
+    selected: {
+      proof_profile: "acceptance_criteria",
+      required_claim_kinds: [...input.requiredClaimKinds],
+      required_evidence_kinds: [...input.requiredEvidenceKinds],
+      close_requires_proven: input.closeRequiresProven
+    },
+    input_refs: input.inputRefs.length === 0 ? [bounds.workContractRef] : input.inputRefs,
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    reason_codes: ["proof_policy_selected"]
+  });
+}
 
 // dist/runtime/executors/result.js
 function errorFromUnknown(error51) {
@@ -45561,6 +45641,7 @@ function policy(step) {
 }
 async function materializePolicy(step, context) {
   const stepPolicy = policy(step);
+  const choiceSource = stepPolicy.choices_from === void 0 ? "static" : "dynamic";
   const choices = stepPolicy.choices ?? (stepPolicy.choices_from === void 0 ? void 0 : await resolveCheckpointChoicesSource({
     source: stepPolicy.choices_from,
     files: context.files,
@@ -45573,6 +45654,7 @@ async function materializePolicy(step, context) {
   return {
     prompt: stepPolicy.prompt,
     choices,
+    choice_source: choiceSource,
     ...stepPolicy.safe_default_choice === void 0 ? {} : { safe_default_choice: stepPolicy.safe_default_choice },
     ...stepPolicy.auto_resolution === void 0 ? {} : { auto_resolution: stepPolicy.auto_resolution }
   };
@@ -45617,7 +45699,7 @@ function projectRuntimeCheckpointBoundary(input) {
     });
   } catch (error51) {
     if (error51 instanceof ZodError || error51 instanceof CheckpointBoundaryProjectionError) {
-      return void 0;
+      throw new Error(`checkpoint step '${input.step.id}' authority boundary projection failed: ${error51.message}`);
     }
     throw error51;
   }
@@ -45708,6 +45790,21 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
     };
   }
 }
+function checkpointRouteIdForResolution(input) {
+  if (Object.hasOwn(input.step.routes, input.selection)) {
+    return { kind: "resolved", routeId: input.selection };
+  }
+  if (input.stepPolicy.choice_source === "dynamic") {
+    if (Object.hasOwn(input.step.routes, "select"))
+      return { kind: "resolved", routeId: "select" };
+    if (Object.hasOwn(input.step.routes, "pass"))
+      return { kind: "resolved", routeId: "pass" };
+  }
+  return {
+    kind: "failed",
+    reason: `checkpoint step '${input.step.id}' selected '${input.selection}' but no declared route matches that checkpoint choice`
+  };
+}
 function checkpointRequestBody(input) {
   const stepPolicy = input.stepPolicy;
   return {
@@ -45720,10 +45817,8 @@ function checkpointRequestBody(input) {
       ...input.context.axes === void 0 ? {} : { axes: input.context.axes },
       ...input.context.projectRoot === void 0 ? {} : { project_root: input.context.projectRoot },
       ...input.context.workContractRef === void 0 ? {} : { work_contract_ref: input.context.workContractRef },
-      ...input.boundary === void 0 ? {} : {
-        checkpoint_boundary_ref: input.boundary.request_trace.boundary_ref,
-        checkpoint_boundary_hash: input.boundary.request_trace.boundary_hash
-      },
+      checkpoint_boundary_ref: input.boundary.request_trace.boundary_ref,
+      checkpoint_boundary_hash: input.boundary.request_trace.boundary_hash,
       selection_config_layers: input.context.selectionConfigLayers ?? [],
       policy_layers: input.context.policyLayers ?? [],
       ...input.checkpointReportSha256 === void 0 ? {} : { checkpoint_report_sha256: input.checkpointReportSha256 }
@@ -45774,7 +45869,7 @@ async function executeCheckpointResult(step, context) {
         step,
         context,
         stepPolicy,
-        ...boundary === void 0 ? {} : { boundary },
+        boundary,
         ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
       });
       await context.files.writeJson(request, requestBody);
@@ -45787,10 +45882,8 @@ async function executeCheckpointResult(step, context) {
         attempt,
         request_path: request.path,
         request_report_hash: checkpointRequestSha256,
-        ...boundary === void 0 ? {} : {
-          boundary_ref: boundary.request_trace.boundary_ref,
-          boundary_hash: boundary.request_trace.boundary_hash
-        },
+        boundary_ref: boundary.request_trace.boundary_ref,
+        boundary_hash: boundary.request_trace.boundary_hash,
         options: stepPolicy.choices.map((choice) => choice.id),
         ...resolution.kind === "waiting" ? { auto_resolved: false } : {}
       });
@@ -45829,7 +45922,15 @@ async function executeCheckpointResult(step, context) {
     if (!effectiveAllowed.includes(effectiveResolution.selection)) {
       return stepExecutionFailed(`checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${effectiveAllowed.join(", ")}]`);
     }
-    const routeId = Object.hasOwn(step.routes, effectiveResolution.selection) ? effectiveResolution.selection : "pass";
+    const routeResult = checkpointRouteIdForResolution({
+      step,
+      stepPolicy,
+      selection: effectiveResolution.selection
+    });
+    if (routeResult.kind === "failed") {
+      return stepExecutionFailed(routeResult.reason);
+    }
+    const routeId = routeResult.routeId;
     if (checkpointRequestSha256 === void 0) {
       checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
     }
@@ -46419,18 +46520,78 @@ async function relayCustom(input) {
   }
 }
 
-// dist/shared/recovery-route.js
-var RECOVERY_ROUTE_PRIORITY = [
-  "retry",
-  "revise",
-  "ask",
-  "stop",
-  "handoff",
-  "escalate"
-];
-function recoveryRouteForStep(step, allowedRoutes = RECOVERY_ROUTE_PRIORITY) {
-  const allowed = new Set(allowedRoutes);
-  return RECOVERY_ROUTE_PRIORITY.find((route) => allowed.has(route) && Object.hasOwn(step.routes, route));
+// dist/shared/proof-assessment.js
+import { createHash as createHash7 } from "node:crypto";
+function stableJson4(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha2563(value) {
+  return createHash7("sha256").update(stableJson4(value)).digest("hex");
+}
+function traceRef(entry) {
+  return {
+    kind: "trace",
+    ref: `trace.ndjson#sequence=${entry.sequence}`,
+    run_id: entry.run_id,
+    step_id: entry.step_id,
+    attempt: entry.attempt,
+    sequence: entry.sequence
+  };
+}
+function commandRef(entry) {
+  if (entry.criterion_id === void 0) {
+    throw new Error("acceptance command evidence requires criterion_id");
+  }
+  return {
+    kind: "command",
+    ref: `acceptance-criteria/${entry.step_id}/${entry.attempt}/${entry.criterion_id}/command`,
+    sha256: sha2563({
+      check_kind: entry.check_kind,
+      criterion_id: entry.criterion_id,
+      criterion_kind: entry.criterion_kind,
+      exit_code: entry.exit_code,
+      status: entry.status,
+      stdout_summary: entry.stdout_summary,
+      stderr_summary: entry.stderr_summary,
+      outcome: entry.outcome
+    }),
+    run_id: entry.run_id,
+    step_id: entry.step_id,
+    attempt: entry.attempt
+  };
+}
+function requireAcceptanceCriterionKind(criterionKind) {
+  if (criterionKind === "command" || criterionKind === "report_field")
+    return criterionKind;
+  throw new Error("acceptance criteria evidence requires criterion_kind");
+}
+function evidenceFromAcceptanceCriteriaTrace(input) {
+  const { entry } = input;
+  if (entry.kind !== "check.evaluated" || entry.check_kind !== "acceptance_criteria") {
+    throw new Error("acceptance criteria evidence requires a check.evaluated acceptance entry");
+  }
+  if (entry.criterion_id === void 0) {
+    throw new Error("acceptance criteria evidence requires criterion_id");
+  }
+  const kind = requireAcceptanceCriterionKind(entry.criterion_kind);
+  const inputRef = traceRef(entry);
+  const ref = kind === "command" ? commandRef(entry) : inputRef;
+  return Evidence.parse({
+    schema_version: 1,
+    id: `evidence.acceptance:${entry.step_id}:${entry.attempt}:${entry.criterion_id}`,
+    kind,
+    producer: "runtime",
+    independence: "runtime",
+    ref,
+    input_refs: [inputRef],
+    covers_claims: input.coversClaims,
+    result: entry.outcome === "pass" ? "pass" : "fail",
+    ...entry.reason === void 0 ? {} : { summary: entry.reason }
+  });
 }
 
 // dist/shared/relay-support.js
@@ -46629,6 +46790,54 @@ function responseJsonSchemaFromZod(schema) {
   return result;
 }
 
+// dist/shared/recovery-route.js
+var RECOVERY_ROUTE_PRIORITY = [
+  "retry",
+  "revise",
+  "ask",
+  "stop",
+  "handoff",
+  "escalate"
+];
+function recoveryRouteForStep(step, allowedRoutes = RECOVERY_ROUTE_PRIORITY) {
+  const allowed = new Set(allowedRoutes);
+  return RECOVERY_ROUTE_PRIORITY.find((route) => allowed.has(route) && Object.hasOwn(step.routes, route));
+}
+
+// dist/runtime/run/recovery-selection.js
+function routeTargetKey(target) {
+  return target.kind === "terminal" ? target.target : target.stepId;
+}
+function bindingMatches(input) {
+  if (input.binding.step_id !== input.step.id)
+    return false;
+  if (!input.binding.allowed_failure_causes.includes(input.cause))
+    return false;
+  const target = input.step.routes[input.binding.route_id];
+  return target !== void 0 && input.binding.route_target === routeTargetKey(target);
+}
+function recoveryRouteForFailure(input) {
+  const preferredRouteDeclared = input.preferredRoute !== void 0 && Object.hasOwn(input.step.routes, input.preferredRoute);
+  if (input.workContractRef === void 0) {
+    if (preferredRouteDeclared)
+      return input.preferredRoute;
+    return recoveryRouteForStep(input.step);
+  }
+  const matchingBindings = input.recoveryRouteBindings?.filter((binding) => bindingMatches({ step: input.step, binding, cause: input.cause })) ?? [];
+  if (preferredRouteDeclared && matchingBindings.some((binding) => binding.route_id === input.preferredRoute)) {
+    return input.preferredRoute;
+  }
+  const priorityMatch = RECOVERY_ROUTE_PRIORITY.find((route) => matchingBindings.some((binding) => binding.route_id === route));
+  if (priorityMatch !== void 0)
+    return priorityMatch;
+  const firstMatchingBinding = matchingBindings[0];
+  if (firstMatchingBinding !== void 0)
+    return firstMatchingBinding.route_id;
+  if (preferredRouteDeclared)
+    return input.preferredRoute;
+  return recoveryRouteForStep(input.step);
+}
+
 // dist/shared/selection-resolver.js
 var PRE_WORKFLOW_CONFIG_SOURCES = ["default", "user-global", "project"];
 function overrideContributes2(o) {
@@ -46821,7 +47030,7 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join6, resolve as resolve5 } from "node:path";
@@ -46835,7 +47044,7 @@ function defaultUserSkillRoots(homeDir = homedir()) {
   return [join6(homeDir, ".agents", "skills"), join6(homeDir, ".claude", "skills")];
 }
 function sha256Hex2(text) {
-  return createHash7("sha256").update(text, "utf8").digest("hex");
+  return createHash8("sha256").update(text, "utf8").digest("hex");
 }
 function parseSkillMarkdown(text, skillPath) {
   if (!text.startsWith("---"))
@@ -47010,6 +47219,21 @@ function configLayerConnector(name, configLayers) {
   }
   return descriptor;
 }
+function policyLayerConnector(name, policyLayers) {
+  let descriptor;
+  for (const layer of policyLayers ?? []) {
+    descriptor = layer.envelope.policy.rules.connectors.registry[name] ?? descriptor;
+  }
+  return descriptor;
+}
+function connectorFromPolicyRef(ref, policyLayers) {
+  if (ref.kind === "builtin")
+    return ref;
+  const descriptor = policyLayerConnector(ref.name, policyLayers);
+  if (descriptor !== void 0)
+    return descriptor;
+  throw new Error(`policy connector '${ref.name}' is referenced but not declared`);
+}
 function requestedConnectorForRelay(input) {
   const suppliedResolved = input.suppliedConnector?.connector;
   const suppliedResolvedName = resolvedConnectorName(suppliedResolved);
@@ -47029,10 +47253,49 @@ function requestedConnectorForRelay(input) {
   if (suppliedResolved !== void 0 && suppliedResolved.name === requested) {
     return suppliedResolved;
   }
+  const policyConfigured = policyLayerConnector(requested, input.policyLayers);
+  if (policyConfigured !== void 0)
+    return policyConfigured;
   const configured = configLayerConnector(requested, input.configLayers);
   if (configured !== void 0)
     return configured;
   throw new Error(`relay connector '${requested}' requires resolved connector capabilities before execution`);
+}
+function relayDecision(connector, resolvedFrom, role) {
+  assertConnectorCanRunRole(connector, role);
+  return {
+    role,
+    connectorName: connector.name,
+    connector,
+    resolvedFrom
+  };
+}
+function policyConnectorChoice(input) {
+  if ((input.policyLayers?.length ?? 0) === 0)
+    return void 0;
+  let roleRef;
+  let flowRef;
+  let defaultRef;
+  const flowId = input.flowId;
+  for (const layer of input.policyLayers ?? []) {
+    roleRef = layer.envelope.policy.preferences.relay.roles[input.role]?.prefer_connector ?? roleRef;
+    for (const hint of layer.envelope.policy.preferences.relay.flow_connector_hints) {
+      if (hint.flow_id === flowId) {
+        flowRef = hint.prefer_connector;
+      }
+    }
+    defaultRef = layer.envelope.policy.defaults.connector ?? defaultRef;
+  }
+  if (roleRef !== void 0) {
+    return relayDecision(connectorFromPolicyRef(roleRef, input.policyLayers), { source: "role", role: input.role }, input.role);
+  }
+  if (flowRef !== void 0) {
+    return relayDecision(connectorFromPolicyRef(flowRef, input.policyLayers), { source: "circuit", flow_id: flowId }, input.role);
+  }
+  if (defaultRef !== void 0 && defaultRef !== "auto") {
+    return relayDecision(connectorFromPolicyRef(defaultRef, input.policyLayers), { source: "default" }, input.role);
+  }
+  return void 0;
 }
 function selectionForCompatibility(selection) {
   if (selection === void 0)
@@ -47056,35 +47319,46 @@ function effortExceedsMax(effort, maxEffort) {
 }
 function assertPolicyAllowsRelayPlan(input) {
   const policyLayers = input.context.policyLayers ?? [];
+  assertPolicyAllowsRelayExecutionInput({
+    policyLayers,
+    role: input.role,
+    connectorName: input.connectorName,
+    resolvedSelection: input.resolvedSelection
+  });
   if (policyLayers.length === 0)
     return;
   const constraints = composePolicyHardConstraints(policyLayers.map((layer) => layer.envelope));
-  const { connectorName } = input;
-  const allowedConnectors = constraints.connectors.allow;
-  if (allowedConnectors !== void 0 && !allowedConnectors.includes(connectorName)) {
-    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': not in allowed connectors`);
-  }
-  if (constraints.connectors.deny.includes(connectorName)) {
-    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': connector is denied`);
-  }
-  if (input.role === "implementer" && constraints.connectors.deny_for_write.includes(connectorName)) {
-    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': connector is denied for write-capable relays`);
-  }
-  const provider = input.resolvedSelection.model?.provider;
-  if (provider !== void 0 && constraints.models.deny_providers.includes(provider)) {
-    throw new Error(`PolicyEnvelope disallows provider '${provider}': provider is denied`);
-  }
-  const requiredProvider = constraints.models.require_provider_for_connector[connectorName];
-  if (requiredProvider !== void 0 && provider !== requiredProvider) {
-    throw new Error(`PolicyEnvelope requires connector '${connectorName}' to use provider '${requiredProvider}'`);
-  }
-  if (effortExceedsMax(input.resolvedSelection.effort, constraints.limits.max_effort)) {
-    throw new Error(`PolicyEnvelope disallows effort '${input.resolvedSelection.effort}': max effort is '${constraints.limits.max_effort}'`);
-  }
   const deniedSkills = new Set(constraints.skills.deny);
   const deniedLoadedSkill = input.loadedSkills.find((skill) => deniedSkills.has(skill.id));
   if (deniedLoadedSkill !== void 0) {
     throw new Error(`PolicyEnvelope disallows skill '${deniedLoadedSkill.id}': skill is denied`);
+  }
+}
+function assertPolicyAllowsRelayExecutionInput(input) {
+  const policyLayers = input.policyLayers ?? [];
+  if (policyLayers.length === 0)
+    return;
+  const constraints = composePolicyHardConstraints(policyLayers.map((layer) => layer.envelope));
+  const allowedConnectors = constraints.connectors.allow;
+  if (allowedConnectors !== void 0 && !allowedConnectors.includes(input.connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${input.connectorName}': not in allowed connectors`);
+  }
+  if (constraints.connectors.deny.includes(input.connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${input.connectorName}': connector is denied`);
+  }
+  if (input.role === "implementer" && constraints.connectors.deny_for_write.includes(input.connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${input.connectorName}': connector is denied for write-capable relays`);
+  }
+  const provider = input.resolvedSelection?.model?.provider;
+  if (provider !== void 0 && constraints.models.deny_providers.includes(provider)) {
+    throw new Error(`PolicyEnvelope disallows provider '${provider}': provider is denied`);
+  }
+  const requiredProvider = constraints.models.require_provider_for_connector[input.connectorName];
+  if (requiredProvider !== void 0 && provider !== requiredProvider) {
+    throw new Error(`PolicyEnvelope requires connector '${input.connectorName}' to use provider '${requiredProvider}'`);
+  }
+  if (effortExceedsMax(input.resolvedSelection?.effort, constraints.limits.max_effort)) {
+    throw new Error(`PolicyEnvelope disallows effort '${input.resolvedSelection?.effort}': max effort is '${constraints.limits.max_effort}'`);
   }
 }
 function resolveRelayExecution(input) {
@@ -47092,16 +47366,32 @@ function resolveRelayExecution(input) {
   const explicitConnector = requestedConnectorForRelay({
     ...input.stepConnector === void 0 ? {} : { stepConnector: input.stepConnector },
     ...input.suppliedConnector === void 0 ? {} : { suppliedConnector: input.suppliedConnector },
-    ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers }
+    ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
+    ...input.policyLayers === void 0 ? {} : { policyLayers: input.policyLayers }
   });
-  const resolved = resolveConnectorForRelay({
+  const resolved = explicitConnector === void 0 ? policyConnectorChoice({
+    flowId: input.flowId,
+    role,
+    ...input.policyLayers === void 0 ? {} : { policyLayers: input.policyLayers }
+  }) ?? resolveConnectorForRelay({
+    flowId: input.flowId,
+    role,
+    ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers }
+  }) : resolveConnectorForRelay({
     flowId: input.flowId,
     role,
     ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
-    ...explicitConnector === void 0 ? {} : { explicitConnector }
+    explicitConnector
   });
   const resolvedConnector = resolved.connector;
-  assertConnectorSelectionCompatible(resolvedConnector.name, selectionForCompatibility(input.selection));
+  const resolvedSelection = selectionForCompatibility(input.selection);
+  assertConnectorSelectionCompatible(resolvedConnector.name, resolvedSelection);
+  assertPolicyAllowsRelayExecutionInput({
+    ...input.policyLayers === void 0 ? {} : { policyLayers: input.policyLayers },
+    role,
+    connectorName: resolvedConnector.name,
+    ...resolvedSelection === void 0 ? {} : { resolvedSelection }
+  });
   return {
     role,
     connectorName: resolvedConnector.name,
@@ -47129,6 +47419,7 @@ function planRelayGuidanceDecision(input) {
     role: step.role,
     ...suppliedConnector === void 0 ? {} : { suppliedConnector },
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+    ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
     ...step.selection === void 0 ? {} : { selection: step.selection },
     ...step.connector === void 0 ? {} : { stepConnector: step.connector }
   });
@@ -47181,6 +47472,156 @@ function timeoutMs(step) {
   const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === "number" ? wallClock : void 0;
 }
+function proofIdPart(value) {
+  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
+}
+function uniqueValues(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function acceptanceProofStatus(evidence) {
+  if (evidence.some((item) => item.result === "fail"))
+    return "contradicted";
+  if (evidence.some((item) => item.result === "pass" && item.kind === "command"))
+    return "proven";
+  return "weak";
+}
+function acceptanceProofMissing(status, evidence) {
+  if (status === "proven")
+    return [];
+  if (status === "weak" && evidence.some((item) => item.kind === "report_field")) {
+    return [
+      "report-field evidence proves report shape only; runtime command or diff proof is missing"
+    ];
+  }
+  if (status === "contradicted")
+    return [];
+  return ["no runtime evidence covers the acceptance criteria claim"];
+}
+function acceptanceProofContradictions(evidence) {
+  return evidence.filter((item) => item.result === "fail").map((item) => item.summary ?? `acceptance evidence '${item.id}' failed`);
+}
+function proofRecoveryReasonCode(status) {
+  if (status === "weak")
+    return "weak_acceptance_proof";
+  if (status === "contradicted")
+    return "failed_acceptance_criteria";
+  return "unproved_acceptance_claim";
+}
+function declaredRecoveryForAcceptanceProof(input) {
+  if (input.status === "proven")
+    return void 0;
+  const failureCause = input.status === "contradicted" ? "failed_acceptance_criteria" : input.status === "weak" ? "weak_proof" : "unproved_claim";
+  const binding = input.context.recoveryRouteBindings?.find((candidate) => candidate.step_id === input.step.id && candidate.allowed_failure_causes.includes(failureCause));
+  if (binding === void 0)
+    return void 0;
+  return {
+    route_id: binding.route_id,
+    kind: binding.kind,
+    reason_code: proofRecoveryReasonCode(input.status)
+  };
+}
+function proofAssessmentReportRef(input) {
+  return {
+    kind: "report",
+    ref: input.path,
+    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
+`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt
+  };
+}
+async function writeAcceptanceProofAssessment(input) {
+  if (input.context.workContractRef === void 0 || input.checkEntries.length === 0)
+    return;
+  const claimId = `claim.acceptance:${proofIdPart(input.step.id)}:${input.attempt}`;
+  const evidence = input.checkEntries.map((entry) => {
+    const item = evidenceFromAcceptanceCriteriaTrace({
+      entry,
+      coversClaims: [claimId]
+    });
+    return Evidence.parse({
+      ...item,
+      input_refs: [input.context.workContractRef, ...item.input_refs]
+    });
+  });
+  const status = acceptanceProofStatus(evidence);
+  const closeAllowed = status === "proven";
+  const recovery = declaredRecoveryForAcceptanceProof({
+    context: input.context,
+    step: input.step,
+    status
+  });
+  const proofPolicy = await appendProofPolicyGuidance(input.context, {
+    stepId: input.step.id,
+    attempt: input.attempt,
+    requiredClaimKinds: ["verification_passed"],
+    requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed,
+    inputRefs: evidence.flatMap((item) => item.input_refs)
+  });
+  if (proofPolicy === void 0)
+    return;
+  const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
+  const assessment = ProofAssessment.parse({
+    schema_version: 1,
+    assessment_id: `proof.acceptance:${proofIdPart(input.step.id)}:${input.attempt}`,
+    scope: {
+      run_id: input.context.runId,
+      flow_id: input.context.flow.id,
+      step_id: input.step.id,
+      attempt: input.attempt
+    },
+    proof_policy_decision_id: proofPolicy.decision_id,
+    claims: [
+      {
+        schema_version: 1,
+        id: claimId,
+        kind: "verification_passed",
+        statement: `Acceptance criteria for relay step '${input.step.id}' are backed by required runtime evidence.`,
+        scope_refs: [input.context.workContractRef],
+        risk: "medium",
+        required: true,
+        source: "work_contract"
+      }
+    ],
+    evidence,
+    results: [
+      {
+        claim_id: claimId,
+        status,
+        evidence_refs: evidence.map((item) => item.id),
+        missing: [
+          ...acceptanceProofMissing(status, evidence),
+          ...status !== "proven" && recovery === void 0 ? ["no declared recovery route covers this proof outcome"] : []
+        ],
+        contradictions: acceptanceProofContradictions(evidence),
+        ...recovery === void 0 ? {} : { recovery }
+      }
+    ],
+    overall_status: status,
+    close_allowed: closeAllowed
+  });
+  await input.context.files.writeJson(path, assessment);
+  const assessmentRef = proofAssessmentReportRef({
+    context: input.context,
+    stepId: input.step.id,
+    attempt: input.attempt,
+    path,
+    body: assessment
+  });
+  await input.context.trace.append({
+    run_id: input.context.runId,
+    kind: "proof.assessed",
+    assessment_id: assessment.assessment_id,
+    scope: assessment.scope,
+    proof_policy_decision_id: proofPolicy.decision_id,
+    assessment_ref: assessmentRef,
+    overall_status: status,
+    close_allowed: closeAllowed
+  });
+}
 function readRouteFromReportBody(body, path) {
   let cursor = body;
   for (const segment of path) {
@@ -47194,7 +47635,7 @@ function readRouteFromReportBody(body, path) {
   }
   return cursor;
 }
-function stableJson4(value) {
+function stableJson5(value) {
   return JSON.stringify(value, (_key, item) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
       return item;
@@ -47202,7 +47643,7 @@ function stableJson4(value) {
   });
 }
 function sameJson(left, right) {
-  return stableJson4(left) === stableJson4(right);
+  return stableJson5(left) === stableJson5(right);
 }
 function relaySkillIdentities(skills) {
   return skills.map((skill) => ({
@@ -47503,8 +47944,9 @@ async function executeProductionRelayAttempt(input) {
     outcome: resultVerdictEvaluation.kind === "pass" ? "pass" : "fail",
     ...resultVerdictEvaluation.kind === "pass" ? {} : { reason: resultVerdictEvaluation.reason }
   });
+  const acceptanceCheckEntries = [];
   for (const check2 of acceptance?.checks ?? []) {
-    await context.trace.append({
+    const entry = await context.trace.append({
       run_id: context.runId,
       kind: "check.evaluated",
       step_id: step.id,
@@ -47519,7 +47961,14 @@ async function executeProductionRelayAttempt(input) {
       ...check2.stdout_summary === void 0 ? {} : { stdout_summary: check2.stdout_summary },
       ...check2.stderr_summary === void 0 ? {} : { stderr_summary: check2.stderr_summary }
     });
+    acceptanceCheckEntries.push(CheckEvaluatedTraceEntry.parse(entry));
   }
+  await writeAcceptanceProofAssessment({
+    context,
+    step,
+    attempt,
+    checkEntries: acceptanceCheckEntries
+  });
   return {
     kind: "completed",
     evaluation,
@@ -47540,6 +47989,7 @@ async function executeRelayInternal(step, context, connector) {
     role: step.role,
     suppliedConnector: connector,
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+    ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
     ...step.selection === void 0 ? {} : { selection: step.selection },
     ...step.connector === void 0 ? {} : { stepConnector: step.connector }
   });
@@ -47573,10 +48023,13 @@ async function executeProductionRelay(step, context) {
   const compiledStep = requireRuntimeIndexedStep(context.packageIndex, step.id, "relay");
   const relayAttempt = await executeProductionRelayAttempt({ step, context, compiledStep });
   if (relayAttempt.kind === "connector_failed") {
-    if (Object.hasOwn(step.routes, "connector-failed")) {
-      return { route: "connector-failed", details: { reason: relayAttempt.reason } };
-    }
-    const recoveryRoute2 = recoveryRouteForStep(step);
+    const recoveryRoute2 = recoveryRouteForFailure({
+      step,
+      workContractRef: context.workContractRef,
+      recoveryRouteBindings: context.recoveryRouteBindings,
+      cause: "relay_connector_failed",
+      preferredRoute: "connector-failed"
+    });
     if (recoveryRoute2 !== void 0)
       return { route: recoveryRoute2, details: { reason: relayAttempt.reason } };
     throw new Error(relayAttempt.reason);
@@ -47603,7 +48056,13 @@ async function executeProductionRelay(step, context) {
         throw new Error(`relay step '${step.id}' acceptance criteria retry-with-feedback requires retry to re-enter the same step`);
       }
       return {
-        route: "retry",
+        route: recoveryRouteForFailure({
+          step,
+          workContractRef: context.workContractRef,
+          recoveryRouteBindings: context.recoveryRouteBindings,
+          cause: "failed_acceptance_criteria",
+          preferredRoute: "retry"
+        }) ?? "retry",
         details: {
           reason: evaluation.reason,
           acceptance_feedback: failure.feedback
@@ -47612,7 +48071,12 @@ async function executeProductionRelay(step, context) {
     }
     throw new Error(evaluation.reason);
   }
-  const recoveryRoute = recoveryRouteForStep(step);
+  const recoveryRoute = recoveryRouteForFailure({
+    step,
+    workContractRef: context.workContractRef,
+    recoveryRouteBindings: context.recoveryRouteBindings,
+    cause: "failed_check"
+  });
   if (recoveryRoute !== void 0)
     return { route: recoveryRoute, details: { reason: evaluation.reason } };
   throw new Error(evaluation.reason);
@@ -47826,7 +48290,8 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
       selection: branch.selection,
       ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
       suppliedConnector: relayConnector,
-      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
+      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers }
     });
     const response = await relayConnector.relay({
       runId: context.runId,
@@ -48172,7 +48637,8 @@ function branchUsesWritableConnector(branch, context, relayConnector) {
       ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
       ...branch.selection === void 0 ? {} : { selection: branch.selection },
       ...relayConnector === void 0 ? {} : { suppliedConnector: relayConnector },
-      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
+      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers }
     });
     return connectorCapabilities(decision2.connector).filesystem !== "read-only";
   } catch {
@@ -48576,11 +49042,166 @@ function verificationFailureReason(stepId, error51) {
   const message = error51 instanceof Error ? error51.message : String(error51);
   return `verification step '${stepId}': report writer failed (${message})`;
 }
+function proofIdPart2(value) {
+  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
+}
+function uniqueValues2(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function proofAssessmentReportRef2(input) {
+  return {
+    kind: "report",
+    ref: input.path,
+    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
+`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt
+  };
+}
+function commandEvidenceRef(input) {
+  const { observation } = input;
+  return {
+    kind: "command",
+    ref: `verification/${input.stepId}/${input.attempt}/${observation.command.id}`,
+    sha256: sha256Hex(`${JSON.stringify({
+      command_id: observation.command.id,
+      cwd: observation.command.cwd,
+      argv: observation.command.argv,
+      exit_code: observation.exit_code,
+      status: observation.status,
+      stdout_summary: observation.stdout_summary,
+      stderr_summary: observation.stderr_summary
+    }, null, 2)}
+`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt
+  };
+}
+function verificationProofStatus(input) {
+  if (input.observations.some((observation) => observation.status === "failed")) {
+    return "contradicted";
+  }
+  if (input.body.overall_status === "passed" && input.observations.length > 0) {
+    return "proven";
+  }
+  return "unproved";
+}
+function verificationProofContradictions(observations) {
+  return observations.filter((observation) => observation.status === "failed").map((observation) => `verification command '${observation.command.id}' failed with exit code ${observation.exit_code}`);
+}
+function verificationProofMissing(input) {
+  if (input.status === "proven")
+    return [];
+  if (input.status === "contradicted")
+    return [];
+  if (input.observations.length === 0)
+    return ["no runtime verification commands ran"];
+  return ["verification report did not prove required commands passed"];
+}
+async function writeVerificationProofAssessment(input) {
+  if (input.context.workContractRef === void 0)
+    return;
+  const claimId = `claim.verification:${proofIdPart2(input.step.id)}:${input.attempt}`;
+  const evidence = input.observations.map((observation, index) => {
+    const ref = commandEvidenceRef({
+      context: input.context,
+      stepId: input.step.id,
+      attempt: input.attempt,
+      observation
+    });
+    return Evidence.parse({
+      schema_version: 1,
+      id: `evidence.verification:${proofIdPart2(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart2(observation.command.id)}`,
+      kind: "command",
+      producer: "runtime",
+      independence: "runtime",
+      ref,
+      input_refs: [input.context.workContractRef],
+      covers_claims: [claimId],
+      result: observation.status === "passed" ? "pass" : "fail",
+      summary: observation.status === "passed" ? `verification command '${observation.command.id}' passed` : `verification command '${observation.command.id}' failed`
+    });
+  });
+  const status = verificationProofStatus({
+    observations: input.observations,
+    body: input.body
+  });
+  const closeAllowed = status === "proven";
+  const proofPolicy = await appendProofPolicyGuidance(input.context, {
+    stepId: input.step.id,
+    attempt: input.attempt,
+    requiredClaimKinds: ["verification_passed"],
+    requiredEvidenceKinds: uniqueValues2(evidence.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed,
+    inputRefs: evidence.flatMap((item) => [item.ref, ...item.input_refs])
+  });
+  if (proofPolicy === void 0)
+    return;
+  const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
+  const assessment = ProofAssessment.parse({
+    schema_version: 1,
+    assessment_id: `proof.verification:${proofIdPart2(input.step.id)}:${input.attempt}`,
+    scope: {
+      run_id: input.context.runId,
+      flow_id: input.context.flow.id,
+      step_id: input.step.id,
+      attempt: input.attempt
+    },
+    proof_policy_decision_id: proofPolicy.decision_id,
+    claims: [
+      {
+        schema_version: 1,
+        id: claimId,
+        kind: "verification_passed",
+        statement: `Verification step '${input.step.id}' passed required runtime commands.`,
+        scope_refs: [input.context.workContractRef],
+        risk: "medium",
+        required: true,
+        source: "work_contract"
+      }
+    ],
+    evidence,
+    results: [
+      {
+        claim_id: claimId,
+        status,
+        evidence_refs: evidence.map((item) => item.id),
+        missing: verificationProofMissing({ status, observations: input.observations }),
+        contradictions: verificationProofContradictions(input.observations)
+      }
+    ],
+    overall_status: status,
+    close_allowed: closeAllowed
+  });
+  await input.context.files.writeJson(path, assessment);
+  const assessmentRef = proofAssessmentReportRef2({
+    context: input.context,
+    stepId: input.step.id,
+    attempt: input.attempt,
+    path,
+    body: assessment
+  });
+  await input.context.trace.append({
+    run_id: input.context.runId,
+    kind: "proof.assessed",
+    assessment_id: assessment.assessment_id,
+    scope: assessment.scope,
+    proof_policy_decision_id: proofPolicy.decision_id,
+    assessment_ref: assessmentRef,
+    overall_status: status,
+    close_allowed: closeAllowed
+  });
+}
 async function executeVerificationResult(step, context) {
   const attempt = context.activeStepAttempt ?? 1;
   let report;
   let reportSchema;
   let body;
+  let observations;
   try {
     const stepReport = step.writes?.report;
     if (stepReport === void 0 || stepReport.schema === void 0) {
@@ -48604,7 +49225,7 @@ async function executeVerificationResult(step, context) {
       step: indexedStep2
     };
     const commands = builder.loadCommands(builderContext);
-    const observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
+    observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
     body = builder.buildResult(observations, builderContext);
     await context.files.writeJson(report, body);
   } catch (error51) {
@@ -48638,6 +49259,13 @@ async function executeVerificationResult(step, context) {
       check_kind: "schema_sections",
       outcome: "pass"
     });
+    await writeVerificationProofAssessment({
+      context,
+      step,
+      attempt,
+      body,
+      observations
+    });
     return stepExecutionOutcome({ route: "pass", details: { overall_status: "passed" } });
   }
   const reason = `verification step '${step.id}' failed one or more commands`;
@@ -48650,7 +49278,19 @@ async function executeVerificationResult(step, context) {
     outcome: "fail",
     reason
   });
-  const recoveryRoute = recoveryRouteForStep(step);
+  await writeVerificationProofAssessment({
+    context,
+    step,
+    attempt,
+    body,
+    observations
+  });
+  const recoveryRoute = recoveryRouteForFailure({
+    step,
+    workContractRef: context.workContractRef,
+    recoveryRouteBindings: context.recoveryRouteBindings,
+    cause: "failed_check"
+  });
   if (recoveryRoute !== void 0) {
     return stepExecutionOutcome({ route: recoveryRoute, details: { reason } });
   }
@@ -50118,11 +50758,11 @@ function latestAdmittedVerdict(context) {
   }
   return void 0;
 }
-function routeTargetKey(target) {
+function routeTargetKey2(target) {
   return target.kind === "terminal" ? target.target : target.stepId;
 }
 function recoveryBindingForCompletedRoute(input) {
-  return input.bindings?.find((binding) => binding.step_id === input.step.id && binding.route_id === input.route && binding.route_target === routeTargetKey(input.target));
+  return input.bindings?.find((binding) => binding.step_id === input.step.id && binding.route_id === input.route && binding.route_target === routeTargetKey2(input.target));
 }
 function hasRecoveryBindingForRoute(input) {
   if (input.route === void 0)
@@ -50185,6 +50825,12 @@ function latestRecoveryFailureEvidence(input) {
 }
 function recoveryCauseAllowed(binding, cause) {
   return binding.allowed_failure_causes.includes(cause);
+}
+function missingRecoveryBindingReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
+}
+function recoveryCauseNotAllowedReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(", ")}`;
 }
 function isActiveRecoveryRoute(activeRecovery, route) {
   return route !== void 0 && activeRecovery?.route === route;
@@ -50274,25 +50920,71 @@ function resolveManifestHash(flow, options) {
   }
   return computed;
 }
+function recordValue(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function traceScope(entry) {
+  return recordValue(entry.scope);
+}
+function proofPolicyRequirementKey(entry) {
+  const scope = traceScope(entry);
+  const selected = recordValue(entry.selected);
+  return JSON.stringify({
+    flow_id: scope.flow_id,
+    step_id: scope.step_id,
+    proof_profile: selected.proof_profile,
+    required_claim_kinds: selected.required_claim_kinds,
+    required_evidence_kinds: selected.required_evidence_kinds
+  });
+}
+function completeCloseProofGap(context) {
+  const entries = context.trace.getAll();
+  const latestRequiredProofByRequirement = /* @__PURE__ */ new Map();
+  for (const [index, entry] of entries.entries()) {
+    if (entry.kind !== "guidance.decision" || entry.subject !== "proof_policy")
+      continue;
+    const selected = recordValue(entry.selected);
+    if (selected.close_requires_proven !== true)
+      continue;
+    latestRequiredProofByRequirement.set(proofPolicyRequirementKey(entry), { entry, index });
+  }
+  for (const { entry, index } of latestRequiredProofByRequirement.values()) {
+    const guidanceScope = traceScope(entry);
+    const hasPassingProof = entries.some((candidate, proofIndex) => {
+      if (proofIndex <= index || candidate.kind !== "proof.assessed")
+        return false;
+      const proofScope = traceScope(candidate);
+      return candidate.proof_policy_decision_id === entry.decision_id && candidate.overall_status === "proven" && candidate.close_allowed === true && proofScope.flow_id === guidanceScope.flow_id && proofScope.step_id === guidanceScope.step_id && proofScope.attempt === guidanceScope.attempt;
+    });
+    if (!hasPassingProof) {
+      return `run.closed complete requires passing proof.assessed for proof_policy decision '${String(entry.decision_id)}'`;
+    }
+  }
+  return void 0;
+}
 async function closeRun(context, outcome, terminalTarget, reason) {
+  const proofGap = outcome === "complete" ? completeCloseProofGap(context) : void 0;
+  const finalOutcome = proofGap === void 0 ? outcome : "aborted";
+  const finalReason = proofGap ?? reason;
+  const finalTerminalTarget = proofGap === void 0 ? terminalTarget : void 0;
   await context.trace.append({
     run_id: context.runId,
     kind: "run.closed",
-    outcome,
-    ...reason === void 0 ? {} : { reason }
+    outcome: finalOutcome,
+    ...finalReason === void 0 ? {} : { reason: finalReason }
   });
-  const verdict = outcome === "complete" ? latestAdmittedVerdict(context) : void 0;
+  const verdict = finalOutcome === "complete" ? latestAdmittedVerdict(context) : void 0;
   const result = {
     schema_version: 1,
     run_id: context.runId,
     flow_id: context.flow.id,
     goal: context.goal,
-    outcome,
-    summary: resultSummary(outcome, terminalTarget),
+    outcome: finalOutcome,
+    summary: resultSummary(finalOutcome, finalTerminalTarget),
     closed_at: context.now().toISOString(),
     trace_entries_observed: context.trace.getAll().length,
     manifest_hash: context.manifestHash,
-    ...reason === void 0 ? {} : { reason },
+    ...finalReason === void 0 ? {} : { reason: finalReason },
     ...verdict === void 0 ? {} : { verdict }
   };
   const resultPath2 = await writeRuntimeRunResult(context.files, result);
@@ -50322,6 +51014,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     goal: options.goal ?? `Run ${flow.id}`,
     manifestHash: resolveManifestHash(flow, options),
     ...options.workContractRef === void 0 ? {} : { workContractRef: options.workContractRef },
+    ...options.recoveryRouteBindings === void 0 ? {} : { recoveryRouteBindings: options.recoveryRouteBindings },
     ...options.entryModeName === void 0 ? {} : { entryModeName: options.entryModeName },
     ...options.depth === void 0 ? {} : { depth: options.depth },
     ...options.axes === void 0 ? {} : { axes: options.axes },
@@ -50472,6 +51165,45 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       step,
       route
     });
+    const recoveryFailure = latestRecoveryFailureEvidence({
+      context,
+      stepId: step.id,
+      attempt,
+      details
+    });
+    if (context.workContractRef !== void 0 && recoveryFailure !== void 0) {
+      if (recoveryBinding === void 0) {
+        const reason = missingRecoveryBindingReason({
+          stepId: step.id,
+          route,
+          cause: recoveryFailure.cause
+        });
+        await trace.append({
+          run_id: runId,
+          kind: "step.aborted",
+          step_id: step.id,
+          attempt,
+          reason
+        });
+        return await closeRun(context, "aborted", void 0, reason);
+      }
+      if (!recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
+        const reason = recoveryCauseNotAllowedReason({
+          stepId: step.id,
+          route,
+          cause: recoveryFailure.cause,
+          binding: recoveryBinding
+        });
+        await trace.append({
+          run_id: runId,
+          kind: "step.aborted",
+          step_id: step.id,
+          attempt,
+          reason
+        });
+        return await closeRun(context, "aborted", void 0, reason);
+      }
+    }
     if (target.kind === "step" && target.stepId === step.id && route === "pass") {
       const reason = `route cycle detected: step '${step.id}' routes via '${route}' to itself`;
       await trace.append({
@@ -50522,15 +51254,14 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       };
     }
     if (recoveryBinding !== void 0) {
-      const failure = latestRecoveryFailureEvidence({ context, stepId: step.id, attempt, details });
-      if (failure !== void 0 && recoveryCauseAllowed(recoveryBinding, failure.cause)) {
+      if (recoveryFailure !== void 0 && recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
         await appendRecoveryRouteGuidance(context, {
           stepId: step.id,
           attempt,
           routeId: route,
           recoveryKind: recoveryBinding.kind,
-          failureCause: failure.cause,
-          failureRef: failure.ref,
+          failureCause: recoveryFailure.cause,
+          failureRef: recoveryFailure.ref,
           bindingRef: recoveryBinding.source_ref
         });
       }

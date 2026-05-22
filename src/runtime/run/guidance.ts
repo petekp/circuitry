@@ -250,3 +250,45 @@ export async function appendRecoveryRouteGuidance(
     reason_codes: ['recovery_route_selected'],
   })) as GuidanceDecisionTraceEntryBody;
 }
+
+export async function appendProofPolicyGuidance(
+  context: RunContext,
+  input: {
+    readonly stepId: string;
+    readonly attempt: number;
+    readonly requiredClaimKinds: readonly string[];
+    readonly requiredEvidenceKinds: readonly string[];
+    readonly closeRequiresProven: boolean;
+    readonly inputRefs: readonly Ref[];
+  },
+): Promise<GuidanceDecisionTraceEntryBody | undefined> {
+  const bounds = guidanceBounds(context);
+  if (bounds === undefined) return;
+
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  const stepId = StepId.parse(input.stepId);
+  return (await context.trace.append({
+    run_id: context.runId,
+    kind: 'guidance.decision',
+    decision_id: `gd-proof-${idPart(stepId as unknown as string)}-${input.attempt}`,
+    subject: 'proof_policy',
+    scope: {
+      run_id: context.runId,
+      flow_id: flowId,
+      step_id: stepId,
+      attempt: input.attempt,
+    },
+    source: 'deterministic',
+    selected: {
+      proof_profile: 'acceptance_criteria',
+      required_claim_kinds: [...input.requiredClaimKinds],
+      required_evidence_kinds: [...input.requiredEvidenceKinds],
+      close_requires_proven: input.closeRequiresProven,
+    },
+    input_refs: input.inputRefs.length === 0 ? [bounds.workContractRef] : input.inputRefs,
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    reason_codes: ['proof_policy_selected'],
+  })) as GuidanceDecisionTraceEntryBody;
+}

@@ -15,7 +15,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BuildPlan, BuildVerification } from '../../src/flows/build/reports.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
+import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
+import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
+import { RunTrace } from '../../src/schemas/run.js';
 
 function deterministicNow(startMs: number): () => Date {
   let n = 0;
@@ -199,6 +202,37 @@ describe('Build verification command execution', () => {
         },
       ],
     });
+    const proof = ProofAssessment.parse(
+      readJson(runFolder, 'reports/proof/verify-step-attempt-1.assessment.json'),
+    );
+    expect(proof).toMatchObject({
+      overall_status: 'proven',
+      close_allowed: true,
+      evidence: [
+        expect.objectContaining({
+          kind: 'command',
+          producer: 'runtime',
+          independence: 'runtime',
+          result: 'pass',
+        }),
+      ],
+      results: [
+        expect.objectContaining({
+          status: 'proven',
+          missing: [],
+          contradictions: [],
+        }),
+      ],
+    });
+    const trace = await new TraceStore(runFolder).load();
+    expect(trace.map((entry) => entry.kind)).toEqual(
+      expect.arrayContaining(['guidance.decision', 'proof.assessed', 'run.closed']),
+    );
+    const proofIndex = trace.findIndex((entry) => entry.kind === 'proof.assessed');
+    const closeIndex = trace.findIndex((entry) => entry.kind === 'run.closed');
+    expect(proofIndex).toBeGreaterThan(-1);
+    expect(closeIndex).toBeGreaterThan(proofIndex);
+    expect(RunTrace.safeParse(trace).success).toBe(true);
   });
 
   it('writes failed verification evidence and aborts when a command exits nonzero', async () => {
@@ -230,6 +264,27 @@ describe('Build verification command execution', () => {
       exit_code: 2,
       status: 'failed',
       stderr_summary: 'nope',
+    });
+    const proof = ProofAssessment.parse(
+      readJson(runFolder, 'reports/proof/verify-step-attempt-1.assessment.json'),
+    );
+    expect(proof).toMatchObject({
+      overall_status: 'contradicted',
+      close_allowed: false,
+      evidence: [
+        expect.objectContaining({
+          kind: 'command',
+          producer: 'runtime',
+          independence: 'runtime',
+          result: 'fail',
+        }),
+      ],
+      results: [
+        expect.objectContaining({
+          status: 'contradicted',
+          contradictions: [expect.stringContaining('node-check')],
+        }),
+      ],
     });
   });
 

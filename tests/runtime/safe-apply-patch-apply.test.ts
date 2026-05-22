@@ -25,6 +25,16 @@ function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
 
+function treeFingerprint(): string {
+  return sha256(
+    execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }),
+  );
+}
+
 function writePatch(name: string, body: string): string {
   const path = join(root, name);
   writeFileSync(path, body);
@@ -63,6 +73,7 @@ describe('guardedApplyPatch', () => {
       projectRoot: root,
       patchPath,
       expectedPatchSha256: sha256(patch),
+      expectedBaseTreeHash: treeFingerprint(),
     });
 
     expect(result.status).toBe('applied');
@@ -278,6 +289,32 @@ describe('guardedApplyPatch', () => {
       patchPath,
       expectedPatchSha256: sha256(patch),
       baseRef: initialBase,
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.reason_codes).toEqual(['base_mismatch']);
+    expect(result.parent_mutation).toBe('none');
+    expect(result.temp_root_removed).toBe(false);
+    expect(readFileSync(join(root, 'src/example.txt'), 'utf8')).toBe('before\n');
+  });
+
+  it('rejects base tree mismatches before parent mutation', () => {
+    const patch = [
+      'diff --git a/src/example.txt b/src/example.txt',
+      '--- a/src/example.txt',
+      '+++ b/src/example.txt',
+      '@@ -1 +1 @@',
+      '-before',
+      '+after',
+      '',
+    ].join('\n');
+    const patchPath = writePatch('tree-mismatch.patch', patch);
+
+    const result = guardedApplyPatch({
+      projectRoot: root,
+      patchPath,
+      expectedPatchSha256: sha256(patch),
+      expectedBaseTreeHash: '0'.repeat(64),
     });
 
     expect(result.status).toBe('rejected');

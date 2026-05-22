@@ -98,11 +98,6 @@ function proofAssessment(overrides: Record<string, unknown> = {}) {
         evidence_refs: ['evidence.command.verify'],
         missing: [],
         contradictions: [],
-        recovery: {
-          route_id: 'retry',
-          kind: 'retry_same_step_with_feedback',
-          reason_code: 'verification_failed',
-        },
       },
     ],
     overall_status: 'proven',
@@ -114,6 +109,31 @@ function proofAssessment(overrides: Record<string, unknown> = {}) {
 describe('ProofAssessment schema foundation', () => {
   it('accepts a proven claim backed by runtime evidence', () => {
     expect(ProofAssessment.safeParse(proofAssessment()).success).toBe(true);
+  });
+
+  it('does not require or allow recovery routes for proven claims', () => {
+    expect(ProofAssessment.safeParse(proofAssessment()).success).toBe(true);
+
+    expect(
+      ProofAssessment.safeParse(
+        proofAssessment({
+          results: [
+            {
+              claim_id: 'claim.verification_passed',
+              status: 'proven',
+              evidence_refs: ['evidence.command.verify'],
+              missing: [],
+              contradictions: [],
+              recovery: {
+                route_id: 'retry',
+                kind: 'retry_same_step_with_feedback',
+                reason_code: 'unneeded_recovery',
+              },
+            },
+          ],
+        }),
+      ).success,
+    ).toBe(false);
   });
 
   it('requires claims to have scope refs and rejects worker-authored claim sources', () => {

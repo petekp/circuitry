@@ -187,7 +187,10 @@
       "routes": {
         "continue": "close-step",
         "pass": "close-step",
-        "stop": "@stop"
+        "stop": "@stop",
+        "keep-prototype": "close-step",
+        "save-build-input": "close-step",
+        "discard-prototype": "close-step"
       },
       "executor": "orchestrator",
       "kind": "checkpoint",

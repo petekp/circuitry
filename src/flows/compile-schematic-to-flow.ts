@@ -232,6 +232,15 @@ function compileRoutesForMode(
       `schematic item '${item.id}' has no outcome that maps to '${RUNTIME_SUCCESS_ROUTE}'; declare one success route (${SCHEMATIC_SUCCESS_ROUTE_ALIASES.join(' or ')}) so the compiled CompiledFlow has a success edge`,
     );
   }
+  if (item.execution.kind === 'checkpoint' && item.checkpoint_policy?.choices !== undefined) {
+    const successTarget = routes[RUNTIME_SUCCESS_ROUTE];
+    if (successTarget === undefined) {
+      fail(`schematic checkpoint '${item.id}' has no runtime success route`);
+    }
+    for (const choice of item.checkpoint_policy.choices) {
+      routes[choice.id] ??= successTarget;
+    }
+  }
   return routes;
 }
 

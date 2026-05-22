@@ -227,7 +227,7 @@ function checkpointCompiledFlow(options: {
         title: 'Frame',
         protocol: 'build-frame@v1',
         reads: [],
-        routes: { pass: '@complete' },
+        routes: { pass: '@complete', continue: '@complete', revise: '@stop' },
         executor: 'orchestrator',
         kind: 'checkpoint',
         policy: {
@@ -296,7 +296,7 @@ function checkpointToRelayCompiledFlow(): { flow: CompiledFlow; bytes: Buffer } 
         title: 'Frame',
         protocol: 'build-frame@v1',
         reads: [],
-        routes: { pass: 'relay-step' },
+        routes: { pass: 'relay-step', continue: 'relay-step' },
         executor: 'orchestrator',
         kind: 'checkpoint',
         policy: {
@@ -387,7 +387,7 @@ function checkpointToVerificationCompiledFlow(commandCwd = '.'): {
         title: 'Frame',
         protocol: 'build-frame@v1',
         reads: [],
-        routes: { pass: 'plan-step' },
+        routes: { pass: 'plan-step', continue: 'plan-step' },
         executor: 'orchestrator',
         kind: 'checkpoint',
         policy: {
@@ -639,7 +639,7 @@ describe('Build checkpoint execution substrate', () => {
     });
     expect(packet.choices[0]).toMatchObject({
       id: 'continue',
-      route: { key: 'pass', target: '@complete' },
+      route: { key: 'continue', target: '@complete' },
     });
     expect(packet.proof.status).toBe('planned');
     expect(packet.salience.hidden_routine_work.join('\n')).toContain('test execution');

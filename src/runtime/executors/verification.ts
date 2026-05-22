@@ -1,13 +1,24 @@
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import { findVerificationWriter } from '../../flows/registries/verification-writers/registry.js';
+import type { VerificationCommandObservation } from '../../flows/registries/verification-writers/types.js';
+import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
+import {
+  ProofAssessment,
+  type Evidence as ProofEvidence,
+  Evidence as ProofEvidenceSchema,
+  type ProofStatus,
+} from '../../schemas/proof-assessment.js';
+import type { Ref } from '../../schemas/ref.js';
+import { sha256Hex } from '../../shared/connector-relay.js';
 import {
   ProofPlanBlockedError,
   isProofPlanBlockedError,
   runProofPlanCommand,
 } from '../../shared/proof-plan.js';
-import { recoveryRouteForStep } from '../../shared/recovery-route.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { VerificationStep } from '../manifest/executable-flow.js';
+import { appendProofPolicyGuidance } from '../run/guidance.js';
+import { recoveryRouteForFailure } from '../run/recovery-selection.js';
 import type { RunContext } from '../run/run-context.js';
 import {
   type StepExecutionResult,
@@ -21,6 +32,202 @@ function verificationFailureReason(stepId: string, error: unknown): string {
   return `verification step '${stepId}': report writer failed (${message})`;
 }
 
+function proofIdPart(value: string): string {
+  return value.replace(/[^a-z0-9._-]/g, '-').toLowerCase();
+}
+
+function uniqueValues(values: readonly string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
+function proofAssessmentReportRef(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+  readonly path: string;
+  readonly body: unknown;
+}): Ref {
+  return {
+    kind: 'report',
+    ref: input.path,
+    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}\n`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt,
+  };
+}
+
+function commandEvidenceRef(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+  readonly observation: VerificationCommandObservation;
+}): Ref {
+  const { observation } = input;
+  return {
+    kind: 'command',
+    ref: `verification/${input.stepId}/${input.attempt}/${observation.command.id}`,
+    sha256: sha256Hex(
+      `${JSON.stringify(
+        {
+          command_id: observation.command.id,
+          cwd: observation.command.cwd,
+          argv: observation.command.argv,
+          exit_code: observation.exit_code,
+          status: observation.status,
+          stdout_summary: observation.stdout_summary,
+          stderr_summary: observation.stderr_summary,
+        },
+        null,
+        2,
+      )}\n`,
+    ),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt,
+  };
+}
+
+function verificationProofStatus(input: {
+  readonly observations: readonly VerificationCommandObservation[];
+  readonly body: { readonly overall_status?: unknown };
+}): ProofStatus {
+  if (input.observations.some((observation) => observation.status === 'failed')) {
+    return 'contradicted';
+  }
+  if (input.body.overall_status === 'passed' && input.observations.length > 0) {
+    return 'proven';
+  }
+  return 'unproved';
+}
+
+function verificationProofContradictions(
+  observations: readonly VerificationCommandObservation[],
+): string[] {
+  return observations
+    .filter((observation) => observation.status === 'failed')
+    .map(
+      (observation) =>
+        `verification command '${observation.command.id}' failed with exit code ${observation.exit_code}`,
+    );
+}
+
+function verificationProofMissing(input: {
+  readonly status: ProofStatus;
+  readonly observations: readonly VerificationCommandObservation[];
+}): string[] {
+  if (input.status === 'proven') return [];
+  if (input.status === 'contradicted') return [];
+  if (input.observations.length === 0) return ['no runtime verification commands ran'];
+  return ['verification report did not prove required commands passed'];
+}
+
+async function writeVerificationProofAssessment(input: {
+  readonly context: RunContext;
+  readonly step: VerificationStep;
+  readonly attempt: number;
+  readonly body: { readonly overall_status?: unknown };
+  readonly observations: readonly VerificationCommandObservation[];
+}): Promise<void> {
+  if (input.context.workContractRef === undefined) return;
+
+  const claimId = `claim.verification:${proofIdPart(input.step.id)}:${input.attempt}`;
+  const evidence: ProofEvidence[] = input.observations.map((observation, index) => {
+    const ref = commandEvidenceRef({
+      context: input.context,
+      stepId: input.step.id,
+      attempt: input.attempt,
+      observation,
+    });
+    return ProofEvidenceSchema.parse({
+      schema_version: 1,
+      id: `evidence.verification:${proofIdPart(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart(observation.command.id)}`,
+      kind: 'command',
+      producer: 'runtime',
+      independence: 'runtime',
+      ref,
+      input_refs: [input.context.workContractRef],
+      covers_claims: [claimId],
+      result: observation.status === 'passed' ? 'pass' : 'fail',
+      summary:
+        observation.status === 'passed'
+          ? `verification command '${observation.command.id}' passed`
+          : `verification command '${observation.command.id}' failed`,
+    });
+  });
+  const status = verificationProofStatus({
+    observations: input.observations,
+    body: input.body,
+  });
+  const closeAllowed = status === 'proven';
+  const proofPolicy = await appendProofPolicyGuidance(input.context, {
+    stepId: input.step.id,
+    attempt: input.attempt,
+    requiredClaimKinds: ['verification_passed'],
+    requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed,
+    inputRefs: evidence.flatMap((item) => [item.ref, ...item.input_refs]),
+  });
+  if (proofPolicy === undefined) return;
+
+  const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
+  const assessment = ProofAssessment.parse({
+    schema_version: 1,
+    assessment_id: `proof.verification:${proofIdPart(input.step.id)}:${input.attempt}`,
+    scope: {
+      run_id: input.context.runId,
+      flow_id: input.context.flow.id,
+      step_id: input.step.id,
+      attempt: input.attempt,
+    },
+    proof_policy_decision_id: proofPolicy.decision_id,
+    claims: [
+      {
+        schema_version: 1,
+        id: claimId,
+        kind: 'verification_passed',
+        statement: `Verification step '${input.step.id}' passed required runtime commands.`,
+        scope_refs: [input.context.workContractRef],
+        risk: 'medium',
+        required: true,
+        source: 'work_contract',
+      },
+    ],
+    evidence,
+    results: [
+      {
+        claim_id: claimId,
+        status,
+        evidence_refs: evidence.map((item) => item.id),
+        missing: verificationProofMissing({ status, observations: input.observations }),
+        contradictions: verificationProofContradictions(input.observations),
+      },
+    ],
+    overall_status: status,
+    close_allowed: closeAllowed,
+  });
+  await input.context.files.writeJson(path, assessment);
+  const assessmentRef = proofAssessmentReportRef({
+    context: input.context,
+    stepId: input.step.id,
+    attempt: input.attempt,
+    path,
+    body: assessment,
+  });
+  await input.context.trace.append({
+    run_id: input.context.runId,
+    kind: 'proof.assessed',
+    assessment_id: assessment.assessment_id,
+    scope: assessment.scope,
+    proof_policy_decision_id: proofPolicy.decision_id,
+    assessment_ref: assessmentRef,
+    overall_status: status,
+    close_allowed: closeAllowed,
+  });
+}
+
 export async function executeVerificationResult(
   step: VerificationStep,
   context: RunContext,
@@ -31,6 +238,7 @@ export async function executeVerificationResult(
   let body: {
     readonly overall_status?: unknown;
   };
+  let observations: readonly VerificationCommandObservation[];
   try {
     const stepReport = step.writes?.report;
     if (stepReport === undefined || stepReport.schema === undefined) {
@@ -57,7 +265,7 @@ export async function executeVerificationResult(
       step: indexedStep,
     };
     const commands = builder.loadCommands(builderContext);
-    const observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
+    observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
     body = builder.buildResult(observations, builderContext) as {
       readonly overall_status?: unknown;
     };
@@ -95,6 +303,13 @@ export async function executeVerificationResult(
       check_kind: 'schema_sections',
       outcome: 'pass',
     });
+    await writeVerificationProofAssessment({
+      context,
+      step,
+      attempt,
+      body,
+      observations,
+    });
     return stepExecutionOutcome({ route: 'pass', details: { overall_status: 'passed' } });
   }
 
@@ -108,7 +323,19 @@ export async function executeVerificationResult(
     outcome: 'fail',
     reason,
   });
-  const recoveryRoute = recoveryRouteForStep(step);
+  await writeVerificationProofAssessment({
+    context,
+    step,
+    attempt,
+    body,
+    observations,
+  });
+  const recoveryRoute = recoveryRouteForFailure({
+    step,
+    workContractRef: context.workContractRef,
+    recoveryRouteBindings: context.recoveryRouteBindings,
+    cause: 'failed_check',
+  });
   if (recoveryRoute !== undefined) {
     return stepExecutionOutcome({ route: recoveryRoute, details: { reason } });
   }

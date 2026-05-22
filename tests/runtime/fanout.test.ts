@@ -13,6 +13,7 @@ import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { CustomConnectorDescriptor } from '../../src/schemas/connector.js';
+import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 import { RunResult } from '../../src/schemas/result.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
@@ -1500,6 +1501,56 @@ describe('runtime fanout executor', () => {
 
     expect(result.outcome).toBe('aborted');
     expect(result.reason).toContain("expected provider 'anthropic'");
+    expect(relayCalls).toBe(0);
+    const entries = await trace(runDir);
+    expect(entries.filter((entry) => entry.kind === 'fanout.branch_started')).toHaveLength(1);
+    const completed = entries.filter((entry) => entry.kind === 'fanout.branch_completed');
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.child_outcome).toBe('aborted');
+  });
+
+  it('enforces PolicyEnvelope connector rules for injected relay fanout branches', async () => {
+    const runDir = join(baseDir, 'relay-fanout-policy-connector-run');
+    let relayCalls = 0;
+    const policyLayer = PolicyLayer.parse({
+      source: 'project',
+      envelope: {
+        schema_version: 2,
+        policy: {
+          rules: {
+            connectors: {
+              allow: ['codex'],
+            },
+          },
+        },
+      },
+    });
+
+    const result = await executeExecutableFlow(dynamicRelayFanoutFlow(), {
+      runDir,
+      runId: randomUUID(),
+      goal: 'fanout goal',
+      policyLayers: [policyLayer],
+      relayConnector: {
+        connectorName: 'claude-code',
+        async relay() {
+          relayCalls += 1;
+          return { verdict: 'accept', option_id: 'option-one' };
+        },
+      },
+      executors: {
+        compose: async (_step, context) => {
+          await context.files.writeJson('reports/options.json', {
+            options: [{ id: 'option-one', prompt: 'argue for option one' }],
+          });
+          return { route: 'pass' };
+        },
+      },
+      now: () => new Date('2026-05-03T00:00:00.000Z'),
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toContain("PolicyEnvelope disallows connector 'claude-code'");
     expect(relayCalls).toBe(0);
     const entries = await trace(runDir);
     expect(entries.filter((entry) => entry.kind === 'fanout.branch_started')).toHaveLength(1);

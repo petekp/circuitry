@@ -203,9 +203,31 @@ export const ProofAssessmentResult = z
     evidence_refs: z.array(EvidenceId),
     missing: z.array(z.string().min(1)),
     contradictions: z.array(z.string().min(1)),
-    recovery: ProofRecovery,
+    recovery: ProofRecovery.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((result, ctx) => {
+    if (result.status === 'proven' && result.recovery !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recovery'],
+        message: 'proven claims must not declare a recovery route',
+      });
+    }
+    if (
+      result.status !== 'proven' &&
+      result.recovery === undefined &&
+      result.missing.length === 0 &&
+      result.contradictions.length === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recovery'],
+        message:
+          'non-proven claims without recovery must explain the missing or contradicted proof',
+      });
+    }
+  });
 export type ProofAssessmentResult = z.infer<typeof ProofAssessmentResult>;
 
 const ProofScope = z

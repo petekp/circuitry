@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { flowPackages } from '../../src/flows/catalog.js';
 import {
   PursuitBatch,
   PursuitContract,
@@ -259,6 +260,15 @@ function reportWritesBySchema(flow: CompiledFlow): Map<string, string> {
     }
   }
   return writes;
+}
+
+function packageReportSchemas(flowId: string): readonly string[] {
+  const pkg = flowPackages.find((candidate) => candidate.id === flowId);
+  if (pkg === undefined) throw new Error(`missing flow package '${flowId}'`);
+  return [
+    ...pkg.relayReports.map((report) => report.schemaName),
+    ...(pkg.reportSchemas ?? []).map((report) => report.schemaName),
+  ];
 }
 
 describe('Pursue report schemas', () => {
@@ -1398,6 +1408,15 @@ describe('Pursue generated flow report bindings', () => {
         expected.path,
       );
     }
+  });
+
+  it('keeps SafeApply planning reports out of the active Pursue V1 flow', () => {
+    const flow = loadFlow(PURSUE_FLOW_PATH);
+    const flowText = JSON.stringify(flow);
+    expect(packageReportSchemas('pursue')).not.toContain('pursuit.safe_apply@v1');
+    expect([...writes.keys()]).not.toContain('pursuit.safe_apply@v1');
+    expect(flowText).not.toContain('parallel-isolated-safe-apply');
+    expect(flowText).not.toContain('pursuit.safe_apply@v1');
   });
 
   it('gives the close writer every required upstream Pursue report', () => {

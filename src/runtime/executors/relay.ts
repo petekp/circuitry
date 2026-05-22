@@ -8,10 +8,20 @@ import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
+import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
+import {
+  ProofAssessment,
+  type Evidence as ProofEvidence,
+  Evidence as ProofEvidenceSchema,
+  type ProofRecovery,
+  type ProofStatus,
+} from '../../schemas/proof-assessment.js';
+import type { Ref } from '../../schemas/ref.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
+import { CheckEvaluatedTraceEntry } from '../../schemas/trace-entry.js';
 import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
-import { recoveryRouteForStep } from '../../shared/recovery-route.js';
+import { evidenceFromAcceptanceCriteriaTrace } from '../../shared/proof-assessment.js';
 import {
   type CheckEvaluation,
   type RelayStep as CompiledRelayStepV1,
@@ -27,7 +37,8 @@ import {
 } from '../acceptance-criteria.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
-import { appendRelayExecutionGuidance } from '../run/guidance.js';
+import { appendProofPolicyGuidance, appendRelayExecutionGuidance } from '../run/guidance.js';
+import { recoveryRouteForFailure } from '../run/recovery-selection.js';
 import { planRelayGuidanceDecision, resolveRelayExecution } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
@@ -36,8 +47,6 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
-
-export { resolveRelayExecution } from '../run/relay-guidance.js';
 
 export interface RelayRequest {
   readonly runId: string;
@@ -99,6 +108,184 @@ function timeoutMs(step: RelayStep): number | undefined {
   const wallClock = (step.budgets as { readonly wall_clock_ms?: unknown } | undefined)
     ?.wall_clock_ms;
   return typeof wallClock === 'number' ? wallClock : undefined;
+}
+
+function proofIdPart(value: string): string {
+  return value.replace(/[^a-z0-9._-]/g, '-').toLowerCase();
+}
+
+function uniqueValues(values: readonly string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
+function acceptanceProofStatus(evidence: readonly ProofEvidence[]): ProofStatus {
+  if (evidence.some((item) => item.result === 'fail')) return 'contradicted';
+  if (evidence.some((item) => item.result === 'pass' && item.kind === 'command')) return 'proven';
+  return 'weak';
+}
+
+function acceptanceProofMissing(status: ProofStatus, evidence: readonly ProofEvidence[]): string[] {
+  if (status === 'proven') return [];
+  if (status === 'weak' && evidence.some((item) => item.kind === 'report_field')) {
+    return [
+      'report-field evidence proves report shape only; runtime command or diff proof is missing',
+    ];
+  }
+  if (status === 'contradicted') return [];
+  return ['no runtime evidence covers the acceptance criteria claim'];
+}
+
+function acceptanceProofContradictions(evidence: readonly ProofEvidence[]): string[] {
+  return evidence
+    .filter((item) => item.result === 'fail')
+    .map((item) => item.summary ?? `acceptance evidence '${item.id}' failed`);
+}
+
+function proofRecoveryReasonCode(status: Exclude<ProofStatus, 'proven'>): string {
+  if (status === 'weak') return 'weak_acceptance_proof';
+  if (status === 'contradicted') return 'failed_acceptance_criteria';
+  return 'unproved_acceptance_claim';
+}
+
+function declaredRecoveryForAcceptanceProof(input: {
+  readonly context: RunContext;
+  readonly step: RelayStep;
+  readonly status: ProofStatus;
+}): ProofRecovery | undefined {
+  if (input.status === 'proven') return undefined;
+  const failureCause =
+    input.status === 'contradicted'
+      ? 'failed_acceptance_criteria'
+      : input.status === 'weak'
+        ? 'weak_proof'
+        : 'unproved_claim';
+  const binding = input.context.recoveryRouteBindings?.find(
+    (candidate) =>
+      candidate.step_id === input.step.id &&
+      candidate.allowed_failure_causes.includes(failureCause),
+  );
+  if (binding === undefined) return undefined;
+  return {
+    route_id: binding.route_id,
+    kind: binding.kind,
+    reason_code: proofRecoveryReasonCode(input.status),
+  };
+}
+
+function proofAssessmentReportRef(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+  readonly path: string;
+  readonly body: unknown;
+}): Ref {
+  return {
+    kind: 'report',
+    ref: input.path,
+    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}\n`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt,
+  };
+}
+
+async function writeAcceptanceProofAssessment(input: {
+  readonly context: RunContext;
+  readonly step: RelayStep;
+  readonly attempt: number;
+  readonly checkEntries: readonly CheckEvaluatedTraceEntry[];
+}): Promise<void> {
+  if (input.context.workContractRef === undefined || input.checkEntries.length === 0) return;
+
+  const claimId = `claim.acceptance:${proofIdPart(input.step.id)}:${input.attempt}`;
+  const evidence = input.checkEntries.map((entry) => {
+    const item = evidenceFromAcceptanceCriteriaTrace({
+      entry,
+      coversClaims: [claimId],
+    });
+    return ProofEvidenceSchema.parse({
+      ...item,
+      input_refs: [input.context.workContractRef, ...item.input_refs],
+    });
+  });
+  const status = acceptanceProofStatus(evidence);
+  const closeAllowed = status === 'proven';
+  const recovery = declaredRecoveryForAcceptanceProof({
+    context: input.context,
+    step: input.step,
+    status,
+  });
+  const proofPolicy = await appendProofPolicyGuidance(input.context, {
+    stepId: input.step.id,
+    attempt: input.attempt,
+    requiredClaimKinds: ['verification_passed'],
+    requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed,
+    inputRefs: evidence.flatMap((item) => item.input_refs),
+  });
+  if (proofPolicy === undefined) return;
+
+  const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
+  const assessment = ProofAssessment.parse({
+    schema_version: 1,
+    assessment_id: `proof.acceptance:${proofIdPart(input.step.id)}:${input.attempt}`,
+    scope: {
+      run_id: input.context.runId,
+      flow_id: input.context.flow.id,
+      step_id: input.step.id,
+      attempt: input.attempt,
+    },
+    proof_policy_decision_id: proofPolicy.decision_id,
+    claims: [
+      {
+        schema_version: 1,
+        id: claimId,
+        kind: 'verification_passed',
+        statement: `Acceptance criteria for relay step '${input.step.id}' are backed by required runtime evidence.`,
+        scope_refs: [input.context.workContractRef],
+        risk: 'medium',
+        required: true,
+        source: 'work_contract',
+      },
+    ],
+    evidence,
+    results: [
+      {
+        claim_id: claimId,
+        status,
+        evidence_refs: evidence.map((item) => item.id),
+        missing: [
+          ...acceptanceProofMissing(status, evidence),
+          ...(status !== 'proven' && recovery === undefined
+            ? ['no declared recovery route covers this proof outcome']
+            : []),
+        ],
+        contradictions: acceptanceProofContradictions(evidence),
+        ...(recovery === undefined ? {} : { recovery }),
+      },
+    ],
+    overall_status: status,
+    close_allowed: closeAllowed,
+  });
+  await input.context.files.writeJson(path, assessment);
+  const assessmentRef = proofAssessmentReportRef({
+    context: input.context,
+    stepId: input.step.id,
+    attempt: input.attempt,
+    path,
+    body: assessment,
+  });
+  await input.context.trace.append({
+    run_id: input.context.runId,
+    kind: 'proof.assessed',
+    assessment_id: assessment.assessment_id,
+    scope: assessment.scope,
+    proof_policy_decision_id: proofPolicy.decision_id,
+    assessment_ref: assessmentRef,
+    overall_status: status,
+    close_allowed: closeAllowed,
+  });
 }
 
 function readRouteFromReportBody(body: unknown, path: readonly string[]): string {
@@ -545,8 +732,9 @@ export async function executeProductionRelayAttempt(input: {
     outcome: resultVerdictEvaluation.kind === 'pass' ? 'pass' : 'fail',
     ...(resultVerdictEvaluation.kind === 'pass' ? {} : { reason: resultVerdictEvaluation.reason }),
   });
+  const acceptanceCheckEntries: CheckEvaluatedTraceEntry[] = [];
   for (const check of acceptance?.checks ?? []) {
-    await context.trace.append({
+    const entry = await context.trace.append({
       run_id: context.runId,
       kind: 'check.evaluated',
       step_id: step.id,
@@ -561,7 +749,14 @@ export async function executeProductionRelayAttempt(input: {
       ...(check.stdout_summary === undefined ? {} : { stdout_summary: check.stdout_summary }),
       ...(check.stderr_summary === undefined ? {} : { stderr_summary: check.stderr_summary }),
     });
+    acceptanceCheckEntries.push(CheckEvaluatedTraceEntry.parse(entry));
   }
+  await writeAcceptanceProofAssessment({
+    context,
+    step,
+    attempt,
+    checkEntries: acceptanceCheckEntries,
+  });
 
   return {
     kind: 'completed',
@@ -594,6 +789,7 @@ async function executeRelayInternal(
     ...(context.selectionConfigLayers === undefined
       ? {}
       : { configLayers: context.selectionConfigLayers }),
+    ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
     ...(step.selection === undefined ? {} : { selection: step.selection }),
     ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
   });
@@ -645,10 +841,13 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   const compiledStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'relay');
   const relayAttempt = await executeProductionRelayAttempt({ step, context, compiledStep });
   if (relayAttempt.kind === 'connector_failed') {
-    if (Object.hasOwn(step.routes, 'connector-failed')) {
-      return { route: 'connector-failed', details: { reason: relayAttempt.reason } };
-    }
-    const recoveryRoute = recoveryRouteForStep(step);
+    const recoveryRoute = recoveryRouteForFailure({
+      step,
+      workContractRef: context.workContractRef,
+      recoveryRouteBindings: context.recoveryRouteBindings,
+      cause: 'relay_connector_failed',
+      preferredRoute: 'connector-failed',
+    });
     if (recoveryRoute !== undefined)
       return { route: recoveryRoute, details: { reason: relayAttempt.reason } };
     throw new Error(relayAttempt.reason);
@@ -683,7 +882,14 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
         );
       }
       return {
-        route: 'retry',
+        route:
+          recoveryRouteForFailure({
+            step,
+            workContractRef: context.workContractRef,
+            recoveryRouteBindings: context.recoveryRouteBindings,
+            cause: 'failed_acceptance_criteria',
+            preferredRoute: 'retry',
+          }) ?? 'retry',
         details: {
           reason: evaluation.reason,
           acceptance_feedback: failure.feedback,
@@ -693,7 +899,12 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
     throw new Error(evaluation.reason);
   }
 
-  const recoveryRoute = recoveryRouteForStep(step);
+  const recoveryRoute = recoveryRouteForFailure({
+    step,
+    workContractRef: context.workContractRef,
+    recoveryRouteBindings: context.recoveryRouteBindings,
+    cause: 'failed_check',
+  });
   if (recoveryRoute !== undefined)
     return { route: recoveryRoute, details: { reason: evaluation.reason } };
   throw new Error(evaluation.reason);

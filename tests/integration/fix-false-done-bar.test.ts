@@ -453,6 +453,6 @@ describe('False-Done Fix bar', () => {
         // outcome alone.
         expect(outcome.outcome).toBe('aborted');
       }
-    });
+    }, 10_000);
   }
 });

@@ -7,7 +7,13 @@ import type { TerminalTarget } from '../../src/runtime/domain/route.js';
 import type { ExecutableFlow } from '../../src/runtime/manifest/executable-flow.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
+import { appendProofPolicyGuidance } from '../../src/runtime/run/guidance.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import { CompiledFlowId } from '../../src/schemas/ids.js';
+import {
+  ProofAssessment as ProofAssessmentSchema,
+  type ProofAssessment as ProofAssessmentValue,
+} from '../../src/schemas/proof-assessment.js';
 import { type RunResult as ParsedRunResult, RunResult } from '../../src/schemas/result.js';
 import { RunTrace } from '../../src/schemas/run.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
@@ -181,7 +187,7 @@ function multiRelayVerdictFlowBytes(): Buffer {
           title: 'Second relay',
           protocol: 'runtime-multi-relay-verdict@v1',
           reads: ['reports/first.result.json'],
-          routes: { pass: '@complete' },
+          routes: { pass: '@complete', continue: '@complete' },
           executor: 'worker',
           kind: 'relay',
           role: 'implementer',
@@ -397,7 +403,7 @@ function checkpointMissingSafeChoiceFlowBytes(input: {
           title: 'Missing safe choice checkpoint',
           protocol: 'runtime-checkpoint-missing-safe-choice@v1',
           reads: [],
-          routes: { pass: '@complete' },
+          routes: { pass: '@complete', continue: '@complete' },
           executor: 'orchestrator',
           kind: 'checkpoint',
           policy,
@@ -652,6 +658,67 @@ describe('runtime control-loop parity twins', () => {
         });
       });
     }
+  });
+
+  it('aborts complete close when proof policy requires proven proof and no proof was assessed', async () => {
+    const flow: ExecutableFlow = {
+      id: 'proof-close-gate',
+      version: '0.1.0',
+      entry: 'close-step',
+      stages: [{ id: 'main', stepIds: ['close-step'] }],
+      steps: [
+        {
+          id: 'close-step',
+          kind: 'compose',
+          writer: 'test-close',
+          body: {},
+          writes: { report: { path: 'reports/close.json' } },
+          routes: { pass: { kind: 'terminal', target: '@complete' } },
+        },
+      ],
+    };
+
+    const result = await withTempRun('circuit-proof-close-gate-', async (runDir) => {
+      const outcome = await executeExecutableFlow(flow, {
+        runDir,
+        runId: 'ffffffff-5668-4fff-8fff-ffffffff5668',
+        goal: 'Require proof before close',
+        manifestHash: 'proof-close-gate-test',
+        workContractRef: {
+          kind: 'work_contract',
+          ref: 'generated/flows/proof-close-gate/circuit.work-contract.v0.json',
+          sha256: 'a'.repeat(64),
+          flow_id: CompiledFlowId.parse('proof-close-gate'),
+        },
+        now: () => new Date('2026-05-06T00:00:00.000Z'),
+        executors: {
+          compose: async (_step, context) => {
+            await appendProofPolicyGuidance(context, {
+              stepId: 'close-step',
+              attempt: context.activeStepAttempt ?? 1,
+              requiredClaimKinds: ['verification_passed'],
+              requiredEvidenceKinds: ['command'],
+              closeRequiresProven: true,
+              inputRefs: [],
+            });
+            return { route: 'pass' };
+          },
+        },
+      });
+      const trace = await new TraceStore(runDir).load();
+      return { outcome, trace };
+    });
+
+    expect(result.outcome.outcome).toBe('aborted');
+    expect(result.outcome.reason).toMatch(/requires passing proof\.assessed/);
+    expect(result.trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'run.closed',
+        outcome: 'aborted',
+        reason: expect.stringContaining('requires passing proof.assessed'),
+      }),
+    );
+    expect(RunTrace.safeParse(result.trace).success).toBe(true);
   });
 
   it('admits a relay verdict from the connector body instead of assuming check.pass[0]', async () => {
@@ -1297,6 +1364,8 @@ describe('runtime control-loop parity twins', () => {
       'relay.completed',
       'check.evaluated',
       'check.evaluated',
+      'guidance.decision',
+      'proof.assessed',
       'step.aborted',
       'run.closed',
     ]);
@@ -1369,6 +1438,152 @@ describe('runtime control-loop parity twins', () => {
         stderr_summary: expect.stringContaining('bad error'),
       }),
     );
+  });
+
+  it('records report-field acceptance criteria as weak proof, not proven behavior', async () => {
+    const proofPath = 'reports/proof/relay-step-attempt-1.assessment.json';
+    const { result, trace, inspection } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+        },
+      }),
+      resultBody: '{"verdict":"ok","evidence":["worker supplied words"]}',
+      runId: 'ffffffff-5666-4fff-8fff-ffffffff5666',
+      inspectRunDir: async (runDir) => ({
+        proof: ProofAssessmentSchema.parse(
+          JSON.parse(await readFile(join(runDir, proofPath), 'utf8')),
+        ),
+      }),
+    });
+    const proof = (inspection as { proof: ProofAssessmentValue }).proof;
+
+    expect(result.outcome).toBe('complete');
+    expect(inspection).toMatchObject({
+      proof: {
+        overall_status: 'weak',
+        close_allowed: false,
+        evidence: [
+          expect.objectContaining({
+            kind: 'report_field',
+            producer: 'runtime',
+            independence: 'runtime',
+            input_refs: expect.arrayContaining([
+              expect.objectContaining({ kind: 'work_contract' }),
+            ]),
+            result: 'pass',
+          }),
+        ],
+        results: [
+          expect.objectContaining({
+            status: 'weak',
+          }),
+        ],
+      },
+    });
+    expect(proof.results[0]?.missing).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('report-field evidence'),
+        expect.stringContaining('no declared recovery route'),
+      ]),
+    );
+    expect(proof.results[0]?.recovery).toBeUndefined();
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'guidance.decision',
+        subject: 'proof_policy',
+        selected: expect.objectContaining({
+          close_requires_proven: false,
+        }),
+      }),
+    );
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'proof.assessed',
+        assessment_ref: expect.objectContaining({
+          kind: 'report',
+          ref: proofPath,
+        }),
+        overall_status: 'weak',
+        close_allowed: false,
+      }),
+    );
+  });
+
+  it('records command acceptance criteria as proven proof before completing', async () => {
+    const proofPath = 'reports/proof/relay-step-attempt-1.assessment.json';
+    const { result, trace, inspection } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'command',
+              id: 'command-must-pass',
+              expected_status: 'passed',
+              command: {
+                id: 'node-passes',
+                cwd: '.',
+                argv: [process.execPath, '-e', 'process.exit(0);'],
+                timeout_ms: 5000,
+                max_output_bytes: 256,
+                env: {},
+              },
+            },
+          ],
+        },
+      }),
+      resultBody: '{"verdict":"ok"}',
+      runId: 'ffffffff-5667-4fff-8fff-ffffffff5667',
+      projectRootForRunDir: async (runDir) => runDir,
+      inspectRunDir: async (runDir) => ({
+        proof: ProofAssessmentSchema.parse(
+          JSON.parse(await readFile(join(runDir, proofPath), 'utf8')),
+        ),
+      }),
+    });
+    const proof = (inspection as { proof: ProofAssessmentValue }).proof;
+
+    expect(result.outcome).toBe('complete');
+    expect(inspection).toMatchObject({
+      proof: {
+        overall_status: 'proven',
+        close_allowed: true,
+        evidence: [
+          expect.objectContaining({
+            kind: 'command',
+            producer: 'runtime',
+            independence: 'runtime',
+            input_refs: expect.arrayContaining([
+              expect.objectContaining({ kind: 'work_contract' }),
+            ]),
+            result: 'pass',
+          }),
+        ],
+        results: [
+          expect.objectContaining({
+            status: 'proven',
+            missing: [],
+            contradictions: [],
+          }),
+        ],
+      },
+    });
+    expect(proof.results[0]?.recovery).toBeUndefined();
+    expect(trace.map((entry) => entry.kind)).toEqual(
+      expect.arrayContaining(['guidance.decision', 'proof.assessed', 'run.closed']),
+    );
+    const proofIndex = trace.findIndex((entry) => entry.kind === 'proof.assessed');
+    const closeIndex = trace.findIndex((entry) => entry.kind === 'run.closed');
+    expect(proofIndex).toBeGreaterThan(-1);
+    expect(closeIndex).toBeGreaterThan(proofIndex);
+    expect(RunTrace.safeParse(trace).success).toBe(true);
   });
 
   it('retries relay acceptance criteria with feedback through the existing retry route', async () => {

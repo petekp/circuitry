@@ -180,7 +180,7 @@ describe('CheckpointBoundaryV0 schema foundation', () => {
     expect(JSON.stringify(projection.boundary)).not.toContain('highest-score');
   });
 
-  it('classifies implicit pass-route fallback as rejected old authority', () => {
+  it('rejects implicit pass-route fallback for static checkpoint choices', () => {
     const step = CheckpointStep.parse({
       ...baseCheckpointStep,
       routes: {
@@ -197,20 +197,15 @@ describe('CheckpointBoundaryV0 schema foundation', () => {
         allow: ['continue'],
       },
     });
-    const projection = projectCheckpointBoundaryV0({
-      step,
-      flowId: buildFlowId,
-      declaredDefaultPolicyRefs: [policyRef],
-    });
 
-    expect(projection.boundary.choices.kind).toBe('static');
-    if (projection.boundary.choices.kind !== 'static') throw new Error('expected static choices');
-    expect(projection.boundary.choices.items[0]?.route).toEqual({
-      id: 'pass',
-      target: 'implement',
-    });
-    expect(projection.rejected_old_authority.map((item) => item.field)).toContain(
-      'implicit_pass_route',
+    expect(() =>
+      projectCheckpointBoundaryV0({
+        step,
+        flowId: buildFlowId,
+        declaredDefaultPolicyRefs: [policyRef],
+      }),
+    ).toThrow(
+      "checkpoint choice 'continue' on step 'frame-checkpoint' has no explicit declared route",
     );
   });
 
