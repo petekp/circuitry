@@ -437,6 +437,18 @@ export function runPublish(
     }
   }
 
+  function readClaudeMarketplaceList(
+    id: 'claude_marketplace_list_user' | 'claude_marketplace_verify_user',
+    claudeEnv: NodeJS.ProcessEnv | undefined,
+  ): ClaudeMarketplaceListEntry[] {
+    const list = runCommand(
+      id,
+      ['claude', 'plugin', 'marketplace', 'list', '--json'],
+      commandOptions({ env: claudeEnv }),
+    );
+    return parseClaudeMarketplaceList(list);
+  }
+
   function claudeMarketplaceEntryPath(entry: ClaudeMarketplaceListEntry): string | undefined {
     return entry.path ?? (entry.source === 'directory' ? entry.installLocation : undefined);
   }
@@ -447,12 +459,9 @@ export function runPublish(
   }
 
   function refreshClaudeUserMarketplace(claudeEnv: NodeJS.ProcessEnv | undefined): void {
-    const list = runCommand(
-      'claude_marketplace_list_user',
-      ['claude', 'plugin', 'marketplace', 'list', '--json'],
-      commandOptions({ env: claudeEnv }),
+    const current = readClaudeMarketplaceList('claude_marketplace_list_user', claudeEnv).find(
+      (entry) => entry.name === 'circuit',
     );
-    const current = parseClaudeMarketplaceList(list).find((entry) => entry.name === 'circuit');
     if (current !== undefined && !claudeMarketplacePointsAtRepo(current)) {
       runCommand(
         'claude_marketplace_remove_user',
@@ -475,6 +484,26 @@ export function runPublish(
       ['claude', 'plugin', 'marketplace', 'update', 'circuit'],
       commandOptions({ effect: true, env: claudeEnv }),
     );
+  }
+
+  function assertClaudeUserMarketplacePointsAtRepo(claudeEnv: NodeJS.ProcessEnv | undefined): void {
+    const current = readClaudeMarketplaceList('claude_marketplace_verify_user', claudeEnv).find(
+      (entry) => entry.name === 'circuit',
+    );
+    if (current === undefined) {
+      fail('Claude user marketplace circuit is missing after refresh');
+    }
+
+    const path = claudeMarketplaceEntryPath(current);
+    if (path === undefined) {
+      fail('Claude user marketplace circuit has no directory path after refresh');
+    }
+
+    const resolvedPath = resolve(path);
+    report.outputs.claude_marketplace_path = resolvedPath;
+    if (resolvedPath !== repoRoot) {
+      fail(`Claude user marketplace circuit points at ${resolvedPath}; expected ${repoRoot}`);
+    }
   }
 
   function assertBundledDoctor(id: string, result: CommandResult): void {
@@ -807,6 +836,7 @@ export function runPublish(
     }
 
     refreshClaudeUserMarketplace(claudeEnv);
+    assertClaudeUserMarketplacePointsAtRepo(claudeEnv);
     const claudeUpdate = runOptionalCommand(
       'claude_plugin_update_user',
       ['claude', 'plugin', 'update', 'circuit@circuit', '--scope', 'user'],

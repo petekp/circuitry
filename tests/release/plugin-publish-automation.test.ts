@@ -152,6 +152,9 @@ function createRunner(git: GitFixture = {}, options: RunnerOptions = {}) {
   const head = git.head ?? 'abc123';
   const originHead = git.originHead ?? head;
   const dirty = git.dirty ?? '';
+  let claudeMarketplaceList = JSON.parse(
+    JSON.stringify(options.claudeMarketplaceList ?? []),
+  ) as unknown[];
 
   return {
     calls,
@@ -170,6 +173,38 @@ function createRunner(git: GitFixture = {}, options: RunnerOptions = {}) {
           return { exitCode: 0, stdout: `${head}\n`, stderr: '' };
         case 'git_origin_head':
           return { exitCode: 0, stdout: `${originHead}\n`, stderr: '' };
+        case 'claude_marketplace_remove_user': {
+          const name = invocation.argv[4];
+          claudeMarketplaceList = claudeMarketplaceList.filter(
+            (entry) =>
+              typeof entry !== 'object' ||
+              entry === null ||
+              Array.isArray(entry) ||
+              (entry as { name?: unknown }).name !== name,
+          );
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        case 'claude_marketplace_add_user': {
+          const path = invocation.argv[4];
+          claudeMarketplaceList = [
+            ...claudeMarketplaceList.filter(
+              (entry) =>
+                typeof entry !== 'object' ||
+                entry === null ||
+                Array.isArray(entry) ||
+                (entry as { name?: unknown }).name !== 'circuit',
+            ),
+            {
+              name: 'circuit',
+              source: 'directory',
+              path,
+              installLocation: path,
+            },
+          ];
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        case 'claude_marketplace_update_user':
+          return { exitCode: 0, stdout: '', stderr: '' };
         case 'claude_doctor':
         case 'codex_doctor':
         case 'claude_install_smoke_doctor':
@@ -185,9 +220,10 @@ function createRunner(git: GitFixture = {}, options: RunnerOptions = {}) {
             stderr: '',
           };
         case 'claude_marketplace_list_user':
+        case 'claude_marketplace_verify_user':
           return {
             exitCode: 0,
-            stdout: `${JSON.stringify(options.claudeMarketplaceList ?? [])}\n`,
+            stdout: `${JSON.stringify(claudeMarketplaceList)}\n`,
             stderr: '',
           };
         case 'codex_cache_sync':
@@ -632,6 +668,54 @@ describe('plugin publish automation', () => {
       expect(ids(calls).indexOf('claude_plugin_update_user')).toBeGreaterThan(
         ids(calls).indexOf('claude_marketplace_update_user'),
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(installed.homeDir, { recursive: true, force: true });
+      rmSync(installed.codexHome, { recursive: true, force: true });
+    }
+  });
+
+  it('fails local publish when the Claude user marketplace still points away after refresh', () => {
+    const root = createFixture();
+    const installed = primeInstalledPackages(root);
+    const staleEntry = [
+      {
+        name: 'circuit',
+        source: 'directory',
+        path: '/tmp/old-circuit',
+      },
+    ];
+    const base = createRunner(
+      {},
+      {
+        codexCacheTarget: installed.codex,
+        claudeMarketplaceList: staleEntry,
+      },
+    );
+    const runner = (invocation: CommandInvocation) => {
+      if (invocation.id === 'claude_marketplace_verify_user') {
+        base.calls.push(invocation);
+        return {
+          exitCode: 0,
+          stdout: `${JSON.stringify(staleEntry)}\n`,
+          stderr: '',
+        };
+      }
+      return base.runner(invocation);
+    };
+    try {
+      const report = runPublish(['local', '--skip-verify', '--allow-unsafe'], {
+        repoRoot: root,
+        runner,
+        homeDir: installed.homeDir,
+        codexHome: installed.codexHome,
+      });
+
+      expect(report.status).toBe('failed');
+      expect(report.errors.join('\n')).toContain('Claude user marketplace circuit points at');
+      expect(report.errors.join('\n')).toContain(root);
+      expect(ids(base.calls)).toContain('claude_marketplace_verify_user');
+      expect(ids(base.calls)).not.toContain('claude_plugin_update_user');
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(installed.homeDir, { recursive: true, force: true });
