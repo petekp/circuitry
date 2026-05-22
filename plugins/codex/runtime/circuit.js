@@ -33452,6 +33452,240 @@ var RelayResolutionSource = external_exports.discriminatedUnion("source", [
   AutoResolutionSource
 ]);
 
+// dist/schemas/ref.js
+var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RefKind = external_exports.enum([
+  "work_contract",
+  "policy",
+  "trace",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "memory",
+  "operator_input"
+]);
+var ContentRefKinds = /* @__PURE__ */ new Set([
+  "work_contract",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply"
+]);
+var Ref = external_exports.object({
+  kind: RefKind,
+  ref: external_exports.string().min(1),
+  sha256: Sha256.optional(),
+  run_id: RunId.optional(),
+  flow_id: CompiledFlowId.optional(),
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional()
+}).strict().superRefine((ref, ctx) => {
+  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sha256"],
+      message: `${ref.kind} refs require sha256`
+    });
+  }
+  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["flow_id"],
+      message: "work_contract refs require flow_id"
+    });
+  }
+  if (ref.kind !== "trace")
+    return;
+  if (ref.run_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["run_id"],
+      message: "trace refs require run_id"
+    });
+  }
+  if (ref.sequence === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sequence"],
+      message: "trace refs require sequence"
+    });
+    return;
+  }
+  const expected = `trace.ndjson#sequence=${ref.sequence}`;
+  if (ref.ref !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["ref"],
+      message: `trace refs must use ${expected}`
+    });
+  }
+});
+
+// dist/schemas/guidance-decision.js
+var GuidanceDecisionId = external_exports.string().regex(/^gd-[a-z0-9][a-z0-9._-]*$/);
+var GuidanceDecisionSubject = external_exports.enum([
+  "flow_selection",
+  "relay_execution",
+  "checkpoint_resolution",
+  "proof_policy",
+  "recovery_route",
+  "safe_apply"
+]);
+var GuidanceDecisionSource = external_exports.enum([
+  "deterministic",
+  "heuristic",
+  "model_recommended",
+  "host_recommended",
+  "operator_override"
+]);
+var ReasonCode = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
+var GuidanceScope = external_exports.object({
+  run_id: RunId,
+  flow_id: CompiledFlowId.optional(),
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  branch_id: external_exports.string().min(1).optional()
+}).strict();
+var GuidanceSkillSelection = external_exports.object({
+  id: SkillId,
+  slot: SkillSlotId.optional()
+}).strict();
+var RelayExecutionSelected = external_exports.object({
+  role: RelayRole,
+  connector: ResolvedConnector,
+  model: ProviderScopedModel.optional(),
+  effort: Effort.optional(),
+  skills: external_exports.array(GuidanceSkillSelection),
+  context_packet_ref: Ref,
+  request_payload_hash: Sha256
+}).strict();
+var WorkContractRef = Ref.refine((ref) => ref.kind === "work_contract", {
+  message: "must be a work_contract ref"
+});
+var FlowSelectionSelected = external_exports.object({
+  flow_id: CompiledFlowId,
+  work_contract_ref: WorkContractRef,
+  host_recommendation: external_exports.object({
+    flow_id: CompiledFlowId,
+    accepted: external_exports.boolean()
+  }).strict().optional()
+}).strict();
+var RejectedGuidanceOption = external_exports.object({
+  option: JsonObject,
+  reason_code: ReasonCode,
+  blocked_by: Ref.optional()
+}).strict();
+var NonEmptyRefs = external_exports.array(Ref).min(1);
+var GuidanceDecisionTraceEntryBody = external_exports.object({
+  schema_version: external_exports.literal(1),
+  sequence: external_exports.number().int().nonnegative(),
+  recorded_at: external_exports.string().datetime(),
+  run_id: RunId,
+  kind: external_exports.literal("guidance.decision"),
+  decision_id: GuidanceDecisionId,
+  subject: GuidanceDecisionSubject,
+  scope: GuidanceScope,
+  source: GuidanceDecisionSource,
+  selected: external_exports.union([FlowSelectionSelected, RelayExecutionSelected, JsonObject]),
+  input_refs: NonEmptyRefs,
+  constraint_refs: NonEmptyRefs,
+  contract_refs: NonEmptyRefs,
+  policy_refs: NonEmptyRefs,
+  evidence_refs: NonEmptyRefs.optional(),
+  memory_refs: NonEmptyRefs.optional(),
+  reason_codes: external_exports.array(ReasonCode).min(1),
+  rejected_options: external_exports.array(RejectedGuidanceOption).max(3).optional()
+}).strict();
+function refineGuidanceDecisionTraceEntry(entry, ctx) {
+  if (entry.scope.run_id !== entry.run_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["scope", "run_id"],
+      message: "scope.run_id must match run_id"
+    });
+  }
+  for (const [index, ref] of entry.constraint_refs.entries()) {
+    if (ref.kind !== "work_contract" && ref.kind !== "policy") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["constraint_refs", index, "kind"],
+        message: "constraint_refs must use work_contract or policy refs in V0"
+      });
+    }
+  }
+  for (const [index, ref] of entry.contract_refs.entries()) {
+    if (ref.kind !== "work_contract") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["contract_refs", index, "kind"],
+        message: "contract_refs must use work_contract refs"
+      });
+    }
+  }
+  for (const [index, ref] of entry.policy_refs.entries()) {
+    if (ref.kind !== "policy") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["policy_refs", index, "kind"],
+        message: "policy_refs must use policy refs"
+      });
+    }
+  }
+  if (entry.subject === "flow_selection") {
+    if (!FlowSelectionSelected.safeParse(entry.selected).success) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["selected"],
+        message: "flow_selection selected payload must name flow_id and work_contract_ref"
+      });
+    }
+    return;
+  }
+  if (entry.scope.flow_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["scope", "flow_id"],
+      message: `${entry.subject} decisions require scope.flow_id`
+    });
+  }
+  if (entry.scope.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["scope", "step_id"],
+      message: `${entry.subject} decisions require scope.step_id`
+    });
+  }
+  if (entry.scope.attempt === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["scope", "attempt"],
+      message: `${entry.subject} decisions require scope.attempt`
+    });
+  }
+  if (entry.subject === "relay_execution" && !RelayExecutionSelected.safeParse(entry.selected).success) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["selected"],
+      message: "relay_execution selected payload must name role, connector, skills, context ref, and request hash"
+    });
+  }
+}
+var GuidanceDecisionTraceEntry = GuidanceDecisionTraceEntryBody.superRefine(refineGuidanceDecisionTraceEntry);
+
 // dist/schemas/trace-entry.js
 var TraceEntryBase = external_exports.object({
   schema_version: external_exports.literal(1),
@@ -33717,8 +33951,13 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   FanoutJoinedTraceEntry,
   StepCompletedTraceEntry,
   StepAbortedTraceEntry,
-  RunClosedTraceEntry
+  RunClosedTraceEntry,
+  GuidanceDecisionTraceEntryBody
 ]).superRefine((ev, ctx) => {
+  if (ev.kind === "guidance.decision") {
+    refineGuidanceDecisionTraceEntry(ev, ctx);
+    return;
+  }
   if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
     return;
   if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {

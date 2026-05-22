@@ -214,6 +214,153 @@ describe('Snapshot requires change_kind + manifest_hash', () => {
   });
 });
 
+const guidanceSha = 'c'.repeat(64);
+
+const workContractRef = {
+  kind: 'work_contract' as const,
+  ref: 'generated/flows/explore/work-contract.v0.json',
+  sha256: guidanceSha,
+  flow_id: 'explore',
+};
+
+const policyRef = {
+  kind: 'policy' as const,
+  ref: 'policy.constraints.max_effort',
+};
+
+const relayRequestRef = {
+  kind: 'request' as const,
+  ref: 'relay/frame/request.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+function flowSelectionGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:00:30.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-flow-${sequence}`,
+    subject: 'flow_selection',
+    scope: {
+      run_id: RUN_A,
+    },
+    source: 'deterministic',
+    selected: {
+      flow_id: 'explore',
+      work_contract_ref: workContractRef,
+    },
+    input_refs: [workContractRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    reason_codes: ['bootstrap_flow_selected'],
+    ...overrides,
+  };
+}
+
+function relayGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:10.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-relay-${sequence}`,
+    subject: 'relay_execution',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    source: 'deterministic',
+    selected: {
+      role: 'implementer',
+      connector: { kind: 'builtin', name: 'codex' },
+      skills: [],
+      context_packet_ref: relayRequestRef,
+      request_payload_hash: guidanceSha,
+    },
+    input_refs: [relayRequestRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    reason_codes: ['relay_worker_selected'],
+    ...overrides,
+  };
+}
+
+function relayStartedAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:20.000Z',
+    run_id: RUN_A,
+    kind: 'relay.started',
+    step_id: 'frame',
+    attempt: 1,
+    connector: { kind: 'builtin', name: 'codex' },
+    role: 'implementer',
+    resolved_selection: { skills: [] },
+    resolved_from: { source: 'explicit' },
+    ...overrides,
+  };
+}
+
+function checkpointGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:30.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-checkpoint-${sequence}`,
+    subject: 'checkpoint_resolution',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    source: 'deterministic',
+    selected: {
+      choice_id: 'accept',
+      route_id: 'pass',
+      auto_resolved: true,
+      resolution_source: 'declared-default',
+    },
+    input_refs: [workContractRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    reason_codes: ['declared_default_allowed'],
+    ...overrides,
+  };
+}
+
+function checkpointResolvedAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:40.000Z',
+    run_id: RUN_A,
+    kind: 'checkpoint.resolved',
+    step_id: 'frame',
+    attempt: 1,
+    selection: 'accept',
+    auto_resolved: true,
+    resolution_source: 'safe-default',
+    response_path: 'reports/checkpoint-response.json',
+    ...overrides,
+  };
+}
+
 describe('RunTrace structural invariants (RUN-I1..I5)', () => {
   it('happy path: well-formed log parses', () => {
     const ok = RunTrace.safeParse([bootstrapAt(0), stepEntered(1), runClosed(2)]);
@@ -286,6 +433,98 @@ describe('RunTrace structural invariants (RUN-I1..I5)', () => {
   it('RUN-I5: log without run.closed is legal (run still in progress)', () => {
     const ok = RunTrace.safeParse([bootstrapAt(0), stepEntered(1)]);
     expect(ok.success).toBe(true);
+  });
+});
+
+describe('GuidanceDecision trace invariants', () => {
+  it('TraceEntry accepts guidance.decision through the public trace union', () => {
+    expect(TraceEntry.safeParse(flowSelectionGuidanceAt(1)).success).toBe(true);
+  });
+
+  it('RunTrace accepts flow and relay guidance before the matching relay action', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      relayGuidanceAt(3),
+      relayStartedAt(4),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace rejects duplicate guidance decision ids', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1, { decision_id: 'gd-duplicate' }),
+      relayGuidanceAt(2, { decision_id: 'gd-duplicate' }),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects step entry before flow-selection guidance when guidance is present', () => {
+    const bad = RunTrace.safeParse([bootstrapAt(0), stepEntered(1), flowSelectionGuidanceAt(2)]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects relay.started without prior matching relay guidance when guidance is present', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      relayStartedAt(3),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects relay.started that disagrees with relay guidance', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      relayGuidanceAt(3, {
+        selected: {
+          role: 'implementer',
+          connector: { kind: 'builtin', name: 'claude-code' },
+          skills: [],
+          context_packet_ref: relayRequestRef,
+          request_payload_hash: guidanceSha,
+        },
+      }),
+      relayStartedAt(4),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace accepts checkpoint resolution with matching checkpoint guidance', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointGuidanceAt(3),
+      checkpointResolvedAt(4),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace rejects checkpoint.resolved without matching checkpoint guidance when guidance is present', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointResolvedAt(3),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects safe-autonomous checkpoint resolution once guidance is present', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointGuidanceAt(3),
+      checkpointResolvedAt(4, { resolution_source: 'safe-autonomous' }),
+    ]);
+    expect(bad.success).toBe(false);
   });
 });
 

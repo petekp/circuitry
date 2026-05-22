@@ -2,6 +2,10 @@ import { z } from 'zod';
 import { ChangeKindDeclaration } from './change-kind.js';
 import { RelayResolutionSource, ResolvedConnector } from './connector.js';
 import { Depth } from './depth.js';
+import {
+  GuidanceDecisionTraceEntryBody,
+  refineGuidanceDecisionTraceEntry,
+} from './guidance-decision.js';
 import { CompiledFlowId, InvocationId, RunId, SkillId, SkillSlotId, StepId } from './ids.js';
 import { ResolvedSelection } from './selection-policy.js';
 import { FanoutFailurePolicy, RelayRole } from './step.js';
@@ -404,8 +408,13 @@ export const TraceEntry = z
     StepCompletedTraceEntry,
     StepAbortedTraceEntry,
     RunClosedTraceEntry,
+    GuidanceDecisionTraceEntryBody,
   ])
   .superRefine((ev, ctx) => {
+    if (ev.kind === 'guidance.decision') {
+      refineGuidanceDecisionTraceEntry(ev, ctx);
+      return;
+    }
     if (ev.kind !== 'relay.started' && ev.kind !== 'relay.failed') return;
     if (ev.resolved_from.source === 'role' && ev.resolved_from.role !== ev.role) {
       ctx.addIssue({

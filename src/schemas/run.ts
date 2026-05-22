@@ -22,6 +22,229 @@ const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: strin
   ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
 };
 
+type ParsedTraceEntry = z.infer<typeof TraceEntry>;
+type GuidanceTraceEntry = Extract<ParsedTraceEntry, { kind: 'guidance.decision' }>;
+type RelayTraceEntry = Extract<ParsedTraceEntry, { kind: 'relay.started' | 'relay.failed' }>;
+type CheckpointResolvedEntry = Extract<ParsedTraceEntry, { kind: 'checkpoint.resolved' }>;
+
+function isGuidanceDecision(entry: ParsedTraceEntry): entry is GuidanceTraceEntry {
+  return entry.kind === 'guidance.decision';
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
+    return Object.fromEntries(
+      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+    );
+  });
+}
+
+function sameJson(a: unknown, b: unknown): boolean {
+  return stableJson(a) === stableJson(b);
+}
+
+function selectedRecord(entry: GuidanceTraceEntry): Record<string, unknown> {
+  return entry.selected as Record<string, unknown>;
+}
+
+function priorFlowSelectionIndex(
+  traceEntries: readonly ParsedTraceEntry[],
+  beforeIndex: number,
+): number {
+  return traceEntries.findIndex((entry, index) => {
+    return index < beforeIndex && isGuidanceDecision(entry) && entry.subject === 'flow_selection';
+  });
+}
+
+function findPriorRelayGuidance(
+  traceEntries: readonly ParsedTraceEntry[],
+  relay: RelayTraceEntry,
+  beforeIndex: number,
+): GuidanceTraceEntry | undefined {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined || !isGuidanceDecision(entry) || entry.subject !== 'relay_execution') {
+      continue;
+    }
+    if (entry.scope.step_id !== relay.step_id || entry.scope.attempt !== relay.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return undefined;
+}
+
+function findPriorCheckpointGuidance(
+  traceEntries: readonly ParsedTraceEntry[],
+  checkpoint: CheckpointResolvedEntry,
+  beforeIndex: number,
+): GuidanceTraceEntry | undefined {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (
+      entry === undefined ||
+      !isGuidanceDecision(entry) ||
+      entry.subject !== 'checkpoint_resolution'
+    ) {
+      continue;
+    }
+    if (entry.scope.step_id !== checkpoint.step_id || entry.scope.attempt !== checkpoint.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return undefined;
+}
+
+function validateGuidanceTraceSequence(
+  traceEntries: readonly ParsedTraceEntry[],
+  ctx: z.RefinementCtx,
+): void {
+  const decisionIds = new Map<string, number>();
+  let hasGuidance = false;
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined || !isGuidanceDecision(entry)) continue;
+    hasGuidance = true;
+    const priorIndex = decisionIds.get(entry.decision_id);
+    if (priorIndex !== undefined) {
+      issueAt(
+        ctx,
+        [index, 'decision_id'],
+        `duplicate guidance.decision id '${entry.decision_id}' first appeared at index ${priorIndex}`,
+      );
+    } else {
+      decisionIds.set(entry.decision_id, index);
+    }
+  }
+  if (!hasGuidance) return;
+
+  const bootstrap = traceEntries[0];
+  if (bootstrap?.kind !== 'run.bootstrapped') return;
+
+  const firstMaterial = traceEntries[1];
+  if (
+    firstMaterial === undefined ||
+    !isGuidanceDecision(firstMaterial) ||
+    firstMaterial.subject !== 'flow_selection'
+  ) {
+    issueAt(
+      ctx,
+      [1, 'kind'],
+      'when guidance decisions are present, flow_selection guidance must be the first entry after run.bootstrapped',
+    );
+  } else {
+    const selected = selectedRecord(firstMaterial);
+    if (selected.flow_id !== bootstrap.flow_id) {
+      issueAt(
+        ctx,
+        [1, 'selected', 'flow_id'],
+        `flow_selection guidance selected flow '${String(selected.flow_id)}' but bootstrap flow_id is '${bootstrap.flow_id}'`,
+      );
+    }
+  }
+
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined) continue;
+
+    if (entry.kind === 'step.entered' && priorFlowSelectionIndex(traceEntries, index) < 0) {
+      issueAt(
+        ctx,
+        [index, 'kind'],
+        'step.entered requires prior flow_selection guidance when guidance decisions are present',
+      );
+    }
+
+    if (isGuidanceDecision(entry) && entry.subject !== 'flow_selection') {
+      if (entry.scope.flow_id !== bootstrap.flow_id) {
+        issueAt(
+          ctx,
+          [index, 'scope', 'flow_id'],
+          `guidance.decision scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`,
+        );
+      }
+    }
+
+    if (entry.kind !== 'relay.started' && entry.kind !== 'relay.failed') continue;
+    const guidance = findPriorRelayGuidance(traceEntries, entry, index);
+    if (guidance === undefined) {
+      issueAt(
+        ctx,
+        [index, 'kind'],
+        `${entry.kind} requires prior matching relay_execution guidance when guidance decisions are present`,
+      );
+      continue;
+    }
+
+    const selected = selectedRecord(guidance);
+    if (selected.role !== entry.role) {
+      issueAt(
+        ctx,
+        [index, 'role'],
+        `${entry.kind} role '${entry.role}' does not match relay_execution guidance role '${String(selected.role)}'`,
+      );
+    }
+    if (!sameJson(selected.connector, entry.connector)) {
+      issueAt(
+        ctx,
+        [index, 'connector'],
+        `${entry.kind} connector does not match relay_execution guidance connector`,
+      );
+    }
+    if (
+      entry.kind === 'relay.failed' &&
+      selected.request_payload_hash !== entry.request_payload_hash
+    ) {
+      issueAt(
+        ctx,
+        [index, 'request_payload_hash'],
+        'relay.failed request_payload_hash does not match relay_execution guidance request_payload_hash',
+      );
+    }
+  }
+
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== 'checkpoint.resolved') continue;
+
+    if (entry.resolution_source === 'safe-autonomous') {
+      issueAt(
+        ctx,
+        [index, 'resolution_source'],
+        "checkpoint.resolved cannot use resolution_source 'safe-autonomous' once guidance decisions are present",
+      );
+    }
+
+    const guidance = findPriorCheckpointGuidance(traceEntries, entry, index);
+    if (guidance === undefined) {
+      issueAt(
+        ctx,
+        [index, 'kind'],
+        'checkpoint.resolved requires prior matching checkpoint_resolution guidance when guidance decisions are present',
+      );
+      continue;
+    }
+
+    const selected = selectedRecord(guidance);
+    if (selected.choice_id !== entry.selection) {
+      issueAt(
+        ctx,
+        [index, 'selection'],
+        `checkpoint.resolved selection '${entry.selection}' does not match checkpoint guidance choice '${String(selected.choice_id)}'`,
+      );
+    }
+    if (selected.auto_resolved !== entry.auto_resolved) {
+      issueAt(
+        ctx,
+        [index, 'auto_resolved'],
+        'checkpoint.resolved auto_resolved does not match checkpoint guidance',
+      );
+    }
+  }
+}
+
 // Own-property guard for identity fields on raw input. Zod normally reads
 // inherited properties during parse, which lets `Object.create({run_id:
 // other})` smuggle a phantom run_id past the discriminated union. We run
@@ -131,6 +354,8 @@ export const RunTrace = ownPropertyGuardedArray.pipe(
         `trace_entries after 'run.closed' at index ${closedAt}; nothing may be appended after closure`,
       );
     }
+
+    validateGuidanceTraceSequence(trace_entries, ctx);
   }),
 );
 export type RunTrace = z.infer<typeof RunTrace>;

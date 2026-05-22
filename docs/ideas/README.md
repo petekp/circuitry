@@ -9,6 +9,5 @@ canonical docs, code, tests, and generated surfaces.
 
 ## Notes
 
-- [Contract, guidance, proof, and recovery pivot](contract-guidance-proof-recovery-pivot.md)
-  - future-facing brief for hard-cutting Circuit toward work contracts,
-    guidance decisions, proof assessment, recovery, and safe apply.
+- The contract, guidance, proof, and recovery pivot moved to the canonical
+  [pivot reference directory](../pivot/contract-guidance-proof-recovery/).
