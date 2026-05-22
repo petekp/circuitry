@@ -190,8 +190,7 @@
             "label": "Continue with a focused fix anyway"
           }
         ],
-        "safe_default_choice": "continue",
-        "safe_autonomous_choice": "continue"
+        "safe_default_choice": "continue"
       },
       "writes": {
         "request": "reports/checkpoints/fix-no-repro-decision-request.json",

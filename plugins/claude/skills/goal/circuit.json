@@ -487,8 +487,7 @@
             "label": "Hand Off"
           }
         ],
-        "safe_default_choice": "blocked",
-        "safe_autonomous_choice": "blocked"
+        "safe_default_choice": "blocked"
       },
       "writes": {
         "request": "reports/checkpoints/goal-recovery-request.json",

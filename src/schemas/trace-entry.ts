@@ -1,12 +1,21 @@
 import { z } from 'zod';
 import { ChangeKindDeclaration } from './change-kind.js';
+import {
+  ProtectedFileDecision,
+  SafeApplyAction,
+  SafeApplyOutcome,
+  SafeApplyReasonCode,
+} from './change-packet.js';
 import { RelayResolutionSource, ResolvedConnector } from './connector.js';
 import { Depth } from './depth.js';
 import {
+  GuidanceDecisionId,
   GuidanceDecisionTraceEntryBody,
   refineGuidanceDecisionTraceEntry,
 } from './guidance-decision.js';
 import { CompiledFlowId, InvocationId, RunId, SkillId, SkillSlotId, StepId } from './ids.js';
+import { ProofAssessmentId, ProofStatus } from './proof-assessment.js';
+import { Ref } from './ref.js';
 import { ResolvedSelection } from './selection-policy.js';
 import { FanoutFailurePolicy, RelayRole } from './step.js';
 
@@ -75,6 +84,92 @@ export const CheckEvaluatedTraceEntry = TraceEntryBase.extend({
 }).strict();
 export type CheckEvaluatedTraceEntry = z.infer<typeof CheckEvaluatedTraceEntry>;
 
+const ProofAssessmentRef = Ref.refine((ref) => ref.kind === 'evidence' || ref.kind === 'report', {
+  message: 'proof assessment refs must use evidence or report refs',
+});
+
+const ChangePacketRef = Ref.refine((ref) => ref.kind === 'change_packet', {
+  message: 'change packet refs must use kind change_packet',
+});
+
+const SafeApplyBaseRef = Ref.refine((ref) => ref.kind === 'command', {
+  message: 'safe apply base refs must use command refs',
+});
+
+const SafeApplyResultRef = Ref.refine((ref) => ref.kind === 'safe_apply', {
+  message: 'safe apply result refs must use kind safe_apply',
+});
+
+const SafeApplyFinalVerificationRef = Ref.refine((ref) => ref.kind === 'command', {
+  message: 'safe apply final verification refs must use command refs',
+});
+
+const CheckpointBoundaryRef = Ref.refine((ref) => ref.kind === 'work_contract', {
+  message: 'checkpoint boundary refs must use kind work_contract',
+});
+
+const ProofScope = z
+  .object({
+    run_id: RunId,
+    flow_id: CompiledFlowId,
+    step_id: StepId.optional(),
+    attempt: z.number().int().positive().optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if ((scope.step_id === undefined) !== (scope.attempt === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attempt'],
+        message: 'proof assessment scope must include step_id and attempt together',
+      });
+    }
+  });
+
+export const ProofAssessedTraceEntry = TraceEntryBase.extend({
+  kind: z.literal('proof.assessed'),
+  assessment_id: ProofAssessmentId,
+  scope: ProofScope,
+  proof_policy_decision_id: GuidanceDecisionId,
+  assessment_ref: ProofAssessmentRef,
+  overall_status: ProofStatus,
+  close_allowed: z.boolean(),
+}).strict();
+export type ProofAssessedTraceEntry = z.infer<typeof ProofAssessedTraceEntry>;
+
+const SafeApplyScope = z
+  .object({
+    run_id: RunId,
+    flow_id: CompiledFlowId,
+    step_id: StepId.optional(),
+    attempt: z.number().int().positive().optional(),
+  })
+  .strict()
+  .superRefine((scope, ctx) => {
+    if ((scope.step_id === undefined) !== (scope.attempt === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attempt'],
+        message: 'safe apply scope must include step_id and attempt together',
+      });
+    }
+  });
+
+export const SafeApplyResultTraceEntry = TraceEntryBase.extend({
+  kind: z.literal('safe_apply.result'),
+  decision_id: GuidanceDecisionId,
+  scope: SafeApplyScope,
+  change_packet_ref: ChangePacketRef,
+  base_ref: SafeApplyBaseRef,
+  action: SafeApplyAction,
+  outcome: SafeApplyOutcome,
+  reason_codes: z.array(SafeApplyReasonCode).min(1),
+  protected_file_decision: ProtectedFileDecision.optional(),
+  final_verification_ref: SafeApplyFinalVerificationRef.optional(),
+  result_ref: SafeApplyResultRef,
+}).strict();
+export type SafeApplyResultTraceEntry = z.infer<typeof SafeApplyResultTraceEntry>;
+
 export const CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   kind: z.literal('checkpoint.requested'),
   step_id: StepId,
@@ -82,8 +177,32 @@ export const CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   options: z.array(z.string()).min(1),
   request_path: z.string().min(1),
   request_report_hash: ContentHash,
-  auto_resolved: z.boolean().optional(),
-}).strict();
+  boundary_ref: CheckpointBoundaryRef.optional(),
+  boundary_hash: ContentHash.optional(),
+  auto_resolved: z.literal(false).optional(),
+})
+  .strict()
+  .superRefine((entry, ctx) => {
+    if ((entry.boundary_ref === undefined) !== (entry.boundary_hash === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['boundary_ref'],
+        message: 'checkpoint boundary_ref and boundary_hash must be recorded together',
+      });
+      return;
+    }
+    if (
+      entry.boundary_ref !== undefined &&
+      entry.boundary_hash !== undefined &&
+      entry.boundary_ref.sha256 !== entry.boundary_hash
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['boundary_hash'],
+        message: 'checkpoint boundary_hash must match boundary_ref.sha256',
+      });
+    }
+  });
 export type CheckpointRequestedTraceEntry = z.infer<typeof CheckpointRequestedTraceEntry>;
 
 export const CheckpointResolvedTraceEntry = TraceEntryBase.extend({
@@ -91,8 +210,9 @@ export const CheckpointResolvedTraceEntry = TraceEntryBase.extend({
   step_id: StepId,
   attempt: z.number().int().positive(),
   selection: z.string().min(1),
+  route_id: z.string().min(1),
   auto_resolved: z.boolean(),
-  resolution_source: z.enum(['safe-default', 'operator', 'safe-autonomous']),
+  resolution_source: z.enum(['declared-default', 'operator', 'policy']),
   response_path: z.string().min(1),
 }).strict();
 export type CheckpointResolvedTraceEntry = z.infer<typeof CheckpointResolvedTraceEntry>;
@@ -390,6 +510,8 @@ export const TraceEntry = z
     StepEnteredTraceEntry,
     StepReportWrittenTraceEntry,
     CheckEvaluatedTraceEntry,
+    ProofAssessedTraceEntry,
+    SafeApplyResultTraceEntry,
     CheckpointRequestedTraceEntry,
     CheckpointResolvedTraceEntry,
     RelayStartedTraceEntry,
@@ -413,6 +535,103 @@ export const TraceEntry = z
   .superRefine((ev, ctx) => {
     if (ev.kind === 'guidance.decision') {
       refineGuidanceDecisionTraceEntry(ev, ctx);
+      return;
+    }
+    if (ev.kind === 'proof.assessed') {
+      if (ev.scope.run_id !== ev.run_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['scope', 'run_id'],
+          message: 'proof assessment scope.run_id must match run_id',
+        });
+      }
+      if (ev.close_allowed && ev.overall_status !== 'proven') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['close_allowed'],
+          message: 'proof assessment close_allowed requires overall_status proven',
+        });
+      }
+      return;
+    }
+    if (ev.kind === 'safe_apply.result') {
+      if (ev.scope.run_id !== ev.run_id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['scope', 'run_id'],
+          message: 'safe apply scope.run_id must match run_id',
+        });
+      }
+      for (const { label, path, ref } of [
+        {
+          label: 'safe apply change_packet_ref',
+          path: ['change_packet_ref'],
+          ref: ev.change_packet_ref,
+        },
+        { label: 'safe apply base_ref', path: ['base_ref'], ref: ev.base_ref },
+        { label: 'safe apply result_ref', path: ['result_ref'], ref: ev.result_ref },
+        ...(ev.final_verification_ref === undefined
+          ? []
+          : [
+              {
+                label: 'safe apply final_verification_ref',
+                path: ['final_verification_ref'],
+                ref: ev.final_verification_ref,
+              },
+            ]),
+      ] as const) {
+        if (ref.run_id !== ev.run_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...path, 'run_id'],
+            message: `${label} run_id must match run_id`,
+          });
+        }
+        if (ref.flow_id !== ev.scope.flow_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...path, 'flow_id'],
+            message: `${label} flow_id must match scope.flow_id`,
+          });
+        }
+        if (ref.step_id !== ev.scope.step_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...path, 'step_id'],
+            message: `${label} step_id must match scope.step_id`,
+          });
+        }
+        if (ref.attempt !== ev.scope.attempt) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...path, 'attempt'],
+            message: `${label} attempt must match scope.attempt`,
+          });
+        }
+      }
+      if (ev.action === 'rejected' && ev.outcome !== 'fail') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['outcome'],
+          message: 'rejected safe apply trace results require fail outcome',
+        });
+      }
+      if (ev.action === 'applied') {
+        if (ev.outcome !== 'pass') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['outcome'],
+            message: 'applied safe apply trace results require pass outcome',
+          });
+        }
+        if (ev.final_verification_ref === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['final_verification_ref'],
+            message: 'applied safe apply trace results require final verification refs',
+          });
+        }
+      }
       return;
     }
     if (ev.kind !== 'relay.started' && ev.kind !== 'relay.failed') return;

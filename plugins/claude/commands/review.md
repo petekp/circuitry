@@ -1,11 +1,18 @@
 ---
-description: Audit a scoped change or report with the review flow. Invokes Circuit's `review` flow via the project CLI, producing a run trace and review-result report under the run folder.
+description: Starts Circuit from the Review flow to audit a scoped change or report, producing a run trace and review-result report under the run folder.
 argument-hint: <scope>
 ---
 
-# /circuit:review — audit flow
+# /circuit:review — Review expert control
 
-Run the `review` flow on the scope the user supplied. The flow walks an
+Start Circuit from the `review` flow on the scope the user supplied. Use this
+expert control when the operator already knows the work is audit-only.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Review work contract, writes trace, reports, and evidence, and follows declared
+recovery behavior.
+
+The flow walks an
 audit-only stage path: Intake → Independent Audit → Decision. Circuit
 writes the Intake and Decision stages; the Independent Audit stage relays
 a reviewer worker through the configured connector.

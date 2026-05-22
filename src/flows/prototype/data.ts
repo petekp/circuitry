@@ -556,7 +556,6 @@ export const prototypeFlowData = {
             },
           ],
           safe_default_choice: 'keep-prototype',
-          safe_autonomous_choice: 'keep-prototype',
         },
         routes: {
           continue: 'close-step',

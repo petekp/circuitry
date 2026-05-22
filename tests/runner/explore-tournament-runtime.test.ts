@@ -410,7 +410,7 @@ describe('explore tournament runtime', () => {
     };
     expect(response).toMatchObject({
       selection: 'option-2',
-      resolution_source: 'safe-autonomous',
+      resolution_source: 'policy',
       auto_resolution: {
         policy: 'highest-score',
         resolved_value: 'option-2',
@@ -429,11 +429,34 @@ describe('explore tournament runtime', () => {
     const traceEntries = await new TraceStore(runFolder).load();
     expect(traceEntries).toContainEqual(
       expect.objectContaining({
+        kind: 'guidance.decision',
+        subject: 'checkpoint_resolution',
+        scope: expect.objectContaining({ step_id: 'tradeoff-checkpoint-step' }),
+        selected: expect.objectContaining({
+          choice_id: 'option-2',
+          resolution_source: 'policy',
+        }),
+        evidence_refs: [
+          expect.objectContaining({
+            kind: 'report',
+            ref: 'reports/tournament-aggregate.json',
+          }),
+        ],
+        rejected_options: [
+          expect.objectContaining({
+            option: { choice_id: 'option-1' },
+            reason_code: 'lower_auto_resolution_score',
+          }),
+        ],
+      }),
+    );
+    expect(traceEntries).toContainEqual(
+      expect.objectContaining({
         kind: 'checkpoint.resolved',
         step_id: 'tradeoff-checkpoint-step',
         selection: 'option-2',
         auto_resolved: true,
-        resolution_source: 'safe-autonomous',
+        resolution_source: 'policy',
       }),
     );
   });

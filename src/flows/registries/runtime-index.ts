@@ -48,7 +48,6 @@ export interface RuntimeIndexedCheckpointStep extends RuntimeIndexedStepBase {
       | undefined;
     readonly choices_from?: unknown | undefined;
     readonly safe_default_choice?: string | undefined;
-    readonly safe_autonomous_choice?: string | undefined;
     readonly report_template?: unknown | undefined;
   };
   readonly writes: RuntimeIndexedStepBase['writes'] & {

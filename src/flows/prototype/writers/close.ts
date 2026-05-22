@@ -26,7 +26,8 @@ const CheckpointResponse = z
     schema_version: z.literal(1),
     step_id: z.literal('prototype-checkpoint-step'),
     selection: PrototypeCheckpointSelection,
-    resolution_source: z.enum(['operator', 'safe-default', 'safe-autonomous']),
+    route_id: z.string().min(1).optional(),
+    resolution_source: z.enum(['operator', 'declared-default', 'policy']),
   })
   .passthrough();
 
@@ -37,7 +38,8 @@ const VariantCheckpointResponse = z
     schema_version: z.literal(1),
     step_id: z.literal('prototype-variant-checkpoint-step'),
     selection: PrototypeVariantId,
-    resolution_source: z.enum(['operator', 'safe-default', 'safe-autonomous']),
+    route_id: z.string().min(1).optional(),
+    resolution_source: z.enum(['operator', 'declared-default', 'policy']),
   })
   .passthrough();
 

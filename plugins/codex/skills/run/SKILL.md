@@ -1,26 +1,25 @@
 ---
 name: run
-description: "Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task."
+description: "Runs Circuit from the intent front door with recorded flow selection, trace, reports, and evidence."
 ---
 
 # Circuit Run
 
 ## Use Case
 
-Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task.
+Runs Circuit from the intent front door with recorded flow selection, trace, reports, and evidence.
 
 ## Codex Host Invocation
 
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Selects the best Circuit flow for the user's natural-language task, then
-runs that explicit flow through the project CLI. In this host surface, the
-host model chooses the flow before invoking Circuit. The deterministic CLI
-router is available only when the operator asks Circuit to choose mechanically
-or when the host cannot confidently choose.
+Runs Circuit on the user's natural-language task. This is the intent front
+door. The host may recommend a flow from the request, but Circuit records the
+selected flow when the run starts and then uses the same trace, reports,
+evidence, checkpoints, and recovery path as direct flow commands.
 
-Direct Circuit flow skills remain available when the user already knows the flow.
+Direct Circuit flow skills are expert controls for users who already know the flow.
 
 Pursue is routable through this selector and can be invoked
 explicitly through the CLI, but it does not have a dedicated host command yet.
@@ -30,7 +29,7 @@ as literal user-controlled text when constructing shell commands.
 
 ## Instructions
 
-1. **Select the flow before invoking the CLI.** Use this rubric:
+1. **Recommend the flow before invoking the CLI.** Use this rubric:
 
    - **Fix** — bugs, regressions, broken behavior, failing tests, crashes,
      flaky behavior, or production issues.
@@ -46,15 +45,15 @@ as literal user-controlled text when constructing shell commands.
      work, several tracks, or a bundle of pursuits that need ordering and
      serial execution.
 
-   If one flow is clear, briefly state the selected flow and run the
-   explicit CLI flow. Ask one short question only when the answer changes
-   safety or mutation behavior, especially Review vs Build/Fix, Explore vs
-   Build.
+   If one flow is clear, briefly state the recommended flow and run the
+   explicit CLI flow. Circuit records the selected flow in the run trace. Ask
+   one short question only when the answer changes safety or mutation behavior,
+   especially Review vs Build/Fix, Explore vs Build.
 
-   Use the deterministic CLI router (`node '<plugin root>/scripts/circuit.ts' run --goal ...`) only
-   when the user explicitly asks Circuit/the engine to choose mechanically, the
-   host cannot confidently choose, or the task is intentionally exercising the
-   automatic router path.
+   Use the deterministic CLI router (`node '<plugin root>/scripts/circuit.ts' run --goal ...`) when the
+   user explicitly asks Circuit/the engine to choose mechanically, the host
+   cannot confidently recommend a flow, or the task is intentionally exercising
+   the automatic router path.
 2. **Build a shell-safe invocation.** Single-quote the raw task text; double
    quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences — a malicious or accidental

@@ -9,6 +9,8 @@ import {
   PursuitResult,
   PursuitResultReportPointer,
   PursuitReview,
+  PursuitSafeApplyBranchPlan,
+  PursuitSafeApplyReport,
   PursuitVerification,
   PursuitWavePlan,
 } from '../../src/flows/pursue/reports.js';
@@ -16,6 +18,10 @@ import { findCloseBuilder } from '../../src/flows/registries/close-writers/regis
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
 const PURSUE_FLOW_PATH = join('generated', 'flows', 'pursue', 'circuit.json');
+const RUN_ID = '123e4567-e89b-42d3-a456-426614174000';
+const SHA_A = 'a'.repeat(64);
+const SHA_B = 'b'.repeat(64);
+const SHA_C = 'c'.repeat(64);
 
 const EXPECTED_REPORT_WRITES = {
   'pursuit.contract': { path: 'reports/pursuit/contract.json', schema: 'pursuit.contract@v1' },
@@ -97,6 +103,146 @@ function resultPointers() {
       schema: 'pursuit.review@v1',
     }),
   ];
+}
+
+function contentRef(
+  kind: string,
+  ref: string,
+  sha256 = SHA_A,
+  extra: Record<string, unknown> = {},
+) {
+  return { kind, ref, sha256, ...extra };
+}
+
+function traceRef(sequence: number) {
+  return {
+    kind: 'trace',
+    ref: `trace.ndjson#sequence=${sequence}`,
+    run_id: RUN_ID,
+    sequence,
+  };
+}
+
+function policyRef(ref = 'policy/runtime-config-v1') {
+  return { kind: 'policy', ref };
+}
+
+function workContractRef(ref = 'generated/flows/pursue/circuit.work-contract.v0.json') {
+  return contentRef('work_contract', ref, SHA_B, { flow_id: 'pursue' });
+}
+
+function safeApplyPacket(overrides: Record<string, unknown> = {}) {
+  return {
+    pursuit_id: 'pursuit-1',
+    branch_id: 'branch-1',
+    change_packet_ref: contentRef('change_packet', 'reports/pursuit/change-packets/cp-1.json'),
+    status: 'applied',
+    safe_apply_decision_ref: traceRef(11),
+    safe_apply_result_ref: contentRef('safe_apply', 'reports/pursuit/safe-apply/cp-1.json', SHA_B),
+    proof_assessment_refs: [contentRef('evidence', 'reports/proof/pa-1.json', SHA_C)],
+    final_verification_ref: contentRef(
+      'command',
+      'reports/commands/final-verification.json',
+      SHA_C,
+    ),
+    reason_codes: ['applied'],
+    ...overrides,
+  };
+}
+
+function safeApplyBranch(overrides: Record<string, unknown> = {}) {
+  return {
+    pursuit_id: 'pursuit-1',
+    branch_id: 'branch-1',
+    status: 'candidate',
+    source_pursuit_contract_ref: workContractRef(),
+    estimated_touch_set: touchSet(),
+    expected_generated_outputs: [],
+    risk: 'medium',
+    required_claims: ['The requested change is implemented and verified'],
+    required_verification_commands: [verificationCommand()],
+    allowed_recovery_route_kinds: ['retry_same_step_with_feedback', 'safe_apply_reject'],
+    child_execution: {
+      kind: 'relay',
+      role: 'implementer',
+    },
+    work_root_kind: 'isolated_worktree',
+    proof_policy_ref: policyRef('policy.proof.standard'),
+    expected_change_packet_ref: contentRef(
+      'change_packet',
+      'reports/pursuit/change-packets/cp-1.json',
+      SHA_A,
+    ),
+    ...overrides,
+  };
+}
+
+function safeApplyBranchPlan(overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    mode: 'parallel-isolated-safe-apply',
+    runtime_status: 'planning-only',
+    source_contract_ref: workContractRef(),
+    graph_ref: contentRef('report', 'reports/pursuit/graph.json', SHA_A),
+    wave_plan_ref: contentRef('report', 'reports/pursuit/wave-plan.json', SHA_B),
+    policy_ref: policyRef('policy.constraints.pursue.parallel_writes'),
+    max_parallel_branches: 2,
+    branches: [safeApplyBranch()],
+    counts: {
+      candidate: 1,
+      serial_fallback: 0,
+      blocked: 0,
+      checkpoint_required: 0,
+    },
+    ...overrides,
+  };
+}
+
+function safeApplyReport(overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    mode: 'parallel-isolated-safe-apply',
+    base: {
+      ref: 'HEAD',
+      tree_hash: SHA_A,
+      dirty_parent_state: 'clean',
+      policy_ref: policyRef(),
+    },
+    branch_plan_ref: contentRef('report', 'reports/pursuit/branch-plan.json', SHA_B),
+    proof_policy_decision_ref: traceRef(10),
+    packets: [safeApplyPacket()],
+    applied_order: ['branch-1'],
+    counts: {
+      applied: 1,
+      rejected: 0,
+      blocked: 0,
+      failed_before_packet: 0,
+      serial_fallback: 0,
+    },
+    touch_set_reconciliation: [
+      {
+        pursuit_id: 'pursuit-1',
+        estimated_touch_set_ref: workContractRef(),
+        runtime_touched_files_ref: contentRef(
+          'diff',
+          'reports/pursuit/runtime-touched.diff',
+          SHA_B,
+        ),
+        generated_surface_status: 'not_touched',
+        scope_status: 'inside_estimate',
+      },
+    ],
+    generated_surfaces: {
+      status: 'not_touched',
+      source_refs: [],
+      output_refs: [],
+    },
+    final_verification: {
+      status: 'passed',
+      ref: contentRef('command', 'reports/commands/final-verification.json', SHA_C),
+    },
+    ...overrides,
+  };
 }
 
 function loadFlow(path: string): CompiledFlow {
@@ -267,6 +413,670 @@ describe('Pursue report schemas', () => {
         ],
         no_parallel_writes_reason: 'Code writes must be serial.',
       }).success,
+    ).toBe(false);
+  });
+
+  it('keeps Pursue V1 serial-write report fields strict before SafeApply cutover', () => {
+    expect(
+      PursuitContract.safeParse({
+        objective: 'Do coordinated work',
+        pursuits: [
+          {
+            id: 'pursuit-1',
+            title: 'Update runtime contract',
+            goal: 'Update src/example.ts',
+            scope: 'Only the named file',
+            assumptions: ['No external service changes are required'],
+            estimated_touch_set: touchSet(),
+            proof_plan: ['Run npm run verify'],
+            check_in_triggers: ['A shared file needs a conflicting edit'],
+            rollback_notes: ['Revert the local file edit'],
+            risk: 'medium',
+          },
+        ],
+        execution_policy: {
+          code_writes: 'parallel-isolated-safe-apply',
+          read_only_parallelism: 'allowed',
+          parallel_write_status: 'enabled',
+        },
+        verification_command_candidates: [verificationCommand()],
+      }).success,
+    ).toBe(false);
+    expect(
+      PursuitBatch.safeParse({
+        verdict: 'accept',
+        summary: 'This would hide parallel writes',
+        serialized_execution: false,
+        completed: [batchItem('completed')],
+        skipped: [],
+        blocked: [],
+        failed: [],
+        actual_touch_set: touchSet(),
+        proof_evidence: ['npm run verify passed'],
+      }).success,
+    ).toBe(false);
+    expect(
+      PursuitResult.safeParse({
+        summary: 'Unsafe result',
+        outcome: 'complete',
+        verification_status: 'passed',
+        review_verdict: 'clean',
+        total_pursuits: 1,
+        completed_count: 1,
+        skipped_count: 0,
+        blocked_count: 0,
+        failed_count: 0,
+        serial_code_writes: false,
+        evidence_links: resultPointers(),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a planning-only Pursue SafeApply branch plan without enabling parallel writes', () => {
+    expect(PursuitSafeApplyBranchPlan.parse(safeApplyBranchPlan())).toBeDefined();
+    expect(
+      PursuitSafeApplyBranchPlan.parse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              pursuit_id: 'pursuit-1',
+              branch_id: 'branch-1',
+              status: 'serial_fallback',
+              expected_change_packet_ref: undefined,
+              reason: 'Protected runtime files stay serial until checkpoint authority exists',
+            }),
+          ],
+          counts: {
+            candidate: 0,
+            serial_fallback: 1,
+            blocked: 0,
+            checkpoint_required: 0,
+          },
+        }),
+      ),
+    ).toBeDefined();
+  });
+
+  it('rejects Pursue SafeApply branch plans that would smuggle in unsafe parallel writes', () => {
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              work_root_kind: 'parent_checkout_diff_capture',
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              expected_change_packet_ref: undefined,
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          runtime_status: 'enabled',
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              child_execution: {
+                kind: 'relay',
+                role: 'implementer',
+                flow_id: 'fix',
+              },
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              child_execution: {
+                kind: 'child_flow',
+                flow_id: 'fix',
+                role: 'implementer',
+              },
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              allowed_recovery_route_kinds: ['retry_same_step_with_feedback'],
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('keeps Pursue SafeApply branch-plan counts, refs, and fallbacks honest', () => {
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          counts: {
+            candidate: 0,
+            serial_fallback: 0,
+            blocked: 0,
+            checkpoint_required: 0,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch(),
+            safeApplyBranch({
+              branch_id: 'branch-1',
+              pursuit_id: 'pursuit-2',
+            }),
+          ],
+          counts: {
+            candidate: 2,
+            serial_fallback: 0,
+            blocked: 0,
+            checkpoint_required: 0,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              status: 'blocked',
+              expected_change_packet_ref: undefined,
+            }),
+          ],
+          counts: {
+            candidate: 0,
+            serial_fallback: 0,
+            blocked: 1,
+            checkpoint_required: 0,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              status: 'checkpoint_required',
+              expected_change_packet_ref: undefined,
+              reason: 'Protected files need authority',
+            }),
+          ],
+          counts: {
+            candidate: 0,
+            serial_fallback: 0,
+            blocked: 0,
+            checkpoint_required: 1,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyBranchPlan.safeParse(
+        safeApplyBranchPlan({
+          branches: [
+            safeApplyBranch({
+              estimated_touch_set: touchSet({
+                generated_outputs: ['plugins/codex/flows/pursue/circuit.json'],
+              }),
+              expected_generated_outputs: [],
+            }),
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('accepts a strict Pursue SafeApply report without enabling it in the V1 flow', () => {
+    expect(PursuitSafeApplyReport.parse(safeApplyReport())).toBeDefined();
+    expect(
+      PursuitSafeApplyReport.parse(
+        safeApplyReport({
+          generated_surfaces: {
+            status: 'synced',
+            source_refs: [contentRef('generated_surface', 'src/flows/pursue/data.ts', SHA_A)],
+            output_refs: [
+              contentRef(
+                'generated_surface',
+                'generated/flows/pursue/circuit.work-contract.v0.json',
+                SHA_B,
+              ),
+            ],
+            drift_check_ref: contentRef('command', 'reports/commands/check-flow-drift.json', SHA_C),
+          },
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'synced',
+              scope_status: 'inside_estimate',
+            },
+          ],
+        }),
+      ),
+    ).toBeDefined();
+  });
+
+  it('keeps SafeApply packet counts and applied order honest', () => {
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          counts: {
+            applied: 0,
+            rejected: 0,
+            blocked: 0,
+            failed_before_packet: 0,
+            serial_fallback: 0,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          applied_order: ['missing-branch'],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          packets: [safeApplyPacket({ reason_codes: ['Bad-Reason'] })],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          packets: [
+            safeApplyPacket(),
+            safeApplyPacket({
+              branch_id: 'branch-1',
+              pursuit_id: 'pursuit-2',
+            }),
+          ],
+          applied_order: ['branch-1', 'branch-1'],
+          counts: {
+            applied: 2,
+            rejected: 0,
+            blocked: 0,
+            failed_before_packet: 0,
+            serial_fallback: 0,
+          },
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched-1.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+            {
+              pursuit_id: 'pursuit-2',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched-2.diff',
+                SHA_C,
+              ),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('rejects applied packets without packet, guidance, proof, runtime touch, and final verification refs', () => {
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          packets: [
+            safeApplyPacket({
+              change_packet_ref: undefined,
+              safe_apply_decision_ref: undefined,
+              safe_apply_result_ref: undefined,
+              proof_assessment_refs: [],
+              final_verification_ref: undefined,
+            }),
+          ],
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+          ],
+          final_verification: {
+            status: 'skipped',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('requires rejected packets to remain visible with SafeApply and recovery refs', () => {
+    expect(
+      PursuitSafeApplyReport.parse(
+        safeApplyReport({
+          packets: [
+            safeApplyPacket({
+              status: 'rejected',
+              final_verification_ref: undefined,
+              recovery_route_ref: traceRef(12),
+              reason_codes: ['weak_proof'],
+            }),
+          ],
+          applied_order: [],
+          counts: {
+            applied: 0,
+            rejected: 1,
+            blocked: 0,
+            failed_before_packet: 0,
+            serial_fallback: 0,
+          },
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+          ],
+          final_verification: {
+            status: 'skipped',
+          },
+        }),
+      ),
+    ).toBeDefined();
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          packets: [
+            safeApplyPacket({
+              status: 'rejected',
+              final_verification_ref: undefined,
+              recovery_route_ref: undefined,
+              safe_apply_result_ref: undefined,
+            }),
+          ],
+          applied_order: [],
+          counts: {
+            applied: 0,
+            rejected: 1,
+            blocked: 0,
+            failed_before_packet: 0,
+            serial_fallback: 0,
+          },
+          final_verification: {
+            status: 'skipped',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('allows applied work to be reported beside visible unresolved packets', () => {
+    expect(
+      PursuitSafeApplyReport.parse(
+        safeApplyReport({
+          packets: [
+            safeApplyPacket(),
+            safeApplyPacket({
+              pursuit_id: 'pursuit-2',
+              branch_id: 'branch-2',
+              status: 'blocked',
+              change_packet_ref: undefined,
+              safe_apply_decision_ref: undefined,
+              safe_apply_result_ref: undefined,
+              final_verification_ref: undefined,
+              proof_assessment_refs: [],
+              recovery_route_ref: traceRef(12),
+              reason_codes: ['rejected'],
+            }),
+          ],
+          applied_order: ['branch-1'],
+          counts: {
+            applied: 1,
+            rejected: 0,
+            blocked: 1,
+            failed_before_packet: 0,
+            serial_fallback: 0,
+          },
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched-1.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+            {
+              pursuit_id: 'pursuit-2',
+              estimated_touch_set_ref: workContractRef(),
+              generated_surface_status: 'unknown',
+              scope_status: 'unknown',
+            },
+          ],
+          generated_surfaces: {
+            status: 'unknown',
+            source_refs: [],
+            output_refs: [],
+          },
+        }),
+      ),
+    ).toBeDefined();
+  });
+
+  it('keeps blocked, failed, and serial-fallback packets out of SafeApply refs', () => {
+    for (const status of ['blocked', 'failed_before_packet', 'serial_fallback'] as const) {
+      expect(
+        PursuitSafeApplyReport.parse(
+          safeApplyReport({
+            packets: [
+              safeApplyPacket({
+                status,
+                change_packet_ref: undefined,
+                safe_apply_decision_ref: undefined,
+                safe_apply_result_ref: undefined,
+                final_verification_ref: undefined,
+                proof_assessment_refs: [],
+                recovery_route_ref: traceRef(12),
+                reason_codes: ['rejected'],
+              }),
+            ],
+            applied_order: [],
+            counts: {
+              applied: 0,
+              rejected: 0,
+              blocked: status === 'blocked' ? 1 : 0,
+              failed_before_packet: status === 'failed_before_packet' ? 1 : 0,
+              serial_fallback: status === 'serial_fallback' ? 1 : 0,
+            },
+            touch_set_reconciliation: [
+              {
+                pursuit_id: 'pursuit-1',
+                estimated_touch_set_ref: workContractRef(),
+                generated_surface_status: 'unknown',
+                scope_status: 'unknown',
+              },
+            ],
+            generated_surfaces: {
+              status: 'unknown',
+              source_refs: [],
+              output_refs: [],
+            },
+            final_verification: {
+              status: 'skipped',
+            },
+          }),
+        ),
+      ).toBeDefined();
+      expect(
+        PursuitSafeApplyReport.safeParse(
+          safeApplyReport({
+            packets: [
+              safeApplyPacket({
+                status,
+                final_verification_ref: undefined,
+                recovery_route_ref: traceRef(12),
+              }),
+            ],
+            applied_order: [],
+            counts: {
+              applied: 0,
+              rejected: 0,
+              blocked: status === 'blocked' ? 1 : 0,
+              failed_before_packet: status === 'failed_before_packet' ? 1 : 0,
+              serial_fallback: status === 'serial_fallback' ? 1 : 0,
+            },
+            final_verification: {
+              status: 'skipped',
+            },
+          }),
+        ).success,
+      ).toBe(false);
+    }
+  });
+
+  it('rejects missing touch-set reconciliation and generated-surface drift with passed verification', () => {
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'missing-pursuit',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'not_touched',
+              scope_status: 'inside_estimate',
+            },
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'drift_detected',
+              scope_status: 'expanded',
+            },
+          ],
+          generated_surfaces: {
+            status: 'drift_detected',
+            source_refs: [],
+            output_refs: [],
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          generated_surfaces: {
+            status: 'synced',
+            source_refs: [],
+            output_refs: [],
+            drift_check_ref: contentRef('command', 'reports/commands/check-flow-drift.json', SHA_C),
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          touch_set_reconciliation: [
+            {
+              pursuit_id: 'pursuit-1',
+              estimated_touch_set_ref: workContractRef(),
+              runtime_touched_files_ref: contentRef(
+                'diff',
+                'reports/pursuit/runtime-touched.diff',
+                SHA_B,
+              ),
+              generated_surface_status: 'synced',
+              scope_status: 'inside_estimate',
+            },
+          ],
+          generated_surfaces: {
+            status: 'not_touched',
+            source_refs: [],
+            output_refs: [],
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      PursuitSafeApplyReport.safeParse(
+        safeApplyReport({
+          generated_surfaces: {
+            status: 'not_touched',
+            source_refs: [contentRef('generated_surface', 'src/flows/pursue/data.ts', SHA_A)],
+            output_refs: [],
+          },
+        }),
+      ).success,
     ).toBe(false);
   });
 

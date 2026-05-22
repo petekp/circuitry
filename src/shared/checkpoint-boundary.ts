@@ -140,16 +140,6 @@ export function projectCheckpointBoundaryV0(
   const rejectedOldAuthority: CheckpointBoundaryRejectedAuthority[] = [];
   const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
 
-  if (step.policy.safe_autonomous_choice !== undefined) {
-    rejectedOldAuthority.push(
-      rejectOldAuthority(
-        `compiled-flow/steps/${step.id}/policy/safe_autonomous_choice`,
-        'safe_autonomous_choice',
-        'safe-autonomous checkpoint resolution is old hidden authority; future resolution must be declared and traced',
-      ),
-    );
-  }
-
   if (step.policy.auto_resolution !== undefined) {
     rejectedOldAuthority.push(
       rejectOldAuthority(

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runCompiledFlowWithWaiting } from '../../src/runtime/run/compiled-flow-runner.js';
+import { LayeredConfig } from '../../src/schemas/config.js';
 import { RunTrace } from '../../src/schemas/run.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
@@ -69,6 +70,51 @@ describe('runtime trace contract', () => {
     expect(result.outcome).toBe('complete');
 
     const trace = readTrace(runFolder);
+    const kinds = trace.map((entry) => (entry as { kind?: string }).kind);
+    expect(kinds.slice(0, 3)).toEqual(['run.bootstrapped', 'guidance.decision', 'step.entered']);
+    const flowGuidance = trace[1] as {
+      kind: string;
+      subject?: string;
+      selected?: { flow_id?: string; work_contract_ref?: { kind?: string; ref?: string } };
+    };
+    expect(flowGuidance).toMatchObject({
+      kind: 'guidance.decision',
+      subject: 'flow_selection',
+      selected: {
+        flow_id: 'review',
+        work_contract_ref: {
+          kind: 'work_contract',
+        },
+      },
+    });
+    expect(flowGuidance.selected?.work_contract_ref?.ref).toMatch(
+      /^runtime\/work-contract\/review\/[0-9a-f]{64}\.json$/,
+    );
+
+    const relayGuidanceIndex = trace.findIndex(
+      (entry) =>
+        (entry as { kind?: string; subject?: string }).kind === 'guidance.decision' &&
+        (entry as { subject?: string }).subject === 'relay_execution',
+    );
+    const relayStartedIndex = kinds.indexOf('relay.started');
+    const relayRequestIndex = kinds.indexOf('relay.request');
+    expect(relayGuidanceIndex).toBeGreaterThan(0);
+    expect(relayStartedIndex).toBeGreaterThan(relayGuidanceIndex);
+    expect(relayRequestIndex).toBeGreaterThan(relayStartedIndex);
+
+    const relayGuidance = trace[relayGuidanceIndex] as {
+      selected?: {
+        connector?: unknown;
+        role?: string;
+        request_payload_hash?: string;
+      };
+    };
+    const relayStarted = trace[relayStartedIndex] as { connector?: unknown; role?: string };
+    const relayRequest = trace[relayRequestIndex] as { request_payload_hash?: string };
+    expect(relayGuidance.selected?.connector).toEqual(relayStarted.connector);
+    expect(relayGuidance.selected?.role).toBe(relayStarted.role);
+    expect(relayGuidance.selected?.request_payload_hash).toBe(relayRequest.request_payload_hash);
+
     for (const [index, entry] of trace.entries()) {
       const parsed = TraceEntry.safeParse(entry);
       expect(
@@ -84,5 +130,91 @@ describe('runtime trace contract', () => {
       parsedTrace.success,
       parsedTrace.success ? '' : JSON.stringify(parsedTrace.error.issues),
     ).toBe(true);
+  });
+
+  it('uses the generated WorkContract path when the compiled flow path is known', async () => {
+    const runFolder = join(runFolderBase, 'review-with-path');
+    const compiledFlowPath = join(process.cwd(), 'generated/flows/review/circuit.json');
+    const result = await runCompiledFlowWithWaiting({
+      flowBytes: readFileSync(compiledFlowPath),
+      compiledFlowPath,
+      runDir: runFolder,
+      runId: '85000000-0000-4000-8000-000000000102',
+      goal: 'review this patch with source path',
+      now: deterministicNow(Date.UTC(2026, 4, 7, 12, 10, 0)),
+      relayer: relayerWithBody(REVIEW_RELAY_BODY),
+    });
+
+    expect(result.outcome).toBe('complete');
+
+    const trace = readTrace(runFolder);
+    const parsedTrace = RunTrace.safeParse(trace);
+    expect(
+      parsedTrace.success,
+      parsedTrace.success ? '' : JSON.stringify(parsedTrace.error.issues),
+    ).toBe(true);
+    expect(trace[1]).toMatchObject({
+      kind: 'guidance.decision',
+      subject: 'flow_selection',
+      selected: {
+        flow_id: 'review',
+        work_contract_ref: {
+          kind: 'work_contract',
+          ref: compiledFlowPath.replace(/\.json$/, '.work-contract.v0.json'),
+        },
+      },
+    });
+  });
+
+  it('records config-layer policy refs on relay guidance decisions', async () => {
+    const runFolder = join(runFolderBase, 'review-with-policy-ref');
+    const projectPolicyPath = join(runFolderBase, '.circuit/config.yaml');
+    const result = await runCompiledFlowWithWaiting({
+      flowBytes: readFileSync(join(process.cwd(), 'generated/flows/review/circuit.json')),
+      runDir: runFolder,
+      runId: '85000000-0000-4000-8000-000000000103',
+      goal: 'review this patch with policy provenance',
+      now: deterministicNow(Date.UTC(2026, 4, 7, 12, 20, 0)),
+      relayer: relayerWithBody(REVIEW_RELAY_BODY),
+      selectionConfigLayers: [
+        LayeredConfig.parse({
+          layer: 'project',
+          source_path: projectPolicyPath,
+          config: {
+            schema_version: 1,
+            defaults: {
+              selection: {
+                effort: 'medium',
+              },
+            },
+          },
+        }),
+      ],
+    });
+
+    expect(result.outcome).toBe('complete');
+
+    const trace = readTrace(runFolder);
+    const parsedTrace = RunTrace.safeParse(trace);
+    expect(
+      parsedTrace.success,
+      parsedTrace.success ? '' : JSON.stringify(parsedTrace.error.issues),
+    ).toBe(true);
+
+    const relayGuidance = trace.find(
+      (entry) =>
+        (entry as { kind?: string; subject?: string }).kind === 'guidance.decision' &&
+        (entry as { subject?: string }).subject === 'relay_execution',
+    ) as { policy_refs?: Array<{ ref?: string; sha256?: string }> } | undefined;
+    expect(relayGuidance?.policy_refs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ref: 'policy.runtime.config_v1' }),
+        expect.objectContaining({ ref: projectPolicyPath }),
+      ]),
+    );
+    const projectedPolicyRef = relayGuidance?.policy_refs?.find(
+      (ref) => ref.ref === projectPolicyPath,
+    );
+    expect(projectedPolicyRef?.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });

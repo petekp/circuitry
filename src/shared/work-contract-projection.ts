@@ -13,6 +13,8 @@ import type {
 } from '../schemas/step.js';
 import {
   type RecoveryFailureCause,
+  type RecoveryOperatorAuthority,
+  type RecoveryRequiredRefKind,
   type RecoveryRouteKind,
   WorkContractProjectionV0,
   type WorkContractProjectionV0 as WorkContractProjectionValue,
@@ -29,6 +31,7 @@ export class WorkContractProjectionError extends Error {
 
 interface ProjectWorkContractProjectionInput {
   readonly flow: CompiledFlow;
+  readonly contractRefPath?: string;
 }
 
 const FLOW_KEYS = new Set([
@@ -154,7 +157,6 @@ const STEP_KEYS: Readonly<Record<Step['kind'], ReadonlySet<string>>> = {
 const NORMAL_ROUTE_IDS = new Set(['pass', 'continue', 'complete', 'close']);
 
 const RECOVERY_BY_ROUTE: Readonly<Record<string, RecoveryRouteKind>> = {
-  retry: 'retry_same_step_with_feedback',
   revise: 'narrow_scope',
   review: 'run_independent_review',
   'run-review': 'run_independent_review',
@@ -171,11 +173,9 @@ const CAUSES_BY_KIND: Readonly<Record<RecoveryRouteKind, readonly RecoveryFailur
   retry_same_step_with_feedback: [
     'failed_check',
     'failed_acceptance_criteria',
-    'weak_proof',
-    'unproved_claim',
     'relay_result_invalid',
   ],
-  narrow_scope: ['scope_drift', 'weak_proof', 'unproved_claim'],
+  narrow_scope: ['failed_check', 'scope_drift', 'weak_proof', 'unproved_claim'],
   run_verification: ['failed_check', 'weak_proof', 'unproved_claim', 'generated_surface_drift'],
   run_independent_review: ['weak_proof', 'contradicted_evidence', 'scope_drift'],
   checkpoint_authority: [
@@ -184,11 +184,75 @@ const CAUSES_BY_KIND: Readonly<Record<RecoveryRouteKind, readonly RecoveryFailur
     'budget_exceeded',
     'unknown_failure',
   ],
-  safe_apply_reject: ['apply_conflict', 'protected_file_touched', 'generated_surface_drift'],
+  safe_apply_reject: [
+    'base_mismatch',
+    'apply_conflict',
+    'protected_file_touched',
+    'generated_surface_drift',
+  ],
   stop_unsafe: ['contradicted_evidence', 'scope_drift', 'budget_exceeded', 'unknown_failure'],
   escalate: ['relay_connector_failed', 'budget_exceeded', 'unknown_failure'],
   handoff: ['checkpoint_boundary', 'budget_exceeded', 'unknown_failure'],
 };
+
+function recoveryKindForRoute(
+  step: Step,
+  routeId: string,
+  target: string,
+): RecoveryRouteKind | undefined {
+  if (routeId === 'retry') {
+    return target === step.id ? 'retry_same_step_with_feedback' : 'narrow_scope';
+  }
+  return RECOVERY_BY_ROUTE[routeId];
+}
+
+function requiredRefsForRecoveryKind(kind: RecoveryRouteKind): RecoveryRequiredRefKind[] {
+  switch (kind) {
+    case 'retry_same_step_with_feedback':
+      return ['failed_check', 'acceptance_feedback', 'budget_state'];
+    case 'narrow_scope':
+      return ['proof_assessment', 'runtime_diff'];
+    case 'run_verification':
+      return ['proof_assessment', 'generated_surface_evidence'];
+    case 'run_independent_review':
+      return ['proof_assessment', 'report'];
+    case 'checkpoint_authority':
+      return ['checkpoint_request', 'runtime_diff', 'budget_state'];
+    case 'safe_apply_reject':
+      return ['safe_apply_result', 'runtime_diff', 'generated_surface_evidence'];
+    case 'stop_unsafe':
+      return ['failed_check', 'trace'];
+    case 'escalate':
+      return ['relay_result', 'trace'];
+    case 'handoff':
+      return ['trace', 'report'];
+  }
+}
+
+function operatorAuthorityForRecoveryKind(kind: RecoveryRouteKind): RecoveryOperatorAuthority {
+  if (kind === 'checkpoint_authority') return 'required_before_route';
+  if (kind === 'handoff') return 'required_to_continue_after_route';
+  return 'not_required';
+}
+
+function attemptBudgetForRecoveryKind(
+  kind: RecoveryRouteKind,
+  routeTarget: string,
+  stepId: string,
+): WorkContractProjectionValue['work_contract']['recovery'][number]['attempt_budget'] {
+  if (kind === 'retry_same_step_with_feedback') {
+    return {
+      consumes_step_attempt: true,
+      must_respect_max_attempts: true,
+      retry_target: routeTarget === stepId ? 'same_step' : 'declared_step',
+    };
+  }
+  return {
+    consumes_step_attempt: false,
+    must_respect_max_attempts: true,
+    retry_target: 'declared_step',
+  };
+}
 
 function stableJson(value: unknown): string {
   return JSON.stringify(value, (_key, item) => {
@@ -213,6 +277,25 @@ function sourceRef(flow: CompiledFlow, flowHash: string, ref: string): Ref {
     ref,
     sha256: flowHash,
     flow_id: flow.id,
+  };
+}
+
+export function workContractProjectionPathForCompiledFlowPath(compiledFlowPath: string): string {
+  if (!compiledFlowPath.endsWith('.json') || compiledFlowPath.endsWith('.work-contract.v0.json')) {
+    throw new WorkContractProjectionError(
+      `compiled flow path '${compiledFlowPath}' must end with a non-contract .json filename`,
+    );
+  }
+  return compiledFlowPath.replace(/\.json$/, '.work-contract.v0.json');
+}
+
+export function runtimeWorkContractRefForProjectedRef(ref: Ref): Ref {
+  if (ref.sha256 === undefined) {
+    throw new WorkContractProjectionError('projected WorkContract ref is missing sha256');
+  }
+  return {
+    ...ref,
+    ref: `runtime/work-contract/${ref.flow_id as unknown as string}/${ref.sha256}.json`,
   };
 }
 
@@ -413,14 +496,22 @@ export function projectWorkContractProjectionV0(
 
     for (const [routeId, target] of Object.entries(step.routes)) {
       if (NORMAL_ROUTE_IDS.has(routeId)) continue;
-      const kind = RECOVERY_BY_ROUTE[routeId];
+      const kind = recoveryKindForRoute(step, routeId, target);
       if (kind === undefined) continue;
       recovery.push({
+        schema_version: 0,
         step_id: step.id,
         route_id: routeId,
         route_target: target,
         kind,
         allowed_failure_causes: [...CAUSES_BY_KIND[kind]],
+        required_refs: requiredRefsForRecoveryKind(kind),
+        operator_authority: operatorAuthorityForRecoveryKind(kind),
+        attempt_budget: attemptBudgetForRecoveryKind(kind, target, step.id),
+        guidance: {
+          subject: 'recovery_route',
+          must_match_step_completed: true,
+        },
         source_ref: sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/routes/${routeId}`),
       });
     }
@@ -461,18 +552,6 @@ export function projectWorkContractProjectionV0(
         checkpointDefaultHints.push(
           sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/policy/safe_default_choice`),
         );
-      }
-      if (checkpointStep.policy.safe_autonomous_choice !== undefined) {
-        rejectedAuthority.push({
-          path: `compiled-flow/steps/${step.id}/policy/safe_autonomous_choice`,
-          field: 'safe_autonomous_choice',
-          reason: 'hidden checkpoint authority must become declared default or traced guidance',
-          source_ref: sourceRef(
-            flow,
-            flowHash,
-            `compiled-flow/steps/${step.id}/policy/safe_autonomous_choice`,
-          ),
-        });
       }
       if (checkpointStep.policy.auto_resolution !== undefined) {
         rejectedAuthority.push({
@@ -519,65 +598,74 @@ export function projectWorkContractProjectionV0(
     }
   }
 
+  const workContract = {
+    flow: {
+      id: flow.id,
+      version: flow.version,
+      purpose: flow.purpose,
+      entry: asJsonObject(flow.entry),
+      axes: flow.axes,
+      starts_at: flow.starts_at,
+    },
+    topology: {
+      stages: flow.stages.map((stage) => ({
+        id: stage.id,
+        title: stage.title,
+        ...(stage.canonical === undefined ? {} : { canonical: stage.canonical }),
+        steps: [...stage.steps],
+      })),
+      stage_path_policy: asJsonObject(flow.stage_path_policy),
+      routes: flow.steps.flatMap((step) =>
+        Object.entries(step.routes).map(([routeId, target]) => ({
+          step_id: step.id,
+          route_id: routeId,
+          target,
+        })),
+      ),
+    },
+    blocks: flow.steps.map((step) => ({
+      step_id: step.id,
+      title: step.title,
+      kind: step.kind,
+      executor: step.executor,
+      protocol: step.protocol,
+      reads: [...step.reads],
+      writes: asJsonObject(step.writes),
+      check: asJsonObject(step.check),
+      routes: step.routes,
+      ...(step.route_from_report === undefined
+        ? {}
+        : { route_from_report: asJsonObject(step.route_from_report) }),
+    })),
+    authority: {
+      relays,
+      checkpoints,
+      sub_runs: subRuns,
+      fanouts,
+      skill_slots: skillSlots,
+    },
+    proof: {
+      reports,
+      checks,
+      acceptance_criteria: acceptanceCriteria,
+    },
+    recovery,
+    limits: {
+      budgets,
+    },
+  } satisfies WorkContractProjectionValue['work_contract'];
+  const contractRefPath =
+    input.contractRefPath ??
+    workContractProjectionPathForCompiledFlowPath(`generated/flows/${flow.id}/circuit.json`);
   const projection = {
     schema_version: 0,
-    contract_ref: sourceRef(flow, flowHash, `generated/flows/${flow.id}/work-contract.v0.json`),
-    work_contract: {
-      flow: {
-        id: flow.id,
-        version: flow.version,
-        purpose: flow.purpose,
-        entry: asJsonObject(flow.entry),
-        axes: flow.axes,
-        starts_at: flow.starts_at,
-      },
-      topology: {
-        stages: flow.stages.map((stage) => ({
-          id: stage.id,
-          title: stage.title,
-          ...(stage.canonical === undefined ? {} : { canonical: stage.canonical }),
-          steps: [...stage.steps],
-        })),
-        stage_path_policy: asJsonObject(flow.stage_path_policy),
-        routes: flow.steps.flatMap((step) =>
-          Object.entries(step.routes).map(([routeId, target]) => ({
-            step_id: step.id,
-            route_id: routeId,
-            target,
-          })),
-        ),
-      },
-      blocks: flow.steps.map((step) => ({
-        step_id: step.id,
-        title: step.title,
-        kind: step.kind,
-        executor: step.executor,
-        protocol: step.protocol,
-        reads: [...step.reads],
-        writes: asJsonObject(step.writes),
-        check: asJsonObject(step.check),
-        routes: step.routes,
-        ...(step.route_from_report === undefined
-          ? {}
-          : { route_from_report: asJsonObject(step.route_from_report) }),
-      })),
-      authority: {
-        relays,
-        checkpoints,
-        sub_runs: subRuns,
-        fanouts,
-        skill_slots: skillSlots,
-      },
-      proof: {
-        reports,
-        checks,
-        acceptance_criteria: acceptanceCriteria,
-      },
-      recovery,
-      limits: {
-        budgets,
-      },
+    contract_ref: {
+      kind: 'work_contract' as const,
+      ref: contractRefPath,
+      sha256: sha256(workContract),
+      flow_id: flow.id,
     },
+    work_contract: workContract,
     guidance_seed: {
       selection_hints: selectionHints,
       connector_hints: connectorHints,

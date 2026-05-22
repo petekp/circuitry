@@ -25,7 +25,13 @@ const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: strin
 type ParsedTraceEntry = z.infer<typeof TraceEntry>;
 type GuidanceTraceEntry = Extract<ParsedTraceEntry, { kind: 'guidance.decision' }>;
 type RelayTraceEntry = Extract<ParsedTraceEntry, { kind: 'relay.started' | 'relay.failed' }>;
+type RelayStartedEntry = Extract<ParsedTraceEntry, { kind: 'relay.started' }>;
+type RelayRequestEntry = Extract<ParsedTraceEntry, { kind: 'relay.request' }>;
+type SkillsLoadedEntry = Extract<ParsedTraceEntry, { kind: 'skills.loaded' }>;
 type CheckpointResolvedEntry = Extract<ParsedTraceEntry, { kind: 'checkpoint.resolved' }>;
+type ProofAssessedEntry = Extract<ParsedTraceEntry, { kind: 'proof.assessed' }>;
+type SafeApplyResultEntry = Extract<ParsedTraceEntry, { kind: 'safe_apply.result' }>;
+type StepCompletedEntry = Extract<ParsedTraceEntry, { kind: 'step.completed' }>;
 
 function isGuidanceDecision(entry: ParsedTraceEntry): entry is GuidanceTraceEntry {
   return entry.kind === 'guidance.decision';
@@ -75,6 +81,58 @@ function findPriorRelayGuidance(
   return undefined;
 }
 
+function findFollowingRelayRequest(
+  traceEntries: readonly ParsedTraceEntry[],
+  relay: RelayStartedEntry,
+  afterIndex: number,
+): { readonly entry: RelayRequestEntry; readonly index: number } | undefined {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined) continue;
+    if (
+      entry.kind === 'relay.request' &&
+      entry.step_id === relay.step_id &&
+      entry.attempt === relay.attempt
+    ) {
+      return { entry, index };
+    }
+    if (
+      (entry.kind === 'relay.started' || entry.kind === 'relay.completed') &&
+      entry.step_id === relay.step_id &&
+      entry.attempt === relay.attempt
+    ) {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function findFollowingSkillsLoaded(
+  traceEntries: readonly ParsedTraceEntry[],
+  relay: RelayStartedEntry,
+  afterIndex: number,
+): SkillsLoadedEntry | undefined {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined) continue;
+    if (
+      entry.kind === 'skills.loaded' &&
+      entry.step_id === relay.step_id &&
+      entry.attempt === relay.attempt
+    ) {
+      return entry;
+    }
+    if (
+      entry.kind === 'relay.request' &&
+      entry.step_id === relay.step_id &&
+      entry.attempt === relay.attempt
+    ) {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 function findPriorCheckpointGuidance(
   traceEntries: readonly ParsedTraceEntry[],
   checkpoint: CheckpointResolvedEntry,
@@ -97,14 +155,219 @@ function findPriorCheckpointGuidance(
   return undefined;
 }
 
+function findPriorProofPolicyGuidance(
+  traceEntries: readonly ParsedTraceEntry[],
+  proof: ProofAssessedEntry,
+  beforeIndex: number,
+): GuidanceTraceEntry | undefined {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (
+      entry === undefined ||
+      !isGuidanceDecision(entry) ||
+      entry.subject !== 'proof_policy' ||
+      entry.decision_id !== proof.proof_policy_decision_id
+    ) {
+      continue;
+    }
+    return entry;
+  }
+  return undefined;
+}
+
+function findPriorSafeApplyGuidance(
+  traceEntries: readonly ParsedTraceEntry[],
+  result: SafeApplyResultEntry,
+  beforeIndex: number,
+): GuidanceTraceEntry | undefined {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (
+      entry === undefined ||
+      !isGuidanceDecision(entry) ||
+      entry.subject !== 'safe_apply' ||
+      entry.decision_id !== result.decision_id
+    ) {
+      continue;
+    }
+    return entry;
+  }
+  return undefined;
+}
+
+function findFollowingStepCompleted(
+  traceEntries: readonly ParsedTraceEntry[],
+  guidance: GuidanceTraceEntry,
+  afterIndex: number,
+): { readonly entry: StepCompletedEntry; readonly index: number } | undefined {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined) continue;
+    if (
+      entry.kind === 'step.completed' &&
+      entry.step_id === guidance.scope.step_id &&
+      entry.attempt === guidance.scope.attempt
+    ) {
+      return { entry, index };
+    }
+    if (
+      entry.kind === 'step.entered' &&
+      entry.step_id === guidance.scope.step_id &&
+      entry.attempt === guidance.scope.attempt
+    ) {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function selectedSkills(selected: Record<string, unknown>): readonly Record<string, unknown>[] {
+  if (!Array.isArray(selected.skills)) return [];
+  return selected.skills.filter(
+    (skill): skill is Record<string, unknown> =>
+      skill !== null && typeof skill === 'object' && !Array.isArray(skill),
+  );
+}
+
+function skillIdentity(skill: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: skill.id,
+    ...(skill.slot === undefined ? {} : { slot: skill.slot }),
+  };
+}
+
+function selectedSafeApplyActionMatches(selectedAction: unknown, resultAction: unknown): boolean {
+  return (
+    (selectedAction === 'reject' && resultAction === 'rejected') ||
+    (selectedAction === 'accept' && resultAction === 'accepted_for_review') ||
+    (selectedAction === 'apply' && resultAction === 'applied')
+  );
+}
+
+function scopeMatchesGuidance(
+  entry: ProofAssessedEntry | SafeApplyResultEntry,
+  guidance: GuidanceTraceEntry,
+): boolean {
+  return (
+    entry.scope.flow_id === guidance.scope.flow_id &&
+    entry.scope.step_id === guidance.scope.step_id &&
+    entry.scope.attempt === guidance.scope.attempt
+  );
+}
+
+function proofPolicyRequiresProvenClose(guidance: GuidanceTraceEntry): boolean {
+  if (guidance.subject !== 'proof_policy') return false;
+  return selectedRecord(guidance).close_requires_proven === true;
+}
+
+function isPassingCloseProof(entry: ProofAssessedEntry, guidance: GuidanceTraceEntry): boolean {
+  return (
+    entry.proof_policy_decision_id === guidance.decision_id &&
+    entry.overall_status === 'proven' &&
+    entry.close_allowed &&
+    scopeMatchesGuidance(entry, guidance)
+  );
+}
+
+function isPassingSafeApplyResult(entry: SafeApplyResultEntry): boolean {
+  return (
+    entry.action === 'applied' &&
+    entry.outcome === 'pass' &&
+    entry.final_verification_ref !== undefined
+  );
+}
+
+function validateCompleteCloseGates(
+  traceEntries: readonly ParsedTraceEntry[],
+  ctx: z.RefinementCtx,
+): void {
+  const closeIndex = traceEntries.findIndex(
+    (entry) => entry?.kind === 'run.closed' && entry.outcome === 'complete',
+  );
+  if (closeIndex < 0) return;
+
+  for (let index = 0; index < closeIndex; index += 1) {
+    const guidance = traceEntries[index];
+    if (
+      guidance === undefined ||
+      !isGuidanceDecision(guidance) ||
+      !proofPolicyRequiresProvenClose(guidance)
+    ) {
+      continue;
+    }
+    const hasPassingProof = traceEntries.some((entry, proofIndex) => {
+      return (
+        proofIndex > index &&
+        proofIndex < closeIndex &&
+        entry?.kind === 'proof.assessed' &&
+        isPassingCloseProof(entry, guidance)
+      );
+    });
+    if (!hasPassingProof) {
+      issueAt(
+        ctx,
+        [closeIndex, 'kind'],
+        `run.closed complete requires passing proof.assessed for proof_policy decision '${guidance.decision_id}'`,
+      );
+    }
+  }
+
+  let lastSafeApplyResult:
+    | { readonly entry: SafeApplyResultEntry; readonly index: number }
+    | undefined;
+  for (let index = 0; index < closeIndex; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind === 'safe_apply.result') {
+      lastSafeApplyResult = { entry, index };
+    }
+    if (entry === undefined || !isGuidanceDecision(entry) || entry.subject !== 'safe_apply') {
+      continue;
+    }
+    if (selectedRecord(entry).action !== 'apply') continue;
+    const hasPassingResult = traceEntries.some((candidate, resultIndex) => {
+      return (
+        resultIndex > index &&
+        resultIndex < closeIndex &&
+        candidate?.kind === 'safe_apply.result' &&
+        candidate.decision_id === entry.decision_id &&
+        isPassingSafeApplyResult(candidate) &&
+        scopeMatchesGuidance(candidate, entry)
+      );
+    });
+    if (!hasPassingResult) {
+      issueAt(
+        ctx,
+        [closeIndex, 'kind'],
+        `run.closed complete requires passing safe_apply.result for safe_apply decision '${entry.decision_id}'`,
+      );
+    }
+  }
+
+  if (lastSafeApplyResult !== undefined && !isPassingSafeApplyResult(lastSafeApplyResult.entry)) {
+    issueAt(
+      ctx,
+      [closeIndex, 'kind'],
+      `run.closed complete cannot follow non-passing safe_apply.result at index ${lastSafeApplyResult.index}`,
+    );
+  }
+}
+
 function validateGuidanceTraceSequence(
   traceEntries: readonly ParsedTraceEntry[],
   ctx: z.RefinementCtx,
 ): void {
   const decisionIds = new Map<string, number>();
   let hasGuidance = false;
+  let hasProofAssessment = false;
+  let hasSafeApplyResult = false;
   for (let index = 0; index < traceEntries.length; index += 1) {
     const entry = traceEntries[index];
+    if (entry?.kind === 'proof.assessed') {
+      hasProofAssessment = true;
+    }
+    if (entry?.kind === 'safe_apply.result') {
+      hasSafeApplyResult = true;
+    }
     if (entry === undefined || !isGuidanceDecision(entry)) continue;
     hasGuidance = true;
     const priorIndex = decisionIds.get(entry.decision_id);
@@ -118,7 +381,7 @@ function validateGuidanceTraceSequence(
       decisionIds.set(entry.decision_id, index);
     }
   }
-  if (!hasGuidance) return;
+  if (!hasGuidance && !hasProofAssessment && !hasSafeApplyResult) return;
 
   const bootstrap = traceEntries[0];
   if (bootstrap?.kind !== 'run.bootstrapped') return;
@@ -193,6 +456,57 @@ function validateGuidanceTraceSequence(
         `${entry.kind} connector does not match relay_execution guidance connector`,
       );
     }
+    if (!sameJson(selected.model, entry.resolved_selection.model)) {
+      issueAt(
+        ctx,
+        [index, 'resolved_selection', 'model'],
+        `${entry.kind} resolved_selection.model does not match relay_execution guidance model`,
+      );
+    }
+    if (selected.effort !== entry.resolved_selection.effort) {
+      issueAt(
+        ctx,
+        [index, 'resolved_selection', 'effort'],
+        `${entry.kind} resolved_selection.effort does not match relay_execution guidance effort`,
+      );
+    }
+    if (entry.kind === 'relay.started') {
+      const request = findFollowingRelayRequest(traceEntries, entry, index);
+      if (request === undefined) {
+        issueAt(
+          ctx,
+          [index, 'kind'],
+          'relay.started requires a following relay.request for the same step attempt when guidance decisions are present',
+        );
+      } else if (selected.request_payload_hash !== request.entry.request_payload_hash) {
+        issueAt(
+          ctx,
+          [request.index, 'request_payload_hash'],
+          'relay.request request_payload_hash does not match relay_execution guidance request_payload_hash',
+        );
+      }
+
+      const selectedLoadedSkills = selectedSkills(selected).map(skillIdentity);
+      const loaded = findFollowingSkillsLoaded(traceEntries, entry, index);
+      if (loaded === undefined) {
+        if (selectedLoadedSkills.length > 0) {
+          issueAt(
+            ctx,
+            [index, 'kind'],
+            'relay.started with selected skills requires a following skills.loaded entry for the same step attempt',
+          );
+        }
+      } else {
+        const loadedSkills = loaded.skills.map(skillIdentity);
+        if (!sameJson(selectedLoadedSkills, loadedSkills)) {
+          issueAt(
+            ctx,
+            [index, 'kind'],
+            'skills.loaded entries do not match relay_execution guidance skills',
+          );
+        }
+      }
+    }
     if (
       entry.kind === 'relay.failed' &&
       selected.request_payload_hash !== entry.request_payload_hash
@@ -208,14 +522,6 @@ function validateGuidanceTraceSequence(
   for (let index = 0; index < traceEntries.length; index += 1) {
     const entry = traceEntries[index];
     if (entry?.kind !== 'checkpoint.resolved') continue;
-
-    if (entry.resolution_source === 'safe-autonomous') {
-      issueAt(
-        ctx,
-        [index, 'resolution_source'],
-        "checkpoint.resolved cannot use resolution_source 'safe-autonomous' once guidance decisions are present",
-      );
-    }
 
     const guidance = findPriorCheckpointGuidance(traceEntries, entry, index);
     if (guidance === undefined) {
@@ -235,6 +541,13 @@ function validateGuidanceTraceSequence(
         `checkpoint.resolved selection '${entry.selection}' does not match checkpoint guidance choice '${String(selected.choice_id)}'`,
       );
     }
+    if (selected.route_id !== entry.route_id) {
+      issueAt(
+        ctx,
+        [index, 'route_id'],
+        `checkpoint.resolved route_id '${entry.route_id}' does not match checkpoint guidance route '${String(selected.route_id)}'`,
+      );
+    }
     if (selected.auto_resolved !== entry.auto_resolved) {
       issueAt(
         ctx,
@@ -242,7 +555,169 @@ function validateGuidanceTraceSequence(
         'checkpoint.resolved auto_resolved does not match checkpoint guidance',
       );
     }
+    if (selected.resolution_source !== entry.resolution_source) {
+      issueAt(
+        ctx,
+        [index, 'resolution_source'],
+        `checkpoint.resolved resolution_source '${entry.resolution_source}' does not match checkpoint guidance source '${String(selected.resolution_source)}'`,
+      );
+    }
   }
+
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== 'proof.assessed') continue;
+
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'flow_id'],
+        `proof.assessed scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`,
+      );
+    }
+
+    const guidance = findPriorProofPolicyGuidance(traceEntries, entry, index);
+    if (guidance === undefined) {
+      issueAt(
+        ctx,
+        [index, 'proof_policy_decision_id'],
+        'proof.assessed requires prior matching proof_policy guidance when guidance decisions are present',
+      );
+      continue;
+    }
+
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'flow_id'],
+        'proof.assessed flow scope does not match proof_policy guidance',
+      );
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'step_id'],
+        'proof.assessed step scope does not match proof_policy guidance',
+      );
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'attempt'],
+        'proof.assessed attempt scope does not match proof_policy guidance',
+      );
+    }
+  }
+
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === undefined || !isGuidanceDecision(entry) || entry.subject !== 'recovery_route') {
+      continue;
+    }
+
+    const completed = findFollowingStepCompleted(traceEntries, entry, index);
+    if (completed === undefined) {
+      issueAt(
+        ctx,
+        [index, 'kind'],
+        'recovery_route guidance requires a following step.completed for the same step attempt',
+      );
+      continue;
+    }
+
+    const selected = selectedRecord(entry);
+    if (selected.route_id !== completed.entry.route_taken) {
+      issueAt(
+        ctx,
+        [completed.index, 'route_taken'],
+        `step.completed route_taken '${completed.entry.route_taken}' does not match recovery guidance route '${String(selected.route_id)}'`,
+      );
+    }
+  }
+
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== 'safe_apply.result') continue;
+
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'flow_id'],
+        `safe_apply.result scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`,
+      );
+    }
+
+    const guidance = findPriorSafeApplyGuidance(traceEntries, entry, index);
+    if (guidance === undefined) {
+      issueAt(
+        ctx,
+        [index, 'decision_id'],
+        'safe_apply.result requires prior matching safe_apply guidance when guidance decisions are present',
+      );
+      continue;
+    }
+
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'flow_id'],
+        'safe_apply.result flow scope does not match safe_apply guidance',
+      );
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'step_id'],
+        'safe_apply.result step scope does not match safe_apply guidance',
+      );
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt(
+        ctx,
+        [index, 'scope', 'attempt'],
+        'safe_apply.result attempt scope does not match safe_apply guidance',
+      );
+    }
+
+    const selected = selectedRecord(guidance);
+    if (!selectedSafeApplyActionMatches(selected.action, entry.action)) {
+      issueAt(
+        ctx,
+        [index, 'action'],
+        `safe_apply.result action '${entry.action}' does not match safe_apply guidance action '${String(selected.action)}'`,
+      );
+    }
+    if (!sameJson(selected.change_packet_ref, entry.change_packet_ref)) {
+      issueAt(
+        ctx,
+        [index, 'change_packet_ref'],
+        'safe_apply.result change_packet_ref does not match safe_apply guidance',
+      );
+    }
+    if (!sameJson(selected.base_ref, entry.base_ref)) {
+      issueAt(
+        ctx,
+        [index, 'base_ref'],
+        'safe_apply.result base_ref does not match safe_apply guidance',
+      );
+    }
+    if (selected.protected_file_decision !== entry.protected_file_decision) {
+      issueAt(
+        ctx,
+        [index, 'protected_file_decision'],
+        'safe_apply.result protected_file_decision does not match safe_apply guidance',
+      );
+    }
+    if (!sameJson(selected.final_verification_ref, entry.final_verification_ref)) {
+      issueAt(
+        ctx,
+        [index, 'final_verification_ref'],
+        'safe_apply.result final_verification_ref does not match safe_apply guidance',
+      );
+    }
+  }
+
+  validateCompleteCloseGates(traceEntries, ctx);
 }
 
 // Own-property guard for identity fields on raw input. Zod normally reads

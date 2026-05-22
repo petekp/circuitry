@@ -210,8 +210,7 @@
             "description": "Mark the prototype as discarded while keeping the evidence trail."
           }
         ],
-        "safe_default_choice": "keep-prototype",
-        "safe_autonomous_choice": "keep-prototype"
+        "safe_default_choice": "keep-prototype"
       },
       "writes": {
         "request": "reports/checkpoints/prototype-review-request.json",

@@ -1,10 +1,10 @@
 <div align="center">
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </div>
-<h3 align="center"><strong>A Flow Runner for Claude Code and Codex</strong></h3>
+<h3 align="center"><strong>Structured developer flows for Claude Code and Codex</strong></h3>
 <br />
-Circuit gives your coding agent tools for orchestrating complex, multi-step
-flows. It helps produce more consistent and reliable results, with less
+Circuit runs coding tasks through structured flows with trace, reports, and
+evidence. It helps produce more consistent and reliable results, with less
 babysitting.
 
 Go from this:
@@ -24,7 +24,7 @@ To this:
 
 Circuit automates all the tedium and produces sounder results:
 
-- Chooses the right built-in, custom, or dynamically determined multi-step flow
+- Records the chosen built-in, custom, or dynamically determined flow
 - Moves through each step in sequence and/or parallelizes non-dependent steps
 - Applies your preferred skills at the appropriate steps
 - Uses your preferred model(s) and thinking power for particular steps
@@ -74,8 +74,7 @@ Then ask Codex to use Circuit:
 @Circuit the checkout total is wrong when discounts and tax both apply
 ```
 
-Codex can choose the best bundled Circuit flow skill from your
-natural-language request.
+Codex can recommend the right Circuit flow from your natural-language request.
 
 ### Local CLI
 
@@ -91,18 +90,19 @@ Circuit requires Node.js `22.18.0` or newer.
 For a more careful manual check, use [`docs/first-run.md`](docs/first-run.md).
 For the repo map, use [`docs/repository-map.md`](docs/repository-map.md).
 
-## Choose A Flow
+## Start From An Intent
 
 Use one front door unless you already know the flow you want:
 
-| Host | You type | Who chooses the flow |
+| Host | You type | What happens |
 | --- | --- | --- |
-| Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host model selects an explicit Circuit flow. |
-| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex chooses the best bundled Circuit flow skill. |
-| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
+| Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host may recommend a flow; Circuit records the selected flow when the run starts. |
+| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
+| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
 If the flow choice is obvious, use direct commands such as `/circuit:fix`,
-`/circuit:review`, `/circuit:build`, or `/circuit:explore`. The CLI form is
+`/circuit:review`, `/circuit:build`, or `/circuit:explore` as expert controls.
+They start Circuit from that flow; they are not a bypass. The CLI form is
 `./bin/circuit run <flow> --goal "<task>"`. Use `/circuit:run` for Pursue from
 Claude Code; the CLI can run `pursue` directly.
 
@@ -138,8 +138,8 @@ OS sandbox.
 Codex has two separate roles:
 
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
-  Codex chooses the best bundled Circuit flow skill and invokes the local
-  Circuit engine.
+  Codex can recommend the right Circuit flow and invoke the local Circuit
+  engine.
 - **worker connector behavior:** Circuit can relay worker steps through the
   Codex CLI from any host, including write-capable implementer steps.
 

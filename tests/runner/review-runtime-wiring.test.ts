@@ -112,7 +112,18 @@ function relayerWithBody(body: string): RelayFn {
   };
 }
 
-function traceEntryLabel(trace_entry: { kind: string; step_id?: unknown }): string {
+function traceEntryLabel(trace_entry: {
+  kind: string;
+  step_id?: unknown;
+  subject?: unknown;
+  scope?: { step_id?: unknown };
+}): string {
+  if (trace_entry.kind === 'guidance.decision' && typeof trace_entry.subject === 'string') {
+    const scopedStep = trace_entry.scope?.step_id;
+    return typeof scopedStep === 'string'
+      ? `${trace_entry.kind}:${trace_entry.subject}:${scopedStep}`
+      : `${trace_entry.kind}:${trace_entry.subject}`;
+  }
   return typeof trace_entry.step_id === 'string'
     ? `${trace_entry.kind}:${trace_entry.step_id}`
     : trace_entry.kind;
@@ -748,10 +759,12 @@ describe('registered review compose writer', () => {
 
     expect(traceEntries.map(traceEntryLabel)).toEqual([
       'run.bootstrapped',
+      'guidance.decision:flow_selection',
       'step.entered:intake-step',
       'step.report_written:intake-step',
       'step.completed:intake-step',
       'step.entered:audit-step',
+      'guidance.decision:relay_execution:audit-step',
       'relay.started:audit-step',
       'relay.request:audit-step',
       'relay.receipt:audit-step',
@@ -823,10 +836,12 @@ describe('registered review compose writer', () => {
       // and the expected trace_entry ordering for each stage.
       expect(traceEntries.map(traceEntryLabel)).toEqual([
         'run.bootstrapped',
+        'guidance.decision:flow_selection',
         'step.entered:intake-step',
         'step.report_written:intake-step',
         'step.completed:intake-step',
         'step.entered:audit-step',
+        'guidance.decision:relay_execution:audit-step',
         'relay.started:audit-step',
         'relay.request:audit-step',
         'relay.receipt:audit-step',

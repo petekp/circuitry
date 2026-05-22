@@ -1,4 +1,4 @@
-// Build-time emit + CI drift check for compiled flow JSON files.
+// Build-time emit + CI drift check for generated flow package JSON files.
 //
 // Reads the active schematics declared by each flow package and
 // compiles each to a CompileResult via
@@ -8,13 +8,18 @@
 // plugins/claude/skills/<id>/ and Codex host output under
 // plugins/codex/flows/<id>/. Internal flows stay under generated/flows
 // and are not installed into host-visible plugin surfaces.
+// Every compiled-flow JSON file also gets a matching
+// *.work-contract.v0.json projection.
 //
 // File layout:
 //   - kind:'single'   → generated/flows/<id>/circuit.json
+//                        plus circuit.work-contract.v0.json
 //   - kind:'per-mode' → group compiled flows by graph identity
 //                       The largest group goes to circuit.json; remaining
 //                       modes get one file each
 //                       at generated/flows/<id>/<mode-name>.json.
+//                       Each compiled flow file gets a matching
+//                       <name>.work-contract.v0.json projection.
 //                       The CLI loader prefers <mode>.json when an axis
 //                       tuple needs a distinct graph and falls back to
 //                       circuit.json.
@@ -49,6 +54,7 @@ import type * as CatalogModule from '../../src/flows/catalog.js';
 import type * as CompilerModule from '../../src/flows/compile-schematic-to-flow.js';
 import type * as FlowBlockDefinitionsModule from '../../src/schemas/flow-block-definitions.js';
 import type * as FlowSchematicModule from '../../src/schemas/flow-schematic.js';
+import type * as WorkContractProjectionModule from '../../src/shared/work-contract-projection.js';
 import {
   renderClaudeHostCommand,
   renderCodexHostCommand,
@@ -303,13 +309,22 @@ function renderSurfaceInventory(): string {
       'JSON schematics are generated from typed FlowData plus the flow adapter.',
     ],
     [
-      'Generated flow manifests',
+      'Generated compiled flow manifests',
       '`src/flows/<id>/data.ts` + `src/flows/<id>/flow.ts`',
       '`npm run build && node scripts/flows/emit.ts`',
       'no',
-      '`generated/flows/<id>/*.json`',
+      '`generated/flows/<id>/circuit.json`<br>`generated/flows/<id>/<mode>.json`',
       '`node scripts/flows/emit.ts --check`',
       'Canonical compiled-flow outputs. JSON cannot carry generated headers without changing host parsing.',
+    ],
+    [
+      'Generated WorkContract projections',
+      '`src/flows/<id>/data.ts` + `src/shared/work-contract-projection.ts`',
+      '`npm run build && node scripts/flows/emit.ts`',
+      'no',
+      '`generated/flows/<id>/*.work-contract.v0.json`',
+      '`node scripts/flows/emit.ts --check`',
+      'Generated contract projections sit beside each compiled flow file. Runtime cutover is separate; these files make contract refs real and drift-checked.',
     ],
     [
       'Claude plugin flow mirrors',
@@ -318,7 +333,7 @@ function renderSurfaceInventory(): string {
       'no',
       '`plugins/claude/skills/<id>/*.json`',
       '`node scripts/flows/emit.ts --check`',
-      'Public flows only. Internal flow mirrors are stale and fail drift checks.',
+      'Public flows only. Mirrors generated flow package JSON: compiled-flow JSON and WorkContract projection JSON. Internal flow mirrors are stale and fail drift checks.',
     ],
     [
       'Codex plugin flow mirrors',
@@ -327,7 +342,7 @@ function renderSurfaceInventory(): string {
       'no',
       '`plugins/codex/flows/<id>/*.json`',
       '`node scripts/flows/emit.ts --check`',
-      'Public flows only. Internal flow mirrors are stale and fail drift checks.',
+      'Public flows only. Mirrors generated flow package JSON: compiled-flow JSON and WorkContract projection JSON. Internal flow mirrors are stale and fail drift checks.',
     ],
     [
       'Codex plugin command mirrors',
@@ -420,13 +435,21 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
   for (const entry of SCHEMATICS) {
     const result = await compileOneSchematic(entry.schematic);
     const plan = planSchematicFiles(entry.id, result);
-    const compiledOutputs = plan.map((p) => p.outRel);
+    const compiledOutputs = plan.flatMap((p) => [
+      p.outRel,
+      workContractRelForCompiledFlowRel(p.outRel),
+    ]);
     const hostMirrors =
       entry.visibility === 'public'
-        ? [
-            ...claudeHostPlan(plan).map((p) => p.outRel),
-            ...codexHostPlan(plan).map((p) => p.outRel),
-          ]
+        ? plan.flatMap((p) => {
+            const contractRel = workContractRelForCompiledFlowRel(p.outRel);
+            return [
+              claudeHostRel(p.outRel),
+              claudeHostRel(contractRel),
+              codexHostRel(p.outRel),
+              codexHostRel(contractRel),
+            ];
+          })
         : [];
     flowRows.push(
       markdownTableRow([
@@ -491,7 +514,7 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
       'Flow',
       'Visibility',
       'Definition source',
-      'Generated compiled outputs',
+      'Generated flow package outputs',
       'Host flow mirrors',
       'Command source',
       'Command surfaces',
@@ -582,6 +605,18 @@ async function loadFlowBlockDefinitionsModule(): Promise<typeof FlowBlockDefinit
   } catch (err) {
     console.error(
       `\nCould not import block definitions from dist/. Run \`npm run build\` first, then re-run this script.\n${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    process.exit(1);
+  }
+}
+
+async function loadWorkContractProjectionModule(): Promise<typeof WorkContractProjectionModule> {
+  const distPath = resolve(projectRoot, 'dist/shared/work-contract-projection.js');
+  try {
+    return (await import(distPath)) as typeof WorkContractProjectionModule;
+  } catch (err) {
+    console.error(
+      `\nCould not import WorkContract projection from dist/. Run \`npm run build\` first, then re-run this script.\n${err instanceof Error ? err.message : String(err)}\n`,
     );
     process.exit(1);
   }
@@ -697,6 +732,17 @@ function codexHostPlan(plan: SchematicFilePlan[]): SchematicFilePlan[] {
   return plan.map((p) => ({ ...p, outRel: codexHostRel(p.outRel) }));
 }
 
+function workContractRelForCompiledFlowRel(compiledFlowRel: string): string {
+  if (!compiledFlowRel.endsWith('.json') || compiledFlowRel.endsWith('.work-contract.v0.json')) {
+    throw new Error(`compiled flow path '${compiledFlowRel}' is not a compiled-flow JSON path`);
+  }
+  return compiledFlowRel.replace(/\.json$/, '.work-contract.v0.json');
+}
+
+function expectedJsonRelsForPlan(plan: SchematicFilePlan[]): string[] {
+  return plan.flatMap((p) => [p.outRel, workContractRelForCompiledFlowRel(p.outRel)]);
+}
+
 // Returns the set of unexpected `*.json` files in a generated flow directory:
 // anything on disk under `<rootRel>/<id>/` that ends in `.json`
 // but isn't in the emit plan. These are stale per-mode siblings from a
@@ -704,7 +750,7 @@ function codexHostPlan(plan: SchematicFilePlan[]): SchematicFilePlan[] {
 function findStaleSiblings(id: string, plan: SchematicFilePlan[], rootRel: string): string[] {
   const skillDirAbs = resolve(projectRoot, `${rootRel}/${id}`);
   if (!existsSync(skillDirAbs)) return [];
-  const expected = new Set(plan.map((p) => basename(p.outRel)));
+  const expected = new Set(expectedJsonRelsForPlan(plan).map((rel) => basename(rel)));
   return readdirSync(skillDirAbs)
     .filter((name) => name.endsWith('.json') && !expected.has(name))
     .map((name) => `${rootRel}/${id}/${name}`);
@@ -804,6 +850,7 @@ async function checkBlockCatalog(tmpDir: string): Promise<boolean> {
 
 async function emitMode(): Promise<void> {
   const expectedSkills = expectedCodexSkillIds();
+  const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
   await emitBlockCatalog();
   for (const entry of SCHEMATICS) {
     emitSchematicFile(entry);
@@ -815,17 +862,36 @@ async function emitMode(): Promise<void> {
       writeFileSync(outAbs, stringifyCompiledFlow(flow));
       biomeFormatInPlace(outAbs);
       console.log(`emitted ${outRel}`);
+      const contractRel = workContractRelForCompiledFlowRel(outRel);
+      const contractAbs = resolve(projectRoot, contractRel);
+      mkdirSync(dirname(contractAbs), { recursive: true });
+      writeFileSync(
+        contractAbs,
+        stringifyJson(projectWorkContractProjectionV0({ flow, contractRefPath: contractRel })),
+      );
+      biomeFormatInPlace(contractAbs);
+      console.log(`emitted ${contractRel}`);
       if (entry.visibility !== 'public') continue;
       const hostRel = claudeHostRel(outRel);
       const hostAbs = resolve(projectRoot, hostRel);
       mkdirSync(dirname(hostAbs), { recursive: true });
       writeFileSync(hostAbs, readFileSync(outAbs, 'utf8'));
       console.log(`emitted ${hostRel} (claude-code host output)`);
+      const hostContractRel = claudeHostRel(contractRel);
+      const hostContractAbs = resolve(projectRoot, hostContractRel);
+      mkdirSync(dirname(hostContractAbs), { recursive: true });
+      writeFileSync(hostContractAbs, readFileSync(contractAbs, 'utf8'));
+      console.log(`emitted ${hostContractRel} (claude-code host output)`);
       const codexRel = codexHostRel(outRel);
       const codexAbs = resolve(projectRoot, codexRel);
       mkdirSync(dirname(codexAbs), { recursive: true });
       writeFileSync(codexAbs, readFileSync(outAbs, 'utf8'));
       console.log(`emitted ${codexRel} (codex host output)`);
+      const codexContractRel = codexHostRel(contractRel);
+      const codexContractAbs = resolve(projectRoot, codexContractRel);
+      mkdirSync(dirname(codexContractAbs), { recursive: true });
+      writeFileSync(codexContractAbs, readFileSync(contractAbs, 'utf8'));
+      console.log(`emitted ${codexContractRel} (codex host output)`);
     }
     // Stale `<mode>.json` siblings would otherwise survive emit and silently
     // drive runtime behavior via the CLI loader. Treat them as stale outputs
@@ -868,6 +934,7 @@ async function checkMode(): Promise<void> {
   const tmpDir = mkdtempSync(join(tmpdir(), 'flow-drift-'));
   let drifted = false;
   const expectedSkills = expectedCodexSkillIds();
+  const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
   try {
     if (await checkBlockCatalog(tmpDir)) {
       drifted = true;
@@ -901,6 +968,31 @@ async function checkMode(): Promise<void> {
           console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
           drifted = true;
         }
+        const contractRel = workContractRelForCompiledFlowRel(outRel);
+        const contractTmpFile = join(tmpDir, contractRel.replace(/[/]/g, '_'));
+        writeFileSync(
+          contractTmpFile,
+          stringifyJson(projectWorkContractProjectionV0({ flow, contractRefPath: contractRel })),
+        );
+        biomeFormatInPlace(contractTmpFile);
+        const contractBytes = readFileSync(contractTmpFile, 'utf8');
+        let committedContractBytes: string;
+        try {
+          committedContractBytes = readFileSync(resolve(projectRoot, contractRel), 'utf8');
+        } catch (_err) {
+          console.error(
+            `✗ ${contractRel} is missing on disk but ${outRel} projects to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+          );
+          drifted = true;
+          continue;
+        }
+        if (contractBytes === committedContractBytes) {
+          console.log(`✓ ${contractRel} is in sync with ${outRel}`);
+        } else {
+          console.error(`✗ ${contractRel} drifted from WorkContract projection of ${outRel}`);
+          console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
+          drifted = true;
+        }
         if (entry.visibility === 'public') {
           const hostRel = claudeHostRel(outRel);
           let hostBytes: string;
@@ -920,6 +1012,24 @@ async function checkMode(): Promise<void> {
             console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
             drifted = true;
           }
+          const hostContractRel = claudeHostRel(contractRel);
+          let hostContractBytes: string;
+          try {
+            hostContractBytes = readFileSync(resolve(projectRoot, hostContractRel), 'utf8');
+          } catch (_err) {
+            console.error(
+              `✗ ${hostContractRel} is missing on disk but the claude-code host mirrors ${contractRel}. Run \`npm run emit-flows\` to regenerate, then commit.`,
+            );
+            drifted = true;
+            continue;
+          }
+          if (contractBytes === hostContractBytes) {
+            console.log(`✓ ${hostContractRel} mirrors ${contractRel}`);
+          } else {
+            console.error(`✗ ${hostContractRel} drifted from canonical ${contractRel}`);
+            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
+            drifted = true;
+          }
           const codexRel = codexHostRel(outRel);
           let codexBytes: string;
           try {
@@ -935,6 +1045,24 @@ async function checkMode(): Promise<void> {
             console.log(`✓ ${codexRel} mirrors ${outRel}`);
           } else {
             console.error(`✗ ${codexRel} drifted from canonical ${outRel}`);
+            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
+            drifted = true;
+          }
+          const codexContractRel = codexHostRel(contractRel);
+          let codexContractBytes: string;
+          try {
+            codexContractBytes = readFileSync(resolve(projectRoot, codexContractRel), 'utf8');
+          } catch (_err) {
+            console.error(
+              `✗ ${codexContractRel} is missing on disk but the codex host mirrors ${contractRel}. Run \`npm run emit-flows\` to regenerate, then commit.`,
+            );
+            drifted = true;
+            continue;
+          }
+          if (contractBytes === codexContractBytes) {
+            console.log(`✓ ${codexContractRel} mirrors ${contractRel}`);
+          } else {
+            console.error(`✗ ${codexContractRel} drifted from canonical ${contractRel}`);
             console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
             drifted = true;
           }

@@ -1,7 +1,7 @@
 {
   "name": "circuit",
   "version": "0.1.0-alpha.6",
-  "description": "Choose and run the right Circuit flow from Codex.",
+  "description": "Run coding intents through Circuit from Codex.",
   "author": {
     "name": "Circuit"
   },
@@ -12,8 +12,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Circuit",
-    "shortDescription": "Choose and run the right Circuit flow",
-    "longDescription": "Use @Circuit with a natural-language coding task. Codex can choose the best bundled Circuit flow, run the local Circuit engine, render progress, and surface the Circuit summary. Direct Circuit flow skills remain available when you already know the flow.",
+    "shortDescription": "Run coding intents through Circuit",
+    "longDescription": "Use @Circuit with a natural-language coding task. Codex can recommend a Circuit flow, run the local Circuit engine, render progress, and surface the Circuit summary. Direct Circuit flow skills are expert controls when you already know the flow.",
     "developerName": "Circuit",
     "category": "Coding",
     "capabilities": ["Interactive", "Write"],

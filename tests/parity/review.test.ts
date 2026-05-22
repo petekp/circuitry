@@ -53,7 +53,7 @@ describe('review runtime parity', () => {
       expect(runResult).toMatchObject({
         flow_id: 'review',
         outcome: 'complete',
-        trace_entries_observed: 8,
+        trace_entries_observed: 9,
         manifest_hash: fixture.manifestHash,
       });
       const manifestSnapshot = await readRuntimeManifestSnapshot(runDir);

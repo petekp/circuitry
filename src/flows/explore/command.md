@@ -1,11 +1,19 @@
 ---
-description: Investigate, understand, choose among options, or shape an execution plan. Invokes Circuit's `explore` flow end-to-end via the project CLI, producing a run trace + final report under the run folder.
+description: Starts Circuit from the Explore flow to investigate, compare options, or shape a plan, producing a run trace and final report.
 argument-hint: <goal>
 ---
 
-# /circuit:explore — investigation flow
+# /circuit:explore — Explore expert control
 
-Run the `explore` flow on the goal the user supplied. The flow walks a full
+Start Circuit from the `explore` flow on the goal the user supplied. Use this
+expert control when the operator already knows the work is investigation or
+decision support before editing.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Explore work contract, writes trace, reports, and evidence, and follows
+declared recovery behavior.
+
+The flow walks a full
 stage path: Frame → Analyze → Plan or Decision → Close. Synthesis, critique,
 and tournament review live inside the Plan or Decision stage rather than a
 separate canonical Review stage. Frame, Analyze, and Close are Circuit-written

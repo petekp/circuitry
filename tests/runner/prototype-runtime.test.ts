@@ -323,7 +323,7 @@ describe('Prototype runtime wiring', () => {
         (entry) =>
           entry.kind === 'checkpoint.resolved' && entry.step_id === 'prototype-checkpoint-step',
       ),
-    ).toMatchObject({ selection: 'keep-prototype', resolution_source: 'safe-default' });
+    ).toMatchObject({ selection: 'keep-prototype', resolution_source: 'declared-default' });
   });
 
   it('pauses in deep mode and resumes with save-build-input', async () => {

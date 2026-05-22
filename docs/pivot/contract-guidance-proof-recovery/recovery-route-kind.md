@@ -92,13 +92,14 @@ This spec is grounded in the current pivot docs and local repo evidence:
 - Current verification execution falls back to the shared recovery route helper
   after failed commands. See
   [src/runtime/executors/verification.ts](../../../src/runtime/executors/verification.ts).
-- Current checkpoint execution records `safe-default` and `safe-autonomous`
-  resolution sources and may resolve through `accept-as-is`, `first-acceptable`,
-  or `highest-score`. This spec replaces that untraced path. See
+- Current checkpoint execution records `declared-default`, `policy`, or
+  `operator` resolution sources. Scoring-style `auto_resolution` remains only as
+  a policy-resolution input and is paired with checkpoint guidance. See
   [src/runtime/executors/checkpoint.ts](../../../src/runtime/executors/checkpoint.ts).
 - Current trace has `check.evaluated`, `checkpoint.resolved`,
-  `step.completed`, and `run.closed`, but not `guidance.decision` or typed
-  recovery refs yet. See [src/schemas/trace-entry.ts](../../../src/schemas/trace-entry.ts).
+  `guidance.decision`, `step.completed`, and `run.closed`. Typed recovery refs
+  now exist as a foundation, while full recovery behavior remains incremental.
+  See [src/schemas/trace-entry.ts](../../../src/schemas/trace-entry.ts).
 - Current Goal reports already have local recovery route ideas such as
   `retry-selected-flow`, `checkpoint`, `handoff`, and `blocked`. They are useful
   product precedent, not the shared runtime type. See
@@ -193,6 +194,7 @@ type RecoveryFailureCause =
   | 'checkpoint_boundary'
   | 'relay_connector_failed'
   | 'relay_result_invalid'
+  | 'base_mismatch'
   | 'apply_conflict'
   | 'budget_exceeded'
   | 'protected_file_touched'
@@ -620,8 +622,9 @@ Rules:
 
 - target should close, stop, or move to a repair path without mutating the
   parent checkout;
-- cause must be `apply_conflict`, `scope_drift`, `protected_file_touched`,
-  `generated_surface_drift`, `weak_proof`, or `contradicted_evidence`;
+- cause must be `base_mismatch`, `apply_conflict`, `scope_drift`,
+  `protected_file_touched`, `generated_surface_drift`, `weak_proof`, or
+  `contradicted_evidence`;
 - requires SafeApply result refs or runtime diff refs;
 - cannot be followed by complete unless a later declared route produces new
   proof and a successful safe apply.

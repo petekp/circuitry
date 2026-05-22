@@ -6,6 +6,7 @@
 import { CLAUDE_CODE_SUPPORTED_EFFORTS } from '../../connectors/claude-code.js';
 import { CODEX_SUPPORTED_EFFORTS } from '../../connectors/codex.js';
 import { CURSOR_AGENT_SUPPORTED_EFFORTS } from '../../connectors/cursor-agent.js';
+import type { WorkRootKind } from '../../schemas/change-packet.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import type { ConnectorReference } from '../../schemas/config.js';
 import type {
@@ -46,6 +47,56 @@ function mergedRelayConfig(layers: readonly LayeredConfigValue[] | undefined): R
 export function connectorCapabilities(connector: ResolvedConnector): ConnectorCapabilities {
   if (connector.kind === 'builtin') return BUILTIN_CONNECTOR_CAPABILITIES[connector.name];
   return connector.capabilities;
+}
+
+export type RelayWriteClassification =
+  | {
+      readonly filesystem: 'read-only';
+      readonly write_capable: false;
+      readonly may_unlock_higher_autonomy_after_safe_apply: false;
+      readonly reason: string;
+    }
+  | {
+      readonly filesystem: 'trusted-write' | 'isolated-write';
+      readonly write_capable: true;
+      readonly work_root_kind: WorkRootKind;
+      readonly may_unlock_higher_autonomy_after_safe_apply: boolean;
+      readonly reason: string;
+    };
+
+export function classifyConnectorFilesystem(
+  capabilities: ConnectorCapabilities,
+): RelayWriteClassification {
+  if (capabilities.filesystem === 'read-only') {
+    return {
+      filesystem: 'read-only',
+      write_capable: false,
+      may_unlock_higher_autonomy_after_safe_apply: false,
+      reason: 'connector is read-only',
+    };
+  }
+
+  if (capabilities.filesystem === 'isolated-write') {
+    return {
+      filesystem: 'isolated-write',
+      write_capable: true,
+      work_root_kind: 'isolated_worktree',
+      may_unlock_higher_autonomy_after_safe_apply: true,
+      reason: 'connector writes outside the parent checkout',
+    };
+  }
+
+  return {
+    filesystem: 'trusted-write',
+    write_capable: true,
+    work_root_kind: 'pre_safe_apply_trusted_write',
+    may_unlock_higher_autonomy_after_safe_apply: false,
+    reason: 'connector can mutate the parent checkout before SafeApply',
+  };
+}
+
+export function classifyRelayWriteMode(connector: ResolvedConnector): RelayWriteClassification {
+  return classifyConnectorFilesystem(connectorCapabilities(connector));
 }
 
 export function assertConnectorCanRunRole(connector: ResolvedConnector, role: RelayRole): void {

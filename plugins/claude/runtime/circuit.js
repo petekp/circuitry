@@ -26930,7 +26930,6 @@ var VerificationStep = StepBase.extend({
   check: SchemaSectionsCheck
 }).strict();
 var AutoResolutionPolicy = external_exports.discriminatedUnion("policy", [
-  external_exports.object({ policy: external_exports.literal("accept-as-is") }).strict(),
   external_exports.object({
     policy: external_exports.literal("highest-score"),
     source_report: RunRelativePath,
@@ -26938,7 +26937,6 @@ var AutoResolutionPolicy = external_exports.discriminatedUnion("policy", [
     id_path: external_exports.string().min(1).default("branch_id"),
     rubric_result_path: external_exports.string().min(1).default("rubric_result")
   }).strict(),
-  external_exports.object({ policy: external_exports.literal("first-acceptable") }).strict(),
   external_exports.object({ policy: external_exports.literal("refuse") }).strict()
 ]);
 var CheckpointPolicy = external_exports.object({
@@ -26950,7 +26948,6 @@ var CheckpointPolicy = external_exports.object({
   }).strict()).min(1).optional(),
   choices_from: CheckpointChoiceSource.optional(),
   safe_default_choice: external_exports.string().min(1).optional(),
-  safe_autonomous_choice: external_exports.string().min(1).optional(),
   auto_resolution: AutoResolutionPolicy.optional(),
   report_template: JsonObject.optional()
 }).strict().superRefine((policy2, ctx) => {
@@ -26976,10 +26973,7 @@ var CheckpointPolicy = external_exports.object({
       choiceIds.add(choice.id);
     }
   }
-  for (const [field, value] of [
-    ["safe_default_choice", policy2.safe_default_choice],
-    ["safe_autonomous_choice", policy2.safe_autonomous_choice]
-  ]) {
+  for (const [field, value] of [["safe_default_choice", policy2.safe_default_choice]]) {
     if (value !== void 0 && policy2.choices !== void 0 && !choiceIds.has(value)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
@@ -28916,9 +28910,6 @@ function recommendedChoiceId(step) {
   const safeDefault = step.policy.safe_default_choice;
   if (safeDefault !== void 0 && allowed.has(safeDefault))
     return safeDefault;
-  const safeAutonomous = step.policy.safe_autonomous_choice;
-  if (safeAutonomous !== void 0 && allowed.has(safeAutonomous))
-    return safeAutonomous;
   return checkpointChoiceIds(step)[0] ?? "continue";
 }
 function buildCheckpointPacket(input) {
@@ -29342,7 +29333,6 @@ var buildFlowData = {
             }
           ],
           safe_default_choice: "continue",
-          safe_autonomous_choice: "continue",
           report_template: {
             scope: "Make the smallest safe change that satisfies the requested goal.",
             success_criteria: [
@@ -32909,8 +32899,7 @@ var fixFlowData = {
               label: "Continue with a focused fix anyway"
             }
           ],
-          safe_default_choice: "continue",
-          safe_autonomous_choice: "continue"
+          safe_default_choice: "continue"
         },
         routes: {
           continue: "fix-act",
@@ -33469,6 +33458,8 @@ var RefKind = external_exports.enum([
   "command",
   "change_packet",
   "safe_apply",
+  "worktree",
+  "generated_surface",
   "memory",
   "operator_input"
 ]);
@@ -33482,7 +33473,10 @@ var ContentRefKinds = /* @__PURE__ */ new Set([
   "patch",
   "command",
   "change_packet",
-  "safe_apply"
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory"
 ]);
 var Ref = external_exports.object({
   kind: RefKind,
@@ -33531,6 +33525,152 @@ var Ref = external_exports.object({
       code: external_exports.ZodIssueCode.custom,
       path: ["ref"],
       message: `trace refs must use ${expected}`
+    });
+  }
+});
+
+// dist/schemas/recovery-route-kind.js
+var RecoveryRouteKind = external_exports.enum([
+  "retry_same_step_with_feedback",
+  "narrow_scope",
+  "run_verification",
+  "run_independent_review",
+  "checkpoint_authority",
+  "safe_apply_reject",
+  "stop_unsafe",
+  "escalate",
+  "handoff"
+]);
+var RecoveryFailureCause = external_exports.enum([
+  "failed_check",
+  "failed_acceptance_criteria",
+  "weak_proof",
+  "unproved_claim",
+  "contradicted_evidence",
+  "scope_drift",
+  "checkpoint_boundary",
+  "relay_connector_failed",
+  "relay_result_invalid",
+  "base_mismatch",
+  "apply_conflict",
+  "budget_exceeded",
+  "protected_file_touched",
+  "generated_surface_drift",
+  "unknown_failure"
+]);
+var RecoveryRequiredRefKind = external_exports.enum([
+  "failed_check",
+  "acceptance_feedback",
+  "proof_assessment",
+  "runtime_diff",
+  "relay_result",
+  "checkpoint_request",
+  "safe_apply_result",
+  "budget_state",
+  "change_packet",
+  "generated_surface_evidence",
+  "trace",
+  "report"
+]);
+var RecoveryOperatorAuthority = external_exports.enum([
+  "not_required",
+  "required_before_route",
+  "required_to_continue_after_route"
+]);
+var RecoveryAttemptBudget = external_exports.object({
+  consumes_step_attempt: external_exports.boolean(),
+  must_respect_max_attempts: external_exports.boolean(),
+  retry_target: external_exports.enum(["same_step", "declared_step"]).optional()
+}).strict();
+var RecoveryGuidanceRule = external_exports.object({
+  subject: external_exports.literal("recovery_route"),
+  must_match_step_completed: external_exports.literal(true)
+}).strict();
+var RecoveryRouteBindingV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  step_id: StepId,
+  route_id: external_exports.string().min(1),
+  route_target: external_exports.string().min(1),
+  kind: RecoveryRouteKind,
+  allowed_failure_causes: external_exports.array(RecoveryFailureCause).min(1),
+  required_refs: external_exports.array(RecoveryRequiredRefKind).min(1),
+  operator_authority: RecoveryOperatorAuthority,
+  attempt_budget: RecoveryAttemptBudget,
+  guidance: RecoveryGuidanceRule,
+  source_ref: Ref
+}).strict().superRefine((binding, ctx) => {
+  const requiredRefs = new Set(binding.required_refs);
+  const causes = new Set(binding.allowed_failure_causes);
+  if (binding.kind === "retry_same_step_with_feedback") {
+    if (binding.route_target !== binding.step_id) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["route_target"],
+        message: "retry_same_step_with_feedback must target the same step"
+      });
+    }
+    if (!requiredRefs.has("acceptance_feedback")) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["required_refs"],
+        message: "retry_same_step_with_feedback requires acceptance_feedback refs"
+      });
+    }
+    if (!binding.attempt_budget.consumes_step_attempt) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["attempt_budget", "consumes_step_attempt"],
+        message: "retry_same_step_with_feedback consumes the step attempt budget"
+      });
+    }
+    if (!binding.attempt_budget.must_respect_max_attempts) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["attempt_budget", "must_respect_max_attempts"],
+        message: "retry_same_step_with_feedback must respect max_attempts"
+      });
+    }
+    if (binding.attempt_budget.retry_target !== "same_step") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["attempt_budget", "retry_target"],
+        message: "retry_same_step_with_feedback requires retry_target same_step"
+      });
+    }
+  }
+  if (causes.has("unknown_failure") && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(binding.kind)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["allowed_failure_causes"],
+      message: "unknown_failure cannot route to retry, verification, or independent review"
+    });
+  }
+  if (binding.kind === "safe_apply_reject" && !requiredRefs.has("safe_apply_result") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["required_refs"],
+      message: "safe_apply_reject requires safe_apply_result, runtime_diff, or change_packet refs"
+    });
+  }
+  if (causes.has("generated_surface_drift") && !requiredRefs.has("generated_surface_evidence")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["required_refs"],
+      message: "generated_surface_drift requires generated_surface_evidence refs"
+    });
+  }
+  if (causes.has("protected_file_touched") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["required_refs"],
+      message: "protected_file_touched requires runtime_diff or change_packet refs"
+    });
+  }
+  if (binding.source_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source_ref", "kind"],
+      message: "recovery route bindings must point back to WorkContract refs"
     });
   }
 });
@@ -33584,12 +33724,97 @@ var FlowSelectionSelected = external_exports.object({
     accepted: external_exports.boolean()
   }).strict().optional()
 }).strict();
+var ProofPolicySelected = external_exports.object({
+  proof_profile: external_exports.string().min(1),
+  required_claim_kinds: external_exports.array(external_exports.string().min(1)),
+  required_evidence_kinds: external_exports.array(external_exports.string().min(1)),
+  close_requires_proven: external_exports.boolean()
+}).strict();
+var ChangePacketRef = Ref.refine((ref) => ref.kind === "change_packet", {
+  message: "change packet refs must use kind change_packet"
+});
+var BaseRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "safe_apply base refs must use command refs"
+});
+var FinalVerificationRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "safe_apply final verification refs must use command refs"
+});
+var SafeApplySelected = external_exports.object({
+  action: external_exports.enum(["accept", "reject", "apply"]),
+  change_packet_ref: ChangePacketRef,
+  base_ref: BaseRef,
+  protected_file_decision: external_exports.enum(["allowed", "rejected", "checkpointed"]).optional(),
+  final_verification_ref: FinalVerificationRef.optional()
+}).strict().superRefine((selected, ctx) => {
+  if (selected.action === "apply" && selected.final_verification_ref === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["final_verification_ref"],
+      message: "safe_apply apply decisions require final verification refs"
+    });
+  }
+});
+var RecoveryRouteSelected = external_exports.object({
+  route_id: external_exports.string().min(1),
+  recovery_kind: RecoveryRouteKind,
+  failure_cause: RecoveryFailureCause,
+  failure_ref: Ref,
+  binding_ref: WorkContractRef
+}).strict().superRefine((selected, ctx) => {
+  if (["work_contract", "policy", "memory"].includes(selected.failure_ref.kind)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["failure_ref", "kind"],
+      message: "recovery failure refs must point at failure evidence, not authority or memory refs"
+    });
+  }
+  if (selected.failure_cause === "unknown_failure" && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(selected.recovery_kind)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["recovery_kind"],
+      message: "unknown_failure cannot route to retry, verification, or independent review"
+    });
+  }
+});
 var RejectedGuidanceOption = external_exports.object({
   option: JsonObject,
   reason_code: ReasonCode,
   blocked_by: Ref.optional()
 }).strict();
 var NonEmptyRefs = external_exports.array(Ref).min(1);
+function sameRef(a, b) {
+  return a.kind === b.kind && a.ref === b.ref && a.sha256 === b.sha256 && a.run_id === b.run_id && a.flow_id === b.flow_id && a.step_id === b.step_id && a.attempt === b.attempt && a.sequence === b.sequence;
+}
+function addScopedRefIssues(ctx, path, label, ref, entry) {
+  if (ref.run_id !== entry.run_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: [...path, "run_id"],
+      message: `${label} run_id must match guidance run_id`
+    });
+  }
+  if (ref.flow_id !== entry.scope.flow_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: [...path, "flow_id"],
+      message: `${label} flow_id must match guidance scope.flow_id`
+    });
+  }
+  if (ref.step_id !== entry.scope.step_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: [...path, "step_id"],
+      message: `${label} step_id must match guidance scope.step_id`
+    });
+  }
+  if (ref.attempt !== entry.scope.attempt) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: [...path, "attempt"],
+      message: `${label} attempt must match guidance scope.attempt`
+    });
+  }
+}
 var GuidanceDecisionTraceEntryBody = external_exports.object({
   schema_version: external_exports.literal(1),
   sequence: external_exports.number().int().nonnegative(),
@@ -33645,6 +33870,33 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       });
     }
   }
+  for (const [index, ref] of entry.memory_refs?.entries() ?? []) {
+    if (ref.kind !== "memory") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["memory_refs", index, "kind"],
+        message: "memory_refs must use memory refs"
+      });
+    }
+  }
+  for (const [index, ref] of entry.evidence_refs?.entries() ?? []) {
+    if (ref.kind === "memory") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["evidence_refs", index, "kind"],
+        message: "memory refs cannot be evidence refs"
+      });
+    }
+  }
+  for (const [index, option] of entry.rejected_options?.entries() ?? []) {
+    if (option.blocked_by?.kind === "memory") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["rejected_options", index, "blocked_by", "kind"],
+        message: "memory refs cannot block guidance options"
+      });
+    }
+  }
   if (entry.subject === "flow_selection") {
     if (!FlowSelectionSelected.safeParse(entry.selected).success) {
       ctx.addIssue({
@@ -33662,19 +33914,29 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       message: `${entry.subject} decisions require scope.flow_id`
     });
   }
-  if (entry.scope.step_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["scope", "step_id"],
-      message: `${entry.subject} decisions require scope.step_id`
-    });
-  }
-  if (entry.scope.attempt === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["scope", "attempt"],
-      message: `${entry.subject} decisions require scope.attempt`
-    });
+  if (entry.subject === "proof_policy") {
+    if (entry.scope.step_id === void 0 !== (entry.scope.attempt === void 0)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["scope", "attempt"],
+        message: "proof_policy decisions must include step_id and attempt together"
+      });
+    }
+  } else {
+    if (entry.scope.step_id === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["scope", "step_id"],
+        message: `${entry.subject} decisions require scope.step_id`
+      });
+    }
+    if (entry.scope.attempt === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["scope", "attempt"],
+        message: `${entry.subject} decisions require scope.attempt`
+      });
+    }
   }
   if (entry.subject === "relay_execution" && !RelayExecutionSelected.safeParse(entry.selected).success) {
     ctx.addIssue({
@@ -33683,8 +33945,895 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       message: "relay_execution selected payload must name role, connector, skills, context ref, and request hash"
     });
   }
+  if (entry.subject === "proof_policy" && !ProofPolicySelected.safeParse(entry.selected).success) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["selected"],
+      message: "proof_policy selected payload must name proof_profile, required claim kinds, required evidence kinds, and whether close requires proven claims"
+    });
+  }
+  if (entry.subject === "safe_apply" && !SafeApplySelected.safeParse(entry.selected).success) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["selected"],
+      message: "safe_apply selected payload must name action, change_packet_ref, base_ref, and final verification refs when applying"
+    });
+  }
+  if (entry.subject === "safe_apply") {
+    const safeApplySelected = SafeApplySelected.safeParse(entry.selected);
+    if (safeApplySelected.success) {
+      const { base_ref, change_packet_ref, final_verification_ref } = safeApplySelected.data;
+      addScopedRefIssues(ctx, ["selected", "change_packet_ref"], "safe_apply change_packet_ref", change_packet_ref, entry);
+      addScopedRefIssues(ctx, ["selected", "base_ref"], "safe_apply base_ref", base_ref, entry);
+      if (!entry.input_refs.some((ref) => sameRef(ref, change_packet_ref))) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["input_refs"],
+          message: "safe_apply input_refs must include selected.change_packet_ref"
+        });
+      }
+      if (!entry.input_refs.some((ref) => sameRef(ref, base_ref))) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["input_refs"],
+          message: "safe_apply input_refs must include selected.base_ref"
+        });
+      }
+      if (final_verification_ref !== void 0) {
+        addScopedRefIssues(ctx, ["selected", "final_verification_ref"], "safe_apply final_verification_ref", final_verification_ref, entry);
+        if (!entry.evidence_refs?.some((ref) => sameRef(ref, final_verification_ref))) {
+          ctx.addIssue({
+            code: external_exports.ZodIssueCode.custom,
+            path: ["evidence_refs"],
+            message: "safe_apply evidence_refs must include selected.final_verification_ref"
+          });
+        }
+      }
+    }
+  }
+  if (entry.subject === "recovery_route" && !RecoveryRouteSelected.safeParse(entry.selected).success) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["selected"],
+      message: "recovery_route selected payload must name route_id, recovery_kind, failure_cause, failure_ref, and binding_ref"
+    });
+  }
+  if (entry.subject === "recovery_route") {
+    const recoverySelected = RecoveryRouteSelected.safeParse(entry.selected);
+    if (recoverySelected.success) {
+      const { binding_ref, failure_ref } = recoverySelected.data;
+      if (!entry.input_refs.some((ref) => sameRef(ref, failure_ref))) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["input_refs"],
+          message: "recovery_route input_refs must include selected.failure_ref"
+        });
+      }
+      if (!entry.evidence_refs?.some((ref) => sameRef(ref, failure_ref))) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["evidence_refs"],
+          message: "recovery_route evidence_refs must include selected.failure_ref"
+        });
+      }
+      if (failure_ref.kind === "trace" && failure_ref.sequence !== void 0 && failure_ref.sequence >= entry.sequence) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "sequence"],
+          message: "recovery trace failure_ref must point to an earlier trace entry"
+        });
+      }
+      if (binding_ref.flow_id !== entry.scope.flow_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "binding_ref", "flow_id"],
+          message: "recovery binding_ref flow_id must match guidance scope.flow_id"
+        });
+      }
+      if (failure_ref.run_id !== void 0 && failure_ref.run_id !== entry.run_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "run_id"],
+          message: "recovery failure_ref run_id must match guidance run_id"
+        });
+      }
+      if (failure_ref.flow_id !== void 0 && failure_ref.flow_id !== entry.scope.flow_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "flow_id"],
+          message: "recovery failure_ref flow_id must match guidance scope.flow_id"
+        });
+      }
+      if (failure_ref.step_id === void 0 !== (failure_ref.attempt === void 0)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "attempt"],
+          message: "recovery failure_ref must include step_id and attempt together"
+        });
+      }
+      if (failure_ref.step_id !== void 0 && failure_ref.step_id !== entry.scope.step_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "step_id"],
+          message: "recovery failure_ref step_id must match guidance scope.step_id"
+        });
+      }
+      if (failure_ref.attempt !== void 0 && failure_ref.attempt !== entry.scope.attempt) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["selected", "failure_ref", "attempt"],
+          message: "recovery failure_ref attempt must match guidance scope.attempt"
+        });
+      }
+    }
+  }
 }
 var GuidanceDecisionTraceEntry = GuidanceDecisionTraceEntryBody.superRefine(refineGuidanceDecisionTraceEntry);
+
+// dist/schemas/change-packet.js
+var ChangePacketId = external_exports.string().regex(/^cp-[a-z0-9][a-z0-9._:-]*$/);
+var WorkRootKind = external_exports.enum([
+  "isolated_worktree",
+  "parent_checkout_diff_capture",
+  "pre_safe_apply_trusted_write"
+]);
+var DirtyParentState = external_exports.enum(["clean", "dirty_allowed", "dirty_rejected"]);
+var TouchedFileStatus = external_exports.enum(["added", "modified", "deleted", "renamed"]);
+var ChangeRiskKind = external_exports.enum([
+  "protected_file",
+  "generated_surface",
+  "schema_change",
+  "dependency_change",
+  "migration",
+  "semantic_overlap",
+  "verification_gap",
+  "dirty_parent",
+  "base_mismatch",
+  "apply_conflict"
+]);
+var ChangeRiskSeverity = external_exports.enum(["low", "medium", "high"]);
+var GeneratedSurfaceStatus = external_exports.enum([
+  "not_touched",
+  "synced",
+  "drift_detected",
+  "unknown"
+]);
+var ProtectedFileDecision = external_exports.enum(["allowed", "rejected", "checkpointed"]);
+var ApplyRecommendation = external_exports.enum(["apply", "review", "reject"]);
+var SafeApplyAction = external_exports.enum(["rejected", "accepted_for_review", "applied"]);
+var SafeApplyOutcome = external_exports.enum(["pass", "fail"]);
+var SafeApplyCheckStatus = external_exports.enum(["pass", "fail"]);
+var SafeApplyProtectedCheckStatus = external_exports.enum(["pass", "fail", "checkpoint_required"]);
+var SafeApplyGeneratedSurfaceCheckStatus = external_exports.enum(["pass", "fail", "not_required"]);
+var SafeApplyFinalVerificationStatus = external_exports.enum(["pass", "fail", "not_run"]);
+var PartialMutationStatus = external_exports.enum(["none", "possible", "confirmed"]);
+var SafeApplyReasonCode = external_exports.enum([
+  "guidance_missing",
+  "packet_invalid",
+  "base_mismatch",
+  "dirty_parent",
+  "patch_hash_mismatch",
+  "apply_conflict",
+  "touched_files_mismatch",
+  "protected_file_touched",
+  "generated_surface_drift",
+  "weak_proof",
+  "final_verification_failed",
+  "applied",
+  "review_required",
+  "rejected"
+]);
+var CheckpointRef = Ref.refine((ref) => ref.kind === "trace" || ref.kind === "operator_input", {
+  message: "checkpoint refs must be trace or operator_input refs"
+});
+var PatchRef = Ref.refine((ref) => ref.kind === "patch", {
+  message: "patch refs must use kind patch"
+});
+var RuntimeTouchedFilesRef = Ref.refine((ref) => ref.kind === "diff", {
+  message: "runtime touched files must use diff refs"
+});
+var BaseStatusRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "base status refs must use command refs"
+});
+var BaselineSnapshotRef = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
+  message: "baseline snapshot refs must use evidence or report refs"
+});
+var PatchPrecheckRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "patch precheck refs must use command refs"
+});
+var HunkRef = Ref.refine((ref) => ref.kind === "diff" || ref.kind === "patch", {
+  message: "hunk refs must use diff or patch refs"
+});
+var DriftCheckRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "drift check refs must use command refs"
+});
+var GeneratedSurfaceRef = Ref.refine((ref) => ref.kind === "generated_surface", {
+  message: "generated surface refs must use kind generated_surface"
+});
+var ProofAssessmentRef = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
+  message: "proof assessment refs must use evidence or report refs"
+});
+var FinalVerificationRef2 = Ref.refine((ref) => ref.kind === "command", {
+  message: "final verification refs must use command refs"
+});
+var WorkerClaimRef = Ref.refine((ref) => ref.kind === "report" || ref.kind === "evidence", {
+  message: "worker touched-file claims must use report or evidence refs"
+});
+var ChangePacketRef2 = Ref.refine((ref) => ref.kind === "change_packet", {
+  message: "change packet refs must use kind change_packet"
+});
+var SafeApplyRef = Ref.refine((ref) => ref.kind === "safe_apply", {
+  message: "safe apply refs must use kind safe_apply"
+});
+var WorkRootRef = Ref.refine((ref) => ref.kind === "worktree" || ref.kind === "diff" || ref.kind === "trace", {
+  message: "work root refs must use worktree, diff, or trace refs"
+});
+var BaseState = external_exports.object({
+  ref: external_exports.string().min(1),
+  tree_hash: Sha256,
+  status_ref: BaseStatusRef,
+  dirty_parent: external_exports.object({
+    state: DirtyParentState,
+    policy_ref: Ref.refine((ref) => ref.kind === "policy", {
+      message: "dirty parent policy refs must use kind policy"
+    }),
+    baseline_snapshot_ref: BaselineSnapshotRef.optional(),
+    dirty_paths: external_exports.array(external_exports.string().min(1)),
+    hidden_index_flags: external_exports.array(external_exports.object({
+      tag: external_exports.string().min(1),
+      path: external_exports.string().min(1)
+    }).strict())
+  }).strict()
+}).strict();
+var Patch = external_exports.object({
+  ref: PatchRef,
+  sha256: Sha256,
+  format: external_exports.literal("unified_diff"),
+  applies_to_base: external_exports.boolean(),
+  apply_precheck_ref: PatchPrecheckRef.optional()
+}).strict();
+var RuntimeTouchedFile = external_exports.object({
+  path: external_exports.string().min(1),
+  status: TouchedFileStatus,
+  source: external_exports.literal("runtime_diff"),
+  hunks_ref: HunkRef.optional(),
+  generated_surface: external_exports.boolean(),
+  protected: external_exports.boolean()
+}).strict();
+var TouchedFiles = external_exports.object({
+  runtime_ref: RuntimeTouchedFilesRef,
+  files: external_exports.array(RuntimeTouchedFile),
+  worker_claim_ref: WorkerClaimRef.optional(),
+  worker_claim_matches_runtime: external_exports.boolean()
+}).strict();
+var ChangeRisk = external_exports.object({
+  kind: ChangeRiskKind,
+  severity: ChangeRiskSeverity,
+  refs: external_exports.array(Ref).min(1)
+}).strict();
+var GeneratedSurfaces = external_exports.object({
+  status: GeneratedSurfaceStatus,
+  source_refs: external_exports.array(GeneratedSurfaceRef),
+  output_refs: external_exports.array(GeneratedSurfaceRef),
+  drift_check_ref: DriftCheckRef.optional()
+}).strict();
+var ProtectedFiles = external_exports.object({
+  decision: ProtectedFileDecision,
+  policy_ref: Ref.refine((ref) => ref.kind === "policy", {
+    message: "protected file policy refs must use kind policy"
+  }),
+  checkpoint_ref: CheckpointRef.optional(),
+  files: external_exports.array(external_exports.string().min(1))
+}).strict();
+var Producer = external_exports.object({
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  branch_id: external_exports.string().min(1).optional(),
+  connector: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
+  work_root_kind: WorkRootKind,
+  work_root_ref: WorkRootRef
+}).strict();
+var ChangePacketV0 = external_exports.object({
+  schema_version: external_exports.literal(1),
+  packet_id: ChangePacketId,
+  producer: Producer,
+  base: BaseState,
+  patch: Patch,
+  touched_files: TouchedFiles,
+  claims: external_exports.array(Ref).min(1),
+  evidence: external_exports.array(Ref).min(1),
+  proof_assessment_refs: external_exports.array(ProofAssessmentRef).min(1),
+  commands_run: external_exports.array(Ref),
+  risks: external_exports.array(ChangeRisk),
+  generated_surfaces: GeneratedSurfaces,
+  protected_files: ProtectedFiles,
+  apply_recommendation: ApplyRecommendation
+}).strict().superRefine((packet, ctx) => {
+  if (packet.producer.work_root_kind === "isolated_worktree" && packet.producer.work_root_ref.kind !== "worktree") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["producer", "work_root_ref", "kind"],
+      message: "isolated_worktree packets require worktree refs"
+    });
+  }
+  if (packet.producer.work_root_kind !== "isolated_worktree" && packet.producer.work_root_ref.kind === "worktree") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["producer", "work_root_ref", "kind"],
+      message: "only isolated_worktree packets may use worktree refs"
+    });
+  }
+  if (packet.patch.ref.sha256 !== packet.patch.sha256) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["patch", "sha256"],
+      message: "patch.sha256 must match patch.ref.sha256"
+    });
+  }
+  if (packet.apply_recommendation === "apply") {
+    if (!packet.touched_files.worker_claim_matches_runtime) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touched_files", "worker_claim_matches_runtime"],
+        message: "apply recommendations require worker claims to match runtime touched files"
+      });
+    }
+    if (!packet.patch.applies_to_base) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["patch", "applies_to_base"],
+        message: "apply recommendations require patches that apply to base"
+      });
+    }
+  }
+  if (packet.base.dirty_parent.state === "dirty_allowed") {
+    if (packet.base.dirty_parent.baseline_snapshot_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["base", "dirty_parent", "baseline_snapshot_ref"],
+        message: "dirty_allowed requires baseline snapshot evidence"
+      });
+    }
+    if (packet.base.dirty_parent.dirty_paths.length === 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["base", "dirty_parent", "dirty_paths"],
+        message: "dirty_allowed requires dirty_paths"
+      });
+    }
+  }
+  if (packet.base.dirty_parent.hidden_index_flags.length > 0 && packet.base.dirty_parent.state !== "dirty_rejected") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["base", "dirty_parent", "hidden_index_flags"],
+      message: "hidden index flags require dirty_rejected state"
+    });
+  }
+  if (packet.base.dirty_parent.state !== "clean" && !packet.risks.some((risk) => risk.kind === "dirty_parent")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["risks"],
+      message: "dirty parent states require dirty_parent risk evidence"
+    });
+  }
+  for (const [index, ref] of packet.claims.entries()) {
+    if (ref.kind !== "evidence" && ref.kind !== "report") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["claims", index, "kind"],
+        message: "claim refs must use evidence or report refs"
+      });
+    }
+  }
+  for (const [index, ref] of packet.evidence.entries()) {
+    if (ref.kind !== "evidence") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["evidence", index, "kind"],
+        message: "evidence refs must use kind evidence"
+      });
+    }
+  }
+  for (const [index, ref] of packet.commands_run.entries()) {
+    if (ref.kind !== "command") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["commands_run", index, "kind"],
+        message: "commands_run refs must use kind command"
+      });
+    }
+  }
+  const generatedTouched = packet.touched_files.files.some((file2) => file2.generated_surface);
+  if (generatedTouched) {
+    if (packet.generated_surfaces.status === "not_touched") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "status"],
+        message: "generated surfaces cannot be not_touched when generated files changed"
+      });
+    }
+    if (packet.generated_surfaces.status === "unknown") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "status"],
+        message: "generated surface unknown status blocks packets"
+      });
+    }
+    if (packet.generated_surfaces.status === "drift_detected" && packet.apply_recommendation === "apply") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["apply_recommendation"],
+        message: "generated surface drift cannot be recommended for apply"
+      });
+    }
+    if (packet.generated_surfaces.drift_check_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "drift_check_ref"],
+        message: "generated surface changes require drift check evidence"
+      });
+    }
+    if (packet.generated_surfaces.source_refs.length === 0 || packet.generated_surfaces.output_refs.length === 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces"],
+        message: "generated surface changes require source and output refs"
+      });
+    }
+    if (!packet.risks.some((risk) => risk.kind === "generated_surface")) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["risks"],
+        message: "generated surface changes require generated_surface risk evidence"
+      });
+    }
+  } else if (packet.generated_surfaces.status !== "not_touched") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generated_surfaces", "status"],
+      message: "generated surface status must be not_touched when no generated files changed"
+    });
+  }
+  const protectedTouched = packet.touched_files.files.filter((file2) => file2.protected).map((file2) => file2.path);
+  for (const path of protectedTouched) {
+    if (!packet.protected_files.files.includes(path)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["protected_files", "files"],
+        message: `protected touched file '${path}' must be listed`
+      });
+    }
+  }
+  if (packet.protected_files.files.length > 0) {
+    if (!packet.risks.some((risk) => risk.kind === "protected_file")) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["risks"],
+        message: "protected files require protected_file risk evidence"
+      });
+    }
+    if (packet.protected_files.decision === "checkpointed" && packet.protected_files.checkpoint_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["protected_files", "checkpoint_ref"],
+        message: "checkpointed protected files require checkpoint refs"
+      });
+    }
+  } else if (packet.protected_files.decision !== "allowed") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["protected_files", "decision"],
+      message: "empty protected file set must use allowed decision"
+    });
+  }
+});
+var BaseCheck = external_exports.object({
+  status: SafeApplyCheckStatus,
+  expected_ref: external_exports.string().min(1),
+  actual_ref: external_exports.string().min(1).optional(),
+  tree_hash_match: external_exports.boolean()
+}).strict();
+var DirtyParentCheck = external_exports.object({
+  status: SafeApplyCheckStatus,
+  policy_ref: Ref.refine((ref) => ref.kind === "policy", {
+    message: "dirty parent check policy refs must use kind policy"
+  }),
+  refs: external_exports.array(Ref).min(1)
+}).strict();
+var PatchCheck = external_exports.object({
+  status: SafeApplyCheckStatus,
+  conflict_files: external_exports.array(external_exports.string().min(1)),
+  partial_mutation: PartialMutationStatus
+}).strict();
+var TouchedFileCheck = external_exports.object({
+  status: SafeApplyCheckStatus,
+  runtime_ref: RuntimeTouchedFilesRef,
+  worker_claim_ref: WorkerClaimRef.optional()
+}).strict();
+var ProofCheck = external_exports.object({
+  status: SafeApplyCheckStatus,
+  proof_assessment_refs: external_exports.array(ProofAssessmentRef).min(1)
+}).strict();
+var ProtectedFileCheck = external_exports.object({
+  status: SafeApplyProtectedCheckStatus,
+  files: external_exports.array(external_exports.string().min(1)),
+  checkpoint_ref: CheckpointRef.optional()
+}).strict();
+var GeneratedSurfaceCheck = external_exports.object({
+  status: SafeApplyGeneratedSurfaceCheckStatus,
+  drift_check_ref: DriftCheckRef.optional()
+}).strict();
+var FinalVerification = external_exports.object({
+  status: SafeApplyFinalVerificationStatus,
+  ref: FinalVerificationRef2.optional()
+}).strict();
+var SafeApplyResultV0 = external_exports.object({
+  schema_version: external_exports.literal(1),
+  kind: external_exports.literal("safe_apply.result"),
+  decision_id: GuidanceDecisionId,
+  change_packet_ref: ChangePacketRef2,
+  action: SafeApplyAction,
+  outcome: SafeApplyOutcome,
+  reason_codes: external_exports.array(SafeApplyReasonCode).min(1),
+  base_check: BaseCheck,
+  dirty_parent_check: DirtyParentCheck,
+  patch_check: PatchCheck,
+  touched_file_check: TouchedFileCheck,
+  proof_check: ProofCheck,
+  protected_file_check: ProtectedFileCheck,
+  generated_surface_check: GeneratedSurfaceCheck,
+  final_verification: FinalVerification,
+  applied_patch_ref: PatchRef.optional(),
+  result_ref: SafeApplyRef.optional()
+}).strict().superRefine((result, ctx) => {
+  if (result.base_check.status === "pass" && !result.base_check.tree_hash_match) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["base_check", "tree_hash_match"],
+      message: "base check pass requires tree_hash_match"
+    });
+  }
+  const requiredChecksPass = result.base_check.status === "pass" && result.dirty_parent_check.status === "pass" && result.patch_check.status === "pass" && result.touched_file_check.status === "pass" && result.proof_check.status === "pass" && result.protected_file_check.status === "pass" && (result.generated_surface_check.status === "pass" || result.generated_surface_check.status === "not_required") && result.final_verification.status === "pass";
+  if (result.outcome === "pass" && !requiredChecksPass) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outcome"],
+      message: "safe apply pass requires every required check to pass"
+    });
+  }
+  if (result.patch_check.partial_mutation !== "none" && (result.outcome === "pass" || result.action === "applied")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["patch_check", "partial_mutation"],
+      message: "possible or confirmed partial mutation cannot pass or apply"
+    });
+  }
+  if (result.patch_check.partial_mutation !== "none" && !result.reason_codes.includes("apply_conflict")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "possible or confirmed partial mutation requires apply_conflict reason code"
+    });
+  }
+  if (result.action === "applied") {
+    if (result.outcome !== "pass") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["outcome"],
+        message: "applied safe apply results require pass outcome"
+      });
+    }
+    if (result.final_verification.status !== "pass" || result.final_verification.ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["final_verification"],
+        message: "applied safe apply results require final verification refs"
+      });
+    }
+    if (result.applied_patch_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["applied_patch_ref"],
+        message: "applied safe apply results require applied patch refs"
+      });
+    }
+  }
+  if (result.generated_surface_check.status === "pass" && result.generated_surface_check.drift_check_ref === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generated_surface_check", "drift_check_ref"],
+      message: "passing generated surface checks require drift check refs"
+    });
+  }
+  if (result.protected_file_check.status === "checkpoint_required" && result.protected_file_check.checkpoint_ref === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["protected_file_check", "checkpoint_ref"],
+      message: "checkpoint-required protected files require checkpoint refs"
+    });
+  }
+});
+
+// dist/schemas/proof-assessment.js
+var ProofId = external_exports.string().min(1).max(160).regex(/^[a-z0-9][a-z0-9._:-]*$/, {
+  message: "id must be a lowercase proof id"
+});
+var ClaimId = ProofId;
+var EvidenceId = ProofId;
+var ProofAssessmentId = ProofId;
+var ClaimKind = external_exports.enum([
+  "bug_fixed",
+  "behavior_changed",
+  "test_added",
+  "docs_changed",
+  "refactor_only",
+  "generated_surface_synced",
+  "absence_of_change",
+  "scope_respected",
+  "verification_passed",
+  "review_clean"
+]);
+var ClaimRisk = external_exports.enum(["low", "medium", "high"]);
+var ClaimSource = external_exports.enum(["work_contract", "runtime", "operator"]);
+var Claim = external_exports.object({
+  schema_version: external_exports.literal(1),
+  id: ClaimId,
+  kind: ClaimKind,
+  statement: external_exports.string().min(1),
+  scope_refs: external_exports.array(Ref).min(1),
+  risk: ClaimRisk,
+  required: external_exports.boolean(),
+  source: ClaimSource
+}).strict();
+var EvidenceKind = external_exports.enum([
+  "command",
+  "report_field",
+  "diff",
+  "generated_surface",
+  "review",
+  "report",
+  "trace",
+  "source_citation",
+  "absence_of_change"
+]);
+var EvidenceProducer = external_exports.enum(["runtime", "worker", "independent_worker", "operator"]);
+var EvidenceIndependence = external_exports.enum(["self", "runtime", "independent", "external"]);
+var EvidenceResult = external_exports.enum(["pass", "fail", "unknown"]);
+var RuntimeOwnedEvidenceKinds = /* @__PURE__ */ new Set([
+  "command",
+  "diff",
+  "generated_surface",
+  "trace",
+  "absence_of_change"
+]);
+var EvidenceRefKinds = {
+  command: ["command"],
+  report_field: ["report", "trace"],
+  diff: ["diff", "trace"],
+  generated_surface: ["command", "report", "trace"],
+  review: ["report", "trace"],
+  report: ["report"],
+  trace: ["trace"],
+  source_citation: ["report", "trace", "evidence"],
+  absence_of_change: ["diff", "trace"]
+};
+var Evidence = external_exports.object({
+  schema_version: external_exports.literal(1),
+  id: EvidenceId,
+  kind: EvidenceKind,
+  producer: EvidenceProducer,
+  independence: EvidenceIndependence,
+  ref: Ref,
+  input_refs: external_exports.array(Ref).min(1),
+  covers_claims: external_exports.array(ClaimId).min(1),
+  result: EvidenceResult,
+  summary: external_exports.string().min(1).optional()
+}).strict().superRefine((evidence, ctx) => {
+  if (!EvidenceRefKinds[evidence.kind].includes(evidence.ref.kind)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["ref", "kind"],
+      message: `${evidence.kind} evidence cannot use ${evidence.ref.kind} refs`
+    });
+  }
+  if (RuntimeOwnedEvidenceKinds.has(evidence.kind) && evidence.producer !== "runtime") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["producer"],
+      message: `${evidence.kind} evidence must be produced by the runtime`
+    });
+  }
+  if (evidence.producer === "worker" && evidence.result === "pass") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["result"],
+      message: "worker-produced evidence cannot be marked pass by itself"
+    });
+  }
+  if (evidence.independence === "self" && evidence.result === "pass") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["independence"],
+      message: "self evidence cannot prove a claim"
+    });
+  }
+  if (evidence.kind === "review" && evidence.independence === "self") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["independence"],
+      message: "review evidence must be independent or runtime-owned"
+    });
+  }
+});
+var ClaimCoverageRule = external_exports.object({
+  claim_id: ClaimId,
+  required_evidence: external_exports.array(external_exports.object({
+    kind: EvidenceKind,
+    min_result: external_exports.literal("pass"),
+    min_independence: external_exports.enum(["runtime", "independent", "external"]),
+    refs: external_exports.array(Ref).optional(),
+    accepted_sources: external_exports.array(external_exports.string().min(1)).optional()
+  }).strict()).min(1),
+  optional_evidence: external_exports.array(external_exports.object({
+    kind: EvidenceKind,
+    refs: external_exports.array(Ref).optional()
+  }).strict()).default([])
+}).strict();
+var ProofStatus = external_exports.enum(["proven", "weak", "contradicted", "unproved"]);
+var ProofRecovery = external_exports.object({
+  route_id: external_exports.string().min(1),
+  kind: RecoveryRouteKind,
+  reason_code: external_exports.string().regex(/^[a-z][a-z0-9_]*$/)
+}).strict();
+var ProofAssessmentResult = external_exports.object({
+  claim_id: ClaimId,
+  status: ProofStatus,
+  evidence_refs: external_exports.array(EvidenceId),
+  missing: external_exports.array(external_exports.string().min(1)),
+  contradictions: external_exports.array(external_exports.string().min(1)),
+  recovery: ProofRecovery
+}).strict();
+var ProofScope = external_exports.object({
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional()
+}).strict();
+var STATUS_RANK = {
+  proven: 0,
+  weak: 1,
+  unproved: 2,
+  contradicted: 3
+};
+function worstStatus(statuses) {
+  return statuses.reduce((worst, status) => STATUS_RANK[status] > STATUS_RANK[worst] ? status : worst, "proven");
+}
+function canProveClaim(evidence, claimId) {
+  return evidence.result === "pass" && evidence.covers_claims.includes(claimId) && evidence.producer !== "worker" && evidence.independence !== "self" && evidence.ref.kind !== "trace" && evidence.kind !== "trace" && evidence.kind !== "report" && evidence.kind !== "report_field";
+}
+var ProofAssessment = external_exports.object({
+  schema_version: external_exports.literal(1),
+  assessment_id: ProofAssessmentId,
+  scope: ProofScope,
+  proof_policy_decision_id: GuidanceDecisionId,
+  claims: external_exports.array(Claim).min(1),
+  evidence: external_exports.array(Evidence).default([]),
+  results: external_exports.array(ProofAssessmentResult).min(1),
+  overall_status: ProofStatus,
+  close_allowed: external_exports.boolean()
+}).strict().superRefine((assessment, ctx) => {
+  const claimIds = /* @__PURE__ */ new Set();
+  const requiredClaimIds = /* @__PURE__ */ new Set();
+  for (const [index, claim] of assessment.claims.entries()) {
+    if (claimIds.has(claim.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["claims", index, "id"],
+        message: `duplicate claim '${claim.id}'`
+      });
+    }
+    claimIds.add(claim.id);
+    if (claim.required)
+      requiredClaimIds.add(claim.id);
+  }
+  const evidenceById = /* @__PURE__ */ new Map();
+  for (const [index, evidence] of assessment.evidence.entries()) {
+    if (evidenceById.has(evidence.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["evidence", index, "id"],
+        message: `duplicate evidence '${evidence.id}'`
+      });
+    }
+    evidenceById.set(evidence.id, evidence);
+    for (const [claimIndex, claimId] of evidence.covers_claims.entries()) {
+      if (!claimIds.has(claimId)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["evidence", index, "covers_claims", claimIndex],
+          message: `evidence covers undeclared claim '${claimId}'`
+        });
+      }
+    }
+  }
+  const resultsByClaim = /* @__PURE__ */ new Map();
+  for (const [index, result] of assessment.results.entries()) {
+    if (!claimIds.has(result.claim_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["results", index, "claim_id"],
+        message: `result references undeclared claim '${result.claim_id}'`
+      });
+    }
+    if (resultsByClaim.has(result.claim_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["results", index, "claim_id"],
+        message: `duplicate proof result for claim '${result.claim_id}'`
+      });
+    }
+    resultsByClaim.set(result.claim_id, result);
+    const referencedEvidence = result.evidence_refs.map((id, evidenceIndex) => {
+      const evidence = evidenceById.get(id);
+      if (evidence === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["results", index, "evidence_refs", evidenceIndex],
+          message: `result references undeclared evidence '${id}'`
+        });
+      }
+      return evidence;
+    });
+    if (result.status === "proven") {
+      if (result.missing.length > 0 || result.contradictions.length > 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["results", index, "status"],
+          message: "proven claims cannot list missing evidence or contradictions"
+        });
+      }
+      if (!referencedEvidence.some((evidence) => evidence !== void 0 && canProveClaim(evidence, result.claim_id))) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["results", index, "evidence_refs"],
+          message: "proven claims require passing runtime or independent evidence beyond report shape"
+        });
+      }
+    }
+  }
+  for (const requiredClaimId of requiredClaimIds) {
+    if (!resultsByClaim.has(requiredClaimId)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["results"],
+        message: `missing proof result for required claim '${requiredClaimId}'`
+      });
+    }
+  }
+  const requiredResults = [...requiredClaimIds].flatMap((id) => {
+    const result = resultsByClaim.get(id);
+    return result === void 0 ? [] : [result];
+  });
+  const relevantResults = requiredResults.length > 0 ? requiredResults : [...resultsByClaim.values()];
+  const expectedOverall = worstStatus(relevantResults.map((result) => result.status));
+  if (assessment.overall_status !== expectedOverall) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["overall_status"],
+      message: `overall_status must be '${expectedOverall}' for the required claim results`
+    });
+  }
+  if (assessment.close_allowed && relevantResults.some((result) => result.status !== "proven")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["close_allowed"],
+      message: "close_allowed requires every required claim to be proven"
+    });
+  }
+});
 
 // dist/schemas/trace-entry.js
 var TraceEntryBase = external_exports.object({
@@ -33739,6 +34888,74 @@ var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
   missing_sections: external_exports.array(external_exports.string()).optional(),
   reason: external_exports.string().optional()
 }).strict();
+var ProofAssessmentRef2 = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
+  message: "proof assessment refs must use evidence or report refs"
+});
+var ChangePacketRef3 = Ref.refine((ref) => ref.kind === "change_packet", {
+  message: "change packet refs must use kind change_packet"
+});
+var SafeApplyBaseRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "safe apply base refs must use command refs"
+});
+var SafeApplyResultRef = Ref.refine((ref) => ref.kind === "safe_apply", {
+  message: "safe apply result refs must use kind safe_apply"
+});
+var SafeApplyFinalVerificationRef = Ref.refine((ref) => ref.kind === "command", {
+  message: "safe apply final verification refs must use command refs"
+});
+var CheckpointBoundaryRef = Ref.refine((ref) => ref.kind === "work_contract", {
+  message: "checkpoint boundary refs must use kind work_contract"
+});
+var ProofScope2 = external_exports.object({
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional()
+}).strict().superRefine((scope, ctx) => {
+  if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["attempt"],
+      message: "proof assessment scope must include step_id and attempt together"
+    });
+  }
+});
+var ProofAssessedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("proof.assessed"),
+  assessment_id: ProofAssessmentId,
+  scope: ProofScope2,
+  proof_policy_decision_id: GuidanceDecisionId,
+  assessment_ref: ProofAssessmentRef2,
+  overall_status: ProofStatus,
+  close_allowed: external_exports.boolean()
+}).strict();
+var SafeApplyScope = external_exports.object({
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional()
+}).strict().superRefine((scope, ctx) => {
+  if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["attempt"],
+      message: "safe apply scope must include step_id and attempt together"
+    });
+  }
+});
+var SafeApplyResultTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("safe_apply.result"),
+  decision_id: GuidanceDecisionId,
+  scope: SafeApplyScope,
+  change_packet_ref: ChangePacketRef3,
+  base_ref: SafeApplyBaseRef,
+  action: SafeApplyAction,
+  outcome: SafeApplyOutcome,
+  reason_codes: external_exports.array(SafeApplyReasonCode).min(1),
+  protected_file_decision: ProtectedFileDecision.optional(),
+  final_verification_ref: SafeApplyFinalVerificationRef.optional(),
+  result_ref: SafeApplyResultRef
+}).strict();
 var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("checkpoint.requested"),
   step_id: StepId,
@@ -33746,15 +34963,34 @@ var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   options: external_exports.array(external_exports.string()).min(1),
   request_path: external_exports.string().min(1),
   request_report_hash: ContentHash,
-  auto_resolved: external_exports.boolean().optional()
-}).strict();
+  boundary_ref: CheckpointBoundaryRef.optional(),
+  boundary_hash: ContentHash.optional(),
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((entry, ctx) => {
+  if (entry.boundary_ref === void 0 !== (entry.boundary_hash === void 0)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref"],
+      message: "checkpoint boundary_ref and boundary_hash must be recorded together"
+    });
+    return;
+  }
+  if (entry.boundary_ref !== void 0 && entry.boundary_hash !== void 0 && entry.boundary_ref.sha256 !== entry.boundary_hash) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
 var CheckpointResolvedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("checkpoint.resolved"),
   step_id: StepId,
   attempt: external_exports.number().int().positive(),
   selection: external_exports.string().min(1),
+  route_id: external_exports.string().min(1),
   auto_resolved: external_exports.boolean(),
-  resolution_source: external_exports.enum(["safe-default", "operator", "safe-autonomous"]),
+  resolution_source: external_exports.enum(["declared-default", "operator", "policy"]),
   response_path: external_exports.string().min(1)
 }).strict();
 var RelayStartedTraceEntry = TraceEntryBase.extend({
@@ -33934,6 +35170,8 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   StepEnteredTraceEntry,
   StepReportWrittenTraceEntry,
   CheckEvaluatedTraceEntry,
+  ProofAssessedTraceEntry,
+  SafeApplyResultTraceEntry,
   CheckpointRequestedTraceEntry,
   CheckpointResolvedTraceEntry,
   RelayStartedTraceEntry,
@@ -33956,6 +35194,101 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
 ]).superRefine((ev, ctx) => {
   if (ev.kind === "guidance.decision") {
     refineGuidanceDecisionTraceEntry(ev, ctx);
+    return;
+  }
+  if (ev.kind === "proof.assessed") {
+    if (ev.scope.run_id !== ev.run_id) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["scope", "run_id"],
+        message: "proof assessment scope.run_id must match run_id"
+      });
+    }
+    if (ev.close_allowed && ev.overall_status !== "proven") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["close_allowed"],
+        message: "proof assessment close_allowed requires overall_status proven"
+      });
+    }
+    return;
+  }
+  if (ev.kind === "safe_apply.result") {
+    if (ev.scope.run_id !== ev.run_id) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["scope", "run_id"],
+        message: "safe apply scope.run_id must match run_id"
+      });
+    }
+    for (const { label, path, ref } of [
+      {
+        label: "safe apply change_packet_ref",
+        path: ["change_packet_ref"],
+        ref: ev.change_packet_ref
+      },
+      { label: "safe apply base_ref", path: ["base_ref"], ref: ev.base_ref },
+      { label: "safe apply result_ref", path: ["result_ref"], ref: ev.result_ref },
+      ...ev.final_verification_ref === void 0 ? [] : [
+        {
+          label: "safe apply final_verification_ref",
+          path: ["final_verification_ref"],
+          ref: ev.final_verification_ref
+        }
+      ]
+    ]) {
+      if (ref.run_id !== ev.run_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [...path, "run_id"],
+          message: `${label} run_id must match run_id`
+        });
+      }
+      if (ref.flow_id !== ev.scope.flow_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [...path, "flow_id"],
+          message: `${label} flow_id must match scope.flow_id`
+        });
+      }
+      if (ref.step_id !== ev.scope.step_id) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [...path, "step_id"],
+          message: `${label} step_id must match scope.step_id`
+        });
+      }
+      if (ref.attempt !== ev.scope.attempt) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [...path, "attempt"],
+          message: `${label} attempt must match scope.attempt`
+        });
+      }
+    }
+    if (ev.action === "rejected" && ev.outcome !== "fail") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["outcome"],
+        message: "rejected safe apply trace results require fail outcome"
+      });
+    }
+    if (ev.action === "applied") {
+      if (ev.outcome !== "pass") {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["outcome"],
+          message: "applied safe apply trace results require pass outcome"
+        });
+      }
+      if (ev.final_verification_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["final_verification_ref"],
+          message: "applied safe apply trace results require final verification refs"
+        });
+      }
+    }
     return;
   }
   if (ev.kind !== "relay.started" && ev.kind !== "relay.failed")
@@ -35229,8 +36562,7 @@ var goalFlowData = {
             { id: "blocked", label: "Close Blocked" },
             { id: "handoff", label: "Hand Off" }
           ],
-          safe_default_choice: "blocked",
-          safe_autonomous_choice: "blocked"
+          safe_default_choice: "blocked"
         },
         routes: {
           continue: "goal-close",
@@ -36311,13 +37643,15 @@ var CheckpointResponse = external_exports.object({
   schema_version: external_exports.literal(1),
   step_id: external_exports.literal("prototype-checkpoint-step"),
   selection: PrototypeCheckpointSelection,
-  resolution_source: external_exports.enum(["operator", "safe-default", "safe-autonomous"])
+  route_id: external_exports.string().min(1).optional(),
+  resolution_source: external_exports.enum(["operator", "declared-default", "policy"])
 }).passthrough();
 var VariantCheckpointResponse = external_exports.object({
   schema_version: external_exports.literal(1),
   step_id: external_exports.literal("prototype-variant-checkpoint-step"),
   selection: PrototypeVariantId,
-  resolution_source: external_exports.enum(["operator", "safe-default", "safe-autonomous"])
+  route_id: external_exports.string().min(1).optional(),
+  resolution_source: external_exports.enum(["operator", "declared-default", "policy"])
 }).passthrough();
 var BASE_SINGLE_POINTERS = [
   { report_id: "prototype.brief", schema: "prototype.brief@v1" },
@@ -38585,8 +39919,7 @@ var prototypeFlowData = {
               description: "Mark the prototype as discarded while keeping the evidence trail."
             }
           ],
-          safe_default_choice: "keep-prototype",
-          safe_autonomous_choice: "keep-prototype"
+          safe_default_choice: "keep-prototype"
         },
         routes: {
           continue: "close-step",
@@ -39080,6 +40413,526 @@ var PursuitBatch = external_exports.object({
         });
       }
       seen.add(item.pursuit_id);
+    }
+  }
+});
+var PolicyRef = Ref.refine((ref) => ref.kind === "policy", {
+  message: "policy refs must use kind policy"
+});
+var ReportOrWorkContractRef = Ref.refine((ref) => ref.kind === "report" || ref.kind === "work_contract", {
+  message: "estimated touch set refs must use report or work_contract refs"
+});
+var ReportRef2 = Ref.refine((ref) => ref.kind === "report", {
+  message: "branch plan refs must use kind report"
+});
+var TraceRef = Ref.refine((ref) => ref.kind === "trace", {
+  message: "guidance and recovery refs must use kind trace"
+});
+var ChangePacketRef4 = Ref.refine((ref) => ref.kind === "change_packet", {
+  message: "change packet refs must use kind change_packet"
+});
+var SafeApplyRef2 = Ref.refine((ref) => ref.kind === "safe_apply", {
+  message: "safe apply refs must use kind safe_apply"
+});
+var ProofAssessmentRef3 = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
+  message: "proof assessment refs must use evidence or report refs"
+});
+var FinalVerificationRef3 = Ref.refine((ref) => ref.kind === "command", {
+  message: "final verification refs must use command refs"
+});
+var RuntimeTouchedFilesRef2 = Ref.refine((ref) => ref.kind === "diff", {
+  message: "runtime touched files must use diff refs"
+});
+var GeneratedSurfaceRef2 = Ref.refine((ref) => ref.kind === "generated_surface", {
+  message: "generated surface refs must use kind generated_surface"
+});
+var DriftCheckRef2 = Ref.refine((ref) => ref.kind === "command", {
+  message: "drift check refs must use command refs"
+});
+var PursuitSafeApplyBranchStatus = external_exports.enum([
+  "candidate",
+  "serial_fallback",
+  "blocked",
+  "checkpoint_required"
+]);
+var ChildExecution = external_exports.object({
+  kind: external_exports.enum(["relay", "child_flow"]),
+  role: external_exports.string().min(1).optional(),
+  flow_id: external_exports.string().min(1).optional()
+}).strict().superRefine((execution, ctx) => {
+  if (execution.kind === "relay" && execution.role === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["role"],
+      message: "relay branch execution requires role"
+    });
+  }
+  if (execution.kind === "child_flow" && execution.flow_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["flow_id"],
+      message: "child_flow branch execution requires flow_id"
+    });
+  }
+  if (execution.kind === "relay" && execution.flow_id !== void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["flow_id"],
+      message: "relay branch execution must not include flow_id"
+    });
+  }
+  if (execution.kind === "child_flow" && execution.role !== void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["role"],
+      message: "child_flow branch execution must not include role"
+    });
+  }
+});
+var PursuitSafeApplyBranch = external_exports.object({
+  pursuit_id: PursuitId,
+  branch_id: external_exports.string().min(1),
+  status: PursuitSafeApplyBranchStatus,
+  source_pursuit_contract_ref: ReportOrWorkContractRef,
+  estimated_touch_set: PursuitTouchSet,
+  expected_generated_outputs: external_exports.array(external_exports.string().min(1)),
+  risk: PursuitRisk,
+  required_claims: NonEmptyStringArray5,
+  required_verification_commands: external_exports.array(VerificationCommand).min(1),
+  allowed_recovery_route_kinds: external_exports.array(RecoveryRouteKind).min(1),
+  child_execution: ChildExecution,
+  work_root_kind: WorkRootKind,
+  proof_policy_ref: PolicyRef,
+  expected_change_packet_ref: ChangePacketRef4.optional(),
+  checkpoint_ref: TraceRef.optional(),
+  reason: external_exports.string().min(1).optional()
+}).strict();
+var PursuitSafeApplyBranchPlan = external_exports.object({
+  schema_version: external_exports.literal(1),
+  mode: external_exports.literal("parallel-isolated-safe-apply"),
+  runtime_status: external_exports.literal("planning-only"),
+  source_contract_ref: ReportOrWorkContractRef,
+  graph_ref: ReportRef2,
+  wave_plan_ref: ReportRef2,
+  policy_ref: PolicyRef,
+  max_parallel_branches: external_exports.number().int().positive(),
+  branches: external_exports.array(PursuitSafeApplyBranch).min(1),
+  counts: external_exports.object({
+    candidate: external_exports.number().int().nonnegative(),
+    serial_fallback: external_exports.number().int().nonnegative(),
+    blocked: external_exports.number().int().nonnegative(),
+    checkpoint_required: external_exports.number().int().nonnegative()
+  }).strict()
+}).strict().superRefine((plan, ctx) => {
+  const counts = {
+    candidate: 0,
+    serial_fallback: 0,
+    blocked: 0,
+    checkpoint_required: 0
+  };
+  const branchIds = /* @__PURE__ */ new Set();
+  const pursuitIds = /* @__PURE__ */ new Set();
+  for (const [index, branch] of plan.branches.entries()) {
+    counts[branch.status] += 1;
+    if (branchIds.has(branch.branch_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["branches", index, "branch_id"],
+        message: `duplicate branch id: ${branch.branch_id}`
+      });
+    }
+    branchIds.add(branch.branch_id);
+    if (pursuitIds.has(branch.pursuit_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["branches", index, "pursuit_id"],
+        message: `duplicate pursuit id: ${branch.pursuit_id}`
+      });
+    }
+    pursuitIds.add(branch.pursuit_id);
+    if (branch.status === "candidate") {
+      if (branch.work_root_kind !== "isolated_worktree") {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["branches", index, "work_root_kind"],
+          message: "candidate parallel Pursue branches require isolated_worktree"
+        });
+      }
+      if (branch.expected_change_packet_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["branches", index, "expected_change_packet_ref"],
+          message: "candidate branches require expected_change_packet_ref"
+        });
+      }
+      if (!branch.allowed_recovery_route_kinds.includes("safe_apply_reject")) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["branches", index, "allowed_recovery_route_kinds"],
+          message: "candidate branches require safe_apply_reject recovery"
+        });
+      }
+    } else {
+      if (branch.expected_change_packet_ref !== void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["branches", index, "expected_change_packet_ref"],
+          message: `${branch.status} branches must not reserve ChangePacket refs`
+        });
+      }
+      if (branch.reason === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["branches", index, "reason"],
+          message: `${branch.status} branches require reason`
+        });
+      }
+    }
+    if (branch.status === "checkpoint_required" && branch.checkpoint_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["branches", index, "checkpoint_ref"],
+        message: "checkpoint_required branches require checkpoint_ref"
+      });
+    }
+    if (branch.expected_generated_outputs.length > 0 && branch.risk === "low") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["branches", index, "risk"],
+        message: "generated-output branches must be medium or high risk"
+      });
+    }
+    const estimatedGeneratedOutputs = [...branch.estimated_touch_set.generated_outputs].sort();
+    const expectedGeneratedOutputs = [...branch.expected_generated_outputs].sort();
+    if (estimatedGeneratedOutputs.length !== expectedGeneratedOutputs.length || estimatedGeneratedOutputs.some((path, pathIndex) => path !== expectedGeneratedOutputs[pathIndex])) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["branches", index, "expected_generated_outputs"],
+        message: "expected generated outputs must match the estimated generated touch set"
+      });
+    }
+  }
+  for (const [status, count] of Object.entries(plan.counts)) {
+    if (count !== counts[status]) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["counts", status],
+        message: `${status} count must match branches`
+      });
+    }
+  }
+  if (counts.candidate > plan.max_parallel_branches) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["max_parallel_branches"],
+      message: "candidate branches must not exceed max_parallel_branches"
+    });
+  }
+});
+var PursuitSafeApplyReasonCode = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
+var PursuitSafeApplyPacketStatus = external_exports.enum([
+  "applied",
+  "rejected",
+  "blocked",
+  "failed_before_packet",
+  "serial_fallback"
+]);
+var PursuitSafeApplyPacket = external_exports.object({
+  pursuit_id: PursuitId,
+  branch_id: external_exports.string().min(1),
+  change_packet_ref: ChangePacketRef4.optional(),
+  status: PursuitSafeApplyPacketStatus,
+  safe_apply_decision_ref: TraceRef.optional(),
+  safe_apply_result_ref: SafeApplyRef2.optional(),
+  proof_assessment_refs: external_exports.array(ProofAssessmentRef3),
+  final_verification_ref: FinalVerificationRef3.optional(),
+  recovery_route_ref: TraceRef.optional(),
+  reason_codes: external_exports.array(PursuitSafeApplyReasonCode).min(1)
+}).strict();
+var PursuitSafeApplyReport = external_exports.object({
+  schema_version: external_exports.literal(1),
+  mode: external_exports.literal("parallel-isolated-safe-apply"),
+  base: external_exports.object({
+    ref: external_exports.string().min(1),
+    tree_hash: Sha256,
+    dirty_parent_state: DirtyParentState,
+    policy_ref: PolicyRef
+  }).strict(),
+  branch_plan_ref: ReportRef2,
+  proof_policy_decision_ref: TraceRef,
+  packets: external_exports.array(PursuitSafeApplyPacket).min(1),
+  applied_order: external_exports.array(external_exports.string().min(1)),
+  counts: external_exports.object({
+    applied: external_exports.number().int().nonnegative(),
+    rejected: external_exports.number().int().nonnegative(),
+    blocked: external_exports.number().int().nonnegative(),
+    failed_before_packet: external_exports.number().int().nonnegative(),
+    serial_fallback: external_exports.number().int().nonnegative()
+  }).strict(),
+  touch_set_reconciliation: external_exports.array(external_exports.object({
+    pursuit_id: PursuitId,
+    estimated_touch_set_ref: ReportOrWorkContractRef,
+    runtime_touched_files_ref: RuntimeTouchedFilesRef2.optional(),
+    generated_surface_status: GeneratedSurfaceStatus,
+    scope_status: external_exports.enum(["inside_estimate", "expanded", "unknown"])
+  }).strict()).min(1),
+  generated_surfaces: external_exports.object({
+    status: GeneratedSurfaceStatus,
+    source_refs: external_exports.array(GeneratedSurfaceRef2),
+    output_refs: external_exports.array(GeneratedSurfaceRef2),
+    drift_check_ref: DriftCheckRef2.optional()
+  }).strict(),
+  final_verification: external_exports.object({
+    status: external_exports.enum(["passed", "failed", "skipped"]),
+    ref: FinalVerificationRef3.optional()
+  }).strict()
+}).strict().superRefine((report, ctx) => {
+  const counts = {
+    applied: 0,
+    rejected: 0,
+    blocked: 0,
+    failed_before_packet: 0,
+    serial_fallback: 0
+  };
+  const branchIds = /* @__PURE__ */ new Set();
+  const pursuitIds = /* @__PURE__ */ new Set();
+  const appliedBranchIds = /* @__PURE__ */ new Set();
+  for (const [index, packet] of report.packets.entries()) {
+    counts[packet.status] += 1;
+    if (branchIds.has(packet.branch_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["packets", index, "branch_id"],
+        message: `duplicate branch id: ${packet.branch_id}`
+      });
+    }
+    branchIds.add(packet.branch_id);
+    if (pursuitIds.has(packet.pursuit_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["packets", index, "pursuit_id"],
+        message: `duplicate pursuit id: ${packet.pursuit_id}`
+      });
+    }
+    pursuitIds.add(packet.pursuit_id);
+    if (packet.status === "applied")
+      appliedBranchIds.add(packet.branch_id);
+    if (packet.status === "applied") {
+      if (packet.change_packet_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "change_packet_ref"],
+          message: "applied packets require change_packet_ref"
+        });
+      }
+      if (packet.safe_apply_decision_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "safe_apply_decision_ref"],
+          message: "applied packets require safe_apply_decision_ref"
+        });
+      }
+      if (packet.safe_apply_result_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "safe_apply_result_ref"],
+          message: "applied packets require safe_apply_result_ref"
+        });
+      }
+      if (packet.proof_assessment_refs.length === 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "proof_assessment_refs"],
+          message: "applied packets require proof assessment refs"
+        });
+      }
+      if (packet.final_verification_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "final_verification_ref"],
+          message: "applied packets require final verification refs"
+        });
+      }
+    }
+    if (packet.status === "rejected") {
+      if (packet.change_packet_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "change_packet_ref"],
+          message: "rejected packets require change_packet_ref"
+        });
+      }
+      if (packet.safe_apply_decision_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "safe_apply_decision_ref"],
+          message: "rejected packets require safe_apply_decision_ref"
+        });
+      }
+      if (packet.safe_apply_result_ref === void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["packets", index, "safe_apply_result_ref"],
+          message: "rejected packets require safe_apply_result_ref"
+        });
+      }
+    }
+    if ((packet.status === "rejected" || packet.status === "blocked" || packet.status === "failed_before_packet" || packet.status === "serial_fallback") && packet.recovery_route_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["packets", index, "recovery_route_ref"],
+        message: `${packet.status} packets require recovery_route_ref`
+      });
+    }
+    if ((packet.status === "blocked" || packet.status === "failed_before_packet" || packet.status === "serial_fallback") && (packet.change_packet_ref !== void 0 || packet.safe_apply_decision_ref !== void 0 || packet.safe_apply_result_ref !== void 0)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["packets", index],
+        message: `${packet.status} packets must not carry SafeApply refs`
+      });
+    }
+  }
+  for (const [status, count] of Object.entries(report.counts)) {
+    if (count !== counts[status]) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["counts", status],
+        message: `${status} count must match packets`
+      });
+    }
+  }
+  if (report.applied_order.length !== appliedBranchIds.size) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["applied_order"],
+      message: "applied_order must list every applied branch exactly once"
+    });
+  }
+  const seenAppliedOrder = /* @__PURE__ */ new Set();
+  for (const [index, branchId] of report.applied_order.entries()) {
+    if (!appliedBranchIds.has(branchId)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["applied_order", index],
+        message: `applied_order references non-applied branch id: ${branchId}`
+      });
+    }
+    if (seenAppliedOrder.has(branchId)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["applied_order", index],
+        message: `duplicate applied_order branch id: ${branchId}`
+      });
+    }
+    seenAppliedOrder.add(branchId);
+  }
+  const reconciliationIds = /* @__PURE__ */ new Set();
+  for (const [index, item] of report.touch_set_reconciliation.entries()) {
+    if (reconciliationIds.has(item.pursuit_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touch_set_reconciliation", index, "pursuit_id"],
+        message: `duplicate touch-set reconciliation for pursuit id: ${item.pursuit_id}`
+      });
+    }
+    reconciliationIds.add(item.pursuit_id);
+    if (!pursuitIds.has(item.pursuit_id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touch_set_reconciliation", index, "pursuit_id"],
+        message: `touch-set reconciliation references unknown pursuit id: ${item.pursuit_id}`
+      });
+    }
+  }
+  for (const pursuitId of pursuitIds) {
+    if (!reconciliationIds.has(pursuitId)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touch_set_reconciliation"],
+        message: `missing touch-set reconciliation for pursuit id: ${pursuitId}`
+      });
+    }
+  }
+  const appliedPursuitIds = new Set(report.packets.filter((packet) => packet.status === "applied").map((packet) => packet.pursuit_id));
+  for (const [index, item] of report.touch_set_reconciliation.entries()) {
+    if (!appliedPursuitIds.has(item.pursuit_id))
+      continue;
+    if (item.runtime_touched_files_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touch_set_reconciliation", index, "runtime_touched_files_ref"],
+        message: "applied pursuits require runtime_touched_files_ref"
+      });
+    }
+    if (item.generated_surface_status === "unknown" || item.generated_surface_status === "drift_detected") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["touch_set_reconciliation", index, "generated_surface_status"],
+        message: "applied pursuits cannot have unknown or drifted generated surfaces"
+      });
+    }
+  }
+  const reconciliationGeneratedStatuses = new Set(report.touch_set_reconciliation.map((item) => item.generated_surface_status));
+  const expectedGeneratedStatus = reconciliationGeneratedStatuses.has("drift_detected") ? "drift_detected" : reconciliationGeneratedStatuses.has("unknown") ? "unknown" : reconciliationGeneratedStatuses.has("synced") ? "synced" : "not_touched";
+  if (report.generated_surfaces.status !== expectedGeneratedStatus) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generated_surfaces", "status"],
+      message: `generated surface status must summarize touch-set reconciliation as ${expectedGeneratedStatus}`
+    });
+  }
+  if (report.generated_surfaces.status === "not_touched") {
+    if (report.generated_surfaces.source_refs.length > 0 || report.generated_surfaces.output_refs.length > 0 || report.generated_surfaces.drift_check_ref !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces"],
+        message: "not_touched generated surfaces must not carry generated-surface refs"
+      });
+    }
+  }
+  if (report.final_verification.status === "passed" && report.final_verification.ref === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["final_verification", "ref"],
+      message: "passed final verification requires ref"
+    });
+  }
+  if (counts.applied > 0 && report.final_verification.status !== "passed") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["final_verification", "status"],
+      message: "applied packets require passed final verification"
+    });
+  }
+  const unresolvedPacketCount = counts.rejected + counts.blocked + counts.failed_before_packet + counts.serial_fallback;
+  if (report.final_verification.status === "passed" && unresolvedPacketCount === 0 && (report.generated_surfaces.status === "unknown" || report.generated_surfaces.status === "drift_detected")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generated_surfaces", "status"],
+      message: "passed final verification cannot close unknown or drifted generated surfaces"
+    });
+  }
+  if (report.generated_surfaces.status === "synced") {
+    if (report.generated_surfaces.source_refs.length === 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "source_refs"],
+        message: "synced generated surfaces require source refs"
+      });
+    }
+    if (report.generated_surfaces.output_refs.length === 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "output_refs"],
+        message: "synced generated surfaces require output refs"
+      });
+    }
+    if (report.generated_surfaces.drift_check_ref === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["generated_surfaces", "drift_check_ref"],
+        message: "synced generated surfaces require drift check ref"
+      });
     }
   }
 });
@@ -40803,6 +42656,981 @@ function findCheckpointBriefBuilder(resultSchemaName) {
   return REGISTRY.get(resultSchemaName);
 }
 
+// dist/schemas/policy-envelope.js
+var Provider = external_exports.enum(["openai", "anthropic", "gemini", "custom"]);
+var PolicyConnectorReference = external_exports.discriminatedUnion("kind", [
+  external_exports.object({ kind: external_exports.literal("builtin"), name: EnabledConnector }).strict(),
+  external_exports.object({ kind: external_exports.literal("named"), name: ConnectorName }).strict()
+]);
+var forbiddenInvocationOptionKeys = /* @__PURE__ */ new Set([
+  "connector",
+  "model",
+  "effort",
+  "skill",
+  "skills",
+  "write",
+  "writes",
+  "proof",
+  "checkpoint",
+  "recovery",
+  "safe_apply",
+  "safeApply",
+  "auto_apply"
+]);
+function findForbiddenInvocationOptionKey(value) {
+  if (value === null || typeof value !== "object")
+    return void 0;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findForbiddenInvocationOptionKey(item);
+      if (found !== void 0)
+        return found;
+    }
+    return void 0;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (forbiddenInvocationOptionKeys.has(key))
+      return key;
+    const found = findForbiddenInvocationOptionKey(child);
+    if (found !== void 0)
+      return found;
+  }
+  return void 0;
+}
+var PolicySelectionRequest = SelectionOverride.superRefine((selection, ctx) => {
+  const forbidden = findForbiddenInvocationOptionKey(selection.invocation_options);
+  if (forbidden === void 0)
+    return;
+  ctx.addIssue({
+    code: external_exports.ZodIssueCode.custom,
+    path: ["invocation_options", forbidden],
+    message: `invocation_options cannot carry authority key '${forbidden}'`
+  });
+});
+var ConnectorRules = external_exports.object({
+  allow: external_exports.array(ConnectorName).min(1).optional(),
+  deny: external_exports.array(ConnectorName).default([]),
+  deny_for_write: external_exports.array(ConnectorName).default([]),
+  registry: external_exports.record(ConnectorName, CustomConnectorDescriptor).default({})
+}).strict().superRefine((rules, ctx) => {
+  const reserved = new Set(RESERVED_CONNECTOR_NAMES);
+  for (const [name, descriptor] of Object.entries(rules.registry)) {
+    if (reserved.has(name)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["registry", name],
+        message: `connector name '${name}' is reserved and cannot be used as a custom connector key`
+      });
+    }
+    if (descriptor.name !== name) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["registry", name, "name"],
+        message: `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`
+      });
+    }
+  }
+});
+var ModelRules = external_exports.object({
+  deny_providers: external_exports.array(Provider).default([]),
+  require_provider_for_connector: external_exports.record(ConnectorName, Provider).default({})
+}).strict();
+var WriteRules = external_exports.object({
+  auto_apply: external_exports.boolean().optional(),
+  require_checkpoint_globs: external_exports.array(external_exports.string().min(1)).default([])
+}).strict();
+var SkillRules = external_exports.object({
+  deny: external_exports.array(SkillId).default([]),
+  require_known: external_exports.boolean().optional()
+}).strict();
+var ProofRules = external_exports.object({
+  require_independent_review_for: external_exports.array(external_exports.string().min(1)).default([])
+}).strict();
+var PolicyRules = external_exports.object({
+  connectors: ConnectorRules.default({ deny: [], deny_for_write: [], registry: {} }),
+  models: ModelRules.default({ deny_providers: [], require_provider_for_connector: {} }),
+  writes: WriteRules.default({ require_checkpoint_globs: [] }),
+  skills: SkillRules.default({ deny: [] }),
+  proof: ProofRules.default({ require_independent_review_for: [] })
+}).strict();
+var DEFAULT_POLICY_RULES = {
+  connectors: { deny: [], deny_for_write: [], registry: {} },
+  models: { deny_providers: [], require_provider_for_connector: {} },
+  writes: { require_checkpoint_globs: [] },
+  skills: { deny: [] },
+  proof: { require_independent_review_for: [] }
+};
+var PolicyLimits = external_exports.object({
+  max_attempts_per_step: external_exports.number().int().positive().optional(),
+  max_wall_clock_ms: external_exports.number().int().positive().optional(),
+  max_effort: Effort.optional(),
+  max_tournament_n: external_exports.number().int().positive().optional()
+}).strict();
+var RelayRolePreference = external_exports.object({
+  prefer_connector: PolicyConnectorReference
+}).strict();
+var FlowConnectorHint = external_exports.object({
+  flow_id: CompiledFlowId,
+  prefer_connector: PolicyConnectorReference
+}).strict();
+var RelayPreferences = external_exports.object({
+  roles: external_exports.partialRecord(RelayRole, RelayRolePreference).default({}),
+  flow_connector_hints: external_exports.array(FlowConnectorHint).default([])
+}).strict();
+var FlowSelectionHint = external_exports.object({
+  flow_id: CompiledFlowId,
+  selection: PolicySelectionRequest
+}).strict();
+var SkillPreferences = external_exports.object({
+  slot_bindings: external_exports.record(SkillSlotId, SkillId).default({}),
+  flow_slot_bindings: external_exports.array(external_exports.object({
+    flow_id: CompiledFlowId,
+    bindings: external_exports.record(SkillSlotId, SkillId)
+  }).strict()).default([])
+}).strict();
+var PrototypeVariantModelHint = external_exports.object({
+  flow_id: CompiledFlowId,
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1),
+  connector: PolicyConnectorReference.optional(),
+  selection: PolicySelectionRequest
+}).strict();
+var PolicyPreferences = external_exports.object({
+  relay: RelayPreferences.default({ roles: {}, flow_connector_hints: [] }),
+  selection: external_exports.object({
+    flow_hints: external_exports.array(FlowSelectionHint).default([])
+  }).strict().default({ flow_hints: [] }),
+  skills: SkillPreferences.default({ slot_bindings: {}, flow_slot_bindings: [] }),
+  invocation: external_exports.object({
+    selection_request: PolicySelectionRequest.optional()
+  }).strict().default({}),
+  prototype: external_exports.object({
+    variant_model_hints: external_exports.array(PrototypeVariantModelHint).default([])
+  }).strict().default({ variant_model_hints: [] })
+}).strict();
+var DEFAULT_POLICY_PREFERENCES = {
+  relay: { roles: {}, flow_connector_hints: [] },
+  selection: { flow_hints: [] },
+  skills: { slot_bindings: {}, flow_slot_bindings: [] },
+  invocation: {},
+  prototype: { variant_model_hints: [] }
+};
+var PolicyDefaults = external_exports.object({
+  connector: external_exports.union([PolicyConnectorReference, external_exports.literal("auto")]).optional(),
+  selection: PolicySelectionRequest.optional(),
+  proof_profile: external_exports.enum(["standard", "strict"]).optional()
+}).strict();
+var PolicyEnvelopeV2 = external_exports.object({
+  schema_version: external_exports.literal(2),
+  policy: external_exports.object({
+    rules: PolicyRules.default(DEFAULT_POLICY_RULES),
+    limits: PolicyLimits.default({}),
+    preferences: PolicyPreferences.default(DEFAULT_POLICY_PREFERENCES),
+    defaults: PolicyDefaults.default({})
+  }).strict()
+}).strict().superRefine((envelope, ctx) => {
+  const builtinConnectors = new Set(EnabledConnector.options);
+  const registeredConnectors = new Set(Object.keys(envelope.policy.rules.connectors.registry));
+  const checkConnectorName = (path, name) => {
+    if (builtinConnectors.has(name) || registeredConnectors.has(name))
+      return;
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path,
+      message: `connector '${name}' is not registered`
+    });
+  };
+  const checkRef = (path, ref) => {
+    if (ref === void 0 || ref.kind !== "named")
+      return;
+    if (!registeredConnectors.has(ref.name)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path,
+        message: `connector '${ref.name}' is not registered`
+      });
+    }
+  };
+  for (const [index, name] of envelope.policy.rules.connectors.allow?.entries() ?? []) {
+    checkConnectorName(["policy", "rules", "connectors", "allow", index], name);
+  }
+  for (const [index, name] of envelope.policy.rules.connectors.deny.entries()) {
+    checkConnectorName(["policy", "rules", "connectors", "deny", index], name);
+  }
+  for (const [index, name] of envelope.policy.rules.connectors.deny_for_write.entries()) {
+    checkConnectorName(["policy", "rules", "connectors", "deny_for_write", index], name);
+  }
+  for (const name of Object.keys(envelope.policy.rules.models.require_provider_for_connector)) {
+    checkConnectorName(["policy", "rules", "models", "require_provider_for_connector", name], name);
+  }
+  for (const [role, preference] of Object.entries(envelope.policy.preferences.relay.roles)) {
+    checkRef(["policy", "preferences", "relay", "roles", role, "prefer_connector"], preference?.prefer_connector);
+  }
+  for (const [index, hint] of envelope.policy.preferences.relay.flow_connector_hints.entries()) {
+    checkRef(["policy", "preferences", "relay", "flow_connector_hints", index, "prefer_connector"], hint.prefer_connector);
+  }
+  for (const [index, hint] of envelope.policy.preferences.prototype.variant_model_hints.entries()) {
+    checkRef(["policy", "preferences", "prototype", "variant_model_hints", index, "connector"], hint.connector);
+  }
+  if (envelope.policy.defaults.connector !== "auto") {
+    checkRef(["policy", "defaults", "connector"], envelope.policy.defaults.connector);
+  }
+});
+var PolicyLayerSource = external_exports.enum(["built-in", "user-global", "project", "invocation"]);
+var PolicyLayer = external_exports.object({
+  source: PolicyLayerSource,
+  source_path: external_exports.string().optional(),
+  envelope: PolicyEnvelopeV2
+}).strict();
+var RejectedPolicyAuthority = external_exports.object({
+  path: external_exports.string().min(1),
+  field: external_exports.string().min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var PolicyEnvelopeProjectionV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  source: PolicyLayerSource,
+  policy_envelope: PolicyEnvelopeV2,
+  rejected_old_authority: external_exports.array(RejectedPolicyAuthority)
+}).strict();
+var ComposedPolicyHardConstraints = external_exports.object({
+  connectors: external_exports.object({
+    allow: external_exports.array(ConnectorName).optional(),
+    deny: external_exports.array(ConnectorName),
+    deny_for_write: external_exports.array(ConnectorName)
+  }).strict(),
+  models: external_exports.object({
+    deny_providers: external_exports.array(Provider),
+    require_provider_for_connector: external_exports.record(ConnectorName, Provider)
+  }).strict(),
+  writes: external_exports.object({
+    auto_apply: external_exports.boolean().optional(),
+    require_checkpoint_globs: external_exports.array(external_exports.string().min(1))
+  }).strict(),
+  skills: external_exports.object({
+    deny: external_exports.array(SkillId),
+    require_known: external_exports.boolean().optional()
+  }).strict(),
+  proof: external_exports.object({
+    require_independent_review_for: external_exports.array(external_exports.string().min(1))
+  }).strict(),
+  limits: PolicyLimits
+}).strict();
+
+// dist/shared/work-contract-projection.js
+import { createHash as createHash3 } from "node:crypto";
+
+// dist/schemas/work-contract-projection.js
+var ReportSlot = external_exports.object({
+  step_id: StepId,
+  slot: external_exports.string().min(1),
+  path: external_exports.string().min(1),
+  schema: external_exports.string().min(1)
+}).strict();
+var ContractRoute = external_exports.object({
+  step_id: StepId,
+  route_id: external_exports.string().min(1),
+  target: external_exports.string().min(1)
+}).strict();
+var ContractBlock = external_exports.object({
+  step_id: StepId,
+  title: external_exports.string().min(1),
+  kind: external_exports.enum(["compose", "verification", "checkpoint", "relay", "sub-run", "fanout"]),
+  executor: external_exports.enum(["orchestrator", "worker"]),
+  protocol: ProtocolId,
+  reads: external_exports.array(external_exports.string()),
+  writes: JsonObject,
+  check: JsonObject,
+  routes: RouteMap,
+  route_from_report: JsonObject.optional()
+}).strict();
+var ContractSkillSlot = external_exports.object({
+  step_id: StepId,
+  slot_id: SkillSlotId,
+  description: external_exports.string().min(1)
+}).strict();
+var ContractRelay = external_exports.object({
+  step_id: StepId,
+  role: external_exports.enum(["researcher", "implementer", "reviewer"]),
+  writes: JsonObject,
+  report: ReportSlot.optional()
+}).strict();
+var ContractCheckpointChoices = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("static"),
+    ids: external_exports.array(external_exports.string().min(1)).min(1)
+  }).strict(),
+  external_exports.object({
+    kind: external_exports.literal("dynamic"),
+    source_ref: JsonObject
+  }).strict()
+]);
+var ContractCheckpoint = external_exports.object({
+  step_id: StepId,
+  choices: ContractCheckpointChoices,
+  writes: JsonObject
+}).strict();
+var ContractSubRun = external_exports.object({
+  step_id: StepId,
+  flow_ref: JsonObject,
+  goal: external_exports.string().min(1),
+  depth: external_exports.string().min(1),
+  writes: JsonObject
+}).strict();
+var ContractFanout = external_exports.object({
+  step_id: StepId,
+  branches: JsonObject,
+  writes: JsonObject
+}).strict();
+var AcceptanceCriteriaInput = external_exports.object({
+  kind: external_exports.literal("acceptance_criteria_input"),
+  step_id: StepId,
+  criteria: JsonObject
+}).strict();
+var CheckInput = external_exports.object({
+  step_id: StepId,
+  check_kind: external_exports.string().min(1),
+  source: JsonObject
+}).strict();
+var BudgetLimit = external_exports.object({
+  step_id: StepId,
+  max_attempts: external_exports.number().int().positive().optional(),
+  wall_clock_ms: external_exports.number().int().positive().optional()
+}).strict();
+var ProjectionViolation = external_exports.object({
+  path: external_exports.string().min(1),
+  field: external_exports.string().min(1),
+  reason: external_exports.string().min(1),
+  source_ref: Ref
+}).strict();
+var WorkContractProjectionV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  contract_ref: Ref,
+  work_contract: external_exports.object({
+    flow: external_exports.object({
+      id: CompiledFlowId,
+      version: external_exports.string().min(1),
+      purpose: external_exports.string().min(1),
+      entry: JsonObject,
+      axes: FlowAxes,
+      starts_at: StepId
+    }).strict(),
+    topology: external_exports.object({
+      stages: external_exports.array(external_exports.object({
+        id: StageId,
+        title: external_exports.string().min(1),
+        canonical: external_exports.string().min(1).optional(),
+        steps: external_exports.array(StepId).min(1)
+      }).strict()),
+      stage_path_policy: JsonObject,
+      routes: external_exports.array(ContractRoute)
+    }).strict(),
+    blocks: external_exports.array(ContractBlock).min(1),
+    authority: external_exports.object({
+      relays: external_exports.array(ContractRelay),
+      checkpoints: external_exports.array(ContractCheckpoint),
+      sub_runs: external_exports.array(ContractSubRun),
+      fanouts: external_exports.array(ContractFanout),
+      skill_slots: external_exports.array(ContractSkillSlot)
+    }).strict(),
+    proof: external_exports.object({
+      reports: external_exports.array(ReportSlot),
+      checks: external_exports.array(CheckInput),
+      acceptance_criteria: external_exports.array(AcceptanceCriteriaInput)
+    }).strict(),
+    recovery: external_exports.array(RecoveryRouteBindingV0),
+    limits: external_exports.object({
+      budgets: external_exports.array(BudgetLimit)
+    }).strict()
+  }).strict(),
+  guidance_seed: external_exports.object({
+    selection_hints: external_exports.array(Ref),
+    connector_hints: external_exports.array(Ref),
+    skill_hints: external_exports.array(Ref),
+    checkpoint_default_hints: external_exports.array(Ref),
+    host_recommendations: external_exports.array(Ref).default([])
+  }).strict(),
+  rejected_authority: external_exports.array(ProjectionViolation)
+}).strict().superRefine((projection, ctx) => {
+  const routeTargets = /* @__PURE__ */ new Map();
+  for (const route of projection.work_contract.topology.routes) {
+    routeTargets.set(`${route.step_id}:${route.route_id}`, route.target);
+  }
+  const seenRecovery = /* @__PURE__ */ new Set();
+  for (const [index, binding] of projection.work_contract.recovery.entries()) {
+    const key = `${binding.step_id}:${binding.route_id}`;
+    if (seenRecovery.has(key)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["work_contract", "recovery", index, "route_id"],
+        message: `duplicate recovery binding for ${key}`
+      });
+    }
+    seenRecovery.add(key);
+    const declaredTarget = routeTargets.get(key);
+    if (declaredTarget === void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["work_contract", "recovery", index, "route_id"],
+        message: "recovery route binding must name a declared route"
+      });
+      continue;
+    }
+    if (declaredTarget !== binding.route_target) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["work_contract", "recovery", index, "route_target"],
+        message: "recovery route target must match the declared route target"
+      });
+    }
+  }
+});
+
+// dist/shared/work-contract-projection.js
+var WorkContractProjectionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "WorkContractProjectionError";
+  }
+};
+var FLOW_KEYS = /* @__PURE__ */ new Set([
+  "schema_version",
+  "id",
+  "version",
+  "purpose",
+  "entry",
+  "axes",
+  "starts_at",
+  "stages",
+  "stage_path_policy",
+  "steps",
+  "default_selection"
+]);
+var STAGE_KEYS = /* @__PURE__ */ new Set(["id", "title", "canonical", "steps", "selection"]);
+var STEP_KEYS = {
+  compose: /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "writes",
+    "check"
+  ]),
+  verification: /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "writes",
+    "check"
+  ]),
+  checkpoint: /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "policy",
+    "writes",
+    "check"
+  ]),
+  relay: /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "role",
+    "connector",
+    "acceptance_criteria",
+    "writes",
+    "check"
+  ]),
+  "sub-run": /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "flow_ref",
+    "goal",
+    "depth",
+    "writes",
+    "check"
+  ]),
+  fanout: /* @__PURE__ */ new Set([
+    "id",
+    "title",
+    "protocol",
+    "reads",
+    "routes",
+    "selection",
+    "skill_slots",
+    "route_from_report",
+    "budgets",
+    "executor",
+    "kind",
+    "branches",
+    "concurrency",
+    "on_child_failure",
+    "rubric",
+    "writes",
+    "check"
+  ])
+};
+var NORMAL_ROUTE_IDS = /* @__PURE__ */ new Set(["pass", "continue", "complete", "close"]);
+var RECOVERY_BY_ROUTE = {
+  revise: "narrow_scope",
+  review: "run_independent_review",
+  "run-review": "run_independent_review",
+  checkpoint: "checkpoint_authority",
+  ask: "checkpoint_authority",
+  blocked: "stop_unsafe",
+  stop: "stop_unsafe",
+  escalate: "escalate",
+  "connector-failed": "escalate",
+  handoff: "handoff"
+};
+var CAUSES_BY_KIND = {
+  retry_same_step_with_feedback: [
+    "failed_check",
+    "failed_acceptance_criteria",
+    "relay_result_invalid"
+  ],
+  narrow_scope: ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+  run_verification: ["failed_check", "weak_proof", "unproved_claim", "generated_surface_drift"],
+  run_independent_review: ["weak_proof", "contradicted_evidence", "scope_drift"],
+  checkpoint_authority: [
+    "checkpoint_boundary",
+    "protected_file_touched",
+    "budget_exceeded",
+    "unknown_failure"
+  ],
+  safe_apply_reject: [
+    "base_mismatch",
+    "apply_conflict",
+    "protected_file_touched",
+    "generated_surface_drift"
+  ],
+  stop_unsafe: ["contradicted_evidence", "scope_drift", "budget_exceeded", "unknown_failure"],
+  escalate: ["relay_connector_failed", "budget_exceeded", "unknown_failure"],
+  handoff: ["checkpoint_boundary", "budget_exceeded", "unknown_failure"]
+};
+function recoveryKindForRoute(step, routeId, target) {
+  if (routeId === "retry") {
+    return target === step.id ? "retry_same_step_with_feedback" : "narrow_scope";
+  }
+  return RECOVERY_BY_ROUTE[routeId];
+}
+function requiredRefsForRecoveryKind(kind) {
+  switch (kind) {
+    case "retry_same_step_with_feedback":
+      return ["failed_check", "acceptance_feedback", "budget_state"];
+    case "narrow_scope":
+      return ["proof_assessment", "runtime_diff"];
+    case "run_verification":
+      return ["proof_assessment", "generated_surface_evidence"];
+    case "run_independent_review":
+      return ["proof_assessment", "report"];
+    case "checkpoint_authority":
+      return ["checkpoint_request", "runtime_diff", "budget_state"];
+    case "safe_apply_reject":
+      return ["safe_apply_result", "runtime_diff", "generated_surface_evidence"];
+    case "stop_unsafe":
+      return ["failed_check", "trace"];
+    case "escalate":
+      return ["relay_result", "trace"];
+    case "handoff":
+      return ["trace", "report"];
+  }
+}
+function operatorAuthorityForRecoveryKind(kind) {
+  if (kind === "checkpoint_authority")
+    return "required_before_route";
+  if (kind === "handoff")
+    return "required_to_continue_after_route";
+  return "not_required";
+}
+function attemptBudgetForRecoveryKind(kind, routeTarget, stepId) {
+  if (kind === "retry_same_step_with_feedback") {
+    return {
+      consumes_step_attempt: true,
+      must_respect_max_attempts: true,
+      retry_target: routeTarget === stepId ? "same_step" : "declared_step"
+    };
+  }
+  return {
+    consumes_step_attempt: false,
+    must_respect_max_attempts: true,
+    retry_target: "declared_step"
+  };
+}
+function stableJson(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256(value) {
+  return createHash3("sha256").update(stableJson(value)).digest("hex");
+}
+function asJsonObject(value) {
+  return value;
+}
+function sourceRef(flow, flowHash, ref) {
+  return {
+    kind: "work_contract",
+    ref,
+    sha256: flowHash,
+    flow_id: flow.id
+  };
+}
+function workContractProjectionPathForCompiledFlowPath(compiledFlowPath) {
+  if (!compiledFlowPath.endsWith(".json") || compiledFlowPath.endsWith(".work-contract.v0.json")) {
+    throw new WorkContractProjectionError(`compiled flow path '${compiledFlowPath}' must end with a non-contract .json filename`);
+  }
+  return compiledFlowPath.replace(/\.json$/, ".work-contract.v0.json");
+}
+function runtimeWorkContractRefForProjectedRef(ref) {
+  if (ref.sha256 === void 0) {
+    throw new WorkContractProjectionError("projected WorkContract ref is missing sha256");
+  }
+  return {
+    ...ref,
+    ref: `runtime/work-contract/${ref.flow_id}/${ref.sha256}.json`
+  };
+}
+function rejectUnknownKeys(label, value, allowed) {
+  const unknown2 = Object.keys(value).filter((key) => !allowed.has(key));
+  if (unknown2.length > 0) {
+    throw new WorkContractProjectionError(`${label}: ${unknown2.join(", ")}`);
+  }
+}
+function reportSlotsForStep(step) {
+  const reports = [];
+  for (const [slot, value] of Object.entries(step.writes)) {
+    if (value !== null && typeof value === "object" && !Array.isArray(value) && "path" in value && "schema" in value) {
+      const report = value;
+      reports.push({ step_id: step.id, slot, path: report.path, schema: report.schema });
+    }
+  }
+  return reports;
+}
+function choicesForCheckpoint(step) {
+  if (step.policy.choices !== void 0) {
+    return {
+      kind: "static",
+      ids: step.policy.choices.map((choice) => choice.id)
+    };
+  }
+  return {
+    kind: "dynamic",
+    source_ref: asJsonObject(step.policy.choices_from)
+  };
+}
+function guidanceSeedRefsForBranch(flow, flowHash, step, branch, indexLabel) {
+  const refs = {};
+  if ("selection" in branch && branch.selection !== void 0) {
+    refs.selection = sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/branches/${indexLabel}/selection`);
+  }
+  if ("connector" in branch && branch.connector !== void 0) {
+    refs.connector = sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/branches/${indexLabel}/connector`);
+  }
+  return refs;
+}
+function branchGuidanceSeedRefs(flow, flowHash, step) {
+  const selection = [];
+  const connector = [];
+  if (step.branches.kind === "static") {
+    for (const [index, branch] of step.branches.branches.entries()) {
+      const refs = guidanceSeedRefsForBranch(flow, flowHash, step, branch, String(index));
+      if (refs.selection !== void 0)
+        selection.push(refs.selection);
+      if (refs.connector !== void 0)
+        connector.push(refs.connector);
+    }
+  } else {
+    const refs = guidanceSeedRefsForBranch(flow, flowHash, step, step.branches.template, "template");
+    if (refs.selection !== void 0)
+      selection.push(refs.selection);
+    if (refs.connector !== void 0)
+      connector.push(refs.connector);
+  }
+  return { selection, connector };
+}
+function stripBranchGuidanceAuthority(branch) {
+  const { selection: _selection, connector: _connector, ...contractBranch } = branch;
+  return asJsonObject(contractBranch);
+}
+function contractFanoutBranches(step) {
+  if (step.branches.kind === "static") {
+    return asJsonObject({
+      kind: "static",
+      branches: step.branches.branches.map(stripBranchGuidanceAuthority)
+    });
+  }
+  return asJsonObject({
+    ...step.branches,
+    template: stripBranchGuidanceAuthority(step.branches.template)
+  });
+}
+function projectWorkContractProjectionV0(input) {
+  const { flow } = input;
+  const flowHash = sha256(flow);
+  rejectUnknownKeys("unclassified flow fields", flow, FLOW_KEYS);
+  const selectionHints = [];
+  const connectorHints = [];
+  const skillHints = [];
+  const checkpointDefaultHints = [];
+  const rejectedAuthority = [];
+  const relays = [];
+  const checkpoints = [];
+  const subRuns = [];
+  const fanouts = [];
+  const skillSlots = [];
+  const reports = [];
+  const checks = [];
+  const acceptanceCriteria = [];
+  const recovery = [];
+  const budgets = [];
+  if (flow.default_selection !== void 0) {
+    selectionHints.push(sourceRef(flow, flowHash, "compiled-flow/default_selection"));
+    if (flow.default_selection.skills.mode !== "inherit") {
+      skillHints.push(sourceRef(flow, flowHash, "compiled-flow/default_selection/skills"));
+    }
+  }
+  for (const stage of flow.stages) {
+    rejectUnknownKeys("unclassified stage fields", stage, STAGE_KEYS);
+    if (stage.selection !== void 0) {
+      selectionHints.push(sourceRef(flow, flowHash, `compiled-flow/stages/${stage.id}/selection`));
+    }
+  }
+  for (const step of flow.steps) {
+    rejectUnknownKeys("unclassified step fields", step, STEP_KEYS[step.kind]);
+    if (step.selection !== void 0) {
+      selectionHints.push(sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/selection`));
+    }
+    for (const slot of step.skill_slots ?? []) {
+      skillSlots.push({
+        step_id: step.id,
+        slot_id: slot.id,
+        description: slot.description
+      });
+    }
+    for (const report of reportSlotsForStep(step))
+      reports.push(report);
+    checks.push({
+      step_id: step.id,
+      check_kind: step.check.kind,
+      source: asJsonObject(step.check.source)
+    });
+    if (step.budgets !== void 0) {
+      budgets.push({
+        step_id: step.id,
+        ...step.budgets.max_attempts === void 0 ? {} : { max_attempts: step.budgets.max_attempts },
+        ...step.budgets.wall_clock_ms === void 0 ? {} : { wall_clock_ms: step.budgets.wall_clock_ms }
+      });
+    }
+    for (const [routeId, target] of Object.entries(step.routes)) {
+      if (NORMAL_ROUTE_IDS.has(routeId))
+        continue;
+      const kind = recoveryKindForRoute(step, routeId, target);
+      if (kind === void 0)
+        continue;
+      recovery.push({
+        schema_version: 0,
+        step_id: step.id,
+        route_id: routeId,
+        route_target: target,
+        kind,
+        allowed_failure_causes: [...CAUSES_BY_KIND[kind]],
+        required_refs: requiredRefsForRecoveryKind(kind),
+        operator_authority: operatorAuthorityForRecoveryKind(kind),
+        attempt_budget: attemptBudgetForRecoveryKind(kind, target, step.id),
+        guidance: {
+          subject: "recovery_route",
+          must_match_step_completed: true
+        },
+        source_ref: sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/routes/${routeId}`)
+      });
+    }
+    if (step.kind === "relay") {
+      const relayStep = step;
+      if (relayStep.connector !== void 0) {
+        connectorHints.push(sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/connector`));
+      }
+      if (relayStep.acceptance_criteria !== void 0) {
+        acceptanceCriteria.push({
+          kind: "acceptance_criteria_input",
+          step_id: step.id,
+          criteria: asJsonObject(relayStep.acceptance_criteria)
+        });
+      }
+      relays.push({
+        step_id: step.id,
+        role: relayStep.role,
+        writes: asJsonObject(relayStep.writes),
+        ...relayStep.writes.report === void 0 ? {} : {
+          report: {
+            step_id: step.id,
+            slot: "report",
+            path: relayStep.writes.report.path,
+            schema: relayStep.writes.report.schema
+          }
+        }
+      });
+      continue;
+    }
+    if (step.kind === "checkpoint") {
+      const checkpointStep2 = step;
+      if (checkpointStep2.policy.safe_default_choice !== void 0) {
+        checkpointDefaultHints.push(sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/policy/safe_default_choice`));
+      }
+      if (checkpointStep2.policy.auto_resolution !== void 0) {
+        rejectedAuthority.push({
+          path: `compiled-flow/steps/${step.id}/policy/auto_resolution`,
+          field: "auto_resolution",
+          reason: "checkpoint auto-resolution must become a declared default or traced guidance",
+          source_ref: sourceRef(flow, flowHash, `compiled-flow/steps/${step.id}/policy/auto_resolution`)
+        });
+      }
+      checkpoints.push({
+        step_id: step.id,
+        choices: choicesForCheckpoint(checkpointStep2),
+        writes: asJsonObject(checkpointStep2.writes)
+      });
+      continue;
+    }
+    if (step.kind === "sub-run") {
+      const subRunStep = step;
+      subRuns.push({
+        step_id: step.id,
+        flow_ref: asJsonObject(subRunStep.flow_ref),
+        goal: subRunStep.goal,
+        depth: subRunStep.depth,
+        writes: asJsonObject(subRunStep.writes)
+      });
+      continue;
+    }
+    if (step.kind === "fanout") {
+      const fanoutStep = step;
+      const refs = branchGuidanceSeedRefs(flow, flowHash, fanoutStep);
+      selectionHints.push(...refs.selection);
+      connectorHints.push(...refs.connector);
+      fanouts.push({
+        step_id: step.id,
+        branches: contractFanoutBranches(fanoutStep),
+        writes: asJsonObject(fanoutStep.writes)
+      });
+    }
+  }
+  const workContract = {
+    flow: {
+      id: flow.id,
+      version: flow.version,
+      purpose: flow.purpose,
+      entry: asJsonObject(flow.entry),
+      axes: flow.axes,
+      starts_at: flow.starts_at
+    },
+    topology: {
+      stages: flow.stages.map((stage) => ({
+        id: stage.id,
+        title: stage.title,
+        ...stage.canonical === void 0 ? {} : { canonical: stage.canonical },
+        steps: [...stage.steps]
+      })),
+      stage_path_policy: asJsonObject(flow.stage_path_policy),
+      routes: flow.steps.flatMap((step) => Object.entries(step.routes).map(([routeId, target]) => ({
+        step_id: step.id,
+        route_id: routeId,
+        target
+      })))
+    },
+    blocks: flow.steps.map((step) => ({
+      step_id: step.id,
+      title: step.title,
+      kind: step.kind,
+      executor: step.executor,
+      protocol: step.protocol,
+      reads: [...step.reads],
+      writes: asJsonObject(step.writes),
+      check: asJsonObject(step.check),
+      routes: step.routes,
+      ...step.route_from_report === void 0 ? {} : { route_from_report: asJsonObject(step.route_from_report) }
+    })),
+    authority: {
+      relays,
+      checkpoints,
+      sub_runs: subRuns,
+      fanouts,
+      skill_slots: skillSlots
+    },
+    proof: {
+      reports,
+      checks,
+      acceptance_criteria: acceptanceCriteria
+    },
+    recovery,
+    limits: {
+      budgets
+    }
+  };
+  const contractRefPath = input.contractRefPath ?? workContractProjectionPathForCompiledFlowPath(`generated/flows/${flow.id}/circuit.json`);
+  const projection = {
+    schema_version: 0,
+    contract_ref: {
+      kind: "work_contract",
+      ref: contractRefPath,
+      sha256: sha256(workContract),
+      flow_id: flow.id
+    },
+    work_contract: workContract,
+    guidance_seed: {
+      selection_hints: selectionHints,
+      connector_hints: connectorHints,
+      skill_hints: skillHints,
+      checkpoint_default_hints: checkpointDefaultHints,
+      host_recommendations: []
+    },
+    rejected_authority: rejectedAuthority
+  };
+  return WorkContractProjectionV0.parse(projection);
+}
+
 // dist/runtime/domain/route.js
 var TERMINAL_TARGETS = [
   "@complete",
@@ -41484,7 +44312,7 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 var HEX643 = /^[0-9a-f]{64}$/;
 var ManifestHash = external_exports.string().regex(HEX643, {
   message: "must be a 64-character lowercase hex SHA-256 digest"
@@ -41512,7 +44340,7 @@ var ManifestSnapshot = external_exports.object({
     });
     return;
   }
-  const computed = createHash3("sha256").update(decoded).digest("hex");
+  const computed = createHash4("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -41522,7 +44350,7 @@ var ManifestSnapshot = external_exports.object({
   }
 });
 function computeManifestHash(bytes) {
-  return createHash3("sha256").update(bytes).digest("hex");
+  return createHash4("sha256").update(bytes).digest("hex");
 }
 
 // dist/runtime/run/graph-runner.js
@@ -41833,6 +44661,622 @@ function runtimeVetoEffect(candidates) {
   return "none";
 }
 
+// dist/shared/checkpoint-boundary.js
+import { createHash as createHash5 } from "node:crypto";
+
+// dist/schemas/checkpoint-boundary.js
+var CheckpointReasonCode = external_exports.enum([
+  "scope_expansion",
+  "protected_files",
+  "weak_proof",
+  "unsafe_apply",
+  "budget_exceeded",
+  "ambiguous_intent"
+]);
+var CheckpointAuthorityRequired = external_exports.enum(["operator", "policy"]);
+var CheckpointRouteTarget = external_exports.union([
+  StepId,
+  external_exports.enum(["@complete", "@stop", "@handoff", "@escalate"])
+]);
+var PolicyRef2 = Ref.superRefine((ref, ctx) => {
+  if (ref.kind !== "policy") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["kind"],
+      message: "checkpoint declared defaults require policy refs"
+    });
+  }
+});
+var CheckpointBoundaryRoute = external_exports.object({
+  id: external_exports.string().min(1),
+  target: CheckpointRouteTarget
+}).strict();
+var CheckpointBoundaryChoice = external_exports.object({
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  route: CheckpointBoundaryRoute,
+  consequence: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("static"),
+    items: external_exports.array(CheckpointBoundaryChoice).min(1)
+  }).strict().superRefine((choices, ctx) => {
+    const ids = /* @__PURE__ */ new Set();
+    for (const [index, choice] of choices.items.entries()) {
+      if (ids.has(choice.id)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["items", index, "id"],
+          message: `duplicate checkpoint choice '${choice.id}'`
+        });
+      }
+      ids.add(choice.id);
+    }
+  }),
+  external_exports.object({
+    kind: external_exports.literal("dynamic"),
+    source: CheckpointChoiceSource,
+    route_family: CheckpointBoundaryRoute,
+    consequence_template: external_exports.string().min(1)
+  }).strict()
+]);
+var DeclaredCheckpointDefault = external_exports.object({
+  choice_id: external_exports.string().min(1),
+  allowed_when: external_exports.array(PolicyRef2).min(1),
+  reason_code: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  step_id: StepId,
+  reason_code: CheckpointReasonCode,
+  authority_required: CheckpointAuthorityRequired,
+  prompt: external_exports.string().min(1),
+  choices: CheckpointBoundaryChoices,
+  declared_default: DeclaredCheckpointDefault.optional(),
+  writes: external_exports.object({
+    request: RunRelativePath,
+    response: RunRelativePath,
+    report: ReportRef.optional()
+  }).strict(),
+  check: CheckpointSelectionCheck,
+  proof_refs: external_exports.array(Ref).default([])
+}).strict().superRefine((boundary, ctx) => {
+  if (boundary.declared_default === void 0)
+    return;
+  if (boundary.choices.kind === "dynamic") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["declared_default"],
+      message: "declared defaults require static checkpoint choices in V0"
+    });
+    return;
+  }
+  const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
+  if (!choiceIds.has(boundary.declared_default.choice_id)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["declared_default", "choice_id"],
+      message: "declared_default.choice_id must name a declared checkpoint choice"
+    });
+  }
+});
+var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  options: external_exports.array(external_exports.string().min(1)).min(1),
+  request_path: RunRelativePath,
+  request_report_hash: Sha256,
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  } else if (request.boundary_ref.step_id !== request.step_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryResolutionSource = external_exports.enum([
+  "operator",
+  "declared-default",
+  "policy"
+]);
+var CheckpointBoundaryResolutionV0 = external_exports.object({
+  selection: external_exports.string().min(1),
+  route_id: external_exports.string().min(1),
+  auto_resolved: external_exports.boolean(),
+  resolution_source: CheckpointBoundaryResolutionSource
+}).strict().superRefine((resolution, ctx) => {
+  if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["auto_resolved"],
+      message: "operator checkpoint resolutions cannot be auto-resolved"
+    });
+  }
+});
+var CheckpointResumeValidationV0 = external_exports.object({
+  request_path_matches_step: external_exports.literal(true),
+  request_hash_required: external_exports.literal(true),
+  choices_match_request: external_exports.literal(true),
+  selected_choice_allowed: external_exports.literal(true),
+  report_hash_matches_when_present: external_exports.literal(true),
+  boundary_hash_required: external_exports.literal(true),
+  guidance_decision_required_before_resolution: external_exports.literal(true)
+}).strict();
+var CheckpointBoundaryRejectedAuthority = external_exports.object({
+  path: external_exports.string().min(1),
+  field: external_exports.string().min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryProjectionV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  boundary: CheckpointBoundaryV0,
+  request_trace: CheckpointBoundaryRequestTraceLinkV0,
+  allowed_resolution_sources: external_exports.array(CheckpointBoundaryResolutionSource).min(1),
+  resume_validation: CheckpointResumeValidationV0,
+  rejected_old_authority: external_exports.array(CheckpointBoundaryRejectedAuthority)
+}).strict();
+
+// dist/shared/checkpoint-boundary.js
+var CheckpointBoundaryProjectionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CheckpointBoundaryProjectionError";
+  }
+};
+function stableJson2(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha2562(value) {
+  return createHash5("sha256").update(stableJson2(value)).digest("hex");
+}
+function rejectOldAuthority(path, field, reason) {
+  return { path, field, reason };
+}
+function routeForChoice2(step, choiceId, rejectedOldAuthority) {
+  const directTarget = step.routes[choiceId];
+  if (directTarget !== void 0) {
+    return { id: choiceId, target: directTarget };
+  }
+  const passTarget = step.routes.pass;
+  if (passTarget !== void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/routes/pass`, "implicit_pass_route", `checkpoint choice '${choiceId}' would currently fall through to route 'pass'; future boundaries require an explicit choice route`));
+    return { id: "pass", target: passTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no matching route and no pass fallback`);
+}
+function consequenceForChoice(choice) {
+  return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
+}
+function dynamicRouteFamily(step, rejectedOldAuthority) {
+  const selectTarget = step.routes.select;
+  if (selectTarget !== void 0) {
+    return { id: "select", target: selectTarget };
+  }
+  const passTarget = step.routes.pass;
+  if (passTarget !== void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/routes/pass`, "implicit_pass_route", "dynamic checkpoint choices would currently fall through to route pass; future boundaries require a route family"));
+    return { id: "pass", target: passTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
+}
+function staticChoices(step, rejectedOldAuthority) {
+  const choices = step.policy.choices;
+  if (choices === void 0) {
+    throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
+  }
+  return choices.map((choice) => ({
+    id: choice.id,
+    ...choice.label === void 0 ? {} : { label: choice.label },
+    ...choice.description === void 0 ? {} : { description: choice.description },
+    route: routeForChoice2(step, choice.id, rejectedOldAuthority),
+    consequence: consequenceForChoice(choice)
+  }));
+}
+function projectCheckpointBoundaryV0(input) {
+  const { step } = input;
+  const rejectedOldAuthority = [];
+  const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
+  if (step.policy.auto_resolution !== void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
+  }
+  const choices = step.policy.choices !== void 0 ? {
+    kind: "static",
+    items: staticChoices(step, rejectedOldAuthority)
+  } : (() => {
+    const routeFamily = dynamicRouteFamily(step, rejectedOldAuthority);
+    return {
+      kind: "dynamic",
+      source: step.policy.choices_from,
+      route_family: routeFamily,
+      consequence_template: `Select one dynamic checkpoint choice and take route '${routeFamily.id}' to '${routeFamily.target}'.`
+    };
+  })();
+  const declaredDefault = step.policy.safe_default_choice !== void 0 && choices.kind === "static" && declaredDefaultPolicyRefs.length > 0 ? {
+    choice_id: step.policy.safe_default_choice,
+    allowed_when: declaredDefaultPolicyRefs,
+    reason_code: "safe_default_choice"
+  } : void 0;
+  if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
+  }
+  const boundary = {
+    schema_version: 0,
+    step_id: step.id,
+    reason_code: input.reasonCode ?? "ambiguous_intent",
+    authority_required: declaredDefault === void 0 ? "operator" : "policy",
+    prompt: step.policy.prompt,
+    choices,
+    ...declaredDefault === void 0 ? {} : { declared_default: declaredDefault },
+    writes: step.writes,
+    check: step.check,
+    proof_refs: []
+  };
+  const boundaryHash = sha2562(boundary);
+  const boundaryRef = {
+    kind: "work_contract",
+    ref: `compiled-flow/steps/${step.id}/checkpoint-boundary.v0`,
+    sha256: boundaryHash,
+    flow_id: input.flowId,
+    step_id: step.id
+  };
+  return CheckpointBoundaryProjectionV0.parse({
+    schema_version: 0,
+    boundary,
+    request_trace: {
+      boundary_ref: boundaryRef,
+      boundary_hash: boundaryHash
+    },
+    allowed_resolution_sources: ["operator", "declared-default", "policy"],
+    resume_validation: {
+      request_path_matches_step: true,
+      request_hash_required: true,
+      choices_match_request: true,
+      selected_choice_allowed: true,
+      report_hash_matches_when_present: true,
+      boundary_hash_required: true,
+      guidance_decision_required_before_resolution: true
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+
+// dist/shared/policy-envelope.js
+import { createHash as createHash6 } from "node:crypto";
+var PolicyEnvelopeCompositionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PolicyEnvelopeCompositionError";
+  }
+};
+var RUNTIME_CONFIG_V1_POLICY_REF = {
+  kind: "policy",
+  ref: "policy.runtime.config_v1"
+};
+var RUNTIME_POLICY_V2_REF = {
+  kind: "policy",
+  ref: "policy.runtime.policy_v2"
+};
+var EFFORT_ORDER = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max"
+];
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function unionInto(target, values) {
+  for (const value of values)
+    target.add(value);
+}
+function intersectConnectorAllow(current, next) {
+  if (next === void 0)
+    return current;
+  const nextSet = new Set(next);
+  if (current === void 0)
+    return nextSet;
+  return new Set([...current].filter((value) => nextSet.has(value)));
+}
+function minNumber(current, next) {
+  if (next === void 0)
+    return current;
+  return current === void 0 ? next : Math.min(current, next);
+}
+function minEffort(current, next) {
+  if (next === void 0)
+    return current;
+  if (current === void 0)
+    return next;
+  return EFFORT_ORDER.indexOf(next) < EFFORT_ORDER.indexOf(current) ? next : current;
+}
+function composeAutoApply(current, next) {
+  if (next === void 0)
+    return current;
+  if (next === false || current === false)
+    return false;
+  return true;
+}
+function composeRequireKnown(current, next) {
+  if (next === void 0)
+    return current;
+  return current === true || next === true;
+}
+function connectorRefFromDefault(value) {
+  if (value === "auto")
+    return "auto";
+  if (EnabledConnector.options.includes(value)) {
+    return { kind: "builtin", name: value };
+  }
+  return { kind: "named", name: value };
+}
+function connectorRefFromConfig(ref) {
+  return ref;
+}
+function rejectOldAuthority2(path, field, reason) {
+  return { path, field, reason };
+}
+function stableJson3(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256Json(value) {
+  return createHash6("sha256").update(stableJson3(value)).digest("hex");
+}
+function policyLayerSourceForConfigLayer(layer) {
+  if (layer === "default")
+    return "built-in";
+  return layer;
+}
+function composePolicyHardConstraints(envelopes) {
+  let allow;
+  const deny = /* @__PURE__ */ new Set();
+  const denyForWrite = /* @__PURE__ */ new Set();
+  const denyProviders = /* @__PURE__ */ new Set();
+  const requireProviderForConnector = {};
+  let autoApply;
+  const checkpointGlobs = /* @__PURE__ */ new Set();
+  const deniedSkills = /* @__PURE__ */ new Set();
+  let requireKnown;
+  const independentReviewFor = /* @__PURE__ */ new Set();
+  let maxAttempts;
+  let maxWallClockMs;
+  let maxEffortCap;
+  let maxTournamentN;
+  for (const envelope of envelopes) {
+    const parsed = PolicyEnvelopeV2.parse(envelope);
+    const { rules, limits } = parsed.policy;
+    allow = intersectConnectorAllow(allow, rules.connectors.allow);
+    unionInto(deny, rules.connectors.deny);
+    unionInto(denyForWrite, rules.connectors.deny_for_write);
+    unionInto(denyProviders, rules.models.deny_providers);
+    for (const [connector, provider] of Object.entries(rules.models.require_provider_for_connector)) {
+      const previous = requireProviderForConnector[connector];
+      if (previous !== void 0 && previous !== provider) {
+        throw new PolicyEnvelopeCompositionError(`conflicting provider requirements for connector '${connector}': '${previous}' and '${provider}'`);
+      }
+      requireProviderForConnector[connector] = provider;
+    }
+    autoApply = composeAutoApply(autoApply, rules.writes.auto_apply);
+    unionInto(checkpointGlobs, rules.writes.require_checkpoint_globs);
+    unionInto(deniedSkills, rules.skills.deny);
+    requireKnown = composeRequireKnown(requireKnown, rules.skills.require_known);
+    unionInto(independentReviewFor, rules.proof.require_independent_review_for);
+    maxAttempts = minNumber(maxAttempts, limits.max_attempts_per_step);
+    maxWallClockMs = minNumber(maxWallClockMs, limits.max_wall_clock_ms);
+    maxEffortCap = minEffort(maxEffortCap, limits.max_effort);
+    maxTournamentN = minNumber(maxTournamentN, limits.max_tournament_n);
+  }
+  return ComposedPolicyHardConstraints.parse({
+    connectors: {
+      ...allow !== void 0 ? { allow: uniqueSorted(allow) } : {},
+      deny: uniqueSorted(deny),
+      deny_for_write: uniqueSorted(denyForWrite)
+    },
+    models: {
+      deny_providers: uniqueSorted(denyProviders),
+      require_provider_for_connector: Object.fromEntries(Object.entries(requireProviderForConnector).sort(([a], [b]) => a.localeCompare(b)))
+    },
+    writes: {
+      ...autoApply !== void 0 ? { auto_apply: autoApply } : {},
+      require_checkpoint_globs: uniqueSorted(checkpointGlobs)
+    },
+    skills: {
+      deny: uniqueSorted(deniedSkills),
+      ...requireKnown !== void 0 ? { require_known: requireKnown } : {}
+    },
+    proof: {
+      require_independent_review_for: uniqueSorted(independentReviewFor)
+    },
+    limits: {
+      ...maxAttempts !== void 0 ? { max_attempts_per_step: maxAttempts } : {},
+      ...maxWallClockMs !== void 0 ? { max_wall_clock_ms: maxWallClockMs } : {},
+      ...maxEffortCap !== void 0 ? { max_effort: maxEffortCap } : {},
+      ...maxTournamentN !== void 0 ? { max_tournament_n: maxTournamentN } : {}
+    }
+  });
+}
+function projectConfigV1ToPolicyEnvelopeV2(input) {
+  const { config: config2, source } = input;
+  const rejectedOldAuthority = [];
+  const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
+    rejectedOldAuthority.push(rejectOldAuthority2(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
+    return {
+      flow_id: flowId,
+      prefer_connector: connectorRefFromConfig(ref)
+    };
+  });
+  const flowSelectionHints = [];
+  const flowSlotBindings = [];
+  const variantModelHints = [];
+  for (const [flowId, override] of Object.entries(config2.circuits)) {
+    if (override.selection !== void 0) {
+      flowSelectionHints.push({
+        flow_id: flowId,
+        selection: override.selection
+      });
+    }
+    if (Object.keys(override.skill_bindings).length > 0) {
+      flowSlotBindings.push({
+        flow_id: flowId,
+        bindings: override.skill_bindings
+      });
+    }
+    if (override.variant_models !== void 0) {
+      rejectedOldAuthority.push(rejectOldAuthority2(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
+      for (const variant of override.variant_models) {
+        variantModelHints.push({
+          flow_id: flowId,
+          id: variant.id,
+          label: variant.label,
+          ...variant.connector !== void 0 ? { connector: connectorRefFromConfig(variant.connector) } : {},
+          selection: variant.selection
+        });
+      }
+    }
+  }
+  return PolicyEnvelopeProjectionV0.parse({
+    schema_version: 0,
+    source,
+    policy_envelope: {
+      schema_version: 2,
+      policy: {
+        rules: {
+          connectors: {
+            registry: config2.relay.connectors
+          }
+        },
+        preferences: {
+          relay: {
+            roles: Object.fromEntries(Object.entries(config2.relay.roles).filter((entry) => entry[1] !== void 0).map(([role, ref]) => [role, { prefer_connector: connectorRefFromConfig(ref) }])),
+            flow_connector_hints: flowConnectorHints
+          },
+          selection: {
+            flow_hints: flowSelectionHints
+          },
+          skills: {
+            slot_bindings: config2.skills.bindings,
+            flow_slot_bindings: flowSlotBindings
+          },
+          prototype: {
+            variant_model_hints: variantModelHints
+          }
+        },
+        defaults: {
+          connector: connectorRefFromDefault(config2.relay.default),
+          ...config2.defaults.selection !== void 0 ? { selection: config2.defaults.selection } : {}
+        }
+      }
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+function policyRefsForConfigLayers(layers) {
+  const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
+    let sha2563;
+    try {
+      const projection = projectConfigV1ToPolicyEnvelopeV2({
+        config: layer.config,
+        source: policyLayerSourceForConfigLayer(layer.layer)
+      });
+      sha2563 = sha256Json(projection.policy_envelope);
+    } catch {
+      sha2563 = sha256Json({ schema_version: 1, config: layer.config });
+    }
+    refs.push({
+      kind: "policy",
+      ref,
+      sha256: sha2563
+    });
+  }
+  return refs;
+}
+function policyRefsForPolicyLayers(layers) {
+  const refs = [];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    refs.push({
+      kind: "policy",
+      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
+      sha256: sha256Json(layer.envelope)
+    });
+  }
+  return refs;
+}
+function policyRefsForRuntimeInputs(input) {
+  const refs = [];
+  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
+    refs.push(...policyRefsForConfigLayers(input.configLayers));
+  }
+  if ((input.policyLayers?.length ?? 0) > 0) {
+    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
+  }
+  return refs;
+}
+
 // dist/shared/runtime-source.js
 function resolveRuntimeNumberSource(source, axes = DEFAULT_AXES) {
   if (source.kind === "constant")
@@ -41903,6 +45347,191 @@ async function resolveCheckpointChoicesSource(input) {
   });
 }
 
+// dist/runtime/run/guidance.js
+function guidanceBounds(context) {
+  if (context.workContractRef === void 0)
+    return void 0;
+  return {
+    workContractRef: context.workContractRef,
+    policyRefs: policyRefsForRuntimeInputs({
+      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers }
+    })
+  };
+}
+function idPart(value) {
+  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
+}
+async function appendFlowSelectionGuidance(context) {
+  const bounds = guidanceBounds(context);
+  if (bounds === void 0)
+    return;
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  return await context.trace.append({
+    run_id: context.runId,
+    kind: "guidance.decision",
+    decision_id: `gd-flow-selection-${idPart(flowId)}`,
+    subject: "flow_selection",
+    scope: {
+      run_id: context.runId
+    },
+    source: "deterministic",
+    selected: {
+      flow_id: flowId,
+      work_contract_ref: bounds.workContractRef
+    },
+    input_refs: [bounds.workContractRef],
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    reason_codes: ["bootstrap_flow_selected"]
+  });
+}
+async function appendRelayExecutionGuidance(context, input) {
+  const bounds = guidanceBounds(context);
+  if (bounds === void 0)
+    return;
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  const runId = RunId.parse(context.runId);
+  const stepId = StepId.parse(input.stepId);
+  const requestRef = {
+    kind: "request",
+    ref: input.requestPath,
+    sha256: input.requestPayloadHash,
+    run_id: runId,
+    flow_id: flowId,
+    step_id: stepId,
+    attempt: input.attempt
+  };
+  const skills = input.loadedSkills.map((skill) => ({
+    id: skill.id,
+    ...skill.slot === void 0 ? {} : { slot: skill.slot }
+  }));
+  return await context.trace.append({
+    run_id: context.runId,
+    kind: "guidance.decision",
+    decision_id: `gd-relay-${idPart(stepId)}-${input.attempt}`,
+    subject: "relay_execution",
+    scope: {
+      run_id: context.runId,
+      flow_id: flowId,
+      step_id: stepId,
+      attempt: input.attempt
+    },
+    source: "deterministic",
+    selected: {
+      role: input.role,
+      connector: input.connector,
+      ...input.resolvedSelection.model === void 0 ? {} : { model: input.resolvedSelection.model },
+      ...input.resolvedSelection.effort === void 0 ? {} : { effort: input.resolvedSelection.effort },
+      skills,
+      context_packet_ref: requestRef,
+      request_payload_hash: input.requestPayloadHash
+    },
+    input_refs: [requestRef],
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    reason_codes: ["relay_execution_selected"]
+  });
+}
+function checkpointResolutionSource(source) {
+  if (source === "declared-default")
+    return "declared-default";
+  if (source === "operator")
+    return "operator";
+  return "policy";
+}
+function checkpointDecisionSource(source) {
+  if (source === "operator")
+    return "operator_override";
+  if (source === "declared-default")
+    return "deterministic";
+  return "heuristic";
+}
+function checkpointReasonCode(source) {
+  if (source === "declared-default")
+    return "declared_default_allowed";
+  if (source === "operator")
+    return "operator_checkpoint_choice";
+  return "policy_checkpoint_resolution";
+}
+async function appendCheckpointResolutionGuidance(context, input) {
+  const bounds = guidanceBounds(context);
+  if (bounds === void 0)
+    return;
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  const stepId = StepId.parse(input.stepId);
+  const requestRef = {
+    kind: "request",
+    ref: input.requestPath,
+    sha256: input.requestReportHash,
+    run_id: RunId.parse(context.runId),
+    flow_id: flowId,
+    step_id: stepId,
+    attempt: input.attempt
+  };
+  return await context.trace.append({
+    run_id: context.runId,
+    kind: "guidance.decision",
+    decision_id: `gd-checkpoint-${idPart(stepId)}-${input.attempt}`,
+    subject: "checkpoint_resolution",
+    scope: {
+      run_id: context.runId,
+      flow_id: flowId,
+      step_id: stepId,
+      attempt: input.attempt
+    },
+    source: checkpointDecisionSource(input.resolutionSource),
+    selected: {
+      choice_id: input.choiceId,
+      route_id: input.routeId,
+      auto_resolved: input.autoResolved,
+      resolution_source: checkpointResolutionSource(input.resolutionSource)
+    },
+    input_refs: [requestRef],
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    ...input.evidenceRefs === void 0 || input.evidenceRefs.length === 0 ? {} : { evidence_refs: input.evidenceRefs },
+    reason_codes: [checkpointReasonCode(input.resolutionSource)],
+    ...input.rejectedOptions === void 0 || input.rejectedOptions.length === 0 ? {} : { rejected_options: input.rejectedOptions }
+  });
+}
+async function appendRecoveryRouteGuidance(context, input) {
+  const bounds = guidanceBounds(context);
+  if (bounds === void 0)
+    return;
+  const flowId = CompiledFlowId.parse(context.flow.id);
+  const stepId = StepId.parse(input.stepId);
+  return await context.trace.append({
+    run_id: context.runId,
+    kind: "guidance.decision",
+    decision_id: `gd-recovery-${idPart(stepId)}-${input.attempt}-${idPart(input.routeId)}`,
+    subject: "recovery_route",
+    scope: {
+      run_id: context.runId,
+      flow_id: flowId,
+      step_id: stepId,
+      attempt: input.attempt
+    },
+    source: "deterministic",
+    selected: {
+      route_id: input.routeId,
+      recovery_kind: input.recoveryKind,
+      failure_cause: input.failureCause,
+      failure_ref: input.failureRef,
+      binding_ref: input.bindingRef
+    },
+    input_refs: [input.failureRef],
+    constraint_refs: [bounds.workContractRef, ...bounds.policyRefs],
+    contract_refs: [bounds.workContractRef],
+    policy_refs: bounds.policyRefs,
+    evidence_refs: [input.failureRef],
+    reason_codes: ["recovery_route_selected"]
+  });
+}
+
 // dist/runtime/executors/result.js
 function errorFromUnknown(error51) {
   return error51 instanceof Error ? error51 : new Error(String(error51));
@@ -41945,9 +45574,53 @@ async function materializePolicy(step, context) {
     prompt: stepPolicy.prompt,
     choices,
     ...stepPolicy.safe_default_choice === void 0 ? {} : { safe_default_choice: stepPolicy.safe_default_choice },
-    ...stepPolicy.safe_autonomous_choice === void 0 ? {} : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice },
     ...stepPolicy.auto_resolution === void 0 ? {} : { auto_resolution: stepPolicy.auto_resolution }
   };
+}
+function projectRuntimeCheckpointBoundary(input) {
+  const indexedStep2 = requireRuntimeIndexedStep(input.context.packageIndex, input.step.id, "checkpoint");
+  const report = indexedStep2.writes.report;
+  const indexedPolicy = indexedStep2.policy;
+  try {
+    const schemaStep = CheckpointStep.parse({
+      id: indexedStep2.id,
+      title: indexedStep2.title,
+      protocol: indexedStep2.protocol,
+      reads: indexedStep2.reads,
+      routes: indexedStep2.routes,
+      ...indexedStep2.selection === void 0 ? {} : { selection: indexedStep2.selection },
+      ...indexedStep2.skill_slots === void 0 ? {} : { skill_slots: indexedStep2.skill_slots },
+      ...indexedStep2.budgets === void 0 ? {} : { budgets: indexedStep2.budgets },
+      executor: "orchestrator",
+      kind: "checkpoint",
+      policy: {
+        prompt: indexedPolicy.prompt,
+        ...indexedPolicy.choices_from === void 0 ? { choices: indexedPolicy.choices ?? input.stepPolicy.choices } : { choices_from: indexedPolicy.choices_from },
+        ...indexedPolicy.safe_default_choice === void 0 ? {} : { safe_default_choice: indexedPolicy.safe_default_choice },
+        ...indexedPolicy.auto_resolution === void 0 ? {} : { auto_resolution: indexedPolicy.auto_resolution },
+        ...indexedPolicy.report_template === void 0 ? {} : { report_template: indexedPolicy.report_template }
+      },
+      writes: {
+        request: indexedStep2.writes.request,
+        response: indexedStep2.writes.response,
+        ...report === void 0 ? {} : { report }
+      },
+      check: indexedStep2.check
+    });
+    return projectCheckpointBoundaryV0({
+      step: schemaStep,
+      flowId: CompiledFlowId.parse(input.context.flow.id),
+      declaredDefaultPolicyRefs: policyRefsForRuntimeInputs({
+        ...input.context.selectionConfigLayers === void 0 ? {} : { configLayers: input.context.selectionConfigLayers },
+        ...input.context.policyLayers === void 0 ? {} : { policyLayers: input.context.policyLayers }
+      })
+    });
+  } catch (error51) {
+    if (error51 instanceof ZodError || error51 instanceof CheckpointBoundaryProjectionError) {
+      return void 0;
+    }
+    throw error51;
+  }
 }
 async function resolveCheckpoint(step, context, depth, stepPolicy) {
   const effectiveDepth = depth ?? "standard";
@@ -41959,14 +45632,19 @@ async function resolveCheckpoint(step, context, depth, stepPolicy) {
     if (stepPolicy.auto_resolution !== void 0) {
       return await resolveAutoResolution(step, context, stepPolicy, stepPolicy.auto_resolution);
     }
-    const selection2 = stepPolicy.safe_autonomous_choice;
+    const selection2 = stepPolicy.safe_default_choice;
     if (selection2 === void 0) {
       return {
         kind: "failed",
-        reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth without a declared safe autonomous choice`
+        reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth without a declared default choice`
       };
     }
-    return { kind: "resolved", selection: selection2, resolutionSource: "safe-autonomous", autoResolved: true };
+    return {
+      kind: "resolved",
+      selection: selection2,
+      resolutionSource: "declared-default",
+      autoResolved: true
+    };
   }
   const selection = stepPolicy.safe_default_choice;
   if (selection === void 0) {
@@ -41975,7 +45653,7 @@ async function resolveCheckpoint(step, context, depth, stepPolicy) {
       reason: `checkpoint step '${step.id}' cannot resolve ${effectiveDepth} depth without a declared safe default choice`
     };
   }
-  return { kind: "resolved", selection, resolutionSource: "safe-default", autoResolved: true };
+  return { kind: "resolved", selection, resolutionSource: "declared-default", autoResolved: true };
 }
 async function resolveAutoResolution(step, context, stepPolicy, autoResolution) {
   if (autoResolution.policy === "refuse") {
@@ -41984,48 +45662,15 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
       reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth because policy is refuse`
     };
   }
-  if (autoResolution.policy === "first-acceptable") {
-    const selection = stepPolicy.choices[0]?.id;
-    if (selection === void 0) {
-      return { kind: "failed", reason: `checkpoint step '${step.id}' has no executable choices` };
-    }
-    return {
-      kind: "resolved",
-      selection,
-      resolutionSource: "safe-autonomous",
-      autoResolved: true,
-      autoResolution: simpleAutoResolutionRecord({
-        step,
-        context,
-        stepPolicy,
-        policy: autoResolution.policy,
-        selection
-      })
-    };
-  }
-  if (autoResolution.policy === "accept-as-is") {
-    const selection = stepPolicy.safe_autonomous_choice ?? stepPolicy.safe_default_choice;
-    if (selection === void 0) {
-      return {
-        kind: "failed",
-        reason: `checkpoint step '${step.id}' accept-as-is requires safe_autonomous_choice or safe_default_choice`
-      };
-    }
-    return {
-      kind: "resolved",
-      selection,
-      resolutionSource: "safe-autonomous",
-      autoResolved: true,
-      autoResolution: simpleAutoResolutionRecord({
-        step,
-        context,
-        stepPolicy,
-        policy: autoResolution.policy,
-        selection
-      })
-    };
-  }
-  const sourceRaw = await context.files.readJson(autoResolution.source_report);
+  const sourceText = await context.files.readText(autoResolution.source_report);
+  const sourceRaw = JSON.parse(sourceText);
+  const sourceReportRef = {
+    kind: "report",
+    ref: autoResolution.source_report,
+    sha256: sha256Hex(sourceText),
+    run_id: RunId.parse(context.runId),
+    flow_id: CompiledFlowId.parse(context.flow.id)
+  };
   const branches = resolveDottedPath(sourceRaw, autoResolution.branches_path);
   if (!Array.isArray(branches)) {
     return {
@@ -42046,9 +45691,15 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
     return {
       kind: "resolved",
       selection: highestScore.selection,
-      resolutionSource: "safe-autonomous",
+      resolutionSource: "policy",
       autoResolved: true,
-      autoResolution: highestScore.record
+      autoResolution: highestScore.record,
+      guidanceEvidenceRefs: [sourceReportRef],
+      rejectedOptions: highestScore.record.alternatives_available.slice(0, 3).map((choiceId) => ({
+        option: { choice_id: choiceId },
+        reason_code: "lower_auto_resolution_score",
+        blocked_by: sourceReportRef
+      }))
     };
   } catch (error51) {
     return {
@@ -42056,17 +45707,6 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
       reason: error51 instanceof Error ? error51.message : String(error51)
     };
   }
-}
-function simpleAutoResolutionRecord(input) {
-  return {
-    checkpoint_id: input.step.id,
-    ...input.step.title === void 0 ? {} : { checkpoint_label: input.step.title },
-    policy: input.policy,
-    resolved_value: input.selection,
-    alternatives_available: input.stepPolicy.choices.filter((choice) => choice.id !== input.selection).map((choice) => choice.id),
-    runtime_or_model: "runtime",
-    resolved_at: input.context.now().toISOString()
-  };
 }
 function checkpointRequestBody(input) {
   const stepPolicy = input.stepPolicy;
@@ -42076,11 +45716,16 @@ function checkpointRequestBody(input) {
     prompt: stepPolicy.prompt,
     allowed_choices: stepPolicy.choices.map((choice) => choice.id),
     ...stepPolicy.safe_default_choice === void 0 ? {} : { safe_default_choice: stepPolicy.safe_default_choice },
-    ...stepPolicy.safe_autonomous_choice === void 0 ? {} : { safe_autonomous_choice: stepPolicy.safe_autonomous_choice },
     execution_context: {
       ...input.context.axes === void 0 ? {} : { axes: input.context.axes },
       ...input.context.projectRoot === void 0 ? {} : { project_root: input.context.projectRoot },
+      ...input.context.workContractRef === void 0 ? {} : { work_contract_ref: input.context.workContractRef },
+      ...input.boundary === void 0 ? {} : {
+        checkpoint_boundary_ref: input.boundary.request_trace.boundary_ref,
+        checkpoint_boundary_hash: input.boundary.request_trace.boundary_hash
+      },
       selection_config_layers: input.context.selectionConfigLayers ?? [],
+      policy_layers: input.context.policyLayers ?? [],
       ...input.checkpointReportSha256 === void 0 ? {} : { checkpoint_report_sha256: input.checkpointReportSha256 }
     }
   };
@@ -42095,7 +45740,9 @@ async function executeCheckpointResult(step, context) {
     }
     const indexedStep2 = requireRuntimeIndexedStep(context.packageIndex, step.id, "checkpoint");
     const stepPolicy = await materializePolicy(step, context);
+    const boundary = projectRuntimeCheckpointBoundary({ step, stepPolicy, context });
     let checkpointReportSha256;
+    let checkpointRequestSha256;
     const report = step.writes?.report;
     const resumedSelection = context.resumeCheckpoint?.stepId === step.id ? context.resumeCheckpoint.selection : void 0;
     const resolution = await resolveCheckpoint(step, context, context.depth, stepPolicy);
@@ -42127,19 +45774,25 @@ async function executeCheckpointResult(step, context) {
         step,
         context,
         stepPolicy,
+        ...boundary === void 0 ? {} : { boundary },
         ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
       });
       await context.files.writeJson(request, requestBody);
       const requestText = await context.files.readText(request);
+      checkpointRequestSha256 = sha256Hex(requestText);
       await context.trace.append({
         run_id: context.runId,
         kind: "checkpoint.requested",
         step_id: step.id,
         attempt,
         request_path: request.path,
-        request_report_hash: sha256Hex(requestText),
+        request_report_hash: checkpointRequestSha256,
+        ...boundary === void 0 ? {} : {
+          boundary_ref: boundary.request_trace.boundary_ref,
+          boundary_hash: boundary.request_trace.boundary_hash
+        },
         options: stepPolicy.choices.map((choice) => choice.id),
-        auto_resolved: resolution.kind === "resolved" ? resolution.autoResolved : false
+        ...resolution.kind === "waiting" ? { auto_resolved: false } : {}
       });
     }
     const effectiveResolution = resumedSelection === void 0 ? resolution : {
@@ -42176,12 +45829,29 @@ async function executeCheckpointResult(step, context) {
     if (!effectiveAllowed.includes(effectiveResolution.selection)) {
       return stepExecutionFailed(`checkpoint step '${step.id}' selected '${effectiveResolution.selection}' but check.allow is [${effectiveAllowed.join(", ")}]`);
     }
+    const routeId = Object.hasOwn(step.routes, effectiveResolution.selection) ? effectiveResolution.selection : "pass";
+    if (checkpointRequestSha256 === void 0) {
+      checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
+    }
     await context.files.writeJson(response, {
       schema_version: 1,
       step_id: step.id,
       selection: effectiveResolution.selection,
+      route_id: routeId,
       resolution_source: effectiveResolution.resolutionSource,
       ...effectiveResolution.autoResolution === void 0 ? {} : { auto_resolution: effectiveResolution.autoResolution }
+    });
+    await appendCheckpointResolutionGuidance(context, {
+      stepId: step.id,
+      attempt,
+      choiceId: effectiveResolution.selection,
+      routeId,
+      autoResolved: effectiveResolution.autoResolved,
+      resolutionSource: effectiveResolution.resolutionSource,
+      requestPath: request.path,
+      requestReportHash: checkpointRequestSha256,
+      ...effectiveResolution.guidanceEvidenceRefs === void 0 ? {} : { evidenceRefs: effectiveResolution.guidanceEvidenceRefs },
+      ...effectiveResolution.rejectedOptions === void 0 ? {} : { rejectedOptions: effectiveResolution.rejectedOptions }
     });
     await context.trace.append({
       run_id: context.runId,
@@ -42189,6 +45859,7 @@ async function executeCheckpointResult(step, context) {
       step_id: step.id,
       attempt,
       selection: effectiveResolution.selection,
+      route_id: routeId,
       auto_resolved: effectiveResolution.autoResolved,
       resolution_source: effectiveResolution.resolutionSource,
       response_path: response.path
@@ -42202,7 +45873,7 @@ async function executeCheckpointResult(step, context) {
       outcome: "pass"
     });
     return stepExecutionOutcome({
-      route: Object.hasOwn(step.routes, effectiveResolution.selection) ? effectiveResolution.selection : "pass",
+      route: routeId,
       details: { selection: effectiveResolution.selection }
     });
   } catch (error51) {
@@ -42762,6 +46433,202 @@ function recoveryRouteForStep(step, allowedRoutes = RECOVERY_ROUTE_PRIORITY) {
   return RECOVERY_ROUTE_PRIORITY.find((route) => allowed.has(route) && Object.hasOwn(step.routes, route));
 }
 
+// dist/shared/relay-support.js
+import { existsSync as existsSync10, readFileSync as readFileSync20 } from "node:fs";
+
+// dist/flows/registries/shape-hints/registry.js
+var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
+var STRUCTURAL_HINTS = buildStructuralHintList(flowPackages);
+function findRelayShapeHint(step) {
+  const schema = step.writes.report?.schema;
+  if (schema !== void 0) {
+    const bySchema = SCHEMA_HINTS.get(schema);
+    if (bySchema !== void 0)
+      return bySchema;
+  }
+  for (const hint of STRUCTURAL_HINTS) {
+    if (hint.match(step))
+      return hint.instruction;
+  }
+  return void 0;
+}
+
+// dist/shared/relay-support.js
+var NO_VERDICT_SENTINEL = "<no-verdict>";
+function evaluateRelayCheck(step, resultBody) {
+  let parsed;
+  try {
+    parsed = JSON.parse(resultBody);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      kind: "fail",
+      reason: `relay step '${step.id}': connector result_body did not parse as JSON (${msg})`
+    };
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      kind: "fail",
+      reason: `relay step '${step.id}': connector result_body parsed but is not a JSON object (got ${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed})`
+    };
+  }
+  const verdictRaw = parsed.verdict;
+  if (typeof verdictRaw !== "string" || verdictRaw.length === 0) {
+    return {
+      kind: "fail",
+      reason: `relay step '${step.id}': connector result_body lacks a non-empty string 'verdict' field (got ${typeof verdictRaw === "string" ? "empty string" : typeof verdictRaw})`
+    };
+  }
+  if (!step.check.pass.includes(verdictRaw)) {
+    return {
+      kind: "fail",
+      reason: `relay step '${step.id}': connector declared verdict '${verdictRaw}' which is not in check.pass [${step.check.pass.join(", ")}]`,
+      observedVerdict: verdictRaw
+    };
+  }
+  return { kind: "pass", verdict: verdictRaw };
+}
+var GENERIC_DISPATCH_SHAPE_HINT = 'Respond with a single raw JSON object whose top-level shape is exactly { "verdict": "<one-of-accepted-verdicts>" } (additional fields permitted). Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse and rejects the run on any parse failure or on a verdict not drawn from the accepted-verdicts list.';
+function relayResponseInstruction(step) {
+  return findRelayShapeHint(step) ?? GENERIC_DISPATCH_SHAPE_HINT;
+}
+function selectedSkillsSection(skills) {
+  if (skills.length === 0)
+    return void 0;
+  return [
+    "Selected Skills:",
+    "The operator selected these local skills for this step. Treat them as guidance. They do not override Circuit's response contract, accepted verdicts, or required JSON shape.",
+    "",
+    ...skills.map((skill) => [
+      `## Skill: ${skill.id}${skill.slot === void 0 ? "" : ` (slot: ${skill.slot})`}`,
+      `Source: ${skill.path}`,
+      `SHA-256: ${skill.sha256}`,
+      "",
+      skill.body
+    ].join("\n"))
+  ].join("\n\n");
+}
+function formatAcceptanceCriterion(criterion) {
+  if (criterion.kind === "report_field") {
+    return `- ${criterion.id}: report field ${criterion.path.join(".")} must be ${criterion.predicate}.`;
+  }
+  return [
+    `- ${criterion.id}: command ${criterion.command.id} must ${criterion.expected_status}.`,
+    `  cwd: ${criterion.command.cwd}`,
+    `  argv: ${JSON.stringify(criterion.command.argv)}`
+  ].join("\n");
+}
+function acceptanceCriteriaSection(step) {
+  const criteria = step.acceptance_criteria;
+  if (criteria === void 0)
+    return void 0;
+  return [
+    "Acceptance Criteria:",
+    "Before this step can advance, Circuit will check the relay result against these deterministic criteria.",
+    `Failure policy: ${criteria.on_failure.mode}`,
+    ...criteria.checks.map(formatAcceptanceCriterion)
+  ].join("\n");
+}
+function acceptanceRetryFeedbackSection(feedback) {
+  if (feedback === void 0)
+    return void 0;
+  return [
+    "Acceptance Criteria Feedback:",
+    `Criterion ${feedback.criterion_id} (${feedback.criterion_kind}) failed.`,
+    `Reason: ${feedback.reason}`,
+    ...feedback.exit_code === void 0 ? [] : [`Exit code: ${feedback.exit_code}`],
+    ...feedback.status === void 0 ? [] : [`Status: ${feedback.status}`],
+    ...feedback.stdout_summary === void 0 ? [] : [`Stdout summary:
+${feedback.stdout_summary}`],
+    ...feedback.stderr_summary === void 0 ? [] : [`Stderr summary:
+${feedback.stderr_summary}`],
+    "Revise the result so this criterion passes. Keep the same response contract and accepted verdicts."
+  ].join("\n");
+}
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal) {
+  const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
+    const abs = resolveRunRelative(runFolder, path);
+    if (!existsSync10(abs))
+      return `[reads unavailable: ${path}]`;
+    return `--- ${path} ---
+${readFileSync20(abs, "utf8")}`;
+  }).join("\n\n");
+  const skillsSection = selectedSkillsSection(loadedSkills);
+  const criteriaSection = acceptanceCriteriaSection(step);
+  const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
+  return [
+    `Step: ${step.id}`,
+    `Title: ${step.title}`,
+    `Role: ${step.role}`,
+    `Accepted verdicts: ${step.check.pass.join(", ")}`,
+    "",
+    ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
+    "Context (from reads):",
+    readsBody,
+    "",
+    ...skillsSection === void 0 ? [] : [skillsSection, ""],
+    ...criteriaSection === void 0 ? [] : [criteriaSection, ""],
+    ...feedbackSection === void 0 ? [] : [feedbackSection, ""],
+    relayResponseInstruction(step)
+  ].join("\n");
+}
+
+// dist/shared/zod-to-response-schema.js
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function normalizeSchemaNode(node) {
+  if (!isRecord3(node))
+    return;
+  if (Array.isArray(node.oneOf) && node.anyOf === void 0) {
+    node.anyOf = node.oneOf;
+    Reflect.deleteProperty(node, "oneOf");
+  }
+  if (node.type === "object" && isRecord3(node.properties) && node.additionalProperties === void 0) {
+    node.additionalProperties = false;
+  }
+  if (isRecord3(node.additionalProperties) && Object.keys(node.additionalProperties).length === 0) {
+    node.additionalProperties = true;
+  }
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      for (const item of value)
+        normalizeSchemaNode(item);
+    } else {
+      normalizeSchemaNode(value);
+    }
+  }
+}
+function assertNoReferenceSyntax(node) {
+  if (!isRecord3(node))
+    return;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "$ref" || key === "$defs" || key === "definitions") {
+      throw new Error(`Zod JSON Schema conversion emitted unsupported ${key}`);
+    }
+    if (Array.isArray(value)) {
+      for (const item of value)
+        assertNoReferenceSyntax(item);
+    } else {
+      assertNoReferenceSyntax(value);
+    }
+  }
+}
+function responseJsonSchemaFromZod(schema) {
+  const result = external_exports.toJSONSchema(schema, {
+    target: "draft-07",
+    io: "input",
+    reused: "inline",
+    cycles: "throw"
+  });
+  if (typeof result !== "object" || result === null) {
+    throw new Error("Zod JSON Schema conversion returned a non-object value");
+  }
+  normalizeSchemaNode(result);
+  assertNoReferenceSyntax(result);
+  return result;
+}
+
 // dist/shared/selection-resolver.js
 var PRE_WORKFLOW_CONFIG_SOURCES = ["default", "user-global", "project"];
 function overrideContributes2(o) {
@@ -42952,149 +46819,9 @@ function deriveResolvedSelection(inv, flow, step, depth) {
   }).resolved;
 }
 
-// dist/shared/relay-support.js
-import { existsSync as existsSync10, readFileSync as readFileSync20 } from "node:fs";
-
-// dist/flows/registries/shape-hints/registry.js
-var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
-var STRUCTURAL_HINTS = buildStructuralHintList(flowPackages);
-function findRelayShapeHint(step) {
-  const schema = step.writes.report?.schema;
-  if (schema !== void 0) {
-    const bySchema = SCHEMA_HINTS.get(schema);
-    if (bySchema !== void 0)
-      return bySchema;
-  }
-  for (const hint of STRUCTURAL_HINTS) {
-    if (hint.match(step))
-      return hint.instruction;
-  }
-  return void 0;
-}
-
-// dist/shared/relay-support.js
-var NO_VERDICT_SENTINEL = "<no-verdict>";
-function evaluateRelayCheck(step, resultBody) {
-  let parsed;
-  try {
-    parsed = JSON.parse(resultBody);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return {
-      kind: "fail",
-      reason: `relay step '${step.id}': connector result_body did not parse as JSON (${msg})`
-    };
-  }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return {
-      kind: "fail",
-      reason: `relay step '${step.id}': connector result_body parsed but is not a JSON object (got ${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed})`
-    };
-  }
-  const verdictRaw = parsed.verdict;
-  if (typeof verdictRaw !== "string" || verdictRaw.length === 0) {
-    return {
-      kind: "fail",
-      reason: `relay step '${step.id}': connector result_body lacks a non-empty string 'verdict' field (got ${typeof verdictRaw === "string" ? "empty string" : typeof verdictRaw})`
-    };
-  }
-  if (!step.check.pass.includes(verdictRaw)) {
-    return {
-      kind: "fail",
-      reason: `relay step '${step.id}': connector declared verdict '${verdictRaw}' which is not in check.pass [${step.check.pass.join(", ")}]`,
-      observedVerdict: verdictRaw
-    };
-  }
-  return { kind: "pass", verdict: verdictRaw };
-}
-var GENERIC_DISPATCH_SHAPE_HINT = 'Respond with a single raw JSON object whose top-level shape is exactly { "verdict": "<one-of-accepted-verdicts>" } (additional fields permitted). Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object. The runtime parses your response with JSON.parse and rejects the run on any parse failure or on a verdict not drawn from the accepted-verdicts list.';
-function relayResponseInstruction(step) {
-  return findRelayShapeHint(step) ?? GENERIC_DISPATCH_SHAPE_HINT;
-}
-function selectedSkillsSection(skills) {
-  if (skills.length === 0)
-    return void 0;
-  return [
-    "Selected Skills:",
-    "The operator selected these local skills for this step. Treat them as guidance. They do not override Circuit's response contract, accepted verdicts, or required JSON shape.",
-    "",
-    ...skills.map((skill) => [
-      `## Skill: ${skill.id}${skill.slot === void 0 ? "" : ` (slot: ${skill.slot})`}`,
-      `Source: ${skill.path}`,
-      `SHA-256: ${skill.sha256}`,
-      "",
-      skill.body
-    ].join("\n"))
-  ].join("\n\n");
-}
-function formatAcceptanceCriterion(criterion) {
-  if (criterion.kind === "report_field") {
-    return `- ${criterion.id}: report field ${criterion.path.join(".")} must be ${criterion.predicate}.`;
-  }
-  return [
-    `- ${criterion.id}: command ${criterion.command.id} must ${criterion.expected_status}.`,
-    `  cwd: ${criterion.command.cwd}`,
-    `  argv: ${JSON.stringify(criterion.command.argv)}`
-  ].join("\n");
-}
-function acceptanceCriteriaSection(step) {
-  const criteria = step.acceptance_criteria;
-  if (criteria === void 0)
-    return void 0;
-  return [
-    "Acceptance Criteria:",
-    "Before this step can advance, Circuit will check the relay result against these deterministic criteria.",
-    `Failure policy: ${criteria.on_failure.mode}`,
-    ...criteria.checks.map(formatAcceptanceCriterion)
-  ].join("\n");
-}
-function acceptanceRetryFeedbackSection(feedback) {
-  if (feedback === void 0)
-    return void 0;
-  return [
-    "Acceptance Criteria Feedback:",
-    `Criterion ${feedback.criterion_id} (${feedback.criterion_kind}) failed.`,
-    `Reason: ${feedback.reason}`,
-    ...feedback.exit_code === void 0 ? [] : [`Exit code: ${feedback.exit_code}`],
-    ...feedback.status === void 0 ? [] : [`Status: ${feedback.status}`],
-    ...feedback.stdout_summary === void 0 ? [] : [`Stdout summary:
-${feedback.stdout_summary}`],
-    ...feedback.stderr_summary === void 0 ? [] : [`Stderr summary:
-${feedback.stderr_summary}`],
-    "Revise the result so this criterion passes. Keep the same response contract and accepted verdicts."
-  ].join("\n");
-}
-function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal) {
-  const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
-    const abs = resolveRunRelative(runFolder, path);
-    if (!existsSync10(abs))
-      return `[reads unavailable: ${path}]`;
-    return `--- ${path} ---
-${readFileSync20(abs, "utf8")}`;
-  }).join("\n\n");
-  const skillsSection = selectedSkillsSection(loadedSkills);
-  const criteriaSection = acceptanceCriteriaSection(step);
-  const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
-  return [
-    `Step: ${step.id}`,
-    `Title: ${step.title}`,
-    `Role: ${step.role}`,
-    `Accepted verdicts: ${step.check.pass.join(", ")}`,
-    "",
-    ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
-    "Context (from reads):",
-    readsBody,
-    "",
-    ...skillsSection === void 0 ? [] : [skillsSection, ""],
-    ...criteriaSection === void 0 ? [] : [criteriaSection, ""],
-    ...feedbackSection === void 0 ? [] : [feedbackSection, ""],
-    relayResponseInstruction(step)
-  ].join("\n");
-}
-
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join6, resolve as resolve5 } from "node:path";
@@ -43108,7 +46835,7 @@ function defaultUserSkillRoots(homeDir = homedir()) {
   return [join6(homeDir, ".agents", "skills"), join6(homeDir, ".claude", "skills")];
 }
 function sha256Hex2(text) {
-  return createHash4("sha256").update(text, "utf8").digest("hex");
+  return createHash7("sha256").update(text, "utf8").digest("hex");
 }
 function parseSkillMarkdown(text, skillPath) {
   if (!text.startsWith("---"))
@@ -43266,63 +46993,7 @@ ${err.message}`);
   return loaded;
 }
 
-// dist/shared/zod-to-response-schema.js
-function isRecord3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function normalizeSchemaNode(node) {
-  if (!isRecord3(node))
-    return;
-  if (Array.isArray(node.oneOf) && node.anyOf === void 0) {
-    node.anyOf = node.oneOf;
-    Reflect.deleteProperty(node, "oneOf");
-  }
-  if (node.type === "object" && isRecord3(node.properties) && node.additionalProperties === void 0) {
-    node.additionalProperties = false;
-  }
-  if (isRecord3(node.additionalProperties) && Object.keys(node.additionalProperties).length === 0) {
-    node.additionalProperties = true;
-  }
-  for (const value of Object.values(node)) {
-    if (Array.isArray(value)) {
-      for (const item of value)
-        normalizeSchemaNode(item);
-    } else {
-      normalizeSchemaNode(value);
-    }
-  }
-}
-function assertNoReferenceSyntax(node) {
-  if (!isRecord3(node))
-    return;
-  for (const [key, value] of Object.entries(node)) {
-    if (key === "$ref" || key === "$defs" || key === "definitions") {
-      throw new Error(`Zod JSON Schema conversion emitted unsupported ${key}`);
-    }
-    if (Array.isArray(value)) {
-      for (const item of value)
-        assertNoReferenceSyntax(item);
-    } else {
-      assertNoReferenceSyntax(value);
-    }
-  }
-}
-function responseJsonSchemaFromZod(schema) {
-  const result = external_exports.toJSONSchema(schema, {
-    target: "draft-07",
-    io: "input",
-    reused: "inline",
-    cycles: "throw"
-  });
-  if (typeof result !== "object" || result === null) {
-    throw new Error("Zod JSON Schema conversion returned a non-object value");
-  }
-  normalizeSchemaNode(result);
-  assertNoReferenceSyntax(result);
-  return result;
-}
-
-// dist/runtime/executors/relay.js
+// dist/runtime/run/relay-guidance.js
 function builtinConnector(name) {
   if (name === "claude-code" || name === "codex" || name === "cursor-agent") {
     return { kind: "builtin", name };
@@ -43377,6 +47048,45 @@ function selectionForCompatibility(selection) {
     invocation_options: {}
   });
 }
+var EFFORT_ORDER2 = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
+function effortExceedsMax(effort, maxEffort) {
+  if (effort === void 0 || maxEffort === void 0)
+    return false;
+  return EFFORT_ORDER2.indexOf(effort) > EFFORT_ORDER2.indexOf(maxEffort);
+}
+function assertPolicyAllowsRelayPlan(input) {
+  const policyLayers = input.context.policyLayers ?? [];
+  if (policyLayers.length === 0)
+    return;
+  const constraints = composePolicyHardConstraints(policyLayers.map((layer) => layer.envelope));
+  const { connectorName } = input;
+  const allowedConnectors = constraints.connectors.allow;
+  if (allowedConnectors !== void 0 && !allowedConnectors.includes(connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': not in allowed connectors`);
+  }
+  if (constraints.connectors.deny.includes(connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': connector is denied`);
+  }
+  if (input.role === "implementer" && constraints.connectors.deny_for_write.includes(connectorName)) {
+    throw new Error(`PolicyEnvelope disallows connector '${connectorName}': connector is denied for write-capable relays`);
+  }
+  const provider = input.resolvedSelection.model?.provider;
+  if (provider !== void 0 && constraints.models.deny_providers.includes(provider)) {
+    throw new Error(`PolicyEnvelope disallows provider '${provider}': provider is denied`);
+  }
+  const requiredProvider = constraints.models.require_provider_for_connector[connectorName];
+  if (requiredProvider !== void 0 && provider !== requiredProvider) {
+    throw new Error(`PolicyEnvelope requires connector '${connectorName}' to use provider '${requiredProvider}'`);
+  }
+  if (effortExceedsMax(input.resolvedSelection.effort, constraints.limits.max_effort)) {
+    throw new Error(`PolicyEnvelope disallows effort '${input.resolvedSelection.effort}': max effort is '${constraints.limits.max_effort}'`);
+  }
+  const deniedSkills = new Set(constraints.skills.deny);
+  const deniedLoadedSkill = input.loadedSkills.find((skill) => deniedSkills.has(skill.id));
+  if (deniedLoadedSkill !== void 0) {
+    throw new Error(`PolicyEnvelope disallows skill '${deniedLoadedSkill.id}': skill is denied`);
+  }
+}
 function resolveRelayExecution(input) {
   const role = RelayRole.parse(input.role);
   const explicitConnector = requestedConnectorForRelay({
@@ -43399,6 +47109,52 @@ function resolveRelayExecution(input) {
     resolvedFrom: resolved.resolvedFrom
   };
 }
+function suppliedConnectorFromRelayer(context) {
+  if (context.relayer === void 0)
+    return void 0;
+  return {
+    connectorName: context.relayer.connectorName,
+    ...context.relayer.connector === void 0 ? {} : { connector: context.relayer.connector },
+    async relay() {
+      throw new Error("relay identity placeholder should not be invoked");
+    }
+  };
+}
+function planRelayGuidanceDecision(input) {
+  const { context, step, compiledStep } = input;
+  const flow = context.packageIndex.flow;
+  const suppliedConnector = suppliedConnectorFromRelayer(context);
+  const relayExecution = resolveRelayExecution({
+    flowId: context.flow.id,
+    role: step.role,
+    ...suppliedConnector === void 0 ? {} : { suppliedConnector },
+    ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
+    ...step.selection === void 0 ? {} : { selection: step.selection },
+    ...step.connector === void 0 ? {} : { stepConnector: step.connector }
+  });
+  const resolvedSelection = deriveResolvedSelection({
+    ...context.relayer === void 0 ? {} : { relayer: context.relayer },
+    ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers }
+  }, flow, compiledStep, input.depth);
+  assertConnectorSelectionCompatible(relayExecution.connectorName, resolvedSelection);
+  const loadedSkills = resolveLoadedRelaySkills({
+    flowId: flow.id,
+    stepId: step.id,
+    skillSlots: compiledStep.skill_slots ?? [],
+    resolvedSelection,
+    ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
+  });
+  assertPolicyAllowsRelayPlan({
+    context,
+    role: RelayRole.parse(relayExecution.role),
+    connectorName: relayExecution.connectorName,
+    resolvedSelection,
+    loadedSkills
+  });
+  return { relayExecution, resolvedSelection, loadedSkills };
+}
+
+// dist/runtime/executors/relay.js
 async function relayWithResolvedConnector(connector, input) {
   const relayInput = {
     prompt: input.prompt,
@@ -43438,16 +47194,56 @@ function readRouteFromReportBody(body, path) {
   }
   return cursor;
 }
-function suppliedConnectorFromRelayer(context) {
-  if (context.relayer === void 0)
-    return void 0;
-  return {
-    connectorName: context.relayer.connectorName,
-    ...context.relayer.connector === void 0 ? {} : { connector: context.relayer.connector },
-    async relay() {
-      throw new Error("relay identity placeholder should not be invoked");
-    }
-  };
+function stableJson4(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sameJson(left, right) {
+  return stableJson4(left) === stableJson4(right);
+}
+function relaySkillIdentities(skills) {
+  return skills.map((skill) => ({
+    id: skill.id,
+    ...skill.slot === void 0 ? {} : { slot: skill.slot }
+  }));
+}
+function guidanceSelectedRecord(guidance) {
+  return guidance.selected;
+}
+function assertRelayGuidanceMatchesPlan(input) {
+  if (input.guidance === void 0) {
+    if (input.context.workContractRef === void 0)
+      return;
+    throw new Error(`relay step '${input.step.id}' cannot start without relay_execution guidance`);
+  }
+  if (input.guidance.subject !== "relay_execution") {
+    throw new Error(`relay step '${input.step.id}' guidance subject is not relay_execution`);
+  }
+  if (input.guidance.scope.run_id !== input.context.runId || input.guidance.scope.flow_id !== input.context.flow.id || input.guidance.scope.step_id !== input.step.id || input.guidance.scope.attempt !== input.attempt) {
+    throw new Error(`relay step '${input.step.id}' guidance scope does not match relay attempt`);
+  }
+  const selected = guidanceSelectedRecord(input.guidance);
+  if (selected.role !== input.role) {
+    throw new Error(`relay step '${input.step.id}' guidance role does not match relay plan`);
+  }
+  if (!sameJson(selected.connector, input.connector)) {
+    throw new Error(`relay step '${input.step.id}' guidance connector does not match relay plan`);
+  }
+  if (!sameJson(selected.model, input.resolvedSelection.model)) {
+    throw new Error(`relay step '${input.step.id}' guidance model does not match relay plan`);
+  }
+  if (selected.effort !== input.resolvedSelection.effort) {
+    throw new Error(`relay step '${input.step.id}' guidance effort does not match relay plan`);
+  }
+  if (!sameJson(selected.skills, relaySkillIdentities(input.loadedSkills))) {
+    throw new Error(`relay step '${input.step.id}' guidance skills do not match relay plan`);
+  }
+  if (selected.request_payload_hash !== input.requestPayloadHash) {
+    throw new Error(`relay step '${input.step.id}' guidance request hash does not match relay plan`);
+  }
 }
 function defaultValidateAcceptedProductionRelay(input) {
   const { flow, context, step, relayResult, checkEvaluation } = input;
@@ -43515,26 +47311,11 @@ function defaultValidateAcceptedProductionRelay(input) {
 async function executeProductionRelayAttempt(input) {
   const { step, compiledStep, context } = input;
   const flow = context.packageIndex.flow;
-  const suppliedConnector = suppliedConnectorFromRelayer(context);
-  const relayExecution = resolveRelayExecution({
-    flowId: context.flow.id,
-    role: step.role,
-    ...suppliedConnector === void 0 ? {} : { suppliedConnector },
-    ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
-    ...step.selection === void 0 ? {} : { selection: step.selection },
-    ...step.connector === void 0 ? {} : { stepConnector: step.connector }
-  });
-  const resolvedSelection = deriveResolvedSelection({
-    ...context.relayer === void 0 ? {} : { relayer: context.relayer },
-    ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers }
-  }, flow, compiledStep, Depth.parse(context.depth ?? "standard"));
-  assertConnectorSelectionCompatible(relayExecution.connectorName, resolvedSelection);
-  const loadedSkills = resolveLoadedRelaySkills({
-    flowId: flow.id,
-    stepId: step.id,
-    skillSlots: compiledStep.skill_slots ?? [],
-    resolvedSelection,
-    ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers }
+  const { relayExecution, resolvedSelection, loadedSkills } = planRelayGuidanceDecision({
+    context,
+    step,
+    compiledStep,
+    depth: Depth.parse(context.depth ?? "standard")
   });
   const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback, context.goal);
   const request = step.writes?.request;
@@ -43547,6 +47328,27 @@ async function executeProductionRelayAttempt(input) {
   const requestPayloadHash = sha256Hex(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
+  const relayGuidance = await appendRelayExecutionGuidance(context, {
+    stepId: step.id,
+    attempt,
+    role: RelayRole.parse(relayExecution.role),
+    connector: relayExecution.connector,
+    resolvedSelection,
+    loadedSkills,
+    requestPath: request.path,
+    requestPayloadHash
+  });
+  assertRelayGuidanceMatchesPlan({
+    guidance: relayGuidance,
+    context,
+    step,
+    attempt,
+    role: RelayRole.parse(relayExecution.role),
+    connector: relayExecution.connector,
+    resolvedSelection,
+    loadedSkills,
+    requestPayloadHash
+  });
   await context.trace.append({
     run_id: context.runId,
     kind: "relay.started",
@@ -44169,6 +47971,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
       ...context.relayConnector === void 0 ? {} : { relayConnector: context.relayConnector },
       ...context.relayer === void 0 ? {} : { relayer: context.relayer },
       ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers },
+      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
       ...context.progress === void 0 ? {} : { progress: context.progress }
     });
     const childResultText = await context.externalFiles.readText(child.resultPath);
@@ -44699,6 +48502,7 @@ async function executeSubRunInternal(step, context) {
       ...context.relayConnector === void 0 ? {} : { relayConnector: context.relayConnector },
       ...context.relayer === void 0 ? {} : { relayer: context.relayer },
       ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers },
+      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
       ...context.progress === void 0 ? {} : { progress: context.progress }
     });
   } catch (error51) {
@@ -45875,7 +49679,7 @@ function createProgressProjector(input) {
         if (stepId === void 0 || entry.request_path === void 0 || allowedChoices === void 0) {
           break;
         }
-        if (entry.auto_resolved === true) {
+        if (entry.auto_resolved !== false) {
           break;
         }
         const requestPath = checkpointRequestPath(input.runDir, entry.request_path);
@@ -46273,7 +50077,7 @@ function isGraphCheckpointWaitingResult(result) {
 function isGraphRejectedOutcome(result) {
   return "kind" in result && result.kind === "rejected";
 }
-var RECOVERY_ROUTE_LABELS = /* @__PURE__ */ new Set(["retry", "revise"]);
+var LEGACY_RECOVERY_ROUTE_LABELS = /* @__PURE__ */ new Set(["retry", "revise"]);
 function defaultManifestHash(flow) {
   return `runtime:${flow.id}@${flow.version}`;
 }
@@ -46314,8 +50118,76 @@ function latestAdmittedVerdict(context) {
   }
   return void 0;
 }
-function isRecoveryRoute(route) {
-  return route !== void 0 && RECOVERY_ROUTE_LABELS.has(route);
+function routeTargetKey(target) {
+  return target.kind === "terminal" ? target.target : target.stepId;
+}
+function recoveryBindingForCompletedRoute(input) {
+  return input.bindings?.find((binding) => binding.step_id === input.step.id && binding.route_id === input.route && binding.route_target === routeTargetKey(input.target));
+}
+function hasRecoveryBindingForRoute(input) {
+  if (input.route === void 0)
+    return false;
+  const target = input.step.routes[input.route];
+  if (target === void 0)
+    return false;
+  return recoveryBindingForCompletedRoute({
+    bindings: input.bindings,
+    step: input.step,
+    route: input.route,
+    target
+  }) !== void 0;
+}
+function isRecoveryRouteForMechanics(input) {
+  if (input.bindings === void 0) {
+    return input.route !== void 0 && LEGACY_RECOVERY_ROUTE_LABELS.has(input.route);
+  }
+  return hasRecoveryBindingForRoute(input);
+}
+function traceRefForEntry(input) {
+  return {
+    kind: "trace",
+    ref: `trace.ndjson#sequence=${input.sequence}`,
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt,
+    sequence: input.sequence
+  };
+}
+function latestRecoveryFailureEvidence(input) {
+  for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
+      continue;
+    if (entry.kind === "check.evaluated" && entry.outcome === "fail") {
+      return {
+        ref: traceRefForEntry({
+          context: input.context,
+          stepId: input.stepId,
+          attempt: input.attempt,
+          sequence: entry.sequence
+        }),
+        cause: isAcceptanceRetryFeedback(input.details.acceptance_feedback) ? "failed_acceptance_criteria" : "failed_check"
+      };
+    }
+    if (entry.kind === "relay.failed") {
+      return {
+        ref: traceRefForEntry({
+          context: input.context,
+          stepId: input.stepId,
+          attempt: input.attempt,
+          sequence: entry.sequence
+        }),
+        cause: "relay_connector_failed"
+      };
+    }
+  }
+  return void 0;
+}
+function recoveryCauseAllowed(binding, cause) {
+  return binding.allowed_failure_causes.includes(cause);
+}
+function isActiveRecoveryRoute(activeRecovery, route) {
+  return route !== void 0 && activeRecovery?.route === route;
 }
 function canReachStepViaNonRecoveryRoutes(input) {
   if (input.fromStepId === input.targetStepId)
@@ -46331,8 +50203,9 @@ function canReachStepViaNonRecoveryRoutes(input) {
     if (step === void 0)
       continue;
     for (const [route, target] of Object.entries(step.routes)) {
-      if (isRecoveryRoute(route) || target.kind !== "step")
+      if (isRecoveryRouteForMechanics({ bindings: input.bindings, step, route }) || target.kind !== "step") {
         continue;
+      }
       if (target.stepId === input.targetStepId)
         return true;
       queue.push(target.stepId);
@@ -46341,10 +50214,12 @@ function canReachStepViaNonRecoveryRoutes(input) {
   return false;
 }
 function isRecoveryReturnCorridor(input) {
-  if (input.activeRecovery === void 0 || isRecoveryRoute(input.route))
+  if (input.activeRecovery === void 0 || isActiveRecoveryRoute(input.activeRecovery, input.route)) {
     return false;
+  }
   return canReachStepViaNonRecoveryRoutes({
     steps: input.steps,
+    bindings: input.bindings,
     fromStepId: input.stepId,
     targetStepId: input.activeRecovery.originStepId
   });
@@ -46360,8 +50235,8 @@ function configuredMaxAttempts(step) {
     return void 0;
   return maxAttempts;
 }
-function maxAttemptsForRoute(step, route) {
-  return configuredMaxAttempts(step) ?? (isRecoveryRoute(route) ? 2 : 1);
+function maxAttemptsForRoute(step, recoveryRoute) {
+  return configuredMaxAttempts(step) ?? (recoveryRoute ? 2 : 1);
 }
 function bootstrapChangeKind(input) {
   const defaultKind = input.flow.entryModes?.find((mode) => mode.name === input.entryModeName)?.defaultChangeKind ?? "ratchet-advance";
@@ -46446,6 +50321,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     runDir,
     goal: options.goal ?? `Run ${flow.id}`,
     manifestHash: resolveManifestHash(flow, options),
+    ...options.workContractRef === void 0 ? {} : { workContractRef: options.workContractRef },
     ...options.entryModeName === void 0 ? {} : { entryModeName: options.entryModeName },
     ...options.depth === void 0 ? {} : { depth: options.depth },
     ...options.axes === void 0 ? {} : { axes: options.axes },
@@ -46462,6 +50338,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
     ...options.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: options.selectionConfigLayers },
+    ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
     ...options.resumeCheckpoint === void 0 ? {} : { resumeCheckpoint: options.resumeCheckpoint }
   };
@@ -46498,10 +50375,12 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
         ...context.entryModeName === void 0 ? {} : { entryModeName: context.entryModeName }
       })
     });
+    await appendFlowSelectionGuidance(context);
   }
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken;
   let activeRecovery;
+  const recoveryRouteBindings = options.recoveryRouteBindings ?? (options.workContractRef === void 0 ? void 0 : []);
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
     if (step === void 0) {
@@ -46509,15 +50388,17 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     }
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
-    const maxAttempts = maxAttemptsForRoute(step, incomingRouteTaken);
+    const incomingIsActiveRecovery = isActiveRecoveryRoute(activeRecovery, incomingRouteTaken);
+    const maxAttempts = maxAttemptsForRoute(step, incomingIsActiveRecovery);
     const isRecoveryOriginReentry = isRecoveryReturnCorridor({
       steps,
+      bindings: recoveryRouteBindings,
       activeRecovery,
       stepId: step.id,
       route: incomingRouteTaken
     });
     const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
-    if (!isResumedCheckpoint && completedCount > 0 && !isRecoveryOriginReentry && (!isRecoveryRoute(incomingRouteTaken) || completedCount >= maxAttempts)) {
+    if (!isResumedCheckpoint && completedCount > 0 && !isRecoveryOriginReentry && (!incomingIsActiveRecovery || completedCount >= maxAttempts)) {
       const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
       const reason = incomingRouteTaken === void 0 ? `route cycle detected at step '${step.id}'; aborting before re-entering an already completed step` : `route '${incomingRouteTaken}' for step '${step.id}' exhausted max_attempts=${maxAttempts}${recoverySuffix}`;
       await trace.append({
@@ -46535,7 +50416,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     let route;
     let details;
     try {
-      const acceptanceRetryFeedback = activeRecovery?.originStepId === step.id && isRecoveryRoute(incomingRouteTaken) ? activeRecovery.acceptanceFeedback : void 0;
+      const acceptanceRetryFeedback = activeRecovery?.originStepId === step.id && isActiveRecoveryRoute(activeRecovery, incomingRouteTaken) ? activeRecovery.acceptanceFeedback : void 0;
       const stepContext = {
         ...context,
         activeStepAttempt: attempt,
@@ -46556,22 +50437,6 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       }
       route = outcome.route;
       details = outcome.details ?? {};
-      const recoveryReason = details.reason;
-      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0;
-      if (isRecoveryRoute(route) && typeof recoveryReason === "string") {
-        activeRecovery = {
-          originStepId: step.id,
-          route,
-          reason: recoveryReason,
-          ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-        };
-      } else if (isRecoveryRoute(route)) {
-        activeRecovery = {
-          originStepId: step.id,
-          route,
-          ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-        };
-      }
     } catch (error51) {
       const message = error51.message;
       const reason = isProofPlanBlockedError(error51) ? message : `step '${step.id}' handler threw: ${message}`;
@@ -46596,6 +50461,17 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       });
       return await closeRun(context, "aborted", void 0, reason);
     }
+    const recoveryBinding = recoveryBindingForCompletedRoute({
+      bindings: recoveryRouteBindings,
+      step,
+      route,
+      target
+    });
+    const routeHasRecoveryMechanics = isRecoveryRouteForMechanics({
+      bindings: recoveryRouteBindings,
+      step,
+      route
+    });
     if (target.kind === "step" && target.stepId === step.id && route === "pass") {
       const reason = `route cycle detected: step '${step.id}' routes via '${route}' to itself`;
       await trace.append({
@@ -46612,14 +50488,15 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       const targetStep = steps.get(target.stepId);
       const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
         steps,
+        bindings: recoveryRouteBindings,
         activeRecovery,
         stepId: target.stepId,
         route
       });
-      const targetMaxAttempts = targetStep === void 0 ? maxAttemptsForRoute(step, route) : maxAttemptsForRoute(targetStep, route);
-      if (targetCompletedCount > 0 && !isRecoveryReturnToOrigin && (!isRecoveryRoute(route) || targetCompletedCount >= targetMaxAttempts)) {
+      const targetMaxAttempts = targetStep === void 0 ? maxAttemptsForRoute(step, routeHasRecoveryMechanics) : maxAttemptsForRoute(targetStep, routeHasRecoveryMechanics);
+      if (targetCompletedCount > 0 && !isRecoveryReturnToOrigin && (!routeHasRecoveryMechanics || targetCompletedCount >= targetMaxAttempts)) {
         const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
-        const reason = isRecoveryRoute(route) ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}` : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
+        const reason = routeHasRecoveryMechanics ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}` : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
         await trace.append({
           run_id: runId,
           kind: "step.aborted",
@@ -46630,7 +50507,35 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
         return await closeRun(context, "aborted", void 0, reason);
       }
     }
-    if (activeRecovery !== void 0 && activeRecovery.originStepId === step.id && !isRecoveryRoute(route)) {
+    if (routeHasRecoveryMechanics) {
+      const recoveryReason = details.reason;
+      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0;
+      activeRecovery = typeof recoveryReason === "string" ? {
+        originStepId: step.id,
+        route,
+        reason: recoveryReason,
+        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
+      } : {
+        originStepId: step.id,
+        route,
+        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
+      };
+    }
+    if (recoveryBinding !== void 0) {
+      const failure = latestRecoveryFailureEvidence({ context, stepId: step.id, attempt, details });
+      if (failure !== void 0 && recoveryCauseAllowed(recoveryBinding, failure.cause)) {
+        await appendRecoveryRouteGuidance(context, {
+          stepId: step.id,
+          attempt,
+          routeId: route,
+          recoveryKind: recoveryBinding.kind,
+          failureCause: failure.cause,
+          failureRef: failure.ref,
+          bindingRef: recoveryBinding.source_ref
+        });
+      }
+    }
+    if (activeRecovery !== void 0 && activeRecovery.originStepId === step.id && !routeHasRecoveryMechanics) {
       activeRecovery = void 0;
     }
     await trace.append({
@@ -46700,6 +50605,13 @@ async function runCompiledFlowWithWaiting(options) {
   const executable = fromCompiledFlow(flow);
   const entryModeName = options.entryModeName ?? "default";
   const depth = options.depth ?? depthForAxisSelectionName(options.entryModeName) ?? defaultDepthForFlow(flow);
+  const contractRefPath = options.compiledFlowPath === void 0 ? void 0 : workContractProjectionPathForCompiledFlowPath(options.compiledFlowPath);
+  const workContractProjection = projectWorkContractProjectionV0({
+    flow,
+    ...contractRefPath === void 0 ? {} : { contractRefPath }
+  });
+  const workContractRef = workContractProjection.contract_ref;
+  const tracedWorkContractRef = contractRefPath === void 0 ? runtimeWorkContractRefForProjectedRef(workContractRef) : workContractRef;
   return await executeExecutableFlowWithWaiting({
     ...executable,
     metadata: {
@@ -46713,6 +50625,8 @@ async function runCompiledFlowWithWaiting(options) {
     goal: options.goal,
     manifestHash: computeManifestHash(options.flowBytes),
     manifestBytes: options.flowBytes,
+    workContractRef: tracedWorkContractRef,
+    recoveryRouteBindings: workContractProjection.work_contract.recovery,
     entryModeName,
     depth,
     ...options.axes === void 0 ? {} : { axes: options.axes },
@@ -46728,6 +50642,7 @@ async function runCompiledFlowWithWaiting(options) {
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
     ...options.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: options.selectionConfigLayers },
+    ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
     ...options.progressSurface === void 0 ? {} : { progressSurface: options.progressSurface },
     ...options.maxSteps === void 0 ? {} : { maxSteps: options.maxSteps }
@@ -46773,6 +50688,9 @@ function stringArray2(value) {
 }
 function sameStringArray(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+function sameWorkContractIdentity(left, right) {
+  return left.kind === "work_contract" && right.kind === "work_contract" && left.sha256 !== void 0 && left.sha256 === right.sha256 && left.flow_id !== void 0 && left.flow_id === right.flow_id;
 }
 function isRuntimeBootstrap(entry) {
   return entry?.kind === "run.bootstrapped" && traceString(entry, "manifest_hash") !== void 0;
@@ -46870,6 +50788,20 @@ function readCheckpointRequestContextResult(input) {
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
+  let policyLayers;
+  try {
+    policyLayers = PolicyLayer.array().parse(context.policy_layers ?? []);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  let workContractRef;
+  if (context.work_contract_ref !== void 0) {
+    try {
+      workContractRef = Ref.parse(context.work_contract_ref);
+    } catch (error51) {
+      return checkpointResumeRejectedFrom(error51);
+    }
+  }
   const checkpointReportSha256 = context.checkpoint_report_sha256;
   if (checkpointReportSha256 !== void 0 && typeof checkpointReportSha256 !== "string") {
     return checkpointResumeRejected("runtime checkpoint resume rejected: checkpoint_report_sha256 is invalid");
@@ -46877,7 +50809,9 @@ function readCheckpointRequestContextResult(input) {
   return checkpointResumeValid({
     ...axes === void 0 ? {} : { axes },
     ...projectRoot === void 0 ? {} : { projectRoot },
+    ...workContractRef === void 0 ? {} : { workContractRef },
     selectionConfigLayers,
+    policyLayers,
     ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
   });
 }
@@ -47008,6 +50942,13 @@ async function resumeCompiledFlowResult(options) {
   if (isCheckpointResumeRejectedResult(requestContextResult))
     return requestContextResult;
   const requestContext = requestContextResult.value;
+  const projectedWorkContractRef = runtimeWorkContractRefForProjectedRef(projectWorkContractProjectionV0({
+    flow
+  }).contract_ref);
+  if (requestContext.workContractRef !== void 0 && !sameWorkContractIdentity(requestContext.workContractRef, projectedWorkContractRef)) {
+    return checkpointResumeRejected("runtime checkpoint resume rejected: work_contract_ref does not match saved flow");
+  }
+  const workContractRef = requestContext.workContractRef ?? projectedWorkContractRef;
   const reportValidation = validateCheckpointReportResult({
     runDir: options.runDir,
     compiledStep,
@@ -47023,6 +50964,7 @@ async function resumeCompiledFlowResult(options) {
     goal: bootstrapGoal,
     manifestHash: snapshot.hash,
     manifestBytes: flowBytes,
+    workContractRef,
     ...depth === void 0 ? {} : { depth },
     ...requestContext.axes === void 0 ? {} : { axes: requestContext.axes },
     ...options.now === void 0 ? {} : { now: options.now },
@@ -47035,6 +50977,7 @@ async function resumeCompiledFlowResult(options) {
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
     ...requestContext.selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers: requestContext.selectionConfigLayers },
+    ...requestContext.policyLayers.length === 0 ? {} : { policyLayers: requestContext.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
     ...progressSurface === void 0 ? {} : { progressSurface },
     resumeCheckpoint: { stepId, attempt, selection: options.selection }
@@ -47186,36 +51129,65 @@ function parseConfigYaml(text, sourcePath) {
     throw new Error(`config YAML parse failed at ${sourcePath}: ${err.message}`);
   }
 }
-function loadConfigLayerFromPath(layer, sourcePath) {
+function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
   const abs = resolve6(sourcePath);
   if (!existsSync12(abs))
     return void 0;
   const raw = parseConfigYaml(readFileSync24(abs, "utf8"), abs);
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+    const schemaVersion = raw.schema_version;
+    if (schemaVersion === 2) {
+      try {
+        return {
+          policy: PolicyLayer.parse({
+            source: layer,
+            source_path: abs,
+            envelope: PolicyEnvelopeV2.parse(raw)
+          })
+        };
+      } catch (err) {
+        throw new Error(`policy validation failed for ${layer} at ${abs}: ${err.message}`);
+      }
+    }
+  }
   try {
-    return LayeredConfig.parse({
-      layer,
-      source_path: abs,
-      config: Config.parse(raw)
-    });
+    return {
+      selection: LayeredConfig.parse({
+        layer,
+        source_path: abs,
+        config: Config.parse(raw)
+      })
+    };
   } catch (err) {
     throw new Error(`config validation failed for ${layer} at ${abs}: ${err.message}`);
   }
 }
-function discoverConfigLayers(options = {}) {
-  const layers = [];
-  const userGlobal = loadConfigLayerFromPath("user-global", userGlobalConfigPath(options.homeDir));
-  if (userGlobal !== void 0)
-    layers.push(userGlobal);
-  const project = loadConfigLayerFromPath("project", projectConfigPath(options.cwd));
-  if (project !== void 0)
-    layers.push(project);
+function discoverRuntimeConfigLayers(options = {}) {
+  const selectionConfigLayers = [];
+  const policyLayers = [];
+  for (const [layer, path] of [
+    ["user-global", userGlobalConfigPath(options.homeDir)],
+    ["project", projectConfigPath(options.cwd)]
+  ]) {
+    const loaded = loadRuntimeConfigLayerFromPath(layer, path);
+    if (loaded?.selection !== void 0)
+      selectionConfigLayers.push(loaded.selection);
+    if (loaded?.policy !== void 0)
+      policyLayers.push(loaded.policy);
+  }
   if (options.invocationConfig !== void 0) {
-    layers.push(LayeredConfig.parse({
+    selectionConfigLayers.push(LayeredConfig.parse({
       layer: "invocation",
       config: options.invocationConfig
     }));
   }
-  return layers;
+  if (options.invocationPolicy !== void 0) {
+    policyLayers.push(PolicyLayer.parse({
+      source: "invocation",
+      envelope: options.invocationPolicy
+    }));
+  }
+  return { selectionConfigLayers, policyLayers };
 }
 
 // dist/flows/canonical-stage-policy.js
@@ -52426,10 +56398,11 @@ async function main(argv, options = {}) {
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
   const runFolder = resolve13(args.runFolder ?? `${DEFAULT_RUNS_BASE}/${runId}`);
-  const selectionConfigLayers = discoverConfigLayers({
+  const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
+  const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
   const projectRoot = resolve13(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
@@ -52448,6 +56421,7 @@ async function main(argv, options = {}) {
     const progressSurface = progressSurfaceForFlowId(flow.id);
     const runtimeResult = await runCompiledFlowWithWaiting({
       flowBytes: bytes,
+      compiledFlowPath: fixturePath,
       runDir: runFolder,
       runId,
       goal: args.goal,
@@ -52460,6 +56434,7 @@ async function main(argv, options = {}) {
       ...options.relayer === void 0 ? {} : { relayer: options.relayer },
       ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
       ...selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers },
+      ...policyLayers.length === 0 ? {} : { policyLayers },
       ...progress === void 0 ? {} : { progress },
       ...progressSurface === void 0 ? {} : { progressSurface },
       ...args.includeUntrackedContent ? { evidencePolicy: { includeUntrackedFileContent: true } } : {}

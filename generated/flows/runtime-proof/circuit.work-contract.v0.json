@@ -1,0 +1,189 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/runtime-proof/circuit.work-contract.v0.json",
+    "sha256": "4830eae62b5b617897faeda31310fb5c89478db1e884f1c35bf531de79ead8f6",
+    "flow_id": "runtime-proof"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "runtime-proof",
+      "version": "0.1.0",
+      "purpose": "Runtime Proof flow: exercise one compose step and one relay step end-to-end so the runtime boundary can be observed closing a real run.",
+      "entry": {
+        "signals": {
+          "include": ["runtime-proof", "alpha-proof"],
+          "exclude": []
+        },
+        "intent_prefixes": ["runtime-proof"]
+      },
+      "axes": {
+        "allowed_rigors": ["standard"],
+        "supports_tournament": false,
+        "supports_autonomous": false,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
+      "starts_at": "compose-step"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "plan-stage",
+          "title": "Plan",
+          "canonical": "plan",
+          "steps": ["compose-step"]
+        },
+        {
+          "id": "act-stage",
+          "title": "Act",
+          "canonical": "act",
+          "steps": ["relay-step"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["frame", "analyze", "verify", "review", "close"],
+        "rationale": "Runtime Proof is a narrow proof flow; only plan and act are needed to exercise compose and relay through the runtime boundary."
+      },
+      "routes": [
+        {
+          "step_id": "compose-step",
+          "route_id": "continue",
+          "target": "relay-step"
+        },
+        {
+          "step_id": "compose-step",
+          "route_id": "pass",
+          "target": "relay-step"
+        },
+        {
+          "step_id": "relay-step",
+          "route_id": "continue",
+          "target": "@complete"
+        },
+        {
+          "step_id": "relay-step",
+          "route_id": "pass",
+          "target": "@complete"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "compose-step",
+        "title": "Compose runtime proof report",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "runtime-proof-compose@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/compose.json",
+            "schema": "plan.strategy@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["summary"]
+        },
+        "routes": {
+          "continue": "relay-step",
+          "pass": "relay-step"
+        }
+      },
+      {
+        "step_id": "relay-step",
+        "title": "Relay dry-run connector",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "runtime-proof-relay@v1",
+        "reads": ["reports/compose.json"],
+        "writes": {
+          "request": "reports/relay.request.json",
+          "receipt": "reports/relay.receipt.json",
+          "result": "reports/relay.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["ok"]
+        },
+        "routes": {
+          "continue": "@complete",
+          "pass": "@complete"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "relay-step",
+          "role": "implementer",
+          "writes": {
+            "request": "reports/relay.request.json",
+            "receipt": "reports/relay.receipt.json",
+            "result": "reports/relay.result.json"
+          }
+        }
+      ],
+      "checkpoints": [],
+      "sub_runs": [],
+      "fanouts": [],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "compose-step",
+          "slot": "report",
+          "path": "reports/compose.json",
+          "schema": "plan.strategy@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "compose-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "relay-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [],
+    "connector_hints": [],
+    "skill_hints": [],
+    "checkpoint_default_hints": [],
+    "host_recommendations": []
+  },
+  "rejected_authority": []
+}

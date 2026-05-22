@@ -14,10 +14,13 @@ Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior,
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Runs a task through the Fix flow without asking the router to choose a
-flow first. Use this when the operator already knows they want Circuit to
-take a concrete problem, understand it, make the smallest safe change, prove
-it, and close with evidence.
+Starts Circuit from the Fix flow. Use this expert control when the operator
+already knows they want Circuit to take a concrete problem, understand it, make
+the smallest safe change, prove it, and close with evidence.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Fix work contract, writes trace, reports, and evidence, and follows declared
+checkpoints and recovery behavior.
 
 Circuit Fix reproduces the issue, isolates the cause,
 relays a focused change to a worker, runs verification checks, asks for

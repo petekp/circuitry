@@ -44,7 +44,7 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   run: {
     title: 'Circuit Run',
     description:
-      'Chooses and runs the best Circuit flow when no direct flow clearly fits the coding task.',
+      'Runs Circuit from the intent front door with recorded flow selection, trace, reports, and evidence.',
   },
 };
 
@@ -191,9 +191,12 @@ function renderCodexNativeSkillBody(body: string): string {
     )
     .replace(
       /Explicit flow commands remain available as[\s\S]*?(?=\n\nPursue is routable)/,
-      'Direct Circuit flow skills remain available when the user already knows the flow.',
+      'Direct Circuit flow skills are expert controls for users who already know the flow.',
     )
-    .replace(/\n## Direct Flow Bypass\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g, '\n')
+    .replace(
+      /\n## Direct Flow (?:Bypass|Expert Controls)\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g,
+      '\n',
+    )
     .replace(/\n## Authority\n[\s\S]*$/g, '\n')
     .replace(/\bslash-command\b/g, 'host-command')
     .replace(/\bslash command\b/gi, 'host command')

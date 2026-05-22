@@ -2,39 +2,17 @@ import { z } from 'zod';
 import { FlowAxes } from './axes.js';
 import { CompiledFlowId, ProtocolId, SkillSlotId, StageId, StepId } from './ids.js';
 import { JsonObject } from './json.js';
+import { RecoveryRouteBindingV0 } from './recovery-route-kind.js';
 import { Ref } from './ref.js';
 import { RouteMap } from './step.js';
 
-export const RecoveryRouteKind = z.enum([
-  'retry_same_step_with_feedback',
-  'narrow_scope',
-  'run_verification',
-  'run_independent_review',
-  'checkpoint_authority',
-  'safe_apply_reject',
-  'stop_unsafe',
-  'escalate',
-  'handoff',
-]);
-export type RecoveryRouteKind = z.infer<typeof RecoveryRouteKind>;
-
-export const RecoveryFailureCause = z.enum([
-  'failed_check',
-  'failed_acceptance_criteria',
-  'weak_proof',
-  'unproved_claim',
-  'contradicted_evidence',
-  'scope_drift',
-  'checkpoint_boundary',
-  'relay_connector_failed',
-  'relay_result_invalid',
-  'apply_conflict',
-  'budget_exceeded',
-  'protected_file_touched',
-  'generated_surface_drift',
-  'unknown_failure',
-]);
-export type RecoveryFailureCause = z.infer<typeof RecoveryFailureCause>;
+export {
+  RecoveryFailureCause,
+  RecoveryOperatorAuthority,
+  RecoveryRequiredRefKind,
+  RecoveryRouteBindingV0,
+  RecoveryRouteKind,
+} from './recovery-route-kind.js';
 
 const ReportSlot = z
   .object({
@@ -142,17 +120,6 @@ const CheckInput = z
   })
   .strict();
 
-const RecoveryRouteBinding = z
-  .object({
-    step_id: StepId,
-    route_id: z.string().min(1),
-    route_target: z.string().min(1),
-    kind: RecoveryRouteKind,
-    allowed_failure_causes: z.array(RecoveryFailureCause).min(1),
-    source_ref: Ref,
-  })
-  .strict();
-
 const BudgetLimit = z
   .object({
     step_id: StepId,
@@ -220,7 +187,7 @@ export const WorkContractProjectionV0 = z
             acceptance_criteria: z.array(AcceptanceCriteriaInput),
           })
           .strict(),
-        recovery: z.array(RecoveryRouteBinding),
+        recovery: z.array(RecoveryRouteBindingV0),
         limits: z
           .object({
             budgets: z.array(BudgetLimit),
@@ -239,5 +206,41 @@ export const WorkContractProjectionV0 = z
       .strict(),
     rejected_authority: z.array(ProjectionViolation),
   })
-  .strict();
+  .strict()
+  .superRefine((projection, ctx) => {
+    const routeTargets = new Map<string, string>();
+    for (const route of projection.work_contract.topology.routes) {
+      routeTargets.set(`${route.step_id}:${route.route_id}`, route.target);
+    }
+
+    const seenRecovery = new Set<string>();
+    for (const [index, binding] of projection.work_contract.recovery.entries()) {
+      const key = `${binding.step_id}:${binding.route_id}`;
+      if (seenRecovery.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['work_contract', 'recovery', index, 'route_id'],
+          message: `duplicate recovery binding for ${key}`,
+        });
+      }
+      seenRecovery.add(key);
+
+      const declaredTarget = routeTargets.get(key);
+      if (declaredTarget === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['work_contract', 'recovery', index, 'route_id'],
+          message: 'recovery route binding must name a declared route',
+        });
+        continue;
+      }
+      if (declaredTarget !== binding.route_target) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['work_contract', 'recovery', index, 'route_target'],
+          message: 'recovery route target must match the declared route target',
+        });
+      }
+    }
+  });
 export type WorkContractProjectionV0 = z.infer<typeof WorkContractProjectionV0>;

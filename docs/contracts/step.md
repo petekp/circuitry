@@ -127,9 +127,11 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
 - **STEP-I9 — Checkpoint policy and check agreement.** A `CheckpointStep`
   declares the choices an operator or auto-resolver may select in
   `policy.choices`. The checkpoint check's `allow` list MUST exactly match
-  those choice ids, and any safe default or safe autonomous choice MUST name
-  one of those declared choices. This prevents the request report, response
-  check, and auto-resolution policy from drifting apart.
+  those choice ids, and any `safe_default_choice` MUST name one of those
+  declared choices. `safe_autonomous_choice` is not part of the active step
+  contract; automatic checkpoint resolution must go through declared default
+  or policy behavior that is recorded in the trace. This prevents the request
+  report, response check, and auto-resolution policy from drifting apart.
 
 - **STEP-I10 — Skill slots are typed optional placeholders.** Every Step
   may carry `skill_slots: SkillSlot[]`; absence means no slots. Slot ids are

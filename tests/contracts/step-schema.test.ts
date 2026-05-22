@@ -343,7 +343,7 @@ describe('Step discriminated union', () => {
     const bad = Step.safeParse({
       ...baseCompose,
       kind: 'checkpoint',
-      policy: { ...checkpointPolicy(['continue']), safe_autonomous_choice: 'ghost' },
+      policy: { ...checkpointPolicy(['continue']), safe_default_choice: 'ghost' },
       writes: { request: 'req.json', response: 'resp.json' },
       check: {
         kind: 'checkpoint_selection',
@@ -352,6 +352,38 @@ describe('Step discriminated union', () => {
       },
     });
     expect(bad.success).toBe(false);
+  });
+
+  it('CheckpointStep rejects old safe_autonomous_choice authority', () => {
+    const bad = Step.safeParse({
+      ...baseCompose,
+      kind: 'checkpoint',
+      policy: { ...checkpointPolicy(['continue']), safe_autonomous_choice: 'continue' },
+      writes: { request: 'req.json', response: 'resp.json' },
+      check: {
+        kind: 'checkpoint_selection',
+        source: { kind: 'checkpoint_response', ref: 'response' },
+        allow: ['continue'],
+      },
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('CheckpointStep rejects old direct auto-resolution checkpoint modes', () => {
+    for (const policy of ['accept-as-is', 'first-acceptable'] as const) {
+      const bad = Step.safeParse({
+        ...baseCompose,
+        kind: 'checkpoint',
+        policy: { ...checkpointPolicy(['continue']), auto_resolution: { policy } },
+        writes: { request: 'req.json', response: 'resp.json' },
+        check: {
+          kind: 'checkpoint_selection',
+          source: { kind: 'checkpoint_response', ref: 'response' },
+          allow: ['continue'],
+        },
+      });
+      expect(bad.success, policy).toBe(false);
+    }
   });
 
   it('STEP-I9 — checkpoint check allow list must match policy choices', () => {

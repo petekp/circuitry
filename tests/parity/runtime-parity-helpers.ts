@@ -807,15 +807,8 @@ async function writeRelayFiles(step: ExecutableStep, context: RunContext): Promi
 
 function checkpointChoice(step: ExecutableStep): string {
   if (step.kind !== 'checkpoint') throw new Error('expected checkpoint step');
-  const policy = step.policy as
-    | { readonly safe_default_choice?: unknown; readonly safe_autonomous_choice?: unknown }
-    | undefined;
-  const candidates = [
-    policy?.safe_default_choice,
-    policy?.safe_autonomous_choice,
-    ...step.choices,
-    'pass',
-  ];
+  const policy = step.policy as { readonly safe_default_choice?: unknown } | undefined;
+  const candidates = [policy?.safe_default_choice, ...step.choices, 'pass'];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && step.routes[candidate] !== undefined) return candidate;
   }

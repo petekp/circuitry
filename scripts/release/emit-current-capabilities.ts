@@ -127,7 +127,7 @@ function readGeneratedFlowFiles(id: string): FlowGeneratedFile[] {
   const dir = flowDir(id);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((entry) => entry.endsWith('.json'))
+    .filter((entry) => entry.endsWith('.json') && !entry.endsWith('.work-contract.v0.json'))
     .sort()
     .map((entry) => ({
       rel: `generated/flows/${id}/${entry}`,

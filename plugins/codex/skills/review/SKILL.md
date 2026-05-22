@@ -14,7 +14,14 @@ Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, 
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Run the `review` flow on the scope the user supplied. The flow walks an
+Start Circuit from the `review` flow on the scope the user supplied. Use this
+expert control when the operator already knows the work is audit-only.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Review work contract, writes trace, reports, and evidence, and follows declared
+recovery behavior.
+
+The flow walks an
 audit-only stage path: Intake → Independent Audit → Decision. Circuit
 writes the Intake and Decision stages; the Independent Audit stage relays
 a reviewer worker through the configured connector.

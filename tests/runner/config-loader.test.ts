@@ -8,6 +8,7 @@ import { CompiledFlowId, SkillId } from '../../src/schemas/ids.js';
 import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import {
   discoverConfigLayers,
+  discoverRuntimeConfigLayers,
   projectConfigPath,
   userGlobalConfigPath,
 } from '../../src/shared/config-loader.js';
@@ -64,6 +65,43 @@ function captureStdout(): { restore: () => void; text: () => string } {
   };
 }
 
+async function runReviewWithCapturedOutput(input: {
+  readonly relayer: RelayFn;
+  readonly runFolder: string;
+  readonly runId: string;
+  readonly goal: string;
+  readonly nowMs: number;
+}): Promise<Record<string, unknown>> {
+  const stdout = captureStdout();
+  const originalHome = process.env.HOME;
+  const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+  process.env.HOME = homeDir;
+  process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+  try {
+    const exit = await main(
+      ['run', 'review', '--goal', input.goal, '--run-folder', input.runFolder],
+      {
+        relayer: input.relayer,
+        now: deterministicNow(input.nowMs),
+        runId: input.runId,
+        configHomeDir: homeDir,
+        configCwd: cwdDir,
+      },
+    );
+    expect(exit).toBe(0);
+  } finally {
+    stdout.restore();
+    if (originalHome === undefined) {
+      Reflect.deleteProperty(process.env, 'HOME');
+    } else {
+      process.env.HOME = originalHome;
+    }
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
+  }
+
+  return JSON.parse(stdout.text()) as Record<string, unknown>;
+}
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'circuit-config-loader-'));
   homeDir = join(root, 'home');
@@ -106,6 +144,41 @@ circuits:
       provider: 'openai',
       model: 'gpt-5.4',
     });
+  });
+
+  it('loads PolicyEnvelope v2 files as policy layers without turning them into selection config', () => {
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    connectors:
+      allow: [claude-code]
+  defaults:
+    proof_profile: strict
+`);
+
+    const layers = discoverRuntimeConfigLayers({ homeDir, cwd: cwdDir });
+
+    expect(layers.selectionConfigLayers).toEqual([]);
+    expect(layers.policyLayers).toHaveLength(1);
+    expect(layers.policyLayers[0]?.source).toBe('project');
+    expect(layers.policyLayers[0]?.source_path).toBe(projectConfigPath(cwdDir));
+    expect(layers.policyLayers[0]?.envelope.policy.rules.connectors.allow).toEqual(['claude-code']);
+    expect(layers.policyLayers[0]?.envelope.policy.defaults.proof_profile).toBe('strict');
+  });
+
+  it('rejects malformed PolicyEnvelope v2 files before relay', () => {
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    connectors:
+      allow: [missing-connector]
+`);
+
+    expect(() => discoverRuntimeConfigLayers({ homeDir, cwd: cwdDir })).toThrow(
+      /policy validation failed for project/i,
+    );
   });
 
   it('skips missing config files and fails loudly on invalid config payloads', () => {
@@ -257,12 +330,343 @@ circuits:
       .split('\n')
       .filter(Boolean)
       .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const guidance = trace_entries.find(
+      (trace_entry) =>
+        trace_entry.kind === 'guidance.decision' && trace_entry.subject === 'relay_execution',
+    );
+    expect(guidance?.policy_refs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'policy', ref: 'policy.runtime.config_v1' }),
+        expect.objectContaining({ kind: 'policy', ref: userGlobalConfigPath(homeDir) }),
+        expect.objectContaining({ kind: 'policy', ref: projectConfigPath(cwdDir) }),
+      ]),
+    );
     const started = trace_entries.find((trace_entry) => trace_entry.kind === 'relay.started');
     expect(started?.resolved_selection).toEqual(expected);
 
     const output = JSON.parse(stdout.text()) as Record<string, unknown>;
     expect(output.flow_id).toBe('review');
     expect(output.outcome).toBe('complete');
+  });
+
+  it('passes PolicyEnvelope v2 policy refs into guidance without changing v1 selection behavior', async () => {
+    writeUserConfig(`
+schema_version: 1
+defaults:
+  selection:
+    effort: low
+`);
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    connectors:
+      allow: [claude-code]
+  defaults:
+    proof_profile: strict
+`);
+
+    const relayInputs: RelayInput[] = [];
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        relayInputs.push(input);
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'policy-v2-receipt',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      },
+    };
+    const runFolder = join(root, 'policy-v2-run');
+    const stdout = captureStdout();
+    const originalHome = process.env.HOME;
+    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+    process.env.HOME = homeDir;
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+    try {
+      const exit = await main(
+        ['run', 'review', '--goal', 'prove policy refs reach guidance', '--run-folder', runFolder],
+        {
+          relayer,
+          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 45, 0)),
+          runId: '86868686-8686-4686-8686-868686868688',
+          configHomeDir: homeDir,
+          configCwd: cwdDir,
+        },
+      );
+      expect(exit).toBe(0);
+    } finally {
+      stdout.restore();
+      if (originalHome === undefined) {
+        Reflect.deleteProperty(process.env, 'HOME');
+      } else {
+        process.env.HOME = originalHome;
+      }
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
+    }
+
+    expect(relayInputs[0]?.resolvedSelection?.effort).toBe('low');
+    const trace_entries = readFileSync(join(runFolder, 'trace.ndjson'), 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const relayGuidance = trace_entries.find(
+      (trace_entry) =>
+        trace_entry.kind === 'guidance.decision' && trace_entry.subject === 'relay_execution',
+    );
+    expect(relayGuidance?.policy_refs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'policy', ref: 'policy.runtime.config_v1' }),
+        expect.objectContaining({ kind: 'policy', ref: 'policy.runtime.policy_v2' }),
+        expect.objectContaining({ kind: 'policy', ref: userGlobalConfigPath(homeDir) }),
+        expect.objectContaining({ kind: 'policy', ref: projectConfigPath(cwdDir) }),
+      ]),
+    );
+    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    expect(output.outcome).toBe('complete');
+  });
+
+  it('enforces PolicyEnvelope v2 connector rules before relay starts', async () => {
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    connectors:
+      allow: [codex]
+`);
+
+    let relayCalls = 0;
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        relayCalls += 1;
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'should-not-relay',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      },
+    };
+    const runFolder = join(root, 'policy-v2-connector-rejected-run');
+    const stdout = captureStdout();
+    const originalHome = process.env.HOME;
+    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+    process.env.HOME = homeDir;
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+    try {
+      const exit = await main(
+        ['run', 'review', '--goal', 'policy should block connector', '--run-folder', runFolder],
+        {
+          relayer,
+          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 46, 0)),
+          runId: '86868686-8686-4686-8686-868686868689',
+          configHomeDir: homeDir,
+          configCwd: cwdDir,
+        },
+      );
+      expect(exit).toBe(0);
+    } finally {
+      stdout.restore();
+      if (originalHome === undefined) {
+        Reflect.deleteProperty(process.env, 'HOME');
+      } else {
+        process.env.HOME = originalHome;
+      }
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
+    }
+
+    expect(relayCalls).toBe(0);
+    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    expect(output.outcome).toBe('aborted');
+    const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(result.reason).toContain("PolicyEnvelope disallows connector 'claude-code'");
+    const traceEntries = readFileSync(join(runFolder, 'trace.ndjson'), 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const flowGuidance = traceEntries.find(
+      (entry) => entry.kind === 'guidance.decision' && entry.subject === 'flow_selection',
+    );
+    expect(flowGuidance?.policy_refs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'policy', ref: 'policy.runtime.policy_v2' }),
+        expect.objectContaining({ kind: 'policy', ref: projectConfigPath(cwdDir) }),
+      ]),
+    );
+    expect(traceEntries.some((entry) => entry.kind === 'relay.started')).toBe(false);
+  });
+
+  it('enforces PolicyEnvelope v2 provider rules over v1 selection inputs', async () => {
+    writeUserConfig(`
+schema_version: 1
+defaults:
+  selection:
+    model:
+      provider: openai
+      model: gpt-5
+`);
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    models:
+      deny_providers: [openai]
+`);
+
+    let relayCalls = 0;
+    const relayer: RelayFn = {
+      connectorName: 'codex',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        relayCalls += 1;
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'should-not-relay',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      },
+    };
+    const runFolder = join(root, 'policy-v2-provider-rejected-run');
+    const stdout = captureStdout();
+    const originalHome = process.env.HOME;
+    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+    process.env.HOME = homeDir;
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+    try {
+      const exit = await main(
+        ['run', 'review', '--goal', 'policy should block provider', '--run-folder', runFolder],
+        {
+          relayer,
+          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 47, 0)),
+          runId: '86868686-8686-4686-8686-868686868690',
+          configHomeDir: homeDir,
+          configCwd: cwdDir,
+        },
+      );
+      expect(exit).toBe(0);
+    } finally {
+      stdout.restore();
+      if (originalHome === undefined) {
+        Reflect.deleteProperty(process.env, 'HOME');
+      } else {
+        process.env.HOME = originalHome;
+      }
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
+    }
+
+    expect(relayCalls).toBe(0);
+    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    expect(output.outcome).toBe('aborted');
+    const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(result.reason).toContain("PolicyEnvelope disallows provider 'openai'");
+  });
+
+  it('enforces PolicyEnvelope v2 effort limits over v1 selection inputs', async () => {
+    writeUserConfig(`
+schema_version: 1
+defaults:
+  selection:
+    effort: high
+`);
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  limits:
+    max_effort: medium
+`);
+
+    let relayCalls = 0;
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        relayCalls += 1;
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'should-not-relay',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      },
+    };
+    const runFolder = join(root, 'policy-v2-effort-rejected-run');
+    const output = await runReviewWithCapturedOutput({
+      relayer,
+      runFolder,
+      goal: 'policy should block effort',
+      runId: '86868686-8686-4686-8686-868686868691',
+      nowMs: Date.UTC(2026, 3, 24, 23, 48, 0),
+    });
+
+    expect(relayCalls).toBe(0);
+    expect(output.outcome).toBe('aborted');
+    const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(result.reason).toContain("PolicyEnvelope disallows effort 'high'");
+  });
+
+  it('enforces PolicyEnvelope v2 denied skills over v1 selection inputs', async () => {
+    writeSkill('tdd');
+    writeUserConfig(`
+schema_version: 1
+defaults:
+  selection:
+    skills:
+      mode: replace
+      skills: [tdd]
+`);
+    writeProjectConfig(`
+schema_version: 2
+policy:
+  rules:
+    skills:
+      deny: [tdd]
+`);
+
+    let relayCalls = 0;
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        relayCalls += 1;
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'should-not-relay',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: '0.0.0-stub',
+        };
+      },
+    };
+    const runFolder = join(root, 'policy-v2-skill-rejected-run');
+    const output = await runReviewWithCapturedOutput({
+      relayer,
+      runFolder,
+      goal: 'policy should block skill',
+      runId: '86868686-8686-4686-8686-868686868692',
+      nowMs: Date.UTC(2026, 3, 24, 23, 49, 0),
+    });
+
+    expect(relayCalls).toBe(0);
+    expect(output.outcome).toBe('aborted');
+    const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(result.reason).toContain("PolicyEnvelope disallows skill 'tdd'");
   });
 
   it('rejects invalid discovered config before relay', async () => {

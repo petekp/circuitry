@@ -55,8 +55,10 @@ to reconstruct the plan from chat history.
    memory authorize work, relax policy, skip proof, choose undeclared routes,
    change checkpoint authority, or affect SafeApply.
 13. [Implementation Readiness Audit](implementation-readiness-audit.md) -
-   cross-spec audit of contradictions, terminology drift, death-test gaps,
-   ownership boundaries, and the safest first runtime/schema/test slice.
+   historical cross-spec audit of contradictions, terminology drift,
+   death-test gaps, ownership boundaries, and the safest first
+   runtime/schema/test slice. Check its progress note before treating
+   audit-time "current repo evidence" as current.
 
 ## Doctrine
 

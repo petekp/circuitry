@@ -326,10 +326,15 @@ command surfaces:
 - `plugins/codex/commands/<id>.md`
 - `plugins/codex/skills/<id>/SKILL.md`
 
-For a public flow, the emitter also creates host-ready compiled flow surfaces:
+For every flow, the emitter creates generated flow package JSON:
 
 - `src/flows/<id>/schematic.json`
 - `generated/flows/<id>/*.json`
+
+The `generated/flows/<id>/*.json` outputs include compiled flow manifests and
+their matching WorkContract projection files. For a public flow, the emitter
+also mirrors those generated package files into host packages:
+
 - `plugins/claude/skills/<id>/*.json`
 - `plugins/codex/flows/<id>/*.json`
 

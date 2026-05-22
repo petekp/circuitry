@@ -2,7 +2,7 @@
   "schema_version": 1,
   "step_id": "tradeoff-checkpoint-step",
   "selection": "option-2",
-  "resolution_source": "safe-autonomous",
+  "resolution_source": "policy",
   "auto_resolution": {
     "checkpoint_id": "tradeoff-checkpoint-step",
     "checkpoint_label": "Decision — tradeoff checkpoint",

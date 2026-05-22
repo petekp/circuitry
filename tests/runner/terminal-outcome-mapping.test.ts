@@ -178,7 +178,6 @@ function richCheckpointRouteCompiledFlow(route: RichRoute): { bytes: Buffer } {
             { id: 'escalate' },
           ],
           safe_default_choice: route,
-          safe_autonomous_choice: route,
         },
         writes: {
           request: 'reports/checkpoints/rich-route-request.json',
@@ -240,7 +239,6 @@ function retryLoopCompiledFlow(): { bytes: Buffer } {
           prompt: 'Retry until bounded',
           choices: [{ id: 'retry' }],
           safe_default_choice: 'retry',
-          safe_autonomous_choice: 'retry',
         },
         writes: {
           request: 'reports/checkpoints/retry-loop-request.json',
@@ -428,6 +426,7 @@ describe('RUN-I7 terminal route outcome mapping', () => {
       const trace = await readTrace(runFolder);
       expect(trace.map((trace_entry) => trace_entry.kind)).toEqual([
         'run.bootstrapped',
+        'guidance.decision',
         'step.entered',
         'step.report_written',
         'check.evaluated',
@@ -491,7 +490,7 @@ describe('REL-003 rich route execution', () => {
           kind: 'checkpoint.resolved',
           step_id: 'checkpoint-step',
           selection: route,
-          resolution_source: 'safe-default',
+          resolution_source: 'declared-default',
         }),
       );
       expect(trace).toContainEqual(

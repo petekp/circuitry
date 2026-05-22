@@ -6,13 +6,13 @@ Commands, run details, verification, and troubleshooting for Circuit.
 
 Use one front door unless you already know the flow you want:
 
-| Host | You type | Who chooses the flow |
+| Host | You type | What happens |
 | --- | --- | --- |
-| Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host model selects an explicit Circuit flow. |
-| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex chooses the best bundled Circuit flow skill. |
-| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router chooses. |
+| Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host may recommend a flow; Circuit records the selected flow when the run starts. |
+| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
+| CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
-Use a direct command when the flow choice is clear:
+Use a direct command as an expert control when the flow choice is clear:
 
 | Host | You type | What runs |
 | --- | --- | --- |
@@ -59,9 +59,9 @@ that work, `trace` as the ordered record, `report` as typed output, and
 `evidence` as supporting facts or files. The full vocabulary lives in
 [`UBIQUITOUS_LANGUAGE.md`](../UBIQUITOUS_LANGUAGE.md).
 
-1. Circuit selects a flow. In host plugins, the host model may select the flow
-   before calling Circuit. In CLI router mode, Circuit's deterministic router
-   selects it.
+1. Circuit records the selected flow. In host plugins, the host may recommend a
+   flow before calling Circuit. In CLI router mode, Circuit's deterministic
+   router selects it.
 2. Circuit loads the compiled flow from the catalog and checks the requested
    depth, tournament, and autonomous controls against that flow's allow-list.
 3. Circuit runs stages in order. Examples include Frame, Analyze, Plan, Act,

@@ -17,10 +17,13 @@ const projectRoot = resolve(__dirname, '../..');
 const emitScript = resolve(projectRoot, 'scripts/flows/emit.ts');
 const buildSkillDir = resolve(projectRoot, 'generated/flows/build');
 const stalePath = resolve(buildSkillDir, 'never-a-mode.json');
+const staleContractPath = resolve(buildSkillDir, 'never-a-mode.work-contract.v0.json');
 const claudeBuildSkillDir = resolve(projectRoot, 'plugins/claude/skills/build');
 const claudeStalePath = resolve(claudeBuildSkillDir, 'never-a-mode.json');
+const claudeStaleContractPath = resolve(claudeBuildSkillDir, 'never-a-mode.work-contract.v0.json');
 const codexBuildSkillDir = resolve(projectRoot, 'plugins/codex/flows/build');
 const codexStalePath = resolve(codexBuildSkillDir, 'never-a-mode.json');
+const codexStaleContractPath = resolve(codexBuildSkillDir, 'never-a-mode.work-contract.v0.json');
 const runtimeProofClaudeDir = resolve(projectRoot, 'plugins/claude/skills/runtime-proof');
 const runtimeProofCodexDir = resolve(projectRoot, 'plugins/codex/flows/runtime-proof');
 const rootClaudeMarketplacePath = resolve(projectRoot, '.claude-plugin/marketplace.json');
@@ -50,8 +53,11 @@ function removeDirIfPresent(path: string) {
 
 function cleanupPlantedFixtures() {
   removeStaleSiblingIfPresent(stalePath);
+  removeStaleSiblingIfPresent(staleContractPath);
   removeStaleSiblingIfPresent(claudeStalePath);
+  removeStaleSiblingIfPresent(claudeStaleContractPath);
   removeStaleSiblingIfPresent(codexStalePath);
+  removeStaleSiblingIfPresent(codexStaleContractPath);
   removeDirIfPresent(runtimeProofClaudeDir);
   removeDirIfPresent(runtimeProofCodexDir);
   removeStaleSiblingIfPresent(rootClaudeObsoleteManifestPath);
@@ -71,8 +77,11 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     cleanupPlantedFixtures();
 
     plantStaleSibling(stalePath);
+    plantStaleSibling(staleContractPath);
     plantStaleSibling(claudeStalePath);
+    plantStaleSibling(claudeStaleContractPath);
     plantStaleSibling(codexStalePath);
+    plantStaleSibling(codexStaleContractPath);
     const staleCheck = spawnSync('node', [emitScript, '--check'], {
       cwd: projectRoot,
       encoding: 'utf8',
@@ -80,33 +89,58 @@ describe('emit-flows.ts — stale per-mode sibling guard', () => {
     expect(staleCheck.status).toBe(1);
     const staleCheckOutput = `${staleCheck.stdout ?? ''}\n${staleCheck.stderr ?? ''}`;
     expect(staleCheckOutput).toContain('generated/flows/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain('generated/flows/build/never-a-mode.work-contract.v0.json');
     expect(staleCheckOutput).toContain('plugins/claude/skills/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain(
+      'plugins/claude/skills/build/never-a-mode.work-contract.v0.json',
+    );
     expect(staleCheckOutput).toContain('plugins/codex/flows/build/never-a-mode.json');
+    expect(staleCheckOutput).toContain(
+      'plugins/codex/flows/build/never-a-mode.work-contract.v0.json',
+    );
     expect(staleCheckOutput).toContain('not in the emit plan');
 
     cleanupPlantedFixtures();
     plantStaleSibling(stalePath);
+    plantStaleSibling(staleContractPath);
     plantStaleSibling(claudeStalePath);
+    plantStaleSibling(claudeStaleContractPath);
     plantStaleSibling(codexStalePath);
+    plantStaleSibling(codexStaleContractPath);
     expect(planted(stalePath)).toBe(true);
+    expect(planted(staleContractPath)).toBe(true);
     expect(planted(claudeStalePath)).toBe(true);
+    expect(planted(claudeStaleContractPath)).toBe(true);
     expect(planted(codexStalePath)).toBe(true);
+    expect(planted(codexStaleContractPath)).toBe(true);
     const staleEmit = spawnSync('node', [emitScript], {
       cwd: projectRoot,
       encoding: 'utf8',
     });
     expect(staleEmit.status).toBe(0);
     expect(planted(stalePath)).toBe(false);
+    expect(planted(staleContractPath)).toBe(false);
     expect(planted(claudeStalePath)).toBe(false);
+    expect(planted(claudeStaleContractPath)).toBe(false);
     expect(planted(codexStalePath)).toBe(false);
+    expect(planted(codexStaleContractPath)).toBe(false);
     expect(staleEmit.stdout ?? '').toContain(
       'removed stale generated/flows/build/never-a-mode.json',
+    );
+    expect(staleEmit.stdout ?? '').toContain(
+      'removed stale generated/flows/build/never-a-mode.work-contract.v0.json',
     );
     expect(staleEmit.stdout ?? '').toContain(
       'removed stale plugins/claude/skills/build/never-a-mode.json',
     );
     expect(staleEmit.stdout ?? '').toContain(
+      'removed stale plugins/claude/skills/build/never-a-mode.work-contract.v0.json',
+    );
+    expect(staleEmit.stdout ?? '').toContain(
       'removed stale plugins/codex/flows/build/never-a-mode.json',
+    );
+    expect(staleEmit.stdout ?? '').toContain(
+      'removed stale plugins/codex/flows/build/never-a-mode.work-contract.v0.json',
     );
 
     cleanupPlantedFixtures();

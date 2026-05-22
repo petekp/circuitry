@@ -1,14 +1,17 @@
 ---
-description: Runs the Fix flow directly through the project CLI, with optional Lite, Default (standard), Deep, or Autonomous entry behavior.
+description: Starts Circuit from the Fix flow through the project CLI, with optional Lite, Default (standard), Deep, or Autonomous entry behavior.
 argument-hint: <task>
 ---
 
-# /circuit:fix — direct Fix flow
+# /circuit:fix — Fix expert control
 
-Runs a task through the Fix flow without asking the router to choose a
-flow first. Use this when the operator already knows they want Circuit to
-take a concrete problem, understand it, make the smallest safe change, prove
-it, and close with evidence.
+Starts Circuit from the Fix flow. Use this expert control when the operator
+already knows they want Circuit to take a concrete problem, understand it, make
+the smallest safe change, prove it, and close with evidence.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Fix work contract, writes trace, reports, and evidence, and follows declared
+checkpoints and recovery behavior.
 
 Circuit Fix reproduces the issue, isolates the cause,
 relays a focused change to a worker, runs verification checks, asks for
@@ -85,4 +88,4 @@ metacharacters:
 - `src/flows/fix/contract.md` (Fix report contract)
 - `docs/contracts/compiled-flow.md` (compiled flow shape)
 - `src/cli/circuit.ts` (current CLI flags + per-mode flow file resolution)
-- `src/flows/router.ts` (router bypass behavior for explicit flow names)
+- `src/flows/router.ts` (explicit flow behavior)

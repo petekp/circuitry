@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Config, LayeredConfig, PolicyEnvelopeV2, PolicyLayer } from '../../src/index.js';
 import {
   composePolicyHardConstraints,
+  policyRefsForConfigLayers,
   projectConfigV1ToPolicyEnvelopeV2,
 } from '../../src/shared/policy-envelope.js';
 
@@ -351,5 +352,62 @@ describe('config v1 to PolicyEnvelopeV2 projection', () => {
     expect(projection.rejected_old_authority.map((item) => item.field)).toEqual(
       expect.arrayContaining(['relay.circuits', 'circuits.build.variant_models']),
     );
+  });
+
+  it('turns config layers into policy refs for guidance provenance', () => {
+    const layer = LayeredConfig.parse({
+      layer: 'project',
+      source_path: '/repo/.circuit/config.yaml',
+      config: {
+        schema_version: 1,
+        relay: {
+          default: 'codex',
+        },
+      },
+    });
+
+    const refs = policyRefsForConfigLayers([layer]);
+
+    expect(refs).toHaveLength(2);
+    expect(refs[0]).toEqual({
+      kind: 'policy',
+      ref: 'policy.runtime.config_v1',
+    });
+    expect(refs[1]).toMatchObject({
+      kind: 'policy',
+      ref: '/repo/.circuit/config.yaml',
+    });
+    expect(refs[1]?.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('keeps policy refs best-effort for valid v1 config that cannot project cleanly to v2', () => {
+    const layer = LayeredConfig.parse({
+      layer: 'invocation',
+      config: {
+        schema_version: 1,
+        defaults: {
+          selection: {
+            invocation_options: {
+              connector_specific: {
+                model: 'legacy connector option',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      projectConfigV1ToPolicyEnvelopeV2({ config: layer.config, source: 'invocation' }),
+    ).toThrow();
+
+    const refs = policyRefsForConfigLayers([layer]);
+
+    expect(refs).toHaveLength(2);
+    expect(refs[1]).toMatchObject({
+      kind: 'policy',
+      ref: 'policy.config_v1.invocation.0',
+    });
+    expect(refs[1]?.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });

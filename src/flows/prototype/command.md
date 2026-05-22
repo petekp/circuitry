@@ -1,13 +1,17 @@
 ---
-description: Runs the Prototype flow directly through the project CLI to create disposable local prototype artifacts, with optional model-comparison tournament mode.
+description: Starts Circuit from the Prototype flow through the project CLI to create disposable local prototype artifacts, with optional model-comparison tournament mode.
 argument-hint: <prototype goal>
 ---
 
-# /circuit:prototype - direct Prototype flow
+# /circuit:prototype - Prototype expert control
 
-Runs a task through the Prototype flow without asking the router to choose a
-flow first. Use this when the operator wants Circuit to create a small,
-inspectable, disposable local prototype before deciding whether to Build.
+Starts Circuit from the Prototype flow. Use this expert control when the
+operator wants Circuit to create a small, inspectable, disposable local
+prototype before deciding whether to Build.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Prototype work contract, writes trace, reports, and evidence, and follows
+declared checkpoints and recovery behavior.
 
 Circuit runs the Prototype flow: it frames the prototype boundary, plans local
 prototype files, creates the artifact, verifies the reported files under
@@ -57,7 +61,7 @@ metacharacters:
    ```
 
    Autonomous Prototype, only when the operator explicitly asks Circuit to use
-   safe autonomous checkpoint choices:
+   declared default checkpoint choices:
 
    ```bash
    ./bin/circuit run prototype --goal 'sketch a custom flow builder UI' --autonomous --progress jsonl

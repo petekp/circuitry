@@ -174,7 +174,6 @@ export const buildFlowData = {
             },
           ],
           safe_default_choice: 'continue',
-          safe_autonomous_choice: 'continue',
           report_template: {
             scope: 'Make the smallest safe change that satisfies the requested goal.',
             success_criteria: [

@@ -1,0 +1,2125 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/goal/circuit.work-contract.v0.json",
+    "sha256": "0f0172e85d87ada3e993f12fa0fa088265585ea6eb6d95c9b118d26d25b88170",
+    "flow_id": "goal"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "goal",
+      "version": "0.1.0",
+      "purpose": "Goal flow. Circuit writes a bounded goal contract, runs one statically authored child flow target, evaluates evidence, runs a two-pass safety review, and closes from typed Goal reports.",
+      "entry": {
+        "signals": {
+          "include": ["goal", "supervise"],
+          "exclude": []
+        },
+        "intent_prefixes": ["goal", "supervise"]
+      },
+      "axes": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
+      "starts_at": "clarify-goal"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "goal-frame-stage",
+          "title": "Frame",
+          "canonical": "frame",
+          "steps": ["clarify-goal", "goal-contract"]
+        },
+        {
+          "id": "goal-act-stage",
+          "title": "Act",
+          "canonical": "act",
+          "steps": [
+            "goal-run-fix",
+            "goal-run-build",
+            "goal-run-review",
+            "goal-run-explore",
+            "goal-run-pursue",
+            "goal-attempt"
+          ]
+        },
+        {
+          "id": "goal-verify-stage",
+          "title": "Verify",
+          "canonical": "verify",
+          "steps": ["goal-evidence-evaluation", "goal-recovery", "goal-recovery-checkpoint"]
+        },
+        {
+          "id": "goal-review-stage",
+          "title": "Review",
+          "canonical": "review",
+          "steps": ["goal-gate-pass-1", "goal-gate-pass-2"]
+        },
+        {
+          "id": "goal-close-stage",
+          "title": "Close",
+          "canonical": "close",
+          "steps": ["goal-close"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["analyze", "plan"],
+        "rationale": "Goal supervises a child flow through Frame, Act, Verify, Review, and Close. Analyze and Plan are delegated to the selected static child flow."
+      },
+      "routes": [
+        {
+          "step_id": "clarify-goal",
+          "route_id": "continue",
+          "target": "goal-contract"
+        },
+        {
+          "step_id": "clarify-goal",
+          "route_id": "pass",
+          "target": "goal-contract"
+        },
+        {
+          "step_id": "clarify-goal",
+          "route_id": "ask",
+          "target": "@stop"
+        },
+        {
+          "step_id": "clarify-goal",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "continue",
+          "target": "goal-run-build"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "pass",
+          "target": "goal-run-build"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "fix",
+          "target": "goal-run-fix"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "build",
+          "target": "goal-run-build"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "review",
+          "target": "goal-run-review"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "explore",
+          "target": "goal-run-explore"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "pursue",
+          "target": "goal-run-pursue"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "ask",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-contract",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-run-fix",
+          "route_id": "continue",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-fix",
+          "route_id": "pass",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-fix",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-run-build",
+          "route_id": "continue",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-build",
+          "route_id": "pass",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-build",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-run-review",
+          "route_id": "continue",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-review",
+          "route_id": "pass",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-review",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-run-explore",
+          "route_id": "continue",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-explore",
+          "route_id": "pass",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-explore",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "route_id": "continue",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "route_id": "pass",
+          "target": "goal-attempt"
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-attempt",
+          "route_id": "continue",
+          "target": "goal-evidence-evaluation"
+        },
+        {
+          "step_id": "goal-attempt",
+          "route_id": "pass",
+          "target": "goal-evidence-evaluation"
+        },
+        {
+          "step_id": "goal-attempt",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "continue",
+          "target": "goal-gate-pass-1"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "pass",
+          "target": "goal-gate-pass-1"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "completion-gate",
+          "target": "goal-gate-pass-1"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "retry-selected-flow",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "run-fix",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "run-review",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "run-explore",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "split-to-pursue",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "checkpoint",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "handoff",
+          "target": "@handoff"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "blocked",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "continue",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "pass",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "retry-selected-flow",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "run-fix",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "run-review",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "run-explore",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "split-to-pursue",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "checkpoint",
+          "target": "goal-recovery-checkpoint"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "blocked",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "handoff",
+          "target": "@handoff"
+        },
+        {
+          "step_id": "goal-recovery",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "route_id": "continue",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "route_id": "pass",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "route_id": "blocked",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "route_id": "handoff",
+          "target": "@handoff"
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "continue",
+          "target": "goal-gate-pass-2"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "pass",
+          "target": "goal-gate-pass-2"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "retry",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "continue",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "pass",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "retry",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "goal-close",
+          "route_id": "complete",
+          "target": "@complete"
+        },
+        {
+          "step_id": "goal-close",
+          "route_id": "pass",
+          "target": "@complete"
+        },
+        {
+          "step_id": "goal-close",
+          "route_id": "stop",
+          "target": "@stop"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "clarify-goal",
+        "title": "Clarify - shape Goal task",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "goal-clarify@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/goal/clarified-task.json",
+            "schema": "goal.clarified-task@v1"
+          },
+          "request": "reports/relay/goal-clarify.request.json",
+          "receipt": "reports/relay/goal-clarify.receipt.txt",
+          "result": "reports/relay/goal-clarify.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["continue", "ask", "stop"]
+        },
+        "routes": {
+          "continue": "goal-contract",
+          "pass": "goal-contract",
+          "ask": "@stop",
+          "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["verdict"]
+        }
+      },
+      {
+        "step_id": "goal-contract",
+        "title": "Goal - write contract and select static target",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "goal-contract@v1",
+        "reads": ["reports/goal/clarified-task.json"],
+        "writes": {
+          "report": {
+            "path": "reports/goal/contract.json",
+            "schema": "goal.contract@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["schema", "objective", "done_when", "selected_flow_target"]
+        },
+        "routes": {
+          "continue": "goal-run-build",
+          "pass": "goal-run-build",
+          "fix": "goal-run-fix",
+          "build": "goal-run-build",
+          "review": "goal-run-review",
+          "explore": "goal-run-explore",
+          "pursue": "goal-run-pursue",
+          "ask": "goal-recovery-checkpoint",
+          "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["selected_flow_target"]
+        }
+      },
+      {
+        "step_id": "goal-run-fix",
+        "title": "Child Flow - run Fix",
+        "kind": "sub-run",
+        "executor": "orchestrator",
+        "protocol": "goal-run-fix@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "result": "reports/goal/child-results/fix-result.json",
+          "report": {
+            "path": "reports/goal/child-results/fix-result.json",
+            "schema": "goal.child-fix-result@v1"
+          }
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          },
+          "pass": [
+            "accept",
+            "accept-with-fixes",
+            "accept-with-fold-ins",
+            "NO_ISSUES_FOUND",
+            "ISSUES_FOUND",
+            "clean",
+            "needs-followup",
+            "decided"
+          ]
+        },
+        "routes": {
+          "continue": "goal-attempt",
+          "pass": "goal-attempt",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-run-build",
+        "title": "Child Flow - run Build",
+        "kind": "sub-run",
+        "executor": "orchestrator",
+        "protocol": "goal-run-build@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "result": "reports/goal/child-results/build-result.json",
+          "report": {
+            "path": "reports/goal/child-results/build-result.json",
+            "schema": "goal.child-build-result@v1"
+          }
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          },
+          "pass": [
+            "accept",
+            "accept-with-fixes",
+            "accept-with-fold-ins",
+            "NO_ISSUES_FOUND",
+            "ISSUES_FOUND",
+            "clean",
+            "needs-followup",
+            "decided"
+          ]
+        },
+        "routes": {
+          "continue": "goal-attempt",
+          "pass": "goal-attempt",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-run-review",
+        "title": "Child Flow - run Review",
+        "kind": "sub-run",
+        "executor": "orchestrator",
+        "protocol": "goal-run-review@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "result": "reports/goal/child-results/review-result.json",
+          "report": {
+            "path": "reports/goal/child-results/review-result.json",
+            "schema": "goal.child-review-result@v1"
+          }
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          },
+          "pass": [
+            "accept",
+            "accept-with-fixes",
+            "accept-with-fold-ins",
+            "NO_ISSUES_FOUND",
+            "ISSUES_FOUND",
+            "clean",
+            "needs-followup",
+            "decided"
+          ]
+        },
+        "routes": {
+          "continue": "goal-attempt",
+          "pass": "goal-attempt",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-run-explore",
+        "title": "Child Flow - run Explore",
+        "kind": "sub-run",
+        "executor": "orchestrator",
+        "protocol": "goal-run-explore@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "result": "reports/goal/child-results/explore-result.json",
+          "report": {
+            "path": "reports/goal/child-results/explore-result.json",
+            "schema": "goal.child-explore-result@v1"
+          }
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          },
+          "pass": [
+            "accept",
+            "accept-with-fixes",
+            "accept-with-fold-ins",
+            "NO_ISSUES_FOUND",
+            "ISSUES_FOUND",
+            "clean",
+            "needs-followup",
+            "decided"
+          ]
+        },
+        "routes": {
+          "continue": "goal-attempt",
+          "pass": "goal-attempt",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-run-pursue",
+        "title": "Child Flow - run Pursue",
+        "kind": "sub-run",
+        "executor": "orchestrator",
+        "protocol": "goal-run-pursue@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "result": "reports/goal/child-results/pursue-result.json",
+          "report": {
+            "path": "reports/goal/child-results/pursue-result.json",
+            "schema": "goal.child-pursue-result@v1"
+          }
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          },
+          "pass": [
+            "accept",
+            "accept-with-fixes",
+            "accept-with-fold-ins",
+            "NO_ISSUES_FOUND",
+            "ISSUES_FOUND",
+            "clean",
+            "needs-followup",
+            "decided"
+          ]
+        },
+        "routes": {
+          "continue": "goal-attempt",
+          "pass": "goal-attempt",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-attempt",
+        "title": "Attempt - summarize child result",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "goal-attempt@v1",
+        "reads": ["reports/goal/contract.json"],
+        "writes": {
+          "report": {
+            "path": "reports/goal/attempts/attempt-1.json",
+            "schema": "goal.attempt@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["schema", "attempt_id", "flow_target", "outcome"]
+        },
+        "routes": {
+          "continue": "goal-evidence-evaluation",
+          "pass": "goal-evidence-evaluation",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-evidence-evaluation",
+        "title": "Evaluate - compare attempt evidence to done claims",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "goal-evidence-evaluation@v1",
+        "reads": ["reports/goal/contract.json", "reports/goal/attempts/attempt-1.json"],
+        "writes": {
+          "report": {
+            "path": "reports/goal/evidence-evaluation.json",
+            "schema": "goal.evidence-evaluation@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["schema", "verdict", "claim_results", "next_route"]
+        },
+        "routes": {
+          "continue": "goal-gate-pass-1",
+          "pass": "goal-gate-pass-1",
+          "completion-gate": "goal-gate-pass-1",
+          "retry-selected-flow": "goal-recovery",
+          "run-fix": "goal-recovery",
+          "run-review": "goal-recovery",
+          "run-explore": "goal-recovery",
+          "split-to-pursue": "goal-recovery",
+          "checkpoint": "goal-recovery",
+          "handoff": "@handoff",
+          "blocked": "goal-recovery",
+          "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["next_route"]
+        }
+      },
+      {
+        "step_id": "goal-recovery",
+        "title": "Recovery - choose typed next action",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "goal-recovery@v1",
+        "reads": ["reports/goal/evidence-evaluation.json", "reports/goal/attempts/attempt-1.json"],
+        "writes": {
+          "report": {
+            "path": "reports/goal/recovery.json",
+            "schema": "goal.recovery@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["schema", "reason", "selected_route", "rationale"]
+        },
+        "routes": {
+          "continue": "goal-recovery-checkpoint",
+          "pass": "goal-recovery-checkpoint",
+          "retry-selected-flow": "goal-recovery-checkpoint",
+          "run-fix": "goal-recovery-checkpoint",
+          "run-review": "goal-recovery-checkpoint",
+          "run-explore": "goal-recovery-checkpoint",
+          "split-to-pursue": "goal-recovery-checkpoint",
+          "checkpoint": "goal-recovery-checkpoint",
+          "blocked": "goal-close",
+          "handoff": "@handoff",
+          "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["selected_route"]
+        }
+      },
+      {
+        "step_id": "goal-recovery-checkpoint",
+        "title": "Checkpoint - operator judgment required",
+        "kind": "checkpoint",
+        "executor": "orchestrator",
+        "protocol": "goal-recovery-checkpoint@v1",
+        "reads": ["reports/goal/recovery.json"],
+        "writes": {
+          "request": "reports/checkpoints/goal-recovery-request.json",
+          "response": "reports/checkpoints/goal-recovery-response.json"
+        },
+        "check": {
+          "kind": "checkpoint_selection",
+          "source": {
+            "kind": "checkpoint_response",
+            "ref": "response"
+          },
+          "allow": ["continue", "blocked", "handoff"]
+        },
+        "routes": {
+          "continue": "goal-close",
+          "pass": "goal-close",
+          "blocked": "goal-close",
+          "handoff": "@handoff",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-gate-pass-1",
+        "title": "Safety review - pass 1",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "goal-gate-pass-1@v1",
+        "reads": ["reports/goal/contract.json", "reports/goal/evidence-evaluation.json"],
+        "writes": {
+          "report": {
+            "path": "reports/goal/gate-pass-1.json",
+            "schema": "goal.gate-pass@v1"
+          },
+          "request": "reports/relay/goal-gate-pass-1.request.json",
+          "receipt": "reports/relay/goal-gate-pass-1.receipt.txt",
+          "result": "reports/relay/goal-gate-pass-1.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["gate-pass"]
+        },
+        "routes": {
+          "continue": "goal-gate-pass-2",
+          "pass": "goal-gate-pass-2",
+          "retry": "goal-recovery",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-gate-pass-2",
+        "title": "Safety review - pass 2",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "goal-gate-pass-2@v1",
+        "reads": [
+          "reports/goal/contract.json",
+          "reports/goal/evidence-evaluation.json",
+          "reports/goal/gate-pass-1.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/goal/gate.json",
+            "schema": "goal.gate@v1"
+          },
+          "request": "reports/relay/goal-gate-pass-2.request.json",
+          "receipt": "reports/relay/goal-gate-pass-2.receipt.txt",
+          "result": "reports/relay/goal-gate-pass-2.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["gate-pass"]
+        },
+        "routes": {
+          "continue": "goal-close",
+          "pass": "goal-close",
+          "retry": "goal-recovery",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "goal-close",
+        "title": "Close - emit Goal result",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "goal-close@v1",
+        "reads": [
+          "reports/goal/contract.json",
+          "reports/goal/attempts/attempt-1.json",
+          "reports/goal/evidence-evaluation.json",
+          "reports/goal/recovery.json",
+          "reports/goal/gate.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/goal-result.json",
+            "schema": "goal.result@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["schema", "outcome", "summary", "evidence_links", "gate"]
+        },
+        "routes": {
+          "complete": "@complete",
+          "pass": "@complete",
+          "stop": "@stop"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "clarify-goal",
+          "role": "researcher",
+          "writes": {
+            "report": {
+              "path": "reports/goal/clarified-task.json",
+              "schema": "goal.clarified-task@v1"
+            },
+            "request": "reports/relay/goal-clarify.request.json",
+            "receipt": "reports/relay/goal-clarify.receipt.txt",
+            "result": "reports/relay/goal-clarify.result.json"
+          },
+          "report": {
+            "step_id": "clarify-goal",
+            "slot": "report",
+            "path": "reports/goal/clarified-task.json",
+            "schema": "goal.clarified-task@v1"
+          }
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "role": "reviewer",
+          "writes": {
+            "report": {
+              "path": "reports/goal/gate-pass-1.json",
+              "schema": "goal.gate-pass@v1"
+            },
+            "request": "reports/relay/goal-gate-pass-1.request.json",
+            "receipt": "reports/relay/goal-gate-pass-1.receipt.txt",
+            "result": "reports/relay/goal-gate-pass-1.result.json"
+          },
+          "report": {
+            "step_id": "goal-gate-pass-1",
+            "slot": "report",
+            "path": "reports/goal/gate-pass-1.json",
+            "schema": "goal.gate-pass@v1"
+          }
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "role": "reviewer",
+          "writes": {
+            "report": {
+              "path": "reports/goal/gate.json",
+              "schema": "goal.gate@v1"
+            },
+            "request": "reports/relay/goal-gate-pass-2.request.json",
+            "receipt": "reports/relay/goal-gate-pass-2.receipt.txt",
+            "result": "reports/relay/goal-gate-pass-2.result.json"
+          },
+          "report": {
+            "step_id": "goal-gate-pass-2",
+            "slot": "report",
+            "path": "reports/goal/gate.json",
+            "schema": "goal.gate@v1"
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "choices": {
+            "kind": "static",
+            "ids": ["continue", "blocked", "handoff"]
+          },
+          "writes": {
+            "request": "reports/checkpoints/goal-recovery-request.json",
+            "response": "reports/checkpoints/goal-recovery-response.json"
+          }
+        }
+      ],
+      "sub_runs": [
+        {
+          "step_id": "goal-run-fix",
+          "flow_ref": {
+            "flow_id": "fix",
+            "entry_mode": "default"
+          },
+          "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
+          "depth": "standard",
+          "writes": {
+            "result": "reports/goal/child-results/fix-result.json",
+            "report": {
+              "path": "reports/goal/child-results/fix-result.json",
+              "schema": "goal.child-fix-result@v1"
+            }
+          }
+        },
+        {
+          "step_id": "goal-run-build",
+          "flow_ref": {
+            "flow_id": "build",
+            "entry_mode": "default"
+          },
+          "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
+          "depth": "standard",
+          "writes": {
+            "result": "reports/goal/child-results/build-result.json",
+            "report": {
+              "path": "reports/goal/child-results/build-result.json",
+              "schema": "goal.child-build-result@v1"
+            }
+          }
+        },
+        {
+          "step_id": "goal-run-review",
+          "flow_ref": {
+            "flow_id": "review",
+            "entry_mode": "default"
+          },
+          "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
+          "depth": "standard",
+          "writes": {
+            "result": "reports/goal/child-results/review-result.json",
+            "report": {
+              "path": "reports/goal/child-results/review-result.json",
+              "schema": "goal.child-review-result@v1"
+            }
+          }
+        },
+        {
+          "step_id": "goal-run-explore",
+          "flow_ref": {
+            "flow_id": "explore",
+            "entry_mode": "default"
+          },
+          "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
+          "depth": "standard",
+          "writes": {
+            "result": "reports/goal/child-results/explore-result.json",
+            "report": {
+              "path": "reports/goal/child-results/explore-result.json",
+              "schema": "goal.child-explore-result@v1"
+            }
+          }
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "flow_ref": {
+            "flow_id": "pursue",
+            "entry_mode": "default"
+          },
+          "goal": "Execute the selected child flow for reports/goal/contract.json. Preserve the operator objective and produce a report-backed proof packet.",
+          "depth": "standard",
+          "writes": {
+            "result": "reports/goal/child-results/pursue-result.json",
+            "report": {
+              "path": "reports/goal/child-results/pursue-result.json",
+              "schema": "goal.child-pursue-result@v1"
+            }
+          }
+        }
+      ],
+      "fanouts": [],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "clarify-goal",
+          "slot": "report",
+          "path": "reports/goal/clarified-task.json",
+          "schema": "goal.clarified-task@v1"
+        },
+        {
+          "step_id": "goal-contract",
+          "slot": "report",
+          "path": "reports/goal/contract.json",
+          "schema": "goal.contract@v1"
+        },
+        {
+          "step_id": "goal-run-fix",
+          "slot": "report",
+          "path": "reports/goal/child-results/fix-result.json",
+          "schema": "goal.child-fix-result@v1"
+        },
+        {
+          "step_id": "goal-run-build",
+          "slot": "report",
+          "path": "reports/goal/child-results/build-result.json",
+          "schema": "goal.child-build-result@v1"
+        },
+        {
+          "step_id": "goal-run-review",
+          "slot": "report",
+          "path": "reports/goal/child-results/review-result.json",
+          "schema": "goal.child-review-result@v1"
+        },
+        {
+          "step_id": "goal-run-explore",
+          "slot": "report",
+          "path": "reports/goal/child-results/explore-result.json",
+          "schema": "goal.child-explore-result@v1"
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "slot": "report",
+          "path": "reports/goal/child-results/pursue-result.json",
+          "schema": "goal.child-pursue-result@v1"
+        },
+        {
+          "step_id": "goal-attempt",
+          "slot": "report",
+          "path": "reports/goal/attempts/attempt-1.json",
+          "schema": "goal.attempt@v1"
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "slot": "report",
+          "path": "reports/goal/evidence-evaluation.json",
+          "schema": "goal.evidence-evaluation@v1"
+        },
+        {
+          "step_id": "goal-recovery",
+          "slot": "report",
+          "path": "reports/goal/recovery.json",
+          "schema": "goal.recovery@v1"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "slot": "report",
+          "path": "reports/goal/gate-pass-1.json",
+          "schema": "goal.gate-pass@v1"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "slot": "report",
+          "path": "reports/goal/gate.json",
+          "schema": "goal.gate@v1"
+        },
+        {
+          "step_id": "goal-close",
+          "slot": "report",
+          "path": "reports/goal-result.json",
+          "schema": "goal.result@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "clarify-goal",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-contract",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "goal-run-fix",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-run-build",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-run-review",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-run-explore",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-run-pursue",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "sub_run_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-attempt",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "goal-evidence-evaluation",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "goal-recovery",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "goal-recovery-checkpoint",
+          "check_kind": "checkpoint_selection",
+          "source": {
+            "kind": "checkpoint_response",
+            "ref": "response"
+          }
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "goal-close",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [
+      {
+        "schema_version": 0,
+        "step_id": "clarify-goal",
+        "route_id": "ask",
+        "route_target": "@stop",
+        "kind": "checkpoint_authority",
+        "allowed_failure_causes": [
+          "checkpoint_boundary",
+          "protected_file_touched",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["checkpoint_request", "runtime_diff", "budget_state"],
+        "operator_authority": "required_before_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/clarify-goal/routes/ask",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "clarify-goal",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/clarify-goal/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-contract",
+        "route_id": "review",
+        "route_target": "goal-run-review",
+        "kind": "run_independent_review",
+        "allowed_failure_causes": ["weak_proof", "contradicted_evidence", "scope_drift"],
+        "required_refs": ["proof_assessment", "report"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-contract/routes/review",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-contract",
+        "route_id": "ask",
+        "route_target": "goal-recovery-checkpoint",
+        "kind": "checkpoint_authority",
+        "allowed_failure_causes": [
+          "checkpoint_boundary",
+          "protected_file_touched",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["checkpoint_request", "runtime_diff", "budget_state"],
+        "operator_authority": "required_before_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-contract/routes/ask",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-contract",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-contract/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-run-fix",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-run-fix/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-run-build",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-run-build/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-run-review",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-run-review/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-run-explore",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-run-explore/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-run-pursue",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-run-pursue/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-attempt",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-attempt/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-evidence-evaluation",
+        "route_id": "run-review",
+        "route_target": "goal-recovery",
+        "kind": "run_independent_review",
+        "allowed_failure_causes": ["weak_proof", "contradicted_evidence", "scope_drift"],
+        "required_refs": ["proof_assessment", "report"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/run-review",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-evidence-evaluation",
+        "route_id": "checkpoint",
+        "route_target": "goal-recovery",
+        "kind": "checkpoint_authority",
+        "allowed_failure_causes": [
+          "checkpoint_boundary",
+          "protected_file_touched",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["checkpoint_request", "runtime_diff", "budget_state"],
+        "operator_authority": "required_before_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/checkpoint",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-evidence-evaluation",
+        "route_id": "handoff",
+        "route_target": "@handoff",
+        "kind": "handoff",
+        "allowed_failure_causes": ["checkpoint_boundary", "budget_exceeded", "unknown_failure"],
+        "required_refs": ["trace", "report"],
+        "operator_authority": "required_to_continue_after_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/handoff",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-evidence-evaluation",
+        "route_id": "blocked",
+        "route_target": "goal-recovery",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/blocked",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-evidence-evaluation",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery",
+        "route_id": "run-review",
+        "route_target": "goal-recovery-checkpoint",
+        "kind": "run_independent_review",
+        "allowed_failure_causes": ["weak_proof", "contradicted_evidence", "scope_drift"],
+        "required_refs": ["proof_assessment", "report"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery/routes/run-review",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery",
+        "route_id": "checkpoint",
+        "route_target": "goal-recovery-checkpoint",
+        "kind": "checkpoint_authority",
+        "allowed_failure_causes": [
+          "checkpoint_boundary",
+          "protected_file_touched",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["checkpoint_request", "runtime_diff", "budget_state"],
+        "operator_authority": "required_before_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery/routes/checkpoint",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery",
+        "route_id": "blocked",
+        "route_target": "goal-close",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery/routes/blocked",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery",
+        "route_id": "handoff",
+        "route_target": "@handoff",
+        "kind": "handoff",
+        "allowed_failure_causes": ["checkpoint_boundary", "budget_exceeded", "unknown_failure"],
+        "required_refs": ["trace", "report"],
+        "operator_authority": "required_to_continue_after_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery/routes/handoff",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery-checkpoint",
+        "route_id": "blocked",
+        "route_target": "goal-close",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/blocked",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery-checkpoint",
+        "route_id": "handoff",
+        "route_target": "@handoff",
+        "kind": "handoff",
+        "allowed_failure_causes": ["checkpoint_boundary", "budget_exceeded", "unknown_failure"],
+        "required_refs": ["trace", "report"],
+        "operator_authority": "required_to_continue_after_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/handoff",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-recovery-checkpoint",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-gate-pass-1",
+        "route_id": "retry",
+        "route_target": "goal-recovery",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-gate-pass-1/routes/retry",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-gate-pass-1",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-gate-pass-1/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-gate-pass-2",
+        "route_id": "retry",
+        "route_target": "goal-recovery",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-gate-pass-2/routes/retry",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-gate-pass-2",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-gate-pass-2/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "goal-close",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/goal-close/routes/stop",
+          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "flow_id": "goal"
+        }
+      }
+    ],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [],
+    "connector_hints": [],
+    "skill_hints": [],
+    "checkpoint_default_hints": [
+      {
+        "kind": "work_contract",
+        "ref": "compiled-flow/steps/goal-recovery-checkpoint/policy/safe_default_choice",
+        "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+        "flow_id": "goal"
+      }
+    ],
+    "host_recommendations": []
+  },
+  "rejected_authority": []
+}

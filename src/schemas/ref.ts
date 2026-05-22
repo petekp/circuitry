@@ -19,6 +19,8 @@ export const RefKind = z.enum([
   'command',
   'change_packet',
   'safe_apply',
+  'worktree',
+  'generated_surface',
   'memory',
   'operator_input',
 ]);
@@ -35,6 +37,9 @@ const ContentRefKinds = new Set<RefKind>([
   'command',
   'change_packet',
   'safe_apply',
+  'worktree',
+  'generated_surface',
+  'memory',
 ]);
 
 export const Ref = z

@@ -707,7 +707,7 @@ export function createProgressProjector(input: {
         ) {
           break;
         }
-        if (entry.auto_resolved === true) {
+        if (entry.auto_resolved !== false) {
           break;
         }
         const requestPath = checkpointRequestPath(input.runDir, entry.request_path);

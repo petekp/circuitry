@@ -341,7 +341,6 @@ describe('Block Step expansion', () => {
       prompt: 'Confirm the brief.',
       choices: [{ id: 'continue', label: 'Continue' }],
       safe_default_choice: 'continue',
-      safe_autonomous_choice: 'continue',
       report_template: { scope: 'bounded' },
     };
 

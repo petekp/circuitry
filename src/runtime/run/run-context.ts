@@ -1,5 +1,6 @@
 import type { RuntimePackageIndex } from '../../flows/registries/runtime-index.js';
 import type { Axes } from '../../schemas/axes.js';
+import type { Ref } from '../../schemas/ref.js';
 import type { AcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { RunId } from '../domain/run.js';
 import type { ExecutableFlow } from '../manifest/executable-flow.js';
@@ -16,6 +17,7 @@ export interface RunContext
   readonly runDir: string;
   readonly goal: string;
   readonly manifestHash: string;
+  readonly workContractRef?: Ref;
   readonly entryModeName?: string;
   readonly depth?: string;
   readonly axes?: Axes;

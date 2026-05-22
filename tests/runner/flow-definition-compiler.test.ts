@@ -378,7 +378,6 @@ describe('FlowDefinition compiler', () => {
     });
     expect(frameStep?.checkpoint_policy).toMatchObject({
       safe_default_choice: 'continue',
-      safe_autonomous_choice: 'continue',
     });
     expect(actStep?.acceptance_criteria).toEqual({
       checks: [

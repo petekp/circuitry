@@ -1,16 +1,27 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { flowDefinitions } from '../../src/flows/catalog.js';
+import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
 import { compileSchematicToCompiledFlow } from '../../src/flows/compile-schematic-to-flow.js';
 import { schematicForFlowDefinition } from '../../src/flows/flow-definition.js';
-import type { CompiledFlow } from '../../src/index.js';
+import {
+  CompiledFlow,
+  RecoveryFailureCause,
+  RecoveryRouteBindingV0,
+  RecoveryRouteKind,
+} from '../../src/index.js';
+import type { CompiledFlow as CompiledFlowValue } from '../../src/index.js';
 import {
   WorkContractProjectionV0,
   projectWorkContractProjectionV0,
+  workContractProjectionPathForCompiledFlowPath,
 } from '../../src/shared/work-contract-projection.js';
 
-function compiledBuiltInFlows(): readonly CompiledFlow[] {
-  const flows: CompiledFlow[] = [];
+const REPO_ROOT = resolve('.');
+
+function compiledBuiltInFlows(): readonly CompiledFlowValue[] {
+  const flows: CompiledFlowValue[] = [];
   for (const definition of flowDefinitions) {
     const compiled = compileSchematicToCompiledFlow(schematicForFlowDefinition(definition));
     if (compiled.kind === 'single') {
@@ -22,8 +33,22 @@ function compiledBuiltInFlows(): readonly CompiledFlow[] {
   return flows;
 }
 
-function buildProjection(flow: CompiledFlow) {
+function buildProjection(flow: CompiledFlowValue) {
   return projectWorkContractProjectionV0({ flow });
+}
+
+function collectGeneratedCompiledFlowFiles(): string[] {
+  const rels: string[] = [];
+  for (const pkg of flowPackages) {
+    const dir = resolve(REPO_ROOT, 'generated/flows', pkg.id);
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).sort()) {
+      if (!name.endsWith('.json')) continue;
+      if (name.endsWith('.work-contract.v0.json')) continue;
+      rels.push(`generated/flows/${pkg.id}/${name}`);
+    }
+  }
+  return rels;
 }
 
 function walkKeys(value: unknown, visit: (key: string) => void): void {
@@ -97,7 +122,7 @@ describe('WorkContractProjectionV0', () => {
             }
           : step,
       ),
-    } as unknown as CompiledFlow;
+    } as unknown as CompiledFlowValue;
 
     const projection = buildProjection(mutated);
 
@@ -130,7 +155,7 @@ describe('WorkContractProjectionV0', () => {
         },
         ...flow.steps.slice(1),
       ],
-    } as unknown as CompiledFlow;
+    } as unknown as CompiledFlowValue;
 
     const projection = buildProjection(mutated);
 
@@ -143,12 +168,31 @@ describe('WorkContractProjectionV0', () => {
     ]);
   });
 
-  it('puts current hidden checkpoint authority into rejected_authority', () => {
-    const rejected = compiledBuiltInFlows()
-      .flatMap((flow) => buildProjection(flow).rejected_authority)
-      .map((violation) => violation.field);
+  it('rejects hidden checkpoint autonomy before projection', () => {
+    const flow = compiledBuiltInFlows().find((candidate) =>
+      candidate.steps.some((step) => step.kind === 'checkpoint'),
+    );
+    if (flow === undefined) throw new Error('expected at least one checkpoint flow');
+    const checkpointIndex = flow.steps.findIndex((step) => step.kind === 'checkpoint');
+    const checkpoint = flow.steps[checkpointIndex];
+    if (checkpoint === undefined) throw new Error('expected checkpoint step');
 
-    expect(rejected).toContain('safe_autonomous_choice');
+    const mutated = {
+      ...flow,
+      steps: flow.steps.map((step, index) =>
+        index === checkpointIndex
+          ? {
+              ...checkpoint,
+              policy: {
+                ...(checkpoint as { readonly policy: Record<string, unknown> }).policy,
+                safe_autonomous_choice: 'continue',
+              },
+            }
+          : step,
+      ),
+    } as unknown as CompiledFlowValue;
+
+    expect(CompiledFlow.safeParse(mutated).success).toBe(false);
   });
 
   it('requires checkpoint choices to name static ids or a dynamic source', () => {
@@ -205,11 +249,107 @@ describe('WorkContractProjectionV0', () => {
     for (const flow of compiledBuiltInFlows()) {
       const projection = buildProjection(flow);
       for (const route of projection.work_contract.recovery) {
+        expect(route.schema_version).toBe(0);
         expect(route.route_id).toBeTruthy();
         expect(route.kind).toBeTruthy();
         expect(route.allowed_failure_causes.length).toBeGreaterThan(0);
+        expect(route.required_refs.length).toBeGreaterThan(0);
+        expect(route.operator_authority).toBeTruthy();
+        expect(route.guidance).toEqual({
+          subject: 'recovery_route',
+          must_match_step_completed: true,
+        });
       }
     }
+  });
+
+  it('does not treat route ids as recovery kinds', () => {
+    expect(RecoveryRouteKind.safeParse('retry').success).toBe(false);
+    expect(RecoveryRouteKind.safeParse('revise').success).toBe(false);
+    expect(RecoveryRouteKind.safeParse('connector-failed').success).toBe(false);
+    expect(RecoveryRouteKind.safeParse('retry_same_step_with_feedback').success).toBe(true);
+  });
+
+  it('treats base mismatch as a typed SafeApply failure cause', () => {
+    expect(RecoveryFailureCause.safeParse('base_mismatch').success).toBe(true);
+    expect(RecoveryFailureCause.safeParse('apply_conflict').success).toBe(true);
+  });
+
+  it('requires same-step retry bindings to target the same step with feedback and budget refs', () => {
+    const sameStepRetry = compiledBuiltInFlows()
+      .flatMap((flow) => buildProjection(flow).work_contract.recovery)
+      .find((route) => route.kind === 'retry_same_step_with_feedback');
+    if (sameStepRetry === undefined) throw new Error('expected a same-step retry route');
+
+    expect(sameStepRetry.route_target).toBe(sameStepRetry.step_id);
+    expect(sameStepRetry.required_refs).toContain('acceptance_feedback');
+    expect(sameStepRetry.attempt_budget).toMatchObject({
+      consumes_step_attempt: true,
+      must_respect_max_attempts: true,
+      retry_target: 'same_step',
+    });
+
+    expect(
+      RecoveryRouteBindingV0.safeParse({
+        ...sameStepRetry,
+        route_target: 'different-step',
+      }).success,
+    ).toBe(false);
+
+    expect(
+      RecoveryRouteBindingV0.safeParse({
+        ...sameStepRetry,
+        source_ref: {
+          kind: 'policy',
+          ref: 'policy.runtime.config_v1',
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('does not project broad retry routes as same-step retry bindings', () => {
+    const broadRetry = compiledBuiltInFlows()
+      .flatMap((flow) => buildProjection(flow).work_contract.recovery)
+      .find((route) => route.route_id === 'retry' && route.route_target !== route.step_id);
+    if (broadRetry === undefined) throw new Error('expected a broad retry route');
+
+    expect(broadRetry.kind).not.toBe('retry_same_step_with_feedback');
+    expect(broadRetry.kind).toBe('narrow_scope');
+  });
+
+  it('rejects recovery bindings that are duplicated or not backed by declared routes', () => {
+    const projection = compiledBuiltInFlows()
+      .map(buildProjection)
+      .find((candidate) => candidate.work_contract.recovery.length > 0);
+    if (projection === undefined) throw new Error('expected recovery bindings');
+    const [binding] = projection.work_contract.recovery;
+    if (binding === undefined) throw new Error('expected first recovery binding');
+
+    expect(
+      WorkContractProjectionV0.safeParse({
+        ...projection,
+        work_contract: {
+          ...projection.work_contract,
+          recovery: [...projection.work_contract.recovery, binding],
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      WorkContractProjectionV0.safeParse({
+        ...projection,
+        work_contract: {
+          ...projection.work_contract,
+          recovery: [
+            {
+              ...binding,
+              route_id: 'undeclared-recovery-route',
+            },
+            ...projection.work_contract.recovery.slice(1),
+          ],
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it('fails when a compiled flow field has no projection bucket', () => {
@@ -220,8 +360,43 @@ describe('WorkContractProjectionV0', () => {
     const mutated = {
       ...flow,
       steps: [{ ...firstStep, mystery_authority: true }, ...flow.steps.slice(1)],
-    } as unknown as CompiledFlow;
+    } as unknown as CompiledFlowValue;
 
     expect(() => buildProjection(mutated)).toThrow(/unclassified step fields/);
+  });
+
+  it('emits a drift-checked WorkContract projection beside every generated compiled flow', () => {
+    const generated = collectGeneratedCompiledFlowFiles();
+    expect(generated.length).toBeGreaterThan(0);
+    const visibilityById = new Map(
+      flowPackages.map((pkg) => [pkg.id, pkg.visibility ?? 'public'] as const),
+    );
+
+    for (const compiledRel of generated) {
+      const compiledFlow = CompiledFlow.parse(
+        JSON.parse(readFileSync(resolve(REPO_ROOT, compiledRel), 'utf8')),
+      );
+      const contractRel = workContractProjectionPathForCompiledFlowPath(compiledRel);
+      const contractAbs = resolve(REPO_ROOT, contractRel);
+      expect(existsSync(contractAbs), `${contractRel} should exist`).toBe(true);
+
+      const diskProjection = WorkContractProjectionV0.parse(
+        JSON.parse(readFileSync(contractAbs, 'utf8')),
+      );
+      expect(diskProjection).toEqual(
+        projectWorkContractProjectionV0({ flow: compiledFlow, contractRefPath: contractRel }),
+      );
+      expect(diskProjection.contract_ref.ref).toBe(contractRel);
+      expect(diskProjection.work_contract.flow.id).toBe(compiledFlow.id);
+
+      if (visibilityById.get(compiledFlow.id) === 'public') {
+        const contractBytes = readFileSync(contractAbs, 'utf8');
+        const contractName = basename(contractRel);
+        const claudeRel = `plugins/claude/skills/${compiledFlow.id}/${contractName}`;
+        const codexRel = `plugins/codex/flows/${compiledFlow.id}/${contractName}`;
+        expect(readFileSync(resolve(REPO_ROOT, claudeRel), 'utf8')).toBe(contractBytes);
+        expect(readFileSync(resolve(REPO_ROOT, codexRel), 'utf8')).toBe(contractBytes);
+      }
+    }
   });
 });

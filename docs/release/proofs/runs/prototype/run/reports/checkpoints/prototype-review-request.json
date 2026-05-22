@@ -8,7 +8,6 @@
     "discard-prototype"
   ],
   "safe_default_choice": "keep-prototype",
-  "safe_autonomous_choice": "keep-prototype",
   "execution_context": {
     "axes": {
       "rigor": "deep",

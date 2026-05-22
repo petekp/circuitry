@@ -1,7 +1,7 @@
 {
   "name": "circuit",
   "version": "0.1.0-alpha.6",
-  "description": "Structured, resumable, multi-stage developer flows for Claude Code. /circuit:run selects the best flow for a natural-language task and can invoke /circuit:explore, /circuit:review, /circuit:fix, or /circuit:build; Pursue is routable through /circuit:run and direct CLI flow invocation. /circuit:create and /circuit:handoff cover custom flows and continuity.",
+  "description": "Structured, resumable developer flows for Claude Code. /circuit:run is the intent front door for natural-language coding tasks. Direct flow commands such as /circuit:explore, /circuit:review, /circuit:fix, and /circuit:build are expert controls when you already know the flow; Pursue is routable through /circuit:run and direct CLI flow invocation. /circuit:create and /circuit:handoff cover custom flows and continuity.",
   "author": {
     "name": "Pete Petrash"
   },

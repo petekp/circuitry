@@ -218,7 +218,7 @@ const guidanceSha = 'c'.repeat(64);
 
 const workContractRef = {
   kind: 'work_contract' as const,
-  ref: 'generated/flows/explore/work-contract.v0.json',
+  ref: 'generated/flows/explore/circuit.work-contract.v0.json',
   sha256: guidanceSha,
   flow_id: 'explore',
 };
@@ -231,6 +231,65 @@ const policyRef = {
 const relayRequestRef = {
   kind: 'request' as const,
   ref: 'relay/frame/request.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+const proofAssessmentRef = {
+  kind: 'report' as const,
+  ref: 'reports/proof/frame-assessment.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+const recoveryFailureRef = {
+  kind: 'trace' as const,
+  ref: 'trace.ndjson#sequence=3',
+  run_id: RUN_A,
+  step_id: 'frame',
+  attempt: 1,
+  sequence: 3,
+};
+
+const changePacketRef = {
+  kind: 'change_packet' as const,
+  ref: 'change-packets/cp-explore-frame-1.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+const safeApplyBaseRef = {
+  kind: 'command' as const,
+  ref: 'commands/git-status-before.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+const finalVerificationRef = {
+  kind: 'command' as const,
+  ref: 'commands/npm-test.json',
+  sha256: guidanceSha,
+  run_id: RUN_A,
+  flow_id: 'explore',
+  step_id: 'frame',
+  attempt: 1,
+};
+
+const safeApplyResultRef = {
+  kind: 'safe_apply' as const,
+  ref: 'safe-apply/results/cp-explore-frame-1.json',
   sha256: guidanceSha,
   run_id: RUN_A,
   flow_id: 'explore',
@@ -313,6 +372,20 @@ function relayStartedAt(sequence: number, overrides: Record<string, unknown> = {
   };
 }
 
+function relayRequestAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:25.000Z',
+    run_id: RUN_A,
+    kind: 'relay.request',
+    step_id: 'frame',
+    attempt: 1,
+    request_payload_hash: guidanceSha,
+    ...overrides,
+  };
+}
+
 function checkpointGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
   return {
     schema_version: 1,
@@ -354,9 +427,187 @@ function checkpointResolvedAt(sequence: number, overrides: Record<string, unknow
     step_id: 'frame',
     attempt: 1,
     selection: 'accept',
+    route_id: 'pass',
     auto_resolved: true,
-    resolution_source: 'safe-default',
+    resolution_source: 'declared-default',
     response_path: 'reports/checkpoint-response.json',
+    ...overrides,
+  };
+}
+
+function proofPolicyGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:35.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-proof-${sequence}`,
+    subject: 'proof_policy',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    source: 'deterministic',
+    selected: {
+      proof_profile: 'standard',
+      required_claim_kinds: ['verification_passed'],
+      required_evidence_kinds: ['command'],
+      close_requires_proven: true,
+    },
+    input_refs: [workContractRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    reason_codes: ['proof_policy_selected'],
+    ...overrides,
+  };
+}
+
+function proofAssessedAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:45.000Z',
+    run_id: RUN_A,
+    kind: 'proof.assessed',
+    assessment_id: 'proof.frame.1',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    proof_policy_decision_id: 'gd-proof-3',
+    assessment_ref: proofAssessmentRef,
+    overall_status: 'proven',
+    close_allowed: true,
+    ...overrides,
+  };
+}
+
+function recoveryGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:50.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-recovery-${sequence}`,
+    subject: 'recovery_route',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    source: 'deterministic',
+    selected: {
+      route_id: 'retry',
+      recovery_kind: 'retry_same_step_with_feedback',
+      failure_cause: 'failed_acceptance_criteria',
+      failure_ref: recoveryFailureRef,
+      binding_ref: workContractRef,
+    },
+    input_refs: [recoveryFailureRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    evidence_refs: [recoveryFailureRef],
+    reason_codes: ['failed_acceptance_criteria'],
+    ...overrides,
+  };
+}
+
+function checkEvaluatedAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:48.000Z',
+    run_id: RUN_A,
+    kind: 'check.evaluated',
+    step_id: 'frame',
+    attempt: 1,
+    check_kind: 'acceptance_criteria',
+    outcome: 'fail',
+    criterion_id: 'acceptance-command',
+    criterion_kind: 'command',
+    reason: 'acceptance criterion failed',
+    ...overrides,
+  };
+}
+
+function stepCompletedAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:01:55.000Z',
+    run_id: RUN_A,
+    kind: 'step.completed',
+    step_id: 'frame',
+    attempt: 1,
+    route_taken: 'retry',
+    ...overrides,
+  };
+}
+
+function safeApplyGuidanceAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:02:00.000Z',
+    run_id: RUN_A,
+    kind: 'guidance.decision',
+    decision_id: `gd-safe-apply-${sequence}`,
+    subject: 'safe_apply',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    source: 'deterministic',
+    selected: {
+      action: 'apply',
+      change_packet_ref: changePacketRef,
+      base_ref: safeApplyBaseRef,
+      protected_file_decision: 'allowed',
+      final_verification_ref: finalVerificationRef,
+    },
+    input_refs: [changePacketRef, safeApplyBaseRef],
+    constraint_refs: [workContractRef, policyRef],
+    contract_refs: [workContractRef],
+    policy_refs: [policyRef],
+    evidence_refs: [changePacketRef, safeApplyBaseRef, finalVerificationRef],
+    reason_codes: ['safe_apply_allowed'],
+    ...overrides,
+  };
+}
+
+function safeApplyResultAt(sequence: number, overrides: Record<string, unknown> = {}) {
+  return {
+    schema_version: 1,
+    sequence,
+    recorded_at: '2026-04-18T05:02:10.000Z',
+    run_id: RUN_A,
+    kind: 'safe_apply.result',
+    decision_id: 'gd-safe-apply-3',
+    scope: {
+      run_id: RUN_A,
+      flow_id: 'explore',
+      step_id: 'frame',
+      attempt: 1,
+    },
+    change_packet_ref: changePacketRef,
+    base_ref: safeApplyBaseRef,
+    action: 'applied',
+    outcome: 'pass',
+    reason_codes: ['applied'],
+    protected_file_decision: 'allowed',
+    final_verification_ref: finalVerificationRef,
+    result_ref: safeApplyResultRef,
     ...overrides,
   };
 }
@@ -441,6 +692,97 @@ describe('GuidanceDecision trace invariants', () => {
     expect(TraceEntry.safeParse(flowSelectionGuidanceAt(1)).success).toBe(true);
   });
 
+  it('TraceEntry accepts proof.assessed through the public trace union', () => {
+    expect(TraceEntry.safeParse(proofAssessedAt(4)).success).toBe(true);
+  });
+
+  it('TraceEntry rejects proof.assessed when close_allowed is true but status is not proven', () => {
+    expect(
+      TraceEntry.safeParse(proofAssessedAt(4, { overall_status: 'weak', close_allowed: true }))
+        .success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry rejects proof.assessed when its scope does not match the trace entry run', () => {
+    expect(
+      TraceEntry.safeParse(
+        proofAssessedAt(4, {
+          scope: {
+            run_id: RUN_B,
+            flow_id: 'explore',
+            step_id: 'frame',
+            attempt: 1,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry rejects proof.assessed with only half of a step attempt scope', () => {
+    expect(
+      TraceEntry.safeParse(
+        proofAssessedAt(4, {
+          scope: {
+            run_id: RUN_A,
+            flow_id: 'explore',
+            step_id: 'frame',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry rejects proof_policy guidance without the selected proof policy shape', () => {
+    expect(
+      TraceEntry.safeParse(
+        proofPolicyGuidanceAt(3, {
+          selected: {
+            proof_profile: 'standard',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry accepts safe_apply.result through the public trace union', () => {
+    expect(TraceEntry.safeParse(safeApplyResultAt(4)).success).toBe(true);
+  });
+
+  it('TraceEntry rejects applied safe_apply.result without final verification', () => {
+    expect(
+      TraceEntry.safeParse(
+        safeApplyResultAt(4, {
+          final_verification_ref: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry rejects safe_apply.result refs outside the result scope', () => {
+    expect(
+      TraceEntry.safeParse(
+        safeApplyResultAt(4, {
+          change_packet_ref: {
+            ...changePacketRef,
+            run_id: RUN_B,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('TraceEntry rejects rejected safe_apply.result with pass outcome', () => {
+    expect(
+      TraceEntry.safeParse(
+        safeApplyResultAt(4, {
+          action: 'rejected',
+          outcome: 'pass',
+          final_verification_ref: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
   it('RunTrace accepts flow and relay guidance before the matching relay action', () => {
     const ok = RunTrace.safeParse([
       bootstrapAt(0),
@@ -448,6 +790,7 @@ describe('GuidanceDecision trace invariants', () => {
       stepEntered(2),
       relayGuidanceAt(3),
       relayStartedAt(4),
+      relayRequestAt(5),
     ]);
     expect(ok.success).toBe(true);
   });
@@ -491,6 +834,19 @@ describe('GuidanceDecision trace invariants', () => {
         },
       }),
       relayStartedAt(4),
+      relayRequestAt(5),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects relay.request that disagrees with relay guidance', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      relayGuidanceAt(3),
+      relayStartedAt(4),
+      relayRequestAt(5, { request_payload_hash: 'd'.repeat(64) }),
     ]);
     expect(bad.success).toBe(false);
   });
@@ -506,6 +862,253 @@ describe('GuidanceDecision trace invariants', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('RunTrace accepts proof assessment with matching proof-policy guidance', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      proofAssessedAt(4),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace accepts run-level proof assessment with matching run-level proof-policy guidance', () => {
+    const proofScope = {
+      run_id: RUN_A,
+      flow_id: 'explore',
+    };
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      proofPolicyGuidanceAt(2, {
+        scope: proofScope,
+      }),
+      proofAssessedAt(3, {
+        scope: proofScope,
+        proof_policy_decision_id: 'gd-proof-2',
+        assessment_ref: {
+          kind: 'report',
+          ref: 'reports/proof/run-assessment.json',
+          sha256: guidanceSha,
+          run_id: RUN_A,
+          flow_id: 'explore',
+        },
+      }),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace rejects proof.assessed without matching proof-policy guidance when guidance is present', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofAssessedAt(3),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects proof.assessed without guidance even in an otherwise legacy trace', () => {
+    const bad = RunTrace.safeParse([bootstrapAt(0), proofAssessedAt(1)]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects proof.assessed with the wrong proof-policy decision id', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      proofAssessedAt(4, { proof_policy_decision_id: 'gd-proof-other' }),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects proof.assessed that disagrees with proof-policy guidance scope', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      proofAssessedAt(4, {
+        scope: {
+          run_id: RUN_A,
+          flow_id: 'explore',
+          step_id: 'other-step',
+          attempt: 1,
+        },
+      }),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects complete close when proof policy requires proven claims but no proof was assessed', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      runClosed(4),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects complete close when proof assessment does not allow close', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      proofAssessedAt(4, { overall_status: 'weak', close_allowed: false }),
+      runClosed(5),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace accepts complete close after passing proof assessment', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      proofPolicyGuidanceAt(3),
+      proofAssessedAt(4),
+      runClosed(5),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace accepts recovery guidance followed by the matching completed route', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkEvaluatedAt(3),
+      recoveryGuidanceAt(4),
+      stepCompletedAt(5),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace rejects recovery guidance without a matching completed route', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkEvaluatedAt(3),
+      recoveryGuidanceAt(4),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects recovery guidance when the completed route disagrees', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkEvaluatedAt(3),
+      recoveryGuidanceAt(4),
+      stepCompletedAt(5, { route_taken: 'revise' }),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace accepts safe apply guidance followed by the matching result', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3),
+      safeApplyResultAt(4),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
+  it('RunTrace rejects safe_apply.result without matching safe apply guidance', () => {
+    const bad = RunTrace.safeParse([bootstrapAt(0), safeApplyResultAt(1)]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects safe_apply.result that disagrees with safe apply guidance', () => {
+    const badPacket = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3),
+      safeApplyResultAt(4, {
+        change_packet_ref: {
+          ...changePacketRef,
+          ref: 'change-packets/other.json',
+        },
+      }),
+    ]);
+    expect(badPacket.success).toBe(false);
+
+    const badAction = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3, {
+        selected: {
+          action: 'reject',
+          change_packet_ref: changePacketRef,
+          base_ref: safeApplyBaseRef,
+          protected_file_decision: 'allowed',
+        },
+      }),
+      safeApplyResultAt(4),
+    ]);
+    expect(badAction.success).toBe(false);
+  });
+
+  it('RunTrace rejects complete close when safe apply was selected but no result was recorded', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3),
+      runClosed(4),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects complete close when the latest safe apply result did not pass', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3, {
+        selected: {
+          action: 'reject',
+          change_packet_ref: changePacketRef,
+          base_ref: safeApplyBaseRef,
+          protected_file_decision: 'rejected',
+        },
+      }),
+      safeApplyResultAt(4, {
+        action: 'rejected',
+        outcome: 'fail',
+        reason_codes: ['rejected'],
+        protected_file_decision: 'rejected',
+        final_verification_ref: undefined,
+      }),
+      runClosed(5),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace accepts complete close after passing safe apply with final verification', () => {
+    const ok = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      safeApplyGuidanceAt(3),
+      safeApplyResultAt(4),
+      runClosed(5),
+    ]);
+    expect(ok.success).toBe(true);
+  });
+
   it('RunTrace rejects checkpoint.resolved without matching checkpoint guidance when guidance is present', () => {
     const bad = RunTrace.safeParse([
       bootstrapAt(0),
@@ -516,7 +1119,7 @@ describe('GuidanceDecision trace invariants', () => {
     expect(bad.success).toBe(false);
   });
 
-  it('RunTrace rejects safe-autonomous checkpoint resolution once guidance is present', () => {
+  it('RunTrace rejects old safe-autonomous checkpoint resolution even when guidance is present', () => {
     const bad = RunTrace.safeParse([
       bootstrapAt(0),
       flowSelectionGuidanceAt(1),
@@ -524,6 +1127,54 @@ describe('GuidanceDecision trace invariants', () => {
       checkpointGuidanceAt(3),
       checkpointResolvedAt(4, { resolution_source: 'safe-autonomous' }),
     ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects old safe-default checkpoint resolution', () => {
+    const bad = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointGuidanceAt(3),
+      checkpointResolvedAt(4, { resolution_source: 'safe-default' }),
+    ]);
+    expect(bad.success).toBe(false);
+  });
+
+  it('RunTrace rejects checkpoint.resolved that disagrees with checkpoint guidance route or source', () => {
+    const badRoute = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointGuidanceAt(3),
+      checkpointResolvedAt(4, { route_id: 'other-route' }),
+    ]);
+    expect(badRoute.success).toBe(false);
+
+    const badSource = RunTrace.safeParse([
+      bootstrapAt(0),
+      flowSelectionGuidanceAt(1),
+      stepEntered(2),
+      checkpointGuidanceAt(3),
+      checkpointResolvedAt(4, { resolution_source: 'policy' }),
+    ]);
+    expect(badSource.success).toBe(false);
+  });
+
+  it('TraceEntry rejects checkpoint.requested auto_resolved true', () => {
+    const bad = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 9,
+      recorded_at: '2026-04-18T05:01:25.000Z',
+      run_id: RUN_A,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoint-request.json',
+      request_report_hash: 'a'.repeat(64),
+      auto_resolved: true,
+    });
     expect(bad.success).toBe(false);
   });
 });
@@ -927,6 +1578,33 @@ describe('TraceEntry variants reject top-level surplus keys (RUN-I8 coverage exp
       },
     ],
     [
+      'proof.assessed',
+      {
+        ...base,
+        sequence: 4,
+        kind: 'proof.assessed',
+        assessment_id: 'proof.frame.1',
+        scope: {
+          run_id: RUN_A,
+          flow_id: 'explore',
+          step_id: 'frame',
+          attempt: 1,
+        },
+        proof_policy_decision_id: 'gd-proof-1',
+        assessment_ref: {
+          kind: 'report',
+          ref: 'reports/proof/frame-assessment.json',
+          sha256: 'a'.repeat(64),
+          run_id: RUN_A,
+          flow_id: 'explore',
+          step_id: 'frame',
+          attempt: 1,
+        },
+        overall_status: 'proven',
+        close_allowed: true,
+      },
+    ],
+    [
       'checkpoint.requested',
       {
         ...base,
@@ -948,6 +1626,7 @@ describe('TraceEntry variants reject top-level surplus keys (RUN-I8 coverage exp
         step_id: 'frame',
         attempt: 1,
         selection: 'accept',
+        route_id: 'pass',
         auto_resolved: false,
         resolution_source: 'operator',
         response_path: 'reports/checkpoints/frame-response.json',
@@ -1059,6 +1738,88 @@ describe('Checkpoint trace_entry evidence is required', () => {
     recorded_at: '2026-04-25T00:00:00.000Z',
     run_id: RUN_A,
   };
+  const checkpointBoundaryRef = {
+    kind: 'work_contract' as const,
+    ref: 'compiled-flow/steps/frame/checkpoint-boundary.v0',
+    sha256: 'b'.repeat(64),
+    flow_id: 'explore',
+    step_id: 'frame',
+  };
+
+  it('accepts checkpoint.requested with a matching checkpoint boundary ref and hash', () => {
+    const ok = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: checkpointBoundaryRef,
+      boundary_hash: checkpointBoundaryRef.sha256,
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it('rejects checkpoint.requested with only half of the checkpoint boundary pair', () => {
+    const missingHash = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: checkpointBoundaryRef,
+    });
+    expect(missingHash.success).toBe(false);
+
+    const missingRef = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_hash: checkpointBoundaryRef.sha256,
+    });
+    expect(missingRef.success).toBe(false);
+  });
+
+  it('rejects checkpoint.requested when boundary hash does not match the boundary ref', () => {
+    const bad = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: checkpointBoundaryRef,
+      boundary_hash: 'c'.repeat(64),
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('rejects checkpoint.requested with a non-contract boundary ref', () => {
+    const bad = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: {
+        ...checkpointBoundaryRef,
+        kind: 'policy',
+        ref: 'policy.defaults.checkpoints',
+      },
+      boundary_hash: checkpointBoundaryRef.sha256,
+    });
+    expect(bad.success).toBe(false);
+  });
 
   it('rejects checkpoint.requested without request_path', () => {
     const bad = TraceEntry.safeParse({

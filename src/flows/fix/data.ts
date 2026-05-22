@@ -293,7 +293,6 @@ export const fixFlowData = {
             },
           ],
           safe_default_choice: 'continue',
-          safe_autonomous_choice: 'continue',
         },
         routes: {
           continue: 'fix-act',

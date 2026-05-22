@@ -82,8 +82,9 @@ describe('host experience docs', () => {
   it('keeps /circuit:run host guidance aligned with model-mediated selection', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'plugins/claude/commands/run.md'), 'utf8');
 
-    expect(doc).toContain('/circuit:run — flow selector');
-    expect(doc).toContain('Select the flow before invoking the CLI');
+    expect(doc).toContain('/circuit:run — intent front door');
+    expect(doc).toContain('Recommend the flow before invoking the CLI');
+    expect(doc).toContain('Circuit records the selected flow');
     expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run --goal');
     expect(doc).not.toContain('Do not classify the task yourself');
     expect(doc).toContain('Let the presentation wrapper render output');
@@ -100,7 +101,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('Go from this:');
     expect(doc).toContain('To this:');
     expect(doc).toContain('@Circuit the checkout total is wrong when discounts and tax both apply');
-    expect(doc).toMatch(/Codex can choose the best bundled Circuit flow\s+skill/);
+    expect(doc).toMatch(/Codex can recommend the right Circuit flow/);
     expect(doc).toContain('host/orchestrator behavior');
     expect(doc).toContain('worker connector behavior');
     expect(doc).toContain('docs/first-run.md');
@@ -112,6 +113,7 @@ describe('host experience docs', () => {
 
     expect(operatorGuide).not.toContain('old intent prefixes');
     expect(operatorGuide).not.toContain('develop:');
+    expect(operatorGuide).toContain('Circuit records the selected flow');
   });
 
   it('links navigation doc references in the docs map', () => {

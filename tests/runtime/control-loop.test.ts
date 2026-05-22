@@ -9,6 +9,7 @@ import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { type RunResult as ParsedRunResult, RunResult } from '../../src/schemas/result.js';
+import { RunTrace } from '../../src/schemas/run.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { NO_VERDICT_SENTINEL } from '../../src/shared/relay-support.js';
@@ -268,7 +269,6 @@ function checkpointRouteFlowBytes(selection: RichCheckpointRoute): Buffer {
             prompt: 'Choose the route to prove.',
             choices: choices.map((id) => ({ id })),
             safe_default_choice: selection,
-            safe_autonomous_choice: selection,
           },
           writes: {
             request: 'reports/checkpoints/route-request.json',
@@ -329,7 +329,6 @@ function checkpointRetryLoopFlowBytes(): Buffer {
             prompt: 'Retry until bounded.',
             choices: [{ id: 'retry' }],
             safe_default_choice: 'retry',
-            safe_autonomous_choice: 'retry',
           },
           writes: {
             request: 'reports/checkpoints/retry-request.json',
@@ -354,7 +353,6 @@ function checkpointRetryLoopFlowBytes(): Buffer {
 function checkpointMissingSafeChoiceFlowBytes(input: {
   readonly depth: 'standard' | 'autonomous';
   readonly safeDefaultChoice?: string;
-  readonly safeAutonomousChoice?: string;
 }): Buffer {
   const policy: Record<string, unknown> = {
     prompt: 'Try to auto-resolve without the required safe choice.',
@@ -362,9 +360,6 @@ function checkpointMissingSafeChoiceFlowBytes(input: {
   };
   if (input.safeDefaultChoice !== undefined) {
     policy.safe_default_choice = input.safeDefaultChoice;
-  }
-  if (input.safeAutonomousChoice !== undefined) {
-    policy.safe_autonomous_choice = input.safeAutonomousChoice;
   }
   return Buffer.from(
     JSON.stringify({
@@ -835,10 +830,14 @@ describe('runtime control-loop parity twins', () => {
       expect(trace).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
+            kind: 'guidance.decision',
+            subject: 'checkpoint_resolution',
+          }),
+          expect.objectContaining({
             kind: 'checkpoint.resolved',
             step_id: 'checkpoint-step',
             selection,
-            resolution_source: 'safe-default',
+            resolution_source: 'declared-default',
           }),
           expect.objectContaining({
             kind: 'step.completed',
@@ -851,6 +850,7 @@ describe('runtime control-loop parity twins', () => {
           }),
         ]),
       );
+      expect(RunTrace.safeParse(trace).success, selection).toBe(true);
     }
   });
 
@@ -891,10 +891,9 @@ describe('runtime control-loop parity twins', () => {
         name: 'autonomous',
         flowBytes: checkpointMissingSafeChoiceFlowBytes({
           depth: 'autonomous',
-          safeDefaultChoice: 'continue',
         }),
         runId: '40000000-0000-4000-8000-000000000011',
-        reason: /cannot auto-resolve autonomous depth without a declared safe autonomous choice/,
+        reason: /cannot auto-resolve autonomous depth without a declared default choice/,
       },
     ] as const;
 
@@ -913,6 +912,7 @@ describe('runtime control-loop parity twins', () => {
         testCase.name,
       ).toEqual([
         'run.bootstrapped',
+        'guidance.decision',
         'step.entered',
         'checkpoint.requested',
         'check.evaluated',
@@ -1049,7 +1049,9 @@ describe('runtime control-loop parity twins', () => {
     });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
+      'guidance.decision',
       'relay.started',
       'relay.request',
       'relay.receipt',
@@ -1085,7 +1087,9 @@ describe('runtime control-loop parity twins', () => {
     });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
+      'guidance.decision',
       'relay.started',
       'relay.request',
       'relay.receipt',
@@ -1128,7 +1132,9 @@ describe('runtime control-loop parity twins', () => {
     });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
+      'guidance.decision',
       'relay.started',
       'relay.request',
       'relay.failed',
@@ -1281,7 +1287,9 @@ describe('runtime control-loop parity twins', () => {
     expect(inspection).toEqual({ reportExists: false });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
+      'guidance.decision',
       'relay.started',
       'relay.request',
       'relay.receipt',
@@ -1419,6 +1427,50 @@ describe('runtime control-loop parity twins', () => {
     expect(inspection).toEqual({
       reportBody: { verdict: 'ok', evidence: ['fixed'] },
     });
+    const recoveryGuidanceIndex = trace.findIndex(
+      (entry) => entry.kind === 'guidance.decision' && entry.subject === 'recovery_route',
+    );
+    const failedAcceptanceIndex = trace.findIndex(
+      (entry) =>
+        entry.kind === 'check.evaluated' &&
+        entry.step_id === 'relay-step' &&
+        entry.attempt === 1 &&
+        entry.check_kind === 'acceptance_criteria' &&
+        entry.outcome === 'fail',
+    );
+    const firstStepCompletedIndex = trace.findIndex(
+      (entry) =>
+        entry.kind === 'step.completed' && entry.step_id === 'relay-step' && entry.attempt === 1,
+    );
+    expect(recoveryGuidanceIndex).toBeGreaterThan(failedAcceptanceIndex);
+    expect(firstStepCompletedIndex).toBeGreaterThan(recoveryGuidanceIndex);
+    expect(trace[recoveryGuidanceIndex]).toMatchObject({
+      kind: 'guidance.decision',
+      subject: 'recovery_route',
+      scope: {
+        step_id: 'relay-step',
+        attempt: 1,
+      },
+      selected: {
+        route_id: 'retry',
+        recovery_kind: 'retry_same_step_with_feedback',
+        failure_cause: 'failed_acceptance_criteria',
+        failure_ref: {
+          kind: 'trace',
+          sequence: trace[failedAcceptanceIndex]?.sequence,
+        },
+        binding_ref: expect.objectContaining({
+          kind: 'work_contract',
+          ref: 'compiled-flow/steps/relay-step/routes/retry',
+        }),
+      },
+      evidence_refs: [
+        expect.objectContaining({
+          kind: 'trace',
+          sequence: trace[failedAcceptanceIndex]?.sequence,
+        }),
+      ],
+    });
     expect(
       trace
         .filter((entry) => entry.kind === 'check.evaluated')
@@ -1445,6 +1497,11 @@ describe('runtime control-loop parity twins', () => {
         }),
       ]),
     );
+    const parsedTrace = RunTrace.safeParse(trace);
+    expect(
+      parsedTrace.success,
+      parsedTrace.success ? '' : JSON.stringify(parsedTrace.error.issues),
+    ).toBe(true);
   });
 
   it('bounds relay acceptance retries with the existing max_attempts budget', async () => {
@@ -1557,16 +1614,19 @@ describe('runtime control-loop parity twins', () => {
     };
     const { result, trace, resultJson } = await runRuntimeProofRelayCase({
       flowBytes: relayFlowBytes({
-        routes: { pass: '@complete', retry: '@stop' },
+        routes: { pass: '@complete', 'connector-failed': '@escalate' },
       }),
       resultBody: '{"verdict":"unused"}',
       runId: 'ffffffff-4444-4fff-8fff-ffffffff4444',
       relayer: throwingRelayer,
     });
 
-    expect(result.outcome).toBe('stopped');
+    expect(result.outcome).toBe('escalated');
     expect(result.verdict).toBeUndefined();
     expect(resultJson.verdict).toBeUndefined();
+    const relayFailedIndex = trace.findIndex(
+      (entry) => entry.kind === 'relay.failed' && entry.step_id === 'relay-step',
+    );
     expect(trace).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1577,14 +1637,36 @@ describe('runtime control-loop parity twins', () => {
         expect.objectContaining({
           kind: 'step.completed',
           step_id: 'relay-step',
-          route_taken: 'retry',
+          route_taken: 'connector-failed',
+        }),
+        expect.objectContaining({
+          kind: 'guidance.decision',
+          subject: 'recovery_route',
+          selected: expect.objectContaining({
+            route_id: 'connector-failed',
+            recovery_kind: 'escalate',
+            failure_cause: 'relay_connector_failed',
+            failure_ref: expect.objectContaining({
+              kind: 'trace',
+              sequence: trace[relayFailedIndex]?.sequence,
+            }),
+            binding_ref: expect.objectContaining({
+              kind: 'work_contract',
+              ref: 'compiled-flow/steps/relay-step/routes/connector-failed',
+            }),
+          }),
         }),
         expect.objectContaining({
           kind: 'run.closed',
-          outcome: 'stopped',
+          outcome: 'escalated',
         }),
       ]),
     );
+    const parsedTrace = RunTrace.safeParse(trace);
+    expect(
+      parsedTrace.success,
+      parsedTrace.success ? '' : JSON.stringify(parsedTrace.error.issues),
+    ).toBe(true);
     expect(trace).not.toContainEqual(
       expect.objectContaining({ kind: 'relay.completed', step_id: 'relay-step' }),
     );
@@ -1643,6 +1725,7 @@ describe('runtime control-loop parity twins', () => {
     expect(inspection).toEqual({ reportExists: false });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
       'check.evaluated',
       'step.aborted',
@@ -1687,6 +1770,7 @@ describe('runtime control-loop parity twins', () => {
     expect(inspection).toEqual({ reportExists: false });
     expect(trace.map((entry) => entry.kind)).toEqual([
       'run.bootstrapped',
+      'guidance.decision',
       'step.entered',
       'check.evaluated',
       'step.aborted',

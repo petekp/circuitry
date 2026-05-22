@@ -195,7 +195,6 @@ async function captureOutput(fn: () => Promise<number>): Promise<{
 
 function checkpointCompiledFlow(options: {
   safeDefault?: string;
-  safeAutonomous?: string;
 }): { flow: CompiledFlow; bytes: Buffer } {
   const raw = {
     schema_version: '2',
@@ -237,9 +236,6 @@ function checkpointCompiledFlow(options: {
           ...(options.safeDefault === undefined
             ? {}
             : { safe_default_choice: options.safeDefault }),
-          ...(options.safeAutonomous === undefined
-            ? {}
-            : { safe_autonomous_choice: options.safeAutonomous }),
           report_template: {
             scope: 'Only prove checkpoint execution',
             success_criteria: ['Frame checkpoint is represented honestly'],
@@ -569,13 +565,30 @@ describe('Build checkpoint execution substrate', () => {
     expect(packet.kind).toBe('build.checkpoint_packet@v1');
     expect(packet.recommendation.choice_id).toBe('continue');
     expect(packet.choices.map((choice) => choice.id)).toEqual(['continue', 'revise']);
+    const requested = outcome.trace_entries.find(
+      (trace_entry) => trace_entry.kind === 'checkpoint.requested',
+    );
+    if (requested?.kind !== 'checkpoint.requested') {
+      throw new Error('expected checkpoint.requested trace');
+    }
+    expect(requested.boundary_ref).toMatchObject({
+      kind: 'work_contract',
+      flow_id: 'build-checkpoint-exec-test',
+      step_id: 'frame-step',
+    });
+    expect(requested.boundary_hash).toBe(requested.boundary_ref?.sha256);
+    const requestBody = readJson(runFolder, 'reports/checkpoints/frame-step-request.json') as {
+      execution_context?: Record<string, unknown>;
+    };
+    expect(requestBody.execution_context?.checkpoint_boundary_ref).toEqual(requested.boundary_ref);
+    expect(requestBody.execution_context?.checkpoint_boundary_hash).toBe(requested.boundary_hash);
     const resolved = outcome.trace_entries.find(
       (trace_entry) => trace_entry.kind === 'checkpoint.resolved',
     );
     expect(resolved).toMatchObject({
       selection: 'continue',
       auto_resolved: true,
-      resolution_source: 'safe-default',
+      resolution_source: 'declared-default',
     });
   });
 
@@ -1262,10 +1275,9 @@ describe('Build checkpoint execution substrate', () => {
     expect(outcome.result.reason).toMatch(/projectRoot was not provided/);
   });
 
-  it('resolves autonomous depth only through a declared safe autonomous choice', async () => {
+  it('resolves autonomous depth through a declared default choice', async () => {
     const { flow, bytes } = checkpointCompiledFlow({
       safeDefault: 'continue',
-      safeAutonomous: 'continue',
     });
     const runFolder = join(runFolderBase, 'autonomous');
 
@@ -1288,12 +1300,12 @@ describe('Build checkpoint execution substrate', () => {
     expect(resolved).toMatchObject({
       selection: 'continue',
       auto_resolved: true,
-      resolution_source: 'safe-autonomous',
+      resolution_source: 'declared-default',
     });
   });
 
-  it('fails autonomous depth closed when no safe autonomous choice exists', async () => {
-    const { flow, bytes } = checkpointCompiledFlow({ safeDefault: 'continue' });
+  it('fails autonomous depth closed when no declared default choice exists', async () => {
+    const { flow, bytes } = checkpointCompiledFlow({});
     const runFolder = join(runFolderBase, 'autonomous-missing');
 
     const outcome = await runCompiledFlow({
@@ -1312,7 +1324,7 @@ describe('Build checkpoint execution substrate', () => {
     if (outcome.result.outcome !== 'aborted') {
       throw new Error(`expected aborted, got ${outcome.result.outcome}`);
     }
-    expect(outcome.result.reason).toMatch(/safe autonomous choice/);
+    expect(outcome.result.reason).toMatch(/declared default choice/);
     expect(existsSync(join(runFolder, 'reports/result.json'))).toBe(true);
   });
 });

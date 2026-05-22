@@ -196,6 +196,7 @@ async function executeSubRunInternal(step: SubRunStep, context: RunContext): Pro
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: context.selectionConfigLayers }),
+      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
       ...(context.progress === undefined ? {} : { progress: context.progress }),
     });
   } catch (error) {

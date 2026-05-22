@@ -281,7 +281,8 @@ the first run may end as `checkpoint_waiting`, and a resumed run can close.
 
 Autonomous decision behavior is separate. If an autonomous Explore mode later
 uses this path, it must carry ambiguity forward or choose only when a declared
-safe autonomous policy exists.
+default or policy-controlled checkpoint resolution exists and is recorded in
+the trace.
 
 ### 7. Compose Decision
 

@@ -1,13 +1,17 @@
 ---
-description: Runs the Build flow directly through the project CLI, with optional Lite, Deep, or Autonomous entry behavior.
+description: Starts Circuit from the Build flow through the project CLI, with optional Lite, Deep, or Autonomous entry behavior.
 argument-hint: <task>
 ---
 
-# /circuit:build — direct Build flow
+# /circuit:build — Build expert control
 
-Runs a task through the Build flow without asking the router to choose a
-flow first. Use this when the operator is asking Circuit to make a focused
-change.
+Starts Circuit from the Build flow. Use this expert control when the operator
+is asking Circuit to make a focused change and the Build flow is already the
+right starting point.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Build work contract, writes trace, reports, and evidence, and follows declared
+checkpoints and recovery behavior.
 
 Circuit runs the Build flow: it confirms the brief, makes a plan, relays the
 implementation to a worker, runs checks, asks for review when required, and
@@ -79,4 +83,4 @@ metacharacters:
 
 - `docs/contracts/compiled-flow.md` (compiled flow shape)
 - `src/cli/circuit.ts` (current CLI flags)
-- `src/flows/router.ts` (router bypass behavior for explicit flow names)
+- `src/flows/router.ts` (explicit flow behavior)

@@ -1,0 +1,707 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/explore/circuit.work-contract.v0.json",
+    "sha256": "bb31c9bca1e9eec789b73a2e28c85e723542ee5726722b5564c61a086d8b20bf",
+    "flow_id": "explore"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "explore",
+      "version": "0.1.0",
+      "purpose": "Explore flow: frame the investigation, analyze the subject, either synthesize and critique findings or run a decision tournament, then close with findings plus evidence. All modes use Frame, Analyze, Plan or Decision, and Close; critique is embedded inside the Plan/Decision stage rather than exposed as a separate canonical Review stage.",
+      "entry": {
+        "signals": {
+          "include": ["explore", "investigate", "research", "understand"],
+          "exclude": []
+        },
+        "intent_prefixes": ["explore", "investigate", "decide"]
+      },
+      "axes": {
+        "allowed_rigors": ["lite", "standard", "deep"],
+        "supports_tournament": true,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        },
+        "tournament_fan_out_stage": "decision-stage"
+      },
+      "starts_at": "frame-step"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "frame-stage",
+          "title": "Frame",
+          "canonical": "frame",
+          "steps": ["frame-step"]
+        },
+        {
+          "id": "analyze-stage",
+          "title": "Analyze",
+          "canonical": "analyze",
+          "steps": ["analyze-step"]
+        },
+        {
+          "id": "decision-stage",
+          "title": "Plan or Decision",
+          "canonical": "plan",
+          "steps": ["synthesize-step", "review-step"]
+        },
+        {
+          "id": "close-stage",
+          "title": "Close",
+          "canonical": "close",
+          "steps": ["close-step"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["act", "verify", "review"],
+        "rationale": "Explore is an investigation and decision flow. Synthesize, critique, and tournament stress review are all embedded inside the canonical Plan/Decision stage. Verify is omitted because Explore output is not executable and uses evidence/seam proof rather than mechanical command verification. See src/flows/explore/contract.md §Canonical stage set for the full rationale."
+      },
+      "routes": [
+        {
+          "step_id": "frame-step",
+          "route_id": "continue",
+          "target": "analyze-step"
+        },
+        {
+          "step_id": "frame-step",
+          "route_id": "pass",
+          "target": "analyze-step"
+        },
+        {
+          "step_id": "frame-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "analyze-step",
+          "route_id": "continue",
+          "target": "synthesize-step"
+        },
+        {
+          "step_id": "analyze-step",
+          "route_id": "pass",
+          "target": "synthesize-step"
+        },
+        {
+          "step_id": "analyze-step",
+          "route_id": "retry",
+          "target": "analyze-step"
+        },
+        {
+          "step_id": "analyze-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "synthesize-step",
+          "route_id": "continue",
+          "target": "review-step"
+        },
+        {
+          "step_id": "synthesize-step",
+          "route_id": "pass",
+          "target": "review-step"
+        },
+        {
+          "step_id": "synthesize-step",
+          "route_id": "retry",
+          "target": "synthesize-step"
+        },
+        {
+          "step_id": "synthesize-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "continue",
+          "target": "close-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "pass",
+          "target": "close-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "retry",
+          "target": "synthesize-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "revise",
+          "target": "synthesize-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "complete",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "pass",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "stop",
+          "target": "@stop"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "frame-step",
+        "title": "Frame — produce explore.brief",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "explore-frame@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/brief.json",
+            "schema": "explore.brief@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["subject", "success_condition"]
+        },
+        "routes": {
+          "continue": "analyze-step",
+          "pass": "analyze-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "analyze-step",
+        "title": "Analyze — produce explore.analysis",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "explore-analyze@v1",
+        "reads": ["reports/brief.json"],
+        "writes": {
+          "report": {
+            "path": "reports/analysis.json",
+            "schema": "explore.analysis@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["aspects"]
+        },
+        "routes": {
+          "continue": "synthesize-step",
+          "pass": "synthesize-step",
+          "retry": "analyze-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "synthesize-step",
+        "title": "Synthesize — produce explore.compose (connector-bound relay)",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "explore-synthesize@v1",
+        "reads": ["reports/brief.json", "reports/analysis.json"],
+        "writes": {
+          "report": {
+            "path": "reports/compose.json",
+            "schema": "explore.compose@v1"
+          },
+          "request": "reports/relay/synthesize.request.json",
+          "receipt": "reports/relay/synthesize.receipt.txt",
+          "result": "reports/relay/synthesize.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["accept"]
+        },
+        "routes": {
+          "continue": "review-step",
+          "pass": "review-step",
+          "retry": "synthesize-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "review-step",
+        "title": "Review — adversarial pass over compose (connector-bound relay)",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "explore-review@v1",
+        "reads": ["reports/brief.json", "reports/analysis.json", "reports/compose.json"],
+        "writes": {
+          "report": {
+            "path": "reports/review-verdict.json",
+            "schema": "explore.review-verdict@v1"
+          },
+          "request": "reports/relay/review.request.json",
+          "receipt": "reports/relay/review.receipt.txt",
+          "result": "reports/relay/review.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["accept", "accept-with-fold-ins"]
+        },
+        "routes": {
+          "continue": "close-step",
+          "pass": "close-step",
+          "retry": "synthesize-step",
+          "revise": "synthesize-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "close-step",
+        "title": "Close — emit final result file",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "explore-close@v1",
+        "reads": ["reports/brief.json", "reports/compose.json", "reports/review-verdict.json"],
+        "writes": {
+          "report": {
+            "path": "reports/explore-result.json",
+            "schema": "explore.result@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["summary", "verdict_snapshot"]
+        },
+        "routes": {
+          "complete": "@complete",
+          "pass": "@complete",
+          "stop": "@stop"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "synthesize-step",
+          "role": "implementer",
+          "writes": {
+            "report": {
+              "path": "reports/compose.json",
+              "schema": "explore.compose@v1"
+            },
+            "request": "reports/relay/synthesize.request.json",
+            "receipt": "reports/relay/synthesize.receipt.txt",
+            "result": "reports/relay/synthesize.result.json"
+          },
+          "report": {
+            "step_id": "synthesize-step",
+            "slot": "report",
+            "path": "reports/compose.json",
+            "schema": "explore.compose@v1"
+          }
+        },
+        {
+          "step_id": "review-step",
+          "role": "reviewer",
+          "writes": {
+            "report": {
+              "path": "reports/review-verdict.json",
+              "schema": "explore.review-verdict@v1"
+            },
+            "request": "reports/relay/review.request.json",
+            "receipt": "reports/relay/review.receipt.txt",
+            "result": "reports/relay/review.result.json"
+          },
+          "report": {
+            "step_id": "review-step",
+            "slot": "report",
+            "path": "reports/review-verdict.json",
+            "schema": "explore.review-verdict@v1"
+          }
+        }
+      ],
+      "checkpoints": [],
+      "sub_runs": [],
+      "fanouts": [],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "frame-step",
+          "slot": "report",
+          "path": "reports/brief.json",
+          "schema": "explore.brief@v1"
+        },
+        {
+          "step_id": "analyze-step",
+          "slot": "report",
+          "path": "reports/analysis.json",
+          "schema": "explore.analysis@v1"
+        },
+        {
+          "step_id": "synthesize-step",
+          "slot": "report",
+          "path": "reports/compose.json",
+          "schema": "explore.compose@v1"
+        },
+        {
+          "step_id": "review-step",
+          "slot": "report",
+          "path": "reports/review-verdict.json",
+          "schema": "explore.review-verdict@v1"
+        },
+        {
+          "step_id": "close-step",
+          "slot": "report",
+          "path": "reports/explore-result.json",
+          "schema": "explore.result@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "frame-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "analyze-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "synthesize-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "review-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "close-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [
+      {
+        "schema_version": 0,
+        "step_id": "frame-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/frame-step/routes/stop",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "analyze-step",
+        "route_id": "retry",
+        "route_target": "analyze-step",
+        "kind": "retry_same_step_with_feedback",
+        "allowed_failure_causes": [
+          "failed_check",
+          "failed_acceptance_criteria",
+          "relay_result_invalid"
+        ],
+        "required_refs": ["failed_check", "acceptance_feedback", "budget_state"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": true,
+          "must_respect_max_attempts": true,
+          "retry_target": "same_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/analyze-step/routes/retry",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "analyze-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/analyze-step/routes/stop",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "synthesize-step",
+        "route_id": "retry",
+        "route_target": "synthesize-step",
+        "kind": "retry_same_step_with_feedback",
+        "allowed_failure_causes": [
+          "failed_check",
+          "failed_acceptance_criteria",
+          "relay_result_invalid"
+        ],
+        "required_refs": ["failed_check", "acceptance_feedback", "budget_state"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": true,
+          "must_respect_max_attempts": true,
+          "retry_target": "same_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/synthesize-step/routes/retry",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "synthesize-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/synthesize-step/routes/stop",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "review-step",
+        "route_id": "retry",
+        "route_target": "synthesize-step",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/review-step/routes/retry",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "review-step",
+        "route_id": "revise",
+        "route_target": "synthesize-step",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/review-step/routes/revise",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "review-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/review-step/routes/stop",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "close-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/close-step/routes/stop",
+          "sha256": "e1eb8c07cfeb9ffdec4fd817831a5af8f82217e2c1bf6dedd5a8d6b16e6cd1a2",
+          "flow_id": "explore"
+        }
+      }
+    ],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [],
+    "connector_hints": [],
+    "skill_hints": [],
+    "checkpoint_default_hints": [],
+    "host_recommendations": []
+  },
+  "rejected_authority": []
+}

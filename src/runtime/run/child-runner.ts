@@ -1,4 +1,5 @@
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
+import type { PolicyLayer as PolicyLayerValue } from '../../schemas/policy-envelope.js';
 import type {
   ProgressReporter,
   RelayFn,
@@ -57,6 +58,7 @@ export interface CompiledFlowRunOptions {
   readonly relayConnector?: RelayConnector;
   readonly relayer?: RelayFn;
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
+  readonly policyLayers?: readonly PolicyLayerValue[];
   readonly progress?: ProgressReporter;
   readonly maxSteps?: number;
 }

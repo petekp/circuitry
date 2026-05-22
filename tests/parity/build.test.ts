@@ -84,7 +84,7 @@ describe('build runtime parity', () => {
       expect(runResult).toMatchObject({
         flow_id: 'build',
         outcome: 'complete',
-        trace_entries_observed: 14,
+        trace_entries_observed: 15,
         manifest_hash: fixture.manifestHash,
       });
     });

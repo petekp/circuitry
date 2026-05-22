@@ -17,6 +17,7 @@ import {
 import { runCompiledFlowWithWaiting } from '../../src/runtime/run/compiled-flow-runner.js';
 import { isGraphCheckpointWaitingResult } from '../../src/runtime/run/graph-runner.js';
 import { LayeredConfig } from '../../src/schemas/config.js';
+import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
@@ -98,7 +99,6 @@ function checkpointFixtureFlow(
           prompt: 'Choose whether the runtime fixture should continue.',
           choices: checkpointChoices,
           safe_default_choice: checkpointChoices[0]?.id,
-          safe_autonomous_choice: checkpointChoices[0]?.id,
         },
         writes: {
           request: 'reports/checkpoints/checkpoint-step-request.json',
@@ -265,6 +265,7 @@ function fixtureExecutors(
     verificationContexts?: Array<{
       readonly projectRoot?: string;
       readonly selectionConfigLayerCount: number;
+      readonly policyLayerCount: number;
     }>;
     composeCalls?: string[];
   } = {},
@@ -291,6 +292,7 @@ function fixtureExecutors(
       observed.verificationContexts?.push({
         ...(context.projectRoot === undefined ? {} : { projectRoot: context.projectRoot }),
         selectionConfigLayerCount: context.selectionConfigLayers?.length ?? 0,
+        policyLayerCount: context.policyLayers?.length ?? 0,
       });
       await context.files.writeJson(
         { path: report.path },
@@ -298,6 +300,7 @@ function fixtureExecutors(
           overall_status: 'passed',
           ...(context.projectRoot === undefined ? {} : { project_root: context.projectRoot }),
           selection_config_layer_count: context.selectionConfigLayers?.length ?? 0,
+          policy_layer_count: context.policyLayers?.length ?? 0,
         },
       );
       await context.trace.append({
@@ -339,6 +342,22 @@ function selectionLayer() {
   });
 }
 
+function policyLayer() {
+  return PolicyLayer.parse({
+    source: 'project',
+    envelope: {
+      schema_version: 2,
+      policy: {
+        rules: {
+          connectors: {
+            allow: ['claude-code'],
+          },
+        },
+      },
+    },
+  });
+}
+
 async function readTrace(runDir: string): Promise<TraceEntry[]> {
   const text = await readFile(join(runDir, 'trace.ndjson'), 'utf8');
   return text
@@ -371,6 +390,7 @@ async function createWaitingFixture(input: {
   readonly now?: () => Date;
   readonly progress?: (event: unknown) => void;
   readonly flowBytes?: Buffer;
+  readonly policyLayers?: readonly ReturnType<typeof policyLayer>[];
 }) {
   const result = await runCompiledFlowWithWaiting({
     flowBytes: input.flowBytes ?? fixtureBytes(),
@@ -380,6 +400,7 @@ async function createWaitingFixture(input: {
     entryModeName: 'deep',
     projectRoot: input.runDir,
     selectionConfigLayers: [selectionLayer()],
+    ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
     ...(input.now === undefined ? {} : { now: input.now }),
     ...(input.progress === undefined ? {} : { progress: input.progress }),
     executors: fixtureExecutors(),
@@ -478,7 +499,11 @@ describe('runtime checkpoint pause/resume fixture', () => {
     });
     const entriesBeforeResume = await readTrace(runDir);
     const observed: {
-      verificationContexts: Array<{ projectRoot?: string; selectionConfigLayerCount: number }>;
+      verificationContexts: Array<{
+        projectRoot?: string;
+        selectionConfigLayerCount: number;
+        policyLayerCount: number;
+      }>;
     } = {
       verificationContexts: [],
     };
@@ -502,10 +527,26 @@ describe('runtime checkpoint pause/resume fixture', () => {
       {
         projectRoot: runDir,
         selectionConfigLayerCount: 1,
+        policyLayerCount: 0,
       },
     ]);
 
     const trace = await readTrace(runDir);
+    const guidance = trace.find(
+      (entry) =>
+        entry.kind === 'guidance.decision' &&
+        entry.subject === 'checkpoint_resolution' &&
+        entry.scope?.step_id === 'checkpoint-step',
+    );
+    expect(guidance).toMatchObject({
+      input_refs: [
+        expect.objectContaining({
+          kind: 'request',
+          ref: 'reports/checkpoints/checkpoint-step-request.json',
+          step_id: 'checkpoint-step',
+        }),
+      ],
+    });
     const resolved = trace.find((entry) => entry.kind === 'checkpoint.resolved');
     expect(resolved).toMatchObject({
       step_id: 'checkpoint-step',
@@ -530,6 +571,84 @@ describe('runtime checkpoint pause/resume fixture', () => {
       reason: 'run_closed',
       terminal_outcome: 'complete',
     });
+  });
+
+  it('preserves PolicyEnvelope layers across checkpoint resume', async () => {
+    const runDir = join(tempDir, 'resume-policy-v2');
+    await createWaitingFixture({
+      runDir,
+      now: deterministicNow(Date.UTC(2026, 0, 2)),
+      policyLayers: [policyLayer()],
+    });
+    const observed: {
+      verificationContexts: Array<{
+        projectRoot?: string;
+        selectionConfigLayerCount: number;
+        policyLayerCount: number;
+      }>;
+    } = {
+      verificationContexts: [],
+    };
+
+    const result = await resumeCompiledFlow({
+      runDir,
+      selection: 'continue',
+      now: deterministicNow(Date.UTC(2026, 0, 3)),
+      relayer: fixtureRelayer(),
+      executors: fixtureExecutors(observed),
+    });
+
+    expect(result.outcome).toBe('complete');
+    expect(observed.verificationContexts).toEqual([
+      {
+        projectRoot: runDir,
+        selectionConfigLayerCount: 1,
+        policyLayerCount: 1,
+      },
+    ]);
+    const trace = await readTrace(runDir);
+    const relayGuidance = trace.find(
+      (entry) => entry.kind === 'guidance.decision' && entry.subject === 'relay_execution',
+    );
+    expect(relayGuidance).toMatchObject({
+      policy_refs: expect.arrayContaining([
+        expect.objectContaining({ kind: 'policy', ref: 'policy.runtime.policy_v2' }),
+      ]),
+    });
+  });
+
+  it('rejects checkpoint resume when the saved WorkContract ref does not match the flow snapshot', async () => {
+    const runDir = join(tempDir, 'resume-contract-ref-drift');
+    const waiting = await createWaitingFixture({
+      runDir,
+      now: deterministicNow(Date.UTC(2026, 0, 2)),
+      policyLayers: [policyLayer()],
+    });
+    const requestText = await readFile(waiting.checkpoint.requestPath, 'utf8');
+    const request = JSON.parse(requestText) as {
+      execution_context: {
+        work_contract_ref: {
+          sha256?: string;
+        };
+      };
+    };
+    request.execution_context.work_contract_ref.sha256 = '0'.repeat(64);
+    const rewritten = `${JSON.stringify(request, null, 2)}\n`;
+    await writeFile(waiting.checkpoint.requestPath, rewritten);
+    await rewriteCheckpointRequestTrace(runDir, (entry) => ({
+      ...entry,
+      request_report_hash: sha256Hex(rewritten),
+    }));
+
+    await expect(
+      resumeCompiledFlow({
+        runDir,
+        selection: 'continue',
+        now: deterministicNow(Date.UTC(2026, 0, 3)),
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/work_contract_ref does not match saved flow/);
   });
 
   it('rejects invalid selections and tampered checkpoint request bytes', async () => {
@@ -782,6 +901,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
         step_id: 'checkpoint-step',
         attempt: 1,
         selection: 'continue',
+        route_id: 'pass',
         auto_resolved: false,
         resolution_source: 'operator',
         response_path: 'reports/checkpoints/checkpoint-step-response.json',

@@ -452,6 +452,7 @@ export async function executeSubRunFanoutBranch(
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: context.selectionConfigLayers }),
+      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
       ...(context.progress === undefined ? {} : { progress: context.progress }),
     });
     const childResultText = await context.externalFiles.readText(child.resultPath);

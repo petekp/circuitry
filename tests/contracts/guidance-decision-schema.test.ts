@@ -7,7 +7,7 @@ const runId = '0191d2f0-aaaa-7fff-8aaa-000000000000';
 
 const workContractRef = {
   kind: 'work_contract' as const,
-  ref: 'generated/flows/build/work-contract.json',
+  ref: 'generated/flows/build/circuit.work-contract.v0.json',
   sha256: sha,
   flow_id: 'build',
 };
@@ -20,6 +20,42 @@ const policyRef = {
 const requestRef = {
   kind: 'request' as const,
   ref: 'relay/act-step/request.json',
+  sha256: sha,
+  run_id: runId,
+  flow_id: 'build',
+  step_id: 'act-step',
+  attempt: 1,
+};
+
+const memoryRef = {
+  kind: 'memory' as const,
+  ref: 'memory/repo-norms.json',
+  sha256: sha,
+};
+
+const changePacketRef = {
+  kind: 'change_packet' as const,
+  ref: 'change-packets/cp-build-act-1.json',
+  sha256: sha,
+  run_id: runId,
+  flow_id: 'build',
+  step_id: 'act-step',
+  attempt: 1,
+};
+
+const baseRef = {
+  kind: 'command' as const,
+  ref: 'commands/git-status-before.json',
+  sha256: sha,
+  run_id: runId,
+  flow_id: 'build',
+  step_id: 'act-step',
+  attempt: 1,
+};
+
+const finalVerificationRef = {
+  kind: 'command' as const,
+  ref: 'commands/npm-test.json',
   sha256: sha,
   run_id: runId,
   flow_id: 'build',
@@ -55,6 +91,68 @@ function relayDecision() {
     contract_refs: [workContractRef],
     policy_refs: [policyRef],
     reason_codes: ['write_step_requires_worker'],
+  };
+}
+
+function proofPolicyDecision(overrides: Record<string, unknown> = {}) {
+  return {
+    ...relayDecision(),
+    decision_id: 'gd-proof-001',
+    subject: 'proof_policy',
+    selected: {
+      proof_profile: 'standard',
+      required_claim_kinds: ['verification_passed'],
+      required_evidence_kinds: ['command'],
+      close_requires_proven: true,
+    },
+    ...overrides,
+  };
+}
+
+function recoveryDecision(overrides: Record<string, unknown> = {}) {
+  const failureRef = {
+    kind: 'trace' as const,
+    ref: 'trace.ndjson#sequence=7',
+    run_id: runId,
+    step_id: 'act-step',
+    attempt: 1,
+    sequence: 7,
+  };
+
+  return {
+    ...relayDecision(),
+    sequence: 8,
+    decision_id: 'gd-recovery-001',
+    subject: 'recovery_route',
+    selected: {
+      route_id: 'retry',
+      recovery_kind: 'retry_same_step_with_feedback',
+      failure_cause: 'failed_acceptance_criteria',
+      failure_ref: failureRef,
+      binding_ref: workContractRef,
+    },
+    input_refs: [failureRef],
+    evidence_refs: [failureRef],
+    ...overrides,
+  };
+}
+
+function safeApplyDecision(overrides: Record<string, unknown> = {}) {
+  return {
+    ...relayDecision(),
+    decision_id: 'gd-safe-apply-001',
+    subject: 'safe_apply',
+    selected: {
+      action: 'apply',
+      change_packet_ref: changePacketRef,
+      base_ref: baseRef,
+      protected_file_decision: 'allowed',
+      final_verification_ref: finalVerificationRef,
+    },
+    input_refs: [changePacketRef, baseRef],
+    evidence_refs: [changePacketRef, baseRef, finalVerificationRef],
+    reason_codes: ['safe_apply_requested'],
+    ...overrides,
   };
 }
 
@@ -122,11 +220,284 @@ describe('GuidanceDecisionTraceEntry schema', () => {
     expect(GuidanceDecisionTraceEntry.safeParse(candidate).success).toBe(false);
   });
 
+  it('allows proof policy decisions at run or step scope', () => {
+    expect(GuidanceDecisionTraceEntry.safeParse(proofPolicyDecision()).success).toBe(true);
+
+    const { step_id: _stepId, attempt: _attempt, ...runScope } = relayDecision().scope;
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(proofPolicyDecision({ scope: runScope })).success,
+    ).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        proofPolicyDecision({ scope: { ...runScope, step_id: 'act-step' } }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('requires recovery route decisions to name the typed route, failure, and binding refs', () => {
+    expect(GuidanceDecisionTraceEntry.safeParse(recoveryDecision()).success).toBe(true);
+
+    const selected = recoveryDecision().selected;
+    const failureRef = selected.failure_ref;
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            route_id: 'retry',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            route_id: 'retry',
+            recovery_kind: 'retry_same_step_with_feedback',
+            failure_cause: 'unknown_failure',
+            failure_ref: {
+              kind: 'trace',
+              ref: 'trace.ndjson#sequence=7',
+              run_id: runId,
+              step_id: 'act-step',
+              attempt: 1,
+              sequence: 7,
+            },
+            binding_ref: workContractRef,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            ...selected,
+            failure_ref: policyRef,
+          },
+          input_refs: [policyRef],
+          evidence_refs: [policyRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    const foreignFailureRef = {
+      ...failureRef,
+      run_id: '0191d2f0-bbbb-7fff-8aaa-000000000000',
+    };
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            ...selected,
+            failure_ref: foreignFailureRef,
+          },
+          input_refs: [foreignFailureRef],
+          evidence_refs: [foreignFailureRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            ...selected,
+            binding_ref: {
+              ...workContractRef,
+              ref: 'generated/flows/fix/circuit.work-contract.v0.json',
+              flow_id: 'fix',
+            },
+          },
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          input_refs: [requestRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          evidence_refs: [requestRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        recoveryDecision({
+          selected: {
+            ...selected,
+            failure_ref: {
+              ...failureRef,
+              ref: 'trace.ndjson#sequence=8',
+              sequence: 8,
+            },
+          },
+          input_refs: [
+            {
+              ...failureRef,
+              ref: 'trace.ndjson#sequence=8',
+              sequence: 8,
+            },
+          ],
+          evidence_refs: [
+            {
+              ...failureRef,
+              ref: 'trace.ndjson#sequence=8',
+              sequence: 8,
+            },
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('requires safe apply decisions to name packet, base, and apply verification refs', () => {
+    expect(GuidanceDecisionTraceEntry.safeParse(safeApplyDecision()).success).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          selected: {
+            action: 'apply',
+            change_packet_ref: changePacketRef,
+            base_ref: baseRef,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          selected: {
+            action: 'reject',
+            change_packet_ref: changePacketRef,
+            base_ref: baseRef,
+          },
+        }),
+      ).success,
+    ).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          input_refs: [requestRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          evidence_refs: [changePacketRef, baseRef],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          selected: {
+            action: 'apply',
+            change_packet_ref: {
+              ...changePacketRef,
+              run_id: '0191d2f0-bbbb-7fff-8aaa-000000000000',
+            },
+            base_ref: baseRef,
+            final_verification_ref: finalVerificationRef,
+          },
+          input_refs: [
+            {
+              ...changePacketRef,
+              run_id: '0191d2f0-bbbb-7fff-8aaa-000000000000',
+            },
+            baseRef,
+          ],
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse(
+        safeApplyDecision({
+          selected: {
+            action: 'apply',
+            change_packet_ref: {
+              ...changePacketRef,
+              kind: 'report',
+              ref: 'reports/change-packet.json',
+            },
+            base_ref: baseRef,
+            final_verification_ref: finalVerificationRef,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
   it('keeps constraint refs to work contract and policy refs in V0', () => {
     expect(
       GuidanceDecisionTraceEntry.safeParse({
         ...relayDecision(),
         constraint_refs: [requestRef],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('allows memory refs only as memory hints or inputs', () => {
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        input_refs: [requestRef, memoryRef],
+        memory_refs: [memoryRef],
+        reason_codes: ['write_step_requires_worker', 'memory_hint_used'],
+      }).success,
+    ).toBe(true);
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        memory_refs: [requestRef],
+      }).success,
+    ).toBe(false);
+
+    for (const field of [
+      'constraint_refs',
+      'contract_refs',
+      'policy_refs',
+      'evidence_refs',
+    ] as const) {
+      expect(
+        GuidanceDecisionTraceEntry.safeParse({
+          ...relayDecision(),
+          [field]: [memoryRef],
+        }).success,
+        `${field} should not accept memory refs`,
+      ).toBe(false);
+    }
+
+    expect(
+      GuidanceDecisionTraceEntry.safeParse({
+        ...relayDecision(),
+        rejected_options: [
+          {
+            option: { connector: 'old-memory-choice' },
+            reason_code: 'memory_conflicts_with_policy',
+            blocked_by: memoryRef,
+          },
+        ],
       }).success,
     ).toBe(false);
   });

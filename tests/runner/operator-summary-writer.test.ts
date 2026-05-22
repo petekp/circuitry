@@ -87,7 +87,8 @@ function writeHighestScoreAutoResolution(): void {
     schema_version: 1,
     step_id: 'tradeoff-checkpoint-step',
     selection: 'option-2',
-    resolution_source: 'safe-autonomous',
+    route_id: 'select',
+    resolution_source: 'policy',
     auto_resolution: record,
   });
   writeTrace([
@@ -100,8 +101,9 @@ function writeHighestScoreAutoResolution(): void {
       step_id: 'tradeoff-checkpoint-step',
       attempt: 1,
       selection: 'option-2',
+      route_id: 'select',
       auto_resolved: true,
-      resolution_source: 'safe-autonomous',
+      resolution_source: 'policy',
       response_path: 'reports/checkpoints/tradeoff-response.json',
     },
   ]);

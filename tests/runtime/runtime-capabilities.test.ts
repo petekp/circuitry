@@ -17,6 +17,7 @@ describe('runtime capabilities', () => {
       'relayConnector',
       'relayer',
       'selectionConfigLayers',
+      'policyLayers',
       'progress',
       'progressSurface',
     ]);

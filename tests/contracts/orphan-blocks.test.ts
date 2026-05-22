@@ -300,7 +300,6 @@ describe('orphan scalar: human-decision', () => {
             },
           ],
           safe_default_choice: 'continue',
-          safe_autonomous_choice: 'continue',
         },
       },
     ],
@@ -326,15 +325,13 @@ describe('orphan scalar: human-decision', () => {
     expect(() => compileSchematicToCompiledFlow(schematic)).not.toThrow();
   });
 
-  it('resolves the checkpoint via safe_autonomous_choice and runs to complete', async () => {
+  it('resolves the checkpoint via declared default choice and runs to complete', async () => {
     // The host scalar's runtime contract is "pause for the operator and
-    // record the answer". When no operator is present, the runner takes
-    // the safe_autonomous_choice declared in the policy — the same path
-    // Build's autonomous mode uses for its frame checkpoint. So the run
-    // resolves the checkpoint immediately and completes. To observe an
-    // actual pause we'd need a checkpoint policy that omits
-    // safe_autonomous_choice; the contract probe here just confirms the
-    // scalar is wireable end-to-end.
+    // record the answer". When no operator is present and the entry asks for
+    // autonomous execution, the runner takes the declared default choice. To
+    // observe an actual pause we'd need a checkpoint policy that omits that
+    // default; the contract probe here just confirms the scalar is wireable
+    // end-to-end.
     const schematic = FlowSchematic.parse(schematicRaw);
     const flow = singleCompiledFlow(compileSchematicToCompiledFlow(schematic));
     const outcome = await runSimpleCompiledFlow({

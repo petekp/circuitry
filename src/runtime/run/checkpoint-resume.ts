@@ -14,8 +14,17 @@ import { Axes, type Axes as AxesValue } from '../../schemas/axes.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import { LayeredConfig } from '../../schemas/config.js';
+import {
+  PolicyLayer,
+  type PolicyLayer as PolicyLayerValue,
+} from '../../schemas/policy-envelope.js';
+import { Ref, type Ref as RefValue } from '../../schemas/ref.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import type { ProgressReporter, RelayFn } from '../../shared/relay-runtime-types.js';
+import {
+  projectWorkContractProjectionV0,
+  runtimeWorkContractRefForProjectedRef,
+} from '../../shared/work-contract-projection.js';
 import type { TraceEntry } from '../domain/trace.js';
 import type { ExecutorRegistry } from '../executors/index.js';
 import type { RelayConnector } from '../executors/relay.js';
@@ -69,7 +78,9 @@ export type CheckpointResumeResult = CheckpointResumeSuccessResult | CheckpointR
 interface CheckpointRequestContext {
   readonly axes?: AxesValue;
   readonly projectRoot?: string;
+  readonly workContractRef?: RefValue;
   readonly selectionConfigLayers: readonly LayeredConfigValue[];
+  readonly policyLayers: readonly PolicyLayerValue[];
   readonly checkpointReportSha256?: string;
 }
 
@@ -124,6 +135,17 @@ function stringArray(value: unknown): readonly string[] | undefined {
 
 function sameStringArray(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function sameWorkContractIdentity(left: RefValue, right: RefValue): boolean {
+  return (
+    left.kind === 'work_contract' &&
+    right.kind === 'work_contract' &&
+    left.sha256 !== undefined &&
+    left.sha256 === right.sha256 &&
+    left.flow_id !== undefined &&
+    left.flow_id === right.flow_id
+  );
 }
 
 function isRuntimeBootstrap(entry: TraceEntry | undefined): entry is TraceEntry {
@@ -257,6 +279,20 @@ function readCheckpointRequestContextResult(input: {
   } catch (error) {
     return checkpointResumeRejectedFrom(error);
   }
+  let policyLayers: readonly PolicyLayerValue[];
+  try {
+    policyLayers = PolicyLayer.array().parse(context.policy_layers ?? []);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  let workContractRef: RefValue | undefined;
+  if (context.work_contract_ref !== undefined) {
+    try {
+      workContractRef = Ref.parse(context.work_contract_ref);
+    } catch (error) {
+      return checkpointResumeRejectedFrom(error);
+    }
+  }
   const checkpointReportSha256 = context.checkpoint_report_sha256;
   if (checkpointReportSha256 !== undefined && typeof checkpointReportSha256 !== 'string') {
     return checkpointResumeRejected(
@@ -266,7 +302,9 @@ function readCheckpointRequestContextResult(input: {
   return checkpointResumeValid({
     ...(axes === undefined ? {} : { axes }),
     ...(projectRoot === undefined ? {} : { projectRoot }),
+    ...(workContractRef === undefined ? {} : { workContractRef }),
     selectionConfigLayers,
+    policyLayers,
     ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
   });
 }
@@ -446,6 +484,20 @@ export async function resumeCompiledFlowResult(
   });
   if (isCheckpointResumeRejectedResult(requestContextResult)) return requestContextResult;
   const requestContext = requestContextResult.value;
+  const projectedWorkContractRef = runtimeWorkContractRefForProjectedRef(
+    projectWorkContractProjectionV0({
+      flow,
+    }).contract_ref,
+  );
+  if (
+    requestContext.workContractRef !== undefined &&
+    !sameWorkContractIdentity(requestContext.workContractRef, projectedWorkContractRef)
+  ) {
+    return checkpointResumeRejected(
+      'runtime checkpoint resume rejected: work_contract_ref does not match saved flow',
+    );
+  }
+  const workContractRef = requestContext.workContractRef ?? projectedWorkContractRef;
   const reportValidation = validateCheckpointReportResult({
     runDir: options.runDir,
     compiledStep,
@@ -461,6 +513,7 @@ export async function resumeCompiledFlowResult(
     goal: bootstrapGoal,
     manifestHash: snapshot.hash,
     manifestBytes: flowBytes,
+    workContractRef,
     ...(depth === undefined ? {} : { depth }),
     ...(requestContext.axes === undefined ? {} : { axes: requestContext.axes }),
     ...(options.now === undefined ? {} : { now: options.now }),
@@ -479,6 +532,9 @@ export async function resumeCompiledFlowResult(
     ...(requestContext.selectionConfigLayers.length === 0
       ? {}
       : { selectionConfigLayers: requestContext.selectionConfigLayers }),
+    ...(requestContext.policyLayers.length === 0
+      ? {}
+      : { policyLayers: requestContext.policyLayers }),
     ...(options.progress === undefined ? {} : { progress: options.progress }),
     ...(progressSurface === undefined ? {} : { progressSurface }),
     resumeCheckpoint: { stepId, attempt, selection: options.selection },

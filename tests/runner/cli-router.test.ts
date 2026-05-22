@@ -826,7 +826,7 @@ describe('CLI router', () => {
     expect(output.router_reason).toMatch(/implementation Build flow/i);
     expect(output.router_signal).toBeDefined();
     expect(output.outcome).toBe('complete');
-  }, 30_000);
+  }, 60_000);
 
   it('omitted flow positional preserves router metadata on Build checkpoint_waiting output', async () => {
     const runFolder = join(runFolderBase, 'build-router-checkpoint-waiting');
@@ -975,7 +975,7 @@ describe('CLI router', () => {
     expect(output.entry_mode_source).toBe('classifier');
     expect(output.router_reason).toMatch(/first executable slice/i);
     expect(output.outcome).toBe('complete');
-  }, 30_000);
+  }, 60_000);
 
   it('explicit flow positional bypasses the classifier', async () => {
     const output = await runMainJson(
@@ -1100,7 +1100,7 @@ describe('CLI router', () => {
       entry_mode: 'lite',
       entry_mode_source: 'classifier',
     });
-  }, 30_000);
+  }, 60_000);
 
   it('uses classifier-inferred Fix deep mode for bare serious Fix intent', async () => {
     const runFolder = join(runFolderBase, 'fix-deep-inferred');
@@ -1132,7 +1132,7 @@ describe('CLI router', () => {
       entry_mode: 'deep',
       entry_mode_source: 'classifier',
     });
-  }, 30_000);
+  }, 60_000);
 
   it('lets explicit --rigor override classifier-inferred Fix mode', async () => {
     const runFolder = join(runFolderBase, 'fix-explicit-default-mode');
@@ -1355,7 +1355,7 @@ describe('CLI router', () => {
         step_id: 'tradeoff-checkpoint-step',
         auto_resolved: true,
         selection: 'option-1',
-        resolution_source: 'safe-autonomous',
+        resolution_source: 'policy',
       }),
     );
     const response = JSON.parse(

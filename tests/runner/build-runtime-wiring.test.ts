@@ -20,6 +20,7 @@ import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const FIXTURE_PATH = resolve('generated/flows/build/circuit.json');
+const BUILD_RUNTIME_TIMEOUT_MS = 15_000;
 
 function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);
@@ -130,223 +131,248 @@ describe('Build runtime wiring', () => {
     expect(frame.check.allow).toEqual(['continue']);
   });
 
-  it('runs the live Build fixture through checkpoint, implementation relay, verification, review relay, and close', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'complete');
+  it(
+    'runs the live Build fixture through checkpoint, implementation relay, verification, review relay, and close',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'complete');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000000',
-      goal: 'Add a tiny Build feature',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 0, 0)),
-      relayer: relayerWith(),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000000',
+        goal: 'Add a tiny Build feature',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 0, 0)),
+        relayer: relayerWith(),
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    expect(outcome.outcome).toBe('complete');
-    const trace_entries = await readTraceEntries(runFolder);
-    expect(trace_entries.map(traceEntryLabel)).toContain('checkpoint.resolved:frame-step');
-    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:act-step');
-    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
+      expect(outcome.outcome).toBe('complete');
+      const trace_entries = await readTraceEntries(runFolder);
+      expect(trace_entries.map(traceEntryLabel)).toContain('checkpoint.resolved:frame-step');
+      expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:act-step');
+      expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
 
-    const implementation = BuildImplementation.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build/implementation.json'), 'utf8')),
-    );
-    expect(implementation.verdict).toBe('accept');
+      const implementation = BuildImplementation.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build/implementation.json'), 'utf8')),
+      );
+      expect(implementation.verdict).toBe('accept');
 
-    const verification = BuildVerification.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build/verification.json'), 'utf8')),
-    );
-    expect(verification.overall_status).toBe('passed');
-    expect(verification.commands[0]?.argv).toEqual(['npm', 'run', 'check']);
+      const verification = BuildVerification.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build/verification.json'), 'utf8')),
+      );
+      expect(verification.overall_status).toBe('passed');
+      expect(verification.commands[0]?.argv).toEqual(['npm', 'run', 'check']);
 
-    const review = BuildReview.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build/review.json'), 'utf8')),
-    );
-    expect(review.verdict).toBe('accept');
+      const review = BuildReview.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build/review.json'), 'utf8')),
+      );
+      expect(review.verdict).toBe('accept');
 
-    const result = BuildResult.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build-result.json'), 'utf8')),
-    );
-    expect(result.outcome).toBe('complete');
-    expect(result.review_verdict).toBe('accept');
-  });
+      const result = BuildResult.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build-result.json'), 'utf8')),
+      );
+      expect(result.outcome).toBe('complete');
+      expect(result.review_verdict).toBe('accept');
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('reruns Build verification after a retry repair instead of aborting as a route cycle', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'verify-retry-complete');
-    const checkScript = [
-      'node',
-      '-e',
-      [
-        "const fs = require('node:fs')",
-        "const path = 'check-count.txt'",
-        "const count = fs.existsSync(path) ? Number(fs.readFileSync(path, 'utf8')) : 0",
-        'fs.writeFileSync(path, String(count + 1))',
-        'process.exit(count === 0 ? 1 : 0)',
-      ].join('; '),
-    ]
-      .map((part) => JSON.stringify(part))
-      .join(' ');
+  it(
+    'reruns Build verification after a retry repair instead of aborting as a route cycle',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'verify-retry-complete');
+      const checkScript = [
+        'node',
+        '-e',
+        [
+          "const fs = require('node:fs')",
+          "const path = 'check-count.txt'",
+          "const count = fs.existsSync(path) ? Number(fs.readFileSync(path, 'utf8')) : 0",
+          'fs.writeFileSync(path, String(count + 1))',
+          'process.exit(count === 0 ? 1 : 0)',
+        ].join('; '),
+      ]
+        .map((part) => JSON.stringify(part))
+        .join(' ');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000010',
-      goal: 'Retry implementation after first verification failure',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 5, 0)),
-      relayer: relayerWith(),
-      projectRoot: makeVerificationProjectRoot(checkScript),
-    });
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000010',
+        goal: 'Retry implementation after first verification failure',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 5, 0)),
+        relayer: relayerWith(),
+        projectRoot: makeVerificationProjectRoot(checkScript),
+      });
 
-    expect(outcome.outcome).toBe('complete');
-    const trace_entries = await readTraceEntries(runFolder);
-    const actCompletions = trace_entries.filter(
-      (trace_entry) => trace_entry.kind === 'step.completed' && trace_entry.step_id === 'act-step',
-    );
-    const verifyCompletions = trace_entries.filter(
-      (trace_entry) =>
-        trace_entry.kind === 'step.completed' && trace_entry.step_id === 'verify-step',
-    );
-    expect(actCompletions.map((entry) => entry.attempt)).toEqual([1, 2]);
-    expect(verifyCompletions.map((entry) => entry.attempt)).toEqual([1, 2]);
-    expect(verifyCompletions.map((entry) => entry.route_taken)).toEqual(['retry', 'pass']);
+      expect(outcome.outcome).toBe('complete');
+      const trace_entries = await readTraceEntries(runFolder);
+      const actCompletions = trace_entries.filter(
+        (trace_entry) =>
+          trace_entry.kind === 'step.completed' && trace_entry.step_id === 'act-step',
+      );
+      const verifyCompletions = trace_entries.filter(
+        (trace_entry) =>
+          trace_entry.kind === 'step.completed' && trace_entry.step_id === 'verify-step',
+      );
+      expect(actCompletions.map((entry) => entry.attempt)).toEqual([1, 2]);
+      expect(verifyCompletions.map((entry) => entry.attempt)).toEqual([1, 2]);
+      expect(verifyCompletions.map((entry) => entry.route_taken)).toEqual(['retry', 'pass']);
 
-    const verification = BuildVerification.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build/verification.json'), 'utf8')),
-    );
-    expect(verification.overall_status).toBe('passed');
-  });
+      const verification = BuildVerification.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build/verification.json'), 'utf8')),
+      );
+      expect(verification.overall_status).toBe('passed');
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('aborts when implementation relay passes the verdict check but fails build.implementation@v1 parsing', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'bad-implementation');
+  it(
+    'aborts when implementation relay passes the verdict check but fails build.implementation@v1 parsing',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'bad-implementation');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000001',
-      goal: 'Reject malformed implementation report',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 10, 0)),
-      relayer: relayerWith({
-        implementationBody: JSON.stringify({
-          verdict: 'accept',
-          summary: 'Missing evidence',
-          changed_files: ['src/example.ts'],
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000001',
+        goal: 'Reject malformed implementation report',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 10, 0)),
+        relayer: relayerWith({
+          implementationBody: JSON.stringify({
+            verdict: 'accept',
+            summary: 'Missing evidence',
+            changed_files: ['src/example.ts'],
+          }),
         }),
-      }),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason).toMatch(/build\.implementation@v1/);
-    expect(outcome.reason).toMatch(/evidence/);
-    expect(existsSync(join(runFolder, 'reports/build/implementation.json'))).toBe(false);
-    expect(existsSync(join(runFolder, 'reports/relay/build-act.result.json'))).toBe(true);
-  });
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason).toMatch(/build\.implementation@v1/);
+      expect(outcome.reason).toMatch(/evidence/);
+      expect(existsSync(join(runFolder, 'reports/build/implementation.json'))).toBe(false);
+      expect(existsSync(join(runFolder, 'reports/relay/build-act.result.json'))).toBe(true);
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('writes the canonical Build review report on rejection so downstream readers see the verdict', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'review-reject');
+  it(
+    'writes the canonical Build review report on rejection so downstream readers see the verdict',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'review-reject');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000002',
-      goal: 'Reject a blocking Build review',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 20, 0)),
-      relayer: relayerWith({
-        reviewBody: JSON.stringify({
-          verdict: 'reject',
-          summary: 'Blocking issue found',
-          findings: [
-            {
-              severity: 'high',
-              text: 'The implementation does not satisfy the requested goal',
-              file_refs: ['src/example.ts:1'],
-            },
-          ],
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000002',
+        goal: 'Reject a blocking Build review',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 20, 0)),
+        relayer: relayerWith({
+          reviewBody: JSON.stringify({
+            verdict: 'reject',
+            summary: 'Blocking issue found',
+            findings: [
+              {
+                severity: 'high',
+                text: 'The implementation does not satisfy the requested goal',
+                file_refs: ['src/example.ts:1'],
+              },
+            ],
+          }),
         }),
-      }),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason).toMatch(/connector declared verdict 'reject'/);
-    // The verdict check fails ('reject' is not in build-review.pass), but
-    // the body parses against build.review@v1, so the schema-tied report
-    // is still materialized for the operator-summary projector.
-    expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(true);
-    expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
-  });
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason).toMatch(/connector declared verdict 'reject'/);
+      // The verdict check fails ('reject' is not in build-review.pass), but
+      // the body parses against build.review@v1, so the schema-tied report
+      // is still materialized for the operator-summary projector.
+      expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(true);
+      expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('aborts accept-with-fixes without findings before writing the canonical Build review report', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'review-empty-fixes');
+  it(
+    'aborts accept-with-fixes without findings before writing the canonical Build review report',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'review-empty-fixes');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000003',
-      goal: 'Reject a non-actionable Build review',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 30, 0)),
-      relayer: relayerWith({
-        reviewBody: JSON.stringify({
-          verdict: 'accept-with-fixes',
-          summary: 'Fixes needed but omitted',
-          findings: [],
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000003',
+        goal: 'Reject a non-actionable Build review',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 30, 0)),
+        relayer: relayerWith({
+          reviewBody: JSON.stringify({
+            verdict: 'accept-with-fixes',
+            summary: 'Fixes needed but omitted',
+            findings: [],
+          }),
         }),
-      }),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    expect(outcome.outcome).toBe('aborted');
-    expect(outcome.reason).toMatch(/build\.review@v1/);
-    expect(outcome.reason).toMatch(/findings/);
-    expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(false);
-    expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
-  });
+      expect(outcome.outcome).toBe('aborted');
+      expect(outcome.reason).toMatch(/build\.review@v1/);
+      expect(outcome.reason).toMatch(/findings/);
+      expect(existsSync(join(runFolder, 'reports/build/review.json'))).toBe(false);
+      expect(existsSync(join(runFolder, 'reports/relay/build-review.result.json'))).toBe(true);
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('marks Build as needs_attention when review accepts with required fixes', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'review-followups');
+  it(
+    'marks Build as needs_attention when review accepts with required fixes',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'review-followups');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000004',
-      goal: 'Accept Build with follow-up fixes',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 35, 0)),
-      relayer: relayerWith({
-        reviewBody: JSON.stringify({
-          verdict: 'accept-with-fixes',
-          summary: 'Usable, but a follow-up is required',
-          findings: [
-            {
-              severity: 'medium',
-              text: 'Add coverage for the boundary case before treating this as done',
-              file_refs: ['tests/example.test.ts:1'],
-            },
-          ],
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000004',
+        goal: 'Accept Build with follow-up fixes',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 35, 0)),
+        relayer: relayerWith({
+          reviewBody: JSON.stringify({
+            verdict: 'accept-with-fixes',
+            summary: 'Usable, but a follow-up is required',
+            findings: [
+              {
+                severity: 'medium',
+                text: 'Add coverage for the boundary case before treating this as done',
+                file_refs: ['tests/example.test.ts:1'],
+              },
+            ],
+          }),
         }),
-      }),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    expect(outcome.outcome).toBe('complete');
-    const result = BuildResult.parse(
-      JSON.parse(readFileSync(join(runFolder, 'reports/build-result.json'), 'utf8')),
-    );
-    expect(result.outcome).toBe('needs_attention');
-    expect(result.review_verdict).toBe('accept-with-fixes');
-  });
+      expect(outcome.outcome).toBe('complete');
+      const result = BuildResult.parse(
+        JSON.parse(readFileSync(join(runFolder, 'reports/build-result.json'), 'utf8')),
+      );
+      expect(result.outcome).toBe('needs_attention');
+      expect(result.review_verdict).toBe('accept-with-fixes');
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
   it('declares Build axes and reaches Review by the pass route', () => {
     const { flow } = loadFixture();
@@ -374,167 +400,208 @@ describe('Build runtime wiring', () => {
     ]);
   });
 
-  it('uses the selected lite axis as the run depth when no explicit depth is supplied', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'lite-axis-selection');
-    const relayInputs: ClaudeCodeRelayInput[] = [];
-    const relayer = relayerWith();
+  it(
+    'uses the selected lite axis as the run depth when no explicit depth is supplied',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'lite-axis-selection');
+      const relayInputs: ClaudeCodeRelayInput[] = [];
+      const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000004',
-      goal: 'Add a tiny Build feature in lite mode',
-      entryModeName: 'lite',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 40, 0)),
-      relayer: {
-        connectorName: relayer.connectorName,
-        relay: async (input) => {
-          relayInputs.push(input);
-          return relayer.relay(input);
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000004',
+        goal: 'Add a tiny Build feature in lite mode',
+        entryModeName: 'lite',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 40, 0)),
+        relayer: {
+          connectorName: relayer.connectorName,
+          relay: async (input) => {
+            relayInputs.push(input);
+            return relayer.relay(input);
+          },
         },
-      },
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    const trace_entries = await readTraceEntries(runFolder);
-    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
-    const checkpoint = trace_entries.find(
-      (trace_entry) =>
-        trace_entry.kind === 'checkpoint.resolved' &&
-        traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
-    );
-    expect(outcome.outcome).toBe('complete');
-    expect(bootstrap).toMatchObject({ depth: 'lite' });
-    expect(checkpoint).toMatchObject({
-      selection: 'continue',
-      resolution_source: 'safe-default',
-    });
-    expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'lite' });
-    expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
-  });
+      const trace_entries = await readTraceEntries(runFolder);
+      const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+      const checkpoint = trace_entries.find(
+        (trace_entry) =>
+          trace_entry.kind === 'checkpoint.resolved' &&
+          traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
+      );
+      expect(outcome.outcome).toBe('complete');
+      expect(bootstrap).toMatchObject({ depth: 'lite' });
+      expect(checkpoint).toMatchObject({
+        selection: 'continue',
+        resolution_source: 'declared-default',
+      });
+      expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'lite' });
+      expect(trace_entries.map(traceEntryLabel)).toContain('relay.completed:review-step');
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('uses deep axis selection to pause at the operator checkpoint when no explicit depth is supplied', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'deep-axis-selection');
+  it(
+    'uses deep axis selection to pause at the operator checkpoint when no explicit depth is supplied',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'deep-axis-selection');
 
-    const outcome = await runCompiledFlowWithWaiting({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000005',
-      goal: 'Add a tiny Build feature in deep mode',
-      entryModeName: 'deep',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 8, 50, 0)),
-      relayer: relayerWith(),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+      const outcome = await runCompiledFlowWithWaiting({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000005',
+        goal: 'Add a tiny Build feature in deep mode',
+        entryModeName: 'deep',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 8, 50, 0)),
+        relayer: relayerWith(),
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    const trace_entries = await readTraceEntries(runFolder);
-    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
-    expect(outcome.outcome).toBe('checkpoint_waiting');
-    expect(bootstrap).toMatchObject({ depth: 'deep' });
-    expect(trace_entries.map(traceEntryLabel)).not.toContain('run.closed');
-    expect(existsSync(join(runFolder, 'reports/result.json'))).toBe(false);
-  });
+      const trace_entries = await readTraceEntries(runFolder);
+      const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+      expect(outcome.outcome).toBe('checkpoint_waiting');
+      expect(bootstrap).toMatchObject({ depth: 'deep' });
+      expect(trace_entries.map(traceEntryLabel)).not.toContain('run.closed');
+      expect(existsSync(join(runFolder, 'reports/result.json'))).toBe(false);
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('lets an explicit depth override the selected axis default', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'axis-depth-override');
-    const relayInputs: ClaudeCodeRelayInput[] = [];
-    const relayer = relayerWith();
+  it(
+    'lets an explicit depth override the selected axis default',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'axis-depth-override');
+      const relayInputs: ClaudeCodeRelayInput[] = [];
+      const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000006',
-      goal: 'Add a tiny Build feature with an explicit standard override',
-      entryModeName: 'deep',
-      depth: 'standard',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 9, 0, 0)),
-      relayer: {
-        connectorName: relayer.connectorName,
-        relay: async (input) => {
-          relayInputs.push(input);
-          return relayer.relay(input);
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000006',
+        goal: 'Add a tiny Build feature with an explicit standard override',
+        entryModeName: 'deep',
+        depth: 'standard',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 9, 0, 0)),
+        relayer: {
+          connectorName: relayer.connectorName,
+          relay: async (input) => {
+            relayInputs.push(input);
+            return relayer.relay(input);
+          },
         },
-      },
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    const trace_entries = await readTraceEntries(runFolder);
-    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
-    expect(outcome.outcome).toBe('complete');
-    expect(bootstrap).toMatchObject({ depth: 'standard' });
-    expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'standard' });
-  });
+      const trace_entries = await readTraceEntries(runFolder);
+      const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+      expect(outcome.outcome).toBe('complete');
+      expect(bootstrap).toMatchObject({ depth: 'standard' });
+      expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'standard' });
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('uses explicit autonomous depth over the default axis for checkpoint policy', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'default-entry-autonomous-override');
-    const relayInputs: ClaudeCodeRelayInput[] = [];
-    const relayer = relayerWith();
+  it(
+    'uses explicit autonomous depth over the default axis for checkpoint policy',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'default-entry-autonomous-override');
+      const relayInputs: ClaudeCodeRelayInput[] = [];
+      const relayer = relayerWith();
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000009',
-      goal: 'Add a tiny Build feature with explicit autonomous depth',
-      entryModeName: 'default',
-      depth: 'autonomous',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 9, 5, 0)),
-      relayer: {
-        connectorName: relayer.connectorName,
-        relay: async (input) => {
-          relayInputs.push(input);
-          return relayer.relay(input);
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000009',
+        goal: 'Add a tiny Build feature with explicit autonomous depth',
+        entryModeName: 'default',
+        depth: 'autonomous',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 9, 5, 0)),
+        relayer: {
+          connectorName: relayer.connectorName,
+          relay: async (input) => {
+            relayInputs.push(input);
+            return relayer.relay(input);
+          },
         },
-      },
-      projectRoot: makeVerificationProjectRoot(),
-    });
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    const trace_entries = await readTraceEntries(runFolder);
-    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
-    const checkpoint = trace_entries.find(
-      (trace_entry) =>
-        trace_entry.kind === 'checkpoint.resolved' &&
-        traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
-    );
-    expect(outcome.outcome).toBe('complete');
-    expect(bootstrap).toMatchObject({ depth: 'autonomous' });
-    expect(checkpoint).toMatchObject({
-      selection: 'continue',
-      resolution_source: 'safe-autonomous',
-    });
-    expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'autonomous' });
-  });
+      const trace_entries = await readTraceEntries(runFolder);
+      const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+      const checkpoint = trace_entries.find(
+        (trace_entry) =>
+          trace_entry.kind === 'checkpoint.resolved' &&
+          traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
+      );
+      const checkpointGuidance = trace_entries.find(
+        (trace_entry) =>
+          trace_entry.kind === 'guidance.decision' &&
+          trace_entry.subject === 'checkpoint_resolution' &&
+          trace_entry.scope?.step_id === 'frame-step',
+      );
+      expect(outcome.outcome).toBe('complete');
+      expect(bootstrap).toMatchObject({ depth: 'autonomous' });
+      expect(checkpointGuidance).toMatchObject({
+        source: 'deterministic',
+        input_refs: [
+          expect.objectContaining({
+            kind: 'request',
+            ref: 'reports/checkpoints/frame-step-request.json',
+            step_id: 'frame-step',
+          }),
+        ],
+        selected: {
+          choice_id: 'continue',
+          resolution_source: 'declared-default',
+        },
+        reason_codes: ['declared_default_allowed'],
+      });
+      expect(checkpoint).toMatchObject({
+        selection: 'continue',
+        resolution_source: 'declared-default',
+      });
+      expect(relayInputs[0]?.resolvedSelection).toMatchObject({ depth: 'autonomous' });
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 
-  it('uses autonomous axis selection to take the declared safe autonomous checkpoint choice', async () => {
-    const { bytes } = loadFixture();
-    const runFolder = join(runFolderBase, 'autonomous-axis-selection');
+  it(
+    'uses autonomous axis selection to take the declared default checkpoint choice',
+    async () => {
+      const { bytes } = loadFixture();
+      const runFolder = join(runFolderBase, 'autonomous-axis-selection');
 
-    const outcome = await runCompiledFlow({
-      runDir: runFolder,
-      flowBytes: bytes,
-      runId: 'b2000000-0000-0000-0000-000000000007',
-      goal: 'Add a tiny Build feature in autonomous mode',
-      entryModeName: 'autonomous',
-      now: deterministicNow(Date.UTC(2026, 3, 25, 9, 10, 0)),
-      relayer: relayerWith(),
-      projectRoot: makeVerificationProjectRoot(),
-    });
+      const outcome = await runCompiledFlow({
+        runDir: runFolder,
+        flowBytes: bytes,
+        runId: 'b2000000-0000-0000-0000-000000000007',
+        goal: 'Add a tiny Build feature in autonomous mode',
+        entryModeName: 'autonomous',
+        now: deterministicNow(Date.UTC(2026, 3, 25, 9, 10, 0)),
+        relayer: relayerWith(),
+        projectRoot: makeVerificationProjectRoot(),
+      });
 
-    const trace_entries = await readTraceEntries(runFolder);
-    const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
-    const checkpoint = trace_entries.find(
-      (trace_entry) =>
-        trace_entry.kind === 'checkpoint.resolved' &&
-        traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
-    );
-    expect(outcome.outcome).toBe('complete');
-    expect(bootstrap).toMatchObject({ depth: 'autonomous' });
-    expect(checkpoint).toMatchObject({
-      selection: 'continue',
-      resolution_source: 'safe-autonomous',
-    });
-  });
+      const trace_entries = await readTraceEntries(runFolder);
+      const bootstrap = traceEntryByKind(trace_entries, 'run.bootstrapped');
+      const checkpoint = trace_entries.find(
+        (trace_entry) =>
+          trace_entry.kind === 'checkpoint.resolved' &&
+          traceEntryLabel(trace_entry) === 'checkpoint.resolved:frame-step',
+      );
+      expect(outcome.outcome).toBe('complete');
+      expect(bootstrap).toMatchObject({ depth: 'autonomous' });
+      expect(checkpoint).toMatchObject({
+        selection: 'continue',
+        resolution_source: 'declared-default',
+      });
+    },
+    BUILD_RUNTIME_TIMEOUT_MS,
+  );
 });

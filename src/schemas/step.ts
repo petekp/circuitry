@@ -81,7 +81,6 @@ export const VerificationStep = StepBase.extend({
 export type VerificationStep = z.infer<typeof VerificationStep>;
 
 export const AutoResolutionPolicy = z.discriminatedUnion('policy', [
-  z.object({ policy: z.literal('accept-as-is') }).strict(),
   z
     .object({
       policy: z.literal('highest-score'),
@@ -91,7 +90,6 @@ export const AutoResolutionPolicy = z.discriminatedUnion('policy', [
       rubric_result_path: z.string().min(1).default('rubric_result'),
     })
     .strict(),
-  z.object({ policy: z.literal('first-acceptable') }).strict(),
   z.object({ policy: z.literal('refuse') }).strict(),
 ]);
 export type AutoResolutionPolicy = z.infer<typeof AutoResolutionPolicy>;
@@ -113,7 +111,6 @@ export const CheckpointPolicy = z
       .optional(),
     choices_from: CheckpointChoiceSource.optional(),
     safe_default_choice: z.string().min(1).optional(),
-    safe_autonomous_choice: z.string().min(1).optional(),
     auto_resolution: AutoResolutionPolicy.optional(),
     report_template: JsonObject.optional(),
   })
@@ -141,10 +138,7 @@ export const CheckpointPolicy = z
         choiceIds.add(choice.id);
       }
     }
-    for (const [field, value] of [
-      ['safe_default_choice', policy.safe_default_choice],
-      ['safe_autonomous_choice', policy.safe_autonomous_choice],
-    ] as const) {
+    for (const [field, value] of [['safe_default_choice', policy.safe_default_choice]] as const) {
       if (value !== undefined && policy.choices !== undefined && !choiceIds.has(value)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

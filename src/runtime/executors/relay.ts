@@ -7,13 +7,11 @@ import { findReportZodSchema, parseReport } from '../../flows/registries/report-
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
-import type { CompiledFlowId } from '../../schemas/ids.js';
+import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
-import type { SkillSlot } from '../../schemas/skill.js';
 import { RelayRole } from '../../schemas/step.js';
 import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
 import { recoveryRouteForStep } from '../../shared/recovery-route.js';
-import { deriveResolvedSelection } from '../../shared/relay-selection.js';
 import {
   type CheckEvaluation,
   type RelayStep as CompiledRelayStepV1,
@@ -21,18 +19,16 @@ import {
   composeRelayPrompt,
   evaluateRelayCheck,
 } from '../../shared/relay-support.js';
-import { resolveLoadedRelaySkills } from '../../shared/skill-loading.js';
+import type { LoadedRelaySkill } from '../../shared/skill-loading.js';
 import { responseJsonSchemaFromZod } from '../../shared/zod-to-response-schema.js';
 import {
   type AcceptanceCriteriaEvaluationResult,
   evaluateAcceptanceCriteria,
 } from '../acceptance-criteria.js';
-import {
-  assertConnectorSelectionCompatible,
-  resolveConnectorForRelay,
-} from '../connectors/resolver.js';
 import type { StepOutcome } from '../domain/step.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
+import { appendRelayExecutionGuidance } from '../run/guidance.js';
+import { planRelayGuidanceDecision, resolveRelayExecution } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
   type StepExecutionResult,
@@ -40,6 +36,8 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
+
+export { resolveRelayExecution } from '../run/relay-guidance.js';
 
 export interface RelayRequest {
   readonly runId: string;
@@ -60,132 +58,6 @@ export function createStubRelayConnector(response: unknown = { ok: true }): Rela
     async relay() {
       return response;
     },
-  };
-}
-
-function builtinConnector(name: string): ResolvedConnector | undefined {
-  if (name === 'claude-code' || name === 'codex' || name === 'cursor-agent') {
-    return { kind: 'builtin', name };
-  }
-  return undefined;
-}
-
-function resolvedConnectorName(connector: ResolvedConnector | undefined): string | undefined {
-  return connector?.name;
-}
-
-function configLayerConnector(
-  name: string,
-  configLayers: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'],
-): ResolvedConnector | undefined {
-  let descriptor: ResolvedConnector | undefined;
-  for (const layer of configLayers ?? []) {
-    descriptor = layer.config.relay.connectors[name] ?? descriptor;
-  }
-  return descriptor;
-}
-
-function requestedConnectorForRelay(input: {
-  readonly stepConnector?: string;
-  readonly suppliedConnector?: RelayConnector;
-  readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
-}): ResolvedConnector | undefined {
-  const suppliedResolved = input.suppliedConnector?.connector;
-  const suppliedResolvedName = resolvedConnectorName(suppliedResolved);
-  const suppliedName = input.suppliedConnector?.connectorName ?? suppliedResolvedName;
-
-  if (
-    input.suppliedConnector?.connectorName !== undefined &&
-    suppliedResolvedName !== undefined &&
-    input.suppliedConnector.connectorName !== suppliedResolvedName
-  ) {
-    throw new Error(
-      `relay connector identity mismatch: connectorName '${input.suppliedConnector.connectorName}' does not match resolved connector '${suppliedResolvedName}'`,
-    );
-  }
-
-  if (
-    input.stepConnector !== undefined &&
-    suppliedName !== undefined &&
-    input.stepConnector !== suppliedName
-  ) {
-    throw new Error(
-      `relay connector identity mismatch: step requests '${input.stepConnector}' but supplied connector is '${suppliedName}'`,
-    );
-  }
-
-  const requested = input.stepConnector ?? suppliedName;
-  if (requested === undefined) return undefined;
-
-  const builtin = builtinConnector(requested);
-  if (builtin !== undefined) return builtin;
-
-  if (suppliedResolved !== undefined && suppliedResolved.name === requested) {
-    return suppliedResolved;
-  }
-
-  const configured = configLayerConnector(requested, input.configLayers);
-  if (configured !== undefined) return configured;
-
-  throw new Error(
-    `relay connector '${requested}' requires resolved connector capabilities before execution`,
-  );
-}
-
-function selectionForCompatibility(selection: unknown) {
-  if (selection === undefined) return undefined;
-  if (selection === null || typeof selection !== 'object' || Array.isArray(selection)) {
-    return undefined;
-  }
-  const selectionRecord = selection as {
-    readonly model?: unknown;
-    readonly effort?: unknown;
-  };
-  return ResolvedSelection.parse({
-    ...(selectionRecord.model === undefined ? {} : { model: selectionRecord.model }),
-    ...(selectionRecord.effort === undefined ? {} : { effort: selectionRecord.effort }),
-    skills: [],
-    invocation_options: {},
-  });
-}
-
-export function resolveRelayExecution(input: {
-  readonly flowId: string;
-  readonly role: string;
-  readonly selection?: unknown;
-  readonly stepConnector?: string;
-  readonly suppliedConnector?: RelayConnector;
-  readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
-}): {
-  readonly role: string;
-  readonly connectorName: string;
-  readonly connector: ResolvedConnector;
-  readonly resolvedFrom: ReturnType<typeof resolveConnectorForRelay>['resolvedFrom'];
-} {
-  const role = RelayRole.parse(input.role);
-  const explicitConnector = requestedConnectorForRelay({
-    ...(input.stepConnector === undefined ? {} : { stepConnector: input.stepConnector }),
-    ...(input.suppliedConnector === undefined
-      ? {}
-      : { suppliedConnector: input.suppliedConnector }),
-    ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
-  });
-  const resolved = resolveConnectorForRelay({
-    flowId: input.flowId,
-    role,
-    ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
-    ...(explicitConnector === undefined ? {} : { explicitConnector }),
-  });
-  const resolvedConnector = resolved.connector;
-  assertConnectorSelectionCompatible(
-    resolvedConnector.name,
-    selectionForCompatibility(input.selection),
-  );
-  return {
-    role,
-    connectorName: resolvedConnector.name,
-    connector: resolvedConnector,
-    resolvedFrom: resolved.resolvedFrom,
   };
 }
 
@@ -247,15 +119,80 @@ function readRouteFromReportBody(body: unknown, path: readonly string[]): string
   return cursor;
 }
 
-function suppliedConnectorFromRelayer(context: RunContext): RelayConnector | undefined {
-  if (context.relayer === undefined) return undefined;
-  return {
-    connectorName: context.relayer.connectorName,
-    ...(context.relayer.connector === undefined ? {} : { connector: context.relayer.connector }),
-    async relay() {
-      throw new Error('relay identity placeholder should not be invoked');
-    },
-  };
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
+    return Object.fromEntries(
+      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+    );
+  });
+}
+
+function sameJson(left: unknown, right: unknown): boolean {
+  return stableJson(left) === stableJson(right);
+}
+
+function relaySkillIdentities(
+  skills: readonly LoadedRelaySkill[],
+): readonly Record<string, unknown>[] {
+  return skills.map((skill) => ({
+    id: skill.id,
+    ...(skill.slot === undefined ? {} : { slot: skill.slot }),
+  }));
+}
+
+function guidanceSelectedRecord(guidance: GuidanceDecisionTraceEntryBody): Record<string, unknown> {
+  return guidance.selected as Record<string, unknown>;
+}
+
+function assertRelayGuidanceMatchesPlan(input: {
+  readonly guidance: GuidanceDecisionTraceEntryBody | undefined;
+  readonly context: RunContext;
+  readonly step: RelayStep;
+  readonly attempt: number;
+  readonly role: RelayRole;
+  readonly connector: ResolvedConnector;
+  readonly resolvedSelection: ResolvedSelection;
+  readonly loadedSkills: readonly LoadedRelaySkill[];
+  readonly requestPayloadHash: string;
+}): void {
+  if (input.guidance === undefined) {
+    if (input.context.workContractRef === undefined) return;
+    throw new Error(`relay step '${input.step.id}' cannot start without relay_execution guidance`);
+  }
+  if (input.guidance.subject !== 'relay_execution') {
+    throw new Error(`relay step '${input.step.id}' guidance subject is not relay_execution`);
+  }
+  if (
+    input.guidance.scope.run_id !== input.context.runId ||
+    input.guidance.scope.flow_id !== input.context.flow.id ||
+    input.guidance.scope.step_id !== input.step.id ||
+    input.guidance.scope.attempt !== input.attempt
+  ) {
+    throw new Error(`relay step '${input.step.id}' guidance scope does not match relay attempt`);
+  }
+
+  const selected = guidanceSelectedRecord(input.guidance);
+  if (selected.role !== input.role) {
+    throw new Error(`relay step '${input.step.id}' guidance role does not match relay plan`);
+  }
+  if (!sameJson(selected.connector, input.connector)) {
+    throw new Error(`relay step '${input.step.id}' guidance connector does not match relay plan`);
+  }
+  if (!sameJson(selected.model, input.resolvedSelection.model)) {
+    throw new Error(`relay step '${input.step.id}' guidance model does not match relay plan`);
+  }
+  if (selected.effort !== input.resolvedSelection.effort) {
+    throw new Error(`relay step '${input.step.id}' guidance effort does not match relay plan`);
+  }
+  if (!sameJson(selected.skills, relaySkillIdentities(input.loadedSkills))) {
+    throw new Error(`relay step '${input.step.id}' guidance skills do not match relay plan`);
+  }
+  if (selected.request_payload_hash !== input.requestPayloadHash) {
+    throw new Error(
+      `relay step '${input.step.id}' guidance request hash does not match relay plan`,
+    );
+  }
 }
 
 export interface ProductionRelayAttemptValidationInput {
@@ -376,37 +313,11 @@ export async function executeProductionRelayAttempt(input: {
 }): Promise<ProductionRelayAttemptResult> {
   const { step, compiledStep, context } = input;
   const flow = context.packageIndex.flow;
-  const suppliedConnector = suppliedConnectorFromRelayer(context);
-  const relayExecution = resolveRelayExecution({
-    flowId: context.flow.id,
-    role: step.role,
-    ...(suppliedConnector === undefined ? {} : { suppliedConnector }),
-    ...(context.selectionConfigLayers === undefined
-      ? {}
-      : { configLayers: context.selectionConfigLayers }),
-    ...(step.selection === undefined ? {} : { selection: step.selection }),
-    ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
-  });
-  const resolvedSelection = deriveResolvedSelection(
-    {
-      ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
-      ...(context.selectionConfigLayers === undefined
-        ? {}
-        : { selectionConfigLayers: context.selectionConfigLayers }),
-    },
-    flow,
+  const { relayExecution, resolvedSelection, loadedSkills } = planRelayGuidanceDecision({
+    context,
+    step,
     compiledStep,
-    Depth.parse(context.depth ?? 'standard'),
-  );
-  assertConnectorSelectionCompatible(relayExecution.connectorName, resolvedSelection);
-  const loadedSkills = resolveLoadedRelaySkills({
-    flowId: flow.id as CompiledFlowId,
-    stepId: step.id,
-    skillSlots: (compiledStep.skill_slots ?? []) as readonly SkillSlot[],
-    resolvedSelection,
-    ...(context.selectionConfigLayers === undefined
-      ? {}
-      : { configLayers: context.selectionConfigLayers }),
+    depth: Depth.parse(context.depth ?? 'standard'),
   });
   const prompt = composeRelayPrompt(
     compiledStep,
@@ -428,6 +339,27 @@ export async function executeProductionRelayAttempt(input: {
   const requestPayloadHash = sha256Hex(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
+  const relayGuidance = await appendRelayExecutionGuidance(context, {
+    stepId: step.id,
+    attempt,
+    role: RelayRole.parse(relayExecution.role),
+    connector: relayExecution.connector,
+    resolvedSelection,
+    loadedSkills,
+    requestPath: request.path,
+    requestPayloadHash,
+  });
+  assertRelayGuidanceMatchesPlan({
+    guidance: relayGuidance,
+    context,
+    step,
+    attempt,
+    role: RelayRole.parse(relayExecution.role),
+    connector: relayExecution.connector,
+    resolvedSelection,
+    loadedSkills,
+    requestPayloadHash,
+  });
   await context.trace.append({
     run_id: context.runId,
     kind: 'relay.started',

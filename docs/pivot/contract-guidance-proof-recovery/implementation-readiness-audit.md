@@ -1,7 +1,9 @@
 # Implementation Readiness Audit
 
-Status: cross-spec audit for the contract, guidance, proof, and recovery pivot.
-This is future-facing. It is not current runtime behavior.
+Status: historical cross-spec audit for the first implementation slice of the
+contract, guidance, proof, and recovery pivot. The "current repo evidence"
+section below records the repo state at audit time; some of those facts have
+changed on the pivot branch as foundation slices landed.
 
 Date: 2026-05-21
 
@@ -26,6 +28,35 @@ contract, policy, and trace records.
 No critical or high spec-readiness blockers remain after this audit. Medium gaps
 found during the audit are resolved below into concrete first-slice gates or
 docs fixes.
+
+## Progress Since This Audit
+
+On the pivot foundation branch, the first narrow slices have started landing.
+The repo now has shared `Ref` handling, WorkContract projection artifacts,
+`guidance.decision` trace support, PolicyEnvelope v2 projection, CheckpointBoundary
+projection, ProofAssessment and Evidence schemas, RecoveryRouteKind,
+ChangePacket schema, Pursue SafeApply reporting, MemoryInput hints, and
+generated host surface framing tests. The SafeApply foundation also has a
+runtime touched-file adapter that projects before/after git-state snapshots
+into the runtime-observed files a ChangePacket must use, plus relay write-mode
+classification that marks current write-capable built-ins as
+`pre_safe_apply_trusted_write`. SafeApply now has a reject-only helper that
+validates packets and records why apply was refused without mutating the parent
+checkout, plus a guarded patch-apply helper that checks patch hashes, tests the
+patch in a temporary apply root, and only then applies to the parent checkout.
+RunTrace sequence validation now blocks clean complete closes when a proof
+policy requires proven claims but no passing ProofAssessment is present, and
+when SafeApply was selected but no passing final-verified SafeApply result was
+recorded.
+
+Those changes do not mean the broad runtime cutover is done. These items remain
+future work unless a later implementation slice explicitly completes them:
+
+- config v2 as the runtime config path;
+- removal of old selection as final relay authority;
+- checkpoint execution without old safe-autonomous and auto-resolution paths;
+- runtime SafeApply with isolated proposed changes;
+- Pursue parallel code-changing branches after SafeApply exists.
 
 ## Evidence Checked
 
@@ -98,11 +129,13 @@ Current repo evidence:
   [UBIQUITOUS_LANGUAGE.md](../../../UBIQUITOUS_LANGUAGE.md#L12),
   [UBIQUITOUS_LANGUAGE.md](../../../UBIQUITOUS_LANGUAGE.md#L89), and
   [UBIQUITOUS_LANGUAGE.md](../../../UBIQUITOUS_LANGUAGE.md#L221).
-- Current trace has no `guidance.decision` entry. It records run, step, check,
-  checkpoint, relay, skills, sub-run, fanout, and close entries. See
+- Current trace includes `guidance.decision` alongside run, step, check,
+  checkpoint, relay, skills, sub-run, fanout, proof, safe-apply, and close
+  entries. See
   [src/schemas/trace-entry.ts](../../../src/schemas/trace-entry.ts#L383).
-- Current relay trace still repeats `resolved_selection`, and relay execution
-  derives selection before appending `relay.started`. See
+- Current relay trace still repeats `resolved_selection` for compatibility, but
+  relay execution now requires matching relay guidance before `relay.started`.
+  See
   [src/schemas/trace-entry.ts](../../../src/schemas/trace-entry.ts#L111) and
   [src/runtime/executors/relay.ts](../../../src/runtime/executors/relay.ts#L380).
 - Current config is `schema_version: 1` and includes relay routing,
@@ -111,13 +144,14 @@ Current repo evidence:
   [src/schemas/config.ts](../../../src/schemas/config.ts#L170), and
   [src/schemas/config.ts](../../../src/schemas/config.ts#L185).
 - Current step schemas still carry `selection`, `skill_slots`, routes, budgets,
-  checkpoint auto-resolution fields, relay connector, and acceptance criteria. See
+  checkpoint defaults and policy auto-resolution, relay connector, and acceptance
+  criteria. See
   [src/schemas/step.ts](../../../src/schemas/step.ts#L38),
   [src/schemas/step.ts](../../../src/schemas/step.ts#L83),
   [src/schemas/step.ts](../../../src/schemas/step.ts#L99), and
   [src/schemas/step.ts](../../../src/schemas/step.ts#L174).
 - Current checkpoint runtime can resolve through safe defaults,
-  safe-autonomous paths, and scoring-style auto-resolution. See
+  policy-controlled scoring-style auto-resolution, or operator resume. See
   [src/runtime/executors/checkpoint.ts](../../../src/runtime/executors/checkpoint.ts#L91),
   [src/runtime/executors/checkpoint.ts](../../../src/runtime/executors/checkpoint.ts#L125),
   and
@@ -289,7 +323,7 @@ These are still premature:
 These remain real decisions, but they should not block the first foundation slice:
 
 - exact generated manifest location for WorkContract projection;
-- whether `safe_apply.result` is trace-only, report-only, or both;
+- whether `safe_apply.result` also gets a durable report mirror;
 - exact path for durable ProofAssessment records;
 - exact PolicyEnvelope connector registry shape;
 - operator policy-change event name;

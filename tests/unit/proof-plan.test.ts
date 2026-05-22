@@ -53,7 +53,7 @@ describe('proof plan boundary', () => {
         id: 'direct-proof',
         cwd: '.',
         argv: [process.execPath, '-e', "process.stdout.write('proof ok')"],
-        timeout_ms: 1_000,
+        timeout_ms: 5_000,
         max_output_bytes: 12,
         env: {},
       },

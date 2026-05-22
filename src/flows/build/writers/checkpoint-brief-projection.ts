@@ -45,8 +45,6 @@ function recommendedChoiceId(step: CheckpointBuildContext['step']): string {
   const allowed = new Set(checkpointChoiceIds(step));
   const safeDefault = step.policy.safe_default_choice;
   if (safeDefault !== undefined && allowed.has(safeDefault)) return safeDefault;
-  const safeAutonomous = step.policy.safe_autonomous_choice;
-  if (safeAutonomous !== undefined && allowed.has(safeAutonomous)) return safeAutonomous;
   return checkpointChoiceIds(step)[0] ?? 'continue';
 }
 

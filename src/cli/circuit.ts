@@ -22,7 +22,7 @@ import { Rigor, type Rigor as RigorValue } from '../schemas/rigor.js';
 
 import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import { classifyCompiledFlowTask } from '../flows/router.js';
-import { discoverConfigLayers } from '../shared/config-loader.js';
+import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
 import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
@@ -786,10 +786,11 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       : { entry_mode_source: entryModeSelection.source }),
   });
   const runFolder = resolve(args.runFolder ?? `${DEFAULT_RUNS_BASE}/${runId as unknown as string}`);
-  const selectionConfigLayers = discoverConfigLayers({
+  const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...(options.configHomeDir !== undefined ? { homeDir: options.configHomeDir } : {}),
     ...(options.configCwd !== undefined ? { cwd: options.configCwd } : {}),
   });
+  const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
 
   const projectRoot = resolve(options.configCwd ?? process.cwd());
 
@@ -814,6 +815,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     const progressSurface = progressSurfaceForFlowId(flow.id);
     const runtimeResult = await runCompiledFlowWithWaiting({
       flowBytes: bytes,
+      compiledFlowPath: fixturePath,
       runDir: runFolder,
       runId,
       goal: args.goal,
@@ -828,6 +830,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
       ...(options.runtimeExecutors === undefined ? {} : { executors: options.runtimeExecutors }),
       ...(selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers }),
+      ...(policyLayers.length === 0 ? {} : { policyLayers }),
       ...(progress === undefined ? {} : { progress }),
       ...(progressSurface === undefined ? {} : { progressSurface }),
       ...(args.includeUntrackedContent

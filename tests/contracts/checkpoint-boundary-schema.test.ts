@@ -132,13 +132,40 @@ describe('CheckpointBoundaryV0 schema foundation', () => {
     ).toBe(false);
   });
 
-  it('keeps current checkpoint schema behavior while projecting safe-autonomous as rejected authority', () => {
-    const step = CheckpointStep.parse({
+  it('rejects safe-autonomous checkpoint authority at the active checkpoint schema', () => {
+    const parsed = CheckpointStep.safeParse({
       ...baseCheckpointStep,
       policy: {
         ...baseCheckpointStep.policy,
         safe_autonomous_choice: 'continue',
-        auto_resolution: { policy: 'first-acceptable' },
+      },
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects old direct checkpoint auto-resolution modes at the active schema', () => {
+    for (const policy of ['accept-as-is', 'first-acceptable'] as const) {
+      const parsed = CheckpointStep.safeParse({
+        ...baseCheckpointStep,
+        policy: {
+          ...baseCheckpointStep.policy,
+          auto_resolution: { policy },
+        },
+      });
+      expect(parsed.success, policy).toBe(false);
+    }
+  });
+
+  it('keeps highest-score scoring out of the projected checkpoint boundary', () => {
+    const step = CheckpointStep.parse({
+      ...baseCheckpointStep,
+      policy: {
+        ...baseCheckpointStep.policy,
+        auto_resolution: {
+          policy: 'highest-score',
+          source_report: 'reports/tournament-aggregate.json',
+        },
       },
     });
     const projection = projectCheckpointBoundaryV0({
@@ -148,10 +175,9 @@ describe('CheckpointBoundaryV0 schema foundation', () => {
     });
 
     expect(projection.rejected_old_authority.map((item) => item.field)).toEqual(
-      expect.arrayContaining(['safe_autonomous_choice', 'auto_resolution.first-acceptable']),
+      expect.arrayContaining(['auto_resolution.highest-score']),
     );
-    expect(JSON.stringify(projection.boundary)).not.toContain('safe_autonomous_choice');
-    expect(JSON.stringify(projection.boundary)).not.toContain('first-acceptable');
+    expect(JSON.stringify(projection.boundary)).not.toContain('highest-score');
   });
 
   it('classifies implicit pass-route fallback as rejected old authority', () => {

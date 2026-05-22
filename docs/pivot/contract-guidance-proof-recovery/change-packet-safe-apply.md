@@ -319,7 +319,7 @@ through a typed RecoveryRouteKind.
 | --- | --- | --- |
 | 1. Guidance | A prior matching `guidance.decision` exists with `subject: "safe_apply"` and selected packet/action refs. | `escalate` or `stop_unsafe` |
 | 2. Packet schema | ChangePacket parses, refs resolve, and hashes match the referenced files. | `safe_apply_reject` |
-| 3. Base | Current parent base matches `base.ref` and `base.tree_hash`, unless applying in an isolated compose root with a known rebase step. | `apply_conflict` |
+| 3. Base | Current parent base matches `base.ref` and `base.tree_hash`, unless applying in an isolated compose root with a known rebase step. | `safe_apply_reject` with `base_mismatch` |
 | 4. Dirty parent | Parent checkout state matches the policy. | `checkpoint_authority` or `safe_apply_reject` |
 | 5. Patch precheck | Patch hash matches, patch applies to the base in a temporary apply root, and no partial parent mutation occurs. | `apply_conflict` |
 | 6. Touched files | Runtime-computed touched files exist and match the packet. | `scope_drift` or `safe_apply_reject` |

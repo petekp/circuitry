@@ -14,7 +14,15 @@ Runs Circuit Explore for investigation, explanation, option comparison, architec
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Run the `explore` flow on the goal the user supplied. The flow walks a full
+Start Circuit from the `explore` flow on the goal the user supplied. Use this
+expert control when the operator already knows the work is investigation or
+decision support before editing.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Explore work contract, writes trace, reports, and evidence, and follows
+declared recovery behavior.
+
+The flow walks a full
 stage path: Frame → Analyze → Plan or Decision → Close. Synthesis, critique,
 and tournament review live inside the Plan or Decision stage rather than a
 separate canonical Review stage. Frame, Analyze, and Close are Circuit-written

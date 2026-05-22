@@ -9,6 +9,11 @@ import {
   CompiledFlow as CompiledFlowSchema,
 } from '../../schemas/compiled-flow.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
+import {
+  projectWorkContractProjectionV0,
+  runtimeWorkContractRefForProjectedRef,
+  workContractProjectionPathForCompiledFlowPath,
+} from '../../shared/work-contract-projection.js';
 import { fromCompiledFlow } from '../manifest/from-compiled-flow.js';
 import type { RuntimeExecutionCapabilities } from './capabilities.js';
 import {
@@ -20,6 +25,7 @@ import {
 
 export interface CompiledFlowRunOptions extends RuntimeExecutionCapabilities {
   readonly flowBytes: Uint8Array;
+  readonly compiledFlowPath?: string;
   readonly runDir: string;
   readonly runId?: string;
   readonly goal: string;
@@ -54,6 +60,19 @@ export async function runCompiledFlowWithWaiting(
   const entryModeName = options.entryModeName ?? 'default';
   const depth =
     options.depth ?? depthForAxisSelectionName(options.entryModeName) ?? defaultDepthForFlow(flow);
+  const contractRefPath =
+    options.compiledFlowPath === undefined
+      ? undefined
+      : workContractProjectionPathForCompiledFlowPath(options.compiledFlowPath);
+  const workContractProjection = projectWorkContractProjectionV0({
+    flow,
+    ...(contractRefPath === undefined ? {} : { contractRefPath }),
+  });
+  const workContractRef = workContractProjection.contract_ref;
+  const tracedWorkContractRef =
+    contractRefPath === undefined
+      ? runtimeWorkContractRefForProjectedRef(workContractRef)
+      : workContractRef;
   return await executeExecutableFlowWithWaiting(
     {
       ...executable,
@@ -69,6 +88,8 @@ export async function runCompiledFlowWithWaiting(
       goal: options.goal,
       manifestHash: computeManifestHash(options.flowBytes),
       manifestBytes: options.flowBytes,
+      workContractRef: tracedWorkContractRef,
+      recoveryRouteBindings: workContractProjection.work_contract.recovery,
       entryModeName,
       depth,
       ...(options.axes === undefined ? {} : { axes: options.axes }),
@@ -88,6 +109,7 @@ export async function runCompiledFlowWithWaiting(
       ...(options.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: options.selectionConfigLayers }),
+      ...(options.policyLayers === undefined ? {} : { policyLayers: options.policyLayers }),
       ...(options.progress === undefined ? {} : { progress: options.progress }),
       ...(options.progressSurface === undefined
         ? {}

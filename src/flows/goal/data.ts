@@ -391,7 +391,6 @@ export const goalFlowData = {
             { id: 'handoff', label: 'Hand Off' },
           ],
           safe_default_choice: 'blocked',
-          safe_autonomous_choice: 'blocked',
         },
         routes: {
           continue: 'goal-close',

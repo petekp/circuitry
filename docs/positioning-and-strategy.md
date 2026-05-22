@@ -78,7 +78,10 @@ These are real, demonstrable, and pointed at the fatigue audience's actual pain:
   step must produce, and relay steps can declare deterministic
   `acceptance_criteria` that Circuit checks before advancing. This is the
   grounded version of the "prove it before moving on" claim.
-- **Checkpoints with safe defaults** — schematics carry `safe_default_choice` and `safe_autonomous_choice`; human-in-the-loop is first-class. *"Pause for you when it matters; run autonomously when you let it."*
+- **Checkpoints with safe defaults** — schematics carry declared defaults, and
+  checkpoint choices are recorded in the trace. Human-in-the-loop remains
+  first-class. *"Pause for you when it matters; continue only when the safe
+  choice is declared."*
 - **Multi-agent review by default** — Build runs implementer and reviewer as separate workers (`role: "implementer"` vs `role: "reviewer"`). Frontier-lab pattern most users don't manually wire up.
 - **Variable model and effort per step** — `SelectionOverride` supports model (openai/anthropic/gemini/custom) and effort (none/minimal/low/medium/high/xhigh) at six layers of granularity, including per-step. Enables frontier-lab pipeline patterns: cheap/fast model for Frame, high-effort reasoning model for Plan, *different* model for Review (real cognitive diversity, not two instances of the same model). *"Different models for different jobs, on by default — you don't have to pick."* **Caveat:** capability is shipping; curated per-step defaults in flow schematics aren't yet — build item before this graduates from architectural to demonstrable.
 - **Structured report and evidence trail** — see Section 7. Currently treated as plumbing; should be a co-equal lead beat.

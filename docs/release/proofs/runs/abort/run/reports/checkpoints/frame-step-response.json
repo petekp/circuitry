@@ -2,5 +2,5 @@
   "schema_version": 1,
   "step_id": "frame-step",
   "selection": "continue",
-  "resolution_source": "safe-default"
+  "resolution_source": "declared-default"
 }

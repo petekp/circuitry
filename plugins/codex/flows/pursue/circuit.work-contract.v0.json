@@ -1,0 +1,932 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/pursue/circuit.work-contract.v0.json",
+    "sha256": "b2c3507de51d99e88c22aa2e2ce8bb93243805f7404b2a50c6a4e395211d50f7",
+    "flow_id": "pursue"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "pursue",
+      "version": "0.1.0",
+      "purpose": "Pursue flow: turn one or more rough operator ideas into pursuit contracts, coordinate their order, execute code-changing work serially, verify, review for interference, and close with evidence.",
+      "entry": {
+        "signals": {
+          "include": ["pursue", "pursuit", "coordinate pursuits", "multiple autonomous goals"],
+          "exclude": []
+        },
+        "intent_prefixes": ["pursue"]
+      },
+      "axes": {
+        "allowed_rigors": ["standard"],
+        "supports_tournament": false,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
+      "starts_at": "contract-step"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "frame-stage",
+          "title": "Frame",
+          "canonical": "frame",
+          "steps": ["contract-step"]
+        },
+        {
+          "id": "plan-stage",
+          "title": "Coordinate",
+          "canonical": "plan",
+          "steps": ["graph-step", "wave-plan-step"]
+        },
+        {
+          "id": "act-stage",
+          "title": "Execute",
+          "canonical": "act",
+          "steps": ["batch-step"]
+        },
+        {
+          "id": "verify-stage",
+          "title": "Verify",
+          "canonical": "verify",
+          "steps": ["verify-step"]
+        },
+        {
+          "id": "review-stage",
+          "title": "Review",
+          "canonical": "review",
+          "steps": ["review-step"]
+        },
+        {
+          "id": "close-stage",
+          "title": "Close",
+          "canonical": "close",
+          "steps": ["close-step"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["analyze"],
+        "rationale": "Pursuits V1 folds read-only discovery policy into the coordination graph before acting; a separate Analyze stage can be added when dynamic discovery fanout lands."
+      },
+      "routes": [
+        {
+          "step_id": "contract-step",
+          "route_id": "continue",
+          "target": "graph-step"
+        },
+        {
+          "step_id": "contract-step",
+          "route_id": "pass",
+          "target": "graph-step"
+        },
+        {
+          "step_id": "contract-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "graph-step",
+          "route_id": "continue",
+          "target": "wave-plan-step"
+        },
+        {
+          "step_id": "graph-step",
+          "route_id": "pass",
+          "target": "wave-plan-step"
+        },
+        {
+          "step_id": "graph-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "wave-plan-step",
+          "route_id": "continue",
+          "target": "batch-step"
+        },
+        {
+          "step_id": "wave-plan-step",
+          "route_id": "pass",
+          "target": "batch-step"
+        },
+        {
+          "step_id": "wave-plan-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "batch-step",
+          "route_id": "continue",
+          "target": "verify-step"
+        },
+        {
+          "step_id": "batch-step",
+          "route_id": "pass",
+          "target": "verify-step"
+        },
+        {
+          "step_id": "batch-step",
+          "route_id": "retry",
+          "target": "batch-step"
+        },
+        {
+          "step_id": "batch-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "verify-step",
+          "route_id": "continue",
+          "target": "review-step"
+        },
+        {
+          "step_id": "verify-step",
+          "route_id": "pass",
+          "target": "review-step"
+        },
+        {
+          "step_id": "verify-step",
+          "route_id": "retry",
+          "target": "batch-step"
+        },
+        {
+          "step_id": "verify-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "continue",
+          "target": "close-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "pass",
+          "target": "close-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "retry",
+          "target": "batch-step"
+        },
+        {
+          "step_id": "review-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "complete",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "pass",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "handoff",
+          "target": "@handoff"
+        },
+        {
+          "step_id": "close-step",
+          "route_id": "escalate",
+          "target": "@escalate"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "contract-step",
+        "title": "Frame - create pursuit contract",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "pursuit-contract@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/contract.json",
+            "schema": "pursuit.contract@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["objective", "pursuits", "verification_command_candidates"]
+        },
+        "routes": {
+          "continue": "graph-step",
+          "pass": "graph-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "graph-step",
+        "title": "Coordinate - build pursuit graph",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "pursuit-graph@v1",
+        "reads": ["reports/pursuit/contract.json"],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/graph.json",
+            "schema": "pursuit.graph@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["nodes", "serial_groups", "parallel_read_only_groups"]
+        },
+        "routes": {
+          "continue": "wave-plan-step",
+          "pass": "wave-plan-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "wave-plan-step",
+        "title": "Plan - order execution waves",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "pursuit-wave-plan@v1",
+        "reads": ["reports/pursuit/contract.json", "reports/pursuit/graph.json"],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/wave-plan.json",
+            "schema": "pursuit.wave-plan@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["waves", "no_parallel_writes_reason"]
+        },
+        "routes": {
+          "continue": "batch-step",
+          "pass": "batch-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "batch-step",
+        "title": "Execute - run serialized pursuit batch",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "pursuit-batch@v1",
+        "reads": [
+          "reports/pursuit/graph.json",
+          "reports/pursuit/contract.json",
+          "reports/pursuit/wave-plan.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/batch.json",
+            "schema": "pursuit.batch@v1"
+          },
+          "request": "reports/relay/pursuit-batch.request.json",
+          "receipt": "reports/relay/pursuit-batch.receipt.txt",
+          "result": "reports/relay/pursuit-batch.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["accept", "partial"]
+        },
+        "routes": {
+          "continue": "verify-step",
+          "pass": "verify-step",
+          "retry": "batch-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "verify-step",
+        "title": "Verify - run Pursue proof commands",
+        "kind": "verification",
+        "executor": "orchestrator",
+        "protocol": "pursuit-verify@v1",
+        "reads": ["reports/pursuit/contract.json", "reports/pursuit/batch.json"],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/verification.json",
+            "schema": "pursuit.verification@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["overall_status", "commands"]
+        },
+        "routes": {
+          "continue": "review-step",
+          "pass": "review-step",
+          "retry": "batch-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "review-step",
+        "title": "Review - check pursuit coordination",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "pursuit-review@v1",
+        "reads": [
+          "reports/pursuit/contract.json",
+          "reports/pursuit/batch.json",
+          "reports/pursuit/verification.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit/review.json",
+            "schema": "pursuit.review@v1"
+          },
+          "request": "reports/relay/pursuit-review.request.json",
+          "receipt": "reports/relay/pursuit-review.receipt.txt",
+          "result": "reports/relay/pursuit-review.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["clean", "needs-followup"]
+        },
+        "routes": {
+          "continue": "close-step",
+          "pass": "close-step",
+          "retry": "batch-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "close-step",
+        "title": "Close - summarize pursuit result",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "pursuit-close@v1",
+        "reads": [
+          "reports/pursuit/contract.json",
+          "reports/pursuit/graph.json",
+          "reports/pursuit/wave-plan.json",
+          "reports/pursuit/verification.json",
+          "reports/pursuit/review.json",
+          "reports/pursuit/batch.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/pursuit-result.json",
+            "schema": "pursuit.result@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["summary", "outcome", "evidence_links"]
+        },
+        "routes": {
+          "complete": "@complete",
+          "pass": "@complete",
+          "stop": "@stop",
+          "handoff": "@handoff",
+          "escalate": "@escalate"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "batch-step",
+          "role": "implementer",
+          "writes": {
+            "report": {
+              "path": "reports/pursuit/batch.json",
+              "schema": "pursuit.batch@v1"
+            },
+            "request": "reports/relay/pursuit-batch.request.json",
+            "receipt": "reports/relay/pursuit-batch.receipt.txt",
+            "result": "reports/relay/pursuit-batch.result.json"
+          },
+          "report": {
+            "step_id": "batch-step",
+            "slot": "report",
+            "path": "reports/pursuit/batch.json",
+            "schema": "pursuit.batch@v1"
+          }
+        },
+        {
+          "step_id": "review-step",
+          "role": "reviewer",
+          "writes": {
+            "report": {
+              "path": "reports/pursuit/review.json",
+              "schema": "pursuit.review@v1"
+            },
+            "request": "reports/relay/pursuit-review.request.json",
+            "receipt": "reports/relay/pursuit-review.receipt.txt",
+            "result": "reports/relay/pursuit-review.result.json"
+          },
+          "report": {
+            "step_id": "review-step",
+            "slot": "report",
+            "path": "reports/pursuit/review.json",
+            "schema": "pursuit.review@v1"
+          }
+        }
+      ],
+      "checkpoints": [],
+      "sub_runs": [],
+      "fanouts": [],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "contract-step",
+          "slot": "report",
+          "path": "reports/pursuit/contract.json",
+          "schema": "pursuit.contract@v1"
+        },
+        {
+          "step_id": "graph-step",
+          "slot": "report",
+          "path": "reports/pursuit/graph.json",
+          "schema": "pursuit.graph@v1"
+        },
+        {
+          "step_id": "wave-plan-step",
+          "slot": "report",
+          "path": "reports/pursuit/wave-plan.json",
+          "schema": "pursuit.wave-plan@v1"
+        },
+        {
+          "step_id": "batch-step",
+          "slot": "report",
+          "path": "reports/pursuit/batch.json",
+          "schema": "pursuit.batch@v1"
+        },
+        {
+          "step_id": "verify-step",
+          "slot": "report",
+          "path": "reports/pursuit/verification.json",
+          "schema": "pursuit.verification@v1"
+        },
+        {
+          "step_id": "review-step",
+          "slot": "report",
+          "path": "reports/pursuit/review.json",
+          "schema": "pursuit.review@v1"
+        },
+        {
+          "step_id": "close-step",
+          "slot": "report",
+          "path": "reports/pursuit-result.json",
+          "schema": "pursuit.result@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "contract-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "graph-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "wave-plan-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "batch-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "verify-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "review-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "close-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [
+      {
+        "schema_version": 0,
+        "step_id": "contract-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/contract-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "graph-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/graph-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "wave-plan-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/wave-plan-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "batch-step",
+        "route_id": "retry",
+        "route_target": "batch-step",
+        "kind": "retry_same_step_with_feedback",
+        "allowed_failure_causes": [
+          "failed_check",
+          "failed_acceptance_criteria",
+          "relay_result_invalid"
+        ],
+        "required_refs": ["failed_check", "acceptance_feedback", "budget_state"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": true,
+          "must_respect_max_attempts": true,
+          "retry_target": "same_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/batch-step/routes/retry",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "batch-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/batch-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "verify-step",
+        "route_id": "retry",
+        "route_target": "batch-step",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/verify-step/routes/retry",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "verify-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/verify-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "review-step",
+        "route_id": "retry",
+        "route_target": "batch-step",
+        "kind": "narrow_scope",
+        "allowed_failure_causes": ["failed_check", "scope_drift", "weak_proof", "unproved_claim"],
+        "required_refs": ["proof_assessment", "runtime_diff"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/review-step/routes/retry",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "review-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/review-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "close-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/close-step/routes/stop",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "close-step",
+        "route_id": "handoff",
+        "route_target": "@handoff",
+        "kind": "handoff",
+        "allowed_failure_causes": ["checkpoint_boundary", "budget_exceeded", "unknown_failure"],
+        "required_refs": ["trace", "report"],
+        "operator_authority": "required_to_continue_after_route",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/close-step/routes/handoff",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "close-step",
+        "route_id": "escalate",
+        "route_target": "@escalate",
+        "kind": "escalate",
+        "allowed_failure_causes": ["relay_connector_failed", "budget_exceeded", "unknown_failure"],
+        "required_refs": ["relay_result", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/close-step/routes/escalate",
+          "sha256": "db6aad9ce7e307e6348046bbdd01a166cfc5c9d4aa0d2620c1a2ae7206447e06",
+          "flow_id": "pursue"
+        }
+      }
+    ],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [],
+    "connector_hints": [],
+    "skill_hints": [],
+    "checkpoint_default_hints": [],
+    "host_recommendations": []
+  },
+  "rejected_authority": []
+}

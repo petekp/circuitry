@@ -17,6 +17,7 @@ import {
   writeRuntimeManifestSnapshot,
 } from '../../src/runtime/run/manifest-snapshot.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import { CompiledFlowId } from '../../src/schemas/ids.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
 import { RunResult } from '../../src/schemas/result.js';
 
@@ -690,6 +691,71 @@ describe('runtime baseline', () => {
             reason: "route 'revise' for step 'compose' exhausted max_attempts=2",
           }),
         ]),
+      );
+    });
+  });
+
+  it('does not use legacy recovery labels when a WorkContract ref has no bindings', async () => {
+    await withTempRun(async (runDir) => {
+      const result = await executeExecutableFlow(
+        {
+          id: 'revise-self-route',
+          version: '0.1.0',
+          entry: 'compose',
+          stages: [{ id: 'main', stepIds: ['compose'] }],
+          steps: [
+            {
+              id: 'compose',
+              kind: 'compose',
+              writer: 'self-route',
+              routes: {
+                pass: { kind: 'terminal', target: '@complete' },
+                revise: { kind: 'step', stepId: 'compose' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000106',
+          workContractRef: {
+            kind: 'work_contract',
+            ref: 'runtime/work-contract/revise-self-route/test.json',
+            sha256: 'a'.repeat(64),
+            flow_id: CompiledFlowId.parse('revise-self-route'),
+          },
+          executors: {
+            compose: async () => ({ route: 'revise' }),
+          },
+        },
+      );
+
+      const entries = await new TraceStore(runDir).load();
+      const completed = entries.filter((entry) => entry.kind === 'step.completed');
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason: "route 'revise' for step 'compose' exhausted max_attempts=1",
+      });
+      expect(completed).toHaveLength(1);
+      expect(entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: 'guidance.decision',
+            subject: 'flow_selection',
+          }),
+          expect.objectContaining({
+            kind: 'step.aborted',
+            step_id: 'compose',
+            attempt: 2,
+            reason: "route 'revise' for step 'compose' exhausted max_attempts=1",
+          }),
+        ]),
+      );
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'guidance.decision',
+          subject: 'recovery_route',
+        }),
       );
     });
   });

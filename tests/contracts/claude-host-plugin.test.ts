@@ -130,7 +130,7 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
-  it('mirrors every public canonical generated flow JSON file into the Claude package', () => {
+  it('mirrors every public canonical generated flow package JSON file into the Claude package', () => {
     const canonicalRoot = resolve(REPO_ROOT, 'generated/flows');
     const claudeRoot = resolve(PLUGIN_ROOT, 'skills');
     const canonicalFiles = collectJsonFiles(canonicalRoot).sort();

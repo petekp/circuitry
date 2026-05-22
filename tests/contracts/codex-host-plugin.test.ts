@@ -115,10 +115,11 @@ describe('Codex host plugin package', () => {
     expect(manifest.repository).toBe('https://github.com/petekp/circuit');
     expect(manifest.interface.capabilities).toContain('Interactive');
     expect(manifest.interface.capabilities).toContain('Write');
-    expect(manifest.description).toContain('right Circuit flow');
-    expect(manifest.interface.shortDescription).toContain('right Circuit flow');
+    expect(manifest.description).toContain('coding intents');
+    expect(manifest.interface.shortDescription).toContain('coding intents');
     expect(manifest.interface.longDescription).toContain('@Circuit');
-    expect(manifest.interface.longDescription).toContain('choose the best bundled Circuit flow');
+    expect(manifest.interface.longDescription).toContain('recommend a Circuit flow');
+    expect(manifest.interface.longDescription).toContain('expert controls');
     expect(manifest.interface.defaultPrompt).toEqual([
       'Use Circuit on this task',
       'Use Circuit to fix this bug',
@@ -272,7 +273,7 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain('# Circuit Run');
     expect(skill).toContain('## Use Case');
     expect(skill).toContain(
-      'Chooses and runs the best Circuit flow when no direct flow clearly fits',
+      'Runs Circuit from the intent front door with recorded flow selection, trace, reports, and evidence.',
     );
     expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run --goal");
     expect(skill).toContain("node '<plugin root>/scripts/circuit.ts' run fix --goal");
@@ -281,7 +282,7 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain('task_list.updated');
     expect(skill).toContain('user_input.requested');
     expect(skill).toContain('operator_summary_markdown_path');
-    expect(skill).toContain('Direct Circuit flow skills remain available');
+    expect(skill).toContain('Direct Circuit flow skills are expert controls');
     expect(skill).toContain('Do not use a path relative to the user');
     expect(skill).not.toMatch(/^# \/circuit:/m);
     expect(skill).not.toContain('/circuit:');
@@ -759,7 +760,7 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('mirrors every canonical generated flow JSON file into the Codex host output tree', () => {
+  it('mirrors every canonical generated flow package JSON file into the Codex host output tree', () => {
     const canonicalRoot = resolve(REPO_ROOT, 'generated/flows');
     const codexRoot = resolve(PLUGIN_ROOT, 'flows');
     const canonicalFiles = collectJsonFiles(canonicalRoot).sort();

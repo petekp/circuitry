@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   assertConnectorCanRunRole,
   assertConnectorSelectionCompatible,
+  classifyConnectorFilesystem,
+  classifyRelayWriteMode,
   resolveConnectorForRelay,
 } from '../../src/runtime/connectors/resolver.js';
 import { resolveRelayExecution } from '../../src/runtime/executors/relay.js';
@@ -72,6 +74,39 @@ describe('runtime connector safety', () => {
     expect(() =>
       assertConnectorCanRunRole({ kind: 'builtin', name: 'cursor-agent' }, 'implementer'),
     ).not.toThrow();
+  });
+
+  it('classifies current built-in write-capable connectors as pre-SafeApply trusted writes', () => {
+    for (const name of ['claude-code', 'codex', 'cursor-agent'] as const) {
+      expect(classifyRelayWriteMode({ kind: 'builtin', name })).toEqual({
+        filesystem: 'trusted-write',
+        write_capable: true,
+        work_root_kind: 'pre_safe_apply_trusted_write',
+        may_unlock_higher_autonomy_after_safe_apply: false,
+        reason: 'connector can mutate the parent checkout before SafeApply',
+      });
+    }
+  });
+
+  it('keeps read-only and isolated connector write classifications distinct', () => {
+    expect(
+      classifyConnectorFilesystem({ filesystem: 'read-only', structured_output: 'json' }),
+    ).toEqual({
+      filesystem: 'read-only',
+      write_capable: false,
+      may_unlock_higher_autonomy_after_safe_apply: false,
+      reason: 'connector is read-only',
+    });
+
+    expect(
+      classifyConnectorFilesystem({ filesystem: 'isolated-write', structured_output: 'json' }),
+    ).toEqual({
+      filesystem: 'isolated-write',
+      write_capable: true,
+      work_root_kind: 'isolated_worktree',
+      may_unlock_higher_autonomy_after_safe_apply: true,
+      reason: 'connector writes outside the parent checkout',
+    });
   });
 
   it('resolves declared custom connectors by role without losing identity', () => {

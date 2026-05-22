@@ -14,9 +14,13 @@ Runs Circuit Build for code or documentation changes that are not primarily bug 
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Runs a task through the Build flow without asking the router to choose a
-flow first. Use this when the operator is asking Circuit to make a focused
-change.
+Starts Circuit from the Build flow. Use this expert control when the operator
+is asking Circuit to make a focused change and the Build flow is already the
+right starting point.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Build work contract, writes trace, reports, and evidence, and follows declared
+checkpoints and recovery behavior.
 
 Circuit runs the Build flow: it confirms the brief, makes a plan, relays the
 implementation to a worker, runs checks, asks for review when required, and

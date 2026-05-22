@@ -795,13 +795,13 @@ function resolveCheckpoint(step, depth) {
   const stepPolicy = policy(step);
   if (effectiveDepth === 'deep' || effectiveDepth === 'tournament') return { kind: 'waiting' };
   if (effectiveDepth === 'autonomous') {
-    const selection = stepPolicy.safe_autonomous_choice;
-    if (selection === undefined) return { kind: 'failed', reason: '…no declared safe autonomous choice' };
-    return { kind: 'resolved', selection, resolutionSource: 'safe-autonomous', autoResolved: true };
+    const selection = stepPolicy.safe_default_choice;
+    if (selection === undefined) return { kind: 'failed', reason: '…no declared safe default choice' };
+    return { kind: 'resolved', selection, resolutionSource: 'declared-default', autoResolved: true };
   }
   const selection = stepPolicy.safe_default_choice;
   if (selection === undefined) return { kind: 'failed', reason: '…no declared safe default choice' };
-  return { kind: 'resolved', selection, resolutionSource: 'safe-default', autoResolved: true };
+  return { kind: 'resolved', selection, resolutionSource: 'declared-default', autoResolved: true };
 }
 ```
 
@@ -811,8 +811,9 @@ this choice is the conservative one if no human is around. At deep
 or tournament depth, the checkpoint waits — the run returns up to the
 CLI as `checkpoint_waiting`, the operator sees the prompt rendered in
 the host, and the next session resumes with the chosen choice. At
-autonomous depth, a separate `safe_autonomous_choice` (which may be
-different from the standard safe default) auto-resolves.
+autonomous depth, Circuit may use the same declared default or a
+policy-controlled resolution, but the choice is still recorded as checkpoint
+guidance in the trace.
 
 This is the design that lets a single schematic be used for every
 mode. The flow author writes one set of checkpoints, declares the safe

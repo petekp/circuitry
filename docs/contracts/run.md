@@ -104,6 +104,49 @@ and `RunProjection.superRefine`) and tested in
   The log must explicitly record closure; anything appended afterward is
   rejected. Enforced at `src/schemas/run.ts`.
 
+- **RUN-I5a — Guidance decisions bind recorded actions.** When a `RunTrace`
+  contains any `guidance.decision` entry, flow-selection guidance MUST be the
+  first entry after `run.bootstrapped`, before any `step.entered`. Guidance
+  `decision_id` values are unique within the run. A `relay.started` or
+  `relay.failed` entry then requires a prior matching `guidance.decision` with
+  `subject: 'relay_execution'`, the same step attempt, the same role and
+  connector, the same model/effort where present, and the same relay request
+  payload hash. If `skills.loaded` appears for the relay, the loaded skill ids
+  and slots must match the guidance decision. This is the trace-level bridge
+  from old relay provenance to recorded guidance authority.
+
+  A `checkpoint.resolved` entry also requires a prior matching
+  `guidance.decision` with `subject: 'checkpoint_resolution'`, the same step
+  attempt, the same selected choice, the same route id, the same resolution
+  source, and the same auto-resolved flag. Checkpoint resolution sources are
+  `declared-default`, `policy`, or `operator`; the old `safe-default` and
+  `safe-autonomous` names are not valid checkpoint trace sources. Enforced at
+  `src/schemas/run.ts` and covered by `tests/contracts/runtrace-schema.test.ts`
+  plus `tests/runtime/runtime-trace-contract.test.ts`.
+
+  A `proof.assessed` entry also requires a prior matching `guidance.decision`
+  with `subject: 'proof_policy'`. The assessment must reference that decision
+  id, share the same run/flow scope, share the same step/attempt when the
+  proof is step-scoped, and point to a durable proof assessment report or
+  evidence ref. This records the proof check; later close gates decide which
+  flows may complete from it.
+
+  A `guidance.decision` with `subject: 'recovery_route'` must be followed by a
+  `step.completed` entry for the same step attempt, and
+  `selected.route_id` must match `step.completed.route_taken`. The decision
+  records the typed recovery kind, failure cause, failure ref, and WorkContract
+  binding ref. The failure ref must appear in the decision's `input_refs` and
+  `evidence_refs`; trace failure refs must point to an earlier trace entry.
+  This validates recorded recovery decisions without cutting the graph runner
+  over from legacy recovery labels yet.
+
+  A `safe_apply.result` entry requires a prior matching `guidance.decision`
+  with `subject: 'safe_apply'`. The result must reference that decision id,
+  share the same run/flow/step scope, match the selected ChangePacket ref, base
+  ref, protected-file decision, final verification ref, and action, and reject
+  applied results without final verification. This records SafeApply decisions
+  without adding any apply runtime in this slice.
+
 - **RUN-I6 — Projection binding: bootstrap-frozen fields survive into the
   Snapshot unchanged.** A `RunProjection` pairs a `RunTrace` with a
   `Snapshot`. The Snapshot's `run_id`, `flow_id`, `manifest_hash`,

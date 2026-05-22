@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import type { Config, ConnectorReference } from '../schemas/config.js';
+import type { LayeredConfig as LayeredConfigValue } from '../schemas/config.js';
 import { EnabledConnector } from '../schemas/connector.js';
 import {
   ComposedPolicyHardConstraints,
@@ -8,9 +10,11 @@ import {
   PolicyEnvelopeV2,
   type PolicyEnvelopeV2 as PolicyEnvelopeValue,
   type PolicyLayerSource,
+  type PolicyLayer as PolicyLayerValue,
   type Provider,
   type RejectedPolicyAuthority,
 } from '../schemas/policy-envelope.js';
+import type { Ref } from '../schemas/ref.js';
 import type { Effort } from '../schemas/selection-policy.js';
 
 export { PolicyEnvelopeProjectionV0, PolicyEnvelopeV2 } from '../schemas/policy-envelope.js';
@@ -26,6 +30,16 @@ interface ProjectConfigV1Input {
   readonly config: Config;
   readonly source: PolicyLayerSource;
 }
+
+export const RUNTIME_CONFIG_V1_POLICY_REF: Ref = {
+  kind: 'policy',
+  ref: 'policy.runtime.config_v1',
+};
+
+export const RUNTIME_POLICY_V2_REF: Ref = {
+  kind: 'policy',
+  ref: 'policy.runtime.policy_v2',
+};
 
 const EFFORT_ORDER: readonly Effort[] = [
   'none',
@@ -99,6 +113,24 @@ function connectorRefFromConfig(ref: ConnectorReference): PolicyConnectorReferen
 
 function rejectOldAuthority(path: string, field: string, reason: string): RejectedPolicyAuthority {
   return { path, field, reason };
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
+    return Object.fromEntries(
+      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+    );
+  });
+}
+
+function sha256Json(value: unknown): string {
+  return createHash('sha256').update(stableJson(value)).digest('hex');
+}
+
+function policyLayerSourceForConfigLayer(layer: LayeredConfigValue['layer']): PolicyLayerSource {
+  if (layer === 'default') return 'built-in';
+  return layer;
 }
 
 export function composePolicyHardConstraints(
@@ -280,4 +312,60 @@ export function projectConfigV1ToPolicyEnvelopeV2(
     },
     rejected_old_authority: rejectedOldAuthority,
   });
+}
+
+export function policyRefsForConfigLayers(
+  layers: readonly LayeredConfigValue[] | undefined,
+): readonly Ref[] {
+  const refs: Ref[] = [RUNTIME_CONFIG_V1_POLICY_REF];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
+    let sha256: string;
+    try {
+      const projection = projectConfigV1ToPolicyEnvelopeV2({
+        config: layer.config,
+        source: policyLayerSourceForConfigLayer(layer.layer),
+      });
+      sha256 = sha256Json(projection.policy_envelope);
+    } catch {
+      // Runtime guidance is provenance-only in the v1 transition. A valid v1
+      // config must not start failing just because its migration projection is
+      // stricter than current runtime behavior.
+      sha256 = sha256Json({ schema_version: 1, config: layer.config });
+    }
+    refs.push({
+      kind: 'policy',
+      ref,
+      sha256,
+    });
+  }
+  return refs;
+}
+
+export function policyRefsForPolicyLayers(
+  layers: readonly PolicyLayerValue[] | undefined,
+): readonly Ref[] {
+  const refs: Ref[] = [];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    refs.push({
+      kind: 'policy',
+      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
+      sha256: sha256Json(layer.envelope),
+    });
+  }
+  return refs;
+}
+
+export function policyRefsForRuntimeInputs(input: {
+  readonly configLayers?: readonly LayeredConfigValue[];
+  readonly policyLayers?: readonly PolicyLayerValue[];
+}): readonly Ref[] {
+  const refs: Ref[] = [];
+  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
+    refs.push(...policyRefsForConfigLayers(input.configLayers));
+  }
+  if ((input.policyLayers?.length ?? 0) > 0) {
+    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
+  }
+  return refs;
 }

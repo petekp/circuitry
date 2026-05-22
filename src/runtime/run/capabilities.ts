@@ -1,5 +1,6 @@
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
+import type { PolicyLayer as PolicyLayerValue } from '../../schemas/policy-envelope.js';
 import type {
   ProgressReporter,
   RelayFn,
@@ -27,6 +28,7 @@ export const RUNTIME_CAPABILITY_NAMES = [
   'relayConnector',
   'relayer',
   'selectionConfigLayers',
+  'policyLayers',
   'progress',
   'progressSurface',
 ] as const;
@@ -46,6 +48,7 @@ export interface RuntimeExecutionCapabilities {
   readonly relayConnector?: RelayConnector;
   readonly relayer?: RelayFn;
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
+  readonly policyLayers?: readonly PolicyLayerValue[];
   readonly progress?: ProgressReporter;
   readonly progressSurface?: CompiledFlowProgressSurface;
 }

@@ -1,0 +1,389 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/review/circuit.work-contract.v0.json",
+    "sha256": "3a7214b495f0e6a9fb82cdf328c298463ff6d877c4b75814faecabbe895b4da8",
+    "flow_id": "review"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "review",
+      "version": "0.1.0",
+      "purpose": "Review flow: frame the audit scope, relay independent review to a reviewer, and close with a verdict report. The schematic uses a compact Intake, Independent Audit, and Verdict shape because Review is audit-only and does not implement or verify a change.",
+      "entry": {
+        "signals": {
+          "include": ["review", "audit", "check"],
+          "exclude": []
+        },
+        "intent_prefixes": ["review"]
+      },
+      "axes": {
+        "allowed_rigors": ["standard"],
+        "supports_tournament": false,
+        "supports_autonomous": false,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        }
+      },
+      "starts_at": "intake-step"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "intake-stage",
+          "title": "Intake",
+          "canonical": "frame",
+          "steps": ["intake-step"]
+        },
+        {
+          "id": "audit-stage",
+          "title": "Independent Audit",
+          "canonical": "analyze",
+          "steps": ["audit-step"]
+        },
+        {
+          "id": "verdict-stage",
+          "title": "Verdict",
+          "canonical": "close",
+          "steps": ["verdict-step"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["plan", "act", "verify", "review"],
+        "rationale": "Review is an audit-only flow: Intake frames the scope, Independent Audit performs the reviewer relay, and Verdict aggregates findings. There is no planning stage, no implementation/action stage, no verification rerun, and no nested review stage in this narrowed variant."
+      },
+      "routes": [
+        {
+          "step_id": "intake-step",
+          "route_id": "continue",
+          "target": "audit-step"
+        },
+        {
+          "step_id": "intake-step",
+          "route_id": "pass",
+          "target": "audit-step"
+        },
+        {
+          "step_id": "intake-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "audit-step",
+          "route_id": "continue",
+          "target": "verdict-step"
+        },
+        {
+          "step_id": "audit-step",
+          "route_id": "pass",
+          "target": "verdict-step"
+        },
+        {
+          "step_id": "audit-step",
+          "route_id": "retry",
+          "target": "audit-step"
+        },
+        {
+          "step_id": "audit-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "verdict-step",
+          "route_id": "complete",
+          "target": "@complete"
+        },
+        {
+          "step_id": "verdict-step",
+          "route_id": "pass",
+          "target": "@complete"
+        },
+        {
+          "step_id": "verdict-step",
+          "route_id": "stop",
+          "target": "@stop"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "intake-step",
+        "title": "Intake — resolve review scope",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "review-intake@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/review-intake.json",
+            "schema": "review.intake@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["scope", "evidence"]
+        },
+        "routes": {
+          "continue": "audit-step",
+          "pass": "audit-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "audit-step",
+        "title": "Independent Audit — reviewer relay",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "review-audit@v1",
+        "reads": ["reports/review-intake.json"],
+        "writes": {
+          "request": "reports/relay/review.request.json",
+          "receipt": "reports/relay/review.receipt.txt",
+          "result": "stages/analyze/review-raw-findings.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["NO_ISSUES_FOUND", "ISSUES_FOUND"]
+        },
+        "routes": {
+          "continue": "verdict-step",
+          "pass": "verdict-step",
+          "retry": "audit-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "verdict-step",
+        "title": "Verdict — emit review.result",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "review-verdict@v1",
+        "reads": ["reports/review-intake.json", "stages/analyze/review-raw-findings.json"],
+        "writes": {
+          "report": {
+            "path": "reports/review-result.json",
+            "schema": "review.result@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["scope", "findings", "verdict"]
+        },
+        "routes": {
+          "complete": "@complete",
+          "pass": "@complete",
+          "stop": "@stop"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "audit-step",
+          "role": "reviewer",
+          "writes": {
+            "request": "reports/relay/review.request.json",
+            "receipt": "reports/relay/review.receipt.txt",
+            "result": "stages/analyze/review-raw-findings.json"
+          }
+        }
+      ],
+      "checkpoints": [],
+      "sub_runs": [],
+      "fanouts": [],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "intake-step",
+          "slot": "report",
+          "path": "reports/review-intake.json",
+          "schema": "review.intake@v1"
+        },
+        {
+          "step_id": "verdict-step",
+          "slot": "report",
+          "path": "reports/review-result.json",
+          "schema": "review.result@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "intake-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "audit-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "verdict-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [
+      {
+        "schema_version": 0,
+        "step_id": "intake-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/intake-step/routes/stop",
+          "sha256": "abb28632adca93ace98645841e41a493920fd9bb8d51ba5924dbe428e03cc563",
+          "flow_id": "review"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "audit-step",
+        "route_id": "retry",
+        "route_target": "audit-step",
+        "kind": "retry_same_step_with_feedback",
+        "allowed_failure_causes": [
+          "failed_check",
+          "failed_acceptance_criteria",
+          "relay_result_invalid"
+        ],
+        "required_refs": ["failed_check", "acceptance_feedback", "budget_state"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": true,
+          "must_respect_max_attempts": true,
+          "retry_target": "same_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/audit-step/routes/retry",
+          "sha256": "abb28632adca93ace98645841e41a493920fd9bb8d51ba5924dbe428e03cc563",
+          "flow_id": "review"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "audit-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/audit-step/routes/stop",
+          "sha256": "abb28632adca93ace98645841e41a493920fd9bb8d51ba5924dbe428e03cc563",
+          "flow_id": "review"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "verdict-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/verdict-step/routes/stop",
+          "sha256": "abb28632adca93ace98645841e41a493920fd9bb8d51ba5924dbe428e03cc563",
+          "flow_id": "review"
+        }
+      }
+    ],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [],
+    "connector_hints": [],
+    "skill_hints": [],
+    "checkpoint_default_hints": [],
+    "host_recommendations": []
+  },
+  "rejected_authority": []
+}

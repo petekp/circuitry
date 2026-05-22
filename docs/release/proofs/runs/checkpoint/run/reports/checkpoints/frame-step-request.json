@@ -6,7 +6,6 @@
     "continue"
   ],
   "safe_default_choice": "continue",
-  "safe_autonomous_choice": "continue",
   "execution_context": {
     "project_root": "<repo>",
     "selection_config_layers": [],

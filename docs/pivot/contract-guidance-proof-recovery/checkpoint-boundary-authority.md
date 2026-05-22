@@ -60,18 +60,20 @@ After this cutover:
   operator input or a declared safe default, and lists current checkpoint trace
   kinds. See [UBIQUITOUS_LANGUAGE.md](../../../UBIQUITOUS_LANGUAGE.md).
 - Current `CheckpointPolicy` accepts `prompt`, `choices`, `choices_from`,
-  `safe_default_choice`, `safe_autonomous_choice`, `auto_resolution`, and
-  `report_template`. See [src/schemas/step.ts](../../../src/schemas/step.ts).
-- Current checkpoint auto-resolution modes are `accept-as-is`, `highest-score`,
-  `first-acceptable`, and `refuse`. See
+  `safe_default_choice`, `auto_resolution`, and `report_template`.
+  `safe_autonomous_choice` is rejected by the active schema. See
+  [src/schemas/step.ts](../../../src/schemas/step.ts).
+- Current checkpoint auto-resolution modes are `highest-score` and `refuse`.
+  Earlier `accept-as-is` and `first-acceptable` modes are not part of the active
+  schema. See
   [src/schemas/step.ts](../../../src/schemas/step.ts) and
   [src/schemas/operator-summary.ts](../../../src/schemas/operator-summary.ts).
 - Current checkpoint execution waits in deep or tournament depth, resolves
   standard depth through `safe_default_choice`, and resolves autonomous depth
-  through `auto_resolution` or `safe_autonomous_choice`. See
+  through `auto_resolution` or the same declared default. See
   [src/runtime/executors/checkpoint.ts](../../../src/runtime/executors/checkpoint.ts).
-- Current checkpoint trace allows `resolution_source` values `safe-default`,
-  `operator`, and `safe-autonomous`. See
+- Current checkpoint trace allows `resolution_source` values `declared-default`,
+  `operator`, and `policy`. See
   [src/schemas/trace-entry.ts](../../../src/schemas/trace-entry.ts).
 - Current checkpoint resume reloads the saved manifest, finds an unresolved
   checkpoint request, validates request path, request hash, choices, selected

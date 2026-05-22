@@ -1,0 +1,1112 @@
+{
+  "schema_version": 0,
+  "contract_ref": {
+    "kind": "work_contract",
+    "ref": "generated/flows/prototype/tournament.work-contract.v0.json",
+    "sha256": "1abfe24c04465bda1b5738d050c480cda3126b8ef471448c2b342fe56b727393",
+    "flow_id": "prototype"
+  },
+  "work_contract": {
+    "flow": {
+      "id": "prototype",
+      "version": "0.1.0",
+      "purpose": "Prototype flow. Circuit frames a disposable artifact, plans its local prototype files, either relays one artifact or fans out configured model variants, verifies reported files under prototype_root, asks which local prototype evidence to keep, and closes with evidence. Prototype does not edit production code outside prototype_root or claim deployment, branch previews, screenshots, provider behavior, model behavior, or production readiness.",
+      "entry": {
+        "signals": {
+          "include": ["prototype", "mock up", "sketch"],
+          "exclude": ["production", "deploy", "ship"]
+        },
+        "intent_prefixes": ["prototype"]
+      },
+      "axes": {
+        "allowed_rigors": ["standard", "deep"],
+        "supports_tournament": true,
+        "supports_autonomous": true,
+        "default": {
+          "rigor": "standard",
+          "tournament": false,
+          "tournament_n": 3,
+          "autonomous": false
+        },
+        "tournament_fan_out_stage": "act-stage"
+      },
+      "starts_at": "frame-step"
+    },
+    "topology": {
+      "stages": [
+        {
+          "id": "frame-stage",
+          "title": "Frame",
+          "canonical": "frame",
+          "steps": ["frame-step"]
+        },
+        {
+          "id": "plan-stage",
+          "title": "Plan",
+          "canonical": "plan",
+          "steps": ["plan-step", "variant-options-step"]
+        },
+        {
+          "id": "act-stage",
+          "title": "Act",
+          "canonical": "act",
+          "steps": ["variant-fanout-step"]
+        },
+        {
+          "id": "verify-stage",
+          "title": "Verify",
+          "canonical": "verify",
+          "steps": ["variant-provider-evidence-step", "variant-verification-step"]
+        },
+        {
+          "id": "review-stage",
+          "title": "Review",
+          "canonical": "review",
+          "steps": [
+            "variant-review-step",
+            "variant-choice-options-step",
+            "prototype-variant-checkpoint-step"
+          ]
+        },
+        {
+          "id": "close-stage",
+          "title": "Close",
+          "canonical": "close",
+          "steps": ["close-model-comparison-step"]
+        }
+      ],
+      "stage_path_policy": {
+        "mode": "partial",
+        "omits": ["analyze"],
+        "rationale": "Prototype follows Frame, Plan, Act, Verify, Review, Close. Analyze is omitted because V1 frames enough context to build a small disposable artifact; research-first work should use Explore."
+      },
+      "routes": [
+        {
+          "step_id": "frame-step",
+          "route_id": "continue",
+          "target": "plan-step"
+        },
+        {
+          "step_id": "frame-step",
+          "route_id": "pass",
+          "target": "plan-step"
+        },
+        {
+          "step_id": "frame-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "plan-step",
+          "route_id": "continue",
+          "target": "variant-options-step"
+        },
+        {
+          "step_id": "plan-step",
+          "route_id": "pass",
+          "target": "variant-options-step"
+        },
+        {
+          "step_id": "plan-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "variant-options-step",
+          "route_id": "continue",
+          "target": "variant-fanout-step"
+        },
+        {
+          "step_id": "variant-options-step",
+          "route_id": "pass",
+          "target": "variant-fanout-step"
+        },
+        {
+          "step_id": "variant-options-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "variant-fanout-step",
+          "route_id": "continue",
+          "target": "variant-provider-evidence-step"
+        },
+        {
+          "step_id": "variant-fanout-step",
+          "route_id": "pass",
+          "target": "variant-provider-evidence-step"
+        },
+        {
+          "step_id": "variant-fanout-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "variant-provider-evidence-step",
+          "route_id": "complete",
+          "target": "variant-verification-step"
+        },
+        {
+          "step_id": "variant-provider-evidence-step",
+          "route_id": "pass",
+          "target": "variant-verification-step"
+        },
+        {
+          "step_id": "variant-provider-evidence-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "variant-verification-step",
+          "route_id": "continue",
+          "target": "variant-review-step"
+        },
+        {
+          "step_id": "variant-verification-step",
+          "route_id": "pass",
+          "target": "variant-review-step"
+        },
+        {
+          "step_id": "variant-verification-step",
+          "route_id": "stop",
+          "target": "close-model-comparison-step"
+        },
+        {
+          "step_id": "variant-review-step",
+          "route_id": "continue",
+          "target": "variant-choice-options-step"
+        },
+        {
+          "step_id": "variant-review-step",
+          "route_id": "pass",
+          "target": "variant-choice-options-step"
+        },
+        {
+          "step_id": "variant-review-step",
+          "route_id": "stop",
+          "target": "close-model-comparison-step"
+        },
+        {
+          "step_id": "variant-choice-options-step",
+          "route_id": "continue",
+          "target": "prototype-variant-checkpoint-step"
+        },
+        {
+          "step_id": "variant-choice-options-step",
+          "route_id": "pass",
+          "target": "prototype-variant-checkpoint-step"
+        },
+        {
+          "step_id": "variant-choice-options-step",
+          "route_id": "stop",
+          "target": "close-model-comparison-step"
+        },
+        {
+          "step_id": "prototype-variant-checkpoint-step",
+          "route_id": "continue",
+          "target": "close-model-comparison-step"
+        },
+        {
+          "step_id": "prototype-variant-checkpoint-step",
+          "route_id": "pass",
+          "target": "close-model-comparison-step"
+        },
+        {
+          "step_id": "prototype-variant-checkpoint-step",
+          "route_id": "stop",
+          "target": "@stop"
+        },
+        {
+          "step_id": "close-model-comparison-step",
+          "route_id": "complete",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-model-comparison-step",
+          "route_id": "pass",
+          "target": "@complete"
+        },
+        {
+          "step_id": "close-model-comparison-step",
+          "route_id": "stop",
+          "target": "@stop"
+        }
+      ]
+    },
+    "blocks": [
+      {
+        "step_id": "frame-step",
+        "title": "Frame - define Prototype boundary",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-frame@v1",
+        "reads": [],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/brief.json",
+            "schema": "prototype.brief@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["objective", "prototype_root", "claim_limits"]
+        },
+        "routes": {
+          "continue": "plan-step",
+          "pass": "plan-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "plan-step",
+        "title": "Plan - choose disposable artifact files",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-plan@v1",
+        "reads": ["reports/prototype/brief.json"],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/plan.json",
+            "schema": "prototype.plan@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["objective", "files_to_create", "verification"]
+        },
+        "routes": {
+          "continue": "variant-options-step",
+          "pass": "variant-options-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "variant-options-step",
+        "title": "Plan - resolve Prototype model variants",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-options@v1",
+        "reads": ["reports/prototype/brief.json", "reports/prototype/plan.json"],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/variant-options.json",
+            "schema": "prototype.variant-options@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["variants", "variant_count"]
+        },
+        "routes": {
+          "continue": "variant-fanout-step",
+          "pass": "variant-fanout-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "variant-fanout-step",
+        "title": "Act - create model-comparison Prototype variants",
+        "kind": "fanout",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-fanout@v1",
+        "reads": [
+          "reports/prototype/brief.json",
+          "reports/prototype/plan.json",
+          "reports/prototype/variant-options.json"
+        ],
+        "writes": {
+          "branches_dir": "reports/prototype/variant-branches",
+          "aggregate": {
+            "path": "reports/prototype/variant-aggregate.json",
+            "schema": "prototype.variant-aggregate@v1"
+          }
+        },
+        "check": {
+          "kind": "fanout_aggregate",
+          "source": {
+            "kind": "fanout_results",
+            "ref": "aggregate"
+          },
+          "join": {
+            "policy": "aggregate-survivors"
+          },
+          "verdicts": {
+            "admit": ["accept"]
+          }
+        },
+        "routes": {
+          "continue": "variant-provider-evidence-step",
+          "pass": "variant-provider-evidence-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "variant-provider-evidence-step",
+        "title": "Verify - capture variant provider evidence",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-provider-evidence@v1",
+        "reads": [
+          "reports/prototype/brief.json",
+          "reports/prototype/variant-options.json",
+          "reports/prototype/variant-aggregate.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/variant-provider-evidence.json",
+            "schema": "prototype.variant-provider-evidence@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["captured_count", "variants"]
+        },
+        "routes": {
+          "complete": "variant-verification-step",
+          "pass": "variant-verification-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "variant-verification-step",
+        "title": "Verify - check Prototype variants",
+        "kind": "verification",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-verify@v1",
+        "reads": [
+          "reports/prototype/plan.json",
+          "reports/prototype/variant-aggregate.json",
+          "reports/prototype/variant-provider-evidence.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/variant-verification.json",
+            "schema": "prototype.variant-verification@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["overall_status", "commands", "variant_results"]
+        },
+        "routes": {
+          "continue": "variant-review-step",
+          "pass": "variant-review-step",
+          "stop": "close-model-comparison-step"
+        }
+      },
+      {
+        "step_id": "variant-review-step",
+        "title": "Review - compare Prototype variants",
+        "kind": "relay",
+        "executor": "worker",
+        "protocol": "prototype-variant-review@v1",
+        "reads": [
+          "reports/prototype/brief.json",
+          "reports/prototype/variant-options.json",
+          "reports/prototype/variant-aggregate.json",
+          "reports/prototype/variant-provider-evidence.json",
+          "reports/prototype/variant-verification.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/variant-review.json",
+            "schema": "prototype.variant-review@v1"
+          },
+          "request": "reports/relay/prototype-variant-review.request.json",
+          "receipt": "reports/relay/prototype-variant-review.receipt.txt",
+          "result": "reports/relay/prototype-variant-review.result.json"
+        },
+        "check": {
+          "kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          },
+          "pass": ["recommend", "no-clear-winner", "needs-operator"]
+        },
+        "routes": {
+          "continue": "variant-choice-options-step",
+          "pass": "variant-choice-options-step",
+          "stop": "close-model-comparison-step"
+        }
+      },
+      {
+        "step_id": "variant-choice-options-step",
+        "title": "Review - prepare variant checkpoint choices",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-choice-options@v1",
+        "reads": [
+          "reports/prototype/brief.json",
+          "reports/prototype/variant-aggregate.json",
+          "reports/prototype/variant-provider-evidence.json",
+          "reports/prototype/variant-verification.json",
+          "reports/prototype/variant-review.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/prototype/variant-choice-options.json",
+            "schema": "prototype.variant-choice-options@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["choices", "recommended_variant_id"]
+        },
+        "routes": {
+          "continue": "prototype-variant-checkpoint-step",
+          "pass": "prototype-variant-checkpoint-step",
+          "stop": "close-model-comparison-step"
+        }
+      },
+      {
+        "step_id": "prototype-variant-checkpoint-step",
+        "title": "Review - choose Prototype variant",
+        "kind": "checkpoint",
+        "executor": "orchestrator",
+        "protocol": "prototype-variant-checkpoint@v1",
+        "reads": [
+          "reports/prototype/variant-choice-options.json",
+          "reports/prototype/variant-aggregate.json"
+        ],
+        "writes": {
+          "request": "reports/checkpoints/prototype-variant-choice-request.json",
+          "response": "reports/checkpoints/prototype-variant-choice-response.json"
+        },
+        "check": {
+          "kind": "checkpoint_selection",
+          "source": {
+            "kind": "checkpoint_response",
+            "ref": "response"
+          },
+          "allow_from": {
+            "kind": "policy_choices"
+          }
+        },
+        "routes": {
+          "continue": "close-model-comparison-step",
+          "pass": "close-model-comparison-step",
+          "stop": "@stop"
+        }
+      },
+      {
+        "step_id": "close-model-comparison-step",
+        "title": "Close - emit Prototype model-comparison result",
+        "kind": "compose",
+        "executor": "orchestrator",
+        "protocol": "prototype-close-model-comparison@v1",
+        "reads": [
+          "reports/prototype/brief.json",
+          "reports/prototype/plan.json",
+          "reports/prototype/variant-options.json",
+          "reports/prototype/variant-aggregate.json",
+          "reports/prototype/variant-provider-evidence.json",
+          "reports/prototype/variant-verification.json"
+        ],
+        "writes": {
+          "report": {
+            "path": "reports/prototype-result.json",
+            "schema": "prototype.result@v1"
+          }
+        },
+        "check": {
+          "kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          },
+          "required": ["summary", "outcome", "evidence_links"]
+        },
+        "routes": {
+          "complete": "@complete",
+          "pass": "@complete",
+          "stop": "@stop"
+        }
+      }
+    ],
+    "authority": {
+      "relays": [
+        {
+          "step_id": "variant-review-step",
+          "role": "reviewer",
+          "writes": {
+            "report": {
+              "path": "reports/prototype/variant-review.json",
+              "schema": "prototype.variant-review@v1"
+            },
+            "request": "reports/relay/prototype-variant-review.request.json",
+            "receipt": "reports/relay/prototype-variant-review.receipt.txt",
+            "result": "reports/relay/prototype-variant-review.result.json"
+          },
+          "report": {
+            "step_id": "variant-review-step",
+            "slot": "report",
+            "path": "reports/prototype/variant-review.json",
+            "schema": "prototype.variant-review@v1"
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "step_id": "prototype-variant-checkpoint-step",
+          "choices": {
+            "kind": "dynamic",
+            "source_ref": {
+              "kind": "report_items",
+              "source_report": "reports/prototype/variant-choice-options.json",
+              "items_path": "choices",
+              "id_path": "id",
+              "label_path": "label",
+              "description_path": "description"
+            }
+          },
+          "writes": {
+            "request": "reports/checkpoints/prototype-variant-choice-request.json",
+            "response": "reports/checkpoints/prototype-variant-choice-response.json"
+          }
+        }
+      ],
+      "sub_runs": [],
+      "fanouts": [
+        {
+          "step_id": "variant-fanout-step",
+          "branches": {
+            "kind": "dynamic",
+            "source_report": "reports/prototype/variant-options.json",
+            "items_path": "variants",
+            "template": {
+              "branch_id": "$item.variant_id",
+              "execution": {
+                "kind": "relay",
+                "role": "implementer",
+                "goal": "$item.goal",
+                "report_schema": "prototype.variant-artifact@v1",
+                "provenance_field": "variant_id"
+              }
+            },
+            "max_branches": {
+              "kind": "axis",
+              "axis": "tournament_n"
+            },
+            "required_count": {
+              "kind": "axis",
+              "axis": "tournament_n"
+            }
+          },
+          "writes": {
+            "branches_dir": "reports/prototype/variant-branches",
+            "aggregate": {
+              "path": "reports/prototype/variant-aggregate.json",
+              "schema": "prototype.variant-aggregate@v1"
+            }
+          }
+        }
+      ],
+      "skill_slots": []
+    },
+    "proof": {
+      "reports": [
+        {
+          "step_id": "frame-step",
+          "slot": "report",
+          "path": "reports/prototype/brief.json",
+          "schema": "prototype.brief@v1"
+        },
+        {
+          "step_id": "plan-step",
+          "slot": "report",
+          "path": "reports/prototype/plan.json",
+          "schema": "prototype.plan@v1"
+        },
+        {
+          "step_id": "variant-options-step",
+          "slot": "report",
+          "path": "reports/prototype/variant-options.json",
+          "schema": "prototype.variant-options@v1"
+        },
+        {
+          "step_id": "variant-fanout-step",
+          "slot": "aggregate",
+          "path": "reports/prototype/variant-aggregate.json",
+          "schema": "prototype.variant-aggregate@v1"
+        },
+        {
+          "step_id": "variant-provider-evidence-step",
+          "slot": "report",
+          "path": "reports/prototype/variant-provider-evidence.json",
+          "schema": "prototype.variant-provider-evidence@v1"
+        },
+        {
+          "step_id": "variant-verification-step",
+          "slot": "report",
+          "path": "reports/prototype/variant-verification.json",
+          "schema": "prototype.variant-verification@v1"
+        },
+        {
+          "step_id": "variant-review-step",
+          "slot": "report",
+          "path": "reports/prototype/variant-review.json",
+          "schema": "prototype.variant-review@v1"
+        },
+        {
+          "step_id": "variant-choice-options-step",
+          "slot": "report",
+          "path": "reports/prototype/variant-choice-options.json",
+          "schema": "prototype.variant-choice-options@v1"
+        },
+        {
+          "step_id": "close-model-comparison-step",
+          "slot": "report",
+          "path": "reports/prototype-result.json",
+          "schema": "prototype.result@v1"
+        }
+      ],
+      "checks": [
+        {
+          "step_id": "frame-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "plan-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "variant-options-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "variant-fanout-step",
+          "check_kind": "fanout_aggregate",
+          "source": {
+            "kind": "fanout_results",
+            "ref": "aggregate"
+          }
+        },
+        {
+          "step_id": "variant-provider-evidence-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "variant-verification-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "variant-review-step",
+          "check_kind": "result_verdict",
+          "source": {
+            "kind": "relay_result",
+            "ref": "result"
+          }
+        },
+        {
+          "step_id": "variant-choice-options-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        },
+        {
+          "step_id": "prototype-variant-checkpoint-step",
+          "check_kind": "checkpoint_selection",
+          "source": {
+            "kind": "checkpoint_response",
+            "ref": "response"
+          }
+        },
+        {
+          "step_id": "close-model-comparison-step",
+          "check_kind": "schema_sections",
+          "source": {
+            "kind": "report",
+            "ref": "report"
+          }
+        }
+      ],
+      "acceptance_criteria": []
+    },
+    "recovery": [
+      {
+        "schema_version": 0,
+        "step_id": "frame-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/frame-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "plan-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/plan-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-options-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-options-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-fanout-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-fanout-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-provider-evidence-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-provider-evidence-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-verification-step",
+        "route_id": "stop",
+        "route_target": "close-model-comparison-step",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-verification-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-review-step",
+        "route_id": "stop",
+        "route_target": "close-model-comparison-step",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-review-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "variant-choice-options-step",
+        "route_id": "stop",
+        "route_target": "close-model-comparison-step",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/variant-choice-options-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "prototype-variant-checkpoint-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/prototype-variant-checkpoint-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      },
+      {
+        "schema_version": 0,
+        "step_id": "close-model-comparison-step",
+        "route_id": "stop",
+        "route_target": "@stop",
+        "kind": "stop_unsafe",
+        "allowed_failure_causes": [
+          "contradicted_evidence",
+          "scope_drift",
+          "budget_exceeded",
+          "unknown_failure"
+        ],
+        "required_refs": ["failed_check", "trace"],
+        "operator_authority": "not_required",
+        "attempt_budget": {
+          "consumes_step_attempt": false,
+          "must_respect_max_attempts": true,
+          "retry_target": "declared_step"
+        },
+        "guidance": {
+          "subject": "recovery_route",
+          "must_match_step_completed": true
+        },
+        "source_ref": {
+          "kind": "work_contract",
+          "ref": "compiled-flow/steps/close-model-comparison-step/routes/stop",
+          "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+          "flow_id": "prototype"
+        }
+      }
+    ],
+    "limits": {
+      "budgets": []
+    }
+  },
+  "guidance_seed": {
+    "selection_hints": [
+      {
+        "kind": "work_contract",
+        "ref": "compiled-flow/steps/variant-fanout-step/branches/template/selection",
+        "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+        "flow_id": "prototype"
+      }
+    ],
+    "connector_hints": [
+      {
+        "kind": "work_contract",
+        "ref": "compiled-flow/steps/variant-fanout-step/branches/template/connector",
+        "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+        "flow_id": "prototype"
+      }
+    ],
+    "skill_hints": [],
+    "checkpoint_default_hints": [],
+    "host_recommendations": []
+  },
+  "rejected_authority": [
+    {
+      "path": "compiled-flow/steps/prototype-variant-checkpoint-step/policy/auto_resolution",
+      "field": "auto_resolution",
+      "reason": "checkpoint auto-resolution must become a declared default or traced guidance",
+      "source_ref": {
+        "kind": "work_contract",
+        "ref": "compiled-flow/steps/prototype-variant-checkpoint-step/policy/auto_resolution",
+        "sha256": "b3f8c228e7d42630fa59e5808b193a3ca4e6355666b9d9c8d3d14b1e036d00ee",
+        "flow_id": "prototype"
+      }
+    }
+  ]
+}

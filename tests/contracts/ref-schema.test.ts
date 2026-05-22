@@ -10,7 +10,7 @@ describe('shared Ref schema', () => {
     expect(
       Ref.safeParse({
         kind: 'work_contract',
-        ref: 'generated/flows/build/work-contract.json',
+        ref: 'generated/flows/build/circuit.work-contract.v0.json',
         sha256: sha,
         flow_id: 'build',
       }).success,
@@ -36,6 +36,9 @@ describe('shared Ref schema', () => {
       'command',
       'change_packet',
       'safe_apply',
+      'worktree',
+      'generated_surface',
+      'memory',
     ] as const) {
       const parsed = Ref.safeParse({ kind, ref: `${kind}/current.json` });
       expect(parsed.success, `${kind} without sha256 should fail`).toBe(false);

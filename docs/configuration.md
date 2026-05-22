@@ -101,8 +101,8 @@ The skill contract is [`docs/contracts/skill.md`](contracts/skill.md).
 The same distinction from the starter section applies throughout config:
 
 - **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
-  Codex chooses the best bundled Circuit flow skill and invokes the local
-  Circuit engine.
+  Codex can recommend the right Circuit flow and invoke the local Circuit
+  engine.
 - **worker connector behavior:** Circuit can relay worker steps through the
   Codex CLI from any host, including write-capable implementer steps.
 

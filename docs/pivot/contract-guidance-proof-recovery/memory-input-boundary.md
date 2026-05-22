@@ -81,7 +81,7 @@ MemoryInput is input. It is not authority.
 
 | Area | Current repo evidence | Target rule |
 | --- | --- | --- |
-| General MemoryInput schema | No current `MemoryInput` schema is present in the source set; the pivot docs only reserve optional `memory_refs`. See `pivot-brief.md:242-253` and `guidance-decision-trace-invariant.md:128-177`. | Do not build a broad memory system in the first cutover. Add only the ref boundary needed for guidance trace. |
+| General MemoryInput schema | The implementation foundation now defines `MemoryInputV0` as a small exported schema and keeps `memory_refs` optional guidance inputs. See `src/schemas/memory-input.ts:56-145`, `tests/contracts/memory-input-schema.test.ts:52-214`, and `guidance-decision-trace-invariant.md:128-177`. | Do not build a broad memory system in the first cutover. Keep only the ref boundary needed for guidance trace. |
 | Continuity records | Current continuity records are strict handoff reports with narrative, git state, run provenance, and resume contract. See `docs/contracts/continuity.md:17-27` and `src/schemas/continuity.ts:28-110`. | A continuity record can become a memory hint or input ref. It does not become policy, proof, or checkpoint authority. |
 | Handoff brief | Brief mode is read-only host context and not an explicit resume request. See `src/commands/handoff.md:47-54`. | A handoff brief can remind a host. Circuit still validates any resume, route, checkpoint, proof, or apply action. |
 | Hook context | Hook adapters use host stdin `cwd`, fail soft on invalid context, and avoid ambient cwd fallback. See `tests/runner/handoff-hook-adapters.test.ts:84-169`. | Memory refs must preserve source identity. Ambient or unverified memory cannot quietly steer a run. |

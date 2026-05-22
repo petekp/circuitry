@@ -14,10 +14,14 @@ Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a sa
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Runs a long-running objective through the Goal flow without asking the router to
-choose a flow first. Goal supervises a bounded objective until typed evidence
-proves it, recovery is needed, or a blocked result is more honest than
-continuing.
+Starts Circuit from the Goal flow. Use this expert control when the operator
+already knows the work should be handled as a bounded objective. Goal
+supervises the objective until typed evidence proves it, recovery is needed, or
+a blocked result is more honest than continuing.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Goal work contract, writes trace, reports, and evidence, and follows declared
+checkpoints and recovery behavior.
 
 Circuit writes a Goal contract, runs one statically authored child flow target,
 evaluates the child evidence, runs two safety review passes, and closes from

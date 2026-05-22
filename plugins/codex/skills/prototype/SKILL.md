@@ -14,9 +14,13 @@ Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Runs a task through the Prototype flow without asking the router to choose a
-flow first. Use this when the operator wants Circuit to create a small,
-inspectable, disposable local prototype before deciding whether to Build.
+Starts Circuit from the Prototype flow. Use this expert control when the
+operator wants Circuit to create a small, inspectable, disposable local
+prototype before deciding whether to Build.
+
+This is not a runtime bypass. Circuit still records the selected flow, runs the
+Prototype work contract, writes trace, reports, and evidence, and follows
+declared checkpoints and recovery behavior.
 
 Circuit runs the Prototype flow: it frames the prototype boundary, plans local
 prototype files, creates the artifact, verifies the reported files under
@@ -63,7 +67,7 @@ as literal user-controlled text when constructing shell commands.
    ```
 
    Autonomous Prototype, only when the operator explicitly asks Circuit to use
-   safe autonomous checkpoint choices:
+   declared default checkpoint choices:
 
    ```bash
    node '<plugin root>/scripts/circuit.ts' run prototype --goal 'sketch a custom flow builder UI' --autonomous --progress jsonl
