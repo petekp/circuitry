@@ -13,7 +13,8 @@ to reconstruct the plan from chat history.
 1. [Pivot brief](pivot-brief.md) - product thesis, doctrine, language rules,
    boundaries, anti-cruft rules, roadmap, unsettled items, and review findings.
 2. [Order of operations](order-of-operations.md) - the safest sequence for
-   specs, docs, generated surfaces, schema/runtime changes, tests, and gates.
+   specs, docs, generated surfaces, schema/runtime changes, tests, gates, and
+   deprecated-code pruning.
 3. [WorkContract Projection V0](work-contract-projection-v0.md) - first
    implementation-spec direction for projecting current Flow fields into
    contract authority, guidance inputs, or deleted old authority.
@@ -95,5 +96,9 @@ Short rule:
 - Do not start runtime implementation until WorkContract Projection V0,
   GuidanceDecision Trace Invariant, and PolicyEnvelope Config V2 Cutover have
   crisp death tests.
+- Every remaining implementation slice must use the
+  [deprecated-code pruning ledger](order-of-operations.md#deprecated-code-pruning-ledger):
+  name the old path being removed, the temporary bridge if one is needed, the
+  cutover condition, and the death test that keeps the old path from returning.
 - Generated host surfaces must change through their source files and emit
   scripts, not by hand-editing generated mirrors.
