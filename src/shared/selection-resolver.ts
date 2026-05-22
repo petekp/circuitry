@@ -11,9 +11,9 @@ import {
   type SkillOverride,
 } from '../schemas/selection-policy.js';
 
-const PRE_WORKFLOW_CONFIG_SOURCES = ['default', 'user-global', 'project'] as const;
+const PRE_FLOW_CONFIG_SOURCES = ['default', 'user-global', 'project'] as const;
 
-export interface ResolveSelectionInput {
+interface ResolveSelectionInput {
   readonly flow: RuntimeIndexedFlow;
   readonly step: RuntimeIndexedStep;
   readonly configLayers?: readonly LayeredConfig[];
@@ -147,14 +147,16 @@ function configLayersBySource(
   return out;
 }
 
-export function resolveSelectionForRelay(input: ResolveSelectionInput): SelectionResolution {
+export function resolveSelectionForGuidanceInput(
+  input: ResolveSelectionInput,
+): SelectionResolution {
   const flowId = input.flow.id as unknown as string;
   const stepId = input.step.id as unknown as string;
   const applied: AppliedEntry[] = [];
   let resolved: ResolvedSelection = { skills: [], invocation_options: {} };
   const configLayers = configLayersBySource(input.configLayers ?? []);
 
-  for (const source of PRE_WORKFLOW_CONFIG_SOURCES) {
+  for (const source of PRE_FLOW_CONFIG_SOURCES) {
     const layer = configLayers[source];
     if (layer === undefined) continue;
     const override = configLayerSelection(flowId, layer, resolved);

@@ -2,19 +2,33 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
 import {
   assertConnectorCanRunRole,
   assertConnectorSelectionCompatible,
   classifyConnectorFilesystem,
   classifyRelayWriteMode,
-  resolveConnectorForRelay,
+  resolveConnectorForGuidanceInput,
 } from '../../src/runtime/connectors/resolver.js';
+import type { RelayConnector } from '../../src/runtime/executors/relay.js';
 import type { ExecutableFlow, RelayStep } from '../../src/runtime/manifest/executable-flow.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
-import { resolveRelayExecution } from '../../src/runtime/run/relay-guidance.js';
-import { LayeredConfig } from '../../src/schemas/config.js';
+import { planRelayGuidanceDecision } from '../../src/runtime/run/relay-guidance.js';
+import type { RunContext } from '../../src/runtime/run/run-context.js';
+import {
+  LayeredConfig,
+  type LayeredConfig as LayeredConfigValue,
+} from '../../src/schemas/config.js';
 import { CustomConnectorDescriptor } from '../../src/schemas/connector.js';
-import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
+import { Depth } from '../../src/schemas/depth.js';
+import {
+  PolicyLayer,
+  type PolicyLayer as PolicyLayerValue,
+} from '../../src/schemas/policy-envelope.js';
+import {
+  SelectionOverride,
+  type SelectionOverride as SelectionOverrideValue,
+} from '../../src/schemas/selection-policy.js';
 
 describe('runtime connector safety', () => {
   let tempDir: string;
@@ -46,8 +60,102 @@ describe('runtime connector safety', () => {
     };
   }
 
+  function relayGuidanceExecution(input: {
+    readonly flowId?: string;
+    readonly role: string;
+    readonly selection?: unknown;
+    readonly stepConnector?: string;
+    readonly suppliedConnector?: RelayConnector;
+    readonly configLayers?: readonly LayeredConfigValue[];
+    readonly policyLayers?: readonly PolicyLayerValue[];
+  }) {
+    const flowId = input.flowId ?? 'review';
+    const rawSelection = input.selection as Partial<SelectionOverrideValue> | undefined;
+    const selectionOverride =
+      input.selection === undefined
+        ? undefined
+        : SelectionOverride.parse({
+            ...rawSelection,
+            skills: rawSelection?.skills ?? { mode: 'inherit' },
+            invocation_options: rawSelection?.invocation_options ?? {},
+          });
+    const runtimeSelection: RelayStep['selection'] | undefined =
+      selectionOverride === undefined
+        ? undefined
+        : {
+            ...(selectionOverride.model === undefined ? {} : { model: selectionOverride.model }),
+            ...(selectionOverride.effort === undefined ? {} : { effort: selectionOverride.effort }),
+            ...(selectionOverride.skills === undefined ? {} : { skills: selectionOverride.skills }),
+            ...(selectionOverride.depth === undefined ? {} : { depth: selectionOverride.depth }),
+            ...(selectionOverride.invocation_options === undefined
+              ? {}
+              : { invocation_options: selectionOverride.invocation_options }),
+          };
+    const step: RelayStep = {
+      id: 'relay-step',
+      kind: 'relay',
+      role: input.role,
+      routes: { pass: { kind: 'terminal', target: '@complete' } },
+      writes: {
+        request: { path: 'request.txt' },
+        receipt: { path: 'receipt.txt' },
+        result: { path: 'result.json' },
+      },
+      ...(runtimeSelection === undefined ? {} : { selection: runtimeSelection }),
+      ...(input.stepConnector === undefined ? {} : { connector: input.stepConnector }),
+    };
+    const compiledStep: RuntimeIndexedRelayStep = {
+      id: step.id,
+      title: step.id,
+      protocol: step.id,
+      reads: [],
+      routes: { pass: '@complete' },
+      writes: {
+        request: 'request.txt',
+        receipt: 'receipt.txt',
+        result: 'result.json',
+      },
+      check: { pass: ['ok'] },
+      skill_slots: [],
+      kind: 'relay',
+      role: step.role as RuntimeIndexedRelayStep['role'],
+      ...(selectionOverride === undefined ? {} : { selection: selectionOverride }),
+      ...(input.stepConnector === undefined ? {} : { connector: input.stepConnector }),
+    };
+    const context = {
+      flow: {
+        id: flowId,
+        version: '0.1.0',
+        entry: step.id,
+        stages: [{ id: 'main', stepIds: [step.id] }],
+        steps: [step],
+      },
+      packageIndex: {
+        flow: {
+          id: flowId,
+          version: '0.1.0',
+          stages: [{ id: 'main', steps: [step.id] }],
+          steps: [compiledStep],
+        },
+        stepsById: new Map([[step.id, compiledStep]]),
+        reportPathBySchema: new Map(),
+      },
+      selectionConfigLayers: input.configLayers,
+      policyLayers: input.policyLayers,
+    } as unknown as RunContext;
+    return planRelayGuidanceDecision({
+      context,
+      step,
+      compiledStep,
+      depth: Depth.parse('standard'),
+      ...(input.suppliedConnector === undefined
+        ? {}
+        : { suppliedConnector: input.suppliedConnector }),
+    }).relayExecution;
+  }
+
   it('defaults auto relay resolution to claude-code', () => {
-    const decision = resolveConnectorForRelay({ flowId: 'review', role: 'reviewer' });
+    const decision = resolveConnectorForGuidanceInput({ flowId: 'review', role: 'reviewer' });
     expect(decision.connector).toEqual({ kind: 'builtin', name: 'claude-code' });
     expect(decision.resolvedFrom).toEqual({ source: 'auto' });
   });
@@ -135,7 +243,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveConnectorForRelay({
+    const decision = resolveConnectorForGuidanceInput({
       flowId: 'review',
       role: 'reviewer',
       configLayers: [layer],
@@ -144,7 +252,7 @@ describe('runtime connector safety', () => {
     expect(decision.resolvedFrom).toEqual({ source: 'role', role: 'reviewer' });
   });
 
-  it('threads config layers through the runtime relay execution resolver', () => {
+  it('threads config layers through relay guidance planning', () => {
     const layer = LayeredConfig.parse({
       layer: 'project',
       config: {
@@ -161,7 +269,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       configLayers: [layer],
@@ -205,7 +313,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       configLayers: [legacyLayer],
@@ -238,7 +346,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       configLayers: [legacyLayer],
@@ -289,7 +397,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       stepConnector: 'local-reviewer',
@@ -318,7 +426,7 @@ describe('runtime connector safety', () => {
     });
 
     expect(() =>
-      resolveRelayExecution({
+      relayGuidanceExecution({
         flowId: 'review',
         role: 'reviewer',
         stepConnector: 'claude-code',
@@ -343,7 +451,7 @@ describe('runtime connector safety', () => {
     });
 
     expect(() =>
-      resolveRelayExecution({
+      relayGuidanceExecution({
         flowId: 'review',
         role: 'reviewer',
         stepConnector: 'codex',
@@ -367,7 +475,7 @@ describe('runtime connector safety', () => {
     });
 
     expect(() =>
-      resolveRelayExecution({
+      relayGuidanceExecution({
         flowId: 'review',
         role: 'reviewer',
         stepConnector: 'claude-code',
@@ -381,7 +489,7 @@ describe('runtime connector safety', () => {
   });
 
   it('honors a builtin step connector without a supplied relay connector', () => {
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       stepConnector: 'claude-code',
@@ -393,7 +501,7 @@ describe('runtime connector safety', () => {
   });
 
   it('honors the codex step connector for implementer roles', () => {
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'prototype',
       role: 'implementer',
       stepConnector: 'codex',
@@ -406,7 +514,7 @@ describe('runtime connector safety', () => {
   });
 
   it('honors the cursor-agent step connector for Gemini implementer roles', () => {
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'prototype',
       role: 'implementer',
       stepConnector: 'cursor-agent',
@@ -438,7 +546,7 @@ describe('runtime connector safety', () => {
     });
 
     expect(() =>
-      resolveRelayExecution({
+      relayGuidanceExecution({
         flowId: 'build',
         role: 'implementer',
         stepConnector: 'local-readonly',
@@ -472,7 +580,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       stepConnector: 'local-reviewer',
@@ -532,7 +640,7 @@ describe('runtime connector safety', () => {
       },
     });
 
-    const decision = resolveRelayExecution({
+    const decision = relayGuidanceExecution({
       flowId: 'review',
       role: 'reviewer',
       stepConnector: 'local-reviewer',
@@ -546,7 +654,7 @@ describe('runtime connector safety', () => {
 
   it('rejects a custom step connector that has no resolved capabilities', () => {
     expect(() =>
-      resolveRelayExecution({
+      relayGuidanceExecution({
         flowId: 'review',
         role: 'reviewer',
         stepConnector: 'local-reviewer',

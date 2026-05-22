@@ -370,7 +370,7 @@ describe('Step discriminated union', () => {
   });
 
   it('CheckpointStep rejects old direct auto-resolution checkpoint modes', () => {
-    for (const policy of ['accept-as-is', 'first-acceptable'] as const) {
+    for (const policy of ['accept-as-is', 'first-acceptable', 'refuse'] as const) {
       const bad = Step.safeParse({
         ...baseCompose,
         kind: 'checkpoint',

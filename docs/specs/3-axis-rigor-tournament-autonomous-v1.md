@@ -172,18 +172,21 @@ Error shape on unsupported tuples mirrors today's `--depth` rejection: name the 
 
 ## 5. Auto-resolution policies
 
-In the target design, each checkpoint in a schematic declares one of four policies:
+After pivot pruning, checkpoint `auto_resolution` has one active policy:
+`highest-score`.
 
 | Policy | Behavior |
 |---|---|
-| `accept-as-is` | Take the model's proposed value as the resolution. |
 | `highest-score` | Pick the option with the highest `aggregate_score` from a typed rubric result. Applies the tie-break rule in §9. Records the winning score, runner-up score, margin, tie-break path, and any runtime-veto effect. |
-| `first-acceptable` | Pick the first option meeting a minimum-bar predicate. |
-| `refuse` | Cannot be auto-resolved. Hitting this checkpoint in autonomous mode is a hard failure. |
 
-**Static validation at fixture-load.** A flow that declares `supports_autonomous: true` and contains any `refuse` checkpoint reachable in its stage path is rejected at fixture-load time. Authors must fix the schematic.
+Retired direct resolver names such as `accept-as-is`, `first-acceptable`, and
+`refuse` are schema errors. Non-scored defaults belong in the checkpoint
+default path, not in `auto_resolution`.
 
-The tournament winner-select checkpoint uses `highest-score` by convention when autonomous; per-flow declaration can pick a different policy. A `highest-score` checkpoint must declare a rubric source whose option ids match the checkpoint choices. Fixture-load validation rejects missing rubric sources, choices without rubric rows, and rubric rows without choices.
+The tournament winner-select checkpoint uses `highest-score` when autonomous. A
+`highest-score` checkpoint must declare a rubric source whose option ids match
+the checkpoint choices. Fixture-load validation rejects missing rubric sources,
+choices without rubric rows, and rubric rows without choices.
 
 ---
 
@@ -218,7 +221,7 @@ Target behavior:
 | Checkpoint wait events | Replaced by auto-resolve events. |
 | Progress prints to stdout | Kept (so tail-logging operators see real-time activity). |
 | Operator-summary surfaces (JSON / MD / HTML) | All three still written. |
-| Validation | Static at fixture-load: no `refuse` checkpoint may be reachable. |
+| Validation | Static at fixture-load: old direct resolver names such as `refuse` are rejected by the checkpoint schema. |
 
 ---
 
@@ -291,7 +294,6 @@ Target tiered recording.
 **Markdown / HTML** (operator-facing prose):
 
 > **Auto-resolutions**
-> - Frame: accepted as-is by policy `accept-as-is`.
 > - Tournament tradeoff: strand B selected by policy `highest-score` (aggregate score 0.875; margin +0.161 over runner-up; no runtime vetoes).
 
 **JSON** (full provenance, one row per checkpoint resolved; example abbreviates repeated dim rows):
@@ -299,14 +301,6 @@ Target tiered recording.
 ```jsonc
 {
   "auto_resolutions": [
-    {
-      "checkpoint_id": "frame-checkpoint",
-      "policy": "accept-as-is",
-      "resolved_value": "<model-proposed-frame>",
-      "alternatives_available": [],
-      "runtime_or_model": "runtime",
-      "resolved_at": "2026-05-11T12:34:56Z"
-    },
     {
       "checkpoint_id": "tournament-tradeoff",
       "policy": "highest-score",
@@ -347,7 +341,6 @@ Target tiered recording.
       },
       "tie_break": "highest aggregate score",
       "runtime_veto_effect": "strand-a evidence_rigor runtime_signal=missing forced final_score=fail and dim_score=0",
-      "runtime_or_model": "runtime",
       "resolved_at": "2026-05-11T12:36:42Z"
     }
   ]
@@ -373,7 +366,7 @@ Sliced, Proof-Carrying-Fix style. Each slice ships independently with full tests
 - Update CLI parsing to accept `--rigor`, `--tournament`, `--tournament-n`, `--autonomous`.
 - Drop `--mode`. Drop `entryModeForDepth`, `depthForEntryMode`, `validateModeDepthAliasConsistency`, `validateFlowDepth`, and mode/depth runtime support rows.
 - New per-tuple validation reads the per-flow allow-list from the compiled fixture.
-- Static fixture-load validation: refuse-policy checkpoint + `supports_autonomous: true` → reject.
+- Static fixture-load validation: old direct checkpoint auto-resolution policy names are schema errors.
 - Update CLI router and `cli-router.test.ts`.
 - **No fixture regeneration yet.** Compiled fixtures still carry the old `entry_modes` shape; this slice adds a transitional reader that maps old shape to allow-list at load. Reader is removed in Slice 4.
 
@@ -449,7 +442,7 @@ Hard break. Old run folders are not parseable by new code. Old fixtures regenera
 | `--tournament` on a flow with `supports_tournament: false` | Parse-time error with flow's allow-list. |
 | `--autonomous` on a flow with `supports_autonomous: false` | Parse-time error with flow's allow-list. |
 | Tournament option generation returns fewer or more than `tournament_n` options | Runtime error before fanout starts; no child relays launch. |
-| Flow with `supports_autonomous: true` containing a `refuse` checkpoint | Fixture-load rejection. |
+| Flow containing checkpoint `auto_resolution.policy: "refuse"` | Schema rejection before fixture-specific validation. |
 | Operator passes axis flags + the flow has different defaults | Operator flags override per-axis. Unspecified axes use flow defaults; flow defaults fall back to axis defaults. |
 | Autonomous on a flow with zero checkpoints | Valid (no-op for checkpoint resolution). All other autonomous behaviors still apply. |
 | Tournament strand failure (1 of N fails) | Continue with N-1 if ≥ 2 survivors. |
@@ -479,7 +472,7 @@ Implementation matches this spec when every row below has a passing proof.
 | 2 | `CompiledFlow` schema declares an `axes` block; no `entry_modes` array. | Contract test parses a fixture with `axes`; rejects one with `entry_modes`; generated fixtures grep clean for `"entry_modes"`. |
 | 3 | CLI parses `--rigor`, `--tournament`, `--tournament-n`, `--autonomous`; rejects `--mode` as unknown; validates `--tournament-n` against [2, 4]. | CLI router tests cover default axes, each flag, N=2/3/4, N=1/5 rejection, and `--mode` rejection. |
 | 4 | The five public flows and the internal Runtime Proof fixture carry the allow-lists in §3. | Catalog completeness test compares each compiled fixture's `axes` block against the §3 table and fails on missing/extra flows. |
-| 5 | A flow with `supports_autonomous: true` and a reachable `refuse` checkpoint fails fixture load. | Fixture-load test builds a minimal invalid flow and expects the load error to name the checkpoint and `refuse`. |
+| 5 | A flow with checkpoint `auto_resolution.policy: "refuse"` fails fixture load. | Fixture-load test mutates a generated fixture with the old policy name and expects the active checkpoint schema to reject it. |
 | 6 | Optional canonical stages are declared via `defineEnforcedStagePolicy`'s `optional_canonicals`. Fix declares Review as optional; Fix lite skips Review; Fix standard and Fix deep traverse it. | Flow-kind and fixture tests assert Fix `optional_canonicals: ['review']`; generated Fix lite omits Review; generated Fix standard/deep include Review; negative tests reject standard/deep projections that omit Review. |
 | 7 | Each rubric dim emits `RubricDimResult` and every option emits `RubricResult` with `runtime_signal: "met" \| "missing" \| "n/a"`, dim scale, aggregate score, tie-break, and runtime-veto effect. | Rubric combiner tests cover all runtime-signal values, score mapping, aggregate rounding, tie-break order, and runtime-vetoed missing evidence. |
 | 8 | Auto-resolutions section appears in operator-summary JSON with full provenance and in MD/HTML with summary lines. | Operator-summary tests assert JSON includes `auto_resolutions[*].rubric_results`, aggregate scores, tie-break path, and runtime-veto effect; Markdown/HTML snapshots show one compact line per auto-resolution. |
@@ -521,7 +514,7 @@ readers do not mistake already-landed axis work for remaining follow-up.
 | Axis schema | `Rigor`, `Axes`, `TournamentN`, and `FlowAxes` now exist. `Depth` remains as a legacy compatibility enum. | `src/schemas/axes.ts`, `src/schemas/rigor.ts`, `src/schemas/depth.ts` | Axis base shipped after this snapshot. |
 | Compiled fixtures | `CompiledFlow` now requires `axes` and `starts_at`; legacy `entry_modes` is rejected by the strict schema. | `src/schemas/compiled-flow.ts`, `tests/contracts/flow-graph-schema.test.ts` | Axis base shipped after this snapshot. |
 | Flow schematics | Active schematics now declare `axes`, `stage_path_policy`, and `stages`; legacy `entry_modes` is rejected. | `src/schemas/flow-schematic.ts`, `src/flows/*/schematic.json`, `tests/contracts/flow-schematic.test.ts` | Axis base shipped after this snapshot. |
-| Checkpoint policies | Checkpoints declare `choices`, optional safe choices, optional typed `auto_resolution` policies (`accept-as-is`, `highest-score`, `first-acceptable`, `refuse`), and optional `report_template`. | `src/schemas/step.ts`, `tests/runner/cli-router.test.ts` | Auto-resolution policy shipped after this snapshot. |
+| Checkpoint policies | Checkpoints declare `choices`, optional safe choices, optional `auto_resolution.policy: "highest-score"`, and optional `report_template`. Old direct resolver names are rejected by the active checkpoint schema. | `src/schemas/step.ts`, `tests/contracts/step-schema.test.ts`, `tests/contracts/checkpoint-boundary-schema.test.ts` | Updated by pivot pruning. |
 | Fanout limits | Static fanout caps branches at 64. Dynamic fanout has a positive `max_branches` capped at 256 and defaulted to 16. Bounded concurrency is capped at 64. | `src/schemas/step.ts:300-350` | Spec target differs; see C3.2 and C3.3. |
 
 ### A3. CLI surface and fixture-load validation
@@ -532,13 +525,13 @@ readers do not mistake already-landed axis work for remaining follow-up.
 | Target flags | Target flags are implemented at the CLI parsing layer and validated against each flow's allow-list. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis CLI shipped after this snapshot. |
 | Alias validators | Old mode/depth alias validators were removed from the current CLI path. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Axis CLI shipped after this snapshot. |
 | Runtime support validation | The CLI validates axis choices against each flow's `axes` support. | `src/cli/circuit.ts`, `src/schemas/axes.ts` | Axis CLI shipped after this snapshot. |
-| Fixture load | `loadFixture` parses `CompiledFlow`, validates flow-kind stage policy, and rejects autonomous-capable fixtures that declare checkpoint `auto_resolution.policy: "refuse"`. | `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts` | Partially shipped after this snapshot. |
+| Fixture load | `loadFixture` parses `CompiledFlow`, validates flow-kind stage policy, and the active checkpoint schema rejects checkpoint `auto_resolution.policy: "refuse"`. | `src/schemas/step.ts`, `tests/runner/cli-router.test.ts` | Updated after this snapshot. |
 
 ### A4. Checkpoints, autonomous behavior, and presentation
 
 | Claim area | Current code fact | Evidence | Status |
 |---|---|---|---|
-| Checkpoint resolution | Autonomous checkpoints use typed `auto_resolution` when declared; otherwise they fall back to `safe_autonomous_choice`. Non-autonomous defaults still use `safe_default_choice`. | `src/runtime/executors/checkpoint.ts`, `src/schemas/step.ts` | Auto-resolution policy shipped after this snapshot; safe-choice fallback remains. |
+| Checkpoint resolution | Autonomous checkpoints use typed `auto_resolution` when declared; otherwise they may use the same declared `safe_default_choice` compatibility path as standard depth. `safe_autonomous_choice` is rejected by the active schema. | `src/runtime/executors/checkpoint.ts`, `src/schemas/step.ts` | Auto-resolution policy shipped after this snapshot; safe-choice fallback remains. |
 | Missing safe choice | Missing safe choices fail during runtime execution and are recorded in trace; they do not fail fixture load. | `src/runtime/executors/checkpoint.ts:181-191`, `tests/runtime/control-loop.test.ts:849-912` | Code must change to match spec. |
 | Checkpoint request body | Request JSON records prompt, allowed choices, safe defaults, and execution context. | `src/runtime/executors/checkpoint.ts:67-94` | Spec corrected here. |
 | Auto-resolved trace | `checkpoint.requested` and `checkpoint.resolved` trace entries include `auto_resolved`. | `src/runtime/executors/checkpoint.ts:149-158`, `src/runtime/executors/checkpoint.ts:200-215` | Partially supports target. |
@@ -587,9 +580,9 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 | D12 | Tournament winner-select checkpoint chooses one strand and later stages run once. | Partially matched: Explore has a tradeoff checkpoint and then decision/close steps (`src/flows/explore/data.ts:390-435`). |
 | D13 | Tournament branch failure continues with survivors >= 2 and aborts below 2. | Shipped after this snapshot through `continue-others` plus `aggregate-survivors`. |
 | D14 | Tournament does not add stages outside fanout. | Partially matched: Explore embeds tournament work in Plan/Decision and Close (`generated/flows/explore/tournament.json:35-56`). |
-| D15 | Autonomous is a checkpoint-resolution policy. | Partially shipped after this snapshot: autonomous is an axis, and checkpoints can declare typed `auto_resolution`; safe-choice fallback remains. |
+| D15 | Autonomous is a checkpoint-resolution policy. | Partially shipped after this snapshot: autonomous is an axis, and checkpoints can declare typed `auto_resolution`; declared-default compatibility remains. |
 | D16 | Autonomous keeps the same stages/checkpoints as interactive. | Mostly matched for current autonomous axes; compatibility fixture selection may still choose an autonomous graph label. |
-| D17 | Autonomous fires declared auto-resolution instead of waiting. | Shipped after this snapshot for typed `auto_resolution`; safe-choice fallback remains for checkpoints without a policy. |
+| D17 | Autonomous fires declared auto-resolution instead of waiting. | Shipped after this snapshot for typed `auto_resolution`; declared-default compatibility remains for checkpoints without a policy. |
 | D18 | Auto-resolutions are recorded in the canonical operator report. | Shipped after this snapshot for typed auto-resolutions in operator summary JSON and Markdown. |
 | D19 | Autonomous suppresses ambient interactive UI but keeps trace/progress/writes. | Partially matched: progress suppresses waiting UI for auto-resolved checkpoint requests (`src/runtime/projections/progress.ts:673-755`). |
 | D20 | CLI parses any axis tuple before flow validation. | Shipped after this snapshot. |
@@ -599,8 +592,8 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 | D24 | Axis defaults are standard/false/false/3. | Shipped after this snapshot through `DEFAULT_AXES` and `FlowAxes.default`. |
 | D25 | `--mode` is removed in target; alias validators and support matrix go away. | Shipped after this snapshot: current tests reject `--mode` and `--entry-mode`. |
 | D26 | Target CLI flags are `--rigor`, `--tournament`, `--tournament-n`, `--autonomous`. | Shipped after this snapshot: current CLI parses these flags. |
-| D27 | Auto-resolution policies are `accept-as-is`, `highest-score`, `first-acceptable`, `refuse`. | Shipped after this snapshot through `AutoResolutionPolicy`. |
-| D28 | `supports_autonomous` plus reachable `refuse` fails fixture-load validation. | Partially shipped after this snapshot: autonomous-capable fixtures reject checkpoint `auto_resolution.policy: "refuse"` regardless of reachability. |
+| D27 | Target auto-resolution policy names originally included `accept-as-is`, `highest-score`, `first-acceptable`, and `refuse`. | Amended by the pivot pruning work: active checkpoint `AutoResolutionPolicy` accepts only `highest-score`; old direct checkpoint resolver names are rejected by schema tests. |
+| D28 | `auto_resolution.policy: "refuse"` fails fixture parsing. | Updated after this snapshot: the active checkpoint schema rejects checkpoint `auto_resolution.policy: "refuse"` before fixture-specific validation. |
 | D29 | Autonomous tournament winner-select uses `highest-score` unless a flow declares otherwise. | Shipped after this snapshot for Explore tournament. |
 | D30 | Rubric provenance uses runtime signal, model judgment, final score, and runtime-veto. | Partially shipped after this snapshot through `RubricResult` and Explore tournament aggregate reports. |
 | D31 | Operator reports include auto-resolutions in JSON plus Markdown/HTML summaries. | Shipped after this snapshot for operator summary JSON and Markdown when auto-resolutions exist; HTML remains renderer-dependent. |
@@ -615,7 +608,7 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 | The spec did not explain the functional/declarative refactor. | Added current architecture notes showing `FlowData`, `compileFlowDefinitions`, and catalog-derived registries. Evidence: `src/flows/flow-definition.ts:67-86`, `src/flows/flow-definition.ts:374-388`, `src/flows/catalog.ts:1-27`. |
 | The per-flow allow-list table was target-only but looked like current implementation. | Reframed it as a target projection and added Appendix A6 with current entry mode evidence. |
 | Runtime presentation claims were too broad. | Recorded current progress behavior: auto-resolved checkpoint requests do not emit waiting UI; waiting checkpoints emit `checkpoint.waiting` and `user_input.requested`. Evidence: `src/runtime/projections/progress.ts:673-755`. |
-| Fixture-load validation claims were target behavior, not current behavior. | Updated after the May 19 commits: fixture loading now also rejects autonomous-capable fixtures that declare checkpoint `auto_resolution.policy: "refuse"`. Evidence: `src/cli/circuit.ts`, `tests/runner/cli-router.test.ts`. |
+| Fixture-load validation claims were target behavior, not current behavior. | Updated after the May 19 commits, then tightened by the pivot pruning work: fixture loading now rejects checkpoint `auto_resolution.policy: "refuse"` at the active checkpoint schema. Evidence: `src/schemas/step.ts`, `tests/runner/cli-router.test.ts`. |
 | Tournament behavior lacked current-code details. | Updated after the May 19 commits: Explore tournament now uses `axis.tournament_n`, `continue-others`, `aggregate-survivors`, and `highest-score` auto-resolution. Evidence: `src/flows/explore/data.ts`, `tests/runner/cli-router.test.ts`. |
 
 ### C2. Code must change to match spec (operator follow-up)
@@ -626,8 +619,8 @@ None of these decisions were silently changed. Rows marked "amended" point to th
 | Compiled fixtures lacked `axes`. | Shipped after this snapshot: compiled fixtures now carry `axes`, and legacy `entry_modes` is rejected. |
 | CLI used `--mode`/`--depth`. | Shipped after this snapshot: current CLI parses axis flags and rejects old aliases. |
 | Flow support was mode/depth rows. | Shipped after this snapshot: flow support is expressed through `axes` allow-lists. |
-| Checkpoint auto-resolution vocabulary was only safe-choice based. | Shipped after this snapshot: `accept-as-is`, `highest-score`, `first-acceptable`, and `refuse` policies exist; safe-choice fallback remains. |
-| Autonomous fixture-load rejection did not exist. | Partially shipped after this snapshot: autonomous-capable fixtures reject `refuse` checkpoint auto-resolution policies. |
+| Checkpoint auto-resolution vocabulary was only safe-choice based. | Updated by pivot pruning: active checkpoint `auto_resolution` accepts only `highest-score`; old direct resolver names are rejected, while safe-choice fallback remains compatibility behavior. |
+| Autonomous fixture-load rejection did not exist. | Updated by pivot pruning: fixtures with `auto_resolution.policy: "refuse"` fail at checkpoint schema parse time. |
 | Auto-resolution report section did not exist. | Shipped after this snapshot: operator summary JSON and Markdown include `auto_resolutions` when present. |
 | Runtime rubric provenance was not represented in audited schemas. | Partially shipped after this snapshot for Explore tournament rubric results; broader flow adoption remains future work. |
 
@@ -655,7 +648,7 @@ The raw prior review transcript is not stored in this repo snapshot, so this led
 | 2. Target 3-axis design read as current shipped behavior. | Resolved in spec: status note and Appendix A separate target design from current implementation. |
 | 3. CLI surface mismatch. | Resolved after this snapshot: current CLI parses axis flags and rejects old aliases. |
 | 4. Schematic and compiled fixture shape mismatch. | Resolved after this snapshot: current schematics and compiled fixtures carry `axes`, not `entry_modes`. |
-| 5. Checkpoint policy and fixture-load validation mismatch. | Partially resolved after this snapshot: typed auto-resolution policies and autonomous `refuse` fixture rejection shipped; safe-choice fallback and some target-reporting details remain compatibility behavior. |
+| 5. Checkpoint policy and fixture-load validation mismatch. | Updated by pivot pruning: active checkpoint `auto_resolution` now accepts only `highest-score`; old direct resolver names are schema-rejected. Safe-choice fallback and some target-reporting details remain compatibility behavior. |
 | 6. Tournament runtime mismatch. | Resolved in C3.2-C3.4: N capped at 4 in v1; `tournament_n` wires to branch generation and checkpoint choices; survivor fanout requires `continue-others` plus `aggregate-survivors`. |
 | 7. Full rubric result underspecified. | Resolved in §9 and C3.5: `RubricDimResult` includes explicit dim scale, `runtime_signal: "n/a"`, aggregate score, tie-break, and runtime-veto effect. |
 | 8. Autonomous tournament could collapse into a minimal interim scorer. | Resolved in §5, §9, §10, and C3.6: v1 ships `highest-score` over typed rubric results and records full provenance in Auto-resolutions. |

@@ -9,11 +9,11 @@ export type JsonObject = Record<string, unknown>;
 export type HtmlAutoResolution = {
   readonly checkpoint_id: string;
   readonly checkpoint_label?: string | undefined;
-  readonly policy: string;
+  readonly policy: 'highest-score';
   readonly resolved_value: string;
-  readonly winning_score?: number | undefined;
-  readonly margin?: number | null | undefined;
-  readonly runtime_veto_effect?: string | undefined;
+  readonly winning_score: number;
+  readonly margin: number | null;
+  readonly runtime_veto_effect: string;
 };
 
 export type HtmlProjectorContext = {

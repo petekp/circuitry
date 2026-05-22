@@ -90,7 +90,6 @@ export const AutoResolutionPolicy = z.discriminatedUnion('policy', [
       rubric_result_path: z.string().min(1).default('rubric_result'),
     })
     .strict(),
-  z.object({ policy: z.literal('refuse') }).strict(),
 ]);
 export type AutoResolutionPolicy = z.infer<typeof AutoResolutionPolicy>;
 

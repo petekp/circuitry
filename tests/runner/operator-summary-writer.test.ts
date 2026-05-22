@@ -80,7 +80,6 @@ function writeHighestScoreAutoResolution(): void {
     tie_break: 'aggregate_score',
     runtime_veto_effect:
       'option-1 evidence_rigor runtime_signal=missing forced final_score=fail and dim_score=0',
-    runtime_or_model: 'runtime',
     resolved_at: '2026-05-19T12:00:00.000Z',
   };
   writeReport('reports/checkpoints/tradeoff-response.json', {

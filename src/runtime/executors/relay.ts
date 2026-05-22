@@ -39,7 +39,7 @@ import type { StepOutcome } from '../domain/step.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
 import { appendProofPolicyGuidance, appendRelayExecutionGuidance } from '../run/guidance.js';
 import { recoveryRouteForFailure } from '../run/recovery-selection.js';
-import { planRelayGuidanceDecision, resolveRelayExecution } from '../run/relay-guidance.js';
+import { planRelayGuidanceDecision } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
   type StepExecutionResult,
@@ -782,16 +782,13 @@ async function executeRelayInternal(
   if (connector === undefined) {
     return executeProductionRelay(step, context);
   }
-  const relayExecution = resolveRelayExecution({
-    flowId: context.flow.id,
-    role: step.role,
+  const compiledStep = requireRuntimeIndexedStep(context.packageIndex, step.id, 'relay');
+  const { relayExecution } = planRelayGuidanceDecision({
+    context,
+    step,
+    compiledStep,
+    depth: Depth.parse(context.depth ?? 'standard'),
     suppliedConnector: connector,
-    ...(context.selectionConfigLayers === undefined
-      ? {}
-      : { configLayers: context.selectionConfigLayers }),
-    ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
-    ...(step.selection === undefined ? {} : { selection: step.selection }),
-    ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
   });
 
   const request: RelayRequest = {

@@ -3,7 +3,7 @@ import { RubricResult } from '../schemas/rubric.js';
 import { resolveDottedPath } from './fanout-branch-template.js';
 import { rankRubricCandidates } from './rubric.js';
 
-export interface HighestScoreAutoResolutionInput {
+interface HighestScoreAutoResolutionInput {
   readonly checkpointId: string;
   readonly checkpointLabel?: string;
   readonly choices: readonly string[];
@@ -13,7 +13,7 @@ export interface HighestScoreAutoResolutionInput {
   readonly rubricResultPath: string;
 }
 
-export interface HighestScoreAutoResolutionResult {
+interface HighestScoreAutoResolutionResult {
   readonly selection: string;
   readonly record: OperatorAutoResolution;
 }
@@ -84,7 +84,6 @@ export function resolveHighestScoreAutoResolution(
     margin: ranking.margin,
     tie_break: ranking.tie_break.final_reason,
     runtime_veto_effect: runtimeVetoEffect(ranking.ranked),
-    runtime_or_model: 'runtime',
     resolved_at: input.resolvedAt,
   };
 

@@ -1,9 +1,10 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { recoveryRouteForFailure } from '../../src/runtime/run/recovery-selection.js';
 import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
-import { RECOVERY_ROUTE_PRIORITY, recoveryRouteForStep } from '../../src/shared/recovery-route.js';
 
 const workContractRef = {
   kind: 'work_contract' as const,
@@ -43,37 +44,28 @@ function binding(
 }
 
 describe('recovery route selection', () => {
-  it('uses the shared priority order for runtime route selection', () => {
-    const step = {
-      routes: {
-        revise: 'revise-step',
-        retry: 'retry-step',
-        escalate: '@escalate',
-      },
-    };
+  it('does not expose old recovery route priority helpers as shared authority', () => {
+    const recoverySelectionSource = readFileSync(
+      join(process.cwd(), 'src/runtime/run/recovery-selection.ts'),
+      'utf8',
+    );
 
-    expect(RECOVERY_ROUTE_PRIORITY).toEqual([
-      'retry',
-      'revise',
-      'ask',
-      'stop',
-      'handoff',
-      'escalate',
-    ]);
-    expect(recoveryRouteForStep(step)).toBe('retry');
+    expect(existsSync(join(process.cwd(), 'src/shared/recovery-route.ts'))).toBe(false);
+    expect(recoverySelectionSource).not.toContain('RECOVERY_ROUTE_PRIORITY');
+    expect(recoverySelectionSource).not.toContain('recoveryRouteForStep');
   });
 
-  it('honors an allowed-route subset without changing the canonical order', () => {
+  it('uses fallback route priority only when no WorkContract is present', () => {
     const step = {
+      id: 'act-step',
       routes: {
-        retry: 'retry-step',
-        ask: 'ask-step',
-        handoff: '@handoff',
+        revise: { kind: 'step' as const, stepId: 'revise-step' },
+        retry: { kind: 'step' as const, stepId: 'retry-step' },
+        escalate: { kind: 'terminal' as const, target: '@escalate' as const },
       },
     };
 
-    expect(recoveryRouteForStep(step, ['handoff', 'ask'])).toBe('ask');
-    expect(recoveryRouteForStep(step, ['escalate'])).toBeUndefined();
+    expect(recoveryRouteForFailure({ step, cause: 'failed_check' })).toBe('retry');
   });
 
   it('uses WorkContract bindings before legacy recovery priority for failed work', () => {

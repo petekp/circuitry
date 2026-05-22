@@ -1,6 +1,6 @@
 import {
   assertConnectorSelectionCompatible,
-  resolveConnectorForRelay,
+  resolveConnectorForGuidanceInput,
   resolveConnectorReference,
 } from '../../../runtime/connectors/resolver.js';
 import type {
@@ -79,7 +79,7 @@ function resolveVariantRelay(input: {
             ? {}
             : { configLayers: input.selectionConfigLayers }),
         });
-  return resolveConnectorForRelay({
+  return resolveConnectorForGuidanceInput({
     flowId: 'prototype',
     role: 'implementer',
     ...(explicitConnector === undefined ? {} : { explicitConnector }),

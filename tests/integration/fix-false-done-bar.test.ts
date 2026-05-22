@@ -261,9 +261,8 @@ function fixVerificationOverride(scenario: ScenarioConfig): ExecutorRegistry['ve
         ...(report.schema === undefined ? {} : { report_schema: report.schema }),
       });
       // Verification step routing: 'pass' when status='pass', 'retry' on fail.
-      // Setting overall_status='failed' would normally trigger retry routing
-      // through the shared recovery-route policy; we mirror that here so the
-      // run reaches the right end state.
+      // Setting overall_status='failed' would normally trigger retry routing;
+      // we mirror that here so the run reaches the right end state.
       if (status === 'fail') {
         return { route: 'retry', details: { reason } };
       }

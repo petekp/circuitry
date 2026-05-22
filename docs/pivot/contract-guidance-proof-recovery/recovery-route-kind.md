@@ -64,9 +64,10 @@ This spec is grounded in the current pivot docs and local repo evidence:
 - Current acceptance criteria know only command and report-field checks with
   `hard-fail` or `retry-with-feedback`. See
   [src/schemas/acceptance-criteria.ts](../../../src/schemas/acceptance-criteria.ts).
-- Current recovery selection has a shared priority list:
-  `retry`, `revise`, `ask`, `stop`, `handoff`, `escalate`. See
-  [src/shared/recovery-route.ts](../../../src/shared/recovery-route.ts) and
+- Current recovery selection keeps that order as a private compatibility
+  fallback when no WorkContract is present. See
+  [src/runtime/run/recovery-selection.ts](../../../src/runtime/run/recovery-selection.ts)
+  and
   [tests/runner/recovery-route.test.ts](../../../tests/runner/recovery-route.test.ts).
 - Current runtime tests cover acceptance retry feedback, retry budget exhaustion,
   failed relay checks through declared recovery, connector failure with and
@@ -696,7 +697,7 @@ without a WorkContract binding.
 | `budgets.max_attempts` | Contract hard cap | Recovery retries must respect it. Policy may tighten. |
 | `budgets.wall_clock_ms` | Contract hard cap | Recovery cannot bypass wall-clock limit. |
 | `AcceptanceCriteria.on_failure: "retry-with-feedback"` | Recovery input | Becomes `retry_same_step_with_feedback` when same-step retry is declared. |
-| `recoveryRouteForStep` helper | Replace as authority | Useful priority precedent, but V0 must use WorkContract bindings. |
+| `recoveryRouteForStep` helper | Delete as shared authority | Any compatibility fallback must stay private to recovery selection. WorkContract bindings own typed recovery. |
 | `RECOVERY_ROUTE_LABELS = retry/revise` | Replace | Recovery handling must be kind-based, not label-based. |
 | `connector-failed` route | Keep as route id | Needs a RecoveryRouteKind binding. |
 | `checkpoint.selection` route fallback to `pass` | Replace with stricter route consequence | A selected checkpoint choice must map to a declared route or declared non-route outcome. |
@@ -873,8 +874,9 @@ rg -n "RECOVERY_ROUTE_LABELS|RECOVERY_ROUTE_PRIORITY|recoveryRouteForStep|isReco
   src tests docs/pivot/contract-guidance-proof-recovery
 ```
 
-Expected hard-cut state: helper use is gone from final runtime authority or
-wrapped by WorkContract recovery bindings.
+Expected hard-cut state: retired helper names have no source, generated, or
+plugin hits. Docs may mention them only in anti-cruft probes or migration
+history.
 
 ```bash
 rg -n "retry_with_feedback|retry-with-feedback|retry_same_step_with_feedback" \

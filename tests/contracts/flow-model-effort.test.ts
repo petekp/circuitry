@@ -13,7 +13,7 @@ import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import { SelectionOverride } from '../../src/schemas/selection-policy.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
-import { resolveSelectionForRelay } from '../../src/shared/selection-resolver.js';
+import { resolveSelectionForGuidanceInput } from '../../src/shared/selection-resolver.js';
 
 const FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');
 
@@ -197,7 +197,7 @@ describe('P2-MODEL-EFFORT — full selection precedence resolver', () => {
     const step = flow.steps.find((s) => s.id === 'synthesize-step');
     if (step === undefined) throw new Error('fixture missing synthesize-step');
 
-    const resolution = resolveSelectionForRelay({
+    const resolution = resolveSelectionForGuidanceInput({
       flow,
       step,
       configLayers: layeredConfigs(),
@@ -229,7 +229,7 @@ describe('P2-MODEL-EFFORT — full selection precedence resolver', () => {
     const step = flow.steps.find((s) => s.id === 'frame-step');
     if (step === undefined) throw new Error('fixture missing frame-step');
 
-    const resolution = resolveSelectionForRelay({
+    const resolution = resolveSelectionForGuidanceInput({
       flow,
       step,
       configLayers: [

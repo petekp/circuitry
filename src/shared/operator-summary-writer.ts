@@ -224,16 +224,11 @@ function formatSignedScore(value: number | null | undefined): string {
   return `${sign}${formatScore(value)}`;
 }
 
-export function autoResolutionSummaryLine(record: OperatorAutoResolutionValue): string {
+function autoResolutionSummaryLine(record: OperatorAutoResolutionValue): string {
   const label = record.checkpoint_label ?? record.checkpoint_id;
-  if (record.policy === 'highest-score') {
-    const vetoText =
-      record.runtime_veto_effect === undefined || record.runtime_veto_effect === 'none'
-        ? 'no runtime vetoes'
-        : record.runtime_veto_effect;
-    return `${label}: ${record.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore(record.winning_score)}; margin ${formatSignedScore(record.margin)} over runner-up; ${vetoText}).`;
-  }
-  return `${label}: ${record.resolved_value} selected by policy \`${record.policy}\`.`;
+  const vetoText =
+    record.runtime_veto_effect === 'none' ? 'no runtime vetoes' : record.runtime_veto_effect;
+  return `${label}: ${record.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore(record.winning_score)}; margin ${formatSignedScore(record.margin)} over runner-up; ${vetoText}).`;
 }
 
 function checkpointOptionDetails(runFolder: string, allowedChoices: readonly string[]): string[] {

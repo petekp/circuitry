@@ -106,8 +106,6 @@ interface RecoveryFailureEvidence {
   readonly cause: RecoveryFailureCause;
 }
 
-const LEGACY_RECOVERY_ROUTE_LABELS = new Set(['retry', 'revise']);
-
 interface ActiveRecovery {
   readonly originStepId: string;
   readonly route: string;
@@ -197,9 +195,7 @@ function isRecoveryRouteForMechanics(input: {
   readonly step: ExecutableStep;
   readonly route: string | undefined;
 }): boolean {
-  if (input.bindings === undefined) {
-    return input.route !== undefined && LEGACY_RECOVERY_ROUTE_LABELS.has(input.route);
-  }
+  if (input.bindings === undefined) return false;
   return hasRecoveryBindingForRoute(input);
 }
 

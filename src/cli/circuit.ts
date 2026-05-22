@@ -561,21 +561,6 @@ function validateFlowAxes(input: {
   }
 }
 
-function validateAutonomousCheckpointPolicies(input: {
-  readonly flow: CompiledFlow;
-}): void {
-  const support = axisSupportFromFlow(input);
-  if (!support.supportsAutonomous) return;
-  for (const step of input.flow.steps) {
-    if (step.kind !== 'checkpoint') continue;
-    const autoResolution = step.policy.auto_resolution;
-    if (autoResolution?.policy !== 'refuse') continue;
-    throw new Error(
-      `flow fixture '${input.flow.id}' supports autonomous but checkpoint '${step.id}' declares auto_resolution policy 'refuse'`,
-    );
-  }
-}
-
 function loadFixture(fixturePath: string): { flow: CompiledFlow; bytes: Buffer } {
   if (!existsSync(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
@@ -589,7 +574,6 @@ function loadFixture(fixturePath: string): { flow: CompiledFlow; bytes: Buffer }
   if (!policy.ok) {
     throw new Error(`flow fixture policy violation (${fixturePath}):\n  ${policy.reason}`);
   }
-  validateAutonomousCheckpointPolicies({ flow });
   return { flow, bytes };
 }
 

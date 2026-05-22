@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ExecutableFlow } from '../../src/runtime/manifest/executable-flow.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
+import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
 
 function deterministicNow(startMs: number): () => Date {
@@ -62,6 +64,36 @@ function flowWithRecoveryCorridor(): ExecutableFlow {
       },
     ],
     purpose: 'Exercise recovery through completed forward-path steps.',
+  };
+}
+
+const recoveryCorridorWorkContractRef = {
+  kind: 'work_contract' as const,
+  ref: 'runtime/work-contract/recovery-corridor/test.json',
+  sha256: 'a'.repeat(64),
+  flow_id: CompiledFlowId.parse('runtime-proof-recovery-corridor'),
+};
+
+function recoveryCorridorBinding(): RecoveryRouteBindingV0 {
+  return {
+    schema_version: 0,
+    step_id: StepId.parse('change-set-step'),
+    route_id: 'retry',
+    route_target: 'act-step',
+    kind: 'narrow_scope',
+    allowed_failure_causes: ['failed_check', 'contradicted_evidence', 'scope_drift'],
+    required_refs: ['trace'],
+    operator_authority: 'not_required',
+    attempt_budget: {
+      consumes_step_attempt: false,
+      must_respect_max_attempts: true,
+      retry_target: 'declared_step',
+    },
+    guidance: {
+      subject: 'recovery_route',
+      must_match_step_completed: true,
+    },
+    source_ref: recoveryCorridorWorkContractRef,
   };
 }
 
@@ -139,6 +171,8 @@ describe('WF-I11 runtime-safety-floor pass-route cycle guard', () => {
       goal: 'runtime must rerun proof corridor after repair',
       depth: 'standard',
       now: deterministicNow(Date.UTC(2026, 3, 24, 19, 5, 0)),
+      workContractRef: recoveryCorridorWorkContractRef,
+      recoveryRouteBindings: [recoveryCorridorBinding()],
       executors: {
         compose: async (step, context) => {
           if (step.id === 'change-set-step' && context.activeStepAttempt === 1) {

@@ -680,7 +680,7 @@ describe('runtime baseline', () => {
     });
   });
 
-  it('allows bounded revise re-entry before aborting when attempts are exhausted', async () => {
+  it('does not treat legacy recovery route labels as authority without WorkContract bindings', async () => {
     await withTempRun(async (runDir) => {
       const result = await executeExecutableFlow(
         {
@@ -713,18 +713,16 @@ describe('runtime baseline', () => {
       const completed = entries.filter((entry) => entry.kind === 'step.completed');
       expect(result).toMatchObject({
         outcome: 'aborted',
-        reason: "route 'revise' for step 'compose' exhausted max_attempts=2",
+        reason: "route 'revise' for step 'compose' exhausted max_attempts=1",
       });
-      expect(completed).toHaveLength(2);
-      expect(completed.map((entry) => entry.attempt)).toEqual([1, 2]);
-      expect(completed.map((entry) => entry.route_taken)).toEqual(['revise', 'revise']);
+      expect(completed).toHaveLength(1);
       expect(entries).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             kind: 'step.aborted',
             step_id: 'compose',
-            attempt: 3,
-            reason: "route 'revise' for step 'compose' exhausted max_attempts=2",
+            attempt: 2,
+            reason: "route 'revise' for step 'compose' exhausted max_attempts=1",
           }),
         ]),
       );

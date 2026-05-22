@@ -10,10 +10,7 @@ import type {
   PolicyConnectorRef,
   PolicyLayer as PolicyLayerValue,
 } from '../../schemas/policy-envelope.js';
-import {
-  ResolvedSelection,
-  type ResolvedSelection as ResolvedSelectionValue,
-} from '../../schemas/selection-policy.js';
+import type { ResolvedSelection as ResolvedSelectionValue } from '../../schemas/selection-policy.js';
 import type { SkillSlot } from '../../schemas/skill.js';
 import { RelayRole } from '../../schemas/step.js';
 import { composePolicyHardConstraints } from '../../shared/policy-envelope.js';
@@ -22,7 +19,7 @@ import { type LoadedRelaySkill, resolveLoadedRelaySkills } from '../../shared/sk
 import {
   assertConnectorCanRunRole,
   assertConnectorSelectionCompatible,
-  resolveConnectorForRelay,
+  resolveConnectorForGuidanceInput,
 } from '../connectors/resolver.js';
 import type { RelayConnector } from '../executors/relay.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
@@ -41,7 +38,7 @@ function resolvedConnectorName(connector: ResolvedConnector | undefined): string
 
 function configLayerConnector(
   name: string,
-  configLayers: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'],
+  configLayers: Parameters<typeof resolveConnectorForGuidanceInput>[0]['configLayers'],
 ): ResolvedConnector | undefined {
   let descriptor: ResolvedConnector | undefined;
   for (const layer of configLayers ?? []) {
@@ -71,10 +68,10 @@ function connectorFromPolicyRef(
   throw new Error(`policy connector '${ref.name}' is referenced but not declared`);
 }
 
-function requestedConnectorForRelay(input: {
+function requestedConnectorForGuidanceInput(input: {
   readonly stepConnector?: string;
   readonly suppliedConnector?: RelayConnector;
-  readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
+  readonly configLayers?: Parameters<typeof resolveConnectorForGuidanceInput>[0]['configLayers'];
   readonly policyLayers?: readonly PolicyLayerValue[];
 }): ResolvedConnector | undefined {
   const suppliedResolved = input.suppliedConnector?.connector;
@@ -191,23 +188,6 @@ function policyConnectorChoice(input: {
   return undefined;
 }
 
-function selectionForCompatibility(selection: unknown) {
-  if (selection === undefined) return undefined;
-  if (selection === null || typeof selection !== 'object' || Array.isArray(selection)) {
-    return undefined;
-  }
-  const selectionRecord = selection as {
-    readonly model?: unknown;
-    readonly effort?: unknown;
-  };
-  return ResolvedSelection.parse({
-    ...(selectionRecord.model === undefined ? {} : { model: selectionRecord.model }),
-    ...(selectionRecord.effort === undefined ? {} : { effort: selectionRecord.effort }),
-    skills: [],
-    invocation_options: {},
-  });
-}
-
 const EFFORT_ORDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 
 function effortExceedsMax(effort: string | undefined, maxEffort: string | undefined): boolean {
@@ -287,13 +267,12 @@ function assertPolicyAllowsRelayExecutionInput(input: {
   }
 }
 
-export function resolveRelayExecution(input: {
+function resolveRelayGuidanceExecution(input: {
   readonly flowId: string;
   readonly role: string;
-  readonly selection?: unknown;
   readonly stepConnector?: string;
   readonly suppliedConnector?: RelayConnector;
-  readonly configLayers?: Parameters<typeof resolveConnectorForRelay>[0]['configLayers'];
+  readonly configLayers?: Parameters<typeof resolveConnectorForGuidanceInput>[0]['configLayers'];
   readonly policyLayers?: readonly PolicyLayerValue[];
 }): {
   readonly role: string;
@@ -302,7 +281,7 @@ export function resolveRelayExecution(input: {
   readonly resolvedFrom: RelayResolutionSource;
 } {
   const role = RelayRole.parse(input.role);
-  const explicitConnector = requestedConnectorForRelay({
+  const explicitConnector = requestedConnectorForGuidanceInput({
     ...(input.stepConnector === undefined ? {} : { stepConnector: input.stepConnector }),
     ...(input.suppliedConnector === undefined
       ? {}
@@ -317,25 +296,22 @@ export function resolveRelayExecution(input: {
           role,
           ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
         }) ??
-        resolveConnectorForRelay({
+        resolveConnectorForGuidanceInput({
           flowId: input.flowId,
           role,
           ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
         }))
-      : resolveConnectorForRelay({
+      : resolveConnectorForGuidanceInput({
           flowId: input.flowId,
           role,
           ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
           explicitConnector,
         });
   const resolvedConnector = resolved.connector;
-  const resolvedSelection = selectionForCompatibility(input.selection);
-  assertConnectorSelectionCompatible(resolvedConnector.name, resolvedSelection);
   assertPolicyAllowsRelayExecutionInput({
     ...(input.policyLayers === undefined ? {} : { policyLayers: input.policyLayers }),
     role,
     connectorName: resolvedConnector.name,
-    ...(resolvedSelection === undefined ? {} : { resolvedSelection }),
   });
   return {
     role,
@@ -356,8 +332,8 @@ function suppliedConnectorFromRelayer(context: RunContext): RelayConnector | und
   };
 }
 
-export interface RelayGuidancePlan {
-  readonly relayExecution: ReturnType<typeof resolveRelayExecution>;
+interface RelayGuidancePlan {
+  readonly relayExecution: ReturnType<typeof resolveRelayGuidanceExecution>;
   readonly resolvedSelection: ResolvedSelectionValue;
   readonly loadedSkills: readonly LoadedRelaySkill[];
 }
@@ -367,11 +343,12 @@ export function planRelayGuidanceDecision(input: {
   readonly step: RelayStep;
   readonly compiledStep: RuntimeIndexedRelayStep;
   readonly depth: Depth;
+  readonly suppliedConnector?: RelayConnector;
 }): RelayGuidancePlan {
   const { context, step, compiledStep } = input;
   const flow = context.packageIndex.flow;
-  const suppliedConnector = suppliedConnectorFromRelayer(context);
-  const relayExecution = resolveRelayExecution({
+  const suppliedConnector = input.suppliedConnector ?? suppliedConnectorFromRelayer(context);
+  const relayExecution = resolveRelayGuidanceExecution({
     flowId: context.flow.id,
     role: step.role,
     ...(suppliedConnector === undefined ? {} : { suppliedConnector }),
@@ -379,12 +356,10 @@ export function planRelayGuidanceDecision(input: {
       ? {}
       : { configLayers: context.selectionConfigLayers }),
     ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
-    ...(step.selection === undefined ? {} : { selection: step.selection }),
     ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
   });
   const resolvedSelection = deriveResolvedSelection(
     {
-      ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: context.selectionConfigLayers }),

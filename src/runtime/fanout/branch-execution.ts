@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
 import { parseReport } from '../../flows/registries/report-schemas.js';
 import { CompiledFlow as CompiledFlowSchema } from '../../schemas/compiled-flow.js';
+import { Depth } from '../../schemas/depth.js';
 import { RunResult } from '../../schemas/result.js';
 import type { RelayStep as CompiledRelayStepV1 } from '../../shared/relay-support.js';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../executors/relay.js';
 import type { FanoutStep, RelayStep } from '../manifest/executable-flow.js';
 import type { WorktreeRunner } from '../run/child-runner.js';
-import { resolveRelayExecution } from '../run/relay-guidance.js';
+import { planRelayGuidanceDecision } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
   type BranchOutcome,
@@ -187,6 +188,23 @@ function validateAcceptedRelayFanoutBranch(
   return { evaluation: input.checkEvaluation, parsedBody };
 }
 
+export function planRelayFanoutBranchGuidanceDecision(input: {
+  readonly step: FanoutStep;
+  readonly context: RunContext;
+  readonly branch: ResolvedRelayBranch;
+  readonly relayConnector?: RelayConnector;
+  readonly branchDirRel: string;
+}): ReturnType<typeof planRelayGuidanceDecision> {
+  const relayStep = syntheticRelayStep(input.step, input.branch, input.branchDirRel);
+  return planRelayGuidanceDecision({
+    context: input.context,
+    step: relayStep,
+    compiledStep: syntheticCompiledRelayStepV1(input.step, input.branch, input.branchDirRel),
+    depth: Depth.parse(input.context.depth ?? 'standard'),
+    ...(input.relayConnector === undefined ? {} : { suppliedConnector: input.relayConnector }),
+  });
+}
+
 export async function executeRelayFanoutBranch(
   step: FanoutStep,
   context: RunContext,
@@ -279,16 +297,12 @@ export async function executeRelayFanoutBranch(
       branch_id: branch.branch_id,
       goal: branch.goal,
     });
-    const relayExecution = resolveRelayExecution({
-      flowId: context.flow.id,
-      role: branch.role,
-      selection: branch.selection,
-      ...(branch.connector === undefined ? {} : { stepConnector: branch.connector }),
-      suppliedConnector: relayConnector,
-      ...(context.selectionConfigLayers === undefined
-        ? {}
-        : { configLayers: context.selectionConfigLayers }),
-      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
+    const { relayExecution } = planRelayFanoutBranchGuidanceDecision({
+      step,
+      context,
+      branch,
+      relayConnector,
+      branchDirRel,
     });
     const response = await relayConnector.relay({
       runId: context.runId,

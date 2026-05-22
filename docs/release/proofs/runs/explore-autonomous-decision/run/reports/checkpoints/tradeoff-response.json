@@ -178,7 +178,6 @@
     "margin": 0.125,
     "tie_break": "aggregate_score",
     "runtime_veto_effect": "option-1 evidence_rigor runtime_signal=missing forced final_score=fail and dim_score=0",
-    "runtime_or_model": "runtime",
     "resolved_at": "2026-04-29T17:30:42.000Z"
   }
 }

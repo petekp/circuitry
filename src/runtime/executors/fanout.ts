@@ -9,12 +9,12 @@ import {
   branchNeedsWorktree,
   executeRelayFanoutBranch,
   executeSubRunFanoutBranch,
+  planRelayFanoutBranchGuidanceDecision,
 } from '../fanout/branch-execution.js';
 import { expandFanoutBranches } from '../fanout/branch-expansion.js';
 import type { BranchOutcome, FanoutJoinPolicy, ResolvedBranch } from '../fanout/types.js';
 import { gitWorktreeRunner } from '../fanout/worktree.js';
 import type { FanoutStep } from '../manifest/executable-flow.js';
-import { resolveRelayExecution } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import type { RelayConnector } from './relay.js';
 import {
@@ -74,24 +74,22 @@ function concurrencyLimit(step: FanoutStep): FanoutConcurrencyLimit {
 }
 
 function branchUsesWritableConnector(
+  step: FanoutStep,
   branch: ResolvedBranch,
   context: RunContext,
   relayConnector: RelayConnector | undefined,
+  branchDirRoot: string,
 ): boolean {
   if (branch.kind !== 'relay') return false;
   try {
-    const decision = resolveRelayExecution({
-      flowId: context.flow.id,
-      role: branch.role,
-      ...(branch.connector === undefined ? {} : { stepConnector: branch.connector }),
-      ...(branch.selection === undefined ? {} : { selection: branch.selection }),
-      ...(relayConnector === undefined ? {} : { suppliedConnector: relayConnector }),
-      ...(context.selectionConfigLayers === undefined
-        ? {}
-        : { configLayers: context.selectionConfigLayers }),
-      ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
+    const decision = planRelayFanoutBranchGuidanceDecision({
+      step,
+      context,
+      branch,
+      ...(relayConnector === undefined ? {} : { relayConnector }),
+      branchDirRel: `${branchDirRoot}/${branch.branch_id}`,
     });
-    return connectorCapabilities(decision.connector).filesystem !== 'read-only';
+    return connectorCapabilities(decision.relayExecution.connector).filesystem !== 'read-only';
   } catch {
     return false;
   }
@@ -102,6 +100,7 @@ function fanoutExecutionPolicy(
   branches: readonly ResolvedBranch[],
   context: RunContext,
   relayConnector: RelayConnector | undefined,
+  branchDirRoot: string,
 ): {
   readonly configuredConcurrency: FanoutConcurrencyLimit;
   readonly effectiveConcurrency: FanoutConcurrencyLimit;
@@ -110,7 +109,7 @@ function fanoutExecutionPolicy(
 } {
   const configuredConcurrency = concurrencyLimit(step);
   const writableRelayBranchesSerialized = branches.some((branch) =>
-    branchUsesWritableConnector(branch, context, relayConnector),
+    branchUsesWritableConnector(step, branch, context, relayConnector, branchDirRoot),
   );
   if (writableRelayBranchesSerialized) {
     return {
@@ -185,7 +184,13 @@ async function executeFanoutInternal(
     );
   }
   const branchIds = branches.map((branch) => branch.branch_id);
-  const executionPolicy = fanoutExecutionPolicy(step, branches, context, relayConnector);
+  const executionPolicy = fanoutExecutionPolicy(
+    step,
+    branches,
+    context,
+    relayConnector,
+    branchDirRoot,
+  );
   await context.trace.append({
     run_id: context.runId,
     kind: 'fanout.started',

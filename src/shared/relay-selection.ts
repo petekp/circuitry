@@ -1,8 +1,8 @@
-// Relay selection derivation.
+// Guidance selection derivation.
 //
 // Most flows resolve relay model and effort from config and step metadata only.
-// A flow must opt into `bindsExecutionDepthToRelaySelection` before the run
-// depth is layered into relay selection.
+// The serialized engine flag still uses its historical name; this module treats
+// it as guidance selection input.
 import { findCompiledFlowPackageById } from '../flows/catalog.js';
 import type {
   RuntimeIndexedFlow,
@@ -16,21 +16,19 @@ import {
 import type { Depth } from '../schemas/depth.js';
 import type { CompiledFlowId } from '../schemas/ids.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
-import type { RelayFn } from './relay-runtime-types.js';
-import { resolveSelectionForRelay } from './selection-resolver.js';
+import { resolveSelectionForGuidanceInput } from './selection-resolver.js';
 
-export type RelayerInvocationConfig = {
-  readonly relayer?: RelayFn;
+type GuidanceSelectionConfig = {
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
 };
 
-export function bindsExecutionDepthToRelaySelection(flow: RuntimeIndexedFlow): boolean {
+function bindsExecutionDepthToGuidanceSelection(flow: RuntimeIndexedFlow): boolean {
   const pkg = findCompiledFlowPackageById(flow.id as unknown as string);
   return pkg?.engineFlags?.bindsExecutionDepthToRelaySelection === true;
 }
 
-export function selectionConfigLayersWithExecutionDepth(
-  inv: RelayerInvocationConfig,
+function guidanceSelectionConfigLayersWithExecutionDepth(
+  inv: GuidanceSelectionConfig,
   flow: RuntimeIndexedFlow,
   depth: Depth,
 ): readonly LayeredConfigValue[] {
@@ -66,26 +64,26 @@ export function selectionConfigLayersWithExecutionDepth(
   return layers;
 }
 
-function selectionConfigLayersForRelay(
-  inv: RelayerInvocationConfig,
+function selectionConfigLayersForGuidanceInput(
+  inv: GuidanceSelectionConfig,
   flow: RuntimeIndexedFlow,
   depth: Depth,
 ): readonly LayeredConfigValue[] {
-  if (!bindsExecutionDepthToRelaySelection(flow)) {
+  if (!bindsExecutionDepthToGuidanceSelection(flow)) {
     return inv.selectionConfigLayers ?? [];
   }
-  return selectionConfigLayersWithExecutionDepth(inv, flow, depth);
+  return guidanceSelectionConfigLayersWithExecutionDepth(inv, flow, depth);
 }
 
 export function deriveResolvedSelection(
-  inv: RelayerInvocationConfig,
+  inv: GuidanceSelectionConfig,
   flow: RuntimeIndexedFlow,
   step: RuntimeIndexedRelayStep,
   depth: Depth,
 ): ResolvedSelection {
-  return resolveSelectionForRelay({
+  return resolveSelectionForGuidanceInput({
     flow,
     step,
-    configLayers: selectionConfigLayersForRelay(inv, flow, depth),
+    configLayers: selectionConfigLayersForGuidanceInput(inv, flow, depth),
   }).resolved;
 }

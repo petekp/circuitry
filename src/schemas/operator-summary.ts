@@ -43,27 +43,24 @@ export const OperatorAutoResolution = z
   .object({
     checkpoint_id: z.string().min(1),
     checkpoint_label: z.string().min(1).optional(),
-    policy: z.enum(['accept-as-is', 'highest-score', 'first-acceptable', 'refuse']),
+    policy: z.literal('highest-score'),
     resolved_value: z.string().min(1),
     alternatives_available: z.array(z.string().min(1)),
-    scores: z
-      .record(
-        z.string().min(1),
-        z
-          .object({
-            aggregate_score: z.number().min(0).max(1),
-            runtime_veto_count: z.number().int().nonnegative(),
-          })
-          .strict(),
-      )
-      .optional(),
-    rubric_results: z.record(z.string().min(1), RubricResult).optional(),
-    winning_score: z.number().min(0).max(1).optional(),
+    scores: z.record(
+      z.string().min(1),
+      z
+        .object({
+          aggregate_score: z.number().min(0).max(1),
+          runtime_veto_count: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+    rubric_results: z.record(z.string().min(1), RubricResult),
+    winning_score: z.number().min(0).max(1),
     runner_up_score: z.number().min(0).max(1).optional(),
-    margin: z.number().nullable().optional(),
-    tie_break: z.string().min(1).optional(),
-    runtime_veto_effect: z.string().min(1).optional(),
-    runtime_or_model: z.enum(['runtime', 'model']),
+    margin: z.number().nullable(),
+    tie_break: z.string().min(1),
+    runtime_veto_effect: z.string().min(1),
     resolved_at: z.string().min(1),
   })
   .strict();

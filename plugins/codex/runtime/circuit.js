@@ -26936,8 +26936,7 @@ var AutoResolutionPolicy = external_exports.discriminatedUnion("policy", [
     branches_path: external_exports.string().min(1).default("branches"),
     id_path: external_exports.string().min(1).default("branch_id"),
     rubric_result_path: external_exports.string().min(1).default("rubric_result")
-  }).strict(),
-  external_exports.object({ policy: external_exports.literal("refuse") }).strict()
+  }).strict()
 ]);
 var CheckpointPolicy = external_exports.object({
   prompt: external_exports.string().min(1),
@@ -39001,7 +39000,7 @@ function decision(connector, resolvedFrom, role) {
     resolvedFrom
   };
 }
-function resolveConnectorForRelay(input) {
+function resolveConnectorForGuidanceInput(input) {
   if (input.explicitConnector !== void 0) {
     return decision(input.explicitConnector, { source: "explicit" }, input.role);
   }
@@ -39096,7 +39095,7 @@ function resolveVariantRelay(input) {
     ref: input.variant.connector,
     ...input.selectionConfigLayers === void 0 ? {} : { configLayers: input.selectionConfigLayers }
   });
-  return resolveConnectorForRelay({
+  return resolveConnectorForGuidanceInput({
     flowId: "prototype",
     role: "implementer",
     ...explicitConnector === void 0 ? {} : { explicitConnector },
@@ -44700,7 +44699,6 @@ function resolveHighestScoreAutoResolution(input) {
     margin: ranking.margin,
     tie_break: ranking.tie_break.final_reason,
     runtime_veto_effect: runtimeVetoEffect(ranking.ranked),
-    runtime_or_model: "runtime",
     resolved_at: input.resolvedAt
   };
   return { selection: ranking.winner.id, record: record2 };
@@ -45738,12 +45736,6 @@ async function resolveCheckpoint(step, context, depth, stepPolicy) {
   return { kind: "resolved", selection, resolutionSource: "declared-default", autoResolved: true };
 }
 async function resolveAutoResolution(step, context, stepPolicy, autoResolution) {
-  if (autoResolution.policy === "refuse") {
-    return {
-      kind: "failed",
-      reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth because policy is refuse`
-    };
-  }
   const sourceText = await context.files.readText(autoResolution.source_report);
   const sourceRaw = JSON.parse(sourceText);
   const sourceReportRef = {
@@ -46790,8 +46782,8 @@ function responseJsonSchemaFromZod(schema) {
   return result;
 }
 
-// dist/shared/recovery-route.js
-var RECOVERY_ROUTE_PRIORITY = [
+// dist/runtime/run/recovery-selection.js
+var FALLBACK_RECOVERY_ROUTE_ORDER = [
   "retry",
   "revise",
   "ask",
@@ -46799,12 +46791,6 @@ var RECOVERY_ROUTE_PRIORITY = [
   "handoff",
   "escalate"
 ];
-function recoveryRouteForStep(step, allowedRoutes = RECOVERY_ROUTE_PRIORITY) {
-  const allowed = new Set(allowedRoutes);
-  return RECOVERY_ROUTE_PRIORITY.find((route) => allowed.has(route) && Object.hasOwn(step.routes, route));
-}
-
-// dist/runtime/run/recovery-selection.js
 function routeTargetKey(target) {
   return target.kind === "terminal" ? target.target : target.stepId;
 }
@@ -46816,18 +46802,21 @@ function bindingMatches(input) {
   const target = input.step.routes[input.binding.route_id];
   return target !== void 0 && input.binding.route_target === routeTargetKey(target);
 }
+function fallbackRouteByRecoveryOrder(step) {
+  return FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => Object.hasOwn(step.routes, route));
+}
 function recoveryRouteForFailure(input) {
   const preferredRouteDeclared = input.preferredRoute !== void 0 && Object.hasOwn(input.step.routes, input.preferredRoute);
   if (input.workContractRef === void 0) {
     if (preferredRouteDeclared)
       return input.preferredRoute;
-    return recoveryRouteForStep(input.step);
+    return fallbackRouteByRecoveryOrder(input.step);
   }
   const matchingBindings = input.recoveryRouteBindings?.filter((binding) => bindingMatches({ step: input.step, binding, cause: input.cause })) ?? [];
   if (preferredRouteDeclared && matchingBindings.some((binding) => binding.route_id === input.preferredRoute)) {
     return input.preferredRoute;
   }
-  const priorityMatch = RECOVERY_ROUTE_PRIORITY.find((route) => matchingBindings.some((binding) => binding.route_id === route));
+  const priorityMatch = FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => matchingBindings.some((binding) => binding.route_id === route));
   if (priorityMatch !== void 0)
     return priorityMatch;
   const firstMatchingBinding = matchingBindings[0];
@@ -46835,11 +46824,11 @@ function recoveryRouteForFailure(input) {
     return firstMatchingBinding.route_id;
   if (preferredRouteDeclared)
     return input.preferredRoute;
-  return recoveryRouteForStep(input.step);
+  return fallbackRouteByRecoveryOrder(input.step);
 }
 
 // dist/shared/selection-resolver.js
-var PRE_WORKFLOW_CONFIG_SOURCES = ["default", "user-global", "project"];
+var PRE_FLOW_CONFIG_SOURCES = ["default", "user-global", "project"];
 function overrideContributes2(o) {
   if (o.model !== void 0)
     return true;
@@ -46937,13 +46926,13 @@ function configLayersBySource(layers) {
   }
   return out;
 }
-function resolveSelectionForRelay(input) {
+function resolveSelectionForGuidanceInput(input) {
   const flowId = input.flow.id;
   const stepId = input.step.id;
   const applied = [];
   let resolved = { skills: [], invocation_options: {} };
   const configLayers = configLayersBySource(input.configLayers ?? []);
-  for (const source of PRE_WORKFLOW_CONFIG_SOURCES) {
+  for (const source of PRE_FLOW_CONFIG_SOURCES) {
     const layer = configLayers[source];
     if (layer === void 0)
       continue;
@@ -46978,11 +46967,11 @@ function resolveSelectionForRelay(input) {
 }
 
 // dist/shared/relay-selection.js
-function bindsExecutionDepthToRelaySelection(flow) {
+function bindsExecutionDepthToGuidanceSelection(flow) {
   const pkg = findCompiledFlowPackageById(flow.id);
   return pkg?.engineFlags?.bindsExecutionDepthToRelaySelection === true;
 }
-function selectionConfigLayersWithExecutionDepth(inv, flow, depth) {
+function guidanceSelectionConfigLayersWithExecutionDepth(inv, flow, depth) {
   const layers = [...inv.selectionConfigLayers ?? []];
   const flowId = flow.id;
   const existingIndex = layers.findIndex((layer) => layer.layer === "invocation");
@@ -47014,17 +47003,17 @@ function selectionConfigLayersWithExecutionDepth(inv, flow, depth) {
   }
   return layers;
 }
-function selectionConfigLayersForRelay(inv, flow, depth) {
-  if (!bindsExecutionDepthToRelaySelection(flow)) {
+function selectionConfigLayersForGuidanceInput(inv, flow, depth) {
+  if (!bindsExecutionDepthToGuidanceSelection(flow)) {
     return inv.selectionConfigLayers ?? [];
   }
-  return selectionConfigLayersWithExecutionDepth(inv, flow, depth);
+  return guidanceSelectionConfigLayersWithExecutionDepth(inv, flow, depth);
 }
 function deriveResolvedSelection(inv, flow, step, depth) {
-  return resolveSelectionForRelay({
+  return resolveSelectionForGuidanceInput({
     flow,
     step,
-    configLayers: selectionConfigLayersForRelay(inv, flow, depth)
+    configLayers: selectionConfigLayersForGuidanceInput(inv, flow, depth)
   }).resolved;
 }
 
@@ -47234,7 +47223,7 @@ function connectorFromPolicyRef(ref, policyLayers) {
     return descriptor;
   throw new Error(`policy connector '${ref.name}' is referenced but not declared`);
 }
-function requestedConnectorForRelay(input) {
+function requestedConnectorForGuidanceInput(input) {
   const suppliedResolved = input.suppliedConnector?.connector;
   const suppliedResolvedName = resolvedConnectorName(suppliedResolved);
   const suppliedName = input.suppliedConnector?.connectorName ?? suppliedResolvedName;
@@ -47297,20 +47286,6 @@ function policyConnectorChoice(input) {
   }
   return void 0;
 }
-function selectionForCompatibility(selection) {
-  if (selection === void 0)
-    return void 0;
-  if (selection === null || typeof selection !== "object" || Array.isArray(selection)) {
-    return void 0;
-  }
-  const selectionRecord = selection;
-  return ResolvedSelection.parse({
-    ...selectionRecord.model === void 0 ? {} : { model: selectionRecord.model },
-    ...selectionRecord.effort === void 0 ? {} : { effort: selectionRecord.effort },
-    skills: [],
-    invocation_options: {}
-  });
-}
 var EFFORT_ORDER2 = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 function effortExceedsMax(effort, maxEffort) {
   if (effort === void 0 || maxEffort === void 0)
@@ -47361,9 +47336,9 @@ function assertPolicyAllowsRelayExecutionInput(input) {
     throw new Error(`PolicyEnvelope disallows effort '${input.resolvedSelection?.effort}': max effort is '${constraints.limits.max_effort}'`);
   }
 }
-function resolveRelayExecution(input) {
+function resolveRelayGuidanceExecution(input) {
   const role = RelayRole.parse(input.role);
-  const explicitConnector = requestedConnectorForRelay({
+  const explicitConnector = requestedConnectorForGuidanceInput({
     ...input.stepConnector === void 0 ? {} : { stepConnector: input.stepConnector },
     ...input.suppliedConnector === void 0 ? {} : { suppliedConnector: input.suppliedConnector },
     ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
@@ -47373,24 +47348,21 @@ function resolveRelayExecution(input) {
     flowId: input.flowId,
     role,
     ...input.policyLayers === void 0 ? {} : { policyLayers: input.policyLayers }
-  }) ?? resolveConnectorForRelay({
+  }) ?? resolveConnectorForGuidanceInput({
     flowId: input.flowId,
     role,
     ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers }
-  }) : resolveConnectorForRelay({
+  }) : resolveConnectorForGuidanceInput({
     flowId: input.flowId,
     role,
     ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
     explicitConnector
   });
   const resolvedConnector = resolved.connector;
-  const resolvedSelection = selectionForCompatibility(input.selection);
-  assertConnectorSelectionCompatible(resolvedConnector.name, resolvedSelection);
   assertPolicyAllowsRelayExecutionInput({
     ...input.policyLayers === void 0 ? {} : { policyLayers: input.policyLayers },
     role,
-    connectorName: resolvedConnector.name,
-    ...resolvedSelection === void 0 ? {} : { resolvedSelection }
+    connectorName: resolvedConnector.name
   });
   return {
     role,
@@ -47413,18 +47385,16 @@ function suppliedConnectorFromRelayer(context) {
 function planRelayGuidanceDecision(input) {
   const { context, step, compiledStep } = input;
   const flow = context.packageIndex.flow;
-  const suppliedConnector = suppliedConnectorFromRelayer(context);
-  const relayExecution = resolveRelayExecution({
+  const suppliedConnector = input.suppliedConnector ?? suppliedConnectorFromRelayer(context);
+  const relayExecution = resolveRelayGuidanceExecution({
     flowId: context.flow.id,
     role: step.role,
     ...suppliedConnector === void 0 ? {} : { suppliedConnector },
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
     ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
-    ...step.selection === void 0 ? {} : { selection: step.selection },
     ...step.connector === void 0 ? {} : { stepConnector: step.connector }
   });
   const resolvedSelection = deriveResolvedSelection({
-    ...context.relayer === void 0 ? {} : { relayer: context.relayer },
     ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers }
   }, flow, compiledStep, input.depth);
   assertConnectorSelectionCompatible(relayExecution.connectorName, resolvedSelection);
@@ -47984,14 +47954,13 @@ async function executeRelayInternal(step, context, connector) {
   if (connector === void 0) {
     return executeProductionRelay(step, context);
   }
-  const relayExecution = resolveRelayExecution({
-    flowId: context.flow.id,
-    role: step.role,
-    suppliedConnector: connector,
-    ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
-    ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
-    ...step.selection === void 0 ? {} : { selection: step.selection },
-    ...step.connector === void 0 ? {} : { stepConnector: step.connector }
+  const compiledStep = requireRuntimeIndexedStep(context.packageIndex, step.id, "relay");
+  const { relayExecution } = planRelayGuidanceDecision({
+    context,
+    step,
+    compiledStep,
+    depth: Depth.parse(context.depth ?? "standard"),
+    suppliedConnector: connector
   });
   const request = {
     runId: context.runId,
@@ -48210,6 +48179,16 @@ function validateAcceptedRelayFanoutBranch(branch, input) {
   }
   return { evaluation: input.checkEvaluation, parsedBody };
 }
+function planRelayFanoutBranchGuidanceDecision(input) {
+  const relayStep = syntheticRelayStep(input.step, input.branch, input.branchDirRel);
+  return planRelayGuidanceDecision({
+    context: input.context,
+    step: relayStep,
+    compiledStep: syntheticCompiledRelayStepV1(input.step, input.branch, input.branchDirRel),
+    depth: Depth.parse(input.context.depth ?? "standard"),
+    ...input.relayConnector === void 0 ? {} : { suppliedConnector: input.relayConnector }
+  });
+}
 async function executeRelayFanoutBranch(step, context, branch, relayConnector, branchDirRel, branchDirAbs) {
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
@@ -48284,14 +48263,12 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
       branch_id: branch.branch_id,
       goal: branch.goal
     });
-    const relayExecution = resolveRelayExecution({
-      flowId: context.flow.id,
-      role: branch.role,
-      selection: branch.selection,
-      ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
-      suppliedConnector: relayConnector,
-      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
-      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers }
+    const { relayExecution } = planRelayFanoutBranchGuidanceDecision({
+      step,
+      context,
+      branch,
+      relayConnector,
+      branchDirRel
     });
     const response = await relayConnector.relay({
       runId: context.runId,
@@ -48627,27 +48604,25 @@ function concurrencyLimit(step) {
   }
   return 4;
 }
-function branchUsesWritableConnector(branch, context, relayConnector) {
+function branchUsesWritableConnector(step, branch, context, relayConnector, branchDirRoot) {
   if (branch.kind !== "relay")
     return false;
   try {
-    const decision2 = resolveRelayExecution({
-      flowId: context.flow.id,
-      role: branch.role,
-      ...branch.connector === void 0 ? {} : { stepConnector: branch.connector },
-      ...branch.selection === void 0 ? {} : { selection: branch.selection },
-      ...relayConnector === void 0 ? {} : { suppliedConnector: relayConnector },
-      ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
-      ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers }
+    const decision2 = planRelayFanoutBranchGuidanceDecision({
+      step,
+      context,
+      branch,
+      ...relayConnector === void 0 ? {} : { relayConnector },
+      branchDirRel: `${branchDirRoot}/${branch.branch_id}`
     });
-    return connectorCapabilities(decision2.connector).filesystem !== "read-only";
+    return connectorCapabilities(decision2.relayExecution.connector).filesystem !== "read-only";
   } catch {
     return false;
   }
 }
-function fanoutExecutionPolicy(step, branches, context, relayConnector) {
+function fanoutExecutionPolicy(step, branches, context, relayConnector, branchDirRoot) {
   const configuredConcurrency = concurrencyLimit(step);
-  const writableRelayBranchesSerialized = branches.some((branch) => branchUsesWritableConnector(branch, context, relayConnector));
+  const writableRelayBranchesSerialized = branches.some((branch) => branchUsesWritableConnector(step, branch, context, relayConnector, branchDirRoot));
   if (writableRelayBranchesSerialized) {
     return {
       configuredConcurrency,
@@ -48704,7 +48679,7 @@ async function executeFanoutInternal(step, context, relayConnector) {
     throw new Error(`fanout step '${step.id}': disjoint-merge is only supported for sub-run branches with worktrees`);
   }
   const branchIds = branches.map((branch) => branch.branch_id);
-  const executionPolicy = fanoutExecutionPolicy(step, branches, context, relayConnector);
+  const executionPolicy = fanoutExecutionPolicy(step, branches, context, relayConnector, branchDirRoot);
   await context.trace.append({
     run_id: context.runId,
     kind: "fanout.started",
@@ -50717,7 +50692,6 @@ function isGraphCheckpointWaitingResult(result) {
 function isGraphRejectedOutcome(result) {
   return "kind" in result && result.kind === "rejected";
 }
-var LEGACY_RECOVERY_ROUTE_LABELS = /* @__PURE__ */ new Set(["retry", "revise"]);
 function defaultManifestHash(flow) {
   return `runtime:${flow.id}@${flow.version}`;
 }
@@ -50778,9 +50752,8 @@ function hasRecoveryBindingForRoute(input) {
   }) !== void 0;
 }
 function isRecoveryRouteForMechanics(input) {
-  if (input.bindings === void 0) {
-    return input.route !== void 0 && LEGACY_RECOVERY_ROUTE_LABELS.has(input.route);
-  }
+  if (input.bindings === void 0)
+    return false;
   return hasRecoveryBindingForRoute(input);
 }
 function traceRefForEntry(input) {
@@ -52187,20 +52160,19 @@ var OperatorBriefSlots = external_exports.object({
 var OperatorAutoResolution = external_exports.object({
   checkpoint_id: external_exports.string().min(1),
   checkpoint_label: external_exports.string().min(1).optional(),
-  policy: external_exports.enum(["accept-as-is", "highest-score", "first-acceptable", "refuse"]),
+  policy: external_exports.literal("highest-score"),
   resolved_value: external_exports.string().min(1),
   alternatives_available: external_exports.array(external_exports.string().min(1)),
   scores: external_exports.record(external_exports.string().min(1), external_exports.object({
     aggregate_score: external_exports.number().min(0).max(1),
     runtime_veto_count: external_exports.number().int().nonnegative()
-  }).strict()).optional(),
-  rubric_results: external_exports.record(external_exports.string().min(1), RubricResult).optional(),
-  winning_score: external_exports.number().min(0).max(1).optional(),
+  }).strict()),
+  rubric_results: external_exports.record(external_exports.string().min(1), RubricResult),
+  winning_score: external_exports.number().min(0).max(1),
   runner_up_score: external_exports.number().min(0).max(1).optional(),
-  margin: external_exports.number().nullable().optional(),
-  tie_break: external_exports.string().min(1).optional(),
-  runtime_veto_effect: external_exports.string().min(1).optional(),
-  runtime_or_model: external_exports.enum(["runtime", "model"]),
+  margin: external_exports.number().nullable(),
+  tie_break: external_exports.string().min(1),
+  runtime_veto_effect: external_exports.string().min(1),
   resolved_at: external_exports.string().min(1)
 }).strict();
 var OperatorSummary = external_exports.object({
@@ -52640,11 +52612,8 @@ function formatSignedScore(value) {
 }
 function autoResolutionLine(record2) {
   const label = record2.checkpoint_label ?? record2.checkpoint_id;
-  if (record2.policy === "highest-score") {
-    const vetoText = record2.runtime_veto_effect === void 0 || record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
-    return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
-  }
-  return `${label}: ${record2.resolved_value} selected by policy ${record2.policy}.`;
+  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
+  return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
 }
 function renderAutoResolutions(records) {
   if (records === void 0 || records.length === 0)
@@ -53938,11 +53907,8 @@ function formatSignedScore2(value) {
 }
 function autoResolutionSummaryLine(record2) {
   const label = record2.checkpoint_label ?? record2.checkpoint_id;
-  if (record2.policy === "highest-score") {
-    const vetoText = record2.runtime_veto_effect === void 0 || record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
-    return `${label}: ${record2.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore2(record2.winning_score)}; margin ${formatSignedScore2(record2.margin)} over runner-up; ${vetoText}).`;
-  }
-  return `${label}: ${record2.resolved_value} selected by policy \`${record2.policy}\`.`;
+  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
+  return `${label}: ${record2.resolved_value} selected by policy \`highest-score\` (aggregate score ${formatScore2(record2.winning_score)}; margin ${formatSignedScore2(record2.margin)} over runner-up; ${vetoText}).`;
 }
 function checkpointOptionDetails(runFolder, allowedChoices) {
   const optionsReport = readJsonIfPresent(runFolder, "reports/decision-options.json");
@@ -56951,19 +56917,6 @@ function validateFlowAxes(input) {
     throw new Error(`--autonomous is not supported by flow '${flowId}'. ${allowList}`);
   }
 }
-function validateAutonomousCheckpointPolicies(input) {
-  const support = axisSupportFromFlow(input);
-  if (!support.supportsAutonomous)
-    return;
-  for (const step of input.flow.steps) {
-    if (step.kind !== "checkpoint")
-      continue;
-    const autoResolution = step.policy.auto_resolution;
-    if (autoResolution?.policy !== "refuse")
-      continue;
-    throw new Error(`flow fixture '${input.flow.id}' supports autonomous but checkpoint '${step.id}' declares auto_resolution policy 'refuse'`);
-  }
-}
 function loadFixture(fixturePath) {
   if (!existsSync18(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
@@ -56976,7 +56929,6 @@ function loadFixture(fixturePath) {
     throw new Error(`flow fixture policy violation (${fixturePath}):
   ${policy2.reason}`);
   }
-  validateAutonomousCheckpointPolicies({ flow });
   return { flow, bytes };
 }
 function defaultChildCompiledFlowResolver(flowRoot2) {

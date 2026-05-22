@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { CheckpointStep, CompiledFlowId } from '../../src/index.js';
@@ -48,6 +50,28 @@ const baseCheckpointStep = {
 };
 
 describe('CheckpointBoundaryV0 schema foundation', () => {
+  it('keeps highest-score auto-resolution bridge helpers private', () => {
+    const autoResolutionSource = readFileSync(
+      join(process.cwd(), 'src/shared/checkpoint-auto-resolution.ts'),
+      'utf8',
+    );
+    const summaryWriterSource = readFileSync(
+      join(process.cwd(), 'src/shared/operator-summary-writer.ts'),
+      'utf8',
+    );
+
+    expect(autoResolutionSource).toContain('export function resolveHighestScoreAutoResolution');
+    expect(autoResolutionSource).not.toMatch(
+      /export\s+(?:interface|type)\s+HighestScoreAutoResolutionInput\b/,
+    );
+    expect(autoResolutionSource).not.toMatch(
+      /export\s+(?:interface|type)\s+HighestScoreAutoResolutionResult\b/,
+    );
+    expect(summaryWriterSource).not.toMatch(
+      /export\s+(?:function|const)\s+autoResolutionSummaryLine\b/,
+    );
+  });
+
   it('projects static checkpoint choices into explicit authority-boundary routes', () => {
     const step = CheckpointStep.parse(baseCheckpointStep);
     const projection = projectCheckpointBoundaryV0({
@@ -145,7 +169,7 @@ describe('CheckpointBoundaryV0 schema foundation', () => {
   });
 
   it('rejects old direct checkpoint auto-resolution modes at the active schema', () => {
-    for (const policy of ['accept-as-is', 'first-acceptable'] as const) {
+    for (const policy of ['accept-as-is', 'first-acceptable', 'refuse'] as const) {
       const parsed = CheckpointStep.safeParse({
         ...baseCheckpointStep,
         policy: {

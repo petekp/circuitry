@@ -11,7 +11,7 @@ small enough that a reader can tell why code does not belong in `src/runtime/`,
 | `selection-resolver.ts`, `relay-selection.ts`, `skill-loading.ts`, `user-skill-registry.ts`, `config-loader.ts` | Selection, local skill, and config helpers used by CLI and runtime paths. |
 | `relay-support.ts`, `relay-runtime-types.ts`, `connector-relay.ts`, `write-capable-worker-disclosure.ts` | Relay prompt, relay result, and worker-disclosure helpers shared by flows, runtime tests, and connectors. |
 | `operator-summary-writer.ts`, `operator-summary/`, `html/`, `progress-output.ts`, `status-block-renderer.ts` | Human-facing run summaries, HTML projectors, and progress/status rendering helpers. |
-| `proof-plan.ts`, `verification-resolver.ts`, `terminal-verdict.ts`, `recovery-route.ts`, `checkpoint-auto-resolution.ts` | Deterministic check, verification, verdict, recovery, and checkpoint policy helpers. |
+| `proof-plan.ts`, `verification-resolver.ts`, `terminal-verdict.ts`, `checkpoint-auto-resolution.ts` | Deterministic check, verification, verdict, and checkpoint policy helpers. Recovery route choice lives with the runtime graph runner and WorkContract bindings. |
 | `fanout-*.ts`, `rubric.ts` | Fanout aggregation, branch templating, join policy, and scoring helpers. |
 | `json-*.ts`, `zod-to-response-schema.ts` | JSON extraction, JSON report writing, and schema-to-response-schema utilities. |
 | `manifest-snapshot.ts`, `result-path.ts`, `run-relative-path.ts`, `runtime-source.ts` | Run-folder, manifest, runtime-source, and path helpers shared outside the runtime package. |

@@ -51,7 +51,6 @@ describe('resolveHighestScoreAutoResolution', () => {
       runner_up_score: 0.938,
       margin: 0.062,
       tie_break: 'aggregate_score',
-      runtime_or_model: 'runtime',
       resolved_at: '2026-05-19T12:00:00.000Z',
     });
     expect(resolution.record.scores).toEqual({

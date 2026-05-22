@@ -158,7 +158,7 @@ function decision(
   };
 }
 
-export function resolveConnectorForRelay(input: {
+export function resolveConnectorForGuidanceInput(input: {
   readonly flowId: string;
   readonly role: RelayRole;
   readonly configLayers?: readonly LayeredConfigValue[];

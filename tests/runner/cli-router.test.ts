@@ -1261,7 +1261,7 @@ describe('CLI router', () => {
     expect(bootstrap).toMatchObject({ depth: 'autonomous' });
   }, 30_000);
 
-  it('rejects autonomous-capable fixtures that declare a refuse checkpoint policy', async () => {
+  it('rejects fixtures that declare the old refuse checkpoint auto-resolution policy', async () => {
     const fixturePath = join(runFolderBase, 'build-refuse-fixture.json');
     const raw = JSON.parse(readFileSync('generated/flows/build/circuit.json', 'utf8')) as {
       steps: Array<{
@@ -1298,7 +1298,7 @@ describe('CLI router', () => {
           configCwd: join(runFolderBase, 'empty-cwd'),
         },
       ),
-    ).rejects.toThrow(/checkpoint 'frame-step'.*policy 'refuse'/);
+    ).rejects.toThrow(/Invalid discriminator value\. Expected 'highest-score'/);
   });
 
   it('accepts explicit tournament flags on Explore and validates N in range', async () => {

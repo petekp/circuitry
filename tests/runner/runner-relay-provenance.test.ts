@@ -4,13 +4,17 @@ import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { materializeRelay } from '../../src/connectors/relay-materializer.js';
-import { resolveConnectorForRelay } from '../../src/runtime/connectors/resolver.js';
+import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { relayWithResolvedConnector } from '../../src/runtime/executors/relay.js';
+import type { RelayStep } from '../../src/runtime/manifest/executable-flow.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
+import { planRelayGuidanceDecision } from '../../src/runtime/run/relay-guidance.js';
+import type { RunContext } from '../../src/runtime/run/run-context.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { Config } from '../../src/schemas/config.js';
+import { Config, type LayeredConfig as LayeredConfigValue } from '../../src/schemas/config.js';
+import { Depth } from '../../src/schemas/depth.js';
 import { RunId, StepId } from '../../src/schemas/ids.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
@@ -53,6 +57,57 @@ function relayStep(
     throw new Error(`fixture missing ${role ?? ''} relay step`);
   }
   return step;
+}
+
+function relayGuidanceExecution(input: {
+  readonly flow: CompiledFlow;
+  readonly step: CompiledFlow['steps'][number] & { readonly kind: 'relay' };
+  readonly configLayers?: readonly LayeredConfigValue[];
+}) {
+  const step = input.step;
+  const selection =
+    step.selection === undefined
+      ? undefined
+      : {
+          ...(step.selection.model === undefined ? {} : { model: step.selection.model }),
+          ...(step.selection.effort === undefined ? {} : { effort: step.selection.effort }),
+          ...(step.selection.skills === undefined ? {} : { skills: step.selection.skills }),
+          ...(step.selection.depth === undefined ? {} : { depth: step.selection.depth }),
+          ...(step.selection.invocation_options === undefined
+            ? {}
+            : { invocation_options: step.selection.invocation_options }),
+        };
+  const runtimeStep: RelayStep = {
+    id: step.id,
+    kind: 'relay',
+    role: step.role,
+    routes: { pass: { kind: 'terminal', target: '@complete' } },
+    ...(selection === undefined ? {} : { selection }),
+    ...(step.connector === undefined ? {} : { connector: step.connector }),
+  };
+  const compiledStep = step as RuntimeIndexedRelayStep;
+  const context = {
+    flow: {
+      id: input.flow.id,
+      version: input.flow.version,
+      entry: step.id,
+      stages: [{ id: 'main', stepIds: [step.id] }],
+      steps: [runtimeStep],
+    },
+    packageIndex: {
+      flow: input.flow,
+      stepsById: new Map([[step.id, compiledStep]]),
+      reportPathBySchema: new Map(),
+    },
+    selectionConfigLayers: input.configLayers,
+  } as unknown as RunContext;
+
+  return planRelayGuidanceDecision({
+    context,
+    step: runtimeStep,
+    compiledStep,
+    depth: Depth.parse('standard'),
+  }).relayExecution;
 }
 
 function deterministicNow(startMs: number): () => Date {
@@ -177,9 +232,9 @@ describe('relay connector resolution precedence', () => {
     const { flow } = loadGeneratedFixture('build');
     const step = relayStep(flow, 'reviewer');
 
-    const decision = resolveConnectorForRelay({
-      flowId: flow.id,
-      role: step.role,
+    const decision = relayGuidanceExecution({
+      flow,
+      step,
       configLayers: [
         {
           layer: 'project',
@@ -208,9 +263,9 @@ describe('relay connector resolution precedence', () => {
     const { flow } = loadGeneratedFixture('build');
     const step = relayStep(flow, 'reviewer');
 
-    const decision = resolveConnectorForRelay({
-      flowId: flow.id,
-      role: step.role,
+    const decision = relayGuidanceExecution({
+      flow,
+      step,
       configLayers: [
         {
           layer: 'project',
@@ -239,11 +294,7 @@ describe('relay connector resolution precedence', () => {
     const { flow } = loadFixture();
     const step = relayStep(flow);
 
-    const decision = resolveConnectorForRelay({
-      flowId: flow.id,
-      role: step.role,
-      configLayers: [],
-    });
+    const decision = relayGuidanceExecution({ flow, step, configLayers: [] });
 
     expect(decision.connectorName).toBe('claude-code');
     expect(decision.resolvedFrom).toEqual({ source: 'auto' });
@@ -253,9 +304,9 @@ describe('relay connector resolution precedence', () => {
     const { flow } = loadGeneratedFixture('build');
     const step = relayStep(flow, 'reviewer');
 
-    const decision = resolveConnectorForRelay({
-      flowId: flow.id,
-      role: step.role,
+    const decision = relayGuidanceExecution({
+      flow,
+      step,
       configLayers: [
         {
           layer: 'user-global',
@@ -288,9 +339,9 @@ describe('relay connector resolution precedence', () => {
     };
 
     expect(() =>
-      resolveConnectorForRelay({
-        flowId: flow.id,
-        role: step.role,
+      relayGuidanceExecution({
+        flow,
+        step,
         configLayers: [
           {
             layer: 'project',
@@ -326,9 +377,9 @@ describe('relay connector resolution precedence', () => {
     };
 
     expect(() =>
-      resolveConnectorForRelay({
-        flowId: flow.id,
-        role: step.role,
+      relayGuidanceExecution({
+        flow,
+        step,
         configLayers: [
           {
             layer: 'project',
@@ -363,9 +414,9 @@ describe('relay connector resolution precedence', () => {
     ].join(' ');
 
     for (const name of ['gemini-reviewer', 'cursor-reviewer'] as const) {
-      const decision = resolveConnectorForRelay({
-        flowId: flow.id,
-        role: step.role,
+      const decision = relayGuidanceExecution({
+        flow,
+        step,
         configLayers: [
           {
             layer: 'project',

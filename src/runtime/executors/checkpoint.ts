@@ -228,12 +228,6 @@ async function resolveAutoResolution(
   stepPolicy: Awaited<ReturnType<typeof materializePolicy>>,
   autoResolution: AutoResolutionPolicy,
 ): Promise<CheckpointResolution> {
-  if (autoResolution.policy === 'refuse') {
-    return {
-      kind: 'failed',
-      reason: `checkpoint step '${step.id}' cannot auto-resolve autonomous depth because policy is refuse`,
-    };
-  }
   const sourceText = await context.files.readText(autoResolution.source_report);
   const sourceRaw = JSON.parse(sourceText) as unknown;
   const sourceReportRef: Ref = {

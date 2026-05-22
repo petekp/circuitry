@@ -3,8 +3,16 @@ import type {
   RecoveryRouteBindingV0,
 } from '../../schemas/recovery-route-kind.js';
 import type { Ref } from '../../schemas/ref.js';
-import { RECOVERY_ROUTE_PRIORITY, recoveryRouteForStep } from '../../shared/recovery-route.js';
 import type { RouteTarget } from '../domain/route.js';
+
+const FALLBACK_RECOVERY_ROUTE_ORDER = [
+  'retry',
+  'revise',
+  'ask',
+  'stop',
+  'handoff',
+  'escalate',
+] as const;
 
 interface StepWithRuntimeRoutes {
   readonly id: string;
@@ -34,13 +42,17 @@ function bindingMatches(input: {
   return target !== undefined && input.binding.route_target === routeTargetKey(target);
 }
 
+function fallbackRouteByRecoveryOrder(step: StepWithRuntimeRoutes): string | undefined {
+  return FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => Object.hasOwn(step.routes, route));
+}
+
 export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): string | undefined {
   const preferredRouteDeclared =
     input.preferredRoute !== undefined && Object.hasOwn(input.step.routes, input.preferredRoute);
 
   if (input.workContractRef === undefined) {
     if (preferredRouteDeclared) return input.preferredRoute;
-    return recoveryRouteForStep(input.step);
+    return fallbackRouteByRecoveryOrder(input.step);
   }
 
   const matchingBindings =
@@ -55,7 +67,7 @@ export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): st
     return input.preferredRoute;
   }
 
-  const priorityMatch = RECOVERY_ROUTE_PRIORITY.find((route) =>
+  const priorityMatch = FALLBACK_RECOVERY_ROUTE_ORDER.find((route) =>
     matchingBindings.some((binding) => binding.route_id === route),
   );
   if (priorityMatch !== undefined) return priorityMatch;
@@ -64,5 +76,5 @@ export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): st
   if (firstMatchingBinding !== undefined) return firstMatchingBinding.route_id;
 
   if (preferredRouteDeclared) return input.preferredRoute;
-  return recoveryRouteForStep(input.step);
+  return fallbackRouteByRecoveryOrder(input.step);
 }
