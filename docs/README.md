@@ -35,8 +35,8 @@ only the layer you need, then go deeper when the change touches that layer.
   [docs/architecture/declarative-flow-architecture.md](architecture/declarative-flow-architecture.md)
   - current runtime and flow authoring architecture.
 - [docs/pivot/contract-guidance-proof-recovery/](pivot/contract-guidance-proof-recovery/)
-  - canonical reference point for the contract, guidance, proof, and recovery
-    pivot.
+  - consolidated reference point for the contract, guidance, proof, and
+    recovery pivot.
 - [docs/flows/authoring-model.md](flows/authoring-model.md),
   [docs/flows/blocks.md](flows/blocks.md), and the specific flow guide you are
   changing.
@@ -100,7 +100,7 @@ The 2026-05-20 documentation audit inventory is
 | Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md), [plugins/README.md](../plugins/README.md) | Current codebase, flow, block, contract, source tree, host package, and script ownership reference. |
 | Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Generated mirrors are regenerated from source. |
 | Release QA | [docs/host-trial-checklist.md](host-trial-checklist.md) | Checklist for validating host readiness before broader use. |
-| Active pivot reference | [docs/pivot/contract-guidance-proof-recovery/](pivot/contract-guidance-proof-recovery/) | Canonical future-facing reference for the contract, guidance, proof, and recovery pivot. Validate claims against code, tests, and generated surfaces before treating them as current behavior. |
+| Active pivot reference | [docs/pivot/contract-guidance-proof-recovery/](pivot/contract-guidance-proof-recovery/) | Consolidated reference for the contract, guidance, proof, and recovery pivot. Validate claims against code, tests, and generated surfaces before treating them as current behavior. |
 | Working strategy | [docs/positioning-and-strategy.md](positioning-and-strategy.md) | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |
 | Research note | [docs/ideas/](ideas/), [docs/learnings/](learnings/), [docs/flows/research-intake.md](flows/research-intake.md), [docs/flows/cloudflare-glasswing-block-review.md](flows/cloudflare-glasswing-block-review.md) | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |
 | Archived | Completed or historical files in [docs/specs/](specs/) and [docs/internal/archive/](internal/archive/) | Dated target specs, design records, and local-only historical notes. Do not treat as active instructions unless a current doc links to a live section. |

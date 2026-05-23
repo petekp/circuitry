@@ -1,104 +1,167 @@
 # Contract, Guidance, Proof, And Recovery Pivot
 
-Status: canonical reference directory for the current Circuit pivot. These docs
-are future-facing unless they point to code, tests, generated surfaces, or
-runtime behavior that has already changed.
+Status: live consolidated reference.
 
-Use this directory when continuing pivot work. It keeps the doctrine, first
-spec direction, and order of operations together so future sessions do not have
-to reconstruct the plan from chat history.
+This directory used to hold a large set of planning specs. The pivot has now
+landed enough runtime, schema, and test boundaries that the old split docs were
+mostly duplicate prose. This README is the live documentation set for the pivot.
+Use the code and tests listed here as the source of truth.
 
-## Read In This Order
+## Source Priority
 
-1. [Pivot brief](pivot-brief.md) - product thesis, doctrine, language rules,
-   boundaries, anti-cruft rules, roadmap, unsettled items, and review findings.
-2. [Order of operations](order-of-operations.md) - the safest sequence for
-   specs, docs, generated surfaces, schema/runtime changes, tests, gates, and
-   deprecated-code pruning.
-3. [WorkContract Projection V0](work-contract-projection-v0.md) - first
-   implementation-spec direction for projecting current Flow fields into
-   contract authority, guidance inputs, or deleted old authority.
-4. [GuidanceDecision Trace Invariant](guidance-decision-trace-invariant.md) -
-   second implementation-spec direction for recorded decisions, refs, matching
-   rules, sequence checks, and death tests.
-5. [PolicyEnvelope Config V2 Cutover](policy-envelope-config-v2-cutover.md) -
-   third implementation-spec direction for moving config, relay routing,
-   selection, skills, connector/model preferences, defaults, limits, and
-   overrides into policy inputs instead of old runtime authority.
-6. [CheckpointBoundary Authority](checkpoint-boundary-authority.md) - supporting
-   implementation-spec direction for checkpoint choices, declared defaults,
-   policy-controlled resolution, trace rules, resume validation, and old
-   auto-resolution death tests.
-7. [ProofAssessment And Evidence Adapter](proof-assessment-evidence-adapter.md) -
-   supporting implementation-spec direction for claims, evidence, proof checks,
-   acceptance-criteria evidence, weak-proof recovery, and write-capable close
-   gates.
-8. [RecoveryRouteKind](recovery-route-kind.md) - supporting
-   implementation-spec direction for typed recovery paths after failed checks,
-   weak proof, contradicted evidence, checkpoint boundaries, relay failures,
-   apply conflicts, budget limits, and unknown failures.
-9. [Generated Host Surface Reframing](generated-host-surface-reframing.md) -
-   supporting implementation-spec direction for intent-first host commands,
-   Codex skills, plugin manifests, direct flow expert controls, generated
-   mirrors, drift checks, and product-framing death tests.
-10. [ChangePacket And SafeApply](change-packet-safe-apply.md) - supporting
-   implementation-spec direction for proposed changes, base checks, runtime
-   touched files, patch/apply gates, protected files, generated surfaces, final
-   verification, and Pursue safe-apply implications.
-11. [Pursue SafeApply Integration](pursue-safe-apply-integration.md) -
-   supporting implementation-spec direction for Pursue isolated write branches,
-   serial behavior before SafeApply, touch-set reconciliation,
-   applied/rejected/blocked packet reporting, proof gates, final verification,
-   recovery, generated-surface handling, and premature-parallel-write death
-   tests.
-12. [MemoryInput Boundary](memory-input-boundary.md) - supporting
-   implementation-spec direction for using memory as hints without letting
-   memory authorize work, relax policy, skip proof, choose undeclared routes,
-   change checkpoint authority, or affect SafeApply.
-13. [Implementation Readiness Audit](implementation-readiness-audit.md) -
-   historical cross-spec audit of contradictions, terminology drift,
-   death-test gaps, ownership boundaries, and the safest first
-   runtime/schema/test slice. Check its progress note before treating
-   audit-time "current repo evidence" as current.
+When sources disagree, use this order:
 
-## Doctrine
+1. Current schemas, runtime code, generated outputs, and tests.
+2. This consolidated pivot reference.
+3. Git history for the removed long-form pivot notes.
 
-Flows carry work contracts. Guidance runs those contracts within the rules.
-Trace records consequential decisions. Proof checks the evidence. Safe apply
-turns agent-written edits into inspected proposed changes.
+Do not treat old report wording, route labels, host prose, or deleted planning
+docs as authority. They are evidence only when current code and tests accept the
+same shape.
 
-Short rule:
+## Pruned Inventory
 
-> Flow defines what can run. WorkContract defines what is allowed. Guidance
-> decides how to run it now.
+| Former file | Classification | Result |
+| --- | --- | --- |
+| `README.md` | keep-live | Replaced with this consolidated reference. |
+| `pivot-brief.md` | consolidate | Product doctrine moved into Source Priority, Current Boundaries, and Future Work Trail below. |
+| `order-of-operations.md` | consolidate | Implementation order and verification ladder moved below. |
+| `work-contract-projection-v0.md` | consolidate | Current WorkContract source map moved below. |
+| `guidance-decision-trace-invariant.md` | consolidate | Guidance trace rules moved below. |
+| `policy-envelope-config-v2-cutover.md` | consolidate | Policy authority rules moved below. |
+| `checkpoint-boundary-authority.md` | consolidate | Checkpoint boundary rules moved below. |
+| `proof-assessment-evidence-adapter.md` | consolidate | Proof and recovery close rules moved below. |
+| `recovery-route-kind.md` | consolidate | Recovery route rules moved below. |
+| `generated-host-surface-reframing.md` | consolidate | Generated-surface rules moved below. |
+| `change-packet-safe-apply.md` | consolidate | Future SafeApply trail moved below. |
+| `pursue-safe-apply-integration.md` | consolidate | Future Pursue/SafeApply trail moved below. |
+| `memory-input-boundary.md` | consolidate | Memory boundary rules moved below. |
+| `implementation-readiness-audit.md` | remove | Historical audit. Recreate detail from git history if needed. |
 
-## Local Evidence To Recheck
+The removed files were only referenced from this pivot directory. External live
+docs point at the directory, not the deleted file paths.
 
-- [UBIQUITOUS_LANGUAGE.md](../../../UBIQUITOUS_LANGUAGE.md) - canonical Circuit
-  vocabulary.
-- [docs/generated-surfaces.md](../../generated-surfaces.md) - generated output
-  ownership and drift checks.
-- [docs/flows/authoring-model.md](../../flows/authoring-model.md) - current flow
-  authoring model.
-- [docs/flows/pursue.md](../../flows/pursue.md) - Pursue safety boundary.
-- [src/schemas/](../../../src/schemas/) - current schema authority paths.
-- [src/runtime/](../../../src/runtime/) - current runtime authority paths.
-- [src/commands/run.md](../../../src/commands/run.md) and
-  [plugins/codex/skills/run/SKILL.md](../../../plugins/codex/skills/run/SKILL.md)
-  - current host-facing flow-selection surfaces.
+## Current Boundaries
 
-## Rules For Future Work
+| Boundary | Live source trail | Rule |
+| --- | --- | --- |
+| WorkContract projection | `src/schemas/work-contract-projection.ts`, `src/shared/work-contract-projection.ts`, `tests/contracts/work-contract-projection.test.ts`, `docs/generated-surfaces.md` | Flow-owned contracts declare authority, proof inputs, recovery bindings, and limits. Runtime fallback behavior may exist only where tests still preserve it. |
+| GuidanceDecision trace | `src/schemas/guidance-decision.ts`, `src/runtime/run/relay-guidance.ts`, `src/runtime/run/guidance.ts`, `tests/contracts/guidance-decision-schema.test.ts`, `tests/contracts/relay-guidance-authority.test.ts` | Guidance is a recorded decision. Agent prose, preferred routes, and host wording cannot become authority without a valid trace entry. |
+| PolicyEnvelope | `src/schemas/policy-envelope.ts`, `src/shared/policy-envelope.ts`, `src/shared/config-loader.ts`, `tests/contracts/policy-envelope-schema.test.ts`, `tests/runner/config-loader.test.ts`, `tests/runtime/connectors.test.ts` | Policy can constrain or rank allowed choices. It cannot loosen WorkContract authority or replace a guidance decision. |
+| CheckpointBoundary | `src/schemas/checkpoint-boundary.ts`, `src/shared/checkpoint-boundary.ts`, `src/runtime/executors/checkpoint.ts`, `src/runtime/run/checkpoint-resume.ts`, `tests/contracts/checkpoint-boundary-schema.test.ts`, `tests/runtime/checkpoint-resume.test.ts` | Every automatic or default checkpoint crossing must be modeled as a declared authority boundary with matching guidance where required. |
+| ProofAssessment | `src/schemas/proof-assessment.ts`, `src/shared/proof-assessment.ts`, `src/runtime/executors/verification.ts`, `src/runtime/executors/relay.ts`, `tests/contracts/proof-assessment-schema.test.ts`, `tests/runner/build-verification-exec.test.ts`, `tests/runtime/runtime-baseline.test.ts` | Write-capable completion that requires proof must close on durable proof assessment evidence, not report shape, verdict strings, or prose. |
+| RecoveryRouteKind | `src/schemas/recovery-route-kind.ts`, `src/runtime/run/recovery-selection.ts`, `src/runtime/run/graph-runner.ts`, `tests/contracts/recovery-route-kind.test.ts`, `tests/runner/recovery-route.test.ts`, `tests/runtime/runtime-baseline.test.ts` | Recovery routes are typed. Legacy route labels are not authority when WorkContract bindings are absent or mismatched. |
+| SafeApply trace foundation | `src/schemas/change-packet.ts`, `src/schemas/trace-entry.ts`, `src/schemas/run.ts`, `tests/contracts/runtrace-schema.test.ts` | The live foundation keeps only shared trace enums and `safe_apply.result` trace validation. A full ChangePacket schema is not live runtime authority yet. |
+| Connector write boundary | `src/runtime/connectors/resolver.ts`, `tests/runtime/connectors.test.ts` | Current write-capable connectors are classified as pre-SafeApply trusted writes. That classification must stay explicit until SafeApply exists. |
+| Pursue V1 write policy | `docs/flows/pursue.md`, `src/flows/pursue/reports.ts`, `tests/contracts/pursue-report-schemas.test.ts`, `tests/runner/pursue-runtime-wiring.test.ts` | Pursue V1 keeps code-changing work serial and keeps SafeApply planning reports out of the active flow until SafeApply exists. |
+| MemoryInput | `src/schemas/memory-input.ts`, `src/schemas/guidance-decision.ts`, `tests/contracts/memory-input-schema.test.ts` | Memory can be cited as input. It cannot grant write, checkpoint, proof, policy, route, or recovery authority. |
+| Generated host surfaces | `docs/generated-surfaces.md`, `scripts/flows/emit.ts`, `tests/contracts/generated-surface-framing.test.ts`, `tests/contracts/catalog-completeness.test.ts` | Generated mirrors must match their sources. Host copy must not promise behavior before runtime can back it. |
 
-- Do not treat these docs as current runtime truth until the matching code,
-  tests, contracts, and generated surfaces change.
-- Keep product prose plain: use flow, block, route, relay, trace, report,
-  evidence, checkpoint, and Pursue.
-- Do not start runtime implementation until WorkContract Projection V0,
-  GuidanceDecision Trace Invariant, and PolicyEnvelope Config V2 Cutover have
-  crisp death tests.
-- Every remaining implementation slice must use the
-  [deprecated-code pruning ledger](order-of-operations.md#deprecated-code-pruning-ledger):
-  name the old path being removed, the temporary bridge if one is needed, the
-  cutover condition, and the death test that keeps the old path from returning.
-- Generated host surfaces must change through their source files and emit
-  scripts, not by hand-editing generated mirrors.
+## Non-Negotiable Rules
+
+- A flow or step may act only through declared contract authority.
+- A guidance decision records why an allowed choice was made.
+- A policy envelope may narrow choices, not invent authority.
+- A checkpoint crossing needs an explicit boundary, choice, default, or traced
+  policy decision.
+- Proof must be durable evidence. Report prose is not proof.
+- Recovery must use declared `RecoveryRouteKind` values and matching
+  WorkContract bindings.
+- Memory references are hints and citations, not permission.
+- Generated host surfaces are generated data. Update sources first, regenerate
+  only when the source of truth changes, then run drift checks.
+
+## Current Implementation Order
+
+Completed pivot boundaries:
+
+1. WorkContract projection and generated projection drift checks.
+2. GuidanceDecision trace schema and relay guidance authority.
+3. PolicyEnvelope projection and connector constraint handling.
+4. CheckpointBoundary authority pruning.
+5. ProofAssessment and typed recovery close behavior.
+6. ChangePacket schema pruning back to the live SafeApply trace foundation.
+7. Pivot documentation consolidation into this file.
+
+Deferred work:
+
+1. SafeApply runtime.
+2. Parallel write-capable Pursue branches.
+3. Broader memory authority or continuity behavior.
+
+Do not start deferred work while cleaning pivot cruft. Preserve current tested
+behavior until a rejection path has focused tests.
+
+## Future SafeApply Trail
+
+SafeApply should stay a runtime boundary, not a Pursue-only feature.
+
+Before adding SafeApply runtime behavior, add failing tests for one old authority
+path at a time. Good death tests include:
+
+- A prose claim or report verdict cannot approve an apply.
+- A packet without runtime diff evidence cannot complete write-capable work.
+- A generated-surface edit without source refs and drift evidence is rejected.
+- A protected-file edit routes through a checkpoint boundary.
+- A weak proof routes to typed recovery or stop.
+- A SafeApply rejection cannot route directly to complete.
+
+Only after those tests exist should runtime code accept a change packet, inspect
+files, bind proof refs, run final verification, and emit `safe_apply.result`.
+
+## Future Pursue Trail
+
+Pursue can coordinate broad work now, but code-changing work remains serial.
+
+Parallel write-capable Pursue branches stay blocked until SafeApply provides:
+
+- isolated work roots;
+- machine-readable packets;
+- runtime diff evidence;
+- generated-surface drift evidence when generated files change;
+- protected-file checks;
+- durable proof assessment refs;
+- typed recovery for reject, conflict, weak proof, and unsafe apply.
+
+Until then, keep Pursue V1 reports strict and keep SafeApply planning reports out
+of the active Pursue flow.
+
+## Verification Ladder
+
+Use focused checks while pruning a boundary, then finish with the full repo
+verification.
+
+Useful focused checks:
+
+```bash
+npm run test -- tests/contracts/work-contract-projection.test.ts
+npm run test -- tests/contracts/guidance-decision-schema.test.ts
+npm run test -- tests/contracts/policy-envelope-schema.test.ts
+npm run test -- tests/contracts/checkpoint-boundary-schema.test.ts
+npm run test -- tests/contracts/proof-assessment-schema.test.ts
+npm run test -- tests/contracts/recovery-route-kind.test.ts
+npm run test -- tests/contracts/runtrace-schema.test.ts
+npm run test -- tests/contracts/pursue-report-schemas.test.ts
+npm run test -- tests/contracts/documentation-surface.test.ts
+```
+
+Required closeout checks for pivot cleanup:
+
+```bash
+git diff --check
+npm run check-flow-drift
+npm run verify
+```
+
+For documentation pruning, also run a repository markdown link probe after
+removing or moving files.
+
+## Change Rules
+
+- Keep this directory small. Add a new pivot file only when one README cannot
+  hold the live boundary without becoming unclear.
+- Prefer source-backed tables over long planning prose.
+- When a boundary moves from future plan to runtime behavior, update the source
+  map and tests in the same change.
+- If old detail is needed, recover it from git history instead of keeping stale
+  active docs in the tree.

@@ -9,5 +9,5 @@ canonical docs, code, tests, and generated surfaces.
 
 ## Notes
 
-- The contract, guidance, proof, and recovery pivot moved to the canonical
+- The contract, guidance, proof, and recovery pivot moved to the consolidated
   [pivot reference directory](../pivot/contract-guidance-proof-recovery/).

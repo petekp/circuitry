@@ -78,17 +78,10 @@ implemented design.
 - The current `codex` adapter accepts only OpenAI models and `low`, `medium`,
   `high`, `xhigh` efforts before spawn.
   Source: [`src/connectors/codex.ts`](../../src/connectors/codex.ts#L241).
-- The current `codex-isolated` adapter already carries the intended Codex
-  writable argv shape: `codex exec --json -s workspace-write --ephemeral
-  --skip-git-repo-check --ignore-user-config --ignore-rules`.
-  Source: [`src/connectors/codex-isolated.ts`](../../src/connectors/codex-isolated.ts#L21).
-- `codex-isolated` already threads a runtime `cwd` through both `--cd` and the
-  subprocess `cwd` option.
-  Sources: [`src/connectors/codex-isolated.ts`](../../src/connectors/codex-isolated.ts#L153),
-  [`src/connectors/codex-isolated.ts`](../../src/connectors/codex-isolated.ts#L201).
-- `codex-isolated` rejects non-OpenAI providers and unsupported efforts before
-  spawn.
-  Source: [`src/connectors/codex-isolated.ts`](../../src/connectors/codex-isolated.ts#L75).
+- Historical note: the deleted `src/connectors/codex-isolated.ts` adapter
+  carried the intended writable argv, runtime `cwd`, provider, and effort
+  checks before that behavior was folded into
+  [`src/connectors/codex.ts`](../../src/connectors/codex.ts).
 
 ### Relay Dispatch, Fanout, And Trace
 
