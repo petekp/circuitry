@@ -176,6 +176,15 @@ describe('WF-I11 runtime-safety-floor pass-route cycle guard', () => {
       executors: {
         compose: async (step, context) => {
           if (step.id === 'change-set-step' && context.activeStepAttempt === 1) {
+            await context.trace.append({
+              run_id: context.runId,
+              kind: 'check.evaluated',
+              step_id: step.id,
+              attempt: context.activeStepAttempt,
+              check_kind: 'schema_sections',
+              outcome: 'fail',
+              reason: 'change-set mismatch',
+            });
             return { route: 'retry', details: { reason: 'change-set mismatch' } };
           }
           return { route: 'pass' };

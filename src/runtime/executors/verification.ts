@@ -124,6 +124,12 @@ function verificationProofMissing(input: {
   return ['verification report did not prove required commands passed'];
 }
 
+function stepCanCloseRun(step: VerificationStep): boolean {
+  return Object.values(step.routes).some(
+    (target) => target.kind === 'terminal' && target.target === '@complete',
+  );
+}
+
 async function writeVerificationProofAssessment(input: {
   readonly context: RunContext;
   readonly step: VerificationStep;
@@ -167,7 +173,7 @@ async function writeVerificationProofAssessment(input: {
     attempt: input.attempt,
     requiredClaimKinds: ['verification_passed'],
     requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed,
+    closeRequiresProven: closeAllowed || stepCanCloseRun(input.step),
     inputRefs: evidence.flatMap((item) => [item.ref, ...item.input_refs]),
   });
   if (proofPolicy === undefined) return;

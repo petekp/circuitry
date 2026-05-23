@@ -314,7 +314,7 @@ describe('Live False-Done Fix bar', () => {
           mutate: (r) => {
             writeRepoFile(r, 'src/parser.ts', 'export const parse = (x) => x;\n');
             git(r, ['add', 'src/parser.ts']);
-            git(r, ['commit', '-m', 'fix-act committed mid-run', '--quiet']);
+            git(r, ['commit', '--allow-empty', '-m', 'fix-act committed mid-run', '--quiet']);
           },
         }),
         executors: frameOverrideExecutors({

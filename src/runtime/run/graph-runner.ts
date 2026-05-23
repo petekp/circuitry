@@ -110,6 +110,7 @@ interface ActiveRecovery {
   readonly originStepId: string;
   readonly route: string;
   readonly reason?: string;
+  readonly failure?: RecoveryFailureEvidence;
   readonly acceptanceFeedback?: AcceptanceRetryFeedback;
 }
 
@@ -250,6 +251,70 @@ function latestRecoveryFailureEvidence(input: {
     }
   }
   return undefined;
+}
+
+function latestStepReportOrRelayRef(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+}): Ref | undefined {
+  for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
+    if (entry.kind !== 'step.report_written' && entry.kind !== 'relay.result') continue;
+    return traceRefForEntry({
+      context: input.context,
+      stepId: input.stepId,
+      attempt: input.attempt,
+      sequence: entry.sequence,
+    });
+  }
+  return undefined;
+}
+
+function reportSelectedCheckpointBoundaryEvidence(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+  readonly details: Record<string, unknown>;
+  readonly binding: RecoveryRouteBindingV0 | undefined;
+}): RecoveryFailureEvidence | undefined {
+  if (!routeSelectedFromReport(input.details)) return undefined;
+  if (input.binding?.kind !== 'checkpoint_authority') return undefined;
+  if (!input.binding.allowed_failure_causes.includes('checkpoint_boundary')) return undefined;
+  const ref = latestStepReportOrRelayRef(input);
+  return ref === undefined ? undefined : { ref, cause: 'checkpoint_boundary' };
+}
+
+function activeRecoveryCorridorCause(input: {
+  readonly activeRecovery: ActiveRecovery;
+  readonly binding: RecoveryRouteBindingV0 | undefined;
+}): RecoveryFailureCause {
+  if (
+    input.binding?.kind === 'checkpoint_authority' &&
+    input.binding.allowed_failure_causes.includes('checkpoint_boundary')
+  ) {
+    return 'checkpoint_boundary';
+  }
+  return input.activeRecovery.failure?.cause ?? 'unknown_failure';
+}
+
+function latestActiveRecoveryCorridorEvidence(input: {
+  readonly context: RunContext;
+  readonly stepId: string;
+  readonly attempt: number;
+  readonly binding: RecoveryRouteBindingV0 | undefined;
+  readonly activeRecovery: ActiveRecovery | undefined;
+}): RecoveryFailureEvidence | undefined {
+  if (input.activeRecovery?.failure === undefined) return undefined;
+  const ref = latestStepReportOrRelayRef(input);
+  if (ref === undefined) return undefined;
+  return {
+    ref,
+    cause: activeRecoveryCorridorCause({
+      activeRecovery: input.activeRecovery,
+      binding: input.binding,
+    }),
+  };
 }
 
 function recoveryCauseAllowed(
@@ -400,6 +465,10 @@ function recordValue(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function routeSelectedFromReport(details: Record<string, unknown>): boolean {
+  return details.route_source === 'report';
 }
 
 function traceScope(entry: TraceEntry): Record<string, unknown> {
@@ -706,12 +775,48 @@ async function executeExecutableFlowOutcomeUnsafe(
       step,
       route,
     });
-    const recoveryFailure = latestRecoveryFailureEvidence({
-      context,
-      stepId: step.id,
-      attempt,
-      details,
-    });
+    const directRecoveryFailure =
+      latestRecoveryFailureEvidence({
+        context,
+        stepId: step.id,
+        attempt,
+        details,
+      }) ??
+      reportSelectedCheckpointBoundaryEvidence({
+        context,
+        stepId: step.id,
+        attempt,
+        details,
+        binding: recoveryBinding,
+      });
+    const recoveryFailure =
+      directRecoveryFailure ??
+      (routeHasRecoveryMechanics
+        ? latestActiveRecoveryCorridorEvidence({
+            context,
+            stepId: step.id,
+            attempt,
+            binding: recoveryBinding,
+            activeRecovery,
+          })
+        : undefined);
+
+    if (
+      context.workContractRef !== undefined &&
+      step.kind !== 'checkpoint' &&
+      routeHasRecoveryMechanics &&
+      recoveryFailure === undefined
+    ) {
+      const reason = `step '${step.id}' selected recovery route '${route}' without failure evidence`;
+      await trace.append({
+        run_id: runId,
+        kind: 'step.aborted',
+        step_id: step.id,
+        attempt,
+        reason,
+      });
+      return await closeRun(context, 'aborted', undefined, reason);
+    }
 
     if (context.workContractRef !== undefined && recoveryFailure !== undefined) {
       if (recoveryBinding === undefined) {
@@ -807,11 +912,13 @@ async function executeExecutableFlowOutcomeUnsafe(
               originStepId: step.id,
               route,
               reason: recoveryReason,
+              ...(recoveryFailure === undefined ? {} : { failure: recoveryFailure }),
               ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
             }
           : {
               originStepId: step.id,
               route,
+              ...(recoveryFailure === undefined ? {} : { failure: recoveryFailure }),
               ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
             };
     }

@@ -771,6 +771,35 @@ describe('runtime control-loop parity twins', () => {
     );
   });
 
+  it('rejects report-selected recovery routes without failure evidence', async () => {
+    const { result, trace } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        pass: [' OK '],
+        routes: { pass: '@complete', retry: 'relay-step' },
+        budgets: { max_attempts: 2 },
+        routeFromReport: { path: ['route'] },
+      }),
+      resultBody: '{"verdict":" OK ","route":"retry"}',
+      runId: 'aaaaaaaa-1313-4aaa-8aaa-aaaaaaaa1313',
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toMatch(/selected recovery route 'retry' without failure evidence/);
+    expect(trace).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'step.completed',
+        step_id: 'relay-step',
+        route_taken: 'retry',
+      }),
+    );
+    expect(trace).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'guidance.decision',
+        subject: 'recovery_route',
+      }),
+    );
+  });
+
   it('uses the later admitted relay verdict for the final result', async () => {
     const { result, trace, resultJson } = await runCompiledV1RelayCase({
       flowBytes: multiRelayVerdictFlowBytes(),
@@ -919,6 +948,76 @@ describe('runtime control-loop parity twins', () => {
       );
       expect(RunTrace.safeParse(trace).success, selection).toBe(true);
     }
+  });
+
+  it('rejects automatic checkpoint resolution when no WorkContract boundary can back guidance', async () => {
+    const flow: ExecutableFlow = {
+      id: 'checkpoint-no-guidance-boundary',
+      version: '0.1.0',
+      entry: 'checkpoint-step',
+      stages: [{ id: 'main', stepIds: ['checkpoint-step'] }],
+      steps: [
+        {
+          id: 'checkpoint-step',
+          kind: 'checkpoint',
+          title: 'Checkpoint without guidance bounds',
+          protocol: 'checkpoint-no-guidance-boundary@v1',
+          routes: {
+            continue: { kind: 'terminal', target: '@complete' },
+            pass: { kind: 'terminal', target: '@complete' },
+            stop: { kind: 'terminal', target: '@stop' },
+          },
+          choices: ['continue'],
+          policy: {
+            prompt: 'Continue without guidance bounds?',
+            choices: [{ id: 'continue', label: 'Continue' }],
+            safe_default_choice: 'continue',
+          },
+          writes: {
+            request: { path: 'reports/checkpoints/no-guidance-request.json' },
+            response: { path: 'reports/checkpoints/no-guidance-response.json' },
+          },
+          check: {
+            kind: 'checkpoint_selection',
+            source: { kind: 'checkpoint_response', ref: 'response' },
+            allow: ['continue'],
+          },
+        },
+      ],
+    };
+
+    await withTempRun('circuit-runtime-checkpoint-no-guidance-', async (runDir) => {
+      const result = await executeExecutableFlow(flow, {
+        runDir,
+        runId: '20000000-0000-4000-8000-000000000007',
+        goal: 'reject hidden automatic checkpoint resolution',
+        manifestHash: 'checkpoint-no-guidance-boundary-test',
+        depth: 'standard',
+        now: () => new Date('2026-05-06T00:00:00.000Z'),
+      });
+      const trace = await new TraceStore(runDir).load();
+
+      expect(result.outcome).toBe('aborted');
+      expect(result.reason).toMatch(/requires checkpoint_resolution guidance/);
+      expect(trace).toContainEqual(
+        expect.objectContaining({
+          kind: 'checkpoint.requested',
+          step_id: 'checkpoint-step',
+        }),
+      );
+      expect(trace).toContainEqual(
+        expect.objectContaining({
+          kind: 'check.evaluated',
+          step_id: 'checkpoint-step',
+          check_kind: 'checkpoint_selection',
+          outcome: 'fail',
+          reason: expect.stringMatching(/requires checkpoint_resolution guidance/),
+        }),
+      );
+      expect(trace).not.toContainEqual(
+        expect.objectContaining({ kind: 'checkpoint.resolved', step_id: 'checkpoint-step' }),
+      );
+    });
   });
 
   it('bounds checkpoint retry loops by max_attempts instead of spinning forever', async () => {
@@ -1440,7 +1539,7 @@ describe('runtime control-loop parity twins', () => {
     );
   });
 
-  it('records report-field acceptance criteria as weak proof, not proven behavior', async () => {
+  it('blocks report-field acceptance criteria from closing as proof', async () => {
     const proofPath = 'reports/proof/relay-step-attempt-1.assessment.json';
     const { result, trace, inspection } = await runRuntimeProofRelayCase({
       flowBytes: relayFlowBytes({
@@ -1465,7 +1564,8 @@ describe('runtime control-loop parity twins', () => {
     });
     const proof = (inspection as { proof: ProofAssessmentValue }).proof;
 
-    expect(result.outcome).toBe('complete');
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toMatch(/requires passing proof\.assessed/);
     expect(inspection).toMatchObject({
       proof: {
         overall_status: 'weak',
@@ -1500,7 +1600,7 @@ describe('runtime control-loop parity twins', () => {
         kind: 'guidance.decision',
         subject: 'proof_policy',
         selected: expect.objectContaining({
-          close_requires_proven: false,
+          close_requires_proven: true,
         }),
       }),
     );
@@ -1511,6 +1611,46 @@ describe('runtime control-loop parity twins', () => {
           kind: 'report',
           ref: proofPath,
         }),
+        overall_status: 'weak',
+        close_allowed: false,
+      }),
+    );
+  });
+
+  it('blocks report-selected complete routes from closing on weak report-field proof', async () => {
+    const { result, trace } = await runRuntimeProofRelayCase({
+      flowBytes: relayFlowBytes({
+        routes: { pass: '@stop', complete: '@complete' },
+        routeFromReport: { path: ['route'] },
+        acceptanceCriteria: {
+          checks: [
+            {
+              kind: 'report_field',
+              id: 'evidence-non-empty',
+              path: ['evidence'],
+              predicate: 'non_empty',
+            },
+          ],
+        },
+      }),
+      resultBody: '{"verdict":"ok","route":"complete","evidence":["worker supplied words"]}',
+      runId: 'ffffffff-5669-4fff-8fff-ffffffff5669',
+    });
+
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toMatch(/requires passing proof\.assessed/);
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'guidance.decision',
+        subject: 'proof_policy',
+        selected: expect.objectContaining({
+          close_requires_proven: true,
+        }),
+      }),
+    );
+    expect(trace).toContainEqual(
+      expect.objectContaining({
+        kind: 'proof.assessed',
         overall_status: 'weak',
         close_allowed: false,
       }),
@@ -1586,7 +1726,7 @@ describe('runtime control-loop parity twins', () => {
     expect(RunTrace.safeParse(trace).success).toBe(true);
   });
 
-  it('retries relay acceptance criteria with feedback through the existing retry route', async () => {
+  it('retries relay acceptance criteria with feedback but does not close weak report-field proof', async () => {
     const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
     const prompts: string[] = [];
     const relayer: RelayFn = {
@@ -1631,9 +1771,10 @@ describe('runtime control-loop parity twins', () => {
       }),
     });
 
-    expect(result.outcome).toBe('complete');
-    expect(result.verdict).toBe('ok');
-    expect(resultJson.verdict).toBe('ok');
+    expect(result.outcome).toBe('aborted');
+    expect(result.reason).toMatch(/requires passing proof\.assessed/);
+    expect(result.verdict).toBeUndefined();
+    expect(resultJson.verdict).toBeUndefined();
     expect(prompts).toHaveLength(2);
     expect(prompts[0]).toContain('Acceptance Criteria:');
     expect(prompts[0]).not.toContain('Acceptance Criteria Feedback:');

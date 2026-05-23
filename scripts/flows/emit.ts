@@ -4,12 +4,12 @@
 // compiles each to a CompileResult via
 // src/flows/compile-schematic-to-flow.ts (consumed here through
 // dist/), then writes canonical JSON files under generated/flows/<id>/.
-// Public flows also mirror to the Claude Code package under
-// plugins/claude/skills/<id>/ and Codex host output under
+// Every canonical compiled-flow JSON file also gets a matching
+// *.work-contract.v0.json projection under generated/flows/<id>/.
+// Public flows mirror only the compiled-flow JSON to the Claude Code package
+// under plugins/claude/skills/<id>/ and Codex host output under
 // plugins/codex/flows/<id>/. Internal flows stay under generated/flows
 // and are not installed into host-visible plugin surfaces.
-// Every compiled-flow JSON file also gets a matching
-// *.work-contract.v0.json projection.
 //
 // File layout:
 //   - kind:'single'   → generated/flows/<id>/circuit.json
@@ -333,7 +333,7 @@ function renderSurfaceInventory(): string {
       'no',
       '`plugins/claude/skills/<id>/*.json`',
       '`node scripts/flows/emit.ts --check`',
-      'Public flows only. Mirrors generated flow package JSON: compiled-flow JSON and WorkContract projection JSON. Internal flow mirrors are stale and fail drift checks.',
+      'Public flows only. Mirrors compiled-flow JSON. WorkContract projections remain canonical under generated/flows and are projected by runtime code from compiled flows. Internal flow mirrors are stale and fail drift checks.',
     ],
     [
       'Codex plugin flow mirrors',
@@ -342,7 +342,7 @@ function renderSurfaceInventory(): string {
       'no',
       '`plugins/codex/flows/<id>/*.json`',
       '`node scripts/flows/emit.ts --check`',
-      'Public flows only. Mirrors generated flow package JSON: compiled-flow JSON and WorkContract projection JSON. Internal flow mirrors are stale and fail drift checks.',
+      'Public flows only. Mirrors compiled-flow JSON. WorkContract projections remain canonical under generated/flows and are projected by runtime code from compiled flows. Internal flow mirrors are stale and fail drift checks.',
     ],
     [
       'Codex plugin command mirrors',
@@ -441,15 +441,7 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
     ]);
     const hostMirrors =
       entry.visibility === 'public'
-        ? plan.flatMap((p) => {
-            const contractRel = workContractRelForCompiledFlowRel(p.outRel);
-            return [
-              claudeHostRel(p.outRel),
-              claudeHostRel(contractRel),
-              codexHostRel(p.outRel),
-              codexHostRel(contractRel),
-            ];
-          })
+        ? plan.flatMap((p) => [claudeHostRel(p.outRel), codexHostRel(p.outRel)])
         : [];
     flowRows.push(
       markdownTableRow([
@@ -739,18 +731,30 @@ function workContractRelForCompiledFlowRel(compiledFlowRel: string): string {
   return compiledFlowRel.replace(/\.json$/, '.work-contract.v0.json');
 }
 
-function expectedJsonRelsForPlan(plan: SchematicFilePlan[]): string[] {
-  return plan.flatMap((p) => [p.outRel, workContractRelForCompiledFlowRel(p.outRel)]);
+function expectedJsonRelsForPlan(
+  plan: SchematicFilePlan[],
+  options: { includeWorkContracts?: boolean } = {},
+): string[] {
+  return plan.flatMap((p) =>
+    options.includeWorkContracts === false
+      ? [p.outRel]
+      : [p.outRel, workContractRelForCompiledFlowRel(p.outRel)],
+  );
 }
 
 // Returns the set of unexpected `*.json` files in a generated flow directory:
 // anything on disk under `<rootRel>/<id>/` that ends in `.json`
 // but isn't in the emit plan. These are stale per-mode siblings from a
 // renamed/collapsed axis selection.
-function findStaleSiblings(id: string, plan: SchematicFilePlan[], rootRel: string): string[] {
+function findStaleSiblings(
+  id: string,
+  plan: SchematicFilePlan[],
+  rootRel: string,
+  options: { includeWorkContracts?: boolean } = {},
+): string[] {
   const skillDirAbs = resolve(projectRoot, `${rootRel}/${id}`);
   if (!existsSync(skillDirAbs)) return [];
-  const expected = new Set(expectedJsonRelsForPlan(plan).map((rel) => basename(rel)));
+  const expected = new Set(expectedJsonRelsForPlan(plan, options).map((rel) => basename(rel)));
   return readdirSync(skillDirAbs)
     .filter((name) => name.endsWith('.json') && !expected.has(name))
     .map((name) => `${rootRel}/${id}/${name}`);
@@ -877,21 +881,11 @@ async function emitMode(): Promise<void> {
       mkdirSync(dirname(hostAbs), { recursive: true });
       writeFileSync(hostAbs, readFileSync(outAbs, 'utf8'));
       console.log(`emitted ${hostRel} (claude-code host output)`);
-      const hostContractRel = claudeHostRel(contractRel);
-      const hostContractAbs = resolve(projectRoot, hostContractRel);
-      mkdirSync(dirname(hostContractAbs), { recursive: true });
-      writeFileSync(hostContractAbs, readFileSync(contractAbs, 'utf8'));
-      console.log(`emitted ${hostContractRel} (claude-code host output)`);
       const codexRel = codexHostRel(outRel);
       const codexAbs = resolve(projectRoot, codexRel);
       mkdirSync(dirname(codexAbs), { recursive: true });
       writeFileSync(codexAbs, readFileSync(outAbs, 'utf8'));
       console.log(`emitted ${codexRel} (codex host output)`);
-      const codexContractRel = codexHostRel(contractRel);
-      const codexContractAbs = resolve(projectRoot, codexContractRel);
-      mkdirSync(dirname(codexContractAbs), { recursive: true });
-      writeFileSync(codexContractAbs, readFileSync(contractAbs, 'utf8'));
-      console.log(`emitted ${codexContractRel} (codex host output)`);
     }
     // Stale `<mode>.json` siblings would otherwise survive emit and silently
     // drive runtime behavior via the CLI loader. Treat them as stale outputs
@@ -904,8 +898,11 @@ async function emitMode(): Promise<void> {
               entry.id,
               claudeHostPlan(plan),
               `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
+              { includeWorkContracts: false },
             ),
-            ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`),
+            ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`, {
+              includeWorkContracts: false,
+            }),
           ]
         : []),
     ]) {
@@ -1012,24 +1009,6 @@ async function checkMode(): Promise<void> {
             console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
             drifted = true;
           }
-          const hostContractRel = claudeHostRel(contractRel);
-          let hostContractBytes: string;
-          try {
-            hostContractBytes = readFileSync(resolve(projectRoot, hostContractRel), 'utf8');
-          } catch (_err) {
-            console.error(
-              `✗ ${hostContractRel} is missing on disk but the claude-code host mirrors ${contractRel}. Run \`npm run emit-flows\` to regenerate, then commit.`,
-            );
-            drifted = true;
-            continue;
-          }
-          if (contractBytes === hostContractBytes) {
-            console.log(`✓ ${hostContractRel} mirrors ${contractRel}`);
-          } else {
-            console.error(`✗ ${hostContractRel} drifted from canonical ${contractRel}`);
-            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-            drifted = true;
-          }
           const codexRel = codexHostRel(outRel);
           let codexBytes: string;
           try {
@@ -1048,24 +1027,6 @@ async function checkMode(): Promise<void> {
             console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
             drifted = true;
           }
-          const codexContractRel = codexHostRel(contractRel);
-          let codexContractBytes: string;
-          try {
-            codexContractBytes = readFileSync(resolve(projectRoot, codexContractRel), 'utf8');
-          } catch (_err) {
-            console.error(
-              `✗ ${codexContractRel} is missing on disk but the codex host mirrors ${contractRel}. Run \`npm run emit-flows\` to regenerate, then commit.`,
-            );
-            drifted = true;
-            continue;
-          }
-          if (contractBytes === codexContractBytes) {
-            console.log(`✓ ${codexContractRel} mirrors ${contractRel}`);
-          } else {
-            console.error(`✗ ${codexContractRel} drifted from canonical ${contractRel}`);
-            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-            drifted = true;
-          }
         }
       }
       // Stale `<mode>.json` siblings in this skill dir would silently drive
@@ -1079,8 +1040,16 @@ async function checkMode(): Promise<void> {
                 entry.id,
                 claudeHostPlan(plan),
                 `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
+                { includeWorkContracts: false },
               ),
-              ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`),
+              ...findStaleSiblings(
+                entry.id,
+                codexHostPlan(plan),
+                `${CODEX_PLUGIN_ROOT_REL}/flows`,
+                {
+                  includeWorkContracts: false,
+                },
+              ),
             ]
           : []),
       ];

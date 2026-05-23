@@ -836,7 +836,19 @@ export function createSimpleParityExecutors(
       if (step.id === options.failStepId) throw new Error(`forced failure at ${step.id}`);
       await writeRelayFiles(step, context);
       await writeReport(step, context);
-      return { route: options.routeByStepId?.[step.id] ?? 'pass', details: { role: step.role } };
+      const route = options.routeByStepId?.[step.id] ?? 'pass';
+      if (route !== 'pass') {
+        await context.trace.append({
+          run_id: context.runId,
+          kind: 'check.evaluated',
+          step_id: step.id,
+          attempt: context.activeStepAttempt ?? 1,
+          check_kind: 'result_verdict',
+          outcome: 'fail',
+          reason: `parity fixture forced route '${route}'`,
+        });
+      }
+      return { route, details: { role: step.role } };
     },
     verification: async (step, context) => {
       if (step.kind !== 'verification') throw new Error('expected verification step');

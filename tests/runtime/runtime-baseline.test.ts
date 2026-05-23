@@ -19,6 +19,7 @@ import {
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
+import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
 import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
 
@@ -861,6 +862,128 @@ describe('runtime baseline', () => {
     });
   });
 
+  it('rejects a declared recovery route without failure evidence', async () => {
+    await withTempRun(async (runDir) => {
+      const result = await executeExecutableFlow(
+        {
+          id: 'recovery-route-without-failure',
+          version: '0.1.0',
+          entry: 'compose',
+          stages: [{ id: 'main', stepIds: ['compose'] }],
+          steps: [
+            {
+              id: 'compose',
+              kind: 'compose',
+              writer: 'bare-recovery-route',
+              routes: {
+                pass: { kind: 'terminal', target: '@complete' },
+                revise: { kind: 'terminal', target: '@stop' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000108',
+          workContractRef: runtimeWorkContractRef('recovery-route-without-failure'),
+          recoveryRouteBindings: [
+            narrowScopeRecoveryBinding({
+              source_ref: runtimeWorkContractRef('recovery-route-without-failure'),
+            }),
+          ],
+          executors: {
+            compose: async () => ({ route: 'revise', details: { reason: 'just revise' } }),
+          },
+        },
+      );
+
+      const entries = await new TraceStore(runDir).load();
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason: "step 'compose' selected recovery route 'revise' without failure evidence",
+      });
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'guidance.decision',
+          subject: 'recovery_route',
+        }),
+      );
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'step.completed',
+          step_id: 'compose',
+          route_taken: 'revise',
+        }),
+      );
+    });
+  });
+
+  it('rejects report-selected recovery when only report prose claims failure', async () => {
+    await withTempRun(async (runDir) => {
+      const flowId = 'report-reason-recovery-route';
+      const result = await executeExecutableFlow(
+        {
+          id: flowId,
+          version: '0.1.0',
+          entry: 'compose',
+          stages: [{ id: 'main', stepIds: ['compose'] }],
+          steps: [
+            {
+              id: 'compose',
+              kind: 'compose',
+              writer: 'report-reason-route',
+              routes: {
+                pass: { kind: 'terminal', target: '@complete' },
+                revise: { kind: 'terminal', target: '@stop' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000109',
+          workContractRef: runtimeWorkContractRef(flowId),
+          recoveryRouteBindings: [
+            narrowScopeRecoveryBinding({
+              source_ref: runtimeWorkContractRef(flowId),
+            }),
+          ],
+          executors: {
+            compose: async (_step, context) => {
+              await context.trace.append({
+                run_id: context.runId,
+                kind: 'step.report_written',
+                step_id: 'compose',
+                attempt: context.activeStepAttempt ?? 1,
+                report_path: 'reports/compose.json',
+                report_schema: 'prose-only.recovery@v1',
+              });
+              return {
+                route: 'revise',
+                details: {
+                  route_source: 'report',
+                  report_reason: 'the report says this should be revised',
+                },
+              };
+            },
+          },
+        },
+      );
+
+      const entries = await new TraceStore(runDir).load();
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason: "step 'compose' selected recovery route 'revise' without failure evidence",
+      });
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'guidance.decision',
+          subject: 'recovery_route',
+        }),
+      );
+    });
+  });
+
   it('rejects a failed step recovery route when the binding does not allow the failure cause', async () => {
     await withTempRun(async (runDir) => {
       const result = await executeExecutableFlow(
@@ -927,6 +1050,92 @@ describe('runtime baseline', () => {
           kind: 'guidance.decision',
           subject: 'recovery_route',
         }),
+      );
+    });
+  });
+
+  it('does not report recovery from a binding that is not backed by the selected route', async () => {
+    await withTempRun(async (runDir) => {
+      const result = await executeExecutableFlow(
+        {
+          id: 'relay-proof-recovery-metadata',
+          version: '0.1.0',
+          entry: 'relay',
+          stages: [{ id: 'main', stepIds: ['relay'] }],
+          steps: [
+            {
+              id: 'relay',
+              kind: 'relay',
+              role: 'reviewer',
+              prompt: 'inspect the result',
+              writes: {
+                request: { path: 'reports/relay.request.txt' },
+                receipt: { path: 'reports/relay.receipt.txt' },
+                result: { path: 'reports/relay.result.json' },
+              },
+              routes: { pass: { kind: 'terminal', target: '@complete' } },
+              check: {
+                kind: 'result_verdict',
+                source: { kind: 'relay_result', ref: 'result' },
+                pass: ['ok'],
+              },
+              acceptanceCriteria: {
+                checks: [
+                  {
+                    kind: 'report_field',
+                    id: 'evidence-non-empty',
+                    path: ['evidence'],
+                    predicate: 'non_empty',
+                  },
+                ],
+                on_failure: { mode: 'hard-fail' },
+              },
+            },
+          ],
+        },
+        {
+          runDir,
+          runId: '40000000-0000-4000-8000-000000000109',
+          workContractRef: runtimeWorkContractRef('relay-proof-recovery-metadata'),
+          recoveryRouteBindings: [
+            narrowScopeRecoveryBinding({
+              step_id: StepId.parse('relay'),
+              route_id: 'revise',
+              route_target: '@stop',
+              allowed_failure_causes: ['weak_proof'],
+              source_ref: runtimeWorkContractRef('relay-proof-recovery-metadata'),
+            }),
+          ],
+          relayer: {
+            connectorName: 'codex',
+            relay: async (input) => ({
+              request_payload: input.prompt,
+              receipt_id: 'runtime-baseline-relay-proof',
+              result_body: '{"verdict":"ok","evidence":["worker prose"]}',
+              duration_ms: 0,
+              cli_version: 'test-relayer',
+            }),
+          },
+        },
+      );
+
+      expect(result).toMatchObject({
+        outcome: 'aborted',
+        reason: expect.stringMatching(/requires passing proof\.assessed/),
+      });
+      const proof = ProofAssessment.parse(
+        JSON.parse(
+          await readFile(
+            join(runDir, 'reports', 'proof', 'relay-attempt-1.assessment.json'),
+            'utf8',
+          ),
+        ),
+      );
+
+      expect(proof.results[0]?.status).toBe('weak');
+      expect(proof.results[0]?.recovery).toBeUndefined();
+      expect(proof.results[0]?.missing).toEqual(
+        expect.arrayContaining([expect.stringContaining('no declared recovery route')]),
       );
     });
   });

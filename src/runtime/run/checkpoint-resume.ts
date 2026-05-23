@@ -14,12 +14,16 @@ import { Axes, type Axes as AxesValue } from '../../schemas/axes.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import { LayeredConfig } from '../../schemas/config.js';
+import { CompiledFlowId } from '../../schemas/ids.js';
 import {
   PolicyLayer,
   type PolicyLayer as PolicyLayerValue,
 } from '../../schemas/policy-envelope.js';
-import { Ref, type Ref as RefValue } from '../../schemas/ref.js';
+import { Ref, type Ref as RefValue, Sha256 } from '../../schemas/ref.js';
+import { CheckpointStep as SchemaCheckpointStep } from '../../schemas/step.js';
+import { projectCheckpointBoundaryV0 } from '../../shared/checkpoint-boundary.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
+import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import type { ProgressReporter, RelayFn } from '../../shared/relay-runtime-types.js';
 import {
   projectWorkContractProjectionV0,
@@ -79,6 +83,8 @@ interface CheckpointRequestContext {
   readonly axes?: AxesValue;
   readonly projectRoot?: string;
   readonly workContractRef?: RefValue;
+  readonly checkpointBoundaryRef: RefValue;
+  readonly checkpointBoundaryHash: string;
   readonly selectionConfigLayers: readonly LayeredConfigValue[];
   readonly policyLayers: readonly PolicyLayerValue[];
   readonly checkpointReportSha256?: string;
@@ -145,6 +151,20 @@ function sameWorkContractIdentity(left: RefValue, right: RefValue): boolean {
     left.sha256 === right.sha256 &&
     left.flow_id !== undefined &&
     left.flow_id === right.flow_id
+  );
+}
+
+function sameCheckpointBoundaryIdentity(left: RefValue, right: RefValue): boolean {
+  return (
+    left.kind === 'work_contract' &&
+    right.kind === 'work_contract' &&
+    left.ref === right.ref &&
+    left.sha256 !== undefined &&
+    left.sha256 === right.sha256 &&
+    left.flow_id !== undefined &&
+    left.flow_id === right.flow_id &&
+    left.step_id !== undefined &&
+    left.step_id === right.step_id
   );
 }
 
@@ -261,6 +281,31 @@ function readCheckpointRequestContextResult(input: {
       `runtime checkpoint resume rejected: request for '${input.step.id}' has no execution context`,
     );
   }
+  let checkpointBoundaryRef: RefValue;
+  try {
+    checkpointBoundaryRef = Ref.parse(context.checkpoint_boundary_ref);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  let checkpointBoundaryHash: string;
+  try {
+    checkpointBoundaryHash = Sha256.parse(context.checkpoint_boundary_hash);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  if (
+    checkpointBoundaryRef.kind !== 'work_contract' ||
+    checkpointBoundaryRef.step_id !== input.step.id
+  ) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint boundary ref for '${input.step.id}' is invalid`,
+    );
+  }
+  if (checkpointBoundaryRef.sha256 !== checkpointBoundaryHash) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint boundary hash for '${input.step.id}' does not match its ref`,
+    );
+  }
   const projectRoot = context.project_root;
   if (projectRoot !== undefined && typeof projectRoot !== 'string') {
     return checkpointResumeRejected('runtime checkpoint resume rejected: project_root is invalid');
@@ -303,10 +348,96 @@ function readCheckpointRequestContextResult(input: {
     ...(axes === undefined ? {} : { axes }),
     ...(projectRoot === undefined ? {} : { projectRoot }),
     ...(workContractRef === undefined ? {} : { workContractRef }),
+    checkpointBoundaryRef,
+    checkpointBoundaryHash,
     selectionConfigLayers,
     policyLayers,
     ...(checkpointReportSha256 === undefined ? {} : { checkpointReportSha256 }),
   });
+}
+
+function checkpointRequestTraceBoundaryResult(input: {
+  readonly requested: TraceEntry;
+  readonly stepId: string;
+}): CheckpointResumeValidation<{
+  readonly boundaryRef: RefValue;
+  readonly boundaryHash: string;
+}> {
+  let boundaryRef: RefValue;
+  try {
+    boundaryRef = Ref.parse(input.requested.boundary_ref);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  let boundaryHash: string;
+  try {
+    boundaryHash = Sha256.parse(input.requested.boundary_hash);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  if (boundaryRef.kind !== 'work_contract' || boundaryRef.step_id !== input.stepId) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint request trace boundary for '${input.stepId}' is invalid`,
+    );
+  }
+  if (boundaryRef.sha256 !== boundaryHash) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint request trace boundary hash for '${input.stepId}' does not match its ref`,
+    );
+  }
+  return checkpointResumeValid({ boundaryRef, boundaryHash });
+}
+
+function validateCheckpointBoundaryResult(input: {
+  readonly flow: CompiledFlow;
+  readonly compiledStep: CompiledCheckpointStep;
+  readonly requestContext: CheckpointRequestContext;
+  readonly traceBoundaryRef: RefValue;
+  readonly traceBoundaryHash: string;
+}): CheckpointResumeValidation<void> {
+  if (
+    input.requestContext.checkpointBoundaryHash !== input.traceBoundaryHash ||
+    !sameCheckpointBoundaryIdentity(
+      input.requestContext.checkpointBoundaryRef,
+      input.traceBoundaryRef,
+    )
+  ) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint boundary for '${input.compiledStep.id}' differs between request and trace`,
+    );
+  }
+
+  let schemaStep: SchemaCheckpointStep;
+  try {
+    schemaStep = SchemaCheckpointStep.parse(input.compiledStep);
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  let projected: ReturnType<typeof projectCheckpointBoundaryV0>;
+  try {
+    projected = projectCheckpointBoundaryV0({
+      step: schemaStep,
+      flowId: CompiledFlowId.parse(input.flow.id),
+      declaredDefaultPolicyRefs: policyRefsForRuntimeInputs({
+        configLayers: input.requestContext.selectionConfigLayers,
+        policyLayers: input.requestContext.policyLayers,
+      }),
+    });
+  } catch (error) {
+    return checkpointResumeRejectedFrom(error);
+  }
+  if (
+    input.requestContext.checkpointBoundaryHash !== projected.request_trace.boundary_hash ||
+    !sameCheckpointBoundaryIdentity(
+      input.requestContext.checkpointBoundaryRef,
+      projected.request_trace.boundary_ref,
+    )
+  ) {
+    return checkpointResumeRejected(
+      `runtime checkpoint resume rejected: checkpoint boundary does not match saved flow for '${input.compiledStep.id}'`,
+    );
+  }
+  return checkpointResumeValid(undefined);
 }
 
 function validateCheckpointReportResult(input: {
@@ -484,6 +615,17 @@ export async function resumeCompiledFlowResult(
   });
   if (isCheckpointResumeRejectedResult(requestContextResult)) return requestContextResult;
   const requestContext = requestContextResult.value;
+  const traceBoundaryResult = checkpointRequestTraceBoundaryResult({ requested, stepId });
+  if (isCheckpointResumeRejectedResult(traceBoundaryResult)) return traceBoundaryResult;
+  const traceBoundary = traceBoundaryResult.value;
+  const boundaryValidation = validateCheckpointBoundaryResult({
+    flow,
+    compiledStep,
+    requestContext,
+    traceBoundaryRef: traceBoundary.boundaryRef,
+    traceBoundaryHash: traceBoundary.boundaryHash,
+  });
+  if (isCheckpointResumeRejectedResult(boundaryValidation)) return boundaryValidation;
   const projectedWorkContractRef = runtimeWorkContractRefForProjectedRef(
     projectWorkContractProjectionV0({
       flow,

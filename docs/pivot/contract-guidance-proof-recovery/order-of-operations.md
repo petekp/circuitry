@@ -74,7 +74,6 @@ repo and must be pruned by the slices below:
 - [src/runtime/run/relay-guidance.ts](../../../src/runtime/run/relay-guidance.ts)
 - [src/runtime/executors/checkpoint.ts](../../../src/runtime/executors/checkpoint.ts)
 - [src/runtime/connectors/resolver.ts](../../../src/runtime/connectors/resolver.ts)
-- [src/runtime/safe-apply/](../../../src/runtime/safe-apply/)
 - [src/commands/run.md](../../../src/commands/run.md)
 - [plugins/codex/skills/run/SKILL.md](../../../plugins/codex/skills/run/SKILL.md)
 
@@ -334,7 +333,7 @@ Exit criteria:
 Verification:
 
 - `tests/contracts/change-packet-schema.test.ts`
-- `tests/runtime/safe-apply.test.ts`
+- future SafeApply runtime tests
 - generated-surface SafeApply tests
 - pre-SafeApply write pruning probe above
 

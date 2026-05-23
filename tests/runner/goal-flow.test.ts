@@ -213,6 +213,15 @@ function blockedGateExecutors(): Partial<ExecutorRegistry> {
       const report = step.writes?.report;
       if (report === undefined) throw new Error('Goal gate step must write a report');
       await context.files.writeJson(report, blockedGateReport());
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'check.evaluated',
+        step_id: step.id,
+        attempt: context.activeStepAttempt ?? 1,
+        check_kind: 'result_verdict',
+        outcome: 'fail',
+        reason: 'goal gate reported blocking findings',
+      });
       return { route: 'retry', details: { verdict: 'blocked' } };
     },
   };

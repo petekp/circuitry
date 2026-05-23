@@ -685,6 +685,51 @@ describe('runtime checkpoint pause/resume fixture', () => {
     ).rejects.toThrow(/work_contract_ref does not match saved flow/);
   });
 
+  it('rejects checkpoint resume when the checkpoint boundary hash does not match the saved flow', async () => {
+    const runDir = join(tempDir, 'resume-boundary-hash-drift');
+    const waiting = await createWaitingFixture({
+      runDir,
+      now: deterministicNow(Date.UTC(2026, 0, 2)),
+      policyLayers: [policyLayer()],
+    });
+    const replacementHash = '0'.repeat(64);
+    const requestText = await readFile(waiting.checkpoint.requestPath, 'utf8');
+    const request = JSON.parse(requestText) as {
+      execution_context: {
+        checkpoint_boundary_ref: {
+          sha256?: string;
+        };
+        checkpoint_boundary_hash?: string;
+      };
+    };
+    request.execution_context.checkpoint_boundary_ref.sha256 = replacementHash;
+    request.execution_context.checkpoint_boundary_hash = replacementHash;
+    const rewritten = `${JSON.stringify(request, null, 2)}\n`;
+    await writeFile(waiting.checkpoint.requestPath, rewritten);
+    await rewriteCheckpointRequestTrace(runDir, (entry) => {
+      if (entry.kind !== 'checkpoint.requested') return entry;
+      if (entry.boundary_ref === undefined) {
+        throw new Error('expected checkpoint request trace boundary_ref');
+      }
+      return {
+        ...entry,
+        request_report_hash: sha256Hex(rewritten),
+        boundary_ref: { ...entry.boundary_ref, sha256: replacementHash },
+        boundary_hash: replacementHash,
+      } as TraceEntry;
+    });
+
+    await expect(
+      resumeCompiledFlow({
+        runDir,
+        selection: 'continue',
+        now: deterministicNow(Date.UTC(2026, 0, 3)),
+        relayer: fixtureRelayer(),
+        executors: fixtureExecutors(),
+      }),
+    ).rejects.toThrow(/checkpoint boundary does not match saved flow/);
+  });
+
   it('rejects invalid selections and tampered checkpoint request bytes', async () => {
     const invalidChoiceRun = join(tempDir, 'invalid-choice');
     await createWaitingFixture({ runDir: invalidChoiceRun });

@@ -62,6 +62,15 @@ function collectJsonFiles(root: string, prefix = ''): string[] {
   });
 }
 
+function publicHostFlowFiles(files: string[]): string[] {
+  return files.filter(
+    (file) =>
+      !file.startsWith('runtime-proof/') &&
+      !file.endsWith('.work-contract.v0.json') &&
+      !file.includes('never-a-mode'),
+  );
+}
+
 function noAmbientCliPath(): string {
   const systemSegments = process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
   return [dirname(process.execPath), ...systemSegments].join(delimiter);
@@ -130,15 +139,13 @@ describe('Claude Code host plugin package', () => {
     }
   });
 
-  it('mirrors every public canonical generated flow package JSON file into the Claude package', () => {
+  it('mirrors every public canonical compiled flow JSON file into the Claude package', () => {
     const canonicalRoot = resolve(REPO_ROOT, 'generated/flows');
     const claudeRoot = resolve(PLUGIN_ROOT, 'skills');
     const canonicalFiles = collectJsonFiles(canonicalRoot).sort();
-    const claudeFiles = collectJsonFiles(claudeRoot).sort();
+    const claudeFiles = publicHostFlowFiles(collectJsonFiles(claudeRoot)).sort();
 
-    expect(claudeFiles).toEqual(
-      canonicalFiles.filter((file) => !file.startsWith('runtime-proof/')),
-    );
+    expect(claudeFiles).toEqual(publicHostFlowFiles(canonicalFiles));
 
     for (const file of claudeFiles) {
       const canonical = readFileSync(resolve(canonicalRoot, file));

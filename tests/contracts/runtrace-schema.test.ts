@@ -1173,6 +1173,8 @@ describe('GuidanceDecision trace invariants', () => {
       options: ['accept'],
       request_path: 'reports/checkpoint-request.json',
       request_report_hash: 'a'.repeat(64),
+      boundary_ref: { ...workContractRef, step_id: 'frame' },
+      boundary_hash: workContractRef.sha256,
       auto_resolved: true,
     });
     expect(bad.success).toBe(false);
@@ -1615,6 +1617,8 @@ describe('TraceEntry variants reject top-level surplus keys (RUN-I8 coverage exp
         options: ['accept', 'revise'],
         request_path: 'reports/checkpoints/frame-request.json',
         request_report_hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        boundary_ref: { ...workContractRef, step_id: 'frame' },
+        boundary_hash: workContractRef.sha256,
       },
     ],
     [
@@ -1761,6 +1765,19 @@ describe('Checkpoint trace_entry evidence is required', () => {
     expect(ok.success).toBe(true);
   });
 
+  it('rejects checkpoint.requested without a checkpoint boundary ref and hash', () => {
+    const bad = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+    });
+    expect(bad.success).toBe(false);
+  });
+
   it('rejects checkpoint.requested with only half of the checkpoint boundary pair', () => {
     const missingHash = TraceEntry.safeParse({
       ...base,
@@ -1800,6 +1817,40 @@ describe('Checkpoint trace_entry evidence is required', () => {
       boundary_hash: 'c'.repeat(64),
     });
     expect(bad.success).toBe(false);
+  });
+
+  it('rejects checkpoint.requested when the boundary ref is not scoped to the checkpoint step', () => {
+    const missingStep = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: {
+        ...checkpointBoundaryRef,
+        step_id: undefined,
+      },
+      boundary_hash: checkpointBoundaryRef.sha256,
+    });
+    expect(missingStep.success).toBe(false);
+
+    const wrongStep = TraceEntry.safeParse({
+      ...base,
+      kind: 'checkpoint.requested',
+      step_id: 'frame',
+      attempt: 1,
+      options: ['accept'],
+      request_path: 'reports/checkpoints/frame-request.json',
+      request_report_hash: 'a'.repeat(64),
+      boundary_ref: {
+        ...checkpointBoundaryRef,
+        step_id: 'other-frame',
+      },
+      boundary_hash: checkpointBoundaryRef.sha256,
+    });
+    expect(wrongStep.success).toBe(false);
   });
 
   it('rejects checkpoint.requested with a non-contract boundary ref', () => {

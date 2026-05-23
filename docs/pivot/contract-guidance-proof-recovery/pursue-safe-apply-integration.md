@@ -493,14 +493,14 @@ Do not start by enabling parallel code-changing waves.
 | --- | --- |
 | Missing ChangePacket rejects the branch. | `tests/runner/pursue-safe-apply.test.ts` |
 | Missing base ref or tree hash rejects the packet. | `tests/contracts/change-packet-schema.test.ts` |
-| Base ref mismatch rejects before parent mutation. | `tests/runtime/safe-apply.test.ts` |
-| Dirty parent checkout rejects unless policy allows it and baseline evidence exists. | `tests/runtime/safe-apply.test.ts` |
-| Worker touched files cannot replace runtime touched files. | `tests/runtime/safe-apply.test.ts` |
-| Packet with weak, contradicted, or unproved required claims is rejected. | `tests/runtime/safe-apply.test.ts` |
-| Protected-file touch without policy or checkpoint authority is rejected. | `tests/runtime/safe-apply.test.ts` |
+| Base ref mismatch rejects before parent mutation. | future SafeApply runtime test |
+| Dirty parent checkout rejects unless policy allows it and baseline evidence exists. | future SafeApply runtime test |
+| Worker touched files cannot replace runtime touched files. | future SafeApply runtime test |
+| Packet with weak, contradicted, or unproved required claims is rejected. | future SafeApply runtime test |
+| Protected-file touch without policy or checkpoint authority is rejected. | future SafeApply runtime test |
 | Generated-surface touch without source refs, output refs, and drift-check evidence is rejected. | `tests/runtime/safe-apply-generated-surfaces.test.ts` |
-| Patch conflict rejects before parent mutation. | `tests/runtime/safe-apply.test.ts` |
-| File-disjoint packets still require final composed verification. | `tests/runtime/safe-apply.test.ts` |
+| Patch conflict rejects before parent mutation. | future SafeApply runtime test |
+| File-disjoint packets still require final composed verification. | future SafeApply runtime test |
 
 ### Pursue Reporting Death Tests
 
@@ -601,7 +601,7 @@ For this docs-only spec:
 
 For implementation slices, also run:
 
-- `tests/runtime/safe-apply.test.ts`;
+- future SafeApply runtime tests;
 - `tests/runtime/safe-apply-generated-surfaces.test.ts`;
 - new Pursue SafeApply tests;
 - full `npm run verify`.

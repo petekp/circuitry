@@ -81,6 +81,15 @@ function collectJsonFiles(root: string, prefix = ''): string[] {
   });
 }
 
+function publicHostFlowFiles(files: string[]): string[] {
+  return files.filter(
+    (file) =>
+      !file.startsWith('runtime-proof/') &&
+      !file.endsWith('.work-contract.v0.json') &&
+      !file.includes('never-a-mode'),
+  );
+}
+
 function noAmbientCliPath(): string {
   const systemSegments = process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
   return [dirname(process.execPath), ...systemSegments].join(delimiter);
@@ -760,13 +769,13 @@ describe('Codex host plugin package', () => {
     }
   });
 
-  it('mirrors every canonical generated flow package JSON file into the Codex host output tree', () => {
+  it('mirrors every public canonical compiled flow JSON file into the Codex host output tree', () => {
     const canonicalRoot = resolve(REPO_ROOT, 'generated/flows');
     const codexRoot = resolve(PLUGIN_ROOT, 'flows');
     const canonicalFiles = collectJsonFiles(canonicalRoot).sort();
-    const codexFiles = collectJsonFiles(codexRoot).sort();
+    const codexFiles = publicHostFlowFiles(collectJsonFiles(codexRoot)).sort();
 
-    expect(codexFiles).toEqual(canonicalFiles.filter((file) => !file.startsWith('runtime-proof/')));
+    expect(codexFiles).toEqual(publicHostFlowFiles(canonicalFiles));
 
     for (const file of codexFiles) {
       const canonical = readFileSync(resolve(canonicalRoot, file));

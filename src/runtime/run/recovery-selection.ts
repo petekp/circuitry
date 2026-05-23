@@ -46,14 +46,13 @@ function fallbackRouteByRecoveryOrder(step: StepWithRuntimeRoutes): string | und
   return FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => Object.hasOwn(step.routes, route));
 }
 
-export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): string | undefined {
+export function recoveryBindingForFailure(
+  input: RecoveryRouteForFailureInput,
+): RecoveryRouteBindingV0 | undefined {
   const preferredRouteDeclared =
     input.preferredRoute !== undefined && Object.hasOwn(input.step.routes, input.preferredRoute);
 
-  if (input.workContractRef === undefined) {
-    if (preferredRouteDeclared) return input.preferredRoute;
-    return fallbackRouteByRecoveryOrder(input.step);
-  }
+  if (input.workContractRef === undefined) return undefined;
 
   const matchingBindings =
     input.recoveryRouteBindings?.filter((binding) =>
@@ -64,17 +63,19 @@ export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): st
     preferredRouteDeclared &&
     matchingBindings.some((binding) => binding.route_id === input.preferredRoute)
   ) {
-    return input.preferredRoute;
+    return matchingBindings.find((binding) => binding.route_id === input.preferredRoute);
   }
 
-  const priorityMatch = FALLBACK_RECOVERY_ROUTE_ORDER.find((route) =>
-    matchingBindings.some((binding) => binding.route_id === route),
-  );
-  if (priorityMatch !== undefined) return priorityMatch;
+  return matchingBindings[0];
+}
 
-  const firstMatchingBinding = matchingBindings[0];
-  if (firstMatchingBinding !== undefined) return firstMatchingBinding.route_id;
+export function recoveryRouteForFailure(input: RecoveryRouteForFailureInput): string | undefined {
+  if (input.workContractRef === undefined) {
+    const preferredRouteDeclared =
+      input.preferredRoute !== undefined && Object.hasOwn(input.step.routes, input.preferredRoute);
+    if (preferredRouteDeclared) return input.preferredRoute;
+    return fallbackRouteByRecoveryOrder(input.step);
+  }
 
-  if (preferredRouteDeclared) return input.preferredRoute;
-  return fallbackRouteByRecoveryOrder(input.step);
+  return recoveryBindingForFailure(input)?.route_id;
 }

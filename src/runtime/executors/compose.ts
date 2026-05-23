@@ -152,7 +152,10 @@ export async function executeComposeWithPorts(
             `compose step '${step.id}' route_from_report selected undeclared route '${route}'`,
           );
         }
-        return stepExecutionOutcome({ route, details: { writer: step.writer } });
+        return stepExecutionOutcome({
+          route,
+          details: { writer: step.writer, route_source: 'report' },
+        });
       }
       return stepExecutionOutcome({ route: 'pass', details: { writer: step.writer } });
     }

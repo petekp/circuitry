@@ -455,17 +455,7 @@ export async function executeCheckpointResult(
     if (checkpointRequestSha256 === undefined) {
       checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
     }
-    await context.files.writeJson(response, {
-      schema_version: 1,
-      step_id: step.id,
-      selection: effectiveResolution.selection,
-      route_id: routeId,
-      resolution_source: effectiveResolution.resolutionSource,
-      ...(effectiveResolution.autoResolution === undefined
-        ? {}
-        : { auto_resolution: effectiveResolution.autoResolution }),
-    });
-    await appendCheckpointResolutionGuidance(context, {
+    const guidance = await appendCheckpointResolutionGuidance(context, {
       stepId: step.id,
       attempt,
       choiceId: effectiveResolution.selection,
@@ -480,6 +470,29 @@ export async function executeCheckpointResult(
       ...(effectiveResolution.rejectedOptions === undefined
         ? {}
         : { rejectedOptions: effectiveResolution.rejectedOptions }),
+    });
+    if (guidance === undefined) {
+      const reason = `checkpoint step '${step.id}' requires checkpoint_resolution guidance before crossing the checkpoint boundary`;
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'check.evaluated',
+        step_id: step.id,
+        attempt,
+        check_kind: 'checkpoint_selection',
+        outcome: 'fail',
+        reason,
+      });
+      return stepExecutionFailed(reason);
+    }
+    await context.files.writeJson(response, {
+      schema_version: 1,
+      step_id: step.id,
+      selection: effectiveResolution.selection,
+      route_id: routeId,
+      resolution_source: effectiveResolution.resolutionSource,
+      ...(effectiveResolution.autoResolution === undefined
+        ? {}
+        : { auto_resolution: effectiveResolution.autoResolution }),
     });
     await context.trace.append({
       run_id: context.runId,

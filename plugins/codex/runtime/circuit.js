@@ -35011,23 +35011,28 @@ var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   options: external_exports.array(external_exports.string()).min(1),
   request_path: external_exports.string().min(1),
   request_report_hash: ContentHash,
-  boundary_ref: CheckpointBoundaryRef.optional(),
-  boundary_hash: ContentHash.optional(),
+  boundary_ref: CheckpointBoundaryRef,
+  boundary_hash: ContentHash,
   auto_resolved: external_exports.literal(false).optional()
 }).strict().superRefine((entry, ctx) => {
-  if (entry.boundary_ref === void 0 !== (entry.boundary_hash === void 0)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref"],
-      message: "checkpoint boundary_ref and boundary_hash must be recorded together"
-    });
-    return;
-  }
-  if (entry.boundary_ref !== void 0 && entry.boundary_hash !== void 0 && entry.boundary_ref.sha256 !== entry.boundary_hash) {
+  if (entry.boundary_ref.sha256 !== entry.boundary_hash) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["boundary_hash"],
       message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+  if (entry.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary_ref.step_id is required"
+    });
+  } else if (entry.boundary_ref.step_id !== entry.step_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary_ref.step_id must match step_id"
     });
   }
 });
@@ -40464,526 +40469,6 @@ var PursuitBatch = external_exports.object({
     }
   }
 });
-var PolicyRef = Ref.refine((ref) => ref.kind === "policy", {
-  message: "policy refs must use kind policy"
-});
-var ReportOrWorkContractRef = Ref.refine((ref) => ref.kind === "report" || ref.kind === "work_contract", {
-  message: "estimated touch set refs must use report or work_contract refs"
-});
-var ReportRef2 = Ref.refine((ref) => ref.kind === "report", {
-  message: "branch plan refs must use kind report"
-});
-var TraceRef = Ref.refine((ref) => ref.kind === "trace", {
-  message: "guidance and recovery refs must use kind trace"
-});
-var ChangePacketRef4 = Ref.refine((ref) => ref.kind === "change_packet", {
-  message: "change packet refs must use kind change_packet"
-});
-var SafeApplyRef2 = Ref.refine((ref) => ref.kind === "safe_apply", {
-  message: "safe apply refs must use kind safe_apply"
-});
-var ProofAssessmentRef3 = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
-  message: "proof assessment refs must use evidence or report refs"
-});
-var FinalVerificationRef3 = Ref.refine((ref) => ref.kind === "command", {
-  message: "final verification refs must use command refs"
-});
-var RuntimeTouchedFilesRef2 = Ref.refine((ref) => ref.kind === "diff", {
-  message: "runtime touched files must use diff refs"
-});
-var GeneratedSurfaceRef2 = Ref.refine((ref) => ref.kind === "generated_surface", {
-  message: "generated surface refs must use kind generated_surface"
-});
-var DriftCheckRef2 = Ref.refine((ref) => ref.kind === "command", {
-  message: "drift check refs must use command refs"
-});
-var PursuitSafeApplyBranchStatus = external_exports.enum([
-  "candidate",
-  "serial_fallback",
-  "blocked",
-  "checkpoint_required"
-]);
-var ChildExecution = external_exports.object({
-  kind: external_exports.enum(["relay", "child_flow"]),
-  role: external_exports.string().min(1).optional(),
-  flow_id: external_exports.string().min(1).optional()
-}).strict().superRefine((execution, ctx) => {
-  if (execution.kind === "relay" && execution.role === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["role"],
-      message: "relay branch execution requires role"
-    });
-  }
-  if (execution.kind === "child_flow" && execution.flow_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["flow_id"],
-      message: "child_flow branch execution requires flow_id"
-    });
-  }
-  if (execution.kind === "relay" && execution.flow_id !== void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["flow_id"],
-      message: "relay branch execution must not include flow_id"
-    });
-  }
-  if (execution.kind === "child_flow" && execution.role !== void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["role"],
-      message: "child_flow branch execution must not include role"
-    });
-  }
-});
-var PursuitSafeApplyBranch = external_exports.object({
-  pursuit_id: PursuitId,
-  branch_id: external_exports.string().min(1),
-  status: PursuitSafeApplyBranchStatus,
-  source_pursuit_contract_ref: ReportOrWorkContractRef,
-  estimated_touch_set: PursuitTouchSet,
-  expected_generated_outputs: external_exports.array(external_exports.string().min(1)),
-  risk: PursuitRisk,
-  required_claims: NonEmptyStringArray5,
-  required_verification_commands: external_exports.array(VerificationCommand).min(1),
-  allowed_recovery_route_kinds: external_exports.array(RecoveryRouteKind).min(1),
-  child_execution: ChildExecution,
-  work_root_kind: WorkRootKind,
-  proof_policy_ref: PolicyRef,
-  expected_change_packet_ref: ChangePacketRef4.optional(),
-  checkpoint_ref: TraceRef.optional(),
-  reason: external_exports.string().min(1).optional()
-}).strict();
-var PursuitSafeApplyBranchPlan = external_exports.object({
-  schema_version: external_exports.literal(1),
-  mode: external_exports.literal("parallel-isolated-safe-apply"),
-  runtime_status: external_exports.literal("planning-only"),
-  source_contract_ref: ReportOrWorkContractRef,
-  graph_ref: ReportRef2,
-  wave_plan_ref: ReportRef2,
-  policy_ref: PolicyRef,
-  max_parallel_branches: external_exports.number().int().positive(),
-  branches: external_exports.array(PursuitSafeApplyBranch).min(1),
-  counts: external_exports.object({
-    candidate: external_exports.number().int().nonnegative(),
-    serial_fallback: external_exports.number().int().nonnegative(),
-    blocked: external_exports.number().int().nonnegative(),
-    checkpoint_required: external_exports.number().int().nonnegative()
-  }).strict()
-}).strict().superRefine((plan, ctx) => {
-  const counts = {
-    candidate: 0,
-    serial_fallback: 0,
-    blocked: 0,
-    checkpoint_required: 0
-  };
-  const branchIds = /* @__PURE__ */ new Set();
-  const pursuitIds = /* @__PURE__ */ new Set();
-  for (const [index, branch] of plan.branches.entries()) {
-    counts[branch.status] += 1;
-    if (branchIds.has(branch.branch_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["branches", index, "branch_id"],
-        message: `duplicate branch id: ${branch.branch_id}`
-      });
-    }
-    branchIds.add(branch.branch_id);
-    if (pursuitIds.has(branch.pursuit_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["branches", index, "pursuit_id"],
-        message: `duplicate pursuit id: ${branch.pursuit_id}`
-      });
-    }
-    pursuitIds.add(branch.pursuit_id);
-    if (branch.status === "candidate") {
-      if (branch.work_root_kind !== "isolated_worktree") {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["branches", index, "work_root_kind"],
-          message: "candidate parallel Pursue branches require isolated_worktree"
-        });
-      }
-      if (branch.expected_change_packet_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["branches", index, "expected_change_packet_ref"],
-          message: "candidate branches require expected_change_packet_ref"
-        });
-      }
-      if (!branch.allowed_recovery_route_kinds.includes("safe_apply_reject")) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["branches", index, "allowed_recovery_route_kinds"],
-          message: "candidate branches require safe_apply_reject recovery"
-        });
-      }
-    } else {
-      if (branch.expected_change_packet_ref !== void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["branches", index, "expected_change_packet_ref"],
-          message: `${branch.status} branches must not reserve ChangePacket refs`
-        });
-      }
-      if (branch.reason === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["branches", index, "reason"],
-          message: `${branch.status} branches require reason`
-        });
-      }
-    }
-    if (branch.status === "checkpoint_required" && branch.checkpoint_ref === void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["branches", index, "checkpoint_ref"],
-        message: "checkpoint_required branches require checkpoint_ref"
-      });
-    }
-    if (branch.expected_generated_outputs.length > 0 && branch.risk === "low") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["branches", index, "risk"],
-        message: "generated-output branches must be medium or high risk"
-      });
-    }
-    const estimatedGeneratedOutputs = [...branch.estimated_touch_set.generated_outputs].sort();
-    const expectedGeneratedOutputs = [...branch.expected_generated_outputs].sort();
-    if (estimatedGeneratedOutputs.length !== expectedGeneratedOutputs.length || estimatedGeneratedOutputs.some((path, pathIndex) => path !== expectedGeneratedOutputs[pathIndex])) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["branches", index, "expected_generated_outputs"],
-        message: "expected generated outputs must match the estimated generated touch set"
-      });
-    }
-  }
-  for (const [status, count] of Object.entries(plan.counts)) {
-    if (count !== counts[status]) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["counts", status],
-        message: `${status} count must match branches`
-      });
-    }
-  }
-  if (counts.candidate > plan.max_parallel_branches) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["max_parallel_branches"],
-      message: "candidate branches must not exceed max_parallel_branches"
-    });
-  }
-});
-var PursuitSafeApplyReasonCode = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
-var PursuitSafeApplyPacketStatus = external_exports.enum([
-  "applied",
-  "rejected",
-  "blocked",
-  "failed_before_packet",
-  "serial_fallback"
-]);
-var PursuitSafeApplyPacket = external_exports.object({
-  pursuit_id: PursuitId,
-  branch_id: external_exports.string().min(1),
-  change_packet_ref: ChangePacketRef4.optional(),
-  status: PursuitSafeApplyPacketStatus,
-  safe_apply_decision_ref: TraceRef.optional(),
-  safe_apply_result_ref: SafeApplyRef2.optional(),
-  proof_assessment_refs: external_exports.array(ProofAssessmentRef3),
-  final_verification_ref: FinalVerificationRef3.optional(),
-  recovery_route_ref: TraceRef.optional(),
-  reason_codes: external_exports.array(PursuitSafeApplyReasonCode).min(1)
-}).strict();
-var PursuitSafeApplyReport = external_exports.object({
-  schema_version: external_exports.literal(1),
-  mode: external_exports.literal("parallel-isolated-safe-apply"),
-  base: external_exports.object({
-    ref: external_exports.string().min(1),
-    tree_hash: Sha256,
-    dirty_parent_state: DirtyParentState,
-    policy_ref: PolicyRef
-  }).strict(),
-  branch_plan_ref: ReportRef2,
-  proof_policy_decision_ref: TraceRef,
-  packets: external_exports.array(PursuitSafeApplyPacket).min(1),
-  applied_order: external_exports.array(external_exports.string().min(1)),
-  counts: external_exports.object({
-    applied: external_exports.number().int().nonnegative(),
-    rejected: external_exports.number().int().nonnegative(),
-    blocked: external_exports.number().int().nonnegative(),
-    failed_before_packet: external_exports.number().int().nonnegative(),
-    serial_fallback: external_exports.number().int().nonnegative()
-  }).strict(),
-  touch_set_reconciliation: external_exports.array(external_exports.object({
-    pursuit_id: PursuitId,
-    estimated_touch_set_ref: ReportOrWorkContractRef,
-    runtime_touched_files_ref: RuntimeTouchedFilesRef2.optional(),
-    generated_surface_status: GeneratedSurfaceStatus,
-    scope_status: external_exports.enum(["inside_estimate", "expanded", "unknown"])
-  }).strict()).min(1),
-  generated_surfaces: external_exports.object({
-    status: GeneratedSurfaceStatus,
-    source_refs: external_exports.array(GeneratedSurfaceRef2),
-    output_refs: external_exports.array(GeneratedSurfaceRef2),
-    drift_check_ref: DriftCheckRef2.optional()
-  }).strict(),
-  final_verification: external_exports.object({
-    status: external_exports.enum(["passed", "failed", "skipped"]),
-    ref: FinalVerificationRef3.optional()
-  }).strict()
-}).strict().superRefine((report, ctx) => {
-  const counts = {
-    applied: 0,
-    rejected: 0,
-    blocked: 0,
-    failed_before_packet: 0,
-    serial_fallback: 0
-  };
-  const branchIds = /* @__PURE__ */ new Set();
-  const pursuitIds = /* @__PURE__ */ new Set();
-  const appliedBranchIds = /* @__PURE__ */ new Set();
-  for (const [index, packet] of report.packets.entries()) {
-    counts[packet.status] += 1;
-    if (branchIds.has(packet.branch_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["packets", index, "branch_id"],
-        message: `duplicate branch id: ${packet.branch_id}`
-      });
-    }
-    branchIds.add(packet.branch_id);
-    if (pursuitIds.has(packet.pursuit_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["packets", index, "pursuit_id"],
-        message: `duplicate pursuit id: ${packet.pursuit_id}`
-      });
-    }
-    pursuitIds.add(packet.pursuit_id);
-    if (packet.status === "applied")
-      appliedBranchIds.add(packet.branch_id);
-    if (packet.status === "applied") {
-      if (packet.change_packet_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "change_packet_ref"],
-          message: "applied packets require change_packet_ref"
-        });
-      }
-      if (packet.safe_apply_decision_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "safe_apply_decision_ref"],
-          message: "applied packets require safe_apply_decision_ref"
-        });
-      }
-      if (packet.safe_apply_result_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "safe_apply_result_ref"],
-          message: "applied packets require safe_apply_result_ref"
-        });
-      }
-      if (packet.proof_assessment_refs.length === 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "proof_assessment_refs"],
-          message: "applied packets require proof assessment refs"
-        });
-      }
-      if (packet.final_verification_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "final_verification_ref"],
-          message: "applied packets require final verification refs"
-        });
-      }
-    }
-    if (packet.status === "rejected") {
-      if (packet.change_packet_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "change_packet_ref"],
-          message: "rejected packets require change_packet_ref"
-        });
-      }
-      if (packet.safe_apply_decision_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "safe_apply_decision_ref"],
-          message: "rejected packets require safe_apply_decision_ref"
-        });
-      }
-      if (packet.safe_apply_result_ref === void 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["packets", index, "safe_apply_result_ref"],
-          message: "rejected packets require safe_apply_result_ref"
-        });
-      }
-    }
-    if ((packet.status === "rejected" || packet.status === "blocked" || packet.status === "failed_before_packet" || packet.status === "serial_fallback") && packet.recovery_route_ref === void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["packets", index, "recovery_route_ref"],
-        message: `${packet.status} packets require recovery_route_ref`
-      });
-    }
-    if ((packet.status === "blocked" || packet.status === "failed_before_packet" || packet.status === "serial_fallback") && (packet.change_packet_ref !== void 0 || packet.safe_apply_decision_ref !== void 0 || packet.safe_apply_result_ref !== void 0)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["packets", index],
-        message: `${packet.status} packets must not carry SafeApply refs`
-      });
-    }
-  }
-  for (const [status, count] of Object.entries(report.counts)) {
-    if (count !== counts[status]) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["counts", status],
-        message: `${status} count must match packets`
-      });
-    }
-  }
-  if (report.applied_order.length !== appliedBranchIds.size) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["applied_order"],
-      message: "applied_order must list every applied branch exactly once"
-    });
-  }
-  const seenAppliedOrder = /* @__PURE__ */ new Set();
-  for (const [index, branchId] of report.applied_order.entries()) {
-    if (!appliedBranchIds.has(branchId)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["applied_order", index],
-        message: `applied_order references non-applied branch id: ${branchId}`
-      });
-    }
-    if (seenAppliedOrder.has(branchId)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["applied_order", index],
-        message: `duplicate applied_order branch id: ${branchId}`
-      });
-    }
-    seenAppliedOrder.add(branchId);
-  }
-  const reconciliationIds = /* @__PURE__ */ new Set();
-  for (const [index, item] of report.touch_set_reconciliation.entries()) {
-    if (reconciliationIds.has(item.pursuit_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["touch_set_reconciliation", index, "pursuit_id"],
-        message: `duplicate touch-set reconciliation for pursuit id: ${item.pursuit_id}`
-      });
-    }
-    reconciliationIds.add(item.pursuit_id);
-    if (!pursuitIds.has(item.pursuit_id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["touch_set_reconciliation", index, "pursuit_id"],
-        message: `touch-set reconciliation references unknown pursuit id: ${item.pursuit_id}`
-      });
-    }
-  }
-  for (const pursuitId of pursuitIds) {
-    if (!reconciliationIds.has(pursuitId)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["touch_set_reconciliation"],
-        message: `missing touch-set reconciliation for pursuit id: ${pursuitId}`
-      });
-    }
-  }
-  const appliedPursuitIds = new Set(report.packets.filter((packet) => packet.status === "applied").map((packet) => packet.pursuit_id));
-  for (const [index, item] of report.touch_set_reconciliation.entries()) {
-    if (!appliedPursuitIds.has(item.pursuit_id))
-      continue;
-    if (item.runtime_touched_files_ref === void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["touch_set_reconciliation", index, "runtime_touched_files_ref"],
-        message: "applied pursuits require runtime_touched_files_ref"
-      });
-    }
-    if (item.generated_surface_status === "unknown" || item.generated_surface_status === "drift_detected") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["touch_set_reconciliation", index, "generated_surface_status"],
-        message: "applied pursuits cannot have unknown or drifted generated surfaces"
-      });
-    }
-  }
-  const reconciliationGeneratedStatuses = new Set(report.touch_set_reconciliation.map((item) => item.generated_surface_status));
-  const expectedGeneratedStatus = reconciliationGeneratedStatuses.has("drift_detected") ? "drift_detected" : reconciliationGeneratedStatuses.has("unknown") ? "unknown" : reconciliationGeneratedStatuses.has("synced") ? "synced" : "not_touched";
-  if (report.generated_surfaces.status !== expectedGeneratedStatus) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generated_surfaces", "status"],
-      message: `generated surface status must summarize touch-set reconciliation as ${expectedGeneratedStatus}`
-    });
-  }
-  if (report.generated_surfaces.status === "not_touched") {
-    if (report.generated_surfaces.source_refs.length > 0 || report.generated_surfaces.output_refs.length > 0 || report.generated_surfaces.drift_check_ref !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["generated_surfaces"],
-        message: "not_touched generated surfaces must not carry generated-surface refs"
-      });
-    }
-  }
-  if (report.final_verification.status === "passed" && report.final_verification.ref === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["final_verification", "ref"],
-      message: "passed final verification requires ref"
-    });
-  }
-  if (counts.applied > 0 && report.final_verification.status !== "passed") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["final_verification", "status"],
-      message: "applied packets require passed final verification"
-    });
-  }
-  const unresolvedPacketCount = counts.rejected + counts.blocked + counts.failed_before_packet + counts.serial_fallback;
-  if (report.final_verification.status === "passed" && unresolvedPacketCount === 0 && (report.generated_surfaces.status === "unknown" || report.generated_surfaces.status === "drift_detected")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generated_surfaces", "status"],
-      message: "passed final verification cannot close unknown or drifted generated surfaces"
-    });
-  }
-  if (report.generated_surfaces.status === "synced") {
-    if (report.generated_surfaces.source_refs.length === 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["generated_surfaces", "source_refs"],
-        message: "synced generated surfaces require source refs"
-      });
-    }
-    if (report.generated_surfaces.output_refs.length === 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["generated_surfaces", "output_refs"],
-        message: "synced generated surfaces require output refs"
-      });
-    }
-    if (report.generated_surfaces.drift_check_ref === void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["generated_surfaces", "drift_check_ref"],
-        message: "synced generated surfaces require drift check ref"
-      });
-    }
-  }
-});
 var PursuitVerification = VerificationResult;
 var PursuitReviewFinding = external_exports.object({
   severity: external_exports.enum(["critical", "high", "medium", "low"]),
@@ -42965,8 +42450,618 @@ var ComposedPolicyHardConstraints = external_exports.object({
   limits: PolicyLimits
 }).strict();
 
-// dist/shared/work-contract-projection.js
+// dist/shared/checkpoint-boundary.js
 import { createHash as createHash3 } from "node:crypto";
+
+// dist/schemas/checkpoint-boundary.js
+var CheckpointReasonCode = external_exports.enum([
+  "scope_expansion",
+  "protected_files",
+  "weak_proof",
+  "unsafe_apply",
+  "budget_exceeded",
+  "ambiguous_intent"
+]);
+var CheckpointAuthorityRequired = external_exports.enum(["operator", "policy"]);
+var CheckpointRouteTarget = external_exports.union([
+  StepId,
+  external_exports.enum(["@complete", "@stop", "@handoff", "@escalate"])
+]);
+var PolicyRef = Ref.superRefine((ref, ctx) => {
+  if (ref.kind !== "policy") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["kind"],
+      message: "checkpoint declared defaults require policy refs"
+    });
+  }
+});
+var CheckpointBoundaryRoute = external_exports.object({
+  id: external_exports.string().min(1),
+  target: CheckpointRouteTarget
+}).strict();
+var CheckpointBoundaryChoice = external_exports.object({
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  route: CheckpointBoundaryRoute,
+  consequence: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("static"),
+    items: external_exports.array(CheckpointBoundaryChoice).min(1)
+  }).strict().superRefine((choices, ctx) => {
+    const ids = /* @__PURE__ */ new Set();
+    for (const [index, choice] of choices.items.entries()) {
+      if (ids.has(choice.id)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["items", index, "id"],
+          message: `duplicate checkpoint choice '${choice.id}'`
+        });
+      }
+      ids.add(choice.id);
+    }
+  }),
+  external_exports.object({
+    kind: external_exports.literal("dynamic"),
+    source: CheckpointChoiceSource,
+    route_family: CheckpointBoundaryRoute,
+    consequence_template: external_exports.string().min(1)
+  }).strict()
+]);
+var DeclaredCheckpointDefault = external_exports.object({
+  choice_id: external_exports.string().min(1),
+  allowed_when: external_exports.array(PolicyRef).min(1),
+  reason_code: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  step_id: StepId,
+  reason_code: CheckpointReasonCode,
+  authority_required: CheckpointAuthorityRequired,
+  prompt: external_exports.string().min(1),
+  choices: CheckpointBoundaryChoices,
+  declared_default: DeclaredCheckpointDefault.optional(),
+  writes: external_exports.object({
+    request: RunRelativePath,
+    response: RunRelativePath,
+    report: ReportRef.optional()
+  }).strict(),
+  check: CheckpointSelectionCheck,
+  proof_refs: external_exports.array(Ref).default([])
+}).strict().superRefine((boundary, ctx) => {
+  if (boundary.declared_default === void 0)
+    return;
+  if (boundary.choices.kind === "dynamic") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["declared_default"],
+      message: "declared defaults require static checkpoint choices in V0"
+    });
+    return;
+  }
+  const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
+  if (!choiceIds.has(boundary.declared_default.choice_id)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["declared_default", "choice_id"],
+      message: "declared_default.choice_id must name a declared checkpoint choice"
+    });
+  }
+});
+var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  options: external_exports.array(external_exports.string().min(1)).min(1),
+  request_path: RunRelativePath,
+  request_report_hash: Sha256,
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  } else if (request.boundary_ref.step_id !== request.step_id) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryResolutionSource = external_exports.enum([
+  "operator",
+  "declared-default",
+  "policy"
+]);
+var CheckpointBoundaryResolutionV0 = external_exports.object({
+  selection: external_exports.string().min(1),
+  route_id: external_exports.string().min(1),
+  auto_resolved: external_exports.boolean(),
+  resolution_source: CheckpointBoundaryResolutionSource
+}).strict().superRefine((resolution, ctx) => {
+  if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["auto_resolved"],
+      message: "operator checkpoint resolutions cannot be auto-resolved"
+    });
+  }
+});
+var CheckpointResumeValidationV0 = external_exports.object({
+  request_path_matches_step: external_exports.literal(true),
+  request_hash_required: external_exports.literal(true),
+  choices_match_request: external_exports.literal(true),
+  selected_choice_allowed: external_exports.literal(true),
+  report_hash_matches_when_present: external_exports.literal(true),
+  boundary_hash_required: external_exports.literal(true),
+  guidance_decision_required_before_resolution: external_exports.literal(true)
+}).strict();
+var CheckpointBoundaryRejectedAuthority = external_exports.object({
+  path: external_exports.string().min(1),
+  field: external_exports.string().min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryProjectionV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  boundary: CheckpointBoundaryV0,
+  request_trace: CheckpointBoundaryRequestTraceLinkV0,
+  allowed_resolution_sources: external_exports.array(CheckpointBoundaryResolutionSource).min(1),
+  resume_validation: CheckpointResumeValidationV0,
+  rejected_old_authority: external_exports.array(CheckpointBoundaryRejectedAuthority)
+}).strict();
+
+// dist/shared/checkpoint-boundary.js
+var CheckpointBoundaryProjectionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CheckpointBoundaryProjectionError";
+  }
+};
+function stableJson(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256(value) {
+  return createHash3("sha256").update(stableJson(value)).digest("hex");
+}
+function rejectOldAuthority(path, field, reason) {
+  return { path, field, reason };
+}
+function routeForChoice2(step, choiceId) {
+  const directTarget = step.routes[choiceId];
+  if (directTarget !== void 0) {
+    return { id: choiceId, target: directTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`);
+}
+function consequenceForChoice(choice) {
+  return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
+}
+function dynamicRouteFamily(step) {
+  const selectTarget = step.routes.select;
+  if (selectTarget !== void 0) {
+    return { id: "select", target: selectTarget };
+  }
+  const passTarget = step.routes.pass;
+  if (passTarget !== void 0) {
+    return { id: "pass", target: passTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
+}
+function staticChoices(step) {
+  const choices = step.policy.choices;
+  if (choices === void 0) {
+    throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
+  }
+  return choices.map((choice) => ({
+    id: choice.id,
+    ...choice.label === void 0 ? {} : { label: choice.label },
+    ...choice.description === void 0 ? {} : { description: choice.description },
+    route: routeForChoice2(step, choice.id),
+    consequence: consequenceForChoice(choice)
+  }));
+}
+function projectCheckpointBoundaryV0(input) {
+  const { step } = input;
+  const rejectedOldAuthority = [];
+  const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
+  if (step.policy.auto_resolution !== void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
+  }
+  const choices = step.policy.choices !== void 0 ? {
+    kind: "static",
+    items: staticChoices(step)
+  } : (() => {
+    const routeFamily = dynamicRouteFamily(step);
+    return {
+      kind: "dynamic",
+      source: step.policy.choices_from,
+      route_family: routeFamily,
+      consequence_template: `Select one dynamic checkpoint choice and take route '${routeFamily.id}' to '${routeFamily.target}'.`
+    };
+  })();
+  const declaredDefault = step.policy.safe_default_choice !== void 0 && choices.kind === "static" && declaredDefaultPolicyRefs.length > 0 ? {
+    choice_id: step.policy.safe_default_choice,
+    allowed_when: declaredDefaultPolicyRefs,
+    reason_code: "safe_default_choice"
+  } : void 0;
+  if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
+  }
+  const boundary = {
+    schema_version: 0,
+    step_id: step.id,
+    reason_code: input.reasonCode ?? "ambiguous_intent",
+    authority_required: declaredDefault === void 0 ? "operator" : "policy",
+    prompt: step.policy.prompt,
+    choices,
+    ...declaredDefault === void 0 ? {} : { declared_default: declaredDefault },
+    writes: step.writes,
+    check: step.check,
+    proof_refs: []
+  };
+  const boundaryHash = sha256(boundary);
+  const boundaryRef = {
+    kind: "work_contract",
+    ref: `compiled-flow/steps/${step.id}/checkpoint-boundary.v0`,
+    sha256: boundaryHash,
+    flow_id: input.flowId,
+    step_id: step.id
+  };
+  return CheckpointBoundaryProjectionV0.parse({
+    schema_version: 0,
+    boundary,
+    request_trace: {
+      boundary_ref: boundaryRef,
+      boundary_hash: boundaryHash
+    },
+    allowed_resolution_sources: ["operator", "declared-default", "policy"],
+    resume_validation: {
+      request_path_matches_step: true,
+      request_hash_required: true,
+      choices_match_request: true,
+      selected_choice_allowed: true,
+      report_hash_matches_when_present: true,
+      boundary_hash_required: true,
+      guidance_decision_required_before_resolution: true
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+
+// dist/shared/policy-envelope.js
+import { createHash as createHash4 } from "node:crypto";
+var PolicyEnvelopeCompositionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PolicyEnvelopeCompositionError";
+  }
+};
+var RUNTIME_CONFIG_V1_POLICY_REF = {
+  kind: "policy",
+  ref: "policy.runtime.config_v1"
+};
+var RUNTIME_POLICY_V2_REF = {
+  kind: "policy",
+  ref: "policy.runtime.policy_v2"
+};
+var EFFORT_ORDER = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max"
+];
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function unionInto(target, values) {
+  for (const value of values)
+    target.add(value);
+}
+function intersectConnectorAllow(current, next) {
+  if (next === void 0)
+    return current;
+  const nextSet = new Set(next);
+  if (current === void 0)
+    return nextSet;
+  return new Set([...current].filter((value) => nextSet.has(value)));
+}
+function minNumber(current, next) {
+  if (next === void 0)
+    return current;
+  return current === void 0 ? next : Math.min(current, next);
+}
+function minEffort(current, next) {
+  if (next === void 0)
+    return current;
+  if (current === void 0)
+    return next;
+  return EFFORT_ORDER.indexOf(next) < EFFORT_ORDER.indexOf(current) ? next : current;
+}
+function composeAutoApply(current, next) {
+  if (next === void 0)
+    return current;
+  if (next === false || current === false)
+    return false;
+  return true;
+}
+function composeRequireKnown(current, next) {
+  if (next === void 0)
+    return current;
+  return current === true || next === true;
+}
+function connectorRefFromDefault(value) {
+  if (value === "auto")
+    return "auto";
+  if (EnabledConnector.options.includes(value)) {
+    return { kind: "builtin", name: value };
+  }
+  return { kind: "named", name: value };
+}
+function connectorRefFromConfig(ref) {
+  return ref;
+}
+function rejectOldAuthority2(path, field, reason) {
+  return { path, field, reason };
+}
+function stableJson2(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256Json(value) {
+  return createHash4("sha256").update(stableJson2(value)).digest("hex");
+}
+function policyLayerSourceForConfigLayer(layer) {
+  if (layer === "default")
+    return "built-in";
+  return layer;
+}
+function composePolicyHardConstraints(envelopes) {
+  let allow;
+  const deny = /* @__PURE__ */ new Set();
+  const denyForWrite = /* @__PURE__ */ new Set();
+  const denyProviders = /* @__PURE__ */ new Set();
+  const requireProviderForConnector = {};
+  let autoApply;
+  const checkpointGlobs = /* @__PURE__ */ new Set();
+  const deniedSkills = /* @__PURE__ */ new Set();
+  let requireKnown;
+  const independentReviewFor = /* @__PURE__ */ new Set();
+  let maxAttempts;
+  let maxWallClockMs;
+  let maxEffortCap;
+  let maxTournamentN;
+  for (const envelope of envelopes) {
+    const parsed = PolicyEnvelopeV2.parse(envelope);
+    const { rules, limits } = parsed.policy;
+    allow = intersectConnectorAllow(allow, rules.connectors.allow);
+    unionInto(deny, rules.connectors.deny);
+    unionInto(denyForWrite, rules.connectors.deny_for_write);
+    unionInto(denyProviders, rules.models.deny_providers);
+    for (const [connector, provider] of Object.entries(rules.models.require_provider_for_connector)) {
+      const previous = requireProviderForConnector[connector];
+      if (previous !== void 0 && previous !== provider) {
+        throw new PolicyEnvelopeCompositionError(`conflicting provider requirements for connector '${connector}': '${previous}' and '${provider}'`);
+      }
+      requireProviderForConnector[connector] = provider;
+    }
+    autoApply = composeAutoApply(autoApply, rules.writes.auto_apply);
+    unionInto(checkpointGlobs, rules.writes.require_checkpoint_globs);
+    unionInto(deniedSkills, rules.skills.deny);
+    requireKnown = composeRequireKnown(requireKnown, rules.skills.require_known);
+    unionInto(independentReviewFor, rules.proof.require_independent_review_for);
+    maxAttempts = minNumber(maxAttempts, limits.max_attempts_per_step);
+    maxWallClockMs = minNumber(maxWallClockMs, limits.max_wall_clock_ms);
+    maxEffortCap = minEffort(maxEffortCap, limits.max_effort);
+    maxTournamentN = minNumber(maxTournamentN, limits.max_tournament_n);
+  }
+  return ComposedPolicyHardConstraints.parse({
+    connectors: {
+      ...allow !== void 0 ? { allow: uniqueSorted(allow) } : {},
+      deny: uniqueSorted(deny),
+      deny_for_write: uniqueSorted(denyForWrite)
+    },
+    models: {
+      deny_providers: uniqueSorted(denyProviders),
+      require_provider_for_connector: Object.fromEntries(Object.entries(requireProviderForConnector).sort(([a], [b]) => a.localeCompare(b)))
+    },
+    writes: {
+      ...autoApply !== void 0 ? { auto_apply: autoApply } : {},
+      require_checkpoint_globs: uniqueSorted(checkpointGlobs)
+    },
+    skills: {
+      deny: uniqueSorted(deniedSkills),
+      ...requireKnown !== void 0 ? { require_known: requireKnown } : {}
+    },
+    proof: {
+      require_independent_review_for: uniqueSorted(independentReviewFor)
+    },
+    limits: {
+      ...maxAttempts !== void 0 ? { max_attempts_per_step: maxAttempts } : {},
+      ...maxWallClockMs !== void 0 ? { max_wall_clock_ms: maxWallClockMs } : {},
+      ...maxEffortCap !== void 0 ? { max_effort: maxEffortCap } : {},
+      ...maxTournamentN !== void 0 ? { max_tournament_n: maxTournamentN } : {}
+    }
+  });
+}
+function projectConfigV1ToPolicyEnvelopeV2(input) {
+  const { config: config2, source } = input;
+  const rejectedOldAuthority = [];
+  const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
+    rejectedOldAuthority.push(rejectOldAuthority2(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
+    return {
+      flow_id: flowId,
+      prefer_connector: connectorRefFromConfig(ref)
+    };
+  });
+  const flowSelectionHints = [];
+  const flowSlotBindings = [];
+  const variantModelHints = [];
+  for (const [flowId, override] of Object.entries(config2.circuits)) {
+    if (override.selection !== void 0) {
+      flowSelectionHints.push({
+        flow_id: flowId,
+        selection: override.selection
+      });
+    }
+    if (Object.keys(override.skill_bindings).length > 0) {
+      flowSlotBindings.push({
+        flow_id: flowId,
+        bindings: override.skill_bindings
+      });
+    }
+    if (override.variant_models !== void 0) {
+      rejectedOldAuthority.push(rejectOldAuthority2(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
+      for (const variant of override.variant_models) {
+        variantModelHints.push({
+          flow_id: flowId,
+          id: variant.id,
+          label: variant.label,
+          ...variant.connector !== void 0 ? { connector: connectorRefFromConfig(variant.connector) } : {},
+          selection: variant.selection
+        });
+      }
+    }
+  }
+  return PolicyEnvelopeProjectionV0.parse({
+    schema_version: 0,
+    source,
+    policy_envelope: {
+      schema_version: 2,
+      policy: {
+        rules: {
+          connectors: {
+            registry: config2.relay.connectors
+          }
+        },
+        preferences: {
+          relay: {
+            roles: Object.fromEntries(Object.entries(config2.relay.roles).filter((entry) => entry[1] !== void 0).map(([role, ref]) => [role, { prefer_connector: connectorRefFromConfig(ref) }])),
+            flow_connector_hints: flowConnectorHints
+          },
+          selection: {
+            flow_hints: flowSelectionHints
+          },
+          skills: {
+            slot_bindings: config2.skills.bindings,
+            flow_slot_bindings: flowSlotBindings
+          },
+          prototype: {
+            variant_model_hints: variantModelHints
+          }
+        },
+        defaults: {
+          connector: connectorRefFromDefault(config2.relay.default),
+          ...config2.defaults.selection !== void 0 ? { selection: config2.defaults.selection } : {}
+        }
+      }
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+function policyRefsForConfigLayers(layers) {
+  const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
+    let sha2564;
+    try {
+      const projection = projectConfigV1ToPolicyEnvelopeV2({
+        config: layer.config,
+        source: policyLayerSourceForConfigLayer(layer.layer)
+      });
+      sha2564 = sha256Json(projection.policy_envelope);
+    } catch {
+      sha2564 = sha256Json({ schema_version: 1, config: layer.config });
+    }
+    refs.push({
+      kind: "policy",
+      ref,
+      sha256: sha2564
+    });
+  }
+  return refs;
+}
+function policyRefsForPolicyLayers(layers) {
+  const refs = [];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    refs.push({
+      kind: "policy",
+      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
+      sha256: sha256Json(layer.envelope)
+    });
+  }
+  return refs;
+}
+function policyRefsForRuntimeInputs(input) {
+  const refs = [];
+  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
+    refs.push(...policyRefsForConfigLayers(input.configLayers));
+  }
+  if ((input.policyLayers?.length ?? 0) > 0) {
+    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
+  }
+  return refs;
+}
+
+// dist/shared/work-contract-projection.js
+import { createHash as createHash5 } from "node:crypto";
 
 // dist/schemas/work-contract-projection.js
 var ReportSlot = external_exports.object({
@@ -43351,15 +43446,15 @@ function attemptBudgetForRecoveryKind(kind, routeTarget, stepId) {
     retry_target: "declared_step"
   };
 }
-function stableJson(value) {
+function stableJson3(value) {
   return JSON.stringify(value, (_key, item) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
       return item;
     return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
   });
 }
-function sha256(value) {
-  return createHash3("sha256").update(stableJson(value)).digest("hex");
+function sha2562(value) {
+  return createHash5("sha256").update(stableJson3(value)).digest("hex");
 }
 function asJsonObject(value) {
   return value;
@@ -43463,7 +43558,7 @@ function contractFanoutBranches(step) {
 }
 function projectWorkContractProjectionV0(input) {
   const { flow } = input;
-  const flowHash = sha256(flow);
+  const flowHash = sha2562(flow);
   rejectUnknownKeys("unclassified flow fields", flow, FLOW_KEYS);
   const selectionHints = [];
   const connectorHints = [];
@@ -43669,7 +43764,7 @@ function projectWorkContractProjectionV0(input) {
     contract_ref: {
       kind: "work_contract",
       ref: contractRefPath,
-      sha256: sha256(workContract),
+      sha256: sha2562(workContract),
       flow_id: flow.id
     },
     work_contract: workContract,
@@ -44366,7 +44461,7 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 var HEX643 = /^[0-9a-f]{64}$/;
 var ManifestHash = external_exports.string().regex(HEX643, {
   message: "must be a 64-character lowercase hex SHA-256 digest"
@@ -44394,7 +44489,7 @@ var ManifestSnapshot = external_exports.object({
     });
     return;
   }
-  const computed = createHash4("sha256").update(decoded).digest("hex");
+  const computed = createHash6("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -44404,7 +44499,7 @@ var ManifestSnapshot = external_exports.object({
   }
 });
 function computeManifestHash(bytes) {
-  return createHash4("sha256").update(bytes).digest("hex");
+  return createHash6("sha256").update(bytes).digest("hex");
 }
 
 // dist/runtime/run/graph-runner.js
@@ -44712,616 +44807,6 @@ function runtimeVetoEffect(candidates) {
     }
   }
   return "none";
-}
-
-// dist/shared/checkpoint-boundary.js
-import { createHash as createHash5 } from "node:crypto";
-
-// dist/schemas/checkpoint-boundary.js
-var CheckpointReasonCode = external_exports.enum([
-  "scope_expansion",
-  "protected_files",
-  "weak_proof",
-  "unsafe_apply",
-  "budget_exceeded",
-  "ambiguous_intent"
-]);
-var CheckpointAuthorityRequired = external_exports.enum(["operator", "policy"]);
-var CheckpointRouteTarget = external_exports.union([
-  StepId,
-  external_exports.enum(["@complete", "@stop", "@handoff", "@escalate"])
-]);
-var PolicyRef2 = Ref.superRefine((ref, ctx) => {
-  if (ref.kind !== "policy") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["kind"],
-      message: "checkpoint declared defaults require policy refs"
-    });
-  }
-});
-var CheckpointBoundaryRoute = external_exports.object({
-  id: external_exports.string().min(1),
-  target: CheckpointRouteTarget
-}).strict();
-var CheckpointBoundaryChoice = external_exports.object({
-  id: external_exports.string().min(1),
-  label: external_exports.string().min(1).optional(),
-  description: external_exports.string().min(1).optional(),
-  route: CheckpointBoundaryRoute,
-  consequence: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
-  external_exports.object({
-    kind: external_exports.literal("static"),
-    items: external_exports.array(CheckpointBoundaryChoice).min(1)
-  }).strict().superRefine((choices, ctx) => {
-    const ids = /* @__PURE__ */ new Set();
-    for (const [index, choice] of choices.items.entries()) {
-      if (ids.has(choice.id)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["items", index, "id"],
-          message: `duplicate checkpoint choice '${choice.id}'`
-        });
-      }
-      ids.add(choice.id);
-    }
-  }),
-  external_exports.object({
-    kind: external_exports.literal("dynamic"),
-    source: CheckpointChoiceSource,
-    route_family: CheckpointBoundaryRoute,
-    consequence_template: external_exports.string().min(1)
-  }).strict()
-]);
-var DeclaredCheckpointDefault = external_exports.object({
-  choice_id: external_exports.string().min(1),
-  allowed_when: external_exports.array(PolicyRef2).min(1),
-  reason_code: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryV0 = external_exports.object({
-  schema_version: external_exports.literal(0),
-  step_id: StepId,
-  reason_code: CheckpointReasonCode,
-  authority_required: CheckpointAuthorityRequired,
-  prompt: external_exports.string().min(1),
-  choices: CheckpointBoundaryChoices,
-  declared_default: DeclaredCheckpointDefault.optional(),
-  writes: external_exports.object({
-    request: RunRelativePath,
-    response: RunRelativePath,
-    report: ReportRef.optional()
-  }).strict(),
-  check: CheckpointSelectionCheck,
-  proof_refs: external_exports.array(Ref).default([])
-}).strict().superRefine((boundary, ctx) => {
-  if (boundary.declared_default === void 0)
-    return;
-  if (boundary.choices.kind === "dynamic") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["declared_default"],
-      message: "declared defaults require static checkpoint choices in V0"
-    });
-    return;
-  }
-  const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
-  if (!choiceIds.has(boundary.declared_default.choice_id)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["declared_default", "choice_id"],
-      message: "declared_default.choice_id must name a declared checkpoint choice"
-    });
-  }
-});
-var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
-  boundary_ref: Ref,
-  boundary_hash: Sha256,
-  auto_resolved: external_exports.literal(false).optional()
-}).strict().superRefine((request, ctx) => {
-  if (request.boundary_ref.kind !== "work_contract") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "kind"],
-      message: "checkpoint boundary refs must be work_contract refs"
-    });
-  }
-  if (request.boundary_ref.step_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary refs must include step_id"
-    });
-  }
-  if (request.boundary_ref.sha256 !== request.boundary_hash) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_hash"],
-      message: "checkpoint boundary_hash must match boundary_ref.sha256"
-    });
-  }
-});
-var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  options: external_exports.array(external_exports.string().min(1)).min(1),
-  request_path: RunRelativePath,
-  request_report_hash: Sha256,
-  boundary_ref: Ref,
-  boundary_hash: Sha256,
-  auto_resolved: external_exports.literal(false).optional()
-}).strict().superRefine((request, ctx) => {
-  if (request.boundary_ref.kind !== "work_contract") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "kind"],
-      message: "checkpoint boundary refs must be work_contract refs"
-    });
-  }
-  if (request.boundary_ref.step_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary refs must include step_id"
-    });
-  } else if (request.boundary_ref.step_id !== request.step_id) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
-    });
-  }
-  if (request.boundary_ref.sha256 !== request.boundary_hash) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_hash"],
-      message: "checkpoint boundary_hash must match boundary_ref.sha256"
-    });
-  }
-});
-var CheckpointBoundaryResolutionSource = external_exports.enum([
-  "operator",
-  "declared-default",
-  "policy"
-]);
-var CheckpointBoundaryResolutionV0 = external_exports.object({
-  selection: external_exports.string().min(1),
-  route_id: external_exports.string().min(1),
-  auto_resolved: external_exports.boolean(),
-  resolution_source: CheckpointBoundaryResolutionSource
-}).strict().superRefine((resolution, ctx) => {
-  if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["auto_resolved"],
-      message: "operator checkpoint resolutions cannot be auto-resolved"
-    });
-  }
-});
-var CheckpointResumeValidationV0 = external_exports.object({
-  request_path_matches_step: external_exports.literal(true),
-  request_hash_required: external_exports.literal(true),
-  choices_match_request: external_exports.literal(true),
-  selected_choice_allowed: external_exports.literal(true),
-  report_hash_matches_when_present: external_exports.literal(true),
-  boundary_hash_required: external_exports.literal(true),
-  guidance_decision_required_before_resolution: external_exports.literal(true)
-}).strict();
-var CheckpointBoundaryRejectedAuthority = external_exports.object({
-  path: external_exports.string().min(1),
-  field: external_exports.string().min(1),
-  reason: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryProjectionV0 = external_exports.object({
-  schema_version: external_exports.literal(0),
-  boundary: CheckpointBoundaryV0,
-  request_trace: CheckpointBoundaryRequestTraceLinkV0,
-  allowed_resolution_sources: external_exports.array(CheckpointBoundaryResolutionSource).min(1),
-  resume_validation: CheckpointResumeValidationV0,
-  rejected_old_authority: external_exports.array(CheckpointBoundaryRejectedAuthority)
-}).strict();
-
-// dist/shared/checkpoint-boundary.js
-var CheckpointBoundaryProjectionError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "CheckpointBoundaryProjectionError";
-  }
-};
-function stableJson2(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
-function sha2562(value) {
-  return createHash5("sha256").update(stableJson2(value)).digest("hex");
-}
-function rejectOldAuthority(path, field, reason) {
-  return { path, field, reason };
-}
-function routeForChoice2(step, choiceId) {
-  const directTarget = step.routes[choiceId];
-  if (directTarget !== void 0) {
-    return { id: choiceId, target: directTarget };
-  }
-  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`);
-}
-function consequenceForChoice(choice) {
-  return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
-}
-function dynamicRouteFamily(step) {
-  const selectTarget = step.routes.select;
-  if (selectTarget !== void 0) {
-    return { id: "select", target: selectTarget };
-  }
-  const passTarget = step.routes.pass;
-  if (passTarget !== void 0) {
-    return { id: "pass", target: passTarget };
-  }
-  throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
-}
-function staticChoices(step) {
-  const choices = step.policy.choices;
-  if (choices === void 0) {
-    throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
-  }
-  return choices.map((choice) => ({
-    id: choice.id,
-    ...choice.label === void 0 ? {} : { label: choice.label },
-    ...choice.description === void 0 ? {} : { description: choice.description },
-    route: routeForChoice2(step, choice.id),
-    consequence: consequenceForChoice(choice)
-  }));
-}
-function projectCheckpointBoundaryV0(input) {
-  const { step } = input;
-  const rejectedOldAuthority = [];
-  const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
-  if (step.policy.auto_resolution !== void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
-  }
-  const choices = step.policy.choices !== void 0 ? {
-    kind: "static",
-    items: staticChoices(step)
-  } : (() => {
-    const routeFamily = dynamicRouteFamily(step);
-    return {
-      kind: "dynamic",
-      source: step.policy.choices_from,
-      route_family: routeFamily,
-      consequence_template: `Select one dynamic checkpoint choice and take route '${routeFamily.id}' to '${routeFamily.target}'.`
-    };
-  })();
-  const declaredDefault = step.policy.safe_default_choice !== void 0 && choices.kind === "static" && declaredDefaultPolicyRefs.length > 0 ? {
-    choice_id: step.policy.safe_default_choice,
-    allowed_when: declaredDefaultPolicyRefs,
-    reason_code: "safe_default_choice"
-  } : void 0;
-  if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
-  }
-  const boundary = {
-    schema_version: 0,
-    step_id: step.id,
-    reason_code: input.reasonCode ?? "ambiguous_intent",
-    authority_required: declaredDefault === void 0 ? "operator" : "policy",
-    prompt: step.policy.prompt,
-    choices,
-    ...declaredDefault === void 0 ? {} : { declared_default: declaredDefault },
-    writes: step.writes,
-    check: step.check,
-    proof_refs: []
-  };
-  const boundaryHash = sha2562(boundary);
-  const boundaryRef = {
-    kind: "work_contract",
-    ref: `compiled-flow/steps/${step.id}/checkpoint-boundary.v0`,
-    sha256: boundaryHash,
-    flow_id: input.flowId,
-    step_id: step.id
-  };
-  return CheckpointBoundaryProjectionV0.parse({
-    schema_version: 0,
-    boundary,
-    request_trace: {
-      boundary_ref: boundaryRef,
-      boundary_hash: boundaryHash
-    },
-    allowed_resolution_sources: ["operator", "declared-default", "policy"],
-    resume_validation: {
-      request_path_matches_step: true,
-      request_hash_required: true,
-      choices_match_request: true,
-      selected_choice_allowed: true,
-      report_hash_matches_when_present: true,
-      boundary_hash_required: true,
-      guidance_decision_required_before_resolution: true
-    },
-    rejected_old_authority: rejectedOldAuthority
-  });
-}
-
-// dist/shared/policy-envelope.js
-import { createHash as createHash6 } from "node:crypto";
-var PolicyEnvelopeCompositionError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "PolicyEnvelopeCompositionError";
-  }
-};
-var RUNTIME_CONFIG_V1_POLICY_REF = {
-  kind: "policy",
-  ref: "policy.runtime.config_v1"
-};
-var RUNTIME_POLICY_V2_REF = {
-  kind: "policy",
-  ref: "policy.runtime.policy_v2"
-};
-var EFFORT_ORDER = [
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max"
-];
-function uniqueSorted(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-function unionInto(target, values) {
-  for (const value of values)
-    target.add(value);
-}
-function intersectConnectorAllow(current, next) {
-  if (next === void 0)
-    return current;
-  const nextSet = new Set(next);
-  if (current === void 0)
-    return nextSet;
-  return new Set([...current].filter((value) => nextSet.has(value)));
-}
-function minNumber(current, next) {
-  if (next === void 0)
-    return current;
-  return current === void 0 ? next : Math.min(current, next);
-}
-function minEffort(current, next) {
-  if (next === void 0)
-    return current;
-  if (current === void 0)
-    return next;
-  return EFFORT_ORDER.indexOf(next) < EFFORT_ORDER.indexOf(current) ? next : current;
-}
-function composeAutoApply(current, next) {
-  if (next === void 0)
-    return current;
-  if (next === false || current === false)
-    return false;
-  return true;
-}
-function composeRequireKnown(current, next) {
-  if (next === void 0)
-    return current;
-  return current === true || next === true;
-}
-function connectorRefFromDefault(value) {
-  if (value === "auto")
-    return "auto";
-  if (EnabledConnector.options.includes(value)) {
-    return { kind: "builtin", name: value };
-  }
-  return { kind: "named", name: value };
-}
-function connectorRefFromConfig(ref) {
-  return ref;
-}
-function rejectOldAuthority2(path, field, reason) {
-  return { path, field, reason };
-}
-function stableJson3(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
-function sha256Json(value) {
-  return createHash6("sha256").update(stableJson3(value)).digest("hex");
-}
-function policyLayerSourceForConfigLayer(layer) {
-  if (layer === "default")
-    return "built-in";
-  return layer;
-}
-function composePolicyHardConstraints(envelopes) {
-  let allow;
-  const deny = /* @__PURE__ */ new Set();
-  const denyForWrite = /* @__PURE__ */ new Set();
-  const denyProviders = /* @__PURE__ */ new Set();
-  const requireProviderForConnector = {};
-  let autoApply;
-  const checkpointGlobs = /* @__PURE__ */ new Set();
-  const deniedSkills = /* @__PURE__ */ new Set();
-  let requireKnown;
-  const independentReviewFor = /* @__PURE__ */ new Set();
-  let maxAttempts;
-  let maxWallClockMs;
-  let maxEffortCap;
-  let maxTournamentN;
-  for (const envelope of envelopes) {
-    const parsed = PolicyEnvelopeV2.parse(envelope);
-    const { rules, limits } = parsed.policy;
-    allow = intersectConnectorAllow(allow, rules.connectors.allow);
-    unionInto(deny, rules.connectors.deny);
-    unionInto(denyForWrite, rules.connectors.deny_for_write);
-    unionInto(denyProviders, rules.models.deny_providers);
-    for (const [connector, provider] of Object.entries(rules.models.require_provider_for_connector)) {
-      const previous = requireProviderForConnector[connector];
-      if (previous !== void 0 && previous !== provider) {
-        throw new PolicyEnvelopeCompositionError(`conflicting provider requirements for connector '${connector}': '${previous}' and '${provider}'`);
-      }
-      requireProviderForConnector[connector] = provider;
-    }
-    autoApply = composeAutoApply(autoApply, rules.writes.auto_apply);
-    unionInto(checkpointGlobs, rules.writes.require_checkpoint_globs);
-    unionInto(deniedSkills, rules.skills.deny);
-    requireKnown = composeRequireKnown(requireKnown, rules.skills.require_known);
-    unionInto(independentReviewFor, rules.proof.require_independent_review_for);
-    maxAttempts = minNumber(maxAttempts, limits.max_attempts_per_step);
-    maxWallClockMs = minNumber(maxWallClockMs, limits.max_wall_clock_ms);
-    maxEffortCap = minEffort(maxEffortCap, limits.max_effort);
-    maxTournamentN = minNumber(maxTournamentN, limits.max_tournament_n);
-  }
-  return ComposedPolicyHardConstraints.parse({
-    connectors: {
-      ...allow !== void 0 ? { allow: uniqueSorted(allow) } : {},
-      deny: uniqueSorted(deny),
-      deny_for_write: uniqueSorted(denyForWrite)
-    },
-    models: {
-      deny_providers: uniqueSorted(denyProviders),
-      require_provider_for_connector: Object.fromEntries(Object.entries(requireProviderForConnector).sort(([a], [b]) => a.localeCompare(b)))
-    },
-    writes: {
-      ...autoApply !== void 0 ? { auto_apply: autoApply } : {},
-      require_checkpoint_globs: uniqueSorted(checkpointGlobs)
-    },
-    skills: {
-      deny: uniqueSorted(deniedSkills),
-      ...requireKnown !== void 0 ? { require_known: requireKnown } : {}
-    },
-    proof: {
-      require_independent_review_for: uniqueSorted(independentReviewFor)
-    },
-    limits: {
-      ...maxAttempts !== void 0 ? { max_attempts_per_step: maxAttempts } : {},
-      ...maxWallClockMs !== void 0 ? { max_wall_clock_ms: maxWallClockMs } : {},
-      ...maxEffortCap !== void 0 ? { max_effort: maxEffortCap } : {},
-      ...maxTournamentN !== void 0 ? { max_tournament_n: maxTournamentN } : {}
-    }
-  });
-}
-function projectConfigV1ToPolicyEnvelopeV2(input) {
-  const { config: config2, source } = input;
-  const rejectedOldAuthority = [];
-  const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
-    rejectedOldAuthority.push(rejectOldAuthority2(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
-    return {
-      flow_id: flowId,
-      prefer_connector: connectorRefFromConfig(ref)
-    };
-  });
-  const flowSelectionHints = [];
-  const flowSlotBindings = [];
-  const variantModelHints = [];
-  for (const [flowId, override] of Object.entries(config2.circuits)) {
-    if (override.selection !== void 0) {
-      flowSelectionHints.push({
-        flow_id: flowId,
-        selection: override.selection
-      });
-    }
-    if (Object.keys(override.skill_bindings).length > 0) {
-      flowSlotBindings.push({
-        flow_id: flowId,
-        bindings: override.skill_bindings
-      });
-    }
-    if (override.variant_models !== void 0) {
-      rejectedOldAuthority.push(rejectOldAuthority2(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
-      for (const variant of override.variant_models) {
-        variantModelHints.push({
-          flow_id: flowId,
-          id: variant.id,
-          label: variant.label,
-          ...variant.connector !== void 0 ? { connector: connectorRefFromConfig(variant.connector) } : {},
-          selection: variant.selection
-        });
-      }
-    }
-  }
-  return PolicyEnvelopeProjectionV0.parse({
-    schema_version: 0,
-    source,
-    policy_envelope: {
-      schema_version: 2,
-      policy: {
-        rules: {
-          connectors: {
-            registry: config2.relay.connectors
-          }
-        },
-        preferences: {
-          relay: {
-            roles: Object.fromEntries(Object.entries(config2.relay.roles).filter((entry) => entry[1] !== void 0).map(([role, ref]) => [role, { prefer_connector: connectorRefFromConfig(ref) }])),
-            flow_connector_hints: flowConnectorHints
-          },
-          selection: {
-            flow_hints: flowSelectionHints
-          },
-          skills: {
-            slot_bindings: config2.skills.bindings,
-            flow_slot_bindings: flowSlotBindings
-          },
-          prototype: {
-            variant_model_hints: variantModelHints
-          }
-        },
-        defaults: {
-          connector: connectorRefFromDefault(config2.relay.default),
-          ...config2.defaults.selection !== void 0 ? { selection: config2.defaults.selection } : {}
-        }
-      }
-    },
-    rejected_old_authority: rejectedOldAuthority
-  });
-}
-function policyRefsForConfigLayers(layers) {
-  const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
-  for (const [index, layer] of (layers ?? []).entries()) {
-    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
-    let sha2564;
-    try {
-      const projection = projectConfigV1ToPolicyEnvelopeV2({
-        config: layer.config,
-        source: policyLayerSourceForConfigLayer(layer.layer)
-      });
-      sha2564 = sha256Json(projection.policy_envelope);
-    } catch {
-      sha2564 = sha256Json({ schema_version: 1, config: layer.config });
-    }
-    refs.push({
-      kind: "policy",
-      ref,
-      sha256: sha2564
-    });
-  }
-  return refs;
-}
-function policyRefsForPolicyLayers(layers) {
-  const refs = [];
-  for (const [index, layer] of (layers ?? []).entries()) {
-    refs.push({
-      kind: "policy",
-      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
-      sha256: sha256Json(layer.envelope)
-    });
-  }
-  return refs;
-}
-function policyRefsForRuntimeInputs(input) {
-  const refs = [];
-  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
-    refs.push(...policyRefsForConfigLayers(input.configLayers));
-  }
-  if ((input.policyLayers?.length ?? 0) > 0) {
-    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
-  }
-  return refs;
 }
 
 // dist/shared/runtime-source.js
@@ -45926,15 +45411,7 @@ async function executeCheckpointResult(step, context) {
     if (checkpointRequestSha256 === void 0) {
       checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
     }
-    await context.files.writeJson(response, {
-      schema_version: 1,
-      step_id: step.id,
-      selection: effectiveResolution.selection,
-      route_id: routeId,
-      resolution_source: effectiveResolution.resolutionSource,
-      ...effectiveResolution.autoResolution === void 0 ? {} : { auto_resolution: effectiveResolution.autoResolution }
-    });
-    await appendCheckpointResolutionGuidance(context, {
+    const guidance = await appendCheckpointResolutionGuidance(context, {
       stepId: step.id,
       attempt,
       choiceId: effectiveResolution.selection,
@@ -45945,6 +45422,27 @@ async function executeCheckpointResult(step, context) {
       requestReportHash: checkpointRequestSha256,
       ...effectiveResolution.guidanceEvidenceRefs === void 0 ? {} : { evidenceRefs: effectiveResolution.guidanceEvidenceRefs },
       ...effectiveResolution.rejectedOptions === void 0 ? {} : { rejectedOptions: effectiveResolution.rejectedOptions }
+    });
+    if (guidance === void 0) {
+      const reason = `checkpoint step '${step.id}' requires checkpoint_resolution guidance before crossing the checkpoint boundary`;
+      await context.trace.append({
+        run_id: context.runId,
+        kind: "check.evaluated",
+        step_id: step.id,
+        attempt,
+        check_kind: "checkpoint_selection",
+        outcome: "fail",
+        reason
+      });
+      return stepExecutionFailed(reason);
+    }
+    await context.files.writeJson(response, {
+      schema_version: 1,
+      step_id: step.id,
+      selection: effectiveResolution.selection,
+      route_id: routeId,
+      resolution_source: effectiveResolution.resolutionSource,
+      ...effectiveResolution.autoResolution === void 0 ? {} : { auto_resolution: effectiveResolution.autoResolution }
     });
     await context.trace.append({
       run_id: context.runId,
@@ -46179,7 +45677,10 @@ async function executeComposeWithPorts(step, context) {
         if (!Object.hasOwn(step.routes, route)) {
           throw new Error(`compose step '${step.id}' route_from_report selected undeclared route '${route}'`);
         }
-        return stepExecutionOutcome({ route, details: { writer: step.writer } });
+        return stepExecutionOutcome({
+          route,
+          details: { writer: step.writer, route_source: "report" }
+        });
       }
       return stepExecutionOutcome({ route: "pass", details: { writer: step.writer } });
     }
@@ -46805,26 +46306,24 @@ function bindingMatches(input) {
 function fallbackRouteByRecoveryOrder(step) {
   return FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => Object.hasOwn(step.routes, route));
 }
-function recoveryRouteForFailure(input) {
+function recoveryBindingForFailure(input) {
   const preferredRouteDeclared = input.preferredRoute !== void 0 && Object.hasOwn(input.step.routes, input.preferredRoute);
+  if (input.workContractRef === void 0)
+    return void 0;
+  const matchingBindings = input.recoveryRouteBindings?.filter((binding) => bindingMatches({ step: input.step, binding, cause: input.cause })) ?? [];
+  if (preferredRouteDeclared && matchingBindings.some((binding) => binding.route_id === input.preferredRoute)) {
+    return matchingBindings.find((binding) => binding.route_id === input.preferredRoute);
+  }
+  return matchingBindings[0];
+}
+function recoveryRouteForFailure(input) {
   if (input.workContractRef === void 0) {
+    const preferredRouteDeclared = input.preferredRoute !== void 0 && Object.hasOwn(input.step.routes, input.preferredRoute);
     if (preferredRouteDeclared)
       return input.preferredRoute;
     return fallbackRouteByRecoveryOrder(input.step);
   }
-  const matchingBindings = input.recoveryRouteBindings?.filter((binding) => bindingMatches({ step: input.step, binding, cause: input.cause })) ?? [];
-  if (preferredRouteDeclared && matchingBindings.some((binding) => binding.route_id === input.preferredRoute)) {
-    return input.preferredRoute;
-  }
-  const priorityMatch = FALLBACK_RECOVERY_ROUTE_ORDER.find((route) => matchingBindings.some((binding) => binding.route_id === route));
-  if (priorityMatch !== void 0)
-    return priorityMatch;
-  const firstMatchingBinding = matchingBindings[0];
-  if (firstMatchingBinding !== void 0)
-    return firstMatchingBinding.route_id;
-  if (preferredRouteDeclared)
-    return input.preferredRoute;
-  return fallbackRouteByRecoveryOrder(input.step);
+  return recoveryBindingForFailure(input)?.route_id;
 }
 
 // dist/shared/selection-resolver.js
@@ -47481,7 +46980,12 @@ function declaredRecoveryForAcceptanceProof(input) {
   if (input.status === "proven")
     return void 0;
   const failureCause = input.status === "contradicted" ? "failed_acceptance_criteria" : input.status === "weak" ? "weak_proof" : "unproved_claim";
-  const binding = input.context.recoveryRouteBindings?.find((candidate) => candidate.step_id === input.step.id && candidate.allowed_failure_causes.includes(failureCause));
+  const binding = recoveryBindingForFailure({
+    step: input.step,
+    workContractRef: input.context.workContractRef,
+    recoveryRouteBindings: input.context.recoveryRouteBindings,
+    cause: failureCause
+  });
   if (binding === void 0)
     return void 0;
   return {
@@ -47489,6 +46993,9 @@ function declaredRecoveryForAcceptanceProof(input) {
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status)
   };
+}
+function stepCanCloseRun(step) {
+  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
 }
 function proofAssessmentReportRef(input) {
   return {
@@ -47528,7 +47035,7 @@ async function writeAcceptanceProofAssessment(input) {
     attempt: input.attempt,
     requiredClaimKinds: ["verification_passed"],
     requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed,
+    closeRequiresProven: closeAllowed || stepCanCloseRun(input.step),
     inputRefs: evidence.flatMap((item) => item.input_refs)
   });
   if (proofPolicy === void 0)
@@ -48010,7 +47517,13 @@ async function executeProductionRelay(step, context) {
       if (!Object.hasOwn(step.routes, route)) {
         throw new Error(`relay step '${step.id}' route_from_report selected undeclared route '${route}'`);
       }
-      return { route, details: { verdict: evaluation.verdict } };
+      return {
+        route,
+        details: {
+          verdict: evaluation.verdict,
+          route_source: "report"
+        }
+      };
     }
     return { route: "pass", details: { verdict: evaluation.verdict } };
   }
@@ -49077,6 +48590,9 @@ function verificationProofMissing(input) {
     return ["no runtime verification commands ran"];
   return ["verification report did not prove required commands passed"];
 }
+function stepCanCloseRun2(step) {
+  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
+}
 async function writeVerificationProofAssessment(input) {
   if (input.context.workContractRef === void 0)
     return;
@@ -49111,7 +48627,7 @@ async function writeVerificationProofAssessment(input) {
     attempt: input.attempt,
     requiredClaimKinds: ["verification_passed"],
     requiredEvidenceKinds: uniqueValues2(evidence.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed,
+    closeRequiresProven: closeAllowed || stepCanCloseRun2(input.step),
     inputRefs: evidence.flatMap((item) => [item.ref, ...item.input_refs])
   });
   if (proofPolicy === void 0)
@@ -50796,6 +50312,51 @@ function latestRecoveryFailureEvidence(input) {
   }
   return void 0;
 }
+function latestStepReportOrRelayRef(input) {
+  for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
+      continue;
+    if (entry.kind !== "step.report_written" && entry.kind !== "relay.result")
+      continue;
+    return traceRefForEntry({
+      context: input.context,
+      stepId: input.stepId,
+      attempt: input.attempt,
+      sequence: entry.sequence
+    });
+  }
+  return void 0;
+}
+function reportSelectedCheckpointBoundaryEvidence(input) {
+  if (!routeSelectedFromReport(input.details))
+    return void 0;
+  if (input.binding?.kind !== "checkpoint_authority")
+    return void 0;
+  if (!input.binding.allowed_failure_causes.includes("checkpoint_boundary"))
+    return void 0;
+  const ref = latestStepReportOrRelayRef(input);
+  return ref === void 0 ? void 0 : { ref, cause: "checkpoint_boundary" };
+}
+function activeRecoveryCorridorCause(input) {
+  if (input.binding?.kind === "checkpoint_authority" && input.binding.allowed_failure_causes.includes("checkpoint_boundary")) {
+    return "checkpoint_boundary";
+  }
+  return input.activeRecovery.failure?.cause ?? "unknown_failure";
+}
+function latestActiveRecoveryCorridorEvidence(input) {
+  if (input.activeRecovery?.failure === void 0)
+    return void 0;
+  const ref = latestStepReportOrRelayRef(input);
+  if (ref === void 0)
+    return void 0;
+  return {
+    ref,
+    cause: activeRecoveryCorridorCause({
+      activeRecovery: input.activeRecovery,
+      binding: input.binding
+    })
+  };
+}
 function recoveryCauseAllowed(binding, cause) {
   return binding.allowed_failure_causes.includes(cause);
 }
@@ -50895,6 +50456,9 @@ function resolveManifestHash(flow, options) {
 }
 function recordValue(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function routeSelectedFromReport(details) {
+  return details.route_source === "report";
 }
 function traceScope(entry) {
   return recordValue(entry.scope);
@@ -51138,12 +50702,36 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       step,
       route
     });
-    const recoveryFailure = latestRecoveryFailureEvidence({
+    const directRecoveryFailure = latestRecoveryFailureEvidence({
       context,
       stepId: step.id,
       attempt,
       details
+    }) ?? reportSelectedCheckpointBoundaryEvidence({
+      context,
+      stepId: step.id,
+      attempt,
+      details,
+      binding: recoveryBinding
     });
+    const recoveryFailure = directRecoveryFailure ?? (routeHasRecoveryMechanics ? latestActiveRecoveryCorridorEvidence({
+      context,
+      stepId: step.id,
+      attempt,
+      binding: recoveryBinding,
+      activeRecovery
+    }) : void 0);
+    if (context.workContractRef !== void 0 && step.kind !== "checkpoint" && routeHasRecoveryMechanics && recoveryFailure === void 0) {
+      const reason = `step '${step.id}' selected recovery route '${route}' without failure evidence`;
+      await trace.append({
+        run_id: runId,
+        kind: "step.aborted",
+        step_id: step.id,
+        attempt,
+        reason
+      });
+      return await closeRun(context, "aborted", void 0, reason);
+    }
     if (context.workContractRef !== void 0 && recoveryFailure !== void 0) {
       if (recoveryBinding === void 0) {
         const reason = missingRecoveryBindingReason({
@@ -51219,10 +50807,12 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
         originStepId: step.id,
         route,
         reason: recoveryReason,
+        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
         ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
       } : {
         originStepId: step.id,
         route,
+        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
         ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
       };
     }
@@ -51396,6 +50986,9 @@ function sameStringArray(left, right) {
 function sameWorkContractIdentity(left, right) {
   return left.kind === "work_contract" && right.kind === "work_contract" && left.sha256 !== void 0 && left.sha256 === right.sha256 && left.flow_id !== void 0 && left.flow_id === right.flow_id;
 }
+function sameCheckpointBoundaryIdentity(left, right) {
+  return left.kind === "work_contract" && right.kind === "work_contract" && left.ref === right.ref && left.sha256 !== void 0 && left.sha256 === right.sha256 && left.flow_id !== void 0 && left.flow_id === right.flow_id && left.step_id !== void 0 && left.step_id === right.step_id;
+}
 function isRuntimeBootstrap(entry) {
   return entry?.kind === "run.bootstrapped" && traceString(entry, "manifest_hash") !== void 0;
 }
@@ -51474,6 +51067,24 @@ function readCheckpointRequestContextResult(input) {
   if (!isRecord5(context)) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request for '${input.step.id}' has no execution context`);
   }
+  let checkpointBoundaryRef;
+  try {
+    checkpointBoundaryRef = Ref.parse(context.checkpoint_boundary_ref);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  let checkpointBoundaryHash;
+  try {
+    checkpointBoundaryHash = Sha256.parse(context.checkpoint_boundary_hash);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  if (checkpointBoundaryRef.kind !== "work_contract" || checkpointBoundaryRef.step_id !== input.step.id) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint boundary ref for '${input.step.id}' is invalid`);
+  }
+  if (checkpointBoundaryRef.sha256 !== checkpointBoundaryHash) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint boundary hash for '${input.step.id}' does not match its ref`);
+  }
   const projectRoot = context.project_root;
   if (projectRoot !== void 0 && typeof projectRoot !== "string") {
     return checkpointResumeRejected("runtime checkpoint resume rejected: project_root is invalid");
@@ -51514,10 +51125,61 @@ function readCheckpointRequestContextResult(input) {
     ...axes === void 0 ? {} : { axes },
     ...projectRoot === void 0 ? {} : { projectRoot },
     ...workContractRef === void 0 ? {} : { workContractRef },
+    checkpointBoundaryRef,
+    checkpointBoundaryHash,
     selectionConfigLayers,
     policyLayers,
     ...checkpointReportSha256 === void 0 ? {} : { checkpointReportSha256 }
   });
+}
+function checkpointRequestTraceBoundaryResult(input) {
+  let boundaryRef;
+  try {
+    boundaryRef = Ref.parse(input.requested.boundary_ref);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  let boundaryHash;
+  try {
+    boundaryHash = Sha256.parse(input.requested.boundary_hash);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  if (boundaryRef.kind !== "work_contract" || boundaryRef.step_id !== input.stepId) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint request trace boundary for '${input.stepId}' is invalid`);
+  }
+  if (boundaryRef.sha256 !== boundaryHash) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint request trace boundary hash for '${input.stepId}' does not match its ref`);
+  }
+  return checkpointResumeValid({ boundaryRef, boundaryHash });
+}
+function validateCheckpointBoundaryResult(input) {
+  if (input.requestContext.checkpointBoundaryHash !== input.traceBoundaryHash || !sameCheckpointBoundaryIdentity(input.requestContext.checkpointBoundaryRef, input.traceBoundaryRef)) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint boundary for '${input.compiledStep.id}' differs between request and trace`);
+  }
+  let schemaStep;
+  try {
+    schemaStep = CheckpointStep.parse(input.compiledStep);
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  let projected;
+  try {
+    projected = projectCheckpointBoundaryV0({
+      step: schemaStep,
+      flowId: CompiledFlowId.parse(input.flow.id),
+      declaredDefaultPolicyRefs: policyRefsForRuntimeInputs({
+        configLayers: input.requestContext.selectionConfigLayers,
+        policyLayers: input.requestContext.policyLayers
+      })
+    });
+  } catch (error51) {
+    return checkpointResumeRejectedFrom(error51);
+  }
+  if (input.requestContext.checkpointBoundaryHash !== projected.request_trace.boundary_hash || !sameCheckpointBoundaryIdentity(input.requestContext.checkpointBoundaryRef, projected.request_trace.boundary_ref)) {
+    return checkpointResumeRejected(`runtime checkpoint resume rejected: checkpoint boundary does not match saved flow for '${input.compiledStep.id}'`);
+  }
+  return checkpointResumeValid(void 0);
 }
 function validateCheckpointReportResult(input) {
   const report = input.compiledStep.writes.report;
@@ -51646,6 +51308,19 @@ async function resumeCompiledFlowResult(options) {
   if (isCheckpointResumeRejectedResult(requestContextResult))
     return requestContextResult;
   const requestContext = requestContextResult.value;
+  const traceBoundaryResult = checkpointRequestTraceBoundaryResult({ requested, stepId });
+  if (isCheckpointResumeRejectedResult(traceBoundaryResult))
+    return traceBoundaryResult;
+  const traceBoundary = traceBoundaryResult.value;
+  const boundaryValidation = validateCheckpointBoundaryResult({
+    flow,
+    compiledStep,
+    requestContext,
+    traceBoundaryRef: traceBoundary.boundaryRef,
+    traceBoundaryHash: traceBoundary.boundaryHash
+  });
+  if (isCheckpointResumeRejectedResult(boundaryValidation))
+    return boundaryValidation;
   const projectedWorkContractRef = runtimeWorkContractRefForProjectedRef(projectWorkContractProjectionV0({
     flow
   }).contract_ref);

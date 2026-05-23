@@ -575,19 +575,19 @@ These tests should be written before or with runtime implementation.
 
 | Death test | Likely test file |
 | --- | --- |
-| SafeApply rejects a base ref mismatch before patch apply. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects a tree hash mismatch before patch apply. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects dirty parent checkout unless policy allows it and baseline snapshot evidence exists. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects hidden index flags. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects patch hash mismatch. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects patch conflict without partial parent mutation. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects worker-reported touched files that differ from runtime touched files. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects protected-file changes without checkpoint or policy authority. | `tests/runtime/safe-apply.test.ts` |
+| SafeApply rejects a base ref mismatch before patch apply. | future SafeApply runtime test |
+| SafeApply rejects a tree hash mismatch before patch apply. | future SafeApply runtime test |
+| SafeApply rejects dirty parent checkout unless policy allows it and baseline snapshot evidence exists. | future SafeApply runtime test |
+| SafeApply rejects hidden index flags. | future SafeApply runtime test |
+| SafeApply rejects patch hash mismatch. | future SafeApply runtime test |
+| SafeApply rejects patch conflict without partial parent mutation. | future SafeApply runtime test |
+| SafeApply rejects worker-reported touched files that differ from runtime touched files. | future SafeApply runtime test |
+| SafeApply rejects protected-file changes without checkpoint or policy authority. | future SafeApply runtime test |
 | SafeApply rejects generated-surface drift without generated-surface proof. | `tests/runtime/safe-apply-generated-surfaces.test.ts` |
-| SafeApply rejects weak, contradicted, or unproved required claims. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply rejects final verification failure. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply emits a failure result with `partial_mutation: "none"` for every pre-apply failure. | `tests/runtime/safe-apply.test.ts` |
-| SafeApply result with `partial_mutation: "possible"` or `"confirmed"` cannot close the run as complete. | `tests/runtime/safe-apply.test.ts` |
+| SafeApply rejects weak, contradicted, or unproved required claims. | future SafeApply runtime test |
+| SafeApply rejects final verification failure. | future SafeApply runtime test |
+| SafeApply emits a failure result with `partial_mutation: "none"` for every pre-apply failure. | future SafeApply runtime test |
+| SafeApply result with `partial_mutation: "possible"` or `"confirmed"` cannot close the run as complete. | future SafeApply runtime test |
 
 ### Trace And Guidance Tests
 
@@ -606,7 +606,7 @@ These tests should be written before or with runtime implementation.
 | Pursue rejects parallel code-changing branches unless SafeApply is enabled. | `tests/runner/pursue-runtime.test.ts` |
 | Pursue keeps serial write behavior before SafeApply. | `tests/runner/pursue-runtime-wiring.test.ts` |
 | Writable relay fanout remains serialized without branch-local write roots. | `tests/runtime/fanout.test.ts` |
-| Disjoint file paths do not bypass final composed verification. | `tests/runtime/safe-apply.test.ts` |
+| Disjoint file paths do not bypass final composed verification. | future SafeApply runtime test |
 | Rejected ChangePacket does not count as a completed pursuit. | `tests/runner/pursue-runtime.test.ts` |
 | Parallel write branch with missing ChangePacket is rejected. | `tests/runner/pursue-runtime.test.ts` |
 

@@ -90,7 +90,29 @@ describe('recovery route selection', () => {
     ).toBe('stop');
   });
 
-  it('keeps a declared preferred route so the graph runner can reject bad bindings', () => {
+  it('uses WorkContract binding order instead of legacy route-label priority', () => {
+    const step = {
+      id: 'act-step',
+      routes: {
+        retry: { kind: 'step' as const, stepId: 'act-step' },
+        revise: { kind: 'step' as const, stepId: 'revise-step' },
+      },
+    };
+
+    expect(
+      recoveryRouteForFailure({
+        step,
+        workContractRef,
+        recoveryRouteBindings: [
+          binding('revise', 'revise-step', ['failed_check']),
+          binding('retry', 'act-step', ['failed_check']),
+        ],
+        cause: 'failed_check',
+      }),
+    ).toBe('revise');
+  });
+
+  it('does not fall back to a preferred route when WorkContract bindings are missing', () => {
     const step = {
       id: 'act-step',
       routes: {
@@ -107,6 +129,6 @@ describe('recovery route selection', () => {
         cause: 'relay_connector_failed',
         preferredRoute: 'connector-failed',
       }),
-    ).toBe('connector-failed');
+    ).toBeUndefined();
   });
 });

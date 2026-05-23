@@ -40,10 +40,8 @@ generated host surface framing tests. The SafeApply foundation also has a
 runtime touched-file adapter that projects before/after git-state snapshots
 into the runtime-observed files a ChangePacket must use, plus relay write-mode
 classification that marks current write-capable built-ins as
-`pre_safe_apply_trusted_write`. SafeApply now has a reject-only helper that
-validates packets and records why apply was refused without mutating the parent
-checkout, plus a guarded patch-apply helper that checks patch hashes, tests the
-patch in a temporary apply root, and only then applies to the parent checkout.
+`pre_safe_apply_trusted_write`. SafeApply remains schema/trace boundary work for
+now; runtime reject/apply helpers are future implementation slices.
 RunTrace sequence validation now blocks clean complete closes when a proof
 policy requires proven claims but no passing ProofAssessment is present, and
 when SafeApply was selected but no passing final-verified SafeApply result was

@@ -177,29 +177,30 @@ export const CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   options: z.array(z.string()).min(1),
   request_path: z.string().min(1),
   request_report_hash: ContentHash,
-  boundary_ref: CheckpointBoundaryRef.optional(),
-  boundary_hash: ContentHash.optional(),
+  boundary_ref: CheckpointBoundaryRef,
+  boundary_hash: ContentHash,
   auto_resolved: z.literal(false).optional(),
 })
   .strict()
   .superRefine((entry, ctx) => {
-    if ((entry.boundary_ref === undefined) !== (entry.boundary_hash === undefined)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['boundary_ref'],
-        message: 'checkpoint boundary_ref and boundary_hash must be recorded together',
-      });
-      return;
-    }
-    if (
-      entry.boundary_ref !== undefined &&
-      entry.boundary_hash !== undefined &&
-      entry.boundary_ref.sha256 !== entry.boundary_hash
-    ) {
+    if (entry.boundary_ref.sha256 !== entry.boundary_hash) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['boundary_hash'],
         message: 'checkpoint boundary_hash must match boundary_ref.sha256',
+      });
+    }
+    if (entry.boundary_ref.step_id === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['boundary_ref', 'step_id'],
+        message: 'checkpoint boundary_ref.step_id is required',
+      });
+    } else if (entry.boundary_ref.step_id !== entry.step_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['boundary_ref', 'step_id'],
+        message: 'checkpoint boundary_ref.step_id must match step_id',
       });
     }
   });

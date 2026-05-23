@@ -333,7 +333,7 @@ For every flow, the emitter creates generated flow package JSON:
 
 The `generated/flows/<id>/*.json` outputs include compiled flow manifests and
 their matching WorkContract projection files. For a public flow, the emitter
-also mirrors those generated package files into host packages:
+also mirrors compiled flow manifests into host packages:
 
 - `plugins/claude/skills/<id>/*.json`
 - `plugins/codex/flows/<id>/*.json`

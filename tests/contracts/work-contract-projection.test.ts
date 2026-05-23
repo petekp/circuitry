@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { flowDefinitions, flowPackages } from '../../src/flows/catalog.js';
@@ -368,9 +368,6 @@ describe('WorkContractProjectionV0', () => {
   it('emits a drift-checked WorkContract projection beside every generated compiled flow', () => {
     const generated = collectGeneratedCompiledFlowFiles();
     expect(generated.length).toBeGreaterThan(0);
-    const visibilityById = new Map(
-      flowPackages.map((pkg) => [pkg.id, pkg.visibility ?? 'public'] as const),
-    );
 
     for (const compiledRel of generated) {
       const compiledFlow = CompiledFlow.parse(
@@ -388,15 +385,6 @@ describe('WorkContractProjectionV0', () => {
       );
       expect(diskProjection.contract_ref.ref).toBe(contractRel);
       expect(diskProjection.work_contract.flow.id).toBe(compiledFlow.id);
-
-      if (visibilityById.get(compiledFlow.id) === 'public') {
-        const contractBytes = readFileSync(contractAbs, 'utf8');
-        const contractName = basename(contractRel);
-        const claudeRel = `plugins/claude/skills/${compiledFlow.id}/${contractName}`;
-        const codexRel = `plugins/codex/flows/${compiledFlow.id}/${contractName}`;
-        expect(readFileSync(resolve(REPO_ROOT, claudeRel), 'utf8')).toBe(contractBytes);
-        expect(readFileSync(resolve(REPO_ROOT, codexRel), 'utf8')).toBe(contractBytes);
-      }
     }
   });
 });

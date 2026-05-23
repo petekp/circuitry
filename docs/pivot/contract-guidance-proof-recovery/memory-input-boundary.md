@@ -375,7 +375,7 @@ First cutover scope:
 | Memory suggesting checkpoint auto-resolution cannot cross a checkpoint. | `tests/runtime/checkpoint-boundary.test.ts` |
 | Memory suggesting stale verification cannot close a write-capable run as complete. | `tests/runtime/proof-closure.test.ts` |
 | Memory suggesting retry cannot exceed WorkContract attempt budget. | `tests/runtime/recovery-route-kind.test.ts` |
-| Memory suggesting SafeApply accept cannot apply a base-mismatched packet. | `tests/runtime/safe-apply.test.ts` |
+| Memory suggesting SafeApply accept cannot apply a base-mismatched packet. | future SafeApply runtime test |
 | Memory suggesting generated-surface safety cannot replace drift-check evidence. | `tests/runtime/safe-apply-generated-surfaces.test.ts` |
 
 ### Trace Death Tests

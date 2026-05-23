@@ -38,7 +38,7 @@ import {
 import type { StepOutcome } from '../domain/step.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
 import { appendProofPolicyGuidance, appendRelayExecutionGuidance } from '../run/guidance.js';
-import { recoveryRouteForFailure } from '../run/recovery-selection.js';
+import { recoveryBindingForFailure, recoveryRouteForFailure } from '../run/recovery-selection.js';
 import { planRelayGuidanceDecision } from '../run/relay-guidance.js';
 import type { RunContext } from '../run/run-context.js';
 import {
@@ -159,17 +159,24 @@ function declaredRecoveryForAcceptanceProof(input: {
       : input.status === 'weak'
         ? 'weak_proof'
         : 'unproved_claim';
-  const binding = input.context.recoveryRouteBindings?.find(
-    (candidate) =>
-      candidate.step_id === input.step.id &&
-      candidate.allowed_failure_causes.includes(failureCause),
-  );
+  const binding = recoveryBindingForFailure({
+    step: input.step,
+    workContractRef: input.context.workContractRef,
+    recoveryRouteBindings: input.context.recoveryRouteBindings,
+    cause: failureCause,
+  });
   if (binding === undefined) return undefined;
   return {
     route_id: binding.route_id,
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status),
   };
+}
+
+function stepCanCloseRun(step: RelayStep): boolean {
+  return Object.values(step.routes).some(
+    (target) => target.kind === 'terminal' && target.target === '@complete',
+  );
 }
 
 function proofAssessmentReportRef(input: {
@@ -221,7 +228,7 @@ async function writeAcceptanceProofAssessment(input: {
     attempt: input.attempt,
     requiredClaimKinds: ['verification_passed'],
     requiredEvidenceKinds: uniqueValues(evidence.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed,
+    closeRequiresProven: closeAllowed || stepCanCloseRun(input.step),
     inputRefs: evidence.flatMap((item) => item.input_refs),
   });
   if (proofPolicy === undefined) return;
@@ -859,7 +866,13 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
           `relay step '${step.id}' route_from_report selected undeclared route '${route}'`,
         );
       }
-      return { route, details: { verdict: evaluation.verdict } };
+      return {
+        route,
+        details: {
+          verdict: evaluation.verdict,
+          route_source: 'report',
+        },
+      };
     }
     return { route: 'pass', details: { verdict: evaluation.verdict } };
   }
