@@ -137,8 +137,8 @@ and `RunProjection.superRefine`) and tested in
   records the typed recovery kind, failure cause, failure ref, and WorkContract
   binding ref. The failure ref must appear in the decision's `input_refs` and
   `evidence_refs`; trace failure refs must point to an earlier trace entry.
-  This validates recorded recovery decisions without cutting the graph runner
-  over from legacy recovery labels yet.
+  This validates recorded recovery decisions without letting graph labels act
+  as recovery authority.
 
   A `safe_apply.result` entry requires a prior matching `guidance.decision`
   with `subject: 'safe_apply'`. The result must reference that decision id,

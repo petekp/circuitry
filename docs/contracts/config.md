@@ -138,7 +138,7 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
 
 - **CONFIG-I6 — `Config.schema_version` is `z.literal(1)`; the parser
   refuses any other version at v0.1.** The schema version is a
-  forward-compatibility hook reserved for future breaking changes to
+  versioning hook reserved for future breaking changes to
   the `Config` shape. At v0.1, only version `1` is accepted. An
   operator config file declaring `schema_version: 2` is rejected at
   parse time with a clear error; attempting to parse it as v1 would

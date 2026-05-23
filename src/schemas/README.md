@@ -12,7 +12,7 @@ schemas first and TypeScript types second.
 | `run.ts`, `run-status.ts`, `snapshot.ts`, `trace-entry.ts`, `operator-summary.ts`, `result.ts` | Run-folder state, trace entries, snapshots, summaries, and final result shapes. |
 | `config.ts`, `selection-policy.ts`, `connector.ts`, `skill.ts`, `axes.ts`, `depth.ts`, `rigor.ts`, `role.ts` | Config, selection, connector, skill, depth, and role contracts. |
 | `host.ts`, `progress-event.ts`, `runtime-source.ts`, `manifest.ts` | Host progress, runtime source, and plugin manifest-facing shapes. |
-| `ids.ts`, `scalars.ts`, `json.ts`, `change-kind.ts`, `rubric.ts`, `verification.ts`, `continuity.ts` | Shared scalar, JSON, verification, continuity, and older serialized compatibility shapes. |
+| `ids.ts`, `scalars.ts`, `json.ts`, `change-kind.ts`, `rubric.ts`, `verification.ts`, `continuity.ts` | Shared scalar, JSON, verification, continuity, and persisted serialized shapes. |
 
 ## Rules Of Thumb
 
@@ -21,5 +21,5 @@ schemas first and TypeScript types second.
 - Product vocabulary belongs in [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md).
 - Generated surfaces and release checks often read these schemas indirectly, so
   schema changes usually need contract tests plus generated-surface checks.
-- Keep deprecated serialized names where existing data needs them, but avoid
-  teaching those names in product prose.
+- Keep serialized names exact where current schemas require them, but avoid
+  teaching schema internals in product prose.

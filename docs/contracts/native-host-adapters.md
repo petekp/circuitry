@@ -1,6 +1,6 @@
 ---
 contract: native-host-adapters
-status: retired-draft
+status: non-shipping
 version: 0.1
 last_updated: 2026-05-19
 depends_on: [host-adapter, host-capabilities, host-rendering]
@@ -8,13 +8,11 @@ depends_on: [host-adapter, host-capabilities, host-rendering]
 
 # Native Host Adapters
 
-This is a retired draft. Native Codex App Server and Claude Agent SDK adapters
-are not current roadmap items, and release truth must not list them as planned
-capabilities.
+Native Codex App Server and Claude Agent SDK adapters are not current product
+surfaces, and release truth must not list them as capabilities.
 
-Circuit emits one host-neutral run stream. If a future product decision reopens
-native adapters, they must map that stream to host affordances without changing
-flow behavior.
+Circuit emits one host-neutral run stream. Any native adapter would map that
+stream to host affordances without changing flow behavior.
 
 ## Shared Events
 
@@ -25,9 +23,9 @@ flow behavior.
 Adapters may choose richer presentation, but they must preserve Circuit's
 wording and keep host/orchestrator separate from worker connector.
 
-## Claude Agent SDK Track
+## Claude Agent SDK Notes
 
-Historical draft notes for a possible Claude Agent SDK adapter:
+Implementation notes for a possible Claude Agent SDK adapter:
 
 - map `task_list.updated` to TodoWrite/todo tracking;
 - map `user_input.requested` to AskUserQuestion through `canUseTool`;
@@ -35,9 +33,9 @@ Historical draft notes for a possible Claude Agent SDK adapter:
 - fall back to in-thread checkpoint prompts when native input is unavailable;
 - avoid expecting AskUserQuestion inside Agent-tool subagents.
 
-## Codex App Server Track
+## Codex App Server Notes
 
-Historical draft notes for a possible Codex App Server adapter:
+Implementation notes for a possible Codex App Server adapter:
 
 - map `task_list.updated` to plan updates where supported;
 - map `user_input.requested` to `tool/requestUserInput` where supported;

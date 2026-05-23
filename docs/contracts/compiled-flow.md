@@ -40,8 +40,8 @@ inside `CompiledFlow.superRefine` — and tested in
 - **WF-I4 — Closed route targets.** Every route target in `Step.routes`
   must be either a terminal label (`@complete`, `@stop`, `@escalate`,
   `@handoff`) or the `id` of an existing step.
-- **WF-I5 — No legacy entry modes.** `CompiledFlow` declares `axes` plus
-  `starts_at`; a legacy `entry_modes` array is rejected by the strict schema.
+- **WF-I5 — No `entry_modes` array.** `CompiledFlow` declares `axes` plus
+  `starts_at`; an `entry_modes` array is rejected by the strict schema.
 - **WF-I6 — Unique stage ids.** No two `Stage`s share an `id`.
 - **WF-I7 — Schema version is 2.** The literal `schema_version: '2'` is
   required. v1 manifests are not accepted; migration is a future Stage 2

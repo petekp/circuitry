@@ -2,10 +2,8 @@
 
 Status: live consolidated reference.
 
-This directory used to hold a large set of planning specs. The pivot has now
-landed enough runtime, schema, and test boundaries that the old split docs were
-mostly duplicate prose. This README is the live documentation set for the pivot.
-Use the code and tests listed here as the source of truth.
+This README is the live documentation set for the pivot. Use the code and tests
+listed here as the source of truth.
 
 ## Source Priority
 
@@ -13,33 +11,9 @@ When sources disagree, use this order:
 
 1. Current schemas, runtime code, generated outputs, and tests.
 2. This consolidated pivot reference.
-3. Git history for the removed long-form pivot notes.
 
-Do not treat old report wording, route labels, host prose, or deleted planning
-docs as authority. They are evidence only when current code and tests accept the
-same shape.
-
-## Pruned Inventory
-
-| Former file | Classification | Result |
-| --- | --- | --- |
-| `README.md` | keep-live | Replaced with this consolidated reference. |
-| `pivot-brief.md` | consolidate | Product doctrine moved into Source Priority, Current Boundaries, and Future Work Trail below. |
-| `order-of-operations.md` | consolidate | Implementation order and verification ladder moved below. |
-| `work-contract-projection-v0.md` | consolidate | Current WorkContract source map moved below. |
-| `guidance-decision-trace-invariant.md` | consolidate | Guidance trace rules moved below. |
-| `policy-envelope-config-v2-cutover.md` | consolidate | Policy authority rules moved below. |
-| `checkpoint-boundary-authority.md` | consolidate | Checkpoint boundary rules moved below. |
-| `proof-assessment-evidence-adapter.md` | consolidate | Proof and recovery close rules moved below. |
-| `recovery-route-kind.md` | consolidate | Recovery route rules moved below. |
-| `generated-host-surface-reframing.md` | consolidate | Generated-surface rules moved below. |
-| `change-packet-safe-apply.md` | consolidate | Future SafeApply trail moved below. |
-| `pursue-safe-apply-integration.md` | consolidate | Future Pursue/SafeApply trail moved below. |
-| `memory-input-boundary.md` | consolidate | Memory boundary rules moved below. |
-| `implementation-readiness-audit.md` | remove | Historical audit. Recreate detail from git history if needed. |
-
-The removed files were only referenced from this pivot directory. External live
-docs point at the directory, not the deleted file paths.
+Host prose, route labels, and report wording are not authority unless current
+code and tests accept the same shape.
 
 ## Current Boundaries
 
@@ -50,7 +24,7 @@ docs point at the directory, not the deleted file paths.
 | PolicyEnvelope | `src/schemas/policy-envelope.ts`, `src/shared/policy-envelope.ts`, `src/shared/config-loader.ts`, `tests/contracts/policy-envelope-schema.test.ts`, `tests/runner/config-loader.test.ts`, `tests/runtime/connectors.test.ts` | Policy can constrain or rank allowed choices. It cannot loosen WorkContract authority or replace a guidance decision. |
 | CheckpointBoundary | `src/schemas/checkpoint-boundary.ts`, `src/shared/checkpoint-boundary.ts`, `src/runtime/executors/checkpoint.ts`, `src/runtime/run/checkpoint-resume.ts`, `tests/contracts/checkpoint-boundary-schema.test.ts`, `tests/runtime/checkpoint-resume.test.ts` | Every automatic or default checkpoint crossing must be modeled as a declared authority boundary with matching guidance where required. |
 | ProofAssessment | `src/schemas/proof-assessment.ts`, `src/shared/proof-assessment.ts`, `src/runtime/executors/verification.ts`, `src/runtime/executors/relay.ts`, `tests/contracts/proof-assessment-schema.test.ts`, `tests/runner/build-verification-exec.test.ts`, `tests/runtime/runtime-baseline.test.ts` | Write-capable completion that requires proof must close on durable proof assessment evidence, not report shape, verdict strings, or prose. |
-| RecoveryRouteKind | `src/schemas/recovery-route-kind.ts`, `src/runtime/run/recovery-selection.ts`, `src/runtime/run/graph-runner.ts`, `tests/contracts/recovery-route-kind.test.ts`, `tests/runner/recovery-route.test.ts`, `tests/runtime/runtime-baseline.test.ts` | Recovery routes are typed. Legacy route labels are not authority when WorkContract bindings are absent or mismatched. |
+| RecoveryRouteKind | `src/schemas/recovery-route-kind.ts`, `src/runtime/run/recovery-selection.ts`, `src/runtime/run/graph-runner.ts`, `tests/contracts/recovery-route-kind.test.ts`, `tests/runner/recovery-route.test.ts`, `tests/runtime/runtime-baseline.test.ts` | Recovery routes are typed. Route labels are not authority when WorkContract bindings are absent or mismatched. |
 | SafeApply trace foundation | `src/schemas/change-packet.ts`, `src/schemas/trace-entry.ts`, `src/schemas/run.ts`, `tests/contracts/runtrace-schema.test.ts` | The live foundation keeps only shared trace enums and `safe_apply.result` trace validation. A full ChangePacket schema is not live runtime authority yet. |
 | Connector write boundary | `src/runtime/connectors/resolver.ts`, `tests/runtime/connectors.test.ts` | Current write-capable connectors are classified as pre-SafeApply trusted writes. That classification must stay explicit until SafeApply exists. |
 | Pursue V1 write policy | `docs/flows/pursue.md`, `src/flows/pursue/reports.ts`, `tests/contracts/pursue-report-schemas.test.ts`, `tests/runner/pursue-runtime-wiring.test.ts` | Pursue V1 keeps code-changing work serial and keeps SafeApply planning reports out of the active flow until SafeApply exists. |

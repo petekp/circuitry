@@ -5,8 +5,6 @@ version: 0.2
 schema_source: src/schemas/skill.ts
 last_updated: 2026-05-08
 depends_on: [ids, selection-policy, config, run]
-compatibility_policy: n/a
-legacy_parse_policy: n/a
 report_ids:
   - skill.descriptor
   - skill.user-entry
@@ -251,7 +249,7 @@ After a `SkillSlot` is accepted:
 
 - **carry-forward:untyped-skill-bypass** — **Partially closed in v0.1
   (catalog boundary) + selection.md SEL-I3 (selection boundary).** The
-  legacy untyped skill channels (`CompiledFlow.default_skills`,
+  untyped skill channels (`CompiledFlow.default_skills`,
   `CircuitOverride.skills`) were removed in selection.md v0.1
   (Codex HIGH #5). SkillDescriptor v0.1 ratifies the catalog-boundary
   side: no surplus keys, typed id, closed-enum domain, non-empty

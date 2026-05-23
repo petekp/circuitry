@@ -7,8 +7,8 @@ only the layer you need, then go deeper when the change touches that layer.
 
 1. [README.md](../README.md) - product shape, install paths, host roles, and
    first links.
-2. [docs/repository-map.md](repository-map.md) - before/after repo map, layer
-   ownership, and migration rationale.
+2. [docs/repository-map.md](repository-map.md) - repo map, layer ownership,
+   and layout rationale.
 3. [docs/first-run.md](first-run.md) - doctor, safest Review, expected output,
    and run folder shape.
 4. [docs/operator-guide.md](operator-guide.md) - commands, run flow,
@@ -70,7 +70,7 @@ locations:
 | Guidance | Source of truth |
 | --- | --- |
 | Repo agent operating rules | [AGENTS.md](../AGENTS.md) |
-| Repository layer map and migration rationale | [docs/repository-map.md](repository-map.md) |
+| Repository layer map and layout rationale | [docs/repository-map.md](repository-map.md) |
 | Coding-agent setup prompt | [docs/agent-setup.md](agent-setup.md) |
 | First install proof | [docs/first-run.md](first-run.md) |
 | Operator commands and verification | [docs/operator-guide.md](operator-guide.md) |

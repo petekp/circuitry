@@ -35,7 +35,7 @@ Recommended public command shape:
 Use host commands for the recorded demo only after the deterministic CLI proof
 passes. The host form should be `/circuit:run ...`, not a new dedicated slash
 command. The alpha is plugin-only, and the root package is private
-(`README.md:94-122`, `docs/release/0.1.0-alpha.6-notes.md:5-18`).
+(`README.md`, `docs/release/0.1.0-alpha.6-notes.md`).
 
 ## Demo Requirements
 
@@ -55,10 +55,10 @@ The demo should make one Circuit command visibly compelling:
 The demo must not claim:
 
 - Native Codex App Server or Claude Agent SDK support. The current public docs
-  say those do not ship in this alpha (`README.md:111-122`,
-  `docs/release/0.1.0-alpha.6-notes.md:59-75`).
-- A global `circuit` launcher. The release notes record that no global launcher
-  was found in the relevant shell (`docs/release/0.1.0-alpha.6-notes.md:43-57`).
+  say those do not ship in this alpha (`README.md`,
+  `docs/release/0.1.0-alpha.6-notes.md`).
+- A global `circuit` launcher. Recorded demos should use `./bin/circuit` or
+  host plugin commands unless a run report proves another launcher.
 - Model quality, provider availability, or deployment success unless a run
   report contains that exact evidence.
 
@@ -66,8 +66,9 @@ The demo must not claim:
 
 ### Product Surface
 
-- Current public flows are Build, Explore, Fix, Pursue, and Review
-  (`README.md:100-109`, `generated/release/current-capabilities.json:564-603`).
+- Current public flows are Build, Explore, Fix, Goal, Prototype, Pursue, and
+  Review (`src/flows/catalog.ts`,
+  `generated/release/current-capabilities.json`).
 - Claude Code and Codex public surfaces exist, but the host support is still
   partial and model-mediated
   (`generated/release/current-capabilities.json:275-335`).
@@ -219,13 +220,13 @@ Demo implication:
 
 What exists:
 
-- The alpha release checks are `npm run check-flow-drift`,
-  `npm run check-release-ready`, and `npm run publish:plugins:check`
-  (`docs/release/0.1.0-alpha.6-notes.md:25-41`).
-- The release checklist says final publication must rerun
-  `check-release-ready`, rerun `publish:plugins:check`, inspect generated
-  source owners, review public copy against deferred items, and inspect the
-  fresh plugin publish report (`docs/release/initial-public-release-list.md:90-101`).
+- The alpha publication checks include `npm run verify`,
+  `npm run check-flow-drift`, `npm run check-release-ready`,
+  `npm run publish:plugins:check`, and `npm run publish:plugins:release`
+  (`docs/release/0.1.0-alpha.6-notes.md`,
+  `docs/release/initial-public-release-list.md`).
+- The release checklist records the final alpha.6 publication gate and the
+  fresh plugin publish report (`docs/release/initial-public-release-list.md`).
 - Package scripts include the required verification, drift, release, host smoke,
   cache sync, and plugin publish commands (`package.json:13-48`).
 - Existing golden proof records already include Explore tournament HTML and
@@ -242,7 +243,7 @@ These checks were run from `/Users/petepetrash/Code/circuit`.
 
 | Check | Result | Use in the decision |
 | --- | --- | --- |
-| `npm run verify` | Passed. Full check, lint, build, 1,800 tests, eval checks, flow drift, plugin runtime, and release infra passed. | Current repo is healthy enough to plan on top of. |
+| `npm run verify` | Passed. Full check, lint, build, test suite, eval checks, flow drift, plugin runtime, and release infra passed. | Current repo is healthy enough to plan on top of. |
 | Focused HTML/runtime tests for Build and Explore tournament | Passed. 5 files, 70 tests. | Existing Build/Explore/HTML evidence is real. |
 | `npm run check-release-ready` | Passed. Fix Lite exception remains tracked. | Release truth is internally coherent. |
 | `npm run check-flow-drift` | Passed. Generated surfaces and plugin runtimes are in sync. | New flow work must preserve this. |
@@ -253,7 +254,7 @@ These checks were run from `/Users/petepetrash/Code/circuit`.
 | `vercel --version` / `vercel whoami` | CLI `48.12.1`; authentication check exited 0. | Deployment proof is plausible, but still must be captured by the demo run. |
 | `command -v circuit` | Not found. | Demo command should use `./bin/circuit` or host plugin commands, not a global launcher. |
 | `claude plugin list` | `circuit@circuit` version `0.1.0-alpha.6` is enabled at user scope. | Claude plugin is installed locally; still not a live demo proof. |
-| `npm run check:codex-plugin-cache` | Passed. 26 owned source files and 26 owned target files, with no missing, stale, or extra owned files. | Local Codex plugin cache is currently aligned. |
+| `npm run check:codex-plugin-cache` | Passed for alpha.6 publication. 34 owned source files and 34 owned target files, with no missing, stale, or extra owned files. | Local Codex plugin cache is currently aligned. |
 
 ## Gap List
 

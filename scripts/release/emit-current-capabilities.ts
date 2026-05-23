@@ -881,7 +881,7 @@ function supportCapabilities(
       title: 'Write-capable worker disclosure',
       status: 'implemented',
       summary:
-        'Write-capable Claude Code worker behavior is disclosed in docs, progress, and final summaries for Build/Fix.',
+        'Write-capable worker behavior is disclosed in docs, progress, and final summaries for Build, Fix, Prototype, and Pursue.',
       evidence: [
         'README.md',
         'docs/first-run.md',

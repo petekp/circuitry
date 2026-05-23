@@ -20,8 +20,11 @@ Use a direct command as an expert control when the flow choice is clear:
 | Claude Code | `/circuit:review current diff` | Review. |
 | Claude Code | `/circuit:build add billing settings` | Build. |
 | Claude Code | `/circuit:explore compare auth providers` | Explore. |
-| Codex | Invoke `fix`, `review`, `build`, or `explore` as a specific Circuit skill. | Runs that flow through the Codex plugin wrapper. |
+| Claude Code | `/circuit:prototype sketch a settings panel` | Prototype. |
+| Claude Code | `/circuit:goal finish the scoped objective` | Goal. |
+| Codex | Invoke `fix`, `review`, `build`, `explore`, `prototype`, or `goal` as a specific Circuit skill. | Runs that flow through the Codex plugin wrapper. |
 | CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Fix. |
+| CLI | `./bin/circuit run goal --goal "finish the scoped objective"` | Goal. |
 | CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Pursue. |
 
 The host commands wrap the same CLI. Each run accepts `--goal`. Direct CLI runs
@@ -29,9 +32,9 @@ can also pass these controls when the selected flow supports them:
 
 | Control | CLI flag | Supported by |
 | --- | --- | --- |
-| Lite, standard, or deep depth | `--rigor <lite|standard|deep>` | Build, Explore, and Fix. Review and Pursue only support standard depth. |
-| Tournament | `--tournament --tournament-n <2|3|4>` | Explore. |
-| Autonomous checkpoint handling | `--autonomous` | Build, Explore, Fix, and Pursue. |
+| Lite, standard, or deep depth | `--rigor <lite|standard|deep>` | Build, Explore, Fix, and Goal. Prototype supports standard or deep. Review and Pursue only support standard depth. |
+| Tournament | `--tournament --tournament-n <2|3|4>` | Explore and Prototype. |
+| Autonomous checkpoint handling | `--autonomous` | Build, Explore, Fix, Goal, Prototype, and Pursue. |
 
 Unsupported combinations fail before the run starts.
 
@@ -43,6 +46,8 @@ Unsupported combinations fail before the run starts.
 | Review | Auditing code, a diff, a PR, a plan, a report, or a risk surface. | Audit-only. |
 | Fix | Bugs, regressions, failing tests, crashes, flaky behavior, or production issues. | May invoke a write-capable worker. |
 | Build | Features, refactors, docs, tests, or focused code changes that are not mainly bug fixes. | May invoke a write-capable worker. |
+| Prototype | Disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build. | May invoke a write-capable worker and writes local prototype evidence. |
+| Goal | Bounded objectives that should run until typed evidence proves completion, recovery is needed, or stopping is more honest. | May run child flows; child flow write behavior applies. |
 | Pursue | Broad goals with several coordinated pieces of work that need ordering. | May invoke a write-capable worker. |
 
 Circuit also ships two utilities:
@@ -80,11 +85,10 @@ that work, `trace` as the ordered record, `report` as typed output, and
      --checkpoint-choice '<choice>'
    ```
 
-Build, Fix, and Pursue disclose the write-capable worker path before they
-invoke an implementer:
+Build, Fix, Prototype, and Pursue disclose worker write access before
+write-capable work starts:
 
-> This flow may invoke a write-capable Claude Code worker. Circuit will verify
-> and review the result, but the worker can edit files in this checkout.
+> A worker can edit this checkout.
 
 ## Review Untracked Files
 

@@ -72,7 +72,7 @@ describe('documentation surface', () => {
       '| Generated ownership | `docs/generated-surfaces.md` | Keep generated |',
       '| Host package maps | `plugins/README.md`, `plugins/claude/README.md`, `plugins/codex/README.md` | Keep thin |',
       '| Source layer maps | `src/README.md`, `src/runtime/README.md`, `src/schemas/README.md`, `src/flows/README.md`, `src/shared/README.md`, `src/types/README.md` | Keep thin |',
-      '| Retired Claude guide | `CLAUDE.md` | Remove |',
+      '| Removed Claude guide | `CLAUDE.md` | Remove |',
       '| Generated host mirrors | `plugins/claude/**`, `plugins/codex/**` | Generated |',
     ]) {
       expect(inventory).toContain(decision);

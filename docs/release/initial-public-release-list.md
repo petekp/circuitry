@@ -2,8 +2,8 @@
 
 Date: 2026-05-19
 
-This is the hand-authored release list for the first public Circuit release.
-It complements the generated release truth surfaces:
+This is the closed hand-authored release list for the first public Circuit
+release. It complements the generated release truth surfaces:
 
 - [docs/release/readiness-report.generated.md](readiness-report.generated.md)
 - [docs/release/parity-matrix.generated.md](parity-matrix.generated.md)
@@ -11,32 +11,38 @@ It complements the generated release truth surfaces:
 - [docs/release/proofs/index.yaml](proofs/index.yaml)
 - [docs/release/claims/public-claims.yaml](claims/public-claims.yaml)
 
-Local release infrastructure is currently green:
+Local release infrastructure was green for publication:
 
 - `npm run check-release-ready` passed with no automated release blockers.
-- `npm run publish:plugins:check` passed and wrote
+- `npm run publish:plugins:release` passed and wrote
   `.circuit/release/plugin-publish-report.json`.
 
 Those checks do not catch every public-facing wording mismatch. The list below
-is the final human release list to clear before announcement or marketplace
-publication.
+records the human release checks for the `0.1.0-alpha.6` plugin publication.
 
-## Blockers
+## Closeout
+
+`0.1.0-alpha.6` was published as a plugin-only alpha. The publish report records
+`status: published`, clean `main`, matching `HEAD`/`origin/main`, no warnings,
+no errors, Claude tag `circuit--v0.1.0-alpha.6`, and Codex marketplace source
+`petekp/circuit`.
+
+## Closed Blockers
 
 | ID | Item | Evidence | Required action | Verification |
 | --- | --- | --- | --- | --- |
-| REL-PUB-001 | Fix the Claude plugin manifest description. It names retired `/circuit:migrate` and `/circuit:sweep` commands and omits Pursue. | `plugins/claude/.claude-plugin/plugin.json` names `/circuit:migrate` and `/circuit:sweep`; `plugins/claude/commands/` contains only `build`, `create`, `explore`, `fix`, `handoff`, `review`, and `run`; `generated/release/current-capabilities.json` lists public flows as Build, Explore, Fix, Pursue, and Review. | Rewrite the description to name the current public commands and clarify that Pursue is routable through `/circuit:run` and CLI explicit flow invocation, not a dedicated slash command. | `rg -n "migrate|sweep|pursue|/circuit:" plugins/claude/.claude-plugin/plugin.json plugins/claude/commands README.md`; `npm run publish:plugins:check`. |
-| REL-PUB-002 | Fix stale Explore command prose before publishing host commands as user-facing docs. | `src/flows/explore/command.md` says Explore walks `Frame -> Analyze -> Compose -> Review -> Close`; `src/flows/explore/data.ts` and `generated/flows/explore/circuit.json` say the canonical stage path is `Frame, Analyze, Plan or Decision, Close`, with critique embedded in the Plan/Decision stage rather than a separate canonical Review stage. | Update `src/flows/explore/command.md` to match the current Explore stage model, then regenerate host command mirrors. | `npm run emit-flows`; `npm run check-flow-drift`; focused `rg` for the old stage sentence in `src/flows/explore/command.md` and generated command mirrors. |
+| REL-PUB-001 | Closed: Claude plugin manifest description names current command surfaces. | Current `plugins/claude/.claude-plugin/plugin.json` names `/circuit:run`, direct expert controls, Pursue via `/circuit:run` or CLI, `/circuit:create`, and `/circuit:handoff`. | No remaining release action. Keep future manifest wording aligned with generated command surfaces. | Confirm current `/circuit:` commands, then run `npm run publish:plugins:check`. |
+| REL-PUB-002 | Closed: Explore command prose matches the current Explore stage model. | `src/flows/explore/command.md`, generated command mirrors, and `generated/flows/explore/circuit.json` no longer describe a stale separate canonical Review stage. | No remaining release action. Edit `src/flows/explore/command.md` and regenerate if Explore command semantics move again. | `npm run emit-flows`; `npm run check-flow-drift`; focused `rg` for the old stage sentence in `src/flows/explore/command.md` and generated command mirrors. |
 
-## Should Fix Before Announcement
+## Closed Or Scoped Before Announcement
 
 | ID | Item | Evidence | Next action | Verification |
 | --- | --- | --- | --- | --- |
-| REL-PUB-003 | Add public release-note wording for the approved Fix Lite intent exception. | [docs/release/readiness-report.generated.md](readiness-report.generated.md) lists this as a next action; [docs/release/parity/exceptions.yaml](parity/exceptions.yaml) tracks `EX-REL-004-FIX-INTENT-MODE`; [docs/release/parity-matrix.generated.md](parity-matrix.generated.md) marks `router:intent:fix` as `approved_exception`. | In release notes or launch copy, say that bare `fix:` selects the Fix flow at normal depth; Lite requires an explicit quick/small/tiny/simple hint or `--rigor lite`. | `npm run check-release-ready`; review release notes for the exact exception wording. |
-| REL-PUB-004 | Run and record a real host trial for Claude Code and Codex before saying the host experience is ready for broader use. | [docs/host-trial-checklist.md](../host-trial-checklist.md) defines the manual scenarios; [docs/contracts/host-adapter-acceptance.md](../contracts/host-adapter-acceptance.md) marks real installed-host injection as experimental for both hosts. | Execute the checklist in a clean temp repo for Claude Code and Codex, then record pass/fail notes or keep the release copy scoped to deterministic package checks. | `npm run smoke:host:claude`; `npm run smoke:host:codex`; manual checklist notes with skipped prerequisites called out. |
-| REL-PUB-005 | Keep public host-support wording scoped to current capability levels. | `generated/release/current-capabilities.json` marks `claude-code-command`, `codex-plugin`, and `generic-shell` as partial; [docs/release/readiness-report.generated.md](readiness-report.generated.md) calls out partial host surfaces as a next action. | In README, release notes, and marketplace copy, avoid claiming native host adapters, planned native Codex App Server or Claude Agent SDK adapters, or polished generic shell text progress. Describe current Claude/Codex support as plugin command surfaces with model-mediated host affordances. | `rg -n "native|supported|generic shell|model-mediated|planned" README.md docs plugins/claude/.claude-plugin/plugin.json plugins/codex/.codex-plugin/plugin.json`; `npm run check-release-ready`. |
-| REL-PUB-006 | Keep golden proof runs refreshed if any blocker fix changes command, summary, or report contracts. | [docs/release/proofs/README.md](proofs/README.md) says to regenerate proofs when command, summary, report, checkpoint, or scenario contracts change; all current scenarios in [docs/release/proofs/index.yaml](proofs/index.yaml) are `verified_current`. | Treat manifest and command prose fixes as source-owned generated-surface changes first. Run flow drift checks after REL-PUB-002. If a fix changes command semantics, flow behavior, progress, summary, report, checkpoint, or scenario contracts, recapture proofs and review the diff. | `npm run capture-proofs:golden-runs` when required; `npm run check-release-ready`; review touched proof files manually. |
-| REL-PUB-007 | Decide whether to ship the package as alpha with the root package still private. | `package.json` is private `0.0.1`; both host plugin manifests are `0.1.0-alpha.6`; `npm run publish:plugins:check` reports source, Claude, Codex, and Claude marketplace versions as `0.1.0-alpha.6`. | If this release is plugin-only, leave root package private and state that publicly. If an npm package is part of release scope, define the package release path separately. | `npm run publish:plugins:check`; inspect `package.json`, `plugins/claude/.claude-plugin/plugin.json`, and `plugins/codex/.codex-plugin/plugin.json`. |
+| REL-PUB-003 | Closed: release-note wording documents the approved Fix Lite intent exception. | [docs/release/parity/exceptions.yaml](parity/exceptions.yaml) tracks `EX-REL-004-FIX-INTENT-MODE`; [docs/release/0.1.0-alpha.6-notes.md](0.1.0-alpha.6-notes.md) explains bare `fix:` versus Lite. | Keep the release note wording if the router exception remains. | `npm run check-release-ready`; review release notes for the exact exception wording. |
+| REL-PUB-004 | Closed by scoped host evidence: release copy stays scoped to deterministic package checks and post-release installed-host acceptance. | [docs/host-trial-checklist.md](../host-trial-checklist.md) remains the broader manual checklist. Publish evidence covers Claude temp install smoke, Codex marketplace add/upgrade, installed package doctors, and bundled runtime checks. | Run the full manual checklist only before claiming a broader host-experience study. | `npm run smoke:host:claude`; `npm run smoke:host:codex`; manual checklist notes with skipped prerequisites called out. |
+| REL-PUB-005 | Closed: public host-support wording is scoped to plugin command/skill surfaces with model-mediated host affordances. | `generated/release/current-capabilities.json` and [docs/release/readiness-report.generated.md](readiness-report.generated.md) track host capability level. | Avoid native Codex App Server, Claude Agent SDK, or polished generic-shell progress claims in launch copy. | `rg -n "native|supported|generic shell|model-mediated|planned" README.md docs plugins/claude/.claude-plugin/plugin.json plugins/codex/.codex-plugin/plugin.json`; `npm run check-release-ready`. |
+| REL-PUB-006 | Closed: golden proof refresh was required only where proof evidence changed. | [docs/release/proofs/README.md](proofs/README.md) says to regenerate proofs when command, summary, report, checkpoint, or scenario contracts change; all current scenarios in [docs/release/proofs/index.yaml](proofs/index.yaml) are `verified_current`. | Regenerate proofs when a future release diff changes behavior or checked-in proof evidence. | `npm run capture-proofs:golden-runs` when required; `npm run check-release-ready`; review touched proof files manually. |
+| REL-PUB-007 | Closed: alpha.6 shipped as plugin-only with the root package private. | `package.json` is private `0.0.1`; host plugin manifests are `0.1.0-alpha.6`; the publish report records source, Claude, Codex, and Claude marketplace versions aligned at `0.1.0-alpha.6`. | Define a separate package release path before any npm package publication. | `npm run publish:plugins:check`; inspect `package.json`, `plugins/claude/.claude-plugin/plugin.json`, and `plugins/codex/.codex-plugin/plugin.json`. |
 
 ## Nice To Have
 
@@ -50,8 +56,7 @@ publication.
 
 These are the extra proof points from the execution-plan gap review:
 
-- `REL-PUB-001`: split verification into a negative check for retired names
-  (`migrate`, `sweep`) and a positive check for the current commands plus Pursue
+- `REL-PUB-001`: verify the manifest names current commands plus Pursue
   wording.
 - `REL-PUB-004`: host-trial evidence must include setup evidence from
   [docs/host-trial-checklist.md](../host-trial-checklist.md): regenerated host output, Codex cache refresh
@@ -86,9 +91,9 @@ These are the extra proof points from the execution-plan gap review:
 | REL-PUB-014 | Keep-up-for-you update channel. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) says the update-channel claim is not yet supported. Do not use launch copy that implies automatic methodology updates. |
 | REL-PUB-015 | Public `/circuit:pursue` slash command. | Pursue is a public routable flow and has generated flow mirrors, but [docs/generated-surfaces.md](../generated-surfaces.md) and `src/commands/run.md` say it has no dedicated command surface yet. |
 
-## Final Gate
+## Final Gate Used For Alpha.6
 
-Before public announcement or marketplace publication:
+For public announcement and marketplace publication, the release gate was:
 
 1. Clear both blocker items.
 2. Re-run `npm run check-release-ready`.
@@ -98,3 +103,6 @@ Before public announcement or marketplace publication:
 6. Review the fresh plugin publish report for status, versions, and
    warnings/errors; review cache-target evidence when local Codex dogfooding is
    part of the release pass.
+
+For alpha.6, the publish report records this gate as passed and the publication
+as complete.

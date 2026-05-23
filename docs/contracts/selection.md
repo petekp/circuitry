@@ -389,7 +389,7 @@ Stage 2 harness task where noted below.
   'flow'`. Not renamed to `CompiledFlow.selection` because
   `default_selection` signals "this is the baseline for all stages/steps
   unless overridden" more clearly than `selection` would.
-  **Codex HIGH #5 fold-in:** the legacy
+  **Codex HIGH #5 fold-in:** the removed
   `CompiledFlow.default_skills: SkillId[]` channel is removed. Seed skill
   sets now flow through `default_selection.skills = {mode: 'replace',
   skills: [...]}`.
@@ -403,7 +403,7 @@ Stage 2 harness task where noted below.
   caveat).** Within one config layer, `defaults.selection` and
   `circuits[flow_id].selection` pre-compose defaults-first /
   circuit-specific-second BEFORE entering the applied chain. **Codex HIGH #5
-  fold-in:** the legacy `CircuitOverride.skills: string[]` channel is
+  fold-in:** the removed `CircuitOverride.skills: string[]` channel is
   removed (it accepted arbitrary non-`SkillId` strings); per-circuit
   skill contribution flows through `CircuitOverride.selection.skills`
   via typed `SkillOverride`. Config reorganization is out of scope for
@@ -482,7 +482,7 @@ Stage 2 harness task where noted below.
   authorial typos. Closed by SEL-I8 (which continues the transitive-
   strict discipline RUN-I8 landed across the trace_entry/snapshot surface).
 
-- `carry-forward:legacy-skill-channels` — Two pre-contract channels
+- `carry-forward:removed-skill-channels` — Two pre-contract channels
   (`CompiledFlow.default_skills: SkillId[]` and `CircuitOverride.skills:
   string[]`) bypassed the typed `SkillOverride` discipline. The config
   channel was worse — it accepted arbitrary strings, not `SkillId`-
@@ -535,8 +535,8 @@ Stage 2 harness task where noted below.
   provenance rejection (MED #7); transitive strict rejection across
   the entire selection triplet (SEL-I8); `Stage.selection:
   SelectionOverride.optional()` added to close stage.md v0.1 MED #7
-  (SEL-I9); legacy `CompiledFlow.default_skills` and
-  `CircuitOverride.skills` channels removed (HIGH #5); backward support
+  (SEL-I9); `CompiledFlow.default_skills` and
+  `CircuitOverride.skills` channels removed (HIGH #5); support
   `SelectionPolicy` alias removed. Stage 2 property ids added for the
   honestly-scoped gaps: `resolved_matches_applied_composition` (HIGH
   #3), `config_layer_precompose_is_right_biased` (HIGH #6),

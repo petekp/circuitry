@@ -96,7 +96,7 @@ Every normal run writes the same kind of evidence under a run folder:
 
 ## 3. Know What Can Write
 
-Build and Fix may invoke a write-capable worker:
+Build, Fix, Prototype, and Pursue may invoke a write-capable worker:
 
 > A worker can edit this checkout.
 

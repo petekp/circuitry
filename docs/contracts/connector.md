@@ -85,9 +85,9 @@ invariant; tested in `tests/contracts/connector-schema.test.ts`,
     via the parent process but runs as a child `claude` executable,
     not in the host Node process. No `@anthropic-ai/sdk` dep at v0;
     ADR-0009 §4 Check 28 enforces this at package.json level. Slice 87
-    wires resolved selection into this connector: compatible Anthropic
+    wires resolved selection into this connector: allowed Anthropic
     model ids are passed with `--model`; supported efforts (`low`,
-    `medium`, `high`, `xhigh`, `max`) are passed with `--effort`; incompatible
+    `medium`, `high`, `xhigh`, `max`) are passed with `--effort`; unsupported
     providers or unsupported built-in effort tiers fail before spawn.
   - `codex` — the Codex CLI relayed via `codex exec` as a
     **subprocess** of the Node.js runtime (same invocation pattern as

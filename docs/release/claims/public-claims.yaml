@@ -1,12 +1,12 @@
 schema_version: 1
 claims:
   - id: CLAIM-FLOW-CATALOG-CURRENT
-    claim: Circuit has current public flow packages for Build, Explore, Fix, Pursue, and Review.
+    claim: Circuit has current public flow packages for Build, Explore, Fix, Goal, Prototype, Pursue, and Review.
     type: flow
     status: verified_current
     surfaces: [README.md, docs/release/parity-matrix.generated.md]
     backing:
-      capability_ids: [flow:build, flow:explore, flow:fix, flow:pursue, flow:review]
+      capability_ids: [flow:build, flow:explore, flow:fix, flow:goal, flow:prototype, flow:pursue, flow:review]
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
     user_risk: If false, the release catalog itself is misleading.
     readiness_refs: [REL-004]
@@ -32,7 +32,7 @@ claims:
         - tests/runner/runner-relay-provenance.test.ts
         - tests/contracts/host-experience-docs.test.ts
       script_checks: [scripts/release/emit-current-capabilities.ts --check]
-    user_risk: Users following docs must be able to build a compatible connector.
+    user_risk: Users following docs must be able to build a valid connector.
     readiness_refs: [REL-001]
   - id: CLAIM-CODEX-WRITABLE
     claim: codex is the first-class write-capable Codex worker connector.
@@ -88,7 +88,7 @@ claims:
     user_risk: Users can ask Circuit to execute a plan and receive analysis-only output that preserves the next-action burden.
     readiness_refs: [REL-016]
   - id: CLAIM-WRITE-CAPABLE-WORKER
-    claim: Write-capable worker behavior must be disclosed before first Build/Fix runs that can edit files.
+    claim: Write-capable worker behavior must be disclosed before Build, Fix, Prototype, or Pursue work that can edit files.
     type: safety
     status: verified_current
     surfaces: [README.md, progress output, final summaries]

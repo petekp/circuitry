@@ -79,9 +79,8 @@ See `UBIQUITOUS_LANGUAGE.md#core-flow-language` for canonical definitions of **C
 - **Explore findings** (`explore.compose`): the report emitted by the
   Synthesize stage. Produces the investigation's primary output — a
   recommendation, decision candidate set, or conclusion — with explicit
-  mapping back to the brief's success condition. (The schema id keeps
-  the legacy `explore.compose` name; in prose we call it the findings
-  report.)
+  mapping back to the brief's success condition. (The schema id is
+  `explore.compose`; in prose we call it the findings report.)
 - **Explore review verdict** (`explore.review-verdict`): the report
   emitted by the Review stage. Adversarial pass over `explore.compose`;
   reports objections, missed angles, and overall result.

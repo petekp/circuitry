@@ -31,12 +31,13 @@ describe('host experience docs', () => {
     expect(doc).toContain('operator_summary_markdown_path');
   });
 
-  it('keeps retired native bridge notes out of the current roadmap', () => {
+  it('keeps native adapter notes out of current product surfaces', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'docs/contracts/native-host-adapters.md'), 'utf8');
 
     expect(doc).toContain('contract: native-host-adapters');
-    expect(doc).toContain('status: retired-draft');
-    expect(doc).toContain('not current roadmap items');
+    expect(doc).toContain('status: non-shipping');
+    expect(doc).toMatch(/not current product\s+surfaces/);
+    expect(doc).toContain('release truth must not list them as capabilities');
     expect(doc).toContain('task_list.updated');
     expect(doc).toContain('user_input.requested');
     expect(doc).toContain('Claude Agent SDK');

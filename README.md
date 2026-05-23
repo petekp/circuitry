@@ -101,8 +101,9 @@ Use one front door unless you already know the flow you want:
 | CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
 If the flow choice is obvious, use direct commands such as `/circuit:fix`,
-`/circuit:review`, `/circuit:build`, or `/circuit:explore` as expert controls.
-They start Circuit from that flow; they are not a bypass. The CLI form is
+`/circuit:review`, `/circuit:build`, `/circuit:explore`,
+`/circuit:prototype`, or `/circuit:goal` as expert controls. They start
+Circuit from that flow; they are not a bypass. The CLI form is
 `./bin/circuit run <flow> --goal "<task>"`. Use `/circuit:run` for Pursue from
 Claude Code; the CLI can run `pursue` directly.
 
@@ -113,11 +114,10 @@ checkpoints, verification, and troubleshooting.
 
 ## Safety Notes
 
-Build, Fix, and Pursue may invoke a write-capable worker. Circuit discloses
-that before it invokes an implementer:
+Build, Fix, Prototype, and Pursue may invoke a write-capable worker. Circuit
+discloses that before write-capable work starts:
 
-> This flow may invoke a write-capable Claude Code worker. Circuit will verify
-> and review the result, but the worker can edit files in this checkout.
+> A worker can edit this checkout.
 
 Review collects untracked file paths and sizes by default, but not untracked
 file contents. Add `--include-untracked-content` only after you confirm those

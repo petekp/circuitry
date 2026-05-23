@@ -76,19 +76,16 @@ Use these rules as the review bar for the migration plan.
 These must remain true through any migration slice derived from this spec.
 
 - Public CLI behavior is preserved.
-- Generated host surfaces remain byte-for-byte compatible unless a separate
+- Generated host surfaces remain byte-for-byte stable unless a separate
   versioned migration is accepted.
-- Report schema names and Zod schema shapes remain the compatibility contract.
+- Report schema names and Zod schema shapes remain the serialized contract.
 - The engine imports flow behavior through the catalog and registries, not
   through direct imports of individual flow packages.
 - Connector security policy is not loosened or hidden behind a generic effect
   abstraction.
-- The retained production flow set stays `review`, `fix`, `pursue`,
-  `runtime-proof`, `build`, and `explore` unless a separate versioned migration
-  reopens it.
+- The production flow set stays explicit in `src/flows/catalog.ts`.
 - Semantic writer, validator, relay-hint, and helper code remains source code.
-- Generated compatibility outputs are regenerated and drift-checked, not
-  edited by hand.
+- Generated outputs are regenerated and drift-checked, not edited by hand.
 - Runtime graph execution stays flow-agnostic.
 - This spec remains design-only until implementation is explicitly requested.
 
@@ -99,7 +96,7 @@ These must remain true through any migration slice derived from this spec.
 | Retained built-in flows are FlowData-owned. | Confirmed | `src/flows/catalog.ts` imports `reviewFlowDefinition`, `fixFlowDefinition`, `pursueFlowDefinition`, `runtimeProofFlowDefinition`, `buildFlowDefinition`, and `exploreFlowDefinition`; each flow adapter calls `defineFlowData()` with `src/flows/<id>/data.ts`. |
 | The current `FlowDefinition` still embeds a schematic-shaped value after FlowData projection. | Confirmed | `src/flows/flow-definition.ts` defines `FlowDefinitionInput.schematic` as `z.input<typeof FlowSchematic>` and `defineFlowData()` parses that value through `defineFlow()` and `FlowSchematic.parse`. |
 | Build is a good proving flow for FlowData-owned authoring. | Confirmed | `src/flows/build/data.ts` owns checkpoint, compose, relay, verification, close, runtime progress, and the `bindsExecutionDepthToRelaySelection` engine flag; `src/flows/build/flow.ts` binds that value to the compiler. |
-| Active schematics already fail early on many structural mistakes. | Confirmed | `src/schemas/flow-schematic.ts` validates routes, route overrides, duplicate ids, active required fields, execution/write/check shape, stages, and block-catalog compatibility helpers. |
+| Active schematics already fail early on many structural mistakes. | Confirmed | `src/schemas/flow-schematic.ts` validates routes, route overrides, duplicate ids, active required fields, execution/write/check shape, stages, and block-catalog helpers. |
 | Schematic-to-manifest compilation is mostly pure but throws for expected compile failures. | Confirmed | `src/flows/compile-schematic-to-flow.ts` computes reachability, read paths, per-mode manifests, and throws `FlowSchematicCompileError` through `fail()`. |
 | Registry derivation is already value-oriented, but also throws. | Confirmed | `src/flows/catalog-derivations.ts` builds writer, report, hint, validator, runtime-surface, and routing indexes from packages. Duplicate detection throws. |
 | Runtime execution is already an explicit graph walk. | Confirmed | `src/runtime/run/graph-runner.ts` enters a step, runs its executor, evaluates the route, appends trace entries, detects cycles and attempt exhaustion, and closes the run. |
@@ -123,7 +120,7 @@ These must remain true through any migration slice derived from this spec.
 | Writers | `src/flows/<id>/writers/*` plus package writer arrays | Semantic code is good; array registration is mechanical. | Writer functions remain code; registration derives from report declarations. |
 | Relay hints | `src/flows/<id>/relay-hints.ts` plus package relay report entries | Hint text is semantic; attachment is mechanical. | Hint values remain code/data; attachment derives from report declarations. |
 | Runtime surface | `runtimeSurface` inside each flow definition | Necessary public metadata, but repeated beside steps and modes. | Derived from modes, primary result, and explicit progress display values. |
-| Schematic JSON | `src/flows/<id>/schematic.json` | Compatibility output, not authored source. | Generated compatibility output. |
+| Schematic JSON | `src/flows/<id>/schematic.json` | Generated output, not authored source. | Generated output. |
 | Compiled manifests | `generated/flows/<id>/*.json` | Already generated. | Continue generated and drift-checked. |
 | Runtime execution | `src/runtime/run/graph-runner.ts` plus executors | The graph walk is clear, but concrete IO classes are wired into core context. | Same graph walk over named capabilities. |
 | Trace and run files | `TraceStore`, `RunFileStore`, report validator | Durable facts are already explicit, but storage is concrete runtime machinery. | `TraceLog` and `RunFiles` capabilities. |
@@ -139,7 +136,7 @@ Circuit should become this pipeline:
 authored flow value
   -> validation value
   -> compiled package value
-  -> generated compatibility outputs
+  -> generated outputs
   -> runtime interpreter over executable graph values
   -> append-only trace facts
   -> edge-provided capabilities
@@ -170,7 +167,7 @@ These are hard migration constraints.
 
 | Boundary | Rule |
 | --- | --- |
-| Authoring vs compatibility | Authors write the compressed flow value. Compatibility schematic JSON is generated from it. |
+| Authoring vs generated outputs | Authors write the compressed flow value. Schematic JSON is generated from it. |
 | Validation vs compilation | Validation accumulates domain errors. Compilation runs only after validation has produced a valid definition. |
 | Compilation vs runtime | Compilation produces package, schematic, manifest, registry, and surface values. Runtime does not inspect authoring-only structures. |
 | Reports vs writers | Report declarations own schema identity and path. Writer functions own semantic construction of report bodies. |
@@ -202,7 +199,7 @@ Allowed:
 - `as const` values;
 - pure helper functions that return records;
 - explicit references to imported schema and writer values;
-- explicit overrides where legacy compatibility requires them.
+- explicit overrides where serialized contracts require them.
 
 The rule is:
 
@@ -214,12 +211,12 @@ The rule is:
 | Fact | Authored? | Derived? | Notes |
 | --- | --- | --- | --- |
 | Flow id and visibility | Yes | No | Identity is authored. |
-| Compatibility schema versions | No | Yes | Schematic v1 and compiled-flow v2 are generated constants until a versioned migration changes them. |
-| Schematic title, purpose, and version | Yes | No | Compatibility identity stays explicit for existing flows. |
+| Schema versions | No | Yes | Schematic v1 and compiled-flow v2 are generated constants until a versioned migration changes them. |
+| Schematic title, purpose, and version | Yes | No | Serialized identity stays explicit for current flows. |
 | Entry classifier metadata | Yes | No | Intent prefixes and include/exclude terms are product-facing classifier facts, not derivable from regex signals. |
 | Flow order/routing signals | Yes | No | Product routing is authored knowledge. |
 | Mode names and depths | Yes | Runtime support rows derive from these. | Public support text must not drift from modes. |
-| Report schema name | Yes | No | Schema names are compatibility contracts. |
+| Report schema name | Yes | No | Schema names are serialized contracts. |
 | Report Zod schema | Yes | No | Schema values stay in `reports.ts`. |
 | Report path | Usually yes | New-flow defaults may derive. | Existing flows keep explicit paths until parity proves defaults. |
 | Primary result metadata | Yes by report ref | Surface derives path/schema/label. | Label is operator-facing and should stay explicit. |
@@ -228,10 +225,10 @@ The rule is:
 | Step block | Yes | Default evidence/stage/execution may derive from block. | Overrides stay visible. |
 | Step input contracts | Yes by report ref or initial contract ref | Read paths derive from producer paths. | The current compiler already derives read paths. |
 | Step output contract | Usually derived from `writes` report ref | Yes | If a step writes a special contract, author it. |
-| Contract aliases | Usually no | Derive from block contracts and step report refs. | Ambiguous or compatibility-only aliases stay authored. |
+| Contract aliases | Usually no | Derive from block contracts and step report refs. | Ambiguous aliases stay authored. |
 | Evidence requirements | Defaults derive from block | Overrides authored | Missing block evidence is a validation error. |
 | Execution kind | Defaults derive from block or step constructor | Overrides authored | Relay role and sub-run target remain explicit. |
-| Write slots | Derived from execution kind and report paths | Yes | Existing compatibility paths must remain unchanged. |
+| Write slots | Derived from execution kind and report paths | Yes | Current paths must remain unchanged. |
 | Check shape | Derived from execution kind and report/check declaration | Yes | Required fields or pass lists remain authored where semantic. |
 | Routes | Yes | No | Routes are product outcomes. |
 | Route overrides | Yes | No | Mode-specific topology is authored. |
@@ -549,7 +546,7 @@ await Effect.runPromise(program.pipe(Effect.provide(NodeRuntimeLive)));
 
 The migration must not add Effect until the runtime service boundary is named
 across the capabilities in this table and at least one narrow runtime slice has
-compatibility tests proving that the old promise API still behaves the same.
+parity tests proving that the current promise API still behaves the same.
 
 ## First Executable Slice
 
@@ -617,10 +614,10 @@ source-backed answer.
   relay hints, generated schematics, and generated manifests.
 - The plan distinguishes semantic code from mechanical registration.
 - The plan says which existing files become deletable, which remain source, and
-  which remain generated compatibility outputs.
+  which remain generated outputs.
 - Expected compiler failures have typed error values and tests.
-- The old thrown-error API stays behind a compatibility adapter until all call
-  sites can render error values.
+- The thrown-error API stays in place until all call sites can render error
+  values.
 - Public-flow progress metadata remains complete; missing metadata is a
   validation failure, not a prose fallback.
 - Public CLI behavior, report schemas, generated host surfaces,
@@ -651,13 +648,12 @@ Stop the migration design if any of these becomes necessary:
 3. Compress Explore to prove tournament/fanout paths.
 4. Compress Fix last to prove the largest flow and preserve semantic helper
    code.
-5. Mark generated schematic compatibility JSON as generated, or stop committing
-   it only after a versioned migration.
+5. Mark generated schematic JSON as generated, or stop committing it only after
+   a versioned migration.
 6. Convert compiler expected failures from throws to typed validation values.
 7. Introduce runtime capability interfaces around current concrete stores and
    subprocess helpers.
-8. Consider Effect only after capability interfaces and compatibility adapters
-   exist.
+8. Consider Effect only after capability interfaces exist.
 
 ## What This Spec Does Not Do
 

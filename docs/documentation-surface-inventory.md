@@ -39,11 +39,24 @@ documentation-surface tests.
 
 ## Decisions
 
+## 2026-05-23 Post-Release Addendum
+
+This addendum records the post-publication documentation acceptance pass for
+`0.1.0-alpha.6`.
+
+| Surface | Classification | Source evidence | Action |
+| --- | --- | --- | --- |
+| Root README, first-run, operator guide, agent setup, and host-capability docs | Update | `src/shared/write-capable-worker-disclosure.ts` names Build, Fix, Prototype, and Pursue as write-capable flows and emits `A worker can edit this checkout.` | Updated public prose to name Prototype and use the runtime disclosure wording instead of Claude-Code-only wording. |
+| Public flow catalog claims | Update | `generated/release/current-capabilities.json` and `docs/generated-surfaces.md` list Build, Explore, Fix, Goal, Prototype, Pursue, and Review as public flows. | Updated release claims and user-facing flow lists to include Goal and Prototype. |
+| Release notes and initial-public-release list | Update | `.circuit/release/plugin-publish-report.json` records `status: published`, tag `circuit--v0.1.0-alpha.6`, no warnings, and no errors. | Reframed the checklist as a closed release record and updated alpha.6 verification evidence. |
+| Generated host command and skill mirrors | Keep | `docs/generated-surfaces.md` maps command sources to generated Claude and Codex mirrors, and `npm run check-flow-drift` owns drift detection. | No hand edits. Regenerate only when source command prose changes. |
+| Release proof doctor output | Generated-source fix | `node plugins/codex/scripts/circuit.ts doctor` reports bundled runtime `0.1.0-alpha.6` and the current Codex skill set. | Refreshed the doctor proof from the doctor command. Use `npm run capture-proofs:golden-runs` for broader proof-shape changes. |
+
 | Cluster | Path | Decision | Notes |
 | --- | --- | --- | --- |
 | Docs map | `docs/README.md` | Keep | Central index. Added the approved active how-to list and this inventory link. |
 | Agent operating rules | `AGENTS.md` | Merge duplicate | Kept repo rules; replaced the full adding-a-flow playbook with a pointer to `docs/flows/authoring-model.md`. |
-| Retired Claude guide | `CLAUDE.md` | Remove | Full cutover to `AGENTS.md`; no legacy agent-guide shim remains. |
+| Removed Claude guide | `CLAUDE.md` | Remove | `AGENTS.md` is the only active agent guide. |
 | Agent setup | `docs/agent-setup.md` | Keep thin | Kept the copy-paste setup prompt; delegated setup details to first-run, operator, config, and generated-surface docs. |
 | First run | `docs/first-run.md` | Keep | Smallest install proof and safest Review path. |
 | Operator guide | `docs/operator-guide.md` | Keep | Current command, checkpoint, verification, and troubleshooting guide. Generated-file guidance stays as a pointer to `docs/generated-surfaces.md`. |
@@ -60,7 +73,7 @@ documentation-surface tests.
 | Codebase walkthrough | `docs/architecture/codebase-walkthrough.md` | Move and keep | Moved from `docs/literate-guide.md` so the deep contributor walkthrough sits with architecture references, not operator entry docs. |
 | Pursue guide | `docs/flows/pursue.md` | Keep and align | Kept product shape; updated executable truth to start from `data.ts`/`flow.ts` and generated-surface map. |
 | Script ownership | `docs/reference/script-inventory.md` | Move and keep | Moved from `docs/script-inventory.md` so script ownership is a reference layer, not a read-first doc. |
-| Repository map | `docs/repository-map.md` | Add | Added the before/after tree map, disclosure principle, migration rationale, and targeted probes for this navigation redesign. |
+| Repository map | `docs/repository-map.md` | Add | Added the tree map, disclosure principle, layout rationale, and targeted probes for this navigation redesign. |
 | Release proofs | `docs/release/proofs/README.md` | Keep | Release proof lifecycle source of truth. Proof runs remain evidence fixtures. |
 | Host release QA | `docs/host-trial-checklist.md` | Keep | Manual release QA checklist. Operators use `docs/first-run.md` instead. |
 | Release plans | `docs/release/initial-public-release-list.md` and release generated reports | Keep as release records | Current only where release checks and ledgers agree. |
@@ -70,7 +83,7 @@ documentation-surface tests.
 | Internal archive | `docs/internal/archive/**` | Archive | Historical audits and completed ledgers only. |
 | Release proof runs | `docs/release/proofs/runs/**` | Evidence | Checked-in fixtures. Preserve unless release proof tooling updates them. |
 | Generated host mirrors | `plugins/claude/**`, `plugins/codex/**` | Generated | Do not edit by hand. Update sources and run generated-surface checks. |
-| Dead connector shim | `src/shared/connector-helpers.ts` | Remove | No imports remain; connector code imports `src/shared/json-extraction.ts` directly. |
+| Removed connector helper | `src/shared/connector-helpers.ts` | Remove | No imports remain; connector code imports `src/shared/json-extraction.ts` directly. |
 
 ## Evidence Probes
 
@@ -95,22 +108,22 @@ rg -l -i "(^# .*Runbook|^# .*Playbook|## Adding A Flow|## Adding a flow|Safe set
 Expected result: every hit is either in the approved list in `docs/README.md`
 or is a command source under `src/commands/` or `src/flows/*/command.md`.
 
-Cutover check for removed legacy public docs:
+Check for removed public doc pointers:
 
 ```bash
-rg -n "CLAUDE\.md|older tooling|compatibility pointer|Advanced Compatibility|old intent prefixes" README.md AGENTS.md docs src/commands -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/ideas/**" -g "!docs/learnings/**" -g "!docs/documentation-surface-inventory.md"
+rg -n "CLAUDE\.md|Advanced" README.md AGENTS.md docs src/commands -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/ideas/**" -g "!docs/learnings/**" -g "!docs/documentation-surface-inventory.md"
 ```
 
 Expected result: no matches.
 
-Cutover check for removed shim surfaces:
+Check for removed connector helper surfaces:
 
 ```bash
 test ! -e src/shared/connector-helpers.ts
-rg -n "connector-helpers|Compatibility shim|compatibility projection|legacy root host surface" src tests scripts docs -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/documentation-surface-inventory.md"
+rg -n "connector-helpers" src tests scripts docs -g "!docs/internal/archive/**" -g "!docs/release/proofs/runs/**" -g "!docs/documentation-surface-inventory.md"
 ```
 
-Expected result: only ratchet tests may name the retired file path.
+Expected result: no active surface imports the removed helper.
 
 Final verification targets:
 

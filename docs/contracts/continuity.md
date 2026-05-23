@@ -5,8 +5,6 @@ version: 0.1
 schema_source: src/schemas/continuity.ts
 last_updated: 2026-04-19
 depends_on: [ids, scalars, snapshot]
-compatibility_policy: clean-break
-legacy_parse_policy: reject
 report_ids:
   - continuity.record
   - continuity.index
@@ -21,10 +19,9 @@ later session pick up where an earlier one left off. A **continuity index**
 is the resolver that determines which record (if any) is authoritative for
 the next resume and which run (if any) is currently attached.
 
-Continuity is **clean-break**. Circuit will NOT parse legacy Circuit
-records through normal runtime paths (`legacy_parse_policy: reject`). If import
-is ever required, it is a separate migration-source contract; the runtime
-schema stays strict.
+Continuity is **strict**. Circuit accepts only the current continuity record
+shape through normal runtime paths. If import is ever required, it must be a
+separate source contract; the runtime schema stays strict.
 
 ## Ubiquitous language
 
@@ -81,9 +78,8 @@ and tested in `tests/contracts/continuity-schema.test.ts`.
   string). Closes the naive `z.string().min(1)` drift that would have
   shipped before Slice 7.
 
-- **CONT-I2 — `schema_version` is `1` (number literal).** Legacy Circuit
-  used string `"1"`; Circuit uses `z.literal(1)`. A later migration
-  contract MAY normalize the legacy form; the runtime schema MUST NOT.
+- **CONT-I2 — `schema_version` is `1` (number literal).** Circuit uses
+  `z.literal(1)`. String versions are rejected by the runtime schema.
 
 - **CONT-I3 — `continuity_kind` is a 2-variant discriminated union.**
   Exactly one of `standalone` or `run-backed`. No third variant, no
@@ -388,9 +384,8 @@ scoped to v0.2 with rationale in the §Resolver precedence section above.
   - **Split-brain resolver precedence (Codex MED #4).** Pick a
     precedence rule for the case where `pending_record` points at a
     run-backed record whose `run_ref.run_id` disagrees with
-    `current_run.run_id`. Three candidates: pending-record-wins (the
-    legacy Circuit behavior); current-run-wins (favors "live" state);
-    error-on-conflict (force operator action). Reopen condition: the
+    `current_run.run_id`. Three candidates: pending-record-wins;
+    current-run-wins; error-on-conflict. Reopen condition: the
     resume flow ships OR a split-brain incident is observed in
     practice.
 - **v1.0 (Stage 2)** — ratified invariants plus property tests:

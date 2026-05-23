@@ -337,7 +337,7 @@ decision receipt, not a raw trace.
 
 - Schematic authoring supports `fanout`.
 - Compiled fanout supports relay branches while keeping existing sub-run fanout
-  behavior backward-compatible.
+  behavior unchanged.
 - Explore tournament mode routes from Analyze into the Decision stage without
   changing default Explore behavior.
 - The emitted tournament path reports canonical stages as Frame, Analyze,
