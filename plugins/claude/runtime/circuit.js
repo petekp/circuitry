@@ -37,9 +37,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/commander/lib/error.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js
 var require_error = __commonJS({
-  "node_modules/commander/lib/error.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js"(exports) {
     var CommanderError2 = class extends Error {
       /**
        * Constructs the CommanderError class
@@ -72,9 +72,9 @@ var require_error = __commonJS({
   }
 });
 
-// node_modules/commander/lib/argument.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js
 var require_argument = __commonJS({
-  "node_modules/commander/lib/argument.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Argument2 = class {
       /**
@@ -200,9 +200,9 @@ var require_argument = __commonJS({
   }
 });
 
-// node_modules/commander/lib/help.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js
 var require_help = __commonJS({
-  "node_modules/commander/lib/help.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js"(exports) {
     var { humanReadableArgName } = require_argument();
     var Help2 = class {
       constructor() {
@@ -802,9 +802,9 @@ ${itemIndentStr}`);
   }
 });
 
-// node_modules/commander/lib/option.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js
 var require_option = __commonJS({
-  "node_modules/commander/lib/option.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Option2 = class {
       /**
@@ -1115,9 +1115,9 @@ var require_option = __commonJS({
   }
 });
 
-// node_modules/commander/lib/suggestSimilar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js
 var require_suggestSimilar = __commonJS({
-  "node_modules/commander/lib/suggestSimilar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js"(exports) {
     var maxDistance = 3;
     function editDistance(a, b) {
       if (Math.abs(a.length - b.length) > maxDistance)
@@ -1195,9 +1195,9 @@ var require_suggestSimilar = __commonJS({
   }
 });
 
-// node_modules/commander/lib/command.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js
 var require_command = __commonJS({
-  "node_modules/commander/lib/command.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js"(exports) {
     var EventEmitter = __require("node:events").EventEmitter;
     var childProcess = __require("node:child_process");
     var path = __require("node:path");
@@ -3441,9 +3441,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 });
 
-// node_modules/commander/index.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js
 var require_commander = __commonJS({
-  "node_modules/commander/index.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js"(exports) {
     var { Argument: Argument2 } = require_argument();
     var { Command: Command2 } = require_command();
     var { CommanderError: CommanderError2, InvalidArgumentError: InvalidArgumentError2 } = require_error();
@@ -3463,9 +3463,9 @@ var require_commander = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/identity.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = Symbol.for("yaml.alias");
     var DOC = Symbol.for("yaml.document");
@@ -3520,9 +3520,9 @@ var require_identity = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/visit.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "node_modules/yaml/dist/visit.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = Symbol("break visit");
@@ -3678,9 +3678,9 @@ var require_visit = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/directives.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "node_modules/yaml/dist/doc/directives.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -3849,9 +3849,9 @@ var require_directives = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/anchors.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -3919,9 +3919,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/applyReviver.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -3969,9 +3969,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/toJS.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -3999,9 +3999,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Node.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -4040,9 +4040,9 @@ var require_Node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Alias.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -4154,9 +4154,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Scalar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -4184,9 +4184,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/createNode.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -4259,9 +4259,9 @@ var require_createNode = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Collection.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
@@ -4402,9 +4402,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyComment.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -4419,9 +4419,9 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/foldFlowLines.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
@@ -4555,9 +4555,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyString.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -4838,9 +4838,9 @@ ${indent}`);
   }
 });
 
-// node_modules/yaml/dist/stringify/stringify.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -4962,9 +4962,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyPair.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -5095,9 +5095,9 @@ ${ctx.indent}`;
   }
 });
 
-// node_modules/yaml/dist/log.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "node_modules/yaml/dist/log.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -5117,9 +5117,9 @@ var require_log = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -5174,9 +5174,9 @@ var require_merge = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/addPairToJSMap.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge2 = require_merge();
@@ -5238,9 +5238,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Pair.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -5278,9 +5278,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyCollection.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -5429,9 +5429,9 @@ ${indent}${end}`;
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLMap.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -5573,9 +5573,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/map.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -5595,9 +5595,9 @@ var require_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLSeq.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -5711,9 +5711,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/seq.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -5733,9 +5733,9 @@ var require_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/string.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string4 = {
@@ -5752,9 +5752,9 @@ var require_string = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/null.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -5770,9 +5770,9 @@ var require_null = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/bool.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -5794,9 +5794,9 @@ var require_bool = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyNumber.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -5821,9 +5821,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/float.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -5867,9 +5867,9 @@ var require_float = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/int.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -5912,9 +5912,9 @@ var require_int = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -5940,9 +5940,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/json/schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map2 = require_map();
@@ -6007,9 +6007,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -6073,9 +6073,9 @@ var require_binary = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -6151,9 +6151,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -6229,9 +6229,9 @@ var require_omap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -6261,9 +6261,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/float.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -6310,9 +6310,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/int.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -6389,9 +6389,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/set.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -6478,9 +6478,9 @@ var require_set = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -6566,9 +6566,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -6610,9 +6610,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/tags.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "node_modules/yaml/dist/schema/tags.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -6704,9 +6704,9 @@ var require_tags = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/Schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map2 = require_map();
@@ -6736,9 +6736,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyDocument.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -6816,9 +6816,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/Document.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "node_modules/yaml/dist/doc/Document.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -7125,9 +7125,9 @@ var require_Document = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/errors.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "node_modules/yaml/dist/errors.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -7190,9 +7190,9 @@ ${pointer}
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-props.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -7324,9 +7324,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-contains-newline.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -7366,9 +7366,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-flow-indent-check.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -7384,9 +7384,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-map-includes.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -7400,9 +7400,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-map.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -7508,9 +7508,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-seq.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -7559,9 +7559,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-end.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -7602,9 +7602,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-collection.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -7796,9 +7796,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-collection.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -7861,9 +7861,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-scalar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -8044,9 +8044,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -8263,9 +8263,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-scalar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -8344,9 +8344,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -8374,9 +8374,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-node.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -8480,9 +8480,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-doc.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -8523,9 +8523,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/composer.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "node_modules/yaml/dist/compose/composer.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -8729,9 +8729,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// node_modules/yaml/dist/parse/cst-scalar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -8914,9 +8914,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-stringify.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -8975,9 +8975,9 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-visit.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = Symbol("break visit");
     var SKIP = Symbol("skip children");
@@ -9037,9 +9037,9 @@ var require_cst_visit = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "node_modules/yaml/dist/parse/cst.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -9139,9 +9139,9 @@ var require_cst = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/lexer.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -9718,9 +9718,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/line-counter.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -9749,9 +9749,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/parser.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "node_modules/yaml/dist/parse/parser.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -10616,9 +10616,9 @@ var require_parser = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/public-api.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "node_modules/yaml/dist/public-api.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -10713,9 +10713,9 @@ var require_public_api = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/index.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/yaml/dist/index.js"(exports) {
+  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -10767,11 +10767,11 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync18, readFileSync as readFileSync32 } from "node:fs";
-import { dirname as dirname9, resolve as resolve13 } from "node:path";
+import { existsSync as existsSync21, readFileSync as readFileSync35 } from "node:fs";
+import { dirname as dirname9, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
-// node_modules/commander/esm.mjs
+// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
 var {
   program,
@@ -10905,7 +10905,7 @@ function findDefaultRoutablePackage(routables) {
   return first;
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
   $brand: () => $brand,
@@ -11148,7 +11148,7 @@ __export(external_exports, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/core/index.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/index.js
 var core_exports2 = {};
 __export(core_exports2, {
   $ZodAny: () => $ZodAny,
@@ -11427,7 +11427,7 @@ __export(core_exports2, {
   version: () => version
 });
 
-// node_modules/zod/v4/core/core.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/core.js
 var _a;
 var NEVER = /* @__PURE__ */ Object.freeze({
   status: "aborted"
@@ -11504,7 +11504,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// node_modules/zod/v4/core/util.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -12200,7 +12200,7 @@ var Class = class {
   }
 };
 
-// node_modules/zod/v4/core/errors.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -12339,7 +12339,7 @@ function prettifyError(error51) {
   return lines.join("\n");
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -12427,7 +12427,7 @@ var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-// node_modules/zod/v4/core/regexes.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/regexes.js
 var regexes_exports = {};
 __export(regexes_exports, {
   base64: () => base64,
@@ -12586,7 +12586,7 @@ var sha512_hex = /^[0-9a-fA-F]{128}$/;
 var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
 var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-// node_modules/zod/v4/core/checks.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a3;
   inst._zod ?? (inst._zod = {});
@@ -13134,7 +13134,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -13170,14 +13170,14 @@ var Doc = class {
   }
 };
 
-// node_modules/zod/v4/core/versions.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 4,
   patch: 3
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a3;
   inst ?? (inst = {});
@@ -13943,13 +13943,13 @@ var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
     }
     return propValues;
   });
-  const isObject4 = isObject;
+  const isObject5 = isObject;
   const catchall = def.catchall;
   let value;
   inst._zod.parse = (payload, ctx) => {
     value ?? (value = _normalized.value);
     const input = payload.value;
-    if (!isObject4(input)) {
+    if (!isObject5(input)) {
       payload.issues.push({
         expected: "object",
         code: "invalid_type",
@@ -14076,7 +14076,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     return (payload, ctx) => fn(shape, payload, ctx);
   };
   let fastpass;
-  const isObject4 = isObject;
+  const isObject5 = isObject;
   const jit = !globalConfig.jitless;
   const allowsEval2 = allowsEval;
   const fastEnabled = jit && allowsEval2.value;
@@ -14085,7 +14085,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
   inst._zod.parse = (payload, ctx) => {
     value ?? (value = _normalized.value);
     const input = payload.value;
-    if (!isObject4(input)) {
+    if (!isObject5(input)) {
       payload.issues.push({
         expected: "object",
         code: "invalid_type",
@@ -15270,7 +15270,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// node_modules/zod/v4/locales/index.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/index.js
 var locales_exports = {};
 __export(locales_exports, {
   ar: () => ar_default,
@@ -15327,7 +15327,7 @@ __export(locales_exports, {
   zhTW: () => zh_TW_default
 });
 
-// node_modules/zod/v4/locales/ar.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0641", verb: "\u0623\u0646 \u064A\u062D\u0648\u064A" },
@@ -15434,7 +15434,7 @@ function ar_default() {
   };
 }
 
-// node_modules/zod/v4/locales/az.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmal\u0131d\u0131r" },
@@ -15540,7 +15540,7 @@ function az_default() {
   };
 }
 
-// node_modules/zod/v4/locales/be.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/be.js
 function getBelarusianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -15697,7 +15697,7 @@ function be_default() {
   };
 }
 
-// node_modules/zod/v4/locales/bg.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/bg.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0430", verb: "\u0434\u0430 \u0441\u044A\u0434\u044A\u0440\u0436\u0430" },
@@ -15818,7 +15818,7 @@ function bg_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ca.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ca.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "car\xE0cters", verb: "contenir" },
@@ -15927,7 +15927,7 @@ function ca_default() {
   };
 }
 
-// node_modules/zod/v4/locales/cs.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/cs.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "znak\u016F", verb: "m\xEDt" },
@@ -16039,7 +16039,7 @@ function cs_default() {
   };
 }
 
-// node_modules/zod/v4/locales/da.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/da.js
 var error7 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "havde" },
@@ -16155,7 +16155,7 @@ function da_default() {
   };
 }
 
-// node_modules/zod/v4/locales/de.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/de.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -16264,7 +16264,7 @@ function de_default() {
   };
 }
 
-// node_modules/zod/v4/locales/el.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/el.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "\u03C7\u03B1\u03C1\u03B1\u03BA\u03C4\u03AE\u03C1\u03B5\u03C2", verb: "\u03BD\u03B1 \u03AD\u03C7\u03B5\u03B9" },
@@ -16374,7 +16374,7 @@ function el_default() {
   };
 }
 
-// node_modules/zod/v4/locales/en.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/en.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -16487,7 +16487,7 @@ function en_default() {
   };
 }
 
-// node_modules/zod/v4/locales/eo.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/eo.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "karaktrojn", verb: "havi" },
@@ -16597,7 +16597,7 @@ function eo_default() {
   };
 }
 
-// node_modules/zod/v4/locales/es.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/es.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -16730,7 +16730,7 @@ function es_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fa.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fa.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "\u06A9\u0627\u0631\u0627\u06A9\u062A\u0631", verb: "\u062F\u0627\u0634\u062A\u0647 \u0628\u0627\u0634\u062F" },
@@ -16845,7 +16845,7 @@ function fa_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fi.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fi.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "merkki\xE4", subject: "merkkijonon" },
@@ -16958,7 +16958,7 @@ function fi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -17084,7 +17084,7 @@ function fr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr-CA.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr-CA.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -17192,7 +17192,7 @@ function fr_CA_default() {
   };
 }
 
-// node_modules/zod/v4/locales/he.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/he.js
 var error17 = () => {
   const TypeNames = {
     string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
@@ -17387,7 +17387,7 @@ function he_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hr.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hr.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "znakova", verb: "imati" },
@@ -17510,7 +17510,7 @@ function hr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hu.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hu.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -17619,7 +17619,7 @@ function hu_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hy.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hy.js
 function getArmenianPlural(count, one, many) {
   return Math.abs(count) === 1 ? one : many;
 }
@@ -17767,7 +17767,7 @@ function hy_default() {
   };
 }
 
-// node_modules/zod/v4/locales/id.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/id.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -17874,7 +17874,7 @@ function id_default() {
   };
 }
 
-// node_modules/zod/v4/locales/is.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/is.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "stafi", verb: "a\xF0 hafa" },
@@ -17984,7 +17984,7 @@ function is_default() {
   };
 }
 
-// node_modules/zod/v4/locales/it.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/it.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -18093,7 +18093,7 @@ function it_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ja.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ja.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "\u6587\u5B57", verb: "\u3067\u3042\u308B" },
@@ -18201,7 +18201,7 @@ function ja_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ka.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ka.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "\u10E1\u10D8\u10DB\u10D1\u10DD\u10DA\u10DD", verb: "\u10E3\u10DC\u10D3\u10D0 \u10E8\u10D4\u10D8\u10EA\u10D0\u10D5\u10D3\u10D4\u10E1" },
@@ -18314,7 +18314,7 @@ function ka_default() {
   };
 }
 
-// node_modules/zod/v4/locales/km.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/km.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "\u178F\u17BD\u17A2\u1780\u17D2\u179F\u179A", verb: "\u1782\u17BD\u179A\u1798\u17B6\u1793" },
@@ -18425,12 +18425,12 @@ function km_default() {
   };
 }
 
-// node_modules/zod/v4/locales/kh.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/kh.js
 function kh_default() {
   return km_default();
 }
 
-// node_modules/zod/v4/locales/ko.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ko.js
 var error27 = () => {
   const Sizable = {
     string: { unit: "\uBB38\uC790", verb: "to have" },
@@ -18542,7 +18542,7 @@ function ko_default() {
   };
 }
 
-// node_modules/zod/v4/locales/lt.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/lt.js
 var capitalizeFirstCharacter = (text) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
@@ -18746,7 +18746,7 @@ function lt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/mk.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/mk.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "\u0437\u043D\u0430\u0446\u0438", verb: "\u0434\u0430 \u0438\u043C\u0430\u0430\u0442" },
@@ -18856,7 +18856,7 @@ function mk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ms.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ms.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -18964,7 +18964,7 @@ function ms_default() {
   };
 }
 
-// node_modules/zod/v4/locales/nl.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/nl.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "tekens", verb: "heeft" },
@@ -19075,7 +19075,7 @@ function nl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/no.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/no.js
 var error32 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "\xE5 ha" },
@@ -19184,7 +19184,7 @@ function no_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ota.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ota.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmal\u0131d\u0131r" },
@@ -19294,7 +19294,7 @@ function ota_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ps.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ps.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "\u062A\u0648\u06A9\u064A", verb: "\u0648\u0644\u0631\u064A" },
@@ -19409,7 +19409,7 @@ function ps_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pl.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pl.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "znak\xF3w", verb: "mie\u0107" },
@@ -19519,7 +19519,7 @@ function pl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pt.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pt.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -19628,7 +19628,7 @@ function pt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ro.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ro.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "caractere", verb: "s\u0103 aib\u0103" },
@@ -19748,7 +19748,7 @@ function ro_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ru.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ru.js
 function getRussianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -19905,7 +19905,7 @@ function ru_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sl.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sl.js
 var error39 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -20015,7 +20015,7 @@ function sl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sv.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sv.js
 var error40 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -20126,7 +20126,7 @@ function sv_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ta.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ta.js
 var error41 = () => {
   const Sizable = {
     string: { unit: "\u0B8E\u0BB4\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BCD\u0B95\u0BB3\u0BCD", verb: "\u0B95\u0BCA\u0BA3\u0BCD\u0B9F\u0BBF\u0BB0\u0BC1\u0B95\u0BCD\u0B95 \u0BB5\u0BC7\u0BA3\u0BCD\u0B9F\u0BC1\u0BAE\u0BCD" },
@@ -20237,7 +20237,7 @@ function ta_default() {
   };
 }
 
-// node_modules/zod/v4/locales/th.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/th.js
 var error42 = () => {
   const Sizable = {
     string: { unit: "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23", verb: "\u0E04\u0E27\u0E23\u0E21\u0E35" },
@@ -20348,7 +20348,7 @@ function th_default() {
   };
 }
 
-// node_modules/zod/v4/locales/tr.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/tr.js
 var error43 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "olmal\u0131" },
@@ -20454,7 +20454,7 @@ function tr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uk.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uk.js
 var error44 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432", verb: "\u043C\u0430\u0442\u0438\u043C\u0435" },
@@ -20563,12 +20563,12 @@ function uk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ua.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ua.js
 function ua_default() {
   return uk_default();
 }
 
-// node_modules/zod/v4/locales/ur.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ur.js
 var error45 = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0648\u0641", verb: "\u06C1\u0648\u0646\u0627" },
@@ -20679,7 +20679,7 @@ function ur_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uz.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uz.js
 var error46 = () => {
   const Sizable = {
     string: { unit: "belgi", verb: "bo\u2018lishi kerak" },
@@ -20790,7 +20790,7 @@ function uz_default() {
   };
 }
 
-// node_modules/zod/v4/locales/vi.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/vi.js
 var error47 = () => {
   const Sizable = {
     string: { unit: "k\xFD t\u1EF1", verb: "c\xF3" },
@@ -20899,7 +20899,7 @@ function vi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-CN.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-CN.js
 var error48 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u7B26", verb: "\u5305\u542B" },
@@ -21009,7 +21009,7 @@ function zh_CN_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-TW.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-TW.js
 var error49 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u5143", verb: "\u64C1\u6709" },
@@ -21117,7 +21117,7 @@ function zh_TW_default() {
   };
 }
 
-// node_modules/zod/v4/locales/yo.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/yo.js
 var error50 = () => {
   const Sizable = {
     string: { unit: "\xE0mi", verb: "n\xED" },
@@ -21225,7 +21225,7 @@ function yo_default() {
   };
 }
 
-// node_modules/zod/v4/core/registries.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/registries.js
 var _a2;
 var $output = Symbol("ZodOutput");
 var $input = Symbol("ZodInput");
@@ -21275,7 +21275,7 @@ function registry() {
 (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
-// node_modules/zod/v4/core/api.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/api.js
 // @__NO_SIDE_EFFECTS__
 function _string(Class2, params) {
   return new Class2({
@@ -22314,7 +22314,7 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
   return inst;
 }
 
-// node_modules/zod/v4/core/to-json-schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/to-json-schema.js
 function initializeContext(params) {
   let target = params?.target ?? "draft-2020-12";
   if (target === "draft-4")
@@ -22673,7 +22673,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   return finalize(ctx, schema);
 };
 
-// node_modules/zod/v4/core/json-schema-processors.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-processors.js
 var formatMap = {
   guid: "uuid",
   url: "uri",
@@ -23217,7 +23217,7 @@ function toJSONSchema(input, params) {
   return finalize(ctx, input);
 }
 
-// node_modules/zod/v4/core/json-schema-generator.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-generator.js
 var JSONSchemaGenerator = class {
   /** @deprecated Access via ctx instead */
   get metadataRegistry() {
@@ -23292,10 +23292,10 @@ var JSONSchemaGenerator = class {
   }
 };
 
-// node_modules/zod/v4/core/json-schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
 var schemas_exports2 = {};
 __export(schemas_exports2, {
   ZodAny: () => ZodAny,
@@ -23466,7 +23466,7 @@ __export(schemas_exports2, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/classic/checks.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/checks.js
 var checks_exports2 = {};
 __export(checks_exports2, {
   endsWith: () => _endsWith,
@@ -23500,7 +23500,7 @@ __export(checks_exports2, {
   uppercase: () => _uppercase
 });
 
-// node_modules/zod/v4/classic/iso.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -23541,7 +23541,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/v4/classic/errors.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -23581,7 +23581,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -23595,7 +23595,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
 var _installedGroups = /* @__PURE__ */ new WeakMap();
 function _installLazyMethods(inst, group, methods) {
   const proto = Object.getPrototypeOf(inst);
@@ -24885,7 +24885,7 @@ function preprocess(fn, schema) {
   });
 }
 
-// node_modules/zod/v4/classic/compat.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/compat.js
 var ZodIssueCode = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -24911,7 +24911,7 @@ var ZodFirstPartyTypeKind;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-// node_modules/zod/v4/classic/from-json-schema.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/from-json-schema.js
 var z = {
   ...schemas_exports2,
   ...checks_exports2,
@@ -25391,7 +25391,7 @@ function fromJSONSchema(schema, params) {
   return convertSchema(normalized, ctx);
 }
 
-// node_modules/zod/v4/classic/coerce.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/coerce.js
 var coerce_exports = {};
 __export(coerce_exports, {
   bigint: () => bigint3,
@@ -25416,7 +25416,7 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
 config(en_default());
 
 // dist/schemas/verification.js
@@ -37705,7 +37705,7 @@ function appendCapped(current, currentBytes, chunk, maxBytes) {
 }
 async function runConnectorSubprocess(input) {
   const start = performance.now();
-  return await new Promise((resolve14, reject) => {
+  return await new Promise((resolve16, reject) => {
     let child;
     try {
       child = spawn(input.executable, [...input.args], {
@@ -37778,7 +37778,7 @@ async function runConnectorSubprocess(input) {
     });
     child.on("close", (code, signal) => {
       clearAllTimers();
-      resolve14({
+      resolve16({
         stdout,
         stderr,
         stdoutCapped,
@@ -48813,8 +48813,8 @@ function boundedText(value, max) {
     return value;
   return `${value.slice(0, Math.max(0, max - 1)).trimEnd()}.`;
 }
-function optionPresentationById(readJson2) {
-  const raw = readJson2("reports/decision-options.json");
+function optionPresentationById(readJson3) {
+  const raw = readJson3("reports/decision-options.json");
   if (!isRecord4(raw) || !Array.isArray(raw.options))
     return /* @__PURE__ */ new Map();
   const entries = [];
@@ -48837,8 +48837,8 @@ function optionPresentationById(readJson2) {
   }
   return new Map(entries);
 }
-function tournamentQuestion(readJson2) {
-  const raw = readJson2("reports/tournament-review.json");
+function tournamentQuestion(readJson3) {
+  const raw = readJson3("reports/tournament-review.json");
   if (!isRecord4(raw))
     return void 0;
   const question = raw.tradeoff_question;
@@ -55676,6 +55676,2227 @@ async function runHandoffCommand(argv, options = {}) {
   }
 }
 
+// dist/history/indexer.js
+import { existsSync as existsSync19, mkdirSync as mkdirSync4, readFileSync as readFileSync33, readdirSync as readdirSync3, renameSync, statSync as statSync3, writeFileSync as writeFileSync5 } from "node:fs";
+import { basename as basename2, join as join19, resolve as resolve14 } from "node:path";
+
+// dist/schemas/memory-input.js
+var ReasonCode2 = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
+var CONTINUITY_RECORD_REF_PATTERN = /(?:^|\/)continuity\/records\/[a-z0-9][a-z0-9._-]*\.json$/;
+var MemoryInputKind = external_exports.enum([
+  "repo",
+  "user",
+  "project",
+  "prior_run",
+  "continuity",
+  "handoff_brief"
+]);
+var MemoryHintAppliesTo = external_exports.enum([
+  "context",
+  "verification",
+  "preference",
+  "prior_failure",
+  "repo_convention",
+  "operator_note"
+]);
+var MemoryStalenessStatus = external_exports.enum(["fresh", "stale", "unknown"]);
+var MemorySource = external_exports.object({
+  ref: Ref,
+  captured_at: external_exports.string().datetime(),
+  source_updated_at: external_exports.string().datetime().optional(),
+  sha256: Sha256.optional()
+}).strict();
+var MemoryHint = external_exports.object({
+  id: ControlPlaneFileStem,
+  text: external_exports.string().min(1),
+  applies_to: MemoryHintAppliesTo
+}).strict();
+var MemoryStaleness = external_exports.object({
+  status: MemoryStalenessStatus,
+  checked_at: external_exports.string().datetime(),
+  reason_codes: external_exports.array(ReasonCode2).min(1)
+}).strict();
+var MemoryInputV0 = external_exports.object({
+  schema_version: external_exports.literal(1),
+  memory_id: ControlPlaneFileStem,
+  kind: MemoryInputKind,
+  source: MemorySource,
+  summary: external_exports.string().min(1),
+  hints: external_exports.array(MemoryHint).min(1),
+  staleness: MemoryStaleness,
+  authority: external_exports.literal("hint_only")
+}).strict().superRefine((memory, ctx) => {
+  if (memory.source.sha256 !== void 0 && memory.source.ref.sha256 !== void 0 && memory.source.sha256 !== memory.source.ref.sha256) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "sha256"],
+      message: "source.sha256 must match source.ref.sha256 when both are present"
+    });
+  }
+  if (memory.kind === "continuity" && memory.source.ref.kind !== "report") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "kind"],
+      message: "continuity memory must point at a continuity report ref"
+    });
+  }
+  if (memory.kind === "continuity" && !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "ref"],
+      message: "continuity memory must point at continuity/records/<record>.json"
+    });
+  }
+  if (memory.kind === "handoff_brief" && memory.source.ref.kind !== "report" && memory.source.ref.kind !== "context_packet") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "kind"],
+      message: "handoff brief memory must point at report or context_packet refs"
+    });
+  }
+  if (memory.staleness.status === "unknown" && !memory.staleness.reason_codes.includes("memory_unverified")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["staleness", "reason_codes"],
+      message: "unknown memory staleness requires memory_unverified reason code"
+    });
+  }
+  if (memory.staleness.status === "stale" && !memory.staleness.reason_codes.includes("memory_stale")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["staleness", "reason_codes"],
+      message: "stale memory requires memory_stale reason code"
+    });
+  }
+  const seenHints = /* @__PURE__ */ new Set();
+  for (const [index, hint] of memory.hints.entries()) {
+    if (seenHints.has(hint.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["hints", index, "id"],
+        message: `duplicate memory hint id: ${hint.id}`
+      });
+    }
+    seenHints.add(hint.id);
+  }
+});
+
+// dist/schemas/run.js
+var RunTraceBody = external_exports.array(TraceEntry).min(1);
+var issueAt4 = (ctx, path, message) => {
+  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+};
+function isGuidanceDecision(entry) {
+  return entry.kind === "guidance.decision";
+}
+function stableJson6(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sameJson2(a, b) {
+  return stableJson6(a) === stableJson6(b);
+}
+function selectedRecord(entry) {
+  return entry.selected;
+}
+function priorFlowSelectionIndex(traceEntries, beforeIndex) {
+  return traceEntries.findIndex((entry, index) => {
+    return index < beforeIndex && isGuidanceDecision(entry) && entry.subject === "flow_selection";
+  });
+}
+function findPriorRelayGuidance(traceEntries, relay, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "relay_execution") {
+      continue;
+    }
+    if (entry.scope.step_id !== relay.step_id || entry.scope.attempt !== relay.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findFollowingRelayRequest(traceEntries, relay, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return { entry, index };
+    }
+    if ((entry.kind === "relay.started" || entry.kind === "relay.completed") && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function findFollowingSkillsLoaded(traceEntries, relay, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "skills.loaded" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return entry;
+    }
+    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function findPriorCheckpointGuidance(traceEntries, checkpoint, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "checkpoint_resolution") {
+      continue;
+    }
+    if (entry.scope.step_id !== checkpoint.step_id || entry.scope.attempt !== checkpoint.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findPriorProofPolicyGuidance(traceEntries, proof, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "proof_policy" || entry.decision_id !== proof.proof_policy_decision_id) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findPriorSafeApplyGuidance(traceEntries, result, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply" || entry.decision_id !== result.decision_id) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findFollowingStepCompleted(traceEntries, guidance, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "step.completed" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
+      return { entry, index };
+    }
+    if (entry.kind === "step.entered" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function selectedSkills(selected) {
+  if (!Array.isArray(selected.skills))
+    return [];
+  return selected.skills.filter((skill) => skill !== null && typeof skill === "object" && !Array.isArray(skill));
+}
+function skillIdentity(skill) {
+  return {
+    id: skill.id,
+    ...skill.slot === void 0 ? {} : { slot: skill.slot }
+  };
+}
+function selectedSafeApplyActionMatches(selectedAction, resultAction) {
+  return selectedAction === "reject" && resultAction === "rejected" || selectedAction === "accept" && resultAction === "accepted_for_review" || selectedAction === "apply" && resultAction === "applied";
+}
+function scopeMatchesGuidance(entry, guidance) {
+  return entry.scope.flow_id === guidance.scope.flow_id && entry.scope.step_id === guidance.scope.step_id && entry.scope.attempt === guidance.scope.attempt;
+}
+function proofPolicyRequiresProvenClose(guidance) {
+  if (guidance.subject !== "proof_policy")
+    return false;
+  return selectedRecord(guidance).close_requires_proven === true;
+}
+function isPassingCloseProof(entry, guidance) {
+  return entry.proof_policy_decision_id === guidance.decision_id && entry.overall_status === "proven" && entry.close_allowed && scopeMatchesGuidance(entry, guidance);
+}
+function isPassingSafeApplyResult(entry) {
+  return entry.action === "applied" && entry.outcome === "pass" && entry.final_verification_ref !== void 0;
+}
+function proofPolicyCloseGateKey(guidance) {
+  const selected = selectedRecord(guidance);
+  return JSON.stringify({
+    flow_id: guidance.scope.flow_id,
+    step_id: guidance.scope.step_id,
+    proof_profile: selected.proof_profile,
+    required_claim_kinds: selected.required_claim_kinds,
+    required_evidence_kinds: selected.required_evidence_kinds
+  });
+}
+function validateCompleteCloseGates(traceEntries, ctx) {
+  const closeIndex = traceEntries.findIndex((entry) => entry?.kind === "run.closed" && entry.outcome === "complete");
+  if (closeIndex < 0)
+    return;
+  const latestRequiredProofByRequirement = /* @__PURE__ */ new Map();
+  for (let index = 0; index < closeIndex; index += 1) {
+    const guidance = traceEntries[index];
+    if (guidance === void 0 || !isGuidanceDecision(guidance) || !proofPolicyRequiresProvenClose(guidance)) {
+      continue;
+    }
+    latestRequiredProofByRequirement.set(proofPolicyCloseGateKey(guidance), { guidance, index });
+  }
+  for (const { guidance, index } of latestRequiredProofByRequirement.values()) {
+    const hasPassingProof = traceEntries.some((entry, proofIndex) => {
+      return proofIndex > index && proofIndex < closeIndex && entry?.kind === "proof.assessed" && isPassingCloseProof(entry, guidance);
+    });
+    if (!hasPassingProof) {
+      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing proof.assessed for proof_policy decision '${guidance.decision_id}'`);
+    }
+  }
+  let lastSafeApplyResult;
+  for (let index = 0; index < closeIndex; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind === "safe_apply.result") {
+      lastSafeApplyResult = { entry, index };
+    }
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply") {
+      continue;
+    }
+    if (selectedRecord(entry).action !== "apply")
+      continue;
+    const hasPassingResult = traceEntries.some((candidate, resultIndex) => {
+      return resultIndex > index && resultIndex < closeIndex && candidate?.kind === "safe_apply.result" && candidate.decision_id === entry.decision_id && isPassingSafeApplyResult(candidate) && scopeMatchesGuidance(candidate, entry);
+    });
+    if (!hasPassingResult) {
+      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing safe_apply.result for safe_apply decision '${entry.decision_id}'`);
+    }
+  }
+  if (lastSafeApplyResult !== void 0 && !isPassingSafeApplyResult(lastSafeApplyResult.entry)) {
+    issueAt4(ctx, [closeIndex, "kind"], `run.closed complete cannot follow non-passing safe_apply.result at index ${lastSafeApplyResult.index}`);
+  }
+}
+function validateGuidanceTraceSequence(traceEntries, ctx) {
+  const decisionIds = /* @__PURE__ */ new Map();
+  let hasGuidance = false;
+  let hasProofAssessment = false;
+  let hasSafeApplyResult = false;
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind === "proof.assessed") {
+      hasProofAssessment = true;
+    }
+    if (entry?.kind === "safe_apply.result") {
+      hasSafeApplyResult = true;
+    }
+    if (entry === void 0 || !isGuidanceDecision(entry))
+      continue;
+    hasGuidance = true;
+    const priorIndex = decisionIds.get(entry.decision_id);
+    if (priorIndex !== void 0) {
+      issueAt4(ctx, [index, "decision_id"], `duplicate guidance.decision id '${entry.decision_id}' first appeared at index ${priorIndex}`);
+    } else {
+      decisionIds.set(entry.decision_id, index);
+    }
+  }
+  if (!hasGuidance && !hasProofAssessment && !hasSafeApplyResult)
+    return;
+  const bootstrap = traceEntries[0];
+  if (bootstrap?.kind !== "run.bootstrapped")
+    return;
+  const firstMaterial = traceEntries[1];
+  if (firstMaterial === void 0 || !isGuidanceDecision(firstMaterial) || firstMaterial.subject !== "flow_selection") {
+    issueAt4(ctx, [1, "kind"], "when guidance decisions are present, flow_selection guidance must be the first entry after run.bootstrapped");
+  } else {
+    const selected = selectedRecord(firstMaterial);
+    if (selected.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [1, "selected", "flow_id"], `flow_selection guidance selected flow '${String(selected.flow_id)}' but bootstrap flow_id is '${bootstrap.flow_id}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "step.entered" && priorFlowSelectionIndex(traceEntries, index) < 0) {
+      issueAt4(ctx, [index, "kind"], "step.entered requires prior flow_selection guidance when guidance decisions are present");
+    }
+    if (isGuidanceDecision(entry) && entry.subject !== "flow_selection") {
+      if (entry.scope.flow_id !== bootstrap.flow_id) {
+        issueAt4(ctx, [index, "scope", "flow_id"], `guidance.decision scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+      }
+    }
+    if (entry.kind !== "relay.started" && entry.kind !== "relay.failed")
+      continue;
+    const guidance = findPriorRelayGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "kind"], `${entry.kind} requires prior matching relay_execution guidance when guidance decisions are present`);
+      continue;
+    }
+    const selected = selectedRecord(guidance);
+    if (selected.role !== entry.role) {
+      issueAt4(ctx, [index, "role"], `${entry.kind} role '${entry.role}' does not match relay_execution guidance role '${String(selected.role)}'`);
+    }
+    if (!sameJson2(selected.connector, entry.connector)) {
+      issueAt4(ctx, [index, "connector"], `${entry.kind} connector does not match relay_execution guidance connector`);
+    }
+    if (!sameJson2(selected.model, entry.resolved_selection.model)) {
+      issueAt4(ctx, [index, "resolved_selection", "model"], `${entry.kind} resolved_selection.model does not match relay_execution guidance model`);
+    }
+    if (selected.effort !== entry.resolved_selection.effort) {
+      issueAt4(ctx, [index, "resolved_selection", "effort"], `${entry.kind} resolved_selection.effort does not match relay_execution guidance effort`);
+    }
+    if (entry.kind === "relay.started") {
+      const request = findFollowingRelayRequest(traceEntries, entry, index);
+      if (request === void 0) {
+        issueAt4(ctx, [index, "kind"], "relay.started requires a following relay.request for the same step attempt when guidance decisions are present");
+      } else if (selected.request_payload_hash !== request.entry.request_payload_hash) {
+        issueAt4(ctx, [request.index, "request_payload_hash"], "relay.request request_payload_hash does not match relay_execution guidance request_payload_hash");
+      }
+      const selectedLoadedSkills = selectedSkills(selected).map(skillIdentity);
+      const loaded = findFollowingSkillsLoaded(traceEntries, entry, index);
+      if (loaded === void 0) {
+        if (selectedLoadedSkills.length > 0) {
+          issueAt4(ctx, [index, "kind"], "relay.started with selected skills requires a following skills.loaded entry for the same step attempt");
+        }
+      } else {
+        const loadedSkills = loaded.skills.map(skillIdentity);
+        if (!sameJson2(selectedLoadedSkills, loadedSkills)) {
+          issueAt4(ctx, [index, "kind"], "skills.loaded entries do not match relay_execution guidance skills");
+        }
+      }
+    }
+    if (entry.kind === "relay.failed" && selected.request_payload_hash !== entry.request_payload_hash) {
+      issueAt4(ctx, [index, "request_payload_hash"], "relay.failed request_payload_hash does not match relay_execution guidance request_payload_hash");
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "checkpoint.resolved")
+      continue;
+    const guidance = findPriorCheckpointGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "kind"], "checkpoint.resolved requires prior matching checkpoint_resolution guidance when guidance decisions are present");
+      continue;
+    }
+    const selected = selectedRecord(guidance);
+    if (selected.choice_id !== entry.selection) {
+      issueAt4(ctx, [index, "selection"], `checkpoint.resolved selection '${entry.selection}' does not match checkpoint guidance choice '${String(selected.choice_id)}'`);
+    }
+    if (selected.route_id !== entry.route_id) {
+      issueAt4(ctx, [index, "route_id"], `checkpoint.resolved route_id '${entry.route_id}' does not match checkpoint guidance route '${String(selected.route_id)}'`);
+    }
+    if (selected.auto_resolved !== entry.auto_resolved) {
+      issueAt4(ctx, [index, "auto_resolved"], "checkpoint.resolved auto_resolved does not match checkpoint guidance");
+    }
+    if (selected.resolution_source !== entry.resolution_source) {
+      issueAt4(ctx, [index, "resolution_source"], `checkpoint.resolved resolution_source '${entry.resolution_source}' does not match checkpoint guidance source '${String(selected.resolution_source)}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "proof.assessed")
+      continue;
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], `proof.assessed scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+    }
+    const guidance = findPriorProofPolicyGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "proof_policy_decision_id"], "proof.assessed requires prior matching proof_policy guidance when guidance decisions are present");
+      continue;
+    }
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], "proof.assessed flow scope does not match proof_policy guidance");
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt4(ctx, [index, "scope", "step_id"], "proof.assessed step scope does not match proof_policy guidance");
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt4(ctx, [index, "scope", "attempt"], "proof.assessed attempt scope does not match proof_policy guidance");
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "recovery_route") {
+      continue;
+    }
+    const completed = findFollowingStepCompleted(traceEntries, entry, index);
+    if (completed === void 0) {
+      issueAt4(ctx, [index, "kind"], "recovery_route guidance requires a following step.completed for the same step attempt");
+      continue;
+    }
+    const selected = selectedRecord(entry);
+    if (selected.route_id !== completed.entry.route_taken) {
+      issueAt4(ctx, [completed.index, "route_taken"], `step.completed route_taken '${completed.entry.route_taken}' does not match recovery guidance route '${String(selected.route_id)}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "safe_apply.result")
+      continue;
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], `safe_apply.result scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+    }
+    const guidance = findPriorSafeApplyGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "decision_id"], "safe_apply.result requires prior matching safe_apply guidance when guidance decisions are present");
+      continue;
+    }
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], "safe_apply.result flow scope does not match safe_apply guidance");
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt4(ctx, [index, "scope", "step_id"], "safe_apply.result step scope does not match safe_apply guidance");
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt4(ctx, [index, "scope", "attempt"], "safe_apply.result attempt scope does not match safe_apply guidance");
+    }
+    const selected = selectedRecord(guidance);
+    if (!selectedSafeApplyActionMatches(selected.action, entry.action)) {
+      issueAt4(ctx, [index, "action"], `safe_apply.result action '${entry.action}' does not match safe_apply guidance action '${String(selected.action)}'`);
+    }
+    if (!sameJson2(selected.change_packet_ref, entry.change_packet_ref)) {
+      issueAt4(ctx, [index, "change_packet_ref"], "safe_apply.result change_packet_ref does not match safe_apply guidance");
+    }
+    if (!sameJson2(selected.base_ref, entry.base_ref)) {
+      issueAt4(ctx, [index, "base_ref"], "safe_apply.result base_ref does not match safe_apply guidance");
+    }
+    if (selected.protected_file_decision !== entry.protected_file_decision) {
+      issueAt4(ctx, [index, "protected_file_decision"], "safe_apply.result protected_file_decision does not match safe_apply guidance");
+    }
+    if (!sameJson2(selected.final_verification_ref, entry.final_verification_ref)) {
+      issueAt4(ctx, [index, "final_verification_ref"], "safe_apply.result final_verification_ref does not match safe_apply guidance");
+    }
+  }
+  validateCompleteCloseGates(traceEntries, ctx);
+}
+var GUARDED_OWN_FIELDS = ["run_id", "kind", "sequence"];
+var ownPropertyGuardedArray = external_exports.custom((raw) => {
+  if (!Array.isArray(raw))
+    return true;
+  for (const entry of raw) {
+    if (entry === null || typeof entry !== "object")
+      continue;
+    for (const field of GUARDED_OWN_FIELDS) {
+      if (!Object.hasOwn(entry, field))
+        return false;
+    }
+  }
+  return true;
+}, "trace_entry has inherited (not own) identity field; prototype-chain smuggle rejected");
+var RunTrace = ownPropertyGuardedArray.pipe(RunTraceBody.superRefine((trace_entries, ctx) => {
+  const first = trace_entries[0];
+  if (first === void 0 || first.kind !== "run.bootstrapped") {
+    issueAt4(ctx, [0, "kind"], `first trace_entry must be 'run.bootstrapped', got '${first?.kind ?? "<empty>"}'`);
+  }
+  let bootstrapCount = 0;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e?.kind === "run.bootstrapped") {
+      bootstrapCount += 1;
+      if (bootstrapCount > 1) {
+        issueAt4(ctx, [i, "kind"], `second 'run.bootstrapped' at index ${i}; a RunTrace must bootstrap exactly once`);
+      }
+    }
+  }
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e === void 0)
+      continue;
+    if (e.sequence !== i) {
+      issueAt4(ctx, [i, "sequence"], `trace_entry at index ${i} has sequence=${e.sequence}; expected contiguous 0-based sequence (should be ${i})`);
+    }
+  }
+  const canonical = first?.run_id;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e === void 0 || canonical === void 0)
+      continue;
+    if (e.run_id !== canonical) {
+      issueAt4(ctx, [i, "run_id"], `trace_entry at index ${i} has run_id='${e.run_id}' but RunTrace is for run_id='${canonical}'`);
+    }
+  }
+  let closedAt = -1;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e?.kind !== "run.closed")
+      continue;
+    if (closedAt >= 0) {
+      issueAt4(ctx, [i, "kind"], `second 'run.closed' at index ${i}; a RunTrace closes at most once`);
+    } else {
+      closedAt = i;
+    }
+  }
+  if (closedAt >= 0 && closedAt !== trace_entries.length - 1) {
+    issueAt4(ctx, [closedAt + 1, "kind"], `trace_entries after 'run.closed' at index ${closedAt}; nothing may be appended after closure`);
+  }
+  validateGuidanceTraceSequence(trace_entries, ctx);
+}));
+var SNAPSHOT_STATUS_FOR_OUTCOME = {
+  complete: "complete",
+  aborted: "aborted",
+  handoff: "handoff",
+  stopped: "stopped",
+  escalated: "escalated"
+};
+var RunProjectionBody = external_exports.object({
+  log: RunTrace,
+  snapshot: Snapshot
+}).strict();
+var RunProjection = RunProjectionBody.superRefine(({ log, snapshot }, ctx) => {
+  const bootstrapTraceEntry = log[0];
+  if (bootstrapTraceEntry === void 0 || bootstrapTraceEntry.kind !== "run.bootstrapped") {
+    return;
+  }
+  const bootstrap = bootstrapTraceEntry;
+  if (snapshot.run_id !== bootstrap.run_id) {
+    issueAt4(ctx, ["snapshot", "run_id"], "snapshot.run_id differs from bootstrap.run_id");
+  }
+  if (snapshot.flow_id !== bootstrap.flow_id) {
+    issueAt4(ctx, ["snapshot", "flow_id"], "snapshot.flow_id differs from bootstrap.flow_id");
+  }
+  if (snapshot.manifest_hash !== bootstrap.manifest_hash) {
+    issueAt4(ctx, ["snapshot", "manifest_hash"], "snapshot.manifest_hash differs from bootstrap.manifest_hash; manifest is immutable per run");
+  }
+  if (snapshot.depth !== bootstrap.depth) {
+    issueAt4(ctx, ["snapshot", "depth"], "snapshot.depth differs from bootstrap.depth");
+  }
+  if (!change_kindEquals(snapshot.change_kind, bootstrap.change_kind)) {
+    issueAt4(ctx, ["snapshot", "change_kind"], "snapshot.change_kind differs from bootstrap.change_kind; change_kind is frozen at bootstrap");
+  }
+  if (snapshot.invocation_id !== bootstrap.invocation_id) {
+    issueAt4(ctx, ["snapshot", "invocation_id"], "snapshot.invocation_id differs from bootstrap.invocation_id");
+  }
+  if (snapshot.trace_entries_consumed !== log.length) {
+    issueAt4(ctx, ["snapshot", "trace_entries_consumed"], `snapshot.trace_entries_consumed=${snapshot.trace_entries_consumed} must equal log length=${log.length}; prefix snapshots are rejected`);
+  }
+  const closed = log.find((e) => e.kind === "run.closed");
+  if (closed === void 0) {
+    if (snapshot.status !== "in_progress") {
+      issueAt4(ctx, ["snapshot", "status"], `log has no 'run.closed' trace_entry so snapshot.status must be 'in_progress', got '${snapshot.status}'`);
+    }
+  } else {
+    const expected = SNAPSHOT_STATUS_FOR_OUTCOME[closed.outcome];
+    if (snapshot.status !== expected) {
+      issueAt4(ctx, ["snapshot", "status"], `run.closed.outcome='${closed.outcome}' requires snapshot.status='${expected}', got '${snapshot.status}'`);
+    }
+  }
+});
+function change_kindEquals(a, b) {
+  if (a.change_kind !== b.change_kind)
+    return false;
+  if (a.failure_mode !== b.failure_mode)
+    return false;
+  if (a.acceptance_evidence !== b.acceptance_evidence)
+    return false;
+  if (a.alternate_framing !== b.alternate_framing)
+    return false;
+  if (a.change_kind === "migration-escrow" && b.change_kind === "migration-escrow") {
+    return a.expires_at === b.expires_at && a.restoration_plan === b.restoration_plan;
+  }
+  if (a.change_kind === "break-glass" && b.change_kind === "break-glass") {
+    return a.post_hoc_adr_deadline_at === b.post_hoc_adr_deadline_at;
+  }
+  return true;
+}
+
+// dist/schemas/history.js
+var HISTORY_AUTHORITY_NOTICE = "History results are hint-only prior-run context. They cannot satisfy current proof, checkpoint, policy, route, recovery, verification, or write authority.";
+var HistoryWarningCodeV1 = external_exports.enum([
+  "run_skipped",
+  "report_skipped",
+  "trace_skipped",
+  "source_unreadable",
+  "source_invalid",
+  "source_pruned"
+]);
+var HistoryWarningV1 = external_exports.object({
+  code: HistoryWarningCodeV1,
+  message: external_exports.string().min(1),
+  run_folder: external_exports.string().min(1).optional(),
+  source_path: external_exports.string().min(1).optional()
+}).strict();
+var HistoryManifestV1 = external_exports.object({
+  api_version: external_exports.literal("history-index-v1"),
+  schema_version: external_exports.literal(1),
+  created_at: external_exports.string().datetime(),
+  repo_root: external_exports.string().min(1),
+  runs_base: external_exports.string().min(1),
+  index_dir: external_exports.string().min(1),
+  documents_path: external_exports.literal("documents.v1.jsonl"),
+  run_count: external_exports.number().int().nonnegative(),
+  document_count: external_exports.number().int().nonnegative(),
+  source_fingerprint: external_exports.object({
+    run_folder_names_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/),
+    latest_source_mtime_ms: external_exports.number().int().nonnegative()
+  }).strict(),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict();
+var HistoryDocumentKindV1 = external_exports.enum(["run", "report", "trace", "checkpoint"]);
+var HistoryDocumentV1 = external_exports.object({
+  api_version: external_exports.literal("history-document-v1"),
+  schema_version: external_exports.literal(1),
+  doc_id: external_exports.string().min(1),
+  doc_kind: HistoryDocumentKindV1,
+  run_id: external_exports.string().min(1),
+  flow_id: external_exports.string().min(1).optional(),
+  run_folder: external_exports.string().min(1),
+  source_path: external_exports.string().min(1),
+  source_ref: Ref,
+  source_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/).optional(),
+  source_mtime_ms: external_exports.number().int().nonnegative().optional(),
+  report_schema: external_exports.string().min(1).optional(),
+  step_id: external_exports.string().min(1).optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional(),
+  recorded_at: external_exports.string().datetime().optional(),
+  outcome: external_exports.string().min(1).optional(),
+  title: external_exports.string().min(1),
+  summary: external_exports.string().min(1),
+  text: external_exports.string(),
+  extracted_from: external_exports.array(external_exports.object({
+    json_pointer: external_exports.string().min(1).optional(),
+    field_role: external_exports.string().min(1)
+  }).strict()),
+  facets: external_exports.array(external_exports.string().min(1)),
+  memory_safe: external_exports.boolean()
+}).strict();
+var HistoryStalenessV1 = external_exports.object({
+  status: external_exports.enum(["fresh", "stale", "unknown"]),
+  reason_codes: external_exports.array(external_exports.string().regex(/^[a-z][a-z0-9_]*$/)).min(1),
+  checked_at: external_exports.string().datetime()
+}).strict().superRefine((staleness, ctx) => {
+  if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "unknown history staleness requires memory_unverified reason code"
+    });
+  }
+  if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "stale history staleness requires memory_stale reason code"
+    });
+  }
+});
+var HistoryQueryHitV1 = external_exports.object({
+  rank: external_exports.number().int().positive(),
+  score: external_exports.number(),
+  doc: HistoryDocumentV1,
+  snippet: external_exports.string(),
+  matched_terms: external_exports.array(external_exports.string().min(1)),
+  ranking_reasons: external_exports.array(external_exports.string().min(1)),
+  staleness: HistoryStalenessV1
+}).strict();
+var HistoryQueryResultV1 = external_exports.object({
+  api_version: external_exports.literal("history-query-result-v1"),
+  schema_version: external_exports.literal(1),
+  query: external_exports.string(),
+  format: external_exports.literal("json"),
+  index_state: external_exports.enum(["fresh", "possibly_stale"]),
+  rebuilt: external_exports.boolean(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  warnings: external_exports.array(HistoryWarningV1),
+  results: external_exports.array(HistoryQueryHitV1)
+}).strict();
+var HistoryMemoryInputPreviewV1 = external_exports.object({
+  api_version: external_exports.literal("history-memory-input-preview-v1"),
+  schema_version: external_exports.literal(1),
+  query: external_exports.string(),
+  format: external_exports.literal("memory-input"),
+  index_state: external_exports.enum(["fresh", "possibly_stale"]),
+  rebuilt: external_exports.boolean(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  warnings: external_exports.array(HistoryWarningV1),
+  memory_inputs: external_exports.array(MemoryInputV0),
+  matches: external_exports.array(external_exports.object({
+    memory_id: external_exports.string().min(1),
+    rank: external_exports.number().int().positive(),
+    score: external_exports.number(),
+    source_doc_id: external_exports.string().min(1),
+    source_ref: Ref,
+    snippet: external_exports.string()
+  }).strict())
+}).strict();
+var HistoryStatusV1 = external_exports.object({
+  api_version: external_exports.literal("history-status-v1"),
+  schema_version: external_exports.literal(1),
+  index_exists: external_exports.boolean(),
+  index_state: external_exports.enum(["fresh", "possibly_stale", "missing", "corrupt", "unsupported"]),
+  runs_base: external_exports.string().min(1),
+  index_dir: external_exports.string().min(1),
+  manifest: HistoryManifestV1.optional(),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict();
+var HistoryErrorCodeV1 = external_exports.enum([
+  "invalid_invocation",
+  "runs_base_not_found",
+  "runs_base_unreadable",
+  "index_missing",
+  "index_unsupported",
+  "index_corrupt",
+  "source_unreadable",
+  "internal_error"
+]);
+var HistoryErrorV1 = external_exports.object({
+  api_version: external_exports.literal("history-error-v1"),
+  schema_version: external_exports.literal(1),
+  error: external_exports.object({
+    code: HistoryErrorCodeV1,
+    message: external_exports.string().min(1)
+  }).strict(),
+  runs_base: external_exports.string().min(1).optional(),
+  index_dir: external_exports.string().min(1).optional()
+}).strict();
+
+// dist/history/extract.js
+import { existsSync as existsSync18, lstatSync as lstatSync5, readFileSync as readFileSync32, readdirSync as readdirSync2, realpathSync as realpathSync4, statSync as statSync2 } from "node:fs";
+import { basename, isAbsolute as isAbsolute9, relative as relative10, resolve as resolve13 } from "node:path";
+var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
+  "goal",
+  "objective",
+  "summary",
+  "verdict",
+  "decision",
+  "rationale",
+  "recommendation",
+  "findings",
+  "reason",
+  "outcome",
+  "status",
+  "acceptance_criteria"
+]);
+var NOISY_FIELDS = /* @__PURE__ */ new Set([
+  "unstaged_diff",
+  "staged_diff",
+  "diff",
+  "patch",
+  "stdout",
+  "stderr",
+  "transcript",
+  "payload",
+  "request",
+  "response",
+  "raw",
+  "body"
+]);
+var REPORT_TEXT_LIMIT = 8e3;
+var HIGH_VALUE_TEXT_LIMIT = 2e3;
+var NORMAL_TEXT_LIMIT = 500;
+function isObject4(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function stringValue(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value : void 0;
+}
+function numberValue(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+}
+function safeDateString(value) {
+  const raw = stringValue(value);
+  if (raw === void 0)
+    return void 0;
+  return Number.isNaN(Date.parse(raw)) ? void 0 : new Date(raw).toISOString();
+}
+function readJson2(path) {
+  return JSON.parse(readFileSync32(path, "utf8"));
+}
+function readJsonRecord(path) {
+  try {
+    const parsed = readJson2(path);
+    return isObject4(parsed) ? parsed : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function sha256File(path) {
+  return sha256Hex(readFileSync32(path, "utf8"));
+}
+function mtimeMs(path) {
+  return Math.trunc(statSync2(path).mtimeMs);
+}
+function isInside3(root, target) {
+  const fromRoot = relative10(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
+}
+function listFiles(root, prefix = "") {
+  const absRoot = resolve13(root);
+  if (!existsSync18(absRoot))
+    return [];
+  const rootReal = realpathSync4.native(absRoot);
+  const out = [];
+  function walk(absDir, relDir) {
+    for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
+      const absPath = resolve13(absDir, entry.name);
+      if (lstatSync5(absPath).isSymbolicLink())
+        continue;
+      const real = realpathSync4.native(absPath);
+      if (!isInside3(rootReal, real))
+        continue;
+      const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(absPath, relPath);
+      } else if (entry.isFile()) {
+        out.push(prefix.length === 0 ? relPath : `${prefix}/${relPath}`);
+      }
+    }
+  }
+  walk(absRoot, "");
+  return out;
+}
+function addOptional(object2, key, value) {
+  if (value !== void 0) {
+    object2[key] = value;
+  }
+}
+function validRunId(value) {
+  if (value === void 0)
+    return void 0;
+  return RunId.safeParse(value).success ? value : void 0;
+}
+function validFlowId(value) {
+  if (value === void 0)
+    return void 0;
+  return CompiledFlowId.safeParse(value).success ? value : void 0;
+}
+function validStepId(value) {
+  if (value === void 0)
+    return void 0;
+  return StepId.safeParse(value).success ? value : void 0;
+}
+function parseTrace(runFolder, runFolderName) {
+  const tracePath = resolve13(runFolder, "trace.ndjson");
+  if (!existsSync18(tracePath)) {
+    return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
+  }
+  let entries = [];
+  try {
+    entries = readFileSync32(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject4);
+  } catch (error51) {
+    return {
+      entries: [],
+      reportWrites: /* @__PURE__ */ new Map(),
+      traceValidForDocs: false,
+      warning: {
+        code: "trace_skipped",
+        message: `trace.ndjson could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolder,
+        source_path: "trace.ndjson"
+      }
+    };
+  }
+  const firstRunId = stringValue(entries[0]?.run_id) ?? runFolderName;
+  let traceValidForDocs = entries.length > 0 && validRunId(firstRunId) !== void 0;
+  for (const [index, entry] of entries.entries()) {
+    if (numberValue(entry.sequence) !== index || stringValue(entry.run_id) !== firstRunId) {
+      traceValidForDocs = false;
+    }
+  }
+  const reportWrites = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.kind !== "step.report_written")
+      continue;
+    const reportPath = stringValue(entry.report_path);
+    const reportSchema = stringValue(entry.report_schema);
+    if (reportPath === void 0 || reportSchema === void 0)
+      continue;
+    const write = {
+      report_schema: reportSchema
+    };
+    addOptional(write, "step_id", stringValue(entry.step_id));
+    const attempt = numberValue(entry.attempt);
+    addOptional(write, "attempt", attempt !== void 0 && attempt > 0 ? attempt : void 0);
+    reportWrites.set(reportPath, write);
+  }
+  return {
+    entries,
+    reportWrites,
+    traceValidForDocs,
+    ...traceValidForDocs ? {} : {
+      warning: {
+        code: "trace_skipped",
+        message: "trace.ndjson is not valid for trace-document indexing",
+        run_folder: runFolder,
+        source_path: "trace.ndjson"
+      }
+    }
+  };
+}
+function jsonPointer(path) {
+  return `/${path.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
+function stringifyForPrune(value) {
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+function extractText(value, options) {
+  const lines = [];
+  const extractedFrom = [];
+  const highValue = /* @__PURE__ */ new Map();
+  let prunedChars = 0;
+  function visit(current, path) {
+    const segment = path.at(-1);
+    if (segment !== void 0 && NOISY_FIELDS.has(segment) && !(options.allowCheckpointResponseFields && ["response"].includes(segment))) {
+      prunedChars += stringifyForPrune(current).length;
+      return;
+    }
+    if (Array.isArray(current)) {
+      for (const [index, item] of current.entries())
+        visit(item, [...path, String(index)]);
+      return;
+    }
+    if (isObject4(current)) {
+      for (const [key, item] of Object.entries(current)) {
+        if (options.allowCheckpointResponseFields && ["selection", "route_id", "resolution_source"].includes(key)) {
+          visit(item, [...path, key]);
+          continue;
+        }
+        visit(item, [...path, key]);
+      }
+      return;
+    }
+    if (current === null || current === void 0)
+      return;
+    const raw = String(current).trim();
+    if (raw.length === 0)
+      return;
+    const role = segment ?? "value";
+    const isHighValue = HIGH_VALUE_FIELDS.has(role);
+    const limit = isHighValue ? HIGH_VALUE_TEXT_LIMIT : NORMAL_TEXT_LIMIT;
+    const clipped = raw.length > limit ? `${raw.slice(0, limit)}...` : raw;
+    lines.push(`${role}: ${clipped}`);
+    extractedFrom.push({ json_pointer: jsonPointer(path), field_role: role });
+    if (isHighValue && !highValue.has(role))
+      highValue.set(role, clipped);
+  }
+  visit(value, []);
+  return {
+    text: lines.join("\n").slice(0, REPORT_TEXT_LIMIT),
+    extractedFrom,
+    prunedChars,
+    highValue
+  };
+}
+function firstHighValue(extraction, fields) {
+  for (const field of fields) {
+    const value = extraction.highValue.get(field);
+    if (value !== void 0 && value.trim().length > 0)
+      return value;
+  }
+  return void 0;
+}
+function buildFacets(input) {
+  const facets = /* @__PURE__ */ new Set([`kind:${input.docKind}`]);
+  if (input.flowId !== void 0)
+    facets.add(`flow:${input.flowId}`);
+  if (input.outcome !== void 0)
+    facets.add(`outcome:${input.outcome}`);
+  if (input.reportSchema !== void 0)
+    facets.add(`schema:${input.reportSchema}`);
+  if (input.stepId !== void 0)
+    facets.add(`step:${input.stepId}`);
+  const haystack = `${input.sourcePath} ${input.reportSchema ?? ""} ${input.traceKind ?? ""}`.toLowerCase();
+  if (input.outcome === "aborted" || input.traceKind === "relay.failed" || input.traceKind === "step.aborted" || input.checkOutcome === "fail") {
+    facets.add("failure");
+  }
+  if (haystack.includes("checkpoint"))
+    facets.add("checkpoint");
+  if (haystack.includes("decision"))
+    facets.add("decision");
+  if (haystack.includes("verification") || haystack.includes("proof") || haystack.includes("check") || input.traceKind === "proof.assessed" || input.traceKind === "safe_apply.result") {
+    facets.add("verification");
+  }
+  if (input.docKind === "checkpoint" && input.sourcePath.includes("-response")) {
+    facets.add("operator-note");
+  }
+  if (input.traceKind === "checkpoint.resolved")
+    facets.add("operator-note");
+  return [...facets].sort();
+}
+function reportSourceRef(input) {
+  const ref = {
+    kind: "report",
+    ref: input.relPath,
+    sha256: input.sha256
+  };
+  addOptional(ref, "run_id", validRunId(input.runId));
+  addOptional(ref, "flow_id", validFlowId(input.flowId));
+  addOptional(ref, "step_id", validStepId(input.stepId));
+  addOptional(ref, "attempt", input.attempt);
+  return Ref.parse(ref);
+}
+function traceSourceRef(input) {
+  const parsedRunId = validRunId(input.runId);
+  if (parsedRunId === void 0)
+    return void 0;
+  const ref = {
+    kind: "trace",
+    ref: `trace.ndjson#sequence=${input.sequence}`,
+    run_id: parsedRunId,
+    sequence: input.sequence
+  };
+  addOptional(ref, "flow_id", validFlowId(input.flowId));
+  addOptional(ref, "step_id", validStepId(input.stepId));
+  addOptional(ref, "attempt", input.attempt);
+  return Ref.parse(ref);
+}
+function docId(input) {
+  return `${input.runId}/${input.docKind}/${sha256Hex(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
+}
+function skipReport(relPath) {
+  const name = basename(relPath);
+  if (!relPath.endsWith(".json"))
+    return true;
+  if (relPath.startsWith("reports/relay/"))
+    return true;
+  if (["operator-summary.json", "operator-summary.md", "operator-summary.html"].includes(name)) {
+    return true;
+  }
+  if ((relPath.includes("/tournament-branches/") || relPath.includes("/variant-branches/")) && name !== "report.json") {
+    return true;
+  }
+  return false;
+}
+function reportKind(relPath) {
+  return relPath.startsWith("reports/checkpoints/") ? "checkpoint" : "report";
+}
+function isCheckpointRequest(relPath) {
+  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-request.json");
+}
+function isCheckpointResponse(relPath) {
+  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-response.json");
+}
+function asStringRecordValue(record2, key) {
+  return record2 === void 0 ? void 0 : stringValue(record2[key]);
+}
+function resolveRunIdentity(input) {
+  const bootstrap = input.traceEntries.find((entry) => entry.kind === "run.bootstrapped");
+  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
+  const runId = stringValue(bootstrap?.run_id) ?? asStringRecordValue(input.result, "run_id") ?? asStringRecordValue(input.manifest, "run_id") ?? input.runFolderName;
+  const flowId = stringValue(bootstrap?.flow_id) ?? asStringRecordValue(input.result, "flow_id") ?? asStringRecordValue(input.manifest, "flow_id");
+  const goal = stringValue(bootstrap?.goal) ?? asStringRecordValue(input.result, "goal") ?? asStringRecordValue(input.manifest, "goal");
+  const recordedAt = safeDateString(bootstrap?.recorded_at) ?? safeDateString(input.result?.recorded_at) ?? safeDateString(input.manifest?.captured_at);
+  const outcome = asStringRecordValue(input.result, "outcome") ?? stringValue(closed?.outcome) ?? asStringRecordValue(input.result, "status") ?? asStringRecordValue(input.result, "verdict");
+  return {
+    runId,
+    ...flowId === void 0 ? {} : { flowId },
+    ...goal === void 0 ? {} : { goal },
+    ...recordedAt === void 0 ? {} : { recordedAt },
+    ...outcome === void 0 ? {} : { outcome }
+  };
+}
+function makeRunDocument(input) {
+  const sourcePath = input.resultPath ?? "trace.ndjson";
+  const sourceAbs = resolve13(input.runFolder, sourcePath);
+  if (!existsSync18(sourceAbs))
+    return void 0;
+  const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
+  if (sourceSha === void 0)
+    return void 0;
+  const sourceMtime = input.resultPath === void 0 ? input.traceMtime : mtimeMs(sourceAbs);
+  const extraction = extractText(input.result ?? {}, { allowCheckpointResponseFields: false });
+  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
+  const summary = firstHighValue(extraction, ["summary", "reason", "goal", "outcome", "verdict"]) ?? stringValue(closed?.reason) ?? input.identity.goal ?? `Circuit ${input.identity.flowId ?? "run"} ${input.identity.outcome ?? "history"}`;
+  const textParts = [
+    `goal: ${input.identity.goal ?? ""}`,
+    `flow: ${input.identity.flowId ?? ""}`,
+    `outcome: ${input.identity.outcome ?? ""}`,
+    extraction.text
+  ].filter((part) => part.trim().length > 0);
+  const ref = input.resultPath === void 0 ? traceSourceRef({
+    sequence: 0,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId
+  }) : reportSourceRef({
+    relPath: input.resultPath,
+    sha256: sourceSha,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId
+  });
+  if (ref === void 0)
+    return void 0;
+  const facets = buildFacets({
+    docKind: "run",
+    flowId: input.identity.flowId,
+    outcome: input.identity.outcome,
+    sourcePath
+  });
+  return HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind: "run",
+      sourcePath,
+      selector: "run"
+    }),
+    doc_kind: "run",
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: sourcePath,
+    source_ref: ref,
+    source_sha256: sourceSha,
+    source_mtime_ms: sourceMtime,
+    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
+    ...input.identity.outcome === void 0 ? {} : { outcome: input.identity.outcome },
+    title: `${input.identity.flowId ?? "Circuit"} run ${input.identity.outcome ?? ""}`.trim(),
+    summary,
+    text: textParts.join("\n").slice(0, REPORT_TEXT_LIMIT),
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: true
+  });
+}
+function makeReportDocument(input) {
+  const absPath = resolveRunFilePath(input.runFolder, input.relPath);
+  const sourceSha = sha256File(absPath);
+  const sourceMtime = mtimeMs(absPath);
+  const docKind = reportKind(input.relPath);
+  const allowCheckpointResponseFields = isCheckpointResponse(input.relPath);
+  const extraction = extractText(input.body, { allowCheckpointResponseFields });
+  const reportSchema = input.reportWrite?.report_schema ?? stringValue(input.body.report_schema) ?? stringValue(input.body.schema);
+  const stepId = input.reportWrite?.step_id ?? stringValue(input.body.step_id);
+  const attempt = input.reportWrite?.attempt;
+  const outcome = stringValue(input.body.outcome) ?? stringValue(input.body.status) ?? input.identity.outcome;
+  const summary = firstHighValue(extraction, [
+    "summary",
+    "decision",
+    "rationale",
+    "reason",
+    "goal",
+    "objective",
+    "verdict",
+    "outcome",
+    "status"
+  ]) ?? `${reportSchema ?? input.relPath}`;
+  const facets = buildFacets({
+    docKind,
+    flowId: input.identity.flowId,
+    outcome,
+    reportSchema,
+    stepId,
+    sourcePath: input.relPath
+  });
+  const ref = reportSourceRef({
+    relPath: input.relPath,
+    sha256: sourceSha,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId,
+    stepId,
+    attempt
+  });
+  const title = `${reportSchema ?? docKind} ${input.relPath}`;
+  const document = HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind,
+      sourcePath: input.relPath,
+      selector: "/"
+    }),
+    doc_kind: docKind,
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: input.relPath,
+    source_ref: ref,
+    source_sha256: sourceSha,
+    source_mtime_ms: sourceMtime,
+    ...reportSchema === void 0 ? {} : { report_schema: reportSchema },
+    ...stepId === void 0 ? {} : { step_id: stepId },
+    ...attempt === void 0 ? {} : { attempt },
+    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
+    ...outcome === void 0 ? {} : { outcome },
+    title,
+    summary,
+    text: extraction.text,
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: !isCheckpointRequest(input.relPath)
+  });
+  const warning = extraction.prunedChars > 1e4 ? {
+    code: "source_pruned",
+    message: `pruned ${extraction.prunedChars} noisy characters from ${input.relPath}`,
+    run_folder: input.runFolder,
+    source_path: input.relPath
+  } : void 0;
+  return warning === void 0 ? { document } : { document, warning };
+}
+function traceDocumentSummary(entry) {
+  return stringValue(entry.reason) ?? stringValue(entry.outcome) ?? stringValue(entry.overall_status) ?? String(entry.kind ?? "trace");
+}
+function shouldIndexTrace(entry) {
+  switch (entry.kind) {
+    case "relay.failed":
+    case "step.aborted":
+    case "checkpoint.resolved":
+    case "proof.assessed":
+    case "safe_apply.result":
+      return true;
+    case "check.evaluated":
+      return entry.outcome === "fail" || entry.status === "failed";
+    case "run.closed":
+      return entry.outcome !== "complete";
+    default:
+      return false;
+  }
+}
+function makeTraceDocument(input) {
+  const sequence = numberValue(input.entry.sequence);
+  if (sequence === void 0 || sequence < 0 || !Number.isInteger(sequence))
+    return void 0;
+  const ref = traceSourceRef({
+    sequence,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId,
+    stepId: stringValue(input.entry.step_id),
+    attempt: numberValue(input.entry.attempt)
+  });
+  if (ref === void 0)
+    return void 0;
+  const extraction = extractText(input.entry, { allowCheckpointResponseFields: true });
+  const traceKind = stringValue(input.entry.kind);
+  const stepId = stringValue(input.entry.step_id);
+  const attempt = numberValue(input.entry.attempt);
+  const outcome = stringValue(input.entry.outcome) ?? input.identity.outcome;
+  const docKind = traceKind === "checkpoint.resolved" ? "checkpoint" : "trace";
+  const summary = traceDocumentSummary(input.entry);
+  const facets = buildFacets({
+    docKind,
+    flowId: input.identity.flowId,
+    outcome,
+    stepId,
+    sourcePath: "trace.ndjson",
+    traceKind,
+    checkOutcome: stringValue(input.entry.outcome)
+  });
+  return HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind,
+      sourcePath: "trace.ndjson",
+      selector: String(sequence)
+    }),
+    doc_kind: docKind,
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: "trace.ndjson",
+    source_ref: ref,
+    source_sha256: input.traceSha,
+    source_mtime_ms: input.traceMtime,
+    ...stepId === void 0 ? {} : { step_id: stepId },
+    ...attempt === void 0 ? {} : { attempt },
+    sequence,
+    ...safeDateString(input.entry.recorded_at) === void 0 ? {} : { recorded_at: safeDateString(input.entry.recorded_at) },
+    ...outcome === void 0 ? {} : { outcome },
+    title: `${traceKind ?? "trace"} sequence ${sequence}`,
+    summary,
+    text: extraction.text,
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: true
+  });
+}
+function extractRunHistoryDocuments(runFolder) {
+  const runFolderAbs = resolve13(runFolder);
+  const runFolderName = basename(runFolderAbs);
+  const warnings = [];
+  const documents = [];
+  const sourceFiles = /* @__PURE__ */ new Set();
+  const manifestPath2 = resolve13(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve13(runFolderAbs, "reports/result.json");
+  const manifest = existsSync18(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
+  const result = existsSync18(resultPath2) ? readJsonRecord(resultPath2) : void 0;
+  if (existsSync18(manifestPath2))
+    sourceFiles.add(manifestPath2);
+  if (existsSync18(resultPath2))
+    sourceFiles.add(resultPath2);
+  const trace = parseTrace(runFolderAbs, runFolderName);
+  if (trace.warning !== void 0)
+    warnings.push(trace.warning);
+  const tracePath = resolve13(runFolderAbs, "trace.ndjson");
+  const traceExists = existsSync18(tracePath);
+  const traceSha = traceExists ? sha256File(tracePath) : void 0;
+  const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
+  if (traceExists)
+    sourceFiles.add(tracePath);
+  const identity = resolveRunIdentity({
+    runFolderName,
+    traceEntries: trace.entries,
+    manifest,
+    result
+  });
+  const runDocument = makeRunDocument({
+    runFolder: runFolderAbs,
+    identity,
+    ...existsSync18(resultPath2) ? { resultPath: "reports/result.json" } : {},
+    result,
+    traceEntries: trace.entries,
+    traceSha,
+    traceMtime
+  });
+  if (runDocument !== void 0)
+    documents.push(runDocument);
+  const reportRoot = resolve13(runFolderAbs, "reports");
+  for (const relPath of listFiles(reportRoot, "reports")) {
+    const absPath = resolve13(runFolderAbs, relPath);
+    if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
+      continue;
+    sourceFiles.add(absPath);
+    if (skipReport(relPath))
+      continue;
+    const validation = validateRunFilePath(relPath);
+    if (validation.length > 0) {
+      warnings.push({
+        code: "report_skipped",
+        message: `report path rejected: ${validation.join("; ")}`,
+        run_folder: runFolderAbs,
+        source_path: relPath
+      });
+      continue;
+    }
+    let body;
+    try {
+      const parsed = readJson2(absPath);
+      body = isObject4(parsed) ? parsed : void 0;
+    } catch (error51) {
+      warnings.push({
+        code: "report_skipped",
+        message: `report could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolderAbs,
+        source_path: relPath
+      });
+      continue;
+    }
+    if (body === void 0)
+      continue;
+    const built = makeReportDocument({
+      runFolder: runFolderAbs,
+      relPath,
+      body,
+      identity,
+      reportWrite: trace.reportWrites.get(relPath)
+    });
+    if (built.document !== void 0)
+      documents.push(built.document);
+    if (built.warning !== void 0)
+      warnings.push(built.warning);
+  }
+  if (trace.traceValidForDocs && traceSha !== void 0 && traceMtime !== void 0) {
+    for (const entry of trace.entries) {
+      if (!shouldIndexTrace(entry))
+        continue;
+      const document = makeTraceDocument({
+        runFolder: runFolderAbs,
+        traceSha,
+        traceMtime,
+        entry,
+        identity
+      });
+      if (document !== void 0)
+        documents.push(document);
+    }
+  }
+  return {
+    documents,
+    warnings,
+    sourceFiles: [...sourceFiles].sort()
+  };
+}
+
+// dist/history/indexer.js
+var DEFAULT_RUNS_BASE = ".circuit/runs";
+var DEFAULT_INDEX_DIR = ".circuit/history";
+var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
+var HISTORY_MANIFEST_FILE = "manifest.v1.json";
+var HistoryCommandError = class extends Error {
+  code;
+  paths;
+  constructor(code, message, paths = {}) {
+    super(message);
+    this.code = code;
+    this.paths = paths;
+  }
+};
+function resolveHistoryPaths(options = {}) {
+  const repoRoot = resolve14(options.repoRoot ?? process.cwd());
+  const runsBase = resolve14(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve14(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  return {
+    repoRoot,
+    runsBase,
+    indexDir,
+    manifestPath: join19(indexDir, HISTORY_MANIFEST_FILE),
+    documentsPath: join19(indexDir, HISTORY_DOCUMENTS_FILE)
+  };
+}
+function isCandidateRunFolder(runFolder) {
+  return existsSync19(join19(runFolder, "manifest.snapshot.json")) || existsSync19(join19(runFolder, "trace.ndjson")) || existsSync19(join19(runFolder, "reports/result.json"));
+}
+function listCandidateRunFolders(runsBase) {
+  if (!existsSync19(runsBase)) {
+    throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
+      runsBase
+    });
+  }
+  let stat2;
+  try {
+    stat2 = statSync3(runsBase);
+  } catch (error51) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
+  }
+  if (!stat2.isDirectory()) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base is not a directory: ${runsBase}`, {
+      runsBase
+    });
+  }
+  try {
+    return readdirSync3(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join19(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
+  } catch (error51) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
+  }
+}
+function computeRunFolderNamesHash(runFolders) {
+  return sha256Hex(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
+}
+function computeLatestSourceMtime(sourceFiles) {
+  let latest = 0;
+  for (const file2 of sourceFiles) {
+    try {
+      latest = Math.max(latest, Math.trunc(statSync3(file2).mtimeMs));
+    } catch {
+    }
+  }
+  return latest;
+}
+function computeHistoryFingerprint(input) {
+  const runFolders = listCandidateRunFolders(input.runsBase);
+  return {
+    run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
+    latest_source_mtime_ms: computeLatestSourceMtime(input.sourceFiles ?? collectSourceFiles(runFolders))
+  };
+}
+function collectSourceFiles(runFolders) {
+  const files = [];
+  for (const runFolder of runFolders) {
+    for (const candidate of [
+      join19(runFolder, "manifest.snapshot.json"),
+      join19(runFolder, "trace.ndjson"),
+      join19(runFolder, "reports/result.json")
+    ]) {
+      if (existsSync19(candidate))
+        files.push(candidate);
+    }
+    const reportsRoot2 = join19(runFolder, "reports");
+    if (!existsSync19(reportsRoot2))
+      continue;
+    const stack = [reportsRoot2];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === void 0)
+        continue;
+      for (const entry of readdirSync3(current, { withFileTypes: true })) {
+        const path = join19(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(path);
+        } else if (entry.isFile() && entry.name.endsWith(".json")) {
+          files.push(path);
+        }
+      }
+    }
+  }
+  return files.sort();
+}
+function errorEnvelope(error51) {
+  return HistoryErrorV1.parse({
+    api_version: "history-error-v1",
+    schema_version: 1,
+    error: {
+      code: error51.code,
+      message: error51.message
+    },
+    ...error51.paths.runsBase === void 0 ? {} : { runs_base: error51.paths.runsBase },
+    ...error51.paths.indexDir === void 0 ? {} : { index_dir: error51.paths.indexDir }
+  });
+}
+function rebuildHistoryIndex(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  const runFolders = listCandidateRunFolders(paths.runsBase);
+  const documents = [];
+  const warnings = [];
+  const sourceFiles = [];
+  for (const runFolder of runFolders) {
+    try {
+      const extracted = extractRunHistoryDocuments(runFolder);
+      documents.push(...extracted.documents);
+      warnings.push(...extracted.warnings);
+      sourceFiles.push(...extracted.sourceFiles);
+    } catch (error51) {
+      warnings.push({
+        code: "run_skipped",
+        message: `run skipped: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolder
+      });
+    }
+  }
+  const manifest = HistoryManifestV1.parse({
+    api_version: "history-index-v1",
+    schema_version: 1,
+    created_at: (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString(),
+    repo_root: paths.repoRoot,
+    runs_base: paths.runsBase,
+    index_dir: paths.indexDir,
+    documents_path: HISTORY_DOCUMENTS_FILE,
+    run_count: runFolders.length,
+    document_count: documents.length,
+    source_fingerprint: {
+      run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
+      latest_source_mtime_ms: computeLatestSourceMtime(sourceFiles)
+    },
+    warnings
+  });
+  mkdirSync4(paths.indexDir, { recursive: true });
+  const documentsJsonl = `${documents.map((doc) => JSON.stringify(HistoryDocumentV1.parse(doc))).join("\n")}
+`;
+  const manifestJson = `${JSON.stringify(manifest, null, 2)}
+`;
+  const documentsTmp = `${paths.documentsPath}.tmp-${process.pid}`;
+  const manifestTmp = `${paths.manifestPath}.tmp-${process.pid}`;
+  writeFileSync5(documentsTmp, documentsJsonl, "utf8");
+  writeFileSync5(manifestTmp, manifestJson, "utf8");
+  HistoryManifestV1.parse(JSON.parse(readFileSync33(manifestTmp, "utf8")));
+  for (const line of readFileSync33(documentsTmp, "utf8").split("\n")) {
+    if (line.trim().length === 0)
+      continue;
+    HistoryDocumentV1.parse(JSON.parse(line));
+  }
+  renameSync(documentsTmp, paths.documentsPath);
+  renameSync(manifestTmp, paths.manifestPath);
+  return {
+    manifest,
+    documents
+  };
+}
+function readHistoryManifest(paths) {
+  if (!existsSync19(paths.manifestPath) || !existsSync19(paths.documentsPath)) {
+    throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync33(paths.manifestPath, "utf8"));
+  } catch (error51) {
+    throw new HistoryCommandError("index_corrupt", `history manifest corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+  }
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw) && "schema_version" in raw && raw.schema_version !== 1) {
+    throw new HistoryCommandError("index_unsupported", "history index schema is unsupported", {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  const parsed = HistoryManifestV1.safeParse(raw);
+  if (!parsed.success) {
+    throw new HistoryCommandError("index_corrupt", parsed.error.message, {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  return parsed.data;
+}
+function readHistoryIndex(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  const manifest = readHistoryManifest(paths);
+  let documentsRaw = "";
+  try {
+    documentsRaw = readFileSync33(paths.documentsPath, "utf8");
+  } catch (error51) {
+    throw new HistoryCommandError("index_corrupt", `history documents unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+  }
+  const documents = [];
+  for (const [index, line] of documentsRaw.split("\n").entries()) {
+    if (line.trim().length === 0)
+      continue;
+    try {
+      documents.push(HistoryDocumentV1.parse(JSON.parse(line)));
+    } catch (error51) {
+      throw new HistoryCommandError("index_corrupt", `history document line ${index + 1} corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+    }
+  }
+  return { manifest, documents };
+}
+function historyIndexState(paths, manifest) {
+  const current = computeHistoryFingerprint({ runsBase: paths.runsBase });
+  return current.run_folder_names_sha256 === manifest.source_fingerprint.run_folder_names_sha256 && current.latest_source_mtime_ms === manifest.source_fingerprint.latest_source_mtime_ms ? "fresh" : "possibly_stale";
+}
+function historyStatus(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  try {
+    const manifest = readHistoryManifest(paths);
+    const state = historyIndexState(paths, manifest);
+    return HistoryStatusV1.parse({
+      api_version: "history-status-v1",
+      schema_version: 1,
+      index_exists: true,
+      index_state: state,
+      runs_base: paths.runsBase,
+      index_dir: paths.indexDir,
+      manifest,
+      warnings: manifest.warnings
+    });
+  } catch (error51) {
+    if (error51 instanceof HistoryCommandError) {
+      if (error51.code === "index_missing") {
+        return HistoryStatusV1.parse({
+          api_version: "history-status-v1",
+          schema_version: 1,
+          index_exists: false,
+          index_state: "missing",
+          runs_base: paths.runsBase,
+          index_dir: paths.indexDir,
+          warnings: []
+        });
+      }
+      if (error51.code === "index_unsupported" || error51.code === "index_corrupt") {
+        return HistoryStatusV1.parse({
+          api_version: "history-status-v1",
+          schema_version: 1,
+          index_exists: true,
+          index_state: error51.code === "index_unsupported" ? "unsupported" : "corrupt",
+          runs_base: paths.runsBase,
+          index_dir: paths.indexDir,
+          warnings: [
+            {
+              code: "source_invalid",
+              message: error51.message
+            }
+          ]
+        });
+      }
+    }
+    throw error51;
+  }
+}
+
+// dist/history/memory-preview.js
+function fileStem(value) {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+  const trimmed = normalized.replace(/^[^a-z0-9]+/, "").slice(0, 96);
+  return trimmed.length === 0 ? "memory" : trimmed;
+}
+function appliesTo(hit) {
+  const facets = new Set(hit.doc.facets);
+  if (facets.has("failure"))
+    return "prior_failure";
+  if (facets.has("verification"))
+    return "verification";
+  if (facets.has("operator-note"))
+    return "operator_note";
+  return "context";
+}
+function hintText(hit) {
+  const caution = hit.doc.facets.includes("checkpoint") || hit.doc.facets.includes("verification") ? " This is prior-run context only; rerun current checks before relying on it." : "";
+  const base = hit.snippet.trim().length > 0 ? hit.snippet.trim() : hit.doc.summary;
+  return `${base}
+Source: ${hit.doc.run_id} ${hit.doc.source_path}.${caution}`.trim();
+}
+function historyMemoryInputPreview(input) {
+  const memoryInputs = [];
+  const matches = [];
+  for (const hit of input.hits) {
+    if (!hit.doc.memory_safe)
+      continue;
+    const hash2 = sha256Hex(hit.doc.doc_id).slice(0, 12);
+    const runPrefix = fileStem(hit.doc.run_id).slice(0, 32);
+    const memoryId = `prior-run-${runPrefix}-${hash2}`.slice(0, 128);
+    const source = hit.doc.source_ref.sha256 !== void 0 && hit.doc.source_sha256 !== void 0 && hit.doc.source_ref.sha256 === hit.doc.source_sha256 ? {
+      ref: hit.doc.source_ref,
+      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() },
+      sha256: hit.doc.source_sha256
+    } : {
+      ref: hit.doc.source_ref,
+      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() }
+    };
+    const memory = MemoryInputV0.parse({
+      schema_version: 1,
+      memory_id: memoryId,
+      kind: "prior_run",
+      source,
+      summary: hit.doc.summary,
+      hints: [
+        {
+          id: `hint-${hash2}`,
+          text: hintText(hit),
+          applies_to: appliesTo(hit)
+        }
+      ],
+      staleness: hit.staleness,
+      authority: "hint_only"
+    });
+    memoryInputs.push(memory);
+    matches.push({
+      memory_id: memoryId,
+      rank: hit.rank,
+      score: hit.score,
+      source_doc_id: hit.doc.doc_id,
+      source_ref: hit.doc.source_ref,
+      snippet: hit.snippet
+    });
+  }
+  return HistoryMemoryInputPreviewV1.parse({
+    api_version: "history-memory-input-preview-v1",
+    schema_version: 1,
+    query: input.query,
+    format: "memory-input",
+    index_state: input.indexState,
+    rebuilt: input.rebuilt,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    warnings: input.warnings,
+    memory_inputs: memoryInputs,
+    matches
+  });
+}
+
+// dist/history/query.js
+import { existsSync as existsSync20, readFileSync as readFileSync34 } from "node:fs";
+var STOPWORDS = /* @__PURE__ */ new Set([
+  "the",
+  "and",
+  "for",
+  "that",
+  "this",
+  "with",
+  "from",
+  "into",
+  "what",
+  "when",
+  "where",
+  "why",
+  "how",
+  "run",
+  "runs",
+  "circuit",
+  "history",
+  "query",
+  "report",
+  "reports"
+]);
+var FAILURE_TERMS = /* @__PURE__ */ new Set(["fail", "failed", "failure", "aborted", "abort", "error"]);
+var CHECKPOINT_TERMS = /* @__PURE__ */ new Set(["checkpoint", "choice", "selection", "resume"]);
+var VERIFICATION_TERMS = /* @__PURE__ */ new Set(["verify", "verification", "proof", "check", "test"]);
+function tokenize(text) {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length >= 2 && !STOPWORDS.has(term));
+}
+function termCounts(tokens) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const token of tokens)
+    counts.set(token, (counts.get(token) ?? 0) + 1);
+  return counts;
+}
+function unique(values) {
+  return [...new Set(values)];
+}
+function idf(documents) {
+  const docFreq = /* @__PURE__ */ new Map();
+  for (const doc of documents) {
+    const terms = unique(tokenize(`${doc.title}
+${doc.summary}
+${doc.text}
+${doc.facets.join(" ")}`));
+    for (const term of terms)
+      docFreq.set(term, (docFreq.get(term) ?? 0) + 1);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const [term, count] of docFreq) {
+    out.set(term, Math.log((documents.length + 1) / (count + 1)) + 1);
+  }
+  return out;
+}
+function weightedTf(doc, term) {
+  const title = termCounts(tokenize(doc.title)).get(term) ?? 0;
+  const summary = termCounts(tokenize(doc.summary)).get(term) ?? 0;
+  const text = termCounts(tokenize(doc.text)).get(term) ?? 0;
+  const facets = termCounts(tokenize(doc.facets.join(" "))).get(term) ?? 0;
+  return title * 5 + summary * 4 + facets * 2 + text;
+}
+function queryBigrams(terms) {
+  const bigrams = [];
+  for (let index = 0; index < terms.length - 1; index += 1) {
+    const left = terms[index];
+    const right = terms[index + 1];
+    if (left !== void 0 && right !== void 0)
+      bigrams.push(`${left} ${right}`);
+  }
+  return bigrams;
+}
+function facetBoost(queryTerms, doc) {
+  let score = 0;
+  const reasons = [];
+  const facets = new Set(doc.facets);
+  if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has("failure")) {
+    score += 3;
+    reasons.push("failure facet matched");
+  }
+  if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has("checkpoint")) {
+    score += 2;
+    reasons.push("checkpoint facet matched");
+  }
+  if (queryTerms.some((term) => VERIFICATION_TERMS.has(term)) && facets.has("verification")) {
+    score += 2;
+    reasons.push("verification facet matched");
+  }
+  return { score, reasons };
+}
+function scoreDocument(input) {
+  let score = 0;
+  const reasons = [];
+  const matchedTerms = [];
+  for (const term of input.queryTerms) {
+    const tf = Math.min(weightedTf(input.doc, term), 3);
+    if (tf <= 0)
+      continue;
+    matchedTerms.push(term);
+    score += (input.queryIdf.get(term) ?? 1) * tf;
+  }
+  const haystack = `${input.doc.title}
+${input.doc.summary}
+${input.doc.text}`.toLowerCase();
+  const queryPhrase = input.query.trim().toLowerCase();
+  if (queryPhrase.length > 0 && haystack.includes(queryPhrase)) {
+    score += 2;
+    reasons.push("exact phrase matched");
+  }
+  for (const bigram of queryBigrams(input.queryTerms)) {
+    if (haystack.includes(bigram)) {
+      score += 0.5;
+      reasons.push(`bigram matched: ${bigram}`);
+    }
+  }
+  const boosted = facetBoost(input.queryTerms, input.doc);
+  score += boosted.score;
+  reasons.push(...boosted.reasons);
+  if (!input.doc.memory_safe) {
+    score -= 3;
+    reasons.push("memory-unsafe source penalized");
+  }
+  if (input.indexState === "possibly_stale") {
+    score -= 0.5;
+    reasons.push("possibly stale index penalty");
+  }
+  if (matchedTerms.length > 0)
+    reasons.push(`matched terms: ${matchedTerms.join(", ")}`);
+  return {
+    score,
+    matchedTerms: unique(matchedTerms),
+    reasons
+  };
+}
+function normalizeText(text) {
+  return tokenize(text).join(" ");
+}
+function snippet(doc, matchedTerms) {
+  const haystack = `${doc.summary}
+${doc.text}`.replace(/\s+/g, " ").trim();
+  if (haystack.length <= 420)
+    return haystack;
+  const lower = haystack.toLowerCase();
+  const firstMatch = matchedTerms.map((term) => lower.indexOf(term)).filter((index) => index >= 0).sort((left, right) => left - right)[0];
+  const start = Math.max(0, (firstMatch ?? 0) - 120);
+  return haystack.slice(start, start + 420).trim();
+}
+function sourceStaleness(doc, checkedAt) {
+  if (doc.source_sha256 === void 0) {
+    return {
+      status: "unknown",
+      reason_codes: ["memory_unverified"],
+      checked_at: checkedAt
+    };
+  }
+  try {
+    const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
+    if (!existsSync20(sourcePath)) {
+      return {
+        status: "stale",
+        reason_codes: ["memory_stale"],
+        checked_at: checkedAt
+      };
+    }
+    const currentHash = sha256Hex(readFileSync34(sourcePath, "utf8"));
+    return currentHash === doc.source_sha256 ? {
+      status: "fresh",
+      reason_codes: ["source_hash_verified"],
+      checked_at: checkedAt
+    } : {
+      status: "stale",
+      reason_codes: ["memory_stale"],
+      checked_at: checkedAt
+    };
+  } catch {
+    return {
+      status: "unknown",
+      reason_codes: ["memory_unverified"],
+      checked_at: checkedAt
+    };
+  }
+}
+function queryHistory(options) {
+  const limit = options.limit ?? 8;
+  const perRunLimit = options.perRunLimit ?? 1;
+  if (limit < 1 || limit > 50 || !Number.isInteger(limit)) {
+    throw new HistoryCommandError("invalid_invocation", "--limit must be an integer from 1 to 50");
+  }
+  if (perRunLimit < 1 || perRunLimit > 5 || !Number.isInteger(perRunLimit)) {
+    throw new HistoryCommandError("invalid_invocation", "--per-run-limit must be an integer from 1 to 5");
+  }
+  const queryTerms = unique(tokenize(options.query));
+  const paths = resolveHistoryPaths(options);
+  let rebuilt = false;
+  let index;
+  try {
+    index = readHistoryIndex(options);
+  } catch (error51) {
+    if (error51 instanceof HistoryCommandError && error51.code === "index_missing" && options.rebuildIfStale === true) {
+      index = rebuildHistoryIndex(options);
+      rebuilt = true;
+    } else {
+      throw error51;
+    }
+  }
+  let indexState = historyIndexState(paths, index.manifest);
+  if (indexState === "possibly_stale" && options.rebuildIfStale === true) {
+    index = rebuildHistoryIndex(options);
+    rebuilt = true;
+    indexState = historyIndexState(paths, index.manifest);
+  }
+  const warnings = [...index.manifest.warnings];
+  if (indexState === "possibly_stale") {
+    warnings.push({
+      code: "source_invalid",
+      message: "history index may be stale; run circuit history rebuild --json to refresh it"
+    });
+  }
+  const candidates = index.documents.filter((doc) => {
+    if (options.flow !== void 0 && doc.flow_id !== options.flow)
+      return false;
+    if (options.kind !== void 0 && doc.doc_kind !== options.kind)
+      return false;
+    return true;
+  });
+  const idfMap = idf(candidates);
+  const scored = candidates.map((doc) => {
+    const score = scoreDocument({
+      query: options.query,
+      queryTerms,
+      queryIdf: idfMap,
+      doc,
+      indexState
+    });
+    return { doc, ...score };
+  }).filter((candidate) => candidate.score > 0 || options.query.trim().length === 0).sort((left, right) => {
+    if (right.score !== left.score)
+      return right.score - left.score;
+    const rightDate = Date.parse(right.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
+    const leftDate = Date.parse(left.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
+    if (rightDate !== leftDate)
+      return rightDate - leftDate;
+    return left.doc.doc_id.localeCompare(right.doc.doc_id);
+  });
+  const seenText = /* @__PURE__ */ new Set();
+  const runCounts = /* @__PURE__ */ new Map();
+  const selected = [];
+  for (const candidate of scored) {
+    const textHash = sha256Hex(normalizeText(candidate.doc.text));
+    if (seenText.has(textHash))
+      continue;
+    const runCount = runCounts.get(candidate.doc.run_id) ?? 0;
+    if (runCount >= perRunLimit)
+      continue;
+    seenText.add(textHash);
+    runCounts.set(candidate.doc.run_id, runCount + 1);
+    selected.push(candidate);
+    if (selected.length >= limit)
+      break;
+  }
+  const checkedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
+  const hits = selected.map((candidate, index2) => {
+    const staleness = sourceStaleness(candidate.doc, checkedAt);
+    const freshBoost = staleness.status === "fresh" ? 0.25 : 0;
+    return {
+      rank: index2 + 1,
+      score: Number((candidate.score + freshBoost).toFixed(6)),
+      doc: candidate.doc,
+      snippet: snippet(candidate.doc, candidate.matchedTerms),
+      matched_terms: [...candidate.matchedTerms],
+      ranking_reasons: freshBoost > 0 ? [...candidate.reasons, "source hash verified"] : [...candidate.reasons],
+      staleness
+    };
+  });
+  return HistoryQueryResultV1.parse({
+    api_version: "history-query-result-v1",
+    schema_version: 1,
+    query: options.query,
+    format: "json",
+    index_state: indexState,
+    rebuilt,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    warnings,
+    results: hits
+  });
+}
+
+// dist/cli/history.js
+function writeJson3(value) {
+  process.stdout.write(`${JSON.stringify(value, null, 2)}
+`);
+}
+function invalidInvocation(message, options = {}) {
+  writeJson3(errorEnvelope(new HistoryCommandError("invalid_invocation", message, {
+    ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+    ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir }
+  })));
+  return 2;
+}
+function operationalError(error51) {
+  if (error51 instanceof HistoryCommandError) {
+    writeJson3(errorEnvelope(error51));
+    return error51.code === "invalid_invocation" ? 2 : 1;
+  }
+  writeJson3(errorEnvelope(new HistoryCommandError("internal_error", error51 instanceof Error ? error51.message : String(error51))));
+  return 1;
+}
+function commanderErrorMessage(err) {
+  if (err instanceof CommanderError)
+    return err.message.replace(/^error: /, "");
+  return err instanceof Error ? err.message : String(err);
+}
+function parsePositiveInteger(value, optionName) {
+  if (value === void 0)
+    return void 0;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    return `${optionName} must be a positive integer`;
+  return parsed;
+}
+function parseHistoryArgs(argv) {
+  let parsed;
+  const program2 = new Command("circuit history").exitOverride().configureOutput({ writeErr: () => {
+  } });
+  program2.command("rebuild").option("--json").option("--runs-base <path>").option("--index-dir <path>").action((options) => {
+    parsed = {
+      command: "rebuild",
+      json: options.json === true,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir }
+    };
+  });
+  program2.command("query").argument("<query...>").option("--json").option("--format <json|memory-input>", "output format", "json").option("--limit <n>").option("--per-run-limit <n>").option("--runs-base <path>").option("--index-dir <path>").option("--flow <flow-id>").option("--kind <run|report|trace|checkpoint>").option("--rebuild-if-stale").action((queryParts, options) => {
+    const format = options.format ?? "json";
+    if (format !== "json" && format !== "memory-input") {
+      parsed = void 0;
+      throw new Error("--format must be json or memory-input");
+    }
+    const limit = parsePositiveInteger(options.limit, "--limit");
+    if (typeof limit === "string")
+      throw new Error(limit);
+    const perRunLimit = parsePositiveInteger(options.perRunLimit, "--per-run-limit");
+    if (typeof perRunLimit === "string")
+      throw new Error(perRunLimit);
+    const kind = options.kind;
+    if (kind !== void 0 && !HistoryDocumentKindV1.safeParse(kind).success) {
+      throw new Error("--kind must be run, report, trace, or checkpoint");
+    }
+    parsed = {
+      command: "query",
+      json: options.json === true,
+      query: queryParts.join(" "),
+      format,
+      ...limit === void 0 ? {} : { limit },
+      ...perRunLimit === void 0 ? {} : { perRunLimit },
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir },
+      ...options.flow === void 0 ? {} : { flow: options.flow },
+      ...kind === void 0 ? {} : { kind },
+      rebuildIfStale: options.rebuildIfStale === true
+    };
+  });
+  program2.command("status").option("--json").option("--runs-base <path>").option("--index-dir <path>").action((options) => {
+    parsed = {
+      command: "status",
+      json: options.json === true,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir }
+    };
+  });
+  try {
+    program2.parse(argv, { from: "user" });
+  } catch (err) {
+    return commanderErrorMessage(err);
+  }
+  if (parsed === void 0)
+    return "history requires a subcommand";
+  return parsed;
+}
+function pathOptions(parsed) {
+  return {
+    ...parsed.runsBase === void 0 ? {} : { runsBase: parsed.runsBase },
+    ...parsed.indexDir === void 0 ? {} : { indexDir: parsed.indexDir }
+  };
+}
+async function runHistoryCommand(argv) {
+  const parsed = parseHistoryArgs(argv);
+  if (typeof parsed === "string")
+    return invalidInvocation(parsed);
+  if (!parsed.json)
+    return invalidInvocation("history commands require --json", pathOptions(parsed));
+  try {
+    if (parsed.command === "rebuild") {
+      const index = rebuildHistoryIndex(pathOptions(parsed));
+      writeJson3(index.manifest);
+      return 0;
+    }
+    if (parsed.command === "status") {
+      writeJson3(historyStatus(pathOptions(parsed)));
+      return 0;
+    }
+    const result = queryHistory({
+      ...pathOptions(parsed),
+      query: parsed.query,
+      ...parsed.limit === void 0 ? {} : { limit: parsed.limit },
+      ...parsed.perRunLimit === void 0 ? {} : { perRunLimit: parsed.perRunLimit },
+      ...parsed.flow === void 0 ? {} : { flow: parsed.flow },
+      ...parsed.kind === void 0 ? {} : { kind: parsed.kind },
+      rebuildIfStale: parsed.rebuildIfStale
+    });
+    if (parsed.format === "memory-input") {
+      const manifest = readHistoryManifest(resolveHistoryPaths(pathOptions(parsed)));
+      writeJson3(historyMemoryInputPreview({
+        query: result.query,
+        indexState: result.index_state,
+        rebuilt: result.rebuilt,
+        warnings: result.warnings,
+        hits: result.results,
+        capturedAt: manifest.created_at
+      }));
+      return 0;
+    }
+    writeJson3(result);
+    return 0;
+  } catch (error51) {
+    return operationalError(error51);
+  }
+}
+
 // dist/cli/run-output.js
 function routeOutputFields(input) {
   return {
@@ -55709,19 +57930,19 @@ function engineError(input) {
     ...input.runFolder === void 0 ? {} : { run_folder: input.runFolder }
   });
 }
-function writeJson3(value) {
+function writeJson4(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}
 `);
 }
-function invalidInvocation(message, runFolder) {
-  writeJson3(engineError({
+function invalidInvocation2(message, runFolder) {
+  writeJson4(engineError({
     code: "invalid_invocation",
     message,
     ...runFolder === void 0 ? {} : { runFolder }
   }));
   return 2;
 }
-function commanderErrorMessage(err) {
+function commanderErrorMessage2(err) {
   if (err instanceof CommanderError)
     return err.message.replace(/^error: /, "");
   return err instanceof Error ? err.message : String(err);
@@ -55736,7 +57957,7 @@ function parseShowArgs(argv) {
   try {
     program2.parse(argv, { from: "user" });
   } catch (err) {
-    return commanderErrorMessage(err);
+    return commanderErrorMessage2(err);
   }
   if (showOptions === void 0)
     return "runs requires a subcommand";
@@ -55749,20 +57970,20 @@ function parseShowArgs(argv) {
 async function runRunsCommand(argv) {
   const parsed = parseShowArgs(argv);
   if (typeof parsed === "string")
-    return invalidInvocation(parsed);
+    return invalidInvocation2(parsed);
   try {
-    writeJson3(projectRunStatusFromRunFolder(parsed.runFolder));
+    writeJson4(projectRunStatusFromRunFolder(parsed.runFolder));
     return 0;
   } catch (err) {
     if (err instanceof RunStatusFolderError) {
-      writeJson3(engineError({
+      writeJson4(engineError({
         code: err.code,
         message: err.message,
         runFolder: err.runFolder
       }));
       return 1;
     }
-    writeJson3(engineError({
+    writeJson4(engineError({
       code: "internal_error",
       message: err instanceof Error ? err.message : String(err),
       runFolder: parsed.runFolder
@@ -55772,13 +57993,14 @@ async function runRunsCommand(argv) {
 }
 
 // dist/cli/circuit.js
-var DEFAULT_RUNS_BASE = ".circuit/runs";
+var DEFAULT_RUNS_BASE2 = ".circuit/runs";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
 function usage() {
   return [
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
     "       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]",
     "       circuit runs show --run-folder <path> --json",
+    "       circuit history rebuild|query|status --json [options]",
     "       circuit handoff [save|resume|done|brief|hook|hooks] [options]",
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     "       circuit version [--json]",
@@ -55800,12 +58022,12 @@ function readSourceVersion() {
   if (true)
     return "0.1.0-alpha.6";
   const candidates = [
-    resolve13(dirname9(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
-    resolve13(process.cwd(), "plugins/version.json")
+    resolve15(dirname9(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
+    resolve15(process.cwd(), "plugins/version.json")
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync32(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync35(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -55876,6 +58098,7 @@ function parseTopLevelInvocation(argv) {
   addForwardingCommand("run");
   addForwardingCommand("resume");
   addForwardingCommand("handoff");
+  addForwardingCommand("history");
   addForwardingCommand("create");
   addForwardingCommand("runs");
   addForwardingCommand("version");
@@ -55889,7 +58112,7 @@ function parseTopLevelInvocation(argv) {
     throw err;
   }
   if (invocation === void 0) {
-    throw new Error("missing command: use run, resume, handoff, create, runs, or version");
+    throw new Error("missing command: use run, resume, handoff, history, create, runs, or version");
   }
   return invocation;
 }
@@ -56000,14 +58223,14 @@ function parseExecutionArgs(command, argv) {
 }
 function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   if (override !== void 0)
-    return resolve13(override);
-  const root = resolve13(flowRoot2 ?? "generated/flows");
+    return resolve15(override);
+  const root = resolve15(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
-    const perMode = resolve13(root, flowName, `${modeName}.json`);
-    if (existsSync18(perMode))
+    const perMode = resolve15(root, flowName, `${modeName}.json`);
+    if (existsSync21(perMode))
       return perMode;
   }
-  return resolve13(root, flowName, "circuit.json");
+  return resolve15(root, flowName, "circuit.json");
 }
 function progressReporter(enabled) {
   if (!enabled)
@@ -56132,10 +58355,10 @@ function validateFlowAxes(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync18(fixturePath)) {
+  if (!existsSync21(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync32(fixturePath);
+  const bytes = readFileSync35(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -56197,6 +58420,9 @@ async function main(argv, options = {}) {
       ...options.now === void 0 ? {} : { now: options.now }
     });
   }
+  if (invocation.command === "history") {
+    return runHistoryCommand(invocation.argv);
+  }
   if (invocation.command === "create") {
     return runCreateCommand(invocation.argv, {
       ...options.now === void 0 ? {} : { now: options.now }
@@ -56214,7 +58440,7 @@ async function main(argv, options = {}) {
     return 2;
   }
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder2 = resolve13(args.runFolder);
+    const runFolder2 = resolve15(args.runFolder);
     const progress2 = progressReporter(args.progress === "jsonl");
     if (await isRuntimeRunFolder(runFolder2)) {
       const runtimeResult = await resumeCompiledFlow({
@@ -56227,7 +58453,7 @@ async function main(argv, options = {}) {
         ...progress2 === void 0 ? {} : { progress: progress2 },
         progressSurfaceForFlowId
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync32(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync35(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
       const operatorSummary = writeOperatorSummary({
         runFolder: runFolder2,
@@ -56294,13 +58520,13 @@ async function main(argv, options = {}) {
     ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName },
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
-  const runFolder = resolve13(args.runFolder ?? `${DEFAULT_RUNS_BASE}/${runId}`);
+  const runFolder = resolve15(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
   const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
-  const projectRoot = resolve13(options.configCwd ?? process.cwd());
+  const projectRoot = resolve15(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
     args,
@@ -56386,7 +58612,7 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync32(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync35(runtimeResult.resultPath, "utf8")));
     const operatorSummary = writeOperatorSummary({
       runFolder,
       runResult,

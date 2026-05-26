@@ -29,6 +29,7 @@ import { progressDisplay, progressPresentation } from '../shared/progress-output
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
+import { runHistoryCommand } from './history.js';
 import { operatorSummaryOutputFields, routeOutputFields } from './run-output.js';
 import { runRunsCommand } from './runs.js';
 import {
@@ -82,6 +83,7 @@ type TopLevelInvocation =
   | { readonly command: 'run'; readonly argv: readonly string[] }
   | { readonly command: 'resume'; readonly argv: readonly string[] }
   | { readonly command: 'handoff'; readonly argv: readonly string[] }
+  | { readonly command: 'history'; readonly argv: readonly string[] }
   | { readonly command: 'create'; readonly argv: readonly string[] }
   | { readonly command: 'runs'; readonly argv: readonly string[] }
   | { readonly command: 'version'; readonly argv: readonly string[] };
@@ -122,6 +124,7 @@ export function usage(): string {
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
     '       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]',
     '       circuit runs show --run-folder <path> --json',
+    '       circuit history rebuild|query|status --json [options]',
     '       circuit handoff [save|resume|done|brief|hook|hooks] [options]',
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     '       circuit version [--json]',
@@ -238,6 +241,7 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   addForwardingCommand('run');
   addForwardingCommand('resume');
   addForwardingCommand('handoff');
+  addForwardingCommand('history');
   addForwardingCommand('create');
   addForwardingCommand('runs');
   addForwardingCommand('version');
@@ -251,7 +255,7 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   }
 
   if (invocation === undefined) {
-    throw new Error('missing command: use run, resume, handoff, create, runs, or version');
+    throw new Error('missing command: use run, resume, handoff, history, create, runs, or version');
   }
   return invocation;
 }
@@ -647,6 +651,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     return runHandoffCommand(invocation.argv, {
       ...(options.now === undefined ? {} : { now: options.now }),
     });
+  }
+  if (invocation.command === 'history') {
+    return runHistoryCommand(invocation.argv);
   }
   if (invocation.command === 'create') {
     return runCreateCommand(invocation.argv, {

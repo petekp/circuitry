@@ -42,3 +42,4 @@ export * from './flow-blocks.js';
 export * from './flow-schematic-policy.js';
 export * from './flow-schematic.js';
 export * from './guidance-decision.js';
+export * from './history.js';
