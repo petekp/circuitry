@@ -114,6 +114,10 @@ export async function runCompiledFlowWithWaiting(
       ...(options.progressSurface === undefined
         ? {}
         : { progressSurface: options.progressSurface }),
+      ...(options.memoryInputs === undefined ? {} : { memoryInputs: options.memoryInputs }),
+      ...(options.historyRecallReport === undefined
+        ? {}
+        : { historyRecallReport: options.historyRecallReport }),
       ...(options.maxSteps === undefined ? {} : { maxSteps: options.maxSteps }),
     },
   );

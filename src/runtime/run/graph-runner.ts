@@ -606,6 +606,10 @@ async function executeExecutableFlowOutcomeUnsafe(
       : { selectionConfigLayers: options.selectionConfigLayers }),
     ...(options.policyLayers === undefined ? {} : { policyLayers: options.policyLayers }),
     ...(options.progress === undefined ? {} : { progress: options.progress }),
+    ...(options.memoryInputs === undefined ? {} : { memoryInputs: options.memoryInputs }),
+    ...(options.historyRecallReport === undefined
+      ? {}
+      : { historyRecallReport: options.historyRecallReport }),
     ...(options.resumeCheckpoint === undefined
       ? {}
       : { resumeCheckpoint: options.resumeCheckpoint }),
@@ -648,6 +652,9 @@ async function executeExecutableFlowOutcomeUnsafe(
       }),
     });
     await appendFlowSelectionGuidance(context);
+    if (options.historyRecallReport !== undefined) {
+      await context.files.writeJson('reports/history/recall.json', options.historyRecallReport);
+    }
   }
 
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;

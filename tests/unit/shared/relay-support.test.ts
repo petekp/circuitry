@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { HISTORY_AUTHORITY_NOTICE, MemoryInputV0 } from '../../../src/index.js';
 import { composeRelayPrompt } from '../../../src/shared/relay-support.js';
 
 let runFolder: string;
@@ -44,5 +45,65 @@ describe('composeRelayPrompt', () => {
     expect(prompt).toContain('Operator Goal:');
     expect(prompt).toContain(goal);
     expect(prompt.indexOf('Operator Goal:')).toBeLessThan(prompt.indexOf('Context (from reads):'));
+  });
+
+  it('includes prior history only as hint-only relay context when memory is provided', () => {
+    const memory = MemoryInputV0.parse({
+      schema_version: 1,
+      memory_id: 'prior-run-11111111-abc123',
+      kind: 'prior_run',
+      source: {
+        ref: {
+          kind: 'report',
+          ref: 'reports/decision.json',
+          sha256: 'a'.repeat(64),
+          run_id: '11111111-1111-4111-8111-111111111111',
+          flow_id: 'explore',
+        },
+        captured_at: '2026-05-26T12:00:00.000Z',
+        sha256: 'a'.repeat(64),
+      },
+      summary: 'Prior run chose explicit recall.',
+      hints: [
+        {
+          id: 'hint-abc123',
+          text: 'Recall must stay cited and hint-only.',
+          applies_to: 'context',
+        },
+      ],
+      staleness: {
+        status: 'fresh',
+        checked_at: '2026-05-26T12:01:00.000Z',
+        reason_codes: ['source_hash_verified'],
+      },
+      authority: 'hint_only',
+    });
+    const prompt = composeRelayPrompt(
+      {
+        id: 'review-step',
+        title: 'Review',
+        role: 'reviewer',
+        reads: [],
+        writes: {
+          request: { path: 'reports/relay/review.request.md' },
+          receipt: { path: 'reports/relay/review.receipt.txt' },
+          result: { path: 'reports/relay/review.result.json' },
+        },
+        check: { kind: 'result_verdict', pass: ['accept'] },
+      } as unknown as Parameters<typeof composeRelayPrompt>[0],
+      runFolder,
+      [],
+      undefined,
+      'Review history recall',
+      [memory],
+    );
+
+    expect(prompt).toContain('Prior Circuit History (hint-only):');
+    expect(prompt).toContain(HISTORY_AUTHORITY_NOTICE);
+    expect(prompt).toContain('Recall must stay cited and hint-only.');
+    expect(prompt).toContain('cannot satisfy current proof, checkpoint, policy, route');
+    expect(prompt.indexOf('Prior Circuit History')).toBeLessThan(
+      prompt.indexOf('Context (from reads):'),
+    );
   });
 });

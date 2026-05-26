@@ -504,36 +504,29 @@ describe('Build verification command execution', () => {
   it('uses declared projectRoot instead of ambient process cwd', async () => {
     const { bytes } = verificationCompiledFlow();
     const projectRoot = join(runFolderBase, 'declared-project');
-    const ambient = join(runFolderBase, 'ambient');
     mkdirSync(projectRoot, { recursive: true });
-    mkdirSync(ambient, { recursive: true });
+    expect(realpathSync(projectRoot)).not.toBe(realpathSync(process.cwd()));
     const runFolder = join(runFolderBase, 'declared-root');
-    const originalCwd = process.cwd();
-    process.chdir(ambient);
-    try {
-      const outcome = await runCompiledFlow({
-        runDir: runFolder,
-        flowBytes: bytes,
-        projectRoot,
-        runId: 'b2000000-0000-0000-0000-000000000006',
-        goal: 'Use declared project root',
-        depth: 'standard',
-        now: deterministicNow(Date.UTC(2026, 3, 25, 2, 30, 0)),
-        executors: planWriter(
-          commandPlan({
-            argv: [process.execPath, '-e', 'process.stdout.write(process.cwd())'],
-          }),
-        ),
-      });
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      projectRoot,
+      runId: 'b2000000-0000-0000-0000-000000000006',
+      goal: 'Use declared project root',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 25, 2, 30, 0)),
+      executors: planWriter(
+        commandPlan({
+          argv: [process.execPath, '-e', 'process.stdout.write(process.cwd())'],
+        }),
+      ),
+    });
 
-      expect(outcome.outcome).toBe('complete');
-      const verification = BuildVerification.parse(
-        readJson(runFolder, 'reports/build/verification.json'),
-      );
-      expect(verification.commands[0]?.stdout_summary).toBe(realpathSync(projectRoot));
-    } finally {
-      process.chdir(originalCwd);
-    }
+    expect(outcome.outcome).toBe('complete');
+    const verification = BuildVerification.parse(
+      readJson(runFolder, 'reports/build/verification.json'),
+    );
+    expect(verification.commands[0]?.stdout_summary).toBe(realpathSync(projectRoot));
   });
 
   it('uses an explicit environment policy instead of inheriting arbitrary parent env', async () => {

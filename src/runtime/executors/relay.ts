@@ -519,6 +519,7 @@ export async function executeProductionRelayAttempt(input: {
     loadedSkills,
     context.acceptanceRetryFeedback,
     context.goal,
+    context.memoryInputs ?? [],
   );
 
   const request = step.writes?.request;

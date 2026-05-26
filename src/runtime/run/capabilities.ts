@@ -1,5 +1,9 @@
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
+import type {
+  HistoryRecallReportV1 as HistoryRecallReportValue,
+  MemoryInputV0 as MemoryInputValue,
+} from '../../schemas/index.js';
 import type { PolicyLayer as PolicyLayerValue } from '../../schemas/policy-envelope.js';
 import type {
   ProgressReporter,
@@ -31,6 +35,8 @@ export const RUNTIME_CAPABILITY_NAMES = [
   'policyLayers',
   'progress',
   'progressSurface',
+  'memoryInputs',
+  'historyRecallReport',
 ] as const;
 
 export type RuntimeCapabilityName = (typeof RUNTIME_CAPABILITY_NAMES)[number];
@@ -51,4 +57,6 @@ export interface RuntimeExecutionCapabilities {
   readonly policyLayers?: readonly PolicyLayerValue[];
   readonly progress?: ProgressReporter;
   readonly progressSurface?: CompiledFlowProgressSurface;
+  readonly memoryInputs?: readonly MemoryInputValue[];
+  readonly historyRecallReport?: HistoryRecallReportValue;
 }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError } from 'commander';
 
@@ -22,6 +22,10 @@ import { Rigor, type Rigor as RigorValue } from '../schemas/rigor.js';
 
 import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import { classifyCompiledFlowTask } from '../flows/router.js';
+import {
+  HISTORY_RECALL_REPORT_PATH,
+  prepareRunStartHistoryRecall,
+} from '../history/run-start-recall.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
@@ -117,6 +121,7 @@ export interface CliMainOptions {
   configHomeDir?: string;
   configCwd?: string;
   runtimeExecutors?: Partial<ExecutorRegistry>;
+  historyRecall?: 'auto' | 'enabled' | 'disabled';
 }
 
 export function usage(): string {
@@ -636,6 +641,35 @@ function classifyRuntimeSupport(input: {
   };
 }
 
+function historyRecallOutputFields(input: {
+  readonly runFolder: string;
+  readonly report: ReturnType<typeof prepareRunStartHistoryRecall>;
+}) {
+  return {
+    history_recall: {
+      status: input.report.status,
+      memory_input_count: input.report.memory_input_count,
+      report_path: join(input.runFolder, HISTORY_RECALL_REPORT_PATH),
+      rebuilt: input.report.rebuilt,
+      ...(input.report.index_state === undefined ? {} : { index_state: input.report.index_state }),
+      warnings: input.report.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message,
+      })),
+    },
+  };
+}
+
+function shouldPrepareHistoryRecall(options: CliMainOptions): boolean {
+  if (options.historyRecall === 'enabled') return true;
+  if (options.historyRecall === 'disabled') return false;
+  return (
+    options.relayer === undefined &&
+    options.runtimeExecutors === undefined &&
+    options.composeWriter === undefined
+  );
+}
+
 export async function main(argv: readonly string[], options: CliMainOptions = {}): Promise<number> {
   let invocation: TopLevelInvocation;
   try {
@@ -804,6 +838,13 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
 
   if (routeToRuntime) {
     const progressSurface = progressSurfaceForFlowId(flow.id);
+    const historyRecall = shouldPrepareHistoryRecall(options)
+      ? prepareRunStartHistoryRecall({
+          repoRoot: projectRoot,
+          query: args.goal,
+          now,
+        })
+      : undefined;
     const runtimeResult = await runCompiledFlowWithWaiting({
       flowBytes: bytes,
       compiledFlowPath: fixturePath,
@@ -824,6 +865,8 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       ...(policyLayers.length === 0 ? {} : { policyLayers }),
       ...(progress === undefined ? {} : { progress }),
       ...(progressSurface === undefined ? {} : { progressSurface }),
+      ...(historyRecall === undefined ? {} : { memoryInputs: historyRecall.memory_inputs }),
+      ...(historyRecall === undefined ? {} : { historyRecallReport: historyRecall }),
       ...(args.includeUntrackedContent
         ? { evidencePolicy: { includeUntrackedFileContent: true } }
         : {}),
@@ -878,6 +921,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
               include: runtimeDecisionDiagnostics,
               decision: defaultRuntimeSupport,
             }),
+            ...(historyRecall === undefined
+              ? {}
+              : historyRecallOutputFields({ runFolder, report: historyRecall })),
             ...operatorSummaryOutputFields({ operatorSummary }),
             checkpoint: waitingResult.checkpoint,
           },
@@ -923,6 +969,9 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             include: runtimeDecisionDiagnostics,
             decision: defaultRuntimeSupport,
           }),
+          ...(historyRecall === undefined
+            ? {}
+            : historyRecallOutputFields({ runFolder, report: historyRecall })),
           ...operatorSummaryOutputFields({ operatorSummary }),
         },
         null,

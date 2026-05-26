@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { RuntimeIndexedRelayStep } from '../flows/registries/runtime-index.js';
 import { findRelayShapeHint } from '../flows/registries/shape-hints/registry.js';
 import type { AcceptanceCriterion } from '../schemas/acceptance-criteria.js';
+import {
+  HISTORY_AUTHORITY_NOTICE,
+  type MemoryInputV0 as MemoryInputValue,
+} from '../schemas/index.js';
 import { resolveRunRelative } from './run-relative-path.js';
 import type { LoadedRelaySkill } from './skill-loading.js';
 
@@ -128,6 +132,38 @@ function acceptanceRetryFeedbackSection(
   ].join('\n');
 }
 
+function sourceRefText(memory: MemoryInputValue): string {
+  const ref = memory.source.ref;
+  return [
+    `${ref.kind}:${ref.ref}`,
+    ...(ref.run_id === undefined ? [] : [`run ${ref.run_id as unknown as string}`]),
+    ...(ref.flow_id === undefined ? [] : [`flow ${ref.flow_id as unknown as string}`]),
+    ...(ref.step_id === undefined ? [] : [`step ${ref.step_id as unknown as string}`]),
+    ...(ref.attempt === undefined ? [] : [`attempt ${ref.attempt}`]),
+    ...(ref.sequence === undefined ? [] : [`sequence ${ref.sequence}`]),
+  ].join(' | ');
+}
+
+function memoryInputsSection(memoryInputs: readonly MemoryInputValue[]): string | undefined {
+  if (memoryInputs.length === 0) return undefined;
+  const items = memoryInputs.flatMap((memory) =>
+    memory.hints.map((hint) =>
+      [
+        `- ${memory.summary}`,
+        `  Hint: ${hint.text}`,
+        `  Source: ${sourceRefText(memory)}`,
+        `  Staleness: ${memory.staleness.status}`,
+      ].join('\n'),
+    ),
+  );
+  return [
+    'Prior Circuit History (hint-only):',
+    HISTORY_AUTHORITY_NOTICE,
+    'Use these only to orient the current work. Re-run current checks before relying on them.',
+    ...items,
+  ].join('\n');
+}
+
 // v0 prompt composition: name the step, enumerate accepted verdicts, and
 // inline every reads-declared report (or a clear placeholder if the
 // reads report hasn't been written yet).
@@ -137,6 +173,7 @@ export function composeRelayPrompt(
   loadedSkills: readonly LoadedRelaySkill[] = [],
   acceptanceRetryFeedback?: RelayAcceptanceRetryFeedback,
   operatorGoal?: string,
+  memoryInputs: readonly MemoryInputValue[] = [],
 ): string {
   const readsBody =
     step.reads.length === 0
@@ -151,6 +188,7 @@ export function composeRelayPrompt(
   const skillsSection = selectedSkillsSection(loadedSkills);
   const criteriaSection = acceptanceCriteriaSection(step);
   const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
+  const memorySection = memoryInputsSection(memoryInputs);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -160,6 +198,7 @@ export function composeRelayPrompt(
     ...(operatorGoal === undefined || operatorGoal.length === 0
       ? []
       : ['Operator Goal:', operatorGoal, '']),
+    ...(memorySection === undefined ? [] : [memorySection, '']),
     'Context (from reads):',
     readsBody,
     '',

@@ -6,6 +6,7 @@ import {
   HistoryManifestV1,
   HistoryMemoryInputPreviewV1,
   HistoryQueryResultV1,
+  HistoryRecallReportV1,
   MemoryInputV0,
 } from '../../src/index.js';
 
@@ -161,6 +162,62 @@ describe('history schemas', () => {
     ).toBeDefined();
 
     expect(MemoryInputV0.safeParse({ ...memory, may_write: true }).success).toBe(false);
+  });
+
+  it('accepts run-start recall reports and rejects mismatched counts', () => {
+    const memory = MemoryInputV0.parse({
+      schema_version: 1,
+      memory_id: 'prior-run-11111111-abc123',
+      kind: 'prior_run',
+      source: {
+        ref: reportRef(),
+        captured_at: '2026-05-26T12:00:00.000Z',
+        sha256: sha,
+      },
+      summary: 'Build completed.',
+      hints: [{ id: 'hint-abc123', text: 'Build completed.', applies_to: 'context' }],
+      staleness: {
+        status: 'fresh',
+        checked_at: '2026-05-26T12:01:00.000Z',
+        reason_codes: ['source_hash_verified'],
+      },
+      authority: 'hint_only',
+    });
+    const report = {
+      api_version: 'history-recall-report-v1',
+      schema_version: 1,
+      status: 'used',
+      query: 'build',
+      index_state: 'fresh',
+      rebuilt: false,
+      authority_notice: HISTORY_AUTHORITY_NOTICE,
+      memory_input_count: 1,
+      memory_inputs: [memory],
+      matches: [
+        {
+          memory_id: memory.memory_id,
+          rank: 1,
+          score: 1,
+          source_doc_id: document().doc_id,
+          source_ref: reportRef(),
+          snippet: 'Build completed.',
+        },
+      ],
+      warnings: [],
+    };
+
+    expect(HistoryRecallReportV1.parse(report)).toBeDefined();
+    expect(HistoryRecallReportV1.safeParse({ ...report, memory_input_count: 0 }).success).toBe(
+      false,
+    );
+    expect(
+      HistoryRecallReportV1.safeParse({
+        ...report,
+        status: 'unavailable',
+        memory_input_count: 0,
+        memory_inputs: [],
+      }).success,
+    ).toBe(false);
   });
 
   it('accepts history error output', () => {

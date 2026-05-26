@@ -37,9 +37,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js
 var require_error = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/error.js"(exports) {
     var CommanderError2 = class extends Error {
       /**
        * Constructs the CommanderError class
@@ -72,9 +72,9 @@ var require_error = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js
 var require_argument = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/argument.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Argument2 = class {
       /**
@@ -200,9 +200,9 @@ var require_argument = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js
 var require_help = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/help.js"(exports) {
     var { humanReadableArgName } = require_argument();
     var Help2 = class {
       constructor() {
@@ -802,9 +802,9 @@ ${itemIndentStr}`);
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js
 var require_option = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/option.js"(exports) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var Option2 = class {
       /**
@@ -1115,9 +1115,9 @@ var require_option = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js
 var require_suggestSimilar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/suggestSimilar.js"(exports) {
     var maxDistance = 3;
     function editDistance(a, b) {
       if (Math.abs(a.length - b.length) > maxDistance)
@@ -1195,9 +1195,9 @@ var require_suggestSimilar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js
 var require_command = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/lib/command.js"(exports) {
     var EventEmitter = __require("node:events").EventEmitter;
     var childProcess = __require("node:child_process");
     var path = __require("node:path");
@@ -3441,9 +3441,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js
 var require_commander = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/commander/index.js"(exports) {
     var { Argument: Argument2 } = require_argument();
     var { Command: Command2 } = require_command();
     var { CommanderError: CommanderError2, InvalidArgumentError: InvalidArgumentError2 } = require_error();
@@ -3463,9 +3463,9 @@ var require_commander = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = Symbol.for("yaml.alias");
     var DOC = Symbol.for("yaml.document");
@@ -3520,9 +3520,9 @@ var require_identity = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = Symbol("break visit");
@@ -3678,9 +3678,9 @@ var require_visit = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -3849,9 +3849,9 @@ var require_directives = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -3919,9 +3919,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -3969,9 +3969,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -3999,9 +3999,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -4040,9 +4040,9 @@ var require_Node = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -4154,9 +4154,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -4184,9 +4184,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -4259,9 +4259,9 @@ var require_createNode = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
@@ -4402,9 +4402,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -4419,9 +4419,9 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
@@ -4555,9 +4555,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -4838,9 +4838,9 @@ ${indent}`);
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -4962,9 +4962,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -5095,9 +5095,9 @@ ${ctx.indent}`;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -5117,9 +5117,9 @@ var require_log = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -5174,9 +5174,9 @@ var require_merge = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge2 = require_merge();
@@ -5238,9 +5238,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -5278,9 +5278,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -5429,9 +5429,9 @@ ${indent}${end}`;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -5573,9 +5573,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -5595,9 +5595,9 @@ var require_map = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -5711,9 +5711,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -5733,9 +5733,9 @@ var require_seq = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string4 = {
@@ -5752,9 +5752,9 @@ var require_string = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -5770,9 +5770,9 @@ var require_null = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -5794,9 +5794,9 @@ var require_bool = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -5821,9 +5821,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -5867,9 +5867,9 @@ var require_float = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -5912,9 +5912,9 @@ var require_int = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -5940,9 +5940,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map2 = require_map();
@@ -6007,9 +6007,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -6073,9 +6073,9 @@ var require_binary = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -6151,9 +6151,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -6229,9 +6229,9 @@ var require_omap = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -6261,9 +6261,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -6310,9 +6310,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -6389,9 +6389,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -6478,9 +6478,9 @@ var require_set = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -6566,9 +6566,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -6610,9 +6610,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -6704,9 +6704,9 @@ var require_tags = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map2 = require_map();
@@ -6736,9 +6736,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -6816,9 +6816,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -7125,9 +7125,9 @@ var require_Document = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -7190,9 +7190,9 @@ ${pointer}
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -7324,9 +7324,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -7366,9 +7366,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -7384,9 +7384,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -7400,9 +7400,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -7508,9 +7508,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -7559,9 +7559,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -7602,9 +7602,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -7796,9 +7796,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -7861,9 +7861,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -8044,9 +8044,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -8263,9 +8263,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -8344,9 +8344,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -8374,9 +8374,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -8480,9 +8480,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -8523,9 +8523,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -8729,9 +8729,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -8914,9 +8914,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -8975,9 +8975,9 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = Symbol("break visit");
     var SKIP = Symbol("skip children");
@@ -9037,9 +9037,9 @@ var require_cst_visit = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -9139,9 +9139,9 @@ var require_cst = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -9718,9 +9718,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -9749,9 +9749,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -10616,9 +10616,9 @@ var require_parser = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -10713,9 +10713,9 @@ var require_public_api = __commonJS({
   }
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "../../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js"(exports) {
+  "../../../Users/petepetrash/Code/circuit/node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -10768,10 +10768,10 @@ var require_dist = __commonJS({
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
 import { existsSync as existsSync21, readFileSync as readFileSync35 } from "node:fs";
-import { dirname as dirname9, resolve as resolve15 } from "node:path";
+import { dirname as dirname9, join as join20, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/commander/esm.mjs
+// ../../../Users/petepetrash/Code/circuit/node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
 var {
   program,
@@ -10905,7 +10905,7 @@ function findDefaultRoutablePackage(routables) {
   return first;
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
   $brand: () => $brand,
@@ -11148,7 +11148,7 @@ __export(external_exports, {
   xor: () => xor
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/index.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/index.js
 var core_exports2 = {};
 __export(core_exports2, {
   $ZodAny: () => $ZodAny,
@@ -11427,7 +11427,7 @@ __export(core_exports2, {
   version: () => version
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/core.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/core.js
 var _a;
 var NEVER = /* @__PURE__ */ Object.freeze({
   status: "aborted"
@@ -11504,7 +11504,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/util.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -12200,7 +12200,7 @@ var Class = class {
   }
 };
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/errors.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -12339,7 +12339,7 @@ function prettifyError(error51) {
   return lines.join("\n");
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/parse.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -12427,7 +12427,7 @@ var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/regexes.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/regexes.js
 var regexes_exports = {};
 __export(regexes_exports, {
   base64: () => base64,
@@ -12586,7 +12586,7 @@ var sha512_hex = /^[0-9a-fA-F]{128}$/;
 var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
 var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/checks.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a3;
   inst._zod ?? (inst._zod = {});
@@ -13134,7 +13134,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/doc.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -13170,14 +13170,14 @@ var Doc = class {
   }
 };
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/versions.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 4,
   patch: 3
 };
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/schemas.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a3;
   inst ?? (inst = {});
@@ -15270,7 +15270,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/index.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/index.js
 var locales_exports = {};
 __export(locales_exports, {
   ar: () => ar_default,
@@ -15327,7 +15327,7 @@ __export(locales_exports, {
   zhTW: () => zh_TW_default
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ar.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0641", verb: "\u0623\u0646 \u064A\u062D\u0648\u064A" },
@@ -15434,7 +15434,7 @@ function ar_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/az.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmal\u0131d\u0131r" },
@@ -15540,7 +15540,7 @@ function az_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/be.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/be.js
 function getBelarusianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -15697,7 +15697,7 @@ function be_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/bg.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/bg.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0430", verb: "\u0434\u0430 \u0441\u044A\u0434\u044A\u0440\u0436\u0430" },
@@ -15818,7 +15818,7 @@ function bg_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ca.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ca.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "car\xE0cters", verb: "contenir" },
@@ -15927,7 +15927,7 @@ function ca_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/cs.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/cs.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "znak\u016F", verb: "m\xEDt" },
@@ -16039,7 +16039,7 @@ function cs_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/da.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/da.js
 var error7 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "havde" },
@@ -16155,7 +16155,7 @@ function da_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/de.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/de.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -16264,7 +16264,7 @@ function de_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/el.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/el.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "\u03C7\u03B1\u03C1\u03B1\u03BA\u03C4\u03AE\u03C1\u03B5\u03C2", verb: "\u03BD\u03B1 \u03AD\u03C7\u03B5\u03B9" },
@@ -16374,7 +16374,7 @@ function el_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/en.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/en.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -16487,7 +16487,7 @@ function en_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/eo.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/eo.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "karaktrojn", verb: "havi" },
@@ -16597,7 +16597,7 @@ function eo_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/es.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/es.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -16730,7 +16730,7 @@ function es_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fa.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fa.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "\u06A9\u0627\u0631\u0627\u06A9\u062A\u0631", verb: "\u062F\u0627\u0634\u062A\u0647 \u0628\u0627\u0634\u062F" },
@@ -16845,7 +16845,7 @@ function fa_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fi.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fi.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "merkki\xE4", subject: "merkkijonon" },
@@ -16958,7 +16958,7 @@ function fi_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -17084,7 +17084,7 @@ function fr_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr-CA.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/fr-CA.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -17192,7 +17192,7 @@ function fr_CA_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/he.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/he.js
 var error17 = () => {
   const TypeNames = {
     string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
@@ -17387,7 +17387,7 @@ function he_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hr.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hr.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "znakova", verb: "imati" },
@@ -17510,7 +17510,7 @@ function hr_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hu.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hu.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -17619,7 +17619,7 @@ function hu_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hy.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/hy.js
 function getArmenianPlural(count, one, many) {
   return Math.abs(count) === 1 ? one : many;
 }
@@ -17767,7 +17767,7 @@ function hy_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/id.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/id.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -17874,7 +17874,7 @@ function id_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/is.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/is.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "stafi", verb: "a\xF0 hafa" },
@@ -17984,7 +17984,7 @@ function is_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/it.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/it.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -18093,7 +18093,7 @@ function it_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ja.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ja.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "\u6587\u5B57", verb: "\u3067\u3042\u308B" },
@@ -18201,7 +18201,7 @@ function ja_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ka.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ka.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "\u10E1\u10D8\u10DB\u10D1\u10DD\u10DA\u10DD", verb: "\u10E3\u10DC\u10D3\u10D0 \u10E8\u10D4\u10D8\u10EA\u10D0\u10D5\u10D3\u10D4\u10E1" },
@@ -18314,7 +18314,7 @@ function ka_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/km.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/km.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "\u178F\u17BD\u17A2\u1780\u17D2\u179F\u179A", verb: "\u1782\u17BD\u179A\u1798\u17B6\u1793" },
@@ -18425,12 +18425,12 @@ function km_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/kh.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/kh.js
 function kh_default() {
   return km_default();
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ko.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ko.js
 var error27 = () => {
   const Sizable = {
     string: { unit: "\uBB38\uC790", verb: "to have" },
@@ -18542,7 +18542,7 @@ function ko_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/lt.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/lt.js
 var capitalizeFirstCharacter = (text) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
@@ -18746,7 +18746,7 @@ function lt_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/mk.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/mk.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "\u0437\u043D\u0430\u0446\u0438", verb: "\u0434\u0430 \u0438\u043C\u0430\u0430\u0442" },
@@ -18856,7 +18856,7 @@ function mk_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ms.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ms.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -18964,7 +18964,7 @@ function ms_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/nl.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/nl.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "tekens", verb: "heeft" },
@@ -19075,7 +19075,7 @@ function nl_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/no.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/no.js
 var error32 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "\xE5 ha" },
@@ -19184,7 +19184,7 @@ function no_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ota.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ota.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmal\u0131d\u0131r" },
@@ -19294,7 +19294,7 @@ function ota_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ps.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ps.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "\u062A\u0648\u06A9\u064A", verb: "\u0648\u0644\u0631\u064A" },
@@ -19409,7 +19409,7 @@ function ps_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pl.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pl.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "znak\xF3w", verb: "mie\u0107" },
@@ -19519,7 +19519,7 @@ function pl_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pt.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/pt.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -19628,7 +19628,7 @@ function pt_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ro.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ro.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "caractere", verb: "s\u0103 aib\u0103" },
@@ -19748,7 +19748,7 @@ function ro_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ru.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ru.js
 function getRussianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -19905,7 +19905,7 @@ function ru_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sl.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sl.js
 var error39 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -20015,7 +20015,7 @@ function sl_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sv.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/sv.js
 var error40 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -20126,7 +20126,7 @@ function sv_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ta.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ta.js
 var error41 = () => {
   const Sizable = {
     string: { unit: "\u0B8E\u0BB4\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BCD\u0B95\u0BB3\u0BCD", verb: "\u0B95\u0BCA\u0BA3\u0BCD\u0B9F\u0BBF\u0BB0\u0BC1\u0B95\u0BCD\u0B95 \u0BB5\u0BC7\u0BA3\u0BCD\u0B9F\u0BC1\u0BAE\u0BCD" },
@@ -20237,7 +20237,7 @@ function ta_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/th.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/th.js
 var error42 = () => {
   const Sizable = {
     string: { unit: "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23", verb: "\u0E04\u0E27\u0E23\u0E21\u0E35" },
@@ -20348,7 +20348,7 @@ function th_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/tr.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/tr.js
 var error43 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "olmal\u0131" },
@@ -20454,7 +20454,7 @@ function tr_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uk.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uk.js
 var error44 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432", verb: "\u043C\u0430\u0442\u0438\u043C\u0435" },
@@ -20563,12 +20563,12 @@ function uk_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ua.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ua.js
 function ua_default() {
   return uk_default();
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ur.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/ur.js
 var error45 = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0648\u0641", verb: "\u06C1\u0648\u0646\u0627" },
@@ -20679,7 +20679,7 @@ function ur_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uz.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/uz.js
 var error46 = () => {
   const Sizable = {
     string: { unit: "belgi", verb: "bo\u2018lishi kerak" },
@@ -20790,7 +20790,7 @@ function uz_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/vi.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/vi.js
 var error47 = () => {
   const Sizable = {
     string: { unit: "k\xFD t\u1EF1", verb: "c\xF3" },
@@ -20899,7 +20899,7 @@ function vi_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-CN.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-CN.js
 var error48 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u7B26", verb: "\u5305\u542B" },
@@ -21009,7 +21009,7 @@ function zh_CN_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-TW.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/zh-TW.js
 var error49 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u5143", verb: "\u64C1\u6709" },
@@ -21117,7 +21117,7 @@ function zh_TW_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/yo.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/locales/yo.js
 var error50 = () => {
   const Sizable = {
     string: { unit: "\xE0mi", verb: "n\xED" },
@@ -21225,7 +21225,7 @@ function yo_default() {
   };
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/registries.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/registries.js
 var _a2;
 var $output = Symbol("ZodOutput");
 var $input = Symbol("ZodInput");
@@ -21275,7 +21275,7 @@ function registry() {
 (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/api.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/api.js
 // @__NO_SIDE_EFFECTS__
 function _string(Class2, params) {
   return new Class2({
@@ -22314,7 +22314,7 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
   return inst;
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/to-json-schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/to-json-schema.js
 function initializeContext(params) {
   let target = params?.target ?? "draft-2020-12";
   if (target === "draft-4")
@@ -22673,7 +22673,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   return finalize(ctx, schema);
 };
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-processors.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-processors.js
 var formatMap = {
   guid: "uuid",
   url: "uri",
@@ -23217,7 +23217,7 @@ function toJSONSchema(input, params) {
   return finalize(ctx, input);
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-generator.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema-generator.js
 var JSONSchemaGenerator = class {
   /** @deprecated Access via ctx instead */
   get metadataRegistry() {
@@ -23292,10 +23292,10 @@ var JSONSchemaGenerator = class {
   }
 };
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
 var schemas_exports2 = {};
 __export(schemas_exports2, {
   ZodAny: () => ZodAny,
@@ -23466,7 +23466,7 @@ __export(schemas_exports2, {
   xor: () => xor
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/checks.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/checks.js
 var checks_exports2 = {};
 __export(checks_exports2, {
   endsWith: () => _endsWith,
@@ -23500,7 +23500,7 @@ __export(checks_exports2, {
   uppercase: () => _uppercase
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/iso.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -23541,7 +23541,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/errors.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -23581,7 +23581,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/parse.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -23595,7 +23595,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/schemas.js
 var _installedGroups = /* @__PURE__ */ new WeakMap();
 function _installLazyMethods(inst, group, methods) {
   const proto = Object.getPrototypeOf(inst);
@@ -24885,7 +24885,7 @@ function preprocess(fn, schema) {
   });
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/compat.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/compat.js
 var ZodIssueCode = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -24911,7 +24911,7 @@ var ZodFirstPartyTypeKind;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/from-json-schema.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/from-json-schema.js
 var z = {
   ...schemas_exports2,
   ...checks_exports2,
@@ -25391,7 +25391,7 @@ function fromJSONSchema(schema, params) {
   return convertSchema(normalized, ctx);
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/coerce.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/coerce.js
 var coerce_exports = {};
 __export(coerce_exports, {
   bigint: () => bigint3,
@@ -25416,7 +25416,7 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
-// ../../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
+// ../../../Users/petepetrash/Code/circuit/node_modules/zod/v4/classic/external.js
 config(en_default());
 
 // dist/schemas/verification.js
@@ -45646,6 +45646,1348 @@ function findRelayShapeHint(step) {
   return void 0;
 }
 
+// dist/schemas/snapshot.js
+var StepStatus = external_exports.enum(["pending", "in_progress", "check_failed", "complete", "aborted"]);
+var StepState = external_exports.object({
+  step_id: StepId,
+  status: StepStatus,
+  attempts: external_exports.number().int().nonnegative(),
+  last_report_path: external_exports.string().optional(),
+  last_checkpoint_selection: external_exports.string().optional(),
+  last_route_taken: external_exports.string().optional()
+}).strict();
+var SnapshotStatus = external_exports.enum([
+  "in_progress",
+  "complete",
+  "aborted",
+  "handoff",
+  "stopped",
+  "escalated"
+]);
+var Snapshot = external_exports.object({
+  schema_version: external_exports.literal(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  invocation_id: InvocationId.optional(),
+  depth: Depth,
+  change_kind: ChangeKindDeclaration,
+  current_step: StepId.optional(),
+  status: SnapshotStatus,
+  steps: external_exports.array(StepState),
+  trace_entries_consumed: external_exports.number().int().nonnegative(),
+  manifest_hash: external_exports.string().min(1),
+  updated_at: external_exports.string().datetime()
+}).strict();
+
+// dist/schemas/continuity.js
+var GitState = external_exports.object({
+  cwd: external_exports.string().min(1),
+  branch: external_exports.string().optional(),
+  head: external_exports.string().optional(),
+  base_commit: external_exports.string().optional()
+}).strict();
+var ContinuityNarrative = external_exports.object({
+  goal: external_exports.string().min(1),
+  next: external_exports.string().min(1),
+  state_markdown: external_exports.string().min(1),
+  debt_markdown: external_exports.string().min(1)
+}).strict();
+var RunAttachedProvenance = external_exports.object({
+  run_id: RunId,
+  invocation_id: InvocationId.optional(),
+  current_stage: StageId,
+  current_step: StepId,
+  runtime_status: SnapshotStatus,
+  runtime_updated_at: external_exports.string().datetime()
+}).strict();
+var resumeContractRefine = (v) => v.auto_resume !== v.requires_explicit_resume;
+var resumeContractRefineMessage = {
+  message: "auto_resume and requires_explicit_resume are contradictory: exactly one must be true"
+};
+var StandaloneResumeContract = external_exports.object({
+  mode: external_exports.literal("resume_standalone"),
+  auto_resume: external_exports.boolean(),
+  requires_explicit_resume: external_exports.boolean()
+}).strict().refine(resumeContractRefine, resumeContractRefineMessage);
+var RunBackedResumeContract = external_exports.object({
+  mode: external_exports.literal("resume_run"),
+  auto_resume: external_exports.boolean(),
+  requires_explicit_resume: external_exports.boolean()
+}).strict().refine(resumeContractRefine, resumeContractRefineMessage);
+var ContinuityBase = external_exports.object({
+  schema_version: external_exports.literal(1),
+  record_id: ControlPlaneFileStem,
+  project_root: external_exports.string().min(1),
+  created_at: external_exports.string().datetime(),
+  git: GitState,
+  narrative: ContinuityNarrative
+});
+var StandaloneContinuity = ContinuityBase.extend({
+  continuity_kind: external_exports.literal("standalone"),
+  resume_contract: StandaloneResumeContract
+}).strict();
+var RunBackedContinuity = ContinuityBase.extend({
+  continuity_kind: external_exports.literal("run-backed"),
+  run_ref: RunAttachedProvenance,
+  resume_contract: RunBackedResumeContract
+}).strict();
+var recordOwnPropertyGuard = external_exports.custom((raw) => {
+  if (raw === null || typeof raw !== "object")
+    return true;
+  const guarded = ["schema_version", "record_id", "continuity_kind", "resume_contract"];
+  for (const f of guarded)
+    if (!Object.hasOwn(raw, f))
+      return false;
+  return true;
+}, "continuity record has inherited (not own) identity/discriminator field; prototype-chain smuggle rejected");
+var ContinuityRecord = recordOwnPropertyGuard.pipe(external_exports.discriminatedUnion("continuity_kind", [StandaloneContinuity, RunBackedContinuity]));
+var PendingRecordPointer = external_exports.object({
+  record_id: ControlPlaneFileStem,
+  continuity_kind: external_exports.union([external_exports.literal("standalone"), external_exports.literal("run-backed")]),
+  created_at: external_exports.string().datetime()
+}).strict();
+var AttachedRunPointer = external_exports.object({
+  run_id: RunId,
+  current_stage: StageId,
+  current_step: StepId,
+  runtime_status: SnapshotStatus,
+  attached_at: external_exports.string().datetime(),
+  last_validated_at: external_exports.string().datetime()
+}).strict();
+var ContinuityIndexBody = external_exports.object({
+  schema_version: external_exports.literal(1),
+  project_root: external_exports.string().min(1),
+  pending_record: PendingRecordPointer.nullable(),
+  current_run: AttachedRunPointer.nullable()
+}).strict();
+var indexOwnPropertyGuard = external_exports.custom((raw) => {
+  if (raw === null || typeof raw !== "object")
+    return true;
+  const guarded = ["schema_version", "project_root", "pending_record", "current_run"];
+  for (const f of guarded)
+    if (!Object.hasOwn(raw, f))
+      return false;
+  return true;
+}, "continuity index has inherited (not own) required field; prototype-chain smuggle rejected");
+var ContinuityIndex = indexOwnPropertyGuard.pipe(ContinuityIndexBody);
+
+// dist/schemas/memory-input.js
+var ReasonCode2 = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
+var CONTINUITY_RECORD_REF_PATTERN = /(?:^|\/)continuity\/records\/[a-z0-9][a-z0-9._-]*\.json$/;
+var MemoryInputKind = external_exports.enum([
+  "repo",
+  "user",
+  "project",
+  "prior_run",
+  "continuity",
+  "handoff_brief"
+]);
+var MemoryHintAppliesTo = external_exports.enum([
+  "context",
+  "verification",
+  "preference",
+  "prior_failure",
+  "repo_convention",
+  "operator_note"
+]);
+var MemoryStalenessStatus = external_exports.enum(["fresh", "stale", "unknown"]);
+var MemorySource = external_exports.object({
+  ref: Ref,
+  captured_at: external_exports.string().datetime(),
+  source_updated_at: external_exports.string().datetime().optional(),
+  sha256: Sha256.optional()
+}).strict();
+var MemoryHint = external_exports.object({
+  id: ControlPlaneFileStem,
+  text: external_exports.string().min(1),
+  applies_to: MemoryHintAppliesTo
+}).strict();
+var MemoryStaleness = external_exports.object({
+  status: MemoryStalenessStatus,
+  checked_at: external_exports.string().datetime(),
+  reason_codes: external_exports.array(ReasonCode2).min(1)
+}).strict();
+var MemoryInputV0 = external_exports.object({
+  schema_version: external_exports.literal(1),
+  memory_id: ControlPlaneFileStem,
+  kind: MemoryInputKind,
+  source: MemorySource,
+  summary: external_exports.string().min(1),
+  hints: external_exports.array(MemoryHint).min(1),
+  staleness: MemoryStaleness,
+  authority: external_exports.literal("hint_only")
+}).strict().superRefine((memory, ctx) => {
+  if (memory.source.sha256 !== void 0 && memory.source.ref.sha256 !== void 0 && memory.source.sha256 !== memory.source.ref.sha256) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "sha256"],
+      message: "source.sha256 must match source.ref.sha256 when both are present"
+    });
+  }
+  if (memory.kind === "continuity" && memory.source.ref.kind !== "report") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "kind"],
+      message: "continuity memory must point at a continuity report ref"
+    });
+  }
+  if (memory.kind === "continuity" && !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "ref"],
+      message: "continuity memory must point at continuity/records/<record>.json"
+    });
+  }
+  if (memory.kind === "handoff_brief" && memory.source.ref.kind !== "report" && memory.source.ref.kind !== "context_packet") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["source", "ref", "kind"],
+      message: "handoff brief memory must point at report or context_packet refs"
+    });
+  }
+  if (memory.staleness.status === "unknown" && !memory.staleness.reason_codes.includes("memory_unverified")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["staleness", "reason_codes"],
+      message: "unknown memory staleness requires memory_unverified reason code"
+    });
+  }
+  if (memory.staleness.status === "stale" && !memory.staleness.reason_codes.includes("memory_stale")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["staleness", "reason_codes"],
+      message: "stale memory requires memory_stale reason code"
+    });
+  }
+  const seenHints = /* @__PURE__ */ new Set();
+  for (const [index, hint] of memory.hints.entries()) {
+    if (seenHints.has(hint.id)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["hints", index, "id"],
+        message: `duplicate memory hint id: ${hint.id}`
+      });
+    }
+    seenHints.add(hint.id);
+  }
+});
+
+// dist/schemas/progress-event.js
+var MAX_STATUS_TEXT_CHARS = 180;
+var MAX_DISPLAY_TEXT_CHARS = 240;
+var ProgressDisplay = external_exports.object({
+  text: external_exports.string().min(1).max(MAX_DISPLAY_TEXT_CHARS),
+  importance: external_exports.enum(["major", "detail"]),
+  tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
+}).strict();
+var ProgressPresentationLineMode = external_exports.enum(["append", "replace_slot", "suppress"]);
+var ProgressPresentation = external_exports.object({
+  block_id: external_exports.string().min(1).max(120),
+  line_mode: ProgressPresentationLineMode,
+  slot_id: external_exports.string().min(1).max(120).optional(),
+  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
+  depth: external_exports.number().int().min(0).max(8).optional()
+}).strict().superRefine((presentation, ctx) => {
+  if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["slot_id"],
+      message: "slot_id is required when line_mode is replace_slot"
+    });
+  }
+  if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["status_text"],
+      message: "status_text is required unless line_mode is suppress"
+    });
+  }
+});
+var ProgressTaskStatus = external_exports.enum(["pending", "in_progress", "completed", "failed"]);
+var ProgressTask = external_exports.object({
+  id: external_exports.string().min(1).max(96),
+  title: external_exports.string().min(1).max(120),
+  status: ProgressTaskStatus
+}).strict();
+var ProgressEventBase = external_exports.object({
+  schema_version: external_exports.literal(1),
+  type: external_exports.string().min(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  recorded_at: external_exports.string().datetime(),
+  label: external_exports.string().min(1),
+  display: ProgressDisplay,
+  presentation: ProgressPresentation.optional()
+}).strict();
+var RunStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.started"),
+  run_folder: external_exports.string().min(1)
+}).strict();
+var RouteSelectedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("route.selected"),
+  selected_flow: CompiledFlowId,
+  routed_by: external_exports.enum(["explicit", "classifier"]),
+  router_reason: external_exports.string().min(1),
+  router_signal: external_exports.string().min(1).optional(),
+  entry_mode: external_exports.string().min(1).optional(),
+  entry_mode_source: external_exports.enum(["explicit", "classifier"]).optional()
+}).strict();
+var StepStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive()
+}).strict();
+var StepCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  route_taken: external_exports.string().min(1)
+}).strict();
+var StepAbortedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("step.aborted"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  reason: external_exports.string().min(1)
+}).strict();
+var EvidenceCollectedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("evidence.collected"),
+  step_id: StepId,
+  report_path: external_exports.string().min(1),
+  report_schema: external_exports.string().min(1),
+  warning_count: external_exports.number().int().nonnegative()
+}).strict();
+var EvidenceWarningProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("evidence.warning"),
+  step_id: StepId,
+  report_path: external_exports.string().min(1),
+  warning_kind: external_exports.string().min(1),
+  message: external_exports.string().min(1),
+  path: external_exports.string().min(1).optional()
+}).strict();
+var RelayStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("relay.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  role: RelayRole,
+  connector_name: external_exports.string().min(1),
+  connector_kind: external_exports.enum(["builtin", "custom"]),
+  filesystem_capability: external_exports.enum(["read-only", "trusted-write", "isolated-write"])
+}).strict();
+var RelayCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("relay.completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  attempt: external_exports.number().int().positive(),
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative()
+}).strict();
+var FanoutStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_count: external_exports.number().int().positive(),
+  branch_ids: external_exports.array(external_exports.string().min(1)).min(1)
+}).strict();
+var FanoutBranchStartedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.branch_started"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId.optional(),
+  worktree_path: external_exports.string().min(1).optional()
+}).strict();
+var FanoutBranchCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.branch_completed"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  branch_id: external_exports.string().min(1),
+  branch_kind: external_exports.enum(["relay", "sub-run"]),
+  child_run_id: RunId.optional(),
+  child_outcome: RunClosedOutcome,
+  verdict: external_exports.string().min(1),
+  duration_ms: external_exports.number().int().nonnegative()
+}).strict();
+var FanoutJoinedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("fanout.joined"),
+  step_id: StepId,
+  step_title: external_exports.string().min(1),
+  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
+  aggregate_path: external_exports.string().min(1),
+  branches_completed: external_exports.number().int().nonnegative(),
+  branches_failed: external_exports.number().int().nonnegative(),
+  selected_branch_id: external_exports.string().min(1).optional()
+}).strict();
+var CheckpointWaitingProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("checkpoint.waiting"),
+  step_id: StepId,
+  request_path: external_exports.string().min(1),
+  allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
+}).strict();
+var TaskListUpdatedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("task_list.updated"),
+  tasks: external_exports.array(ProgressTask).min(1)
+}).strict();
+var UserInputOption = external_exports.object({
+  label: external_exports.string().min(1).max(80),
+  description: external_exports.string().min(1).max(160),
+  checkpoint_choice: external_exports.string().min(1).max(80)
+}).strict();
+var UserInputQuestion = external_exports.object({
+  id: external_exports.string().min(1).max(80),
+  header: external_exports.string().min(1).max(12),
+  question: external_exports.string().min(1).max(240),
+  options: external_exports.array(UserInputOption).min(1).max(4),
+  allow_free_text: external_exports.literal(false)
+}).strict();
+var UserInputRequestedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("user_input.requested"),
+  checkpoint: external_exports.object({
+    step_id: StepId,
+    request_path: external_exports.string().min(1),
+    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
+  }).strict(),
+  questions: external_exports.array(UserInputQuestion).min(1).max(3),
+  resume: external_exports.object({
+    run_folder: external_exports.string().min(1),
+    checkpoint_choice_arg: external_exports.string().min(1),
+    command: external_exports.string().min(1)
+  }).strict()
+}).strict();
+var RunCompletedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.completed"),
+  outcome: RunClosedOutcome,
+  result_path: external_exports.string().min(1)
+}).strict();
+var RunAbortedProgressEvent = ProgressEventBase.extend({
+  type: external_exports.literal("run.aborted"),
+  outcome: external_exports.literal("aborted"),
+  result_path: external_exports.string().min(1),
+  reason: external_exports.string().min(1).optional()
+}).strict();
+var ProgressEvent = external_exports.discriminatedUnion("type", [
+  RunStartedProgressEvent,
+  RouteSelectedProgressEvent,
+  StepStartedProgressEvent,
+  StepCompletedProgressEvent,
+  StepAbortedProgressEvent,
+  EvidenceCollectedProgressEvent,
+  EvidenceWarningProgressEvent,
+  RelayStartedProgressEvent,
+  RelayCompletedProgressEvent,
+  FanoutStartedProgressEvent,
+  FanoutBranchStartedProgressEvent,
+  FanoutBranchCompletedProgressEvent,
+  FanoutJoinedProgressEvent,
+  CheckpointWaitingProgressEvent,
+  TaskListUpdatedProgressEvent,
+  UserInputRequestedProgressEvent,
+  RunCompletedProgressEvent,
+  RunAbortedProgressEvent
+]);
+
+// dist/schemas/operator-summary.js
+var OperatorSummaryWarning = external_exports.object({
+  kind: external_exports.string().min(1),
+  message: external_exports.string().min(1),
+  path: external_exports.string().min(1).optional()
+}).strict();
+var OperatorSummaryReportLink = external_exports.object({
+  label: external_exports.string().min(1),
+  path: external_exports.string().min(1),
+  schema: external_exports.string().min(1).optional()
+}).strict();
+var OperatorBriefSlots = external_exports.object({
+  headline: external_exports.string().min(1),
+  primary: external_exports.object({
+    label: external_exports.string().min(1),
+    text: external_exports.string().min(1)
+  }).strict(),
+  why: external_exports.string().min(1).optional(),
+  startWith: external_exports.string().min(1).optional(),
+  cautions: external_exports.array(external_exports.string().min(1)),
+  nextStep: external_exports.string().min(1).optional()
+}).strict();
+var OperatorAutoResolution = external_exports.object({
+  checkpoint_id: external_exports.string().min(1),
+  checkpoint_label: external_exports.string().min(1).optional(),
+  policy: external_exports.literal("highest-score"),
+  resolved_value: external_exports.string().min(1),
+  alternatives_available: external_exports.array(external_exports.string().min(1)),
+  scores: external_exports.record(external_exports.string().min(1), external_exports.object({
+    aggregate_score: external_exports.number().min(0).max(1),
+    runtime_veto_count: external_exports.number().int().nonnegative()
+  }).strict()),
+  rubric_results: external_exports.record(external_exports.string().min(1), RubricResult),
+  winning_score: external_exports.number().min(0).max(1),
+  runner_up_score: external_exports.number().min(0).max(1).optional(),
+  margin: external_exports.number().nullable(),
+  tie_break: external_exports.string().min(1),
+  runtime_veto_effect: external_exports.string().min(1),
+  resolved_at: external_exports.string().min(1)
+}).strict();
+var OperatorSummary = external_exports.object({
+  schema_version: external_exports.literal(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  selected_flow: CompiledFlowId,
+  routed_by: external_exports.enum(["explicit", "classifier"]).optional(),
+  router_reason: external_exports.string().min(1).optional(),
+  outcome: external_exports.union([RunClosedOutcome, external_exports.literal("checkpoint_waiting")]),
+  headline: external_exports.string().min(1),
+  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
+  brief_slots: OperatorBriefSlots.optional(),
+  details: external_exports.array(external_exports.string().min(1)),
+  evidence_warnings: external_exports.array(OperatorSummaryWarning),
+  run_folder: external_exports.string().min(1),
+  result_path: external_exports.string().min(1).optional(),
+  html_path: external_exports.string().min(1).optional(),
+  report_paths: external_exports.array(OperatorSummaryReportLink),
+  auto_resolutions: external_exports.array(OperatorAutoResolution).optional(),
+  checkpoint: external_exports.object({
+    step_id: external_exports.string().min(1),
+    request_path: external_exports.string().min(1),
+    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
+  }).strict().optional()
+}).strict();
+
+// dist/schemas/run.js
+var RunTraceBody = external_exports.array(TraceEntry).min(1);
+var issueAt4 = (ctx, path, message) => {
+  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+};
+function isGuidanceDecision(entry) {
+  return entry.kind === "guidance.decision";
+}
+function stableJson5(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sameJson(a, b) {
+  return stableJson5(a) === stableJson5(b);
+}
+function selectedRecord(entry) {
+  return entry.selected;
+}
+function priorFlowSelectionIndex(traceEntries, beforeIndex) {
+  return traceEntries.findIndex((entry, index) => {
+    return index < beforeIndex && isGuidanceDecision(entry) && entry.subject === "flow_selection";
+  });
+}
+function findPriorRelayGuidance(traceEntries, relay, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "relay_execution") {
+      continue;
+    }
+    if (entry.scope.step_id !== relay.step_id || entry.scope.attempt !== relay.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findFollowingRelayRequest(traceEntries, relay, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return { entry, index };
+    }
+    if ((entry.kind === "relay.started" || entry.kind === "relay.completed") && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function findFollowingSkillsLoaded(traceEntries, relay, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "skills.loaded" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return entry;
+    }
+    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function findPriorCheckpointGuidance(traceEntries, checkpoint, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "checkpoint_resolution") {
+      continue;
+    }
+    if (entry.scope.step_id !== checkpoint.step_id || entry.scope.attempt !== checkpoint.attempt) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findPriorProofPolicyGuidance(traceEntries, proof, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "proof_policy" || entry.decision_id !== proof.proof_policy_decision_id) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findPriorSafeApplyGuidance(traceEntries, result, beforeIndex) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply" || entry.decision_id !== result.decision_id) {
+      continue;
+    }
+    return entry;
+  }
+  return void 0;
+}
+function findFollowingStepCompleted(traceEntries, guidance, afterIndex) {
+  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "step.completed" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
+      return { entry, index };
+    }
+    if (entry.kind === "step.entered" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
+      return void 0;
+    }
+  }
+  return void 0;
+}
+function selectedSkills(selected) {
+  if (!Array.isArray(selected.skills))
+    return [];
+  return selected.skills.filter((skill) => skill !== null && typeof skill === "object" && !Array.isArray(skill));
+}
+function skillIdentity(skill) {
+  return {
+    id: skill.id,
+    ...skill.slot === void 0 ? {} : { slot: skill.slot }
+  };
+}
+function selectedSafeApplyActionMatches(selectedAction, resultAction) {
+  return selectedAction === "reject" && resultAction === "rejected" || selectedAction === "accept" && resultAction === "accepted_for_review" || selectedAction === "apply" && resultAction === "applied";
+}
+function scopeMatchesGuidance(entry, guidance) {
+  return entry.scope.flow_id === guidance.scope.flow_id && entry.scope.step_id === guidance.scope.step_id && entry.scope.attempt === guidance.scope.attempt;
+}
+function proofPolicyRequiresProvenClose(guidance) {
+  if (guidance.subject !== "proof_policy")
+    return false;
+  return selectedRecord(guidance).close_requires_proven === true;
+}
+function isPassingCloseProof(entry, guidance) {
+  return entry.proof_policy_decision_id === guidance.decision_id && entry.overall_status === "proven" && entry.close_allowed && scopeMatchesGuidance(entry, guidance);
+}
+function isPassingSafeApplyResult(entry) {
+  return entry.action === "applied" && entry.outcome === "pass" && entry.final_verification_ref !== void 0;
+}
+function proofPolicyCloseGateKey(guidance) {
+  const selected = selectedRecord(guidance);
+  return JSON.stringify({
+    flow_id: guidance.scope.flow_id,
+    step_id: guidance.scope.step_id,
+    proof_profile: selected.proof_profile,
+    required_claim_kinds: selected.required_claim_kinds,
+    required_evidence_kinds: selected.required_evidence_kinds
+  });
+}
+function validateCompleteCloseGates(traceEntries, ctx) {
+  const closeIndex = traceEntries.findIndex((entry) => entry?.kind === "run.closed" && entry.outcome === "complete");
+  if (closeIndex < 0)
+    return;
+  const latestRequiredProofByRequirement = /* @__PURE__ */ new Map();
+  for (let index = 0; index < closeIndex; index += 1) {
+    const guidance = traceEntries[index];
+    if (guidance === void 0 || !isGuidanceDecision(guidance) || !proofPolicyRequiresProvenClose(guidance)) {
+      continue;
+    }
+    latestRequiredProofByRequirement.set(proofPolicyCloseGateKey(guidance), { guidance, index });
+  }
+  for (const { guidance, index } of latestRequiredProofByRequirement.values()) {
+    const hasPassingProof = traceEntries.some((entry, proofIndex) => {
+      return proofIndex > index && proofIndex < closeIndex && entry?.kind === "proof.assessed" && isPassingCloseProof(entry, guidance);
+    });
+    if (!hasPassingProof) {
+      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing proof.assessed for proof_policy decision '${guidance.decision_id}'`);
+    }
+  }
+  let lastSafeApplyResult;
+  for (let index = 0; index < closeIndex; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind === "safe_apply.result") {
+      lastSafeApplyResult = { entry, index };
+    }
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply") {
+      continue;
+    }
+    if (selectedRecord(entry).action !== "apply")
+      continue;
+    const hasPassingResult = traceEntries.some((candidate, resultIndex) => {
+      return resultIndex > index && resultIndex < closeIndex && candidate?.kind === "safe_apply.result" && candidate.decision_id === entry.decision_id && isPassingSafeApplyResult(candidate) && scopeMatchesGuidance(candidate, entry);
+    });
+    if (!hasPassingResult) {
+      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing safe_apply.result for safe_apply decision '${entry.decision_id}'`);
+    }
+  }
+  if (lastSafeApplyResult !== void 0 && !isPassingSafeApplyResult(lastSafeApplyResult.entry)) {
+    issueAt4(ctx, [closeIndex, "kind"], `run.closed complete cannot follow non-passing safe_apply.result at index ${lastSafeApplyResult.index}`);
+  }
+}
+function validateGuidanceTraceSequence(traceEntries, ctx) {
+  const decisionIds = /* @__PURE__ */ new Map();
+  let hasGuidance = false;
+  let hasProofAssessment = false;
+  let hasSafeApplyResult = false;
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind === "proof.assessed") {
+      hasProofAssessment = true;
+    }
+    if (entry?.kind === "safe_apply.result") {
+      hasSafeApplyResult = true;
+    }
+    if (entry === void 0 || !isGuidanceDecision(entry))
+      continue;
+    hasGuidance = true;
+    const priorIndex = decisionIds.get(entry.decision_id);
+    if (priorIndex !== void 0) {
+      issueAt4(ctx, [index, "decision_id"], `duplicate guidance.decision id '${entry.decision_id}' first appeared at index ${priorIndex}`);
+    } else {
+      decisionIds.set(entry.decision_id, index);
+    }
+  }
+  if (!hasGuidance && !hasProofAssessment && !hasSafeApplyResult)
+    return;
+  const bootstrap = traceEntries[0];
+  if (bootstrap?.kind !== "run.bootstrapped")
+    return;
+  const firstMaterial = traceEntries[1];
+  if (firstMaterial === void 0 || !isGuidanceDecision(firstMaterial) || firstMaterial.subject !== "flow_selection") {
+    issueAt4(ctx, [1, "kind"], "when guidance decisions are present, flow_selection guidance must be the first entry after run.bootstrapped");
+  } else {
+    const selected = selectedRecord(firstMaterial);
+    if (selected.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [1, "selected", "flow_id"], `flow_selection guidance selected flow '${String(selected.flow_id)}' but bootstrap flow_id is '${bootstrap.flow_id}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0)
+      continue;
+    if (entry.kind === "step.entered" && priorFlowSelectionIndex(traceEntries, index) < 0) {
+      issueAt4(ctx, [index, "kind"], "step.entered requires prior flow_selection guidance when guidance decisions are present");
+    }
+    if (isGuidanceDecision(entry) && entry.subject !== "flow_selection") {
+      if (entry.scope.flow_id !== bootstrap.flow_id) {
+        issueAt4(ctx, [index, "scope", "flow_id"], `guidance.decision scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+      }
+    }
+    if (entry.kind !== "relay.started" && entry.kind !== "relay.failed")
+      continue;
+    const guidance = findPriorRelayGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "kind"], `${entry.kind} requires prior matching relay_execution guidance when guidance decisions are present`);
+      continue;
+    }
+    const selected = selectedRecord(guidance);
+    if (selected.role !== entry.role) {
+      issueAt4(ctx, [index, "role"], `${entry.kind} role '${entry.role}' does not match relay_execution guidance role '${String(selected.role)}'`);
+    }
+    if (!sameJson(selected.connector, entry.connector)) {
+      issueAt4(ctx, [index, "connector"], `${entry.kind} connector does not match relay_execution guidance connector`);
+    }
+    if (!sameJson(selected.model, entry.resolved_selection.model)) {
+      issueAt4(ctx, [index, "resolved_selection", "model"], `${entry.kind} resolved_selection.model does not match relay_execution guidance model`);
+    }
+    if (selected.effort !== entry.resolved_selection.effort) {
+      issueAt4(ctx, [index, "resolved_selection", "effort"], `${entry.kind} resolved_selection.effort does not match relay_execution guidance effort`);
+    }
+    if (entry.kind === "relay.started") {
+      const request = findFollowingRelayRequest(traceEntries, entry, index);
+      if (request === void 0) {
+        issueAt4(ctx, [index, "kind"], "relay.started requires a following relay.request for the same step attempt when guidance decisions are present");
+      } else if (selected.request_payload_hash !== request.entry.request_payload_hash) {
+        issueAt4(ctx, [request.index, "request_payload_hash"], "relay.request request_payload_hash does not match relay_execution guidance request_payload_hash");
+      }
+      const selectedLoadedSkills = selectedSkills(selected).map(skillIdentity);
+      const loaded = findFollowingSkillsLoaded(traceEntries, entry, index);
+      if (loaded === void 0) {
+        if (selectedLoadedSkills.length > 0) {
+          issueAt4(ctx, [index, "kind"], "relay.started with selected skills requires a following skills.loaded entry for the same step attempt");
+        }
+      } else {
+        const loadedSkills = loaded.skills.map(skillIdentity);
+        if (!sameJson(selectedLoadedSkills, loadedSkills)) {
+          issueAt4(ctx, [index, "kind"], "skills.loaded entries do not match relay_execution guidance skills");
+        }
+      }
+    }
+    if (entry.kind === "relay.failed" && selected.request_payload_hash !== entry.request_payload_hash) {
+      issueAt4(ctx, [index, "request_payload_hash"], "relay.failed request_payload_hash does not match relay_execution guidance request_payload_hash");
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "checkpoint.resolved")
+      continue;
+    const guidance = findPriorCheckpointGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "kind"], "checkpoint.resolved requires prior matching checkpoint_resolution guidance when guidance decisions are present");
+      continue;
+    }
+    const selected = selectedRecord(guidance);
+    if (selected.choice_id !== entry.selection) {
+      issueAt4(ctx, [index, "selection"], `checkpoint.resolved selection '${entry.selection}' does not match checkpoint guidance choice '${String(selected.choice_id)}'`);
+    }
+    if (selected.route_id !== entry.route_id) {
+      issueAt4(ctx, [index, "route_id"], `checkpoint.resolved route_id '${entry.route_id}' does not match checkpoint guidance route '${String(selected.route_id)}'`);
+    }
+    if (selected.auto_resolved !== entry.auto_resolved) {
+      issueAt4(ctx, [index, "auto_resolved"], "checkpoint.resolved auto_resolved does not match checkpoint guidance");
+    }
+    if (selected.resolution_source !== entry.resolution_source) {
+      issueAt4(ctx, [index, "resolution_source"], `checkpoint.resolved resolution_source '${entry.resolution_source}' does not match checkpoint guidance source '${String(selected.resolution_source)}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "proof.assessed")
+      continue;
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], `proof.assessed scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+    }
+    const guidance = findPriorProofPolicyGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "proof_policy_decision_id"], "proof.assessed requires prior matching proof_policy guidance when guidance decisions are present");
+      continue;
+    }
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], "proof.assessed flow scope does not match proof_policy guidance");
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt4(ctx, [index, "scope", "step_id"], "proof.assessed step scope does not match proof_policy guidance");
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt4(ctx, [index, "scope", "attempt"], "proof.assessed attempt scope does not match proof_policy guidance");
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "recovery_route") {
+      continue;
+    }
+    const completed = findFollowingStepCompleted(traceEntries, entry, index);
+    if (completed === void 0) {
+      issueAt4(ctx, [index, "kind"], "recovery_route guidance requires a following step.completed for the same step attempt");
+      continue;
+    }
+    const selected = selectedRecord(entry);
+    if (selected.route_id !== completed.entry.route_taken) {
+      issueAt4(ctx, [completed.index, "route_taken"], `step.completed route_taken '${completed.entry.route_taken}' does not match recovery guidance route '${String(selected.route_id)}'`);
+    }
+  }
+  for (let index = 0; index < traceEntries.length; index += 1) {
+    const entry = traceEntries[index];
+    if (entry?.kind !== "safe_apply.result")
+      continue;
+    if (entry.scope.flow_id !== bootstrap.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], `safe_apply.result scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
+    }
+    const guidance = findPriorSafeApplyGuidance(traceEntries, entry, index);
+    if (guidance === void 0) {
+      issueAt4(ctx, [index, "decision_id"], "safe_apply.result requires prior matching safe_apply guidance when guidance decisions are present");
+      continue;
+    }
+    if (guidance.scope.flow_id !== entry.scope.flow_id) {
+      issueAt4(ctx, [index, "scope", "flow_id"], "safe_apply.result flow scope does not match safe_apply guidance");
+    }
+    if (guidance.scope.step_id !== entry.scope.step_id) {
+      issueAt4(ctx, [index, "scope", "step_id"], "safe_apply.result step scope does not match safe_apply guidance");
+    }
+    if (guidance.scope.attempt !== entry.scope.attempt) {
+      issueAt4(ctx, [index, "scope", "attempt"], "safe_apply.result attempt scope does not match safe_apply guidance");
+    }
+    const selected = selectedRecord(guidance);
+    if (!selectedSafeApplyActionMatches(selected.action, entry.action)) {
+      issueAt4(ctx, [index, "action"], `safe_apply.result action '${entry.action}' does not match safe_apply guidance action '${String(selected.action)}'`);
+    }
+    if (!sameJson(selected.change_packet_ref, entry.change_packet_ref)) {
+      issueAt4(ctx, [index, "change_packet_ref"], "safe_apply.result change_packet_ref does not match safe_apply guidance");
+    }
+    if (!sameJson(selected.base_ref, entry.base_ref)) {
+      issueAt4(ctx, [index, "base_ref"], "safe_apply.result base_ref does not match safe_apply guidance");
+    }
+    if (selected.protected_file_decision !== entry.protected_file_decision) {
+      issueAt4(ctx, [index, "protected_file_decision"], "safe_apply.result protected_file_decision does not match safe_apply guidance");
+    }
+    if (!sameJson(selected.final_verification_ref, entry.final_verification_ref)) {
+      issueAt4(ctx, [index, "final_verification_ref"], "safe_apply.result final_verification_ref does not match safe_apply guidance");
+    }
+  }
+  validateCompleteCloseGates(traceEntries, ctx);
+}
+var GUARDED_OWN_FIELDS = ["run_id", "kind", "sequence"];
+var ownPropertyGuardedArray = external_exports.custom((raw) => {
+  if (!Array.isArray(raw))
+    return true;
+  for (const entry of raw) {
+    if (entry === null || typeof entry !== "object")
+      continue;
+    for (const field of GUARDED_OWN_FIELDS) {
+      if (!Object.hasOwn(entry, field))
+        return false;
+    }
+  }
+  return true;
+}, "trace_entry has inherited (not own) identity field; prototype-chain smuggle rejected");
+var RunTrace = ownPropertyGuardedArray.pipe(RunTraceBody.superRefine((trace_entries, ctx) => {
+  const first = trace_entries[0];
+  if (first === void 0 || first.kind !== "run.bootstrapped") {
+    issueAt4(ctx, [0, "kind"], `first trace_entry must be 'run.bootstrapped', got '${first?.kind ?? "<empty>"}'`);
+  }
+  let bootstrapCount = 0;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e?.kind === "run.bootstrapped") {
+      bootstrapCount += 1;
+      if (bootstrapCount > 1) {
+        issueAt4(ctx, [i, "kind"], `second 'run.bootstrapped' at index ${i}; a RunTrace must bootstrap exactly once`);
+      }
+    }
+  }
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e === void 0)
+      continue;
+    if (e.sequence !== i) {
+      issueAt4(ctx, [i, "sequence"], `trace_entry at index ${i} has sequence=${e.sequence}; expected contiguous 0-based sequence (should be ${i})`);
+    }
+  }
+  const canonical = first?.run_id;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e === void 0 || canonical === void 0)
+      continue;
+    if (e.run_id !== canonical) {
+      issueAt4(ctx, [i, "run_id"], `trace_entry at index ${i} has run_id='${e.run_id}' but RunTrace is for run_id='${canonical}'`);
+    }
+  }
+  let closedAt = -1;
+  for (let i = 0; i < trace_entries.length; i++) {
+    const e = trace_entries[i];
+    if (e?.kind !== "run.closed")
+      continue;
+    if (closedAt >= 0) {
+      issueAt4(ctx, [i, "kind"], `second 'run.closed' at index ${i}; a RunTrace closes at most once`);
+    } else {
+      closedAt = i;
+    }
+  }
+  if (closedAt >= 0 && closedAt !== trace_entries.length - 1) {
+    issueAt4(ctx, [closedAt + 1, "kind"], `trace_entries after 'run.closed' at index ${closedAt}; nothing may be appended after closure`);
+  }
+  validateGuidanceTraceSequence(trace_entries, ctx);
+}));
+var SNAPSHOT_STATUS_FOR_OUTCOME = {
+  complete: "complete",
+  aborted: "aborted",
+  handoff: "handoff",
+  stopped: "stopped",
+  escalated: "escalated"
+};
+var RunProjectionBody = external_exports.object({
+  log: RunTrace,
+  snapshot: Snapshot
+}).strict();
+var RunProjection = RunProjectionBody.superRefine(({ log, snapshot }, ctx) => {
+  const bootstrapTraceEntry = log[0];
+  if (bootstrapTraceEntry === void 0 || bootstrapTraceEntry.kind !== "run.bootstrapped") {
+    return;
+  }
+  const bootstrap = bootstrapTraceEntry;
+  if (snapshot.run_id !== bootstrap.run_id) {
+    issueAt4(ctx, ["snapshot", "run_id"], "snapshot.run_id differs from bootstrap.run_id");
+  }
+  if (snapshot.flow_id !== bootstrap.flow_id) {
+    issueAt4(ctx, ["snapshot", "flow_id"], "snapshot.flow_id differs from bootstrap.flow_id");
+  }
+  if (snapshot.manifest_hash !== bootstrap.manifest_hash) {
+    issueAt4(ctx, ["snapshot", "manifest_hash"], "snapshot.manifest_hash differs from bootstrap.manifest_hash; manifest is immutable per run");
+  }
+  if (snapshot.depth !== bootstrap.depth) {
+    issueAt4(ctx, ["snapshot", "depth"], "snapshot.depth differs from bootstrap.depth");
+  }
+  if (!change_kindEquals(snapshot.change_kind, bootstrap.change_kind)) {
+    issueAt4(ctx, ["snapshot", "change_kind"], "snapshot.change_kind differs from bootstrap.change_kind; change_kind is frozen at bootstrap");
+  }
+  if (snapshot.invocation_id !== bootstrap.invocation_id) {
+    issueAt4(ctx, ["snapshot", "invocation_id"], "snapshot.invocation_id differs from bootstrap.invocation_id");
+  }
+  if (snapshot.trace_entries_consumed !== log.length) {
+    issueAt4(ctx, ["snapshot", "trace_entries_consumed"], `snapshot.trace_entries_consumed=${snapshot.trace_entries_consumed} must equal log length=${log.length}; prefix snapshots are rejected`);
+  }
+  const closed = log.find((e) => e.kind === "run.closed");
+  if (closed === void 0) {
+    if (snapshot.status !== "in_progress") {
+      issueAt4(ctx, ["snapshot", "status"], `log has no 'run.closed' trace_entry so snapshot.status must be 'in_progress', got '${snapshot.status}'`);
+    }
+  } else {
+    const expected = SNAPSHOT_STATUS_FOR_OUTCOME[closed.outcome];
+    if (snapshot.status !== expected) {
+      issueAt4(ctx, ["snapshot", "status"], `run.closed.outcome='${closed.outcome}' requires snapshot.status='${expected}', got '${snapshot.status}'`);
+    }
+  }
+});
+function change_kindEquals(a, b) {
+  if (a.change_kind !== b.change_kind)
+    return false;
+  if (a.failure_mode !== b.failure_mode)
+    return false;
+  if (a.acceptance_evidence !== b.acceptance_evidence)
+    return false;
+  if (a.alternate_framing !== b.alternate_framing)
+    return false;
+  if (a.change_kind === "migration-escrow" && b.change_kind === "migration-escrow") {
+    return a.expires_at === b.expires_at && a.restoration_plan === b.restoration_plan;
+  }
+  if (a.change_kind === "break-glass" && b.change_kind === "break-glass") {
+    return a.post_hoc_adr_deadline_at === b.post_hoc_adr_deadline_at;
+  }
+  return true;
+}
+
+// dist/schemas/run-status.js
+var RunStatusEngineState = external_exports.enum([
+  "open",
+  "waiting_checkpoint",
+  "completed",
+  "aborted",
+  "invalid"
+]);
+var RunStatusValidReason = external_exports.enum([
+  "active_or_unknown",
+  "checkpoint_waiting",
+  "run_closed"
+]);
+var RunStatusInvalidReason = external_exports.enum([
+  "manifest_invalid",
+  "trace_invalid",
+  "identity_mismatch",
+  "checkpoint_invalid",
+  "unknown"
+]);
+var RunStatusAction = external_exports.enum(["inspect", "resume", "none"]);
+var CurrentStepStatus = external_exports.object({
+  step_id: StepId,
+  attempt: external_exports.number().int().positive().optional(),
+  stage_id: StageId.optional(),
+  label: external_exports.string().min(1).optional()
+}).strict();
+var CheckpointChoiceStatus = external_exports.object({
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1),
+  value: external_exports.string().min(1)
+}).strict();
+var WaitingCheckpointStatus = external_exports.object({
+  checkpoint_id: external_exports.string().min(1),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  prompt: external_exports.string().min(1).optional(),
+  choices: external_exports.array(CheckpointChoiceStatus).min(1),
+  request_path: external_exports.string().min(1).optional()
+}).strict();
+var LastRunStatusEvent = external_exports.object({
+  sequence: external_exports.number().int().nonnegative(),
+  type: external_exports.string().min(1),
+  timestamp: external_exports.string().datetime()
+}).strict();
+var RunStatusError = external_exports.object({
+  code: external_exports.string().min(1),
+  message: external_exports.string().min(1)
+}).strict();
+var ValidRunStatusBase = external_exports.object({
+  api_version: external_exports.literal("run-status-v1"),
+  schema_version: external_exports.literal(1),
+  run_folder: external_exports.string().min(1),
+  run_id: RunId,
+  flow_id: CompiledFlowId,
+  goal: external_exports.string().min(1),
+  last_event: LastRunStatusEvent.optional(),
+  operator_summary_path: external_exports.string().min(1).optional(),
+  operator_summary_markdown_path: external_exports.string().min(1).optional(),
+  result_path: external_exports.string().min(1).optional()
+}).strict();
+var OpenRunStatusProjectionV1 = ValidRunStatusBase.extend({
+  engine_state: external_exports.literal("open"),
+  reason: external_exports.literal("active_or_unknown"),
+  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
+  current_step: CurrentStepStatus.optional()
+}).strict();
+var WaitingCheckpointRunStatusProjectionV1 = ValidRunStatusBase.extend({
+  engine_state: external_exports.literal("waiting_checkpoint"),
+  reason: external_exports.literal("checkpoint_waiting"),
+  legal_next_actions: external_exports.tuple([external_exports.literal("inspect"), external_exports.literal("resume")]),
+  current_step: CurrentStepStatus.optional(),
+  checkpoint: WaitingCheckpointStatus
+}).strict();
+var CompletedRunStatusProjectionV1 = ValidRunStatusBase.extend({
+  engine_state: external_exports.literal("completed"),
+  reason: external_exports.literal("run_closed"),
+  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
+  terminal_outcome: RunClosedOutcome.exclude(["aborted"])
+}).strict();
+var AbortedRunStatusProjectionV1 = ValidRunStatusBase.extend({
+  engine_state: external_exports.literal("aborted"),
+  reason: external_exports.literal("run_closed"),
+  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
+  terminal_outcome: external_exports.literal("aborted")
+}).strict();
+var InvalidRunStatusProjectionV1 = external_exports.object({
+  api_version: external_exports.literal("run-status-v1"),
+  schema_version: external_exports.literal(1),
+  run_folder: external_exports.string().min(1),
+  engine_state: external_exports.literal("invalid"),
+  reason: RunStatusInvalidReason,
+  legal_next_actions: external_exports.tuple([external_exports.literal("none")]),
+  error: RunStatusError,
+  run_id: RunId.optional(),
+  flow_id: CompiledFlowId.optional(),
+  goal: external_exports.string().min(1).optional()
+}).strict();
+var RunStatusProjectionV1 = external_exports.discriminatedUnion("engine_state", [
+  OpenRunStatusProjectionV1,
+  WaitingCheckpointRunStatusProjectionV1,
+  CompletedRunStatusProjectionV1,
+  AbortedRunStatusProjectionV1,
+  InvalidRunStatusProjectionV1
+]);
+var EngineErrorCodeV1 = external_exports.enum([
+  "invalid_invocation",
+  "folder_not_found",
+  "folder_unreadable",
+  "internal_error"
+]);
+var EngineErrorV1 = external_exports.object({
+  api_version: external_exports.literal("engine-error-v1"),
+  schema_version: external_exports.literal(1),
+  error: external_exports.object({
+    code: EngineErrorCodeV1,
+    message: external_exports.string().min(1)
+  }).strict(),
+  run_folder: external_exports.string().min(1).optional()
+}).strict();
+
+// dist/schemas/history.js
+var HISTORY_AUTHORITY_NOTICE = "History results are hint-only prior-run context. They cannot satisfy current proof, checkpoint, policy, route, recovery, verification, or write authority.";
+var HistoryWarningCodeV1 = external_exports.enum([
+  "run_skipped",
+  "report_skipped",
+  "trace_skipped",
+  "source_unreadable",
+  "source_invalid",
+  "source_pruned"
+]);
+var HistoryWarningV1 = external_exports.object({
+  code: HistoryWarningCodeV1,
+  message: external_exports.string().min(1),
+  run_folder: external_exports.string().min(1).optional(),
+  source_path: external_exports.string().min(1).optional()
+}).strict();
+var HistoryManifestV1 = external_exports.object({
+  api_version: external_exports.literal("history-index-v1"),
+  schema_version: external_exports.literal(1),
+  created_at: external_exports.string().datetime(),
+  repo_root: external_exports.string().min(1),
+  runs_base: external_exports.string().min(1),
+  index_dir: external_exports.string().min(1),
+  documents_path: external_exports.literal("documents.v1.jsonl"),
+  run_count: external_exports.number().int().nonnegative(),
+  document_count: external_exports.number().int().nonnegative(),
+  source_fingerprint: external_exports.object({
+    run_folder_names_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/),
+    latest_source_mtime_ms: external_exports.number().int().nonnegative()
+  }).strict(),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict();
+var HistoryDocumentKindV1 = external_exports.enum(["run", "report", "trace", "checkpoint"]);
+var HistoryDocumentV1 = external_exports.object({
+  api_version: external_exports.literal("history-document-v1"),
+  schema_version: external_exports.literal(1),
+  doc_id: external_exports.string().min(1),
+  doc_kind: HistoryDocumentKindV1,
+  run_id: external_exports.string().min(1),
+  flow_id: external_exports.string().min(1).optional(),
+  run_folder: external_exports.string().min(1),
+  source_path: external_exports.string().min(1),
+  source_ref: Ref,
+  source_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/).optional(),
+  source_mtime_ms: external_exports.number().int().nonnegative().optional(),
+  report_schema: external_exports.string().min(1).optional(),
+  step_id: external_exports.string().min(1).optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional(),
+  recorded_at: external_exports.string().datetime().optional(),
+  outcome: external_exports.string().min(1).optional(),
+  title: external_exports.string().min(1),
+  summary: external_exports.string().min(1),
+  text: external_exports.string(),
+  extracted_from: external_exports.array(external_exports.object({
+    json_pointer: external_exports.string().min(1).optional(),
+    field_role: external_exports.string().min(1)
+  }).strict()),
+  facets: external_exports.array(external_exports.string().min(1)),
+  memory_safe: external_exports.boolean()
+}).strict();
+var HistoryStalenessV1 = external_exports.object({
+  status: external_exports.enum(["fresh", "stale", "unknown"]),
+  reason_codes: external_exports.array(external_exports.string().regex(/^[a-z][a-z0-9_]*$/)).min(1),
+  checked_at: external_exports.string().datetime()
+}).strict().superRefine((staleness, ctx) => {
+  if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "unknown history staleness requires memory_unverified reason code"
+    });
+  }
+  if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "stale history staleness requires memory_stale reason code"
+    });
+  }
+});
+var HistoryQueryHitV1 = external_exports.object({
+  rank: external_exports.number().int().positive(),
+  score: external_exports.number(),
+  doc: HistoryDocumentV1,
+  snippet: external_exports.string(),
+  matched_terms: external_exports.array(external_exports.string().min(1)),
+  ranking_reasons: external_exports.array(external_exports.string().min(1)),
+  staleness: HistoryStalenessV1
+}).strict();
+var HistoryQueryResultV1 = external_exports.object({
+  api_version: external_exports.literal("history-query-result-v1"),
+  schema_version: external_exports.literal(1),
+  query: external_exports.string(),
+  format: external_exports.literal("json"),
+  index_state: external_exports.enum(["fresh", "possibly_stale"]),
+  rebuilt: external_exports.boolean(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  warnings: external_exports.array(HistoryWarningV1),
+  results: external_exports.array(HistoryQueryHitV1)
+}).strict();
+var HistoryMemoryInputMatchV1 = external_exports.object({
+  memory_id: external_exports.string().min(1),
+  rank: external_exports.number().int().positive(),
+  score: external_exports.number(),
+  source_doc_id: external_exports.string().min(1),
+  source_ref: Ref,
+  snippet: external_exports.string()
+}).strict();
+var HistoryMemoryInputPreviewV1 = external_exports.object({
+  api_version: external_exports.literal("history-memory-input-preview-v1"),
+  schema_version: external_exports.literal(1),
+  query: external_exports.string(),
+  format: external_exports.literal("memory-input"),
+  index_state: external_exports.enum(["fresh", "possibly_stale"]),
+  rebuilt: external_exports.boolean(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  warnings: external_exports.array(HistoryWarningV1),
+  memory_inputs: external_exports.array(MemoryInputV0),
+  matches: external_exports.array(HistoryMemoryInputMatchV1)
+}).strict();
+var HistoryRecallStatusV1 = external_exports.enum(["used", "empty", "unavailable"]);
+var HistoryRecallReportV1 = external_exports.object({
+  api_version: external_exports.literal("history-recall-report-v1"),
+  schema_version: external_exports.literal(1),
+  status: HistoryRecallStatusV1,
+  query: external_exports.string(),
+  index_state: external_exports.enum(["fresh", "possibly_stale"]).optional(),
+  rebuilt: external_exports.boolean(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  memory_input_count: external_exports.number().int().nonnegative(),
+  memory_inputs: external_exports.array(MemoryInputV0),
+  matches: external_exports.array(HistoryMemoryInputMatchV1),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict().superRefine((report, ctx) => {
+  if (report.memory_input_count !== report.memory_inputs.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["memory_input_count"],
+      message: "memory_input_count must equal memory_inputs.length"
+    });
+  }
+  if (report.status === "used" && report.memory_inputs.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["status"],
+      message: "status 'used' requires at least one memory input"
+    });
+  }
+  if (report.status !== "used" && report.memory_inputs.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["memory_inputs"],
+      message: "only status 'used' may include memory inputs"
+    });
+  }
+  if (report.status === "unavailable" && report.index_state !== void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["index_state"],
+      message: "status 'unavailable' must not claim an index_state"
+    });
+  }
+});
+var HistoryStatusV1 = external_exports.object({
+  api_version: external_exports.literal("history-status-v1"),
+  schema_version: external_exports.literal(1),
+  index_exists: external_exports.boolean(),
+  index_state: external_exports.enum(["fresh", "possibly_stale", "missing", "corrupt", "unsupported"]),
+  runs_base: external_exports.string().min(1),
+  index_dir: external_exports.string().min(1),
+  manifest: HistoryManifestV1.optional(),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict();
+var HistoryErrorCodeV1 = external_exports.enum([
+  "invalid_invocation",
+  "runs_base_not_found",
+  "runs_base_unreadable",
+  "index_missing",
+  "index_unsupported",
+  "index_corrupt",
+  "source_unreadable",
+  "internal_error"
+]);
+var HistoryErrorV1 = external_exports.object({
+  api_version: external_exports.literal("history-error-v1"),
+  schema_version: external_exports.literal(1),
+  error: external_exports.object({
+    code: HistoryErrorCodeV1,
+    message: external_exports.string().min(1)
+  }).strict(),
+  runs_base: external_exports.string().min(1).optional(),
+  index_dir: external_exports.string().min(1).optional()
+}).strict();
+
 // dist/shared/relay-support.js
 var NO_VERDICT_SENTINEL = "<no-verdict>";
 function evaluateRelayCheck(step, resultBody) {
@@ -45738,7 +47080,34 @@ ${feedback.stderr_summary}`],
     "Revise the result so this criterion passes. Keep the same response contract and accepted verdicts."
   ].join("\n");
 }
-function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal) {
+function sourceRefText(memory) {
+  const ref = memory.source.ref;
+  return [
+    `${ref.kind}:${ref.ref}`,
+    ...ref.run_id === void 0 ? [] : [`run ${ref.run_id}`],
+    ...ref.flow_id === void 0 ? [] : [`flow ${ref.flow_id}`],
+    ...ref.step_id === void 0 ? [] : [`step ${ref.step_id}`],
+    ...ref.attempt === void 0 ? [] : [`attempt ${ref.attempt}`],
+    ...ref.sequence === void 0 ? [] : [`sequence ${ref.sequence}`]
+  ].join(" | ");
+}
+function memoryInputsSection(memoryInputs) {
+  if (memoryInputs.length === 0)
+    return void 0;
+  const items = memoryInputs.flatMap((memory) => memory.hints.map((hint) => [
+    `- ${memory.summary}`,
+    `  Hint: ${hint.text}`,
+    `  Source: ${sourceRefText(memory)}`,
+    `  Staleness: ${memory.staleness.status}`
+  ].join("\n")));
+  return [
+    "Prior Circuit History (hint-only):",
+    HISTORY_AUTHORITY_NOTICE,
+    "Use these only to orient the current work. Re-run current checks before relying on them.",
+    ...items
+  ].join("\n");
+}
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal, memoryInputs = []) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
     if (!existsSync10(abs))
@@ -45749,6 +47118,7 @@ ${readFileSync20(abs, "utf8")}`;
   const skillsSection = selectedSkillsSection(loadedSkills);
   const criteriaSection = acceptanceCriteriaSection(step);
   const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
+  const memorySection = memoryInputsSection(memoryInputs);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -45756,6 +47126,7 @@ ${readFileSync20(abs, "utf8")}`;
     `Accepted verdicts: ${step.check.pass.join(", ")}`,
     "",
     ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
+    ...memorySection === void 0 ? [] : [memorySection, ""],
     "Context (from reads):",
     readsBody,
     "",
@@ -46651,15 +48022,15 @@ function readRouteFromReportBody(body, path) {
   }
   return cursor;
 }
-function stableJson5(value) {
+function stableJson6(value) {
   return JSON.stringify(value, (_key, item) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
       return item;
     return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
   });
 }
-function sameJson(left, right) {
-  return stableJson5(left) === stableJson5(right);
+function sameJson2(left, right) {
+  return stableJson6(left) === stableJson6(right);
 }
 function relaySkillIdentities(skills) {
   return skills.map((skill) => ({
@@ -46686,16 +48057,16 @@ function assertRelayGuidanceMatchesPlan(input) {
   if (selected.role !== input.role) {
     throw new Error(`relay step '${input.step.id}' guidance role does not match relay plan`);
   }
-  if (!sameJson(selected.connector, input.connector)) {
+  if (!sameJson2(selected.connector, input.connector)) {
     throw new Error(`relay step '${input.step.id}' guidance connector does not match relay plan`);
   }
-  if (!sameJson(selected.model, input.resolvedSelection.model)) {
+  if (!sameJson2(selected.model, input.resolvedSelection.model)) {
     throw new Error(`relay step '${input.step.id}' guidance model does not match relay plan`);
   }
   if (selected.effort !== input.resolvedSelection.effort) {
     throw new Error(`relay step '${input.step.id}' guidance effort does not match relay plan`);
   }
-  if (!sameJson(selected.skills, relaySkillIdentities(input.loadedSkills))) {
+  if (!sameJson2(selected.skills, relaySkillIdentities(input.loadedSkills))) {
     throw new Error(`relay step '${input.step.id}' guidance skills do not match relay plan`);
   }
   if (selected.request_payload_hash !== input.requestPayloadHash) {
@@ -46774,7 +48145,7 @@ async function executeProductionRelayAttempt(input) {
     compiledStep,
     depth: Depth.parse(context.depth ?? "standard")
   });
-  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback, context.goal);
+  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback, context.goal, context.memoryInputs ?? []);
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
   const result = step.writes?.result;
@@ -48536,224 +49907,6 @@ import { lstat, mkdir as mkdir4, readdir } from "node:fs/promises";
 // dist/runtime/projections/progress.js
 import { join as join11 } from "node:path";
 
-// dist/schemas/progress-event.js
-var MAX_STATUS_TEXT_CHARS = 180;
-var MAX_DISPLAY_TEXT_CHARS = 240;
-var ProgressDisplay = external_exports.object({
-  text: external_exports.string().min(1).max(MAX_DISPLAY_TEXT_CHARS),
-  importance: external_exports.enum(["major", "detail"]),
-  tone: external_exports.enum(["info", "success", "warning", "error", "checkpoint"])
-}).strict();
-var ProgressPresentationLineMode = external_exports.enum(["append", "replace_slot", "suppress"]);
-var ProgressPresentation = external_exports.object({
-  block_id: external_exports.string().min(1).max(120),
-  line_mode: ProgressPresentationLineMode,
-  slot_id: external_exports.string().min(1).max(120).optional(),
-  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
-  depth: external_exports.number().int().min(0).max(8).optional()
-}).strict().superRefine((presentation, ctx) => {
-  if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["slot_id"],
-      message: "slot_id is required when line_mode is replace_slot"
-    });
-  }
-  if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["status_text"],
-      message: "status_text is required unless line_mode is suppress"
-    });
-  }
-});
-var ProgressTaskStatus = external_exports.enum(["pending", "in_progress", "completed", "failed"]);
-var ProgressTask = external_exports.object({
-  id: external_exports.string().min(1).max(96),
-  title: external_exports.string().min(1).max(120),
-  status: ProgressTaskStatus
-}).strict();
-var ProgressEventBase = external_exports.object({
-  schema_version: external_exports.literal(1),
-  type: external_exports.string().min(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  recorded_at: external_exports.string().datetime(),
-  label: external_exports.string().min(1),
-  display: ProgressDisplay,
-  presentation: ProgressPresentation.optional()
-}).strict();
-var RunStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.started"),
-  run_folder: external_exports.string().min(1)
-}).strict();
-var RouteSelectedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("route.selected"),
-  selected_flow: CompiledFlowId,
-  routed_by: external_exports.enum(["explicit", "classifier"]),
-  router_reason: external_exports.string().min(1),
-  router_signal: external_exports.string().min(1).optional(),
-  entry_mode: external_exports.string().min(1).optional(),
-  entry_mode_source: external_exports.enum(["explicit", "classifier"]).optional()
-}).strict();
-var StepStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive()
-}).strict();
-var StepCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  route_taken: external_exports.string().min(1)
-}).strict();
-var StepAbortedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("step.aborted"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  reason: external_exports.string().min(1)
-}).strict();
-var EvidenceCollectedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("evidence.collected"),
-  step_id: StepId,
-  report_path: external_exports.string().min(1),
-  report_schema: external_exports.string().min(1),
-  warning_count: external_exports.number().int().nonnegative()
-}).strict();
-var EvidenceWarningProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("evidence.warning"),
-  step_id: StepId,
-  report_path: external_exports.string().min(1),
-  warning_kind: external_exports.string().min(1),
-  message: external_exports.string().min(1),
-  path: external_exports.string().min(1).optional()
-}).strict();
-var RelayStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("relay.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  role: RelayRole,
-  connector_name: external_exports.string().min(1),
-  connector_kind: external_exports.enum(["builtin", "custom"]),
-  filesystem_capability: external_exports.enum(["read-only", "trusted-write", "isolated-write"])
-}).strict();
-var RelayCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("relay.completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  attempt: external_exports.number().int().positive(),
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative()
-}).strict();
-var FanoutStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_count: external_exports.number().int().positive(),
-  branch_ids: external_exports.array(external_exports.string().min(1)).min(1)
-}).strict();
-var FanoutBranchStartedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.branch_started"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId.optional(),
-  worktree_path: external_exports.string().min(1).optional()
-}).strict();
-var FanoutBranchCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.branch_completed"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  branch_id: external_exports.string().min(1),
-  branch_kind: external_exports.enum(["relay", "sub-run"]),
-  child_run_id: RunId.optional(),
-  child_outcome: RunClosedOutcome,
-  verdict: external_exports.string().min(1),
-  duration_ms: external_exports.number().int().nonnegative()
-}).strict();
-var FanoutJoinedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("fanout.joined"),
-  step_id: StepId,
-  step_title: external_exports.string().min(1),
-  policy: external_exports.enum(["pick-winner", "disjoint-merge", "aggregate-only", "aggregate-survivors"]),
-  aggregate_path: external_exports.string().min(1),
-  branches_completed: external_exports.number().int().nonnegative(),
-  branches_failed: external_exports.number().int().nonnegative(),
-  selected_branch_id: external_exports.string().min(1).optional()
-}).strict();
-var CheckpointWaitingProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("checkpoint.waiting"),
-  step_id: StepId,
-  request_path: external_exports.string().min(1),
-  allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
-}).strict();
-var TaskListUpdatedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("task_list.updated"),
-  tasks: external_exports.array(ProgressTask).min(1)
-}).strict();
-var UserInputOption = external_exports.object({
-  label: external_exports.string().min(1).max(80),
-  description: external_exports.string().min(1).max(160),
-  checkpoint_choice: external_exports.string().min(1).max(80)
-}).strict();
-var UserInputQuestion = external_exports.object({
-  id: external_exports.string().min(1).max(80),
-  header: external_exports.string().min(1).max(12),
-  question: external_exports.string().min(1).max(240),
-  options: external_exports.array(UserInputOption).min(1).max(4),
-  allow_free_text: external_exports.literal(false)
-}).strict();
-var UserInputRequestedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("user_input.requested"),
-  checkpoint: external_exports.object({
-    step_id: StepId,
-    request_path: external_exports.string().min(1),
-    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
-  }).strict(),
-  questions: external_exports.array(UserInputQuestion).min(1).max(3),
-  resume: external_exports.object({
-    run_folder: external_exports.string().min(1),
-    checkpoint_choice_arg: external_exports.string().min(1),
-    command: external_exports.string().min(1)
-  }).strict()
-}).strict();
-var RunCompletedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.completed"),
-  outcome: RunClosedOutcome,
-  result_path: external_exports.string().min(1)
-}).strict();
-var RunAbortedProgressEvent = ProgressEventBase.extend({
-  type: external_exports.literal("run.aborted"),
-  outcome: external_exports.literal("aborted"),
-  result_path: external_exports.string().min(1),
-  reason: external_exports.string().min(1).optional()
-}).strict();
-var ProgressEvent = external_exports.discriminatedUnion("type", [
-  RunStartedProgressEvent,
-  RouteSelectedProgressEvent,
-  StepStartedProgressEvent,
-  StepCompletedProgressEvent,
-  StepAbortedProgressEvent,
-  EvidenceCollectedProgressEvent,
-  EvidenceWarningProgressEvent,
-  RelayStartedProgressEvent,
-  RelayCompletedProgressEvent,
-  FanoutStartedProgressEvent,
-  FanoutBranchStartedProgressEvent,
-  FanoutBranchCompletedProgressEvent,
-  FanoutJoinedProgressEvent,
-  CheckpointWaitingProgressEvent,
-  TaskListUpdatedProgressEvent,
-  UserInputRequestedProgressEvent,
-  RunCompletedProgressEvent,
-  RunAbortedProgressEvent
-]);
-
 // dist/shared/progress-output.js
 function reportProgress(progress, event) {
   if (progress === void 0)
@@ -50109,6 +51262,8 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     ...options.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: options.selectionConfigLayers },
     ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
+    ...options.memoryInputs === void 0 ? {} : { memoryInputs: options.memoryInputs },
+    ...options.historyRecallReport === void 0 ? {} : { historyRecallReport: options.historyRecallReport },
     ...options.resumeCheckpoint === void 0 ? {} : { resumeCheckpoint: options.resumeCheckpoint }
   };
   const executors = {
@@ -50145,6 +51300,9 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       })
     });
     await appendFlowSelectionGuidance(context);
+    if (options.historyRecallReport !== void 0) {
+      await context.files.writeJson("reports/history/recall.json", options.historyRecallReport);
+    }
   }
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken;
@@ -50478,6 +51636,8 @@ async function runCompiledFlowWithWaiting(options) {
     ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
     ...options.progressSurface === void 0 ? {} : { progressSurface: options.progressSurface },
+    ...options.memoryInputs === void 0 ? {} : { memoryInputs: options.memoryInputs },
+    ...options.historyRecallReport === void 0 ? {} : { historyRecallReport: options.historyRecallReport },
     ...options.maxSteps === void 0 ? {} : { maxSteps: options.maxSteps }
   });
 }
@@ -51027,18 +52187,1401 @@ function classifyCompiledFlowTask(taskText) {
   return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
 }
 
+// dist/history/indexer.js
+import { existsSync as existsSync13, mkdirSync, readFileSync as readFileSync25, readdirSync as readdirSync3, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
+import { basename as basename2, join as join12, resolve as resolve7 } from "node:path";
+
+// dist/history/extract.js
+import { existsSync as existsSync12, lstatSync as lstatSync5, readFileSync as readFileSync24, readdirSync as readdirSync2, realpathSync as realpathSync4, statSync } from "node:fs";
+import { basename, isAbsolute as isAbsolute7, relative as relative7, resolve as resolve6 } from "node:path";
+var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
+  "goal",
+  "objective",
+  "summary",
+  "verdict",
+  "decision",
+  "rationale",
+  "recommendation",
+  "findings",
+  "reason",
+  "outcome",
+  "status",
+  "acceptance_criteria"
+]);
+var NOISY_FIELDS = /* @__PURE__ */ new Set([
+  "unstaged_diff",
+  "staged_diff",
+  "diff",
+  "patch",
+  "stdout",
+  "stderr",
+  "transcript",
+  "payload",
+  "request",
+  "response",
+  "raw",
+  "body"
+]);
+var REPORT_TEXT_LIMIT = 8e3;
+var HIGH_VALUE_TEXT_LIMIT = 2e3;
+var NORMAL_TEXT_LIMIT = 500;
+function isObject2(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function stringValue(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value : void 0;
+}
+function numberValue(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+}
+function safeDateString(value) {
+  const raw = stringValue(value);
+  if (raw === void 0)
+    return void 0;
+  return Number.isNaN(Date.parse(raw)) ? void 0 : new Date(raw).toISOString();
+}
+function readJson2(path) {
+  return JSON.parse(readFileSync24(path, "utf8"));
+}
+function readJsonRecord(path) {
+  try {
+    const parsed = readJson2(path);
+    return isObject2(parsed) ? parsed : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function sha256File(path) {
+  return sha256Hex(readFileSync24(path, "utf8"));
+}
+function mtimeMs(path) {
+  return Math.trunc(statSync(path).mtimeMs);
+}
+function isInside2(root, target) {
+  const fromRoot = relative7(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+}
+function listFiles(root, prefix = "") {
+  const absRoot = resolve6(root);
+  if (!existsSync12(absRoot))
+    return [];
+  const rootReal = realpathSync4.native(absRoot);
+  const out = [];
+  function walk(absDir, relDir) {
+    for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
+      const absPath = resolve6(absDir, entry.name);
+      if (lstatSync5(absPath).isSymbolicLink())
+        continue;
+      const real = realpathSync4.native(absPath);
+      if (!isInside2(rootReal, real))
+        continue;
+      const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(absPath, relPath);
+      } else if (entry.isFile()) {
+        out.push(prefix.length === 0 ? relPath : `${prefix}/${relPath}`);
+      }
+    }
+  }
+  walk(absRoot, "");
+  return out;
+}
+function addOptional(object2, key, value) {
+  if (value !== void 0) {
+    object2[key] = value;
+  }
+}
+function validRunId(value) {
+  if (value === void 0)
+    return void 0;
+  return RunId.safeParse(value).success ? value : void 0;
+}
+function validFlowId(value) {
+  if (value === void 0)
+    return void 0;
+  return CompiledFlowId.safeParse(value).success ? value : void 0;
+}
+function validStepId(value) {
+  if (value === void 0)
+    return void 0;
+  return StepId.safeParse(value).success ? value : void 0;
+}
+function parseTrace(runFolder, runFolderName) {
+  const tracePath = resolve6(runFolder, "trace.ndjson");
+  if (!existsSync12(tracePath)) {
+    return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
+  }
+  let entries = [];
+  try {
+    entries = readFileSync24(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject2);
+  } catch (error51) {
+    return {
+      entries: [],
+      reportWrites: /* @__PURE__ */ new Map(),
+      traceValidForDocs: false,
+      warning: {
+        code: "trace_skipped",
+        message: `trace.ndjson could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolder,
+        source_path: "trace.ndjson"
+      }
+    };
+  }
+  const firstRunId = stringValue(entries[0]?.run_id) ?? runFolderName;
+  let traceValidForDocs = entries.length > 0 && validRunId(firstRunId) !== void 0;
+  for (const [index, entry] of entries.entries()) {
+    if (numberValue(entry.sequence) !== index || stringValue(entry.run_id) !== firstRunId) {
+      traceValidForDocs = false;
+    }
+  }
+  const reportWrites = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.kind !== "step.report_written")
+      continue;
+    const reportPath = stringValue(entry.report_path);
+    const reportSchema = stringValue(entry.report_schema);
+    if (reportPath === void 0 || reportSchema === void 0)
+      continue;
+    const write = {
+      report_schema: reportSchema
+    };
+    addOptional(write, "step_id", stringValue(entry.step_id));
+    const attempt = numberValue(entry.attempt);
+    addOptional(write, "attempt", attempt !== void 0 && attempt > 0 ? attempt : void 0);
+    reportWrites.set(reportPath, write);
+  }
+  return {
+    entries,
+    reportWrites,
+    traceValidForDocs,
+    ...traceValidForDocs ? {} : {
+      warning: {
+        code: "trace_skipped",
+        message: "trace.ndjson is not valid for trace-document indexing",
+        run_folder: runFolder,
+        source_path: "trace.ndjson"
+      }
+    }
+  };
+}
+function jsonPointer(path) {
+  return `/${path.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
+function stringifyForPrune(value) {
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+function extractText(value, options) {
+  const lines = [];
+  const extractedFrom = [];
+  const highValue = /* @__PURE__ */ new Map();
+  let prunedChars = 0;
+  function visit(current, path) {
+    const segment = path.at(-1);
+    if (segment !== void 0 && NOISY_FIELDS.has(segment) && !(options.allowCheckpointResponseFields && ["response"].includes(segment))) {
+      prunedChars += stringifyForPrune(current).length;
+      return;
+    }
+    if (Array.isArray(current)) {
+      for (const [index, item] of current.entries())
+        visit(item, [...path, String(index)]);
+      return;
+    }
+    if (isObject2(current)) {
+      for (const [key, item] of Object.entries(current)) {
+        if (options.allowCheckpointResponseFields && ["selection", "route_id", "resolution_source"].includes(key)) {
+          visit(item, [...path, key]);
+          continue;
+        }
+        visit(item, [...path, key]);
+      }
+      return;
+    }
+    if (current === null || current === void 0)
+      return;
+    const raw = String(current).trim();
+    if (raw.length === 0)
+      return;
+    const role = segment ?? "value";
+    const isHighValue = HIGH_VALUE_FIELDS.has(role);
+    const limit = isHighValue ? HIGH_VALUE_TEXT_LIMIT : NORMAL_TEXT_LIMIT;
+    const clipped = raw.length > limit ? `${raw.slice(0, limit)}...` : raw;
+    lines.push(`${role}: ${clipped}`);
+    extractedFrom.push({ json_pointer: jsonPointer(path), field_role: role });
+    if (isHighValue && !highValue.has(role))
+      highValue.set(role, clipped);
+  }
+  visit(value, []);
+  return {
+    text: lines.join("\n").slice(0, REPORT_TEXT_LIMIT),
+    extractedFrom,
+    prunedChars,
+    highValue
+  };
+}
+function firstHighValue(extraction, fields) {
+  for (const field of fields) {
+    const value = extraction.highValue.get(field);
+    if (value !== void 0 && value.trim().length > 0)
+      return value;
+  }
+  return void 0;
+}
+function buildFacets(input) {
+  const facets = /* @__PURE__ */ new Set([`kind:${input.docKind}`]);
+  if (input.flowId !== void 0)
+    facets.add(`flow:${input.flowId}`);
+  if (input.outcome !== void 0)
+    facets.add(`outcome:${input.outcome}`);
+  if (input.reportSchema !== void 0)
+    facets.add(`schema:${input.reportSchema}`);
+  if (input.stepId !== void 0)
+    facets.add(`step:${input.stepId}`);
+  const haystack = `${input.sourcePath} ${input.reportSchema ?? ""} ${input.traceKind ?? ""}`.toLowerCase();
+  if (input.outcome === "aborted" || input.traceKind === "relay.failed" || input.traceKind === "step.aborted" || input.checkOutcome === "fail") {
+    facets.add("failure");
+  }
+  if (haystack.includes("checkpoint"))
+    facets.add("checkpoint");
+  if (haystack.includes("decision"))
+    facets.add("decision");
+  if (haystack.includes("verification") || haystack.includes("proof") || haystack.includes("check") || input.traceKind === "proof.assessed" || input.traceKind === "safe_apply.result") {
+    facets.add("verification");
+  }
+  if (input.docKind === "checkpoint" && input.sourcePath.includes("-response")) {
+    facets.add("operator-note");
+  }
+  if (input.traceKind === "checkpoint.resolved")
+    facets.add("operator-note");
+  return [...facets].sort();
+}
+function reportSourceRef(input) {
+  const ref = {
+    kind: "report",
+    ref: input.relPath,
+    sha256: input.sha256
+  };
+  addOptional(ref, "run_id", validRunId(input.runId));
+  addOptional(ref, "flow_id", validFlowId(input.flowId));
+  addOptional(ref, "step_id", validStepId(input.stepId));
+  addOptional(ref, "attempt", input.attempt);
+  return Ref.parse(ref);
+}
+function traceSourceRef(input) {
+  const parsedRunId = validRunId(input.runId);
+  if (parsedRunId === void 0)
+    return void 0;
+  const ref = {
+    kind: "trace",
+    ref: `trace.ndjson#sequence=${input.sequence}`,
+    run_id: parsedRunId,
+    sequence: input.sequence
+  };
+  addOptional(ref, "flow_id", validFlowId(input.flowId));
+  addOptional(ref, "step_id", validStepId(input.stepId));
+  addOptional(ref, "attempt", input.attempt);
+  return Ref.parse(ref);
+}
+function docId(input) {
+  return `${input.runId}/${input.docKind}/${sha256Hex(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
+}
+function skipReport(relPath) {
+  const name = basename(relPath);
+  if (!relPath.endsWith(".json"))
+    return true;
+  if (relPath.startsWith("reports/relay/"))
+    return true;
+  if (["operator-summary.json", "operator-summary.md", "operator-summary.html"].includes(name)) {
+    return true;
+  }
+  if ((relPath.includes("/tournament-branches/") || relPath.includes("/variant-branches/")) && name !== "report.json") {
+    return true;
+  }
+  return false;
+}
+function reportKind(relPath) {
+  return relPath.startsWith("reports/checkpoints/") ? "checkpoint" : "report";
+}
+function isCheckpointRequest(relPath) {
+  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-request.json");
+}
+function isCheckpointResponse(relPath) {
+  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-response.json");
+}
+function asStringRecordValue(record2, key) {
+  return record2 === void 0 ? void 0 : stringValue(record2[key]);
+}
+function resolveRunIdentity(input) {
+  const bootstrap = input.traceEntries.find((entry) => entry.kind === "run.bootstrapped");
+  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
+  const runId = stringValue(bootstrap?.run_id) ?? asStringRecordValue(input.result, "run_id") ?? asStringRecordValue(input.manifest, "run_id") ?? input.runFolderName;
+  const flowId = stringValue(bootstrap?.flow_id) ?? asStringRecordValue(input.result, "flow_id") ?? asStringRecordValue(input.manifest, "flow_id");
+  const goal = stringValue(bootstrap?.goal) ?? asStringRecordValue(input.result, "goal") ?? asStringRecordValue(input.manifest, "goal");
+  const recordedAt = safeDateString(bootstrap?.recorded_at) ?? safeDateString(input.result?.recorded_at) ?? safeDateString(input.manifest?.captured_at);
+  const outcome = asStringRecordValue(input.result, "outcome") ?? stringValue(closed?.outcome) ?? asStringRecordValue(input.result, "status") ?? asStringRecordValue(input.result, "verdict");
+  return {
+    runId,
+    ...flowId === void 0 ? {} : { flowId },
+    ...goal === void 0 ? {} : { goal },
+    ...recordedAt === void 0 ? {} : { recordedAt },
+    ...outcome === void 0 ? {} : { outcome }
+  };
+}
+function makeRunDocument(input) {
+  const sourcePath = input.resultPath ?? "trace.ndjson";
+  const sourceAbs = resolve6(input.runFolder, sourcePath);
+  if (!existsSync12(sourceAbs))
+    return void 0;
+  const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
+  if (sourceSha === void 0)
+    return void 0;
+  const sourceMtime = input.resultPath === void 0 ? input.traceMtime : mtimeMs(sourceAbs);
+  const extraction = extractText(input.result ?? {}, { allowCheckpointResponseFields: false });
+  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
+  const summary = firstHighValue(extraction, ["summary", "reason", "goal", "outcome", "verdict"]) ?? stringValue(closed?.reason) ?? input.identity.goal ?? `Circuit ${input.identity.flowId ?? "run"} ${input.identity.outcome ?? "history"}`;
+  const textParts = [
+    `goal: ${input.identity.goal ?? ""}`,
+    `flow: ${input.identity.flowId ?? ""}`,
+    `outcome: ${input.identity.outcome ?? ""}`,
+    extraction.text
+  ].filter((part) => part.trim().length > 0);
+  const ref = input.resultPath === void 0 ? traceSourceRef({
+    sequence: 0,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId
+  }) : reportSourceRef({
+    relPath: input.resultPath,
+    sha256: sourceSha,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId
+  });
+  if (ref === void 0)
+    return void 0;
+  const facets = buildFacets({
+    docKind: "run",
+    flowId: input.identity.flowId,
+    outcome: input.identity.outcome,
+    sourcePath
+  });
+  return HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind: "run",
+      sourcePath,
+      selector: "run"
+    }),
+    doc_kind: "run",
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: sourcePath,
+    source_ref: ref,
+    source_sha256: sourceSha,
+    source_mtime_ms: sourceMtime,
+    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
+    ...input.identity.outcome === void 0 ? {} : { outcome: input.identity.outcome },
+    title: `${input.identity.flowId ?? "Circuit"} run ${input.identity.outcome ?? ""}`.trim(),
+    summary,
+    text: textParts.join("\n").slice(0, REPORT_TEXT_LIMIT),
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: true
+  });
+}
+function makeReportDocument(input) {
+  const absPath = resolveRunFilePath(input.runFolder, input.relPath);
+  const sourceSha = sha256File(absPath);
+  const sourceMtime = mtimeMs(absPath);
+  const docKind = reportKind(input.relPath);
+  const allowCheckpointResponseFields = isCheckpointResponse(input.relPath);
+  const extraction = extractText(input.body, { allowCheckpointResponseFields });
+  const reportSchema = input.reportWrite?.report_schema ?? stringValue(input.body.report_schema) ?? stringValue(input.body.schema);
+  const stepId = input.reportWrite?.step_id ?? stringValue(input.body.step_id);
+  const attempt = input.reportWrite?.attempt;
+  const outcome = stringValue(input.body.outcome) ?? stringValue(input.body.status) ?? input.identity.outcome;
+  const summary = firstHighValue(extraction, [
+    "summary",
+    "decision",
+    "rationale",
+    "reason",
+    "goal",
+    "objective",
+    "verdict",
+    "outcome",
+    "status"
+  ]) ?? `${reportSchema ?? input.relPath}`;
+  const facets = buildFacets({
+    docKind,
+    flowId: input.identity.flowId,
+    outcome,
+    reportSchema,
+    stepId,
+    sourcePath: input.relPath
+  });
+  const ref = reportSourceRef({
+    relPath: input.relPath,
+    sha256: sourceSha,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId,
+    stepId,
+    attempt
+  });
+  const title = `${reportSchema ?? docKind} ${input.relPath}`;
+  const document = HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind,
+      sourcePath: input.relPath,
+      selector: "/"
+    }),
+    doc_kind: docKind,
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: input.relPath,
+    source_ref: ref,
+    source_sha256: sourceSha,
+    source_mtime_ms: sourceMtime,
+    ...reportSchema === void 0 ? {} : { report_schema: reportSchema },
+    ...stepId === void 0 ? {} : { step_id: stepId },
+    ...attempt === void 0 ? {} : { attempt },
+    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
+    ...outcome === void 0 ? {} : { outcome },
+    title,
+    summary,
+    text: extraction.text,
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: !isCheckpointRequest(input.relPath)
+  });
+  const warning = extraction.prunedChars > 1e4 ? {
+    code: "source_pruned",
+    message: `pruned ${extraction.prunedChars} noisy characters from ${input.relPath}`,
+    run_folder: input.runFolder,
+    source_path: input.relPath
+  } : void 0;
+  return warning === void 0 ? { document } : { document, warning };
+}
+function traceDocumentSummary(entry) {
+  return stringValue(entry.reason) ?? stringValue(entry.outcome) ?? stringValue(entry.overall_status) ?? String(entry.kind ?? "trace");
+}
+function shouldIndexTrace(entry) {
+  switch (entry.kind) {
+    case "relay.failed":
+    case "step.aborted":
+    case "checkpoint.resolved":
+    case "proof.assessed":
+    case "safe_apply.result":
+      return true;
+    case "check.evaluated":
+      return entry.outcome === "fail" || entry.status === "failed";
+    case "run.closed":
+      return entry.outcome !== "complete";
+    default:
+      return false;
+  }
+}
+function makeTraceDocument(input) {
+  const sequence = numberValue(input.entry.sequence);
+  if (sequence === void 0 || sequence < 0 || !Number.isInteger(sequence))
+    return void 0;
+  const ref = traceSourceRef({
+    sequence,
+    runId: input.identity.runId,
+    flowId: input.identity.flowId,
+    stepId: stringValue(input.entry.step_id),
+    attempt: numberValue(input.entry.attempt)
+  });
+  if (ref === void 0)
+    return void 0;
+  const extraction = extractText(input.entry, { allowCheckpointResponseFields: true });
+  const traceKind = stringValue(input.entry.kind);
+  const stepId = stringValue(input.entry.step_id);
+  const attempt = numberValue(input.entry.attempt);
+  const outcome = stringValue(input.entry.outcome) ?? input.identity.outcome;
+  const docKind = traceKind === "checkpoint.resolved" ? "checkpoint" : "trace";
+  const summary = traceDocumentSummary(input.entry);
+  const facets = buildFacets({
+    docKind,
+    flowId: input.identity.flowId,
+    outcome,
+    stepId,
+    sourcePath: "trace.ndjson",
+    traceKind,
+    checkOutcome: stringValue(input.entry.outcome)
+  });
+  return HistoryDocumentV1.parse({
+    api_version: "history-document-v1",
+    schema_version: 1,
+    doc_id: docId({
+      runId: input.identity.runId,
+      docKind,
+      sourcePath: "trace.ndjson",
+      selector: String(sequence)
+    }),
+    doc_kind: docKind,
+    run_id: input.identity.runId,
+    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
+    run_folder: input.runFolder,
+    source_path: "trace.ndjson",
+    source_ref: ref,
+    source_sha256: input.traceSha,
+    source_mtime_ms: input.traceMtime,
+    ...stepId === void 0 ? {} : { step_id: stepId },
+    ...attempt === void 0 ? {} : { attempt },
+    sequence,
+    ...safeDateString(input.entry.recorded_at) === void 0 ? {} : { recorded_at: safeDateString(input.entry.recorded_at) },
+    ...outcome === void 0 ? {} : { outcome },
+    title: `${traceKind ?? "trace"} sequence ${sequence}`,
+    summary,
+    text: extraction.text,
+    extracted_from: extraction.extractedFrom,
+    facets,
+    memory_safe: true
+  });
+}
+function extractRunHistoryDocuments(runFolder) {
+  const runFolderAbs = resolve6(runFolder);
+  const runFolderName = basename(runFolderAbs);
+  const warnings = [];
+  const documents = [];
+  const sourceFiles = /* @__PURE__ */ new Set();
+  const manifestPath2 = resolve6(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve6(runFolderAbs, "reports/result.json");
+  const manifest = existsSync12(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
+  const result = existsSync12(resultPath2) ? readJsonRecord(resultPath2) : void 0;
+  if (existsSync12(manifestPath2))
+    sourceFiles.add(manifestPath2);
+  if (existsSync12(resultPath2))
+    sourceFiles.add(resultPath2);
+  const trace = parseTrace(runFolderAbs, runFolderName);
+  if (trace.warning !== void 0)
+    warnings.push(trace.warning);
+  const tracePath = resolve6(runFolderAbs, "trace.ndjson");
+  const traceExists = existsSync12(tracePath);
+  const traceSha = traceExists ? sha256File(tracePath) : void 0;
+  const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
+  if (traceExists)
+    sourceFiles.add(tracePath);
+  const identity = resolveRunIdentity({
+    runFolderName,
+    traceEntries: trace.entries,
+    manifest,
+    result
+  });
+  const runDocument = makeRunDocument({
+    runFolder: runFolderAbs,
+    identity,
+    ...existsSync12(resultPath2) ? { resultPath: "reports/result.json" } : {},
+    result,
+    traceEntries: trace.entries,
+    traceSha,
+    traceMtime
+  });
+  if (runDocument !== void 0)
+    documents.push(runDocument);
+  const reportRoot = resolve6(runFolderAbs, "reports");
+  for (const relPath of listFiles(reportRoot, "reports")) {
+    const absPath = resolve6(runFolderAbs, relPath);
+    if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
+      continue;
+    sourceFiles.add(absPath);
+    if (skipReport(relPath))
+      continue;
+    const validation = validateRunFilePath(relPath);
+    if (validation.length > 0) {
+      warnings.push({
+        code: "report_skipped",
+        message: `report path rejected: ${validation.join("; ")}`,
+        run_folder: runFolderAbs,
+        source_path: relPath
+      });
+      continue;
+    }
+    let body;
+    try {
+      const parsed = readJson2(absPath);
+      body = isObject2(parsed) ? parsed : void 0;
+    } catch (error51) {
+      warnings.push({
+        code: "report_skipped",
+        message: `report could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolderAbs,
+        source_path: relPath
+      });
+      continue;
+    }
+    if (body === void 0)
+      continue;
+    const built = makeReportDocument({
+      runFolder: runFolderAbs,
+      relPath,
+      body,
+      identity,
+      reportWrite: trace.reportWrites.get(relPath)
+    });
+    if (built.document !== void 0)
+      documents.push(built.document);
+    if (built.warning !== void 0)
+      warnings.push(built.warning);
+  }
+  if (trace.traceValidForDocs && traceSha !== void 0 && traceMtime !== void 0) {
+    for (const entry of trace.entries) {
+      if (!shouldIndexTrace(entry))
+        continue;
+      const document = makeTraceDocument({
+        runFolder: runFolderAbs,
+        traceSha,
+        traceMtime,
+        entry,
+        identity
+      });
+      if (document !== void 0)
+        documents.push(document);
+    }
+  }
+  return {
+    documents,
+    warnings,
+    sourceFiles: [...sourceFiles].sort()
+  };
+}
+
+// dist/history/indexer.js
+var DEFAULT_RUNS_BASE = ".circuit/runs";
+var DEFAULT_INDEX_DIR = ".circuit/history";
+var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
+var HISTORY_MANIFEST_FILE = "manifest.v1.json";
+var HistoryCommandError = class extends Error {
+  code;
+  paths;
+  constructor(code, message, paths = {}) {
+    super(message);
+    this.code = code;
+    this.paths = paths;
+  }
+};
+function resolveHistoryPaths(options = {}) {
+  const repoRoot = resolve7(options.repoRoot ?? process.cwd());
+  const runsBase = resolve7(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve7(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  return {
+    repoRoot,
+    runsBase,
+    indexDir,
+    manifestPath: join12(indexDir, HISTORY_MANIFEST_FILE),
+    documentsPath: join12(indexDir, HISTORY_DOCUMENTS_FILE)
+  };
+}
+function isCandidateRunFolder(runFolder) {
+  return existsSync13(join12(runFolder, "manifest.snapshot.json")) || existsSync13(join12(runFolder, "trace.ndjson")) || existsSync13(join12(runFolder, "reports/result.json"));
+}
+function listCandidateRunFolders(runsBase) {
+  if (!existsSync13(runsBase)) {
+    throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
+      runsBase
+    });
+  }
+  let stat2;
+  try {
+    stat2 = statSync2(runsBase);
+  } catch (error51) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
+  }
+  if (!stat2.isDirectory()) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base is not a directory: ${runsBase}`, {
+      runsBase
+    });
+  }
+  try {
+    return readdirSync3(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
+  } catch (error51) {
+    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
+  }
+}
+function computeRunFolderNamesHash(runFolders) {
+  return sha256Hex(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
+}
+function computeLatestSourceMtime(sourceFiles) {
+  let latest = 0;
+  for (const file2 of sourceFiles) {
+    try {
+      latest = Math.max(latest, Math.trunc(statSync2(file2).mtimeMs));
+    } catch {
+    }
+  }
+  return latest;
+}
+function computeHistoryFingerprint(input) {
+  const runFolders = listCandidateRunFolders(input.runsBase);
+  return {
+    run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
+    latest_source_mtime_ms: computeLatestSourceMtime(input.sourceFiles ?? collectSourceFiles(runFolders))
+  };
+}
+function collectSourceFiles(runFolders) {
+  const files = [];
+  for (const runFolder of runFolders) {
+    for (const candidate of [
+      join12(runFolder, "manifest.snapshot.json"),
+      join12(runFolder, "trace.ndjson"),
+      join12(runFolder, "reports/result.json")
+    ]) {
+      if (existsSync13(candidate))
+        files.push(candidate);
+    }
+    const reportsRoot2 = join12(runFolder, "reports");
+    if (!existsSync13(reportsRoot2))
+      continue;
+    const stack = [reportsRoot2];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === void 0)
+        continue;
+      for (const entry of readdirSync3(current, { withFileTypes: true })) {
+        const path = join12(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(path);
+        } else if (entry.isFile() && entry.name.endsWith(".json")) {
+          files.push(path);
+        }
+      }
+    }
+  }
+  return files.sort();
+}
+function errorEnvelope(error51) {
+  return HistoryErrorV1.parse({
+    api_version: "history-error-v1",
+    schema_version: 1,
+    error: {
+      code: error51.code,
+      message: error51.message
+    },
+    ...error51.paths.runsBase === void 0 ? {} : { runs_base: error51.paths.runsBase },
+    ...error51.paths.indexDir === void 0 ? {} : { index_dir: error51.paths.indexDir }
+  });
+}
+function rebuildHistoryIndex(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  const runFolders = listCandidateRunFolders(paths.runsBase);
+  const documents = [];
+  const warnings = [];
+  const sourceFiles = [];
+  for (const runFolder of runFolders) {
+    try {
+      const extracted = extractRunHistoryDocuments(runFolder);
+      documents.push(...extracted.documents);
+      warnings.push(...extracted.warnings);
+      sourceFiles.push(...extracted.sourceFiles);
+    } catch (error51) {
+      warnings.push({
+        code: "run_skipped",
+        message: `run skipped: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        run_folder: runFolder
+      });
+    }
+  }
+  const manifest = HistoryManifestV1.parse({
+    api_version: "history-index-v1",
+    schema_version: 1,
+    created_at: (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString(),
+    repo_root: paths.repoRoot,
+    runs_base: paths.runsBase,
+    index_dir: paths.indexDir,
+    documents_path: HISTORY_DOCUMENTS_FILE,
+    run_count: runFolders.length,
+    document_count: documents.length,
+    source_fingerprint: {
+      run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
+      latest_source_mtime_ms: computeLatestSourceMtime(sourceFiles)
+    },
+    warnings
+  });
+  mkdirSync(paths.indexDir, { recursive: true });
+  const documentsJsonl = `${documents.map((doc) => JSON.stringify(HistoryDocumentV1.parse(doc))).join("\n")}
+`;
+  const manifestJson = `${JSON.stringify(manifest, null, 2)}
+`;
+  const documentsTmp = `${paths.documentsPath}.tmp-${process.pid}`;
+  const manifestTmp = `${paths.manifestPath}.tmp-${process.pid}`;
+  writeFileSync(documentsTmp, documentsJsonl, "utf8");
+  writeFileSync(manifestTmp, manifestJson, "utf8");
+  HistoryManifestV1.parse(JSON.parse(readFileSync25(manifestTmp, "utf8")));
+  for (const line of readFileSync25(documentsTmp, "utf8").split("\n")) {
+    if (line.trim().length === 0)
+      continue;
+    HistoryDocumentV1.parse(JSON.parse(line));
+  }
+  renameSync(documentsTmp, paths.documentsPath);
+  renameSync(manifestTmp, paths.manifestPath);
+  return {
+    manifest,
+    documents
+  };
+}
+function readHistoryManifest(paths) {
+  if (!existsSync13(paths.manifestPath) || !existsSync13(paths.documentsPath)) {
+    throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync25(paths.manifestPath, "utf8"));
+  } catch (error51) {
+    throw new HistoryCommandError("index_corrupt", `history manifest corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+  }
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw) && "schema_version" in raw && raw.schema_version !== 1) {
+    throw new HistoryCommandError("index_unsupported", "history index schema is unsupported", {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  const parsed = HistoryManifestV1.safeParse(raw);
+  if (!parsed.success) {
+    throw new HistoryCommandError("index_corrupt", parsed.error.message, {
+      runsBase: paths.runsBase,
+      indexDir: paths.indexDir
+    });
+  }
+  return parsed.data;
+}
+function readHistoryIndex(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  const manifest = readHistoryManifest(paths);
+  let documentsRaw = "";
+  try {
+    documentsRaw = readFileSync25(paths.documentsPath, "utf8");
+  } catch (error51) {
+    throw new HistoryCommandError("index_corrupt", `history documents unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+  }
+  const documents = [];
+  for (const [index, line] of documentsRaw.split("\n").entries()) {
+    if (line.trim().length === 0)
+      continue;
+    try {
+      documents.push(HistoryDocumentV1.parse(JSON.parse(line)));
+    } catch (error51) {
+      throw new HistoryCommandError("index_corrupt", `history document line ${index + 1} corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
+    }
+  }
+  return { manifest, documents };
+}
+function historyIndexState(paths, manifest) {
+  const current = computeHistoryFingerprint({ runsBase: paths.runsBase });
+  return current.run_folder_names_sha256 === manifest.source_fingerprint.run_folder_names_sha256 && current.latest_source_mtime_ms === manifest.source_fingerprint.latest_source_mtime_ms ? "fresh" : "possibly_stale";
+}
+function historyStatus(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  try {
+    const manifest = readHistoryManifest(paths);
+    const state = historyIndexState(paths, manifest);
+    return HistoryStatusV1.parse({
+      api_version: "history-status-v1",
+      schema_version: 1,
+      index_exists: true,
+      index_state: state,
+      runs_base: paths.runsBase,
+      index_dir: paths.indexDir,
+      manifest,
+      warnings: manifest.warnings
+    });
+  } catch (error51) {
+    if (error51 instanceof HistoryCommandError) {
+      if (error51.code === "index_missing") {
+        return HistoryStatusV1.parse({
+          api_version: "history-status-v1",
+          schema_version: 1,
+          index_exists: false,
+          index_state: "missing",
+          runs_base: paths.runsBase,
+          index_dir: paths.indexDir,
+          warnings: []
+        });
+      }
+      if (error51.code === "index_unsupported" || error51.code === "index_corrupt") {
+        return HistoryStatusV1.parse({
+          api_version: "history-status-v1",
+          schema_version: 1,
+          index_exists: true,
+          index_state: error51.code === "index_unsupported" ? "unsupported" : "corrupt",
+          runs_base: paths.runsBase,
+          index_dir: paths.indexDir,
+          warnings: [
+            {
+              code: "source_invalid",
+              message: error51.message
+            }
+          ]
+        });
+      }
+    }
+    throw error51;
+  }
+}
+
+// dist/history/memory-preview.js
+function fileStem(value) {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+  const trimmed = normalized.replace(/^[^a-z0-9]+/, "").slice(0, 96);
+  return trimmed.length === 0 ? "memory" : trimmed;
+}
+function appliesTo(hit) {
+  const facets = new Set(hit.doc.facets);
+  if (facets.has("failure"))
+    return "prior_failure";
+  if (facets.has("verification"))
+    return "verification";
+  if (facets.has("operator-note"))
+    return "operator_note";
+  return "context";
+}
+function hintText(hit) {
+  const caution = hit.doc.facets.includes("checkpoint") || hit.doc.facets.includes("verification") ? " This is prior-run context only; rerun current checks before relying on it." : "";
+  const base = hit.snippet.trim().length > 0 ? hit.snippet.trim() : hit.doc.summary;
+  return `${base}
+Source: ${hit.doc.run_id} ${hit.doc.source_path}.${caution}`.trim();
+}
+function historyMemoryInputPreview(input) {
+  const memoryInputs = [];
+  const matches = [];
+  for (const hit of input.hits) {
+    if (!hit.doc.memory_safe)
+      continue;
+    const hash2 = sha256Hex(hit.doc.doc_id).slice(0, 12);
+    const runPrefix = fileStem(hit.doc.run_id).slice(0, 32);
+    const memoryId = `prior-run-${runPrefix}-${hash2}`.slice(0, 128);
+    const source = hit.doc.source_ref.sha256 !== void 0 && hit.doc.source_sha256 !== void 0 && hit.doc.source_ref.sha256 === hit.doc.source_sha256 ? {
+      ref: hit.doc.source_ref,
+      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() },
+      sha256: hit.doc.source_sha256
+    } : {
+      ref: hit.doc.source_ref,
+      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() }
+    };
+    const memory = MemoryInputV0.parse({
+      schema_version: 1,
+      memory_id: memoryId,
+      kind: "prior_run",
+      source,
+      summary: hit.doc.summary,
+      hints: [
+        {
+          id: `hint-${hash2}`,
+          text: hintText(hit),
+          applies_to: appliesTo(hit)
+        }
+      ],
+      staleness: hit.staleness,
+      authority: "hint_only"
+    });
+    memoryInputs.push(memory);
+    matches.push({
+      memory_id: memoryId,
+      rank: hit.rank,
+      score: hit.score,
+      source_doc_id: hit.doc.doc_id,
+      source_ref: hit.doc.source_ref,
+      snippet: hit.snippet
+    });
+  }
+  return HistoryMemoryInputPreviewV1.parse({
+    api_version: "history-memory-input-preview-v1",
+    schema_version: 1,
+    query: input.query,
+    format: "memory-input",
+    index_state: input.indexState,
+    rebuilt: input.rebuilt,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    warnings: input.warnings,
+    memory_inputs: memoryInputs,
+    matches
+  });
+}
+
+// dist/history/query.js
+import { existsSync as existsSync14, readFileSync as readFileSync26 } from "node:fs";
+var STOPWORDS = /* @__PURE__ */ new Set([
+  "the",
+  "and",
+  "for",
+  "that",
+  "this",
+  "with",
+  "from",
+  "into",
+  "what",
+  "when",
+  "where",
+  "why",
+  "how",
+  "run",
+  "runs",
+  "circuit",
+  "history",
+  "query",
+  "report",
+  "reports"
+]);
+var FAILURE_TERMS = /* @__PURE__ */ new Set(["fail", "failed", "failure", "aborted", "abort", "error"]);
+var CHECKPOINT_TERMS = /* @__PURE__ */ new Set(["checkpoint", "choice", "selection", "resume"]);
+var VERIFICATION_TERMS = /* @__PURE__ */ new Set(["verify", "verification", "proof", "check", "test"]);
+function tokenize(text) {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length >= 2 && !STOPWORDS.has(term));
+}
+function termCounts(tokens) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const token of tokens)
+    counts.set(token, (counts.get(token) ?? 0) + 1);
+  return counts;
+}
+function unique(values) {
+  return [...new Set(values)];
+}
+function idf(documents) {
+  const docFreq = /* @__PURE__ */ new Map();
+  for (const doc of documents) {
+    const terms = unique(tokenize(`${doc.title}
+${doc.summary}
+${doc.text}
+${doc.facets.join(" ")}`));
+    for (const term of terms)
+      docFreq.set(term, (docFreq.get(term) ?? 0) + 1);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const [term, count] of docFreq) {
+    out.set(term, Math.log((documents.length + 1) / (count + 1)) + 1);
+  }
+  return out;
+}
+function weightedTf(doc, term) {
+  const title = termCounts(tokenize(doc.title)).get(term) ?? 0;
+  const summary = termCounts(tokenize(doc.summary)).get(term) ?? 0;
+  const text = termCounts(tokenize(doc.text)).get(term) ?? 0;
+  const facets = termCounts(tokenize(doc.facets.join(" "))).get(term) ?? 0;
+  return title * 5 + summary * 4 + facets * 2 + text;
+}
+function queryBigrams(terms) {
+  const bigrams = [];
+  for (let index = 0; index < terms.length - 1; index += 1) {
+    const left = terms[index];
+    const right = terms[index + 1];
+    if (left !== void 0 && right !== void 0)
+      bigrams.push(`${left} ${right}`);
+  }
+  return bigrams;
+}
+function facetBoost(queryTerms, doc) {
+  let score = 0;
+  const reasons = [];
+  const facets = new Set(doc.facets);
+  if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has("failure")) {
+    score += 3;
+    reasons.push("failure facet matched");
+  }
+  if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has("checkpoint")) {
+    score += 2;
+    reasons.push("checkpoint facet matched");
+  }
+  if (queryTerms.some((term) => VERIFICATION_TERMS.has(term)) && facets.has("verification")) {
+    score += 2;
+    reasons.push("verification facet matched");
+  }
+  return { score, reasons };
+}
+function scoreDocument(input) {
+  let score = 0;
+  const reasons = [];
+  const matchedTerms = [];
+  for (const term of input.queryTerms) {
+    const tf = Math.min(weightedTf(input.doc, term), 3);
+    if (tf <= 0)
+      continue;
+    matchedTerms.push(term);
+    score += (input.queryIdf.get(term) ?? 1) * tf;
+  }
+  const haystack = `${input.doc.title}
+${input.doc.summary}
+${input.doc.text}`.toLowerCase();
+  const queryPhrase = input.query.trim().toLowerCase();
+  if (queryPhrase.length > 0 && haystack.includes(queryPhrase)) {
+    score += 2;
+    reasons.push("exact phrase matched");
+  }
+  for (const bigram of queryBigrams(input.queryTerms)) {
+    if (haystack.includes(bigram)) {
+      score += 0.5;
+      reasons.push(`bigram matched: ${bigram}`);
+    }
+  }
+  const boosted = facetBoost(input.queryTerms, input.doc);
+  score += boosted.score;
+  reasons.push(...boosted.reasons);
+  if (!input.doc.memory_safe) {
+    score -= 3;
+    reasons.push("memory-unsafe source penalized");
+  }
+  if (input.indexState === "possibly_stale") {
+    score -= 0.5;
+    reasons.push("possibly stale index penalty");
+  }
+  if (matchedTerms.length > 0)
+    reasons.push(`matched terms: ${matchedTerms.join(", ")}`);
+  return {
+    score,
+    matchedTerms: unique(matchedTerms),
+    reasons
+  };
+}
+function normalizeText(text) {
+  return tokenize(text).join(" ");
+}
+function snippet(doc, matchedTerms) {
+  const haystack = `${doc.summary}
+${doc.text}`.replace(/\s+/g, " ").trim();
+  if (haystack.length <= 420)
+    return haystack;
+  const lower = haystack.toLowerCase();
+  const firstMatch = matchedTerms.map((term) => lower.indexOf(term)).filter((index) => index >= 0).sort((left, right) => left - right)[0];
+  const start = Math.max(0, (firstMatch ?? 0) - 120);
+  return haystack.slice(start, start + 420).trim();
+}
+function sourceStaleness(doc, checkedAt) {
+  if (doc.source_sha256 === void 0) {
+    return {
+      status: "unknown",
+      reason_codes: ["memory_unverified"],
+      checked_at: checkedAt
+    };
+  }
+  try {
+    const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
+    if (!existsSync14(sourcePath)) {
+      return {
+        status: "stale",
+        reason_codes: ["memory_stale"],
+        checked_at: checkedAt
+      };
+    }
+    const currentHash = sha256Hex(readFileSync26(sourcePath, "utf8"));
+    return currentHash === doc.source_sha256 ? {
+      status: "fresh",
+      reason_codes: ["source_hash_verified"],
+      checked_at: checkedAt
+    } : {
+      status: "stale",
+      reason_codes: ["memory_stale"],
+      checked_at: checkedAt
+    };
+  } catch {
+    return {
+      status: "unknown",
+      reason_codes: ["memory_unverified"],
+      checked_at: checkedAt
+    };
+  }
+}
+function queryHistory(options) {
+  const limit = options.limit ?? 8;
+  const perRunLimit = options.perRunLimit ?? 1;
+  if (limit < 1 || limit > 50 || !Number.isInteger(limit)) {
+    throw new HistoryCommandError("invalid_invocation", "--limit must be an integer from 1 to 50");
+  }
+  if (perRunLimit < 1 || perRunLimit > 5 || !Number.isInteger(perRunLimit)) {
+    throw new HistoryCommandError("invalid_invocation", "--per-run-limit must be an integer from 1 to 5");
+  }
+  const queryTerms = unique(tokenize(options.query));
+  const paths = resolveHistoryPaths(options);
+  let rebuilt = false;
+  let index;
+  try {
+    index = readHistoryIndex(options);
+  } catch (error51) {
+    if (error51 instanceof HistoryCommandError && error51.code === "index_missing" && options.rebuildIfStale === true) {
+      index = rebuildHistoryIndex(options);
+      rebuilt = true;
+    } else {
+      throw error51;
+    }
+  }
+  let indexState = historyIndexState(paths, index.manifest);
+  if (indexState === "possibly_stale" && options.rebuildIfStale === true) {
+    index = rebuildHistoryIndex(options);
+    rebuilt = true;
+    indexState = historyIndexState(paths, index.manifest);
+  }
+  const warnings = [...index.manifest.warnings];
+  if (indexState === "possibly_stale") {
+    warnings.push({
+      code: "source_invalid",
+      message: "history index may be stale; run circuit history rebuild --json to refresh it"
+    });
+  }
+  const candidates = index.documents.filter((doc) => {
+    if (options.flow !== void 0 && doc.flow_id !== options.flow)
+      return false;
+    if (options.kind !== void 0 && doc.doc_kind !== options.kind)
+      return false;
+    return true;
+  });
+  const idfMap = idf(candidates);
+  const scored = candidates.map((doc) => {
+    const score = scoreDocument({
+      query: options.query,
+      queryTerms,
+      queryIdf: idfMap,
+      doc,
+      indexState
+    });
+    return { doc, ...score };
+  }).filter((candidate) => candidate.score > 0 || options.query.trim().length === 0).sort((left, right) => {
+    if (right.score !== left.score)
+      return right.score - left.score;
+    const rightDate = Date.parse(right.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
+    const leftDate = Date.parse(left.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
+    if (rightDate !== leftDate)
+      return rightDate - leftDate;
+    return left.doc.doc_id.localeCompare(right.doc.doc_id);
+  });
+  const seenText = /* @__PURE__ */ new Set();
+  const runCounts = /* @__PURE__ */ new Map();
+  const selected = [];
+  for (const candidate of scored) {
+    const textHash = sha256Hex(normalizeText(candidate.doc.text));
+    if (seenText.has(textHash))
+      continue;
+    const runCount = runCounts.get(candidate.doc.run_id) ?? 0;
+    if (runCount >= perRunLimit)
+      continue;
+    seenText.add(textHash);
+    runCounts.set(candidate.doc.run_id, runCount + 1);
+    selected.push(candidate);
+    if (selected.length >= limit)
+      break;
+  }
+  const checkedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
+  const hits = selected.map((candidate, index2) => {
+    const staleness = sourceStaleness(candidate.doc, checkedAt);
+    const freshBoost = staleness.status === "fresh" ? 0.25 : 0;
+    return {
+      rank: index2 + 1,
+      score: Number((candidate.score + freshBoost).toFixed(6)),
+      doc: candidate.doc,
+      snippet: snippet(candidate.doc, candidate.matchedTerms),
+      matched_terms: [...candidate.matchedTerms],
+      ranking_reasons: freshBoost > 0 ? [...candidate.reasons, "source hash verified"] : [...candidate.reasons],
+      staleness
+    };
+  });
+  return HistoryQueryResultV1.parse({
+    api_version: "history-query-result-v1",
+    schema_version: 1,
+    query: options.query,
+    format: "json",
+    index_state: indexState,
+    rebuilt,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    warnings,
+    results: hits
+  });
+}
+
+// dist/history/run-start-recall.js
+var HISTORY_RECALL_REPORT_PATH = "reports/history/recall.json";
+var DEFAULT_RECALL_LIMIT = 3;
+function unavailableWarning(error51) {
+  const prefix = error51 instanceof HistoryCommandError ? `history recall unavailable (${error51.code})` : "history recall unavailable";
+  return {
+    code: "source_invalid",
+    message: `${prefix}: ${error51 instanceof Error ? error51.message : String(error51)}`
+  };
+}
+function capReport(input) {
+  const memoryInputs = input.report.memory_inputs.slice(0, input.maxMemoryInputs);
+  const memoryIds = new Set(memoryInputs.map((memory) => memory.memory_id));
+  const matches = input.report.matches.filter((match) => memoryIds.has(match.memory_id));
+  return HistoryRecallReportV1.parse({
+    ...input.report,
+    status: memoryInputs.length === 0 ? "empty" : "used",
+    memory_input_count: memoryInputs.length,
+    memory_inputs: memoryInputs,
+    matches
+  });
+}
+function prepareRunStartHistoryRecall(options) {
+  const maxMemoryInputs = options.maxMemoryInputs ?? DEFAULT_RECALL_LIMIT;
+  try {
+    const result = queryHistory({
+      repoRoot: options.repoRoot,
+      query: options.query,
+      limit: Math.max(maxMemoryInputs * 2, maxMemoryInputs),
+      perRunLimit: 1,
+      rebuildIfStale: true,
+      ...options.now === void 0 ? {} : { now: options.now }
+    });
+    const preview = historyMemoryInputPreview({
+      query: result.query,
+      indexState: result.index_state,
+      rebuilt: result.rebuilt,
+      warnings: result.warnings,
+      hits: result.results,
+      capturedAt: (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString()
+    });
+    return capReport({
+      report: HistoryRecallReportV1.parse({
+        api_version: "history-recall-report-v1",
+        schema_version: 1,
+        status: preview.memory_inputs.length === 0 ? "empty" : "used",
+        query: preview.query,
+        index_state: preview.index_state,
+        rebuilt: preview.rebuilt,
+        authority_notice: preview.authority_notice,
+        memory_input_count: preview.memory_inputs.length,
+        memory_inputs: preview.memory_inputs,
+        matches: preview.matches,
+        warnings: preview.warnings
+      }),
+      maxMemoryInputs
+    });
+  } catch (error51) {
+    return HistoryRecallReportV1.parse({
+      api_version: "history-recall-report-v1",
+      schema_version: 1,
+      status: "unavailable",
+      query: options.query,
+      rebuilt: false,
+      authority_notice: HISTORY_AUTHORITY_NOTICE,
+      memory_input_count: 0,
+      memory_inputs: [],
+      matches: [],
+      warnings: [unavailableWarning(error51)]
+    });
+  }
+}
+
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync12, readFileSync as readFileSync24 } from "node:fs";
+import { existsSync as existsSync15, readFileSync as readFileSync27 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join12, resolve as resolve6 } from "node:path";
+import { join as join13, resolve as resolve8 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
-  return join12(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+  return join13(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
 function projectConfigPath(cwd = process.cwd()) {
-  return join12(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+  return join13(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
 function parseConfigYaml(text, sourcePath) {
   try {
@@ -51048,10 +53591,10 @@ function parseConfigYaml(text, sourcePath) {
   }
 }
 function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve6(sourcePath);
-  if (!existsSync12(abs))
+  const abs = resolve8(sourcePath);
+  if (!existsSync15(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync24(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync27(abs, "utf8"), abs);
   if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
     const schemaVersion = raw.schema_version;
     if (schemaVersion === 2) {
@@ -51346,73 +53889,8 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, rmSync, writeFileSync } from "node:fs";
-import { dirname as dirname5, isAbsolute as isAbsolute8, join as join13, relative as relative8, resolve as resolve8 } from "node:path";
-
-// dist/schemas/operator-summary.js
-var OperatorSummaryWarning = external_exports.object({
-  kind: external_exports.string().min(1),
-  message: external_exports.string().min(1),
-  path: external_exports.string().min(1).optional()
-}).strict();
-var OperatorSummaryReportLink = external_exports.object({
-  label: external_exports.string().min(1),
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1).optional()
-}).strict();
-var OperatorBriefSlots = external_exports.object({
-  headline: external_exports.string().min(1),
-  primary: external_exports.object({
-    label: external_exports.string().min(1),
-    text: external_exports.string().min(1)
-  }).strict(),
-  why: external_exports.string().min(1).optional(),
-  startWith: external_exports.string().min(1).optional(),
-  cautions: external_exports.array(external_exports.string().min(1)),
-  nextStep: external_exports.string().min(1).optional()
-}).strict();
-var OperatorAutoResolution = external_exports.object({
-  checkpoint_id: external_exports.string().min(1),
-  checkpoint_label: external_exports.string().min(1).optional(),
-  policy: external_exports.literal("highest-score"),
-  resolved_value: external_exports.string().min(1),
-  alternatives_available: external_exports.array(external_exports.string().min(1)),
-  scores: external_exports.record(external_exports.string().min(1), external_exports.object({
-    aggregate_score: external_exports.number().min(0).max(1),
-    runtime_veto_count: external_exports.number().int().nonnegative()
-  }).strict()),
-  rubric_results: external_exports.record(external_exports.string().min(1), RubricResult),
-  winning_score: external_exports.number().min(0).max(1),
-  runner_up_score: external_exports.number().min(0).max(1).optional(),
-  margin: external_exports.number().nullable(),
-  tie_break: external_exports.string().min(1),
-  runtime_veto_effect: external_exports.string().min(1),
-  resolved_at: external_exports.string().min(1)
-}).strict();
-var OperatorSummary = external_exports.object({
-  schema_version: external_exports.literal(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  selected_flow: CompiledFlowId,
-  routed_by: external_exports.enum(["explicit", "classifier"]).optional(),
-  router_reason: external_exports.string().min(1).optional(),
-  outcome: external_exports.union([RunClosedOutcome, external_exports.literal("checkpoint_waiting")]),
-  headline: external_exports.string().min(1),
-  status_text: external_exports.string().min(1).max(MAX_STATUS_TEXT_CHARS).optional(),
-  brief_slots: OperatorBriefSlots.optional(),
-  details: external_exports.array(external_exports.string().min(1)),
-  evidence_warnings: external_exports.array(OperatorSummaryWarning),
-  run_folder: external_exports.string().min(1),
-  result_path: external_exports.string().min(1).optional(),
-  html_path: external_exports.string().min(1).optional(),
-  report_paths: external_exports.array(OperatorSummaryReportLink),
-  auto_resolutions: external_exports.array(OperatorAutoResolution).optional(),
-  checkpoint: external_exports.object({
-    step_id: external_exports.string().min(1),
-    request_path: external_exports.string().min(1),
-    allowed_choices: external_exports.array(external_exports.string().min(1)).min(1)
-  }).strict().optional()
-}).strict();
+import { existsSync as existsSync17, mkdirSync as mkdirSync2, readFileSync as readFileSync29, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
+import { dirname as dirname5, isAbsolute as isAbsolute9, join as join14, relative as relative9, resolve as resolve10 } from "node:path";
 
 // dist/shared/html/page.js
 var ESCAPE_MAP = {
@@ -51731,7 +54209,7 @@ function stringField(report, key) {
   const value = report?.[key];
   return typeof value === "string" && value.length > 0 ? value : void 0;
 }
-function isObject2(value) {
+function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function verdictBadgeText(verdict) {
@@ -51841,7 +54319,7 @@ function renderAutoResolutions(records) {
 `;
 }
 function loadHtmlPayload(flowReport, readEvidenceReportById) {
-  const snapshot = isObject2(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
   if (stringField(snapshot, "decision_verdict") !== "decided")
     return void 0;
   const optionsRaw = readEvidenceReportById("explore.decision-options");
@@ -51900,7 +54378,7 @@ ${autoResolutions}
 };
 
 // dist/shared/html/multi-variant.js
-import { isAbsolute as isAbsolute7, relative as relative7, resolve as resolve7 } from "node:path";
+import { isAbsolute as isAbsolute8, relative as relative8, resolve as resolve9 } from "node:path";
 import { pathToFileURL } from "node:url";
 var PREVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
   ".gif",
@@ -51934,24 +54412,24 @@ function toBrowserPath(value) {
 function encodeUrlPath(value) {
   return value.split("/").map((part) => part === ".." || part === "." ? part : encodeURIComponent(part)).join("/");
 }
-function isInside2(root, target) {
-  const fromRoot = relative7(root, target);
-  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+function isInside3(root, target) {
+  const fromRoot = relative8(root, target);
+  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute8(fromRoot);
 }
 function runIdFromFolder(runFolder) {
-  const parts = toBrowserPath(resolve7(runFolder)).split("/").filter((part) => part.length > 0);
+  const parts = toBrowserPath(resolve9(runFolder)).split("/").filter((part) => part.length > 0);
   return parts.at(-1);
 }
 function runArtifactPreviewHref(input) {
   if (!isPreviewableArtifactPath(input.entryPath))
     return void 0;
-  const reportsDir = resolve7(input.runFolder, "reports");
-  const runRoot = resolve7(input.runFolder);
-  if (isAbsolute7(input.entryPath)) {
-    const absoluteEntry = resolve7(input.entryPath);
-    if (!isInside2(runRoot, absoluteEntry))
+  const reportsDir = resolve9(input.runFolder, "reports");
+  const runRoot = resolve9(input.runFolder);
+  if (isAbsolute8(input.entryPath)) {
+    const absoluteEntry = resolve9(input.entryPath);
+    if (!isInside3(runRoot, absoluteEntry))
       return void 0;
-    return encodeUrlPath(toBrowserPath(relative7(reportsDir, absoluteEntry)));
+    return encodeUrlPath(toBrowserPath(relative8(reportsDir, absoluteEntry)));
   }
   const normalized = toBrowserPath(input.entryPath).replace(/^\.\//, "");
   if (normalized.split("/").some((part) => part === ".."))
@@ -51964,9 +54442,9 @@ function runArtifactPreviewHref(input) {
     return encodeUrlPath(`../${normalized.slice(currentRunPrefix.length)}`);
   }
   if (input.projectRoot !== void 0) {
-    const projectRoot = resolve7(input.projectRoot);
-    const absoluteEntry = resolve7(projectRoot, normalized);
-    if (!isInside2(projectRoot, absoluteEntry))
+    const projectRoot = resolve9(input.projectRoot);
+    const absoluteEntry = resolve9(projectRoot, normalized);
+    if (!isInside3(projectRoot, absoluteEntry))
       return void 0;
     return pathToFileURL(absoluteEntry).href;
   }
@@ -52452,16 +54930,16 @@ var HTML_PROJECTORS = {
 };
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync13, readFileSync as readFileSync25 } from "node:fs";
-function isObject3(value) {
+import { existsSync as existsSync16, readFileSync as readFileSync28 } from "node:fs";
+function isObject4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync13(path))
+  if (!existsSync16(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync25(path, "utf8"));
-  return isObject3(parsed) ? parsed : void 0;
+  const parsed = JSON.parse(readFileSync28(path, "utf8"));
+  return isObject4(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
   const value = report?.[key];
@@ -52480,11 +54958,11 @@ function stringArrayField(report, key) {
 }
 function objectField(report, key) {
   const value = report?.[key];
-  return isObject3(value) ? value : void 0;
+  return isObject4(value) ? value : void 0;
 }
 function evidenceReportById(runFolder, flowReport, reportId) {
   for (const item of arrayField(flowReport, "evidence_links")) {
-    if (!isObject3(item))
+    if (!isObject4(item))
       continue;
     if (stringField2(item, "report_id") !== reportId)
       continue;
@@ -52617,7 +55095,7 @@ function exploreDecisionReport(runFolder, flowReport) {
   return evidenceReportById(runFolder, flowReport, "explore.decision") ?? readJsonIfPresent(runFolder, "reports/decision.json");
 }
 function exploreTournamentSnapshot(flowReport) {
-  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  const snapshot = isObject4(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
   if (stringField2(snapshot, "decision_verdict") === "decided")
     return snapshot;
   return stringField2(snapshot, "selected_option_id") === void 0 ? void 0 : snapshot;
@@ -52663,7 +55141,7 @@ function exploreGuidanceDetails(flowReport) {
   ].filter((detail) => detail !== void 0);
 }
 var exploreSummaryProjector = ({ runFolder, flowReport, resultSummary: resultSummary2 }) => {
-  const verdictSnapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  const verdictSnapshot = isObject4(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
   const headline = (() => {
     if (exploreTournamentSnapshot(flowReport) !== void 0) {
       const decisionReport = exploreDecisionReport(runFolder, flowReport);
@@ -52726,7 +55204,7 @@ function reviewFindingDetails(report) {
   }
   const lines = [];
   for (const finding of findings) {
-    if (!isObject3(finding))
+    if (!isObject4(finding))
       continue;
     const severity = (stringField2(finding, "severity") ?? "unknown").toUpperCase();
     const text = stringField2(finding, "text") ?? "(no text)";
@@ -52754,7 +55232,7 @@ function reviewAssessmentDetails(report) {
   return lines;
 }
 function reviewEvidenceDetails(report) {
-  const evidenceSummary2 = isObject3(report?.evidence_summary) ? report.evidence_summary : void 0;
+  const evidenceSummary2 = isObject4(report?.evidence_summary) ? report.evidence_summary : void 0;
   const kind = stringField2(evidenceSummary2, "kind");
   if (kind === "unavailable") {
     const message = stringField2(evidenceSummary2, "message");
@@ -52781,7 +55259,7 @@ function reviewEvidenceDetails(report) {
   return [];
 }
 function hasEvidenceWarningKind(report, kind) {
-  return arrayField(report, "evidence_warnings").some((item) => isObject3(item) && stringField2(item, "kind") === kind);
+  return arrayField(report, "evidence_warnings").some((item) => isObject4(item) && stringField2(item, "kind") === kind);
 }
 var reviewProjector = ({ flowReport }) => {
   const verdict = stringField2(flowReport, "verdict") ?? "review complete";
@@ -52860,7 +55338,7 @@ function goalArrayDetail(flowReport, field, label) {
   return `${label}: ${values.length === 0 ? "none" : values.join("; ")}.`;
 }
 function goalEvidenceDetails(flowReport) {
-  const links = arrayField(flowReport, "evidence_links").filter(isObject3).map((link) => {
+  const links = arrayField(flowReport, "evidence_links").filter(isObject4).map((link) => {
     const reportId = stringField2(link, "report_id") ?? "report";
     const path = stringField2(link, "path") ?? "(missing path)";
     return `${reportId} -> ${path}`;
@@ -52868,7 +55346,7 @@ function goalEvidenceDetails(flowReport) {
   return `Checks: ${links.length === 0 ? "none" : links.join("; ")}.`;
 }
 function goalGateDetail(flowReport) {
-  const gate = isObject3(flowReport?.gate) ? flowReport.gate : void 0;
+  const gate = isObject4(flowReport?.gate) ? flowReport.gate : void 0;
   const clean = numberField(gate, "clean_streak") ?? 0;
   const required2 = numberField(gate, "required_passes") ?? 2;
   const verdict = stringField2(gate, "final_verdict") ?? "unknown";
@@ -52920,7 +55398,7 @@ var prototypeProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
 };
 var goalProjector = ({ flowReport, runOutcome: runOutcome2 }) => {
   const outcome = flowOutcomeOrRunFallback(flowReport, runOutcome2);
-  const gate = isObject3(flowReport?.gate) ? flowReport.gate : void 0;
+  const gate = isObject4(flowReport?.gate) ? flowReport.gate : void 0;
   const clean = numberField(gate, "clean_streak") ?? 0;
   const required2 = numberField(gate, "required_passes") ?? 2;
   const headline = outcome === "complete" ? `Circuit: Goal complete. Evidence satisfied and safety review passed ${clean}/${required2}.` : `Circuit: Goal finished with outcome ${outcome}. Safety review passed ${clean}/${required2}.`;
@@ -52988,12 +55466,12 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join13(runFolder, "reports", "operator-summary.json");
-  if (!existsSync14(path))
+  const path = join14(runFolder, "reports", "operator-summary.json");
+  if (!existsSync17(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync26(path, "utf8"));
-    if (!isObject3(raw))
+    const raw = JSON.parse(readFileSync29(path, "utf8"));
+    if (!isObject4(raw))
       return {};
     const routedBy = raw.routed_by;
     const routerReason = raw.router_reason;
@@ -53007,32 +55485,32 @@ function readPriorRoute(runFolder) {
 }
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join13(runFolder, "reports", "operator-summary.json");
+  return join14(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join13(runFolder, "reports", "operator-summary.md");
+  return join14(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join13(runFolder, "reports", "operator-summary.html");
+  return join14(runFolder, "reports", "operator-summary.html");
 }
 function isInsideOrSame4(root, target) {
-  const fromRoot = relative8(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute8(fromRoot);
+  const fromRoot = relative9(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
 }
 function readCheckpointRequest(runFolder, checkpoint) {
   let requestPath;
   try {
-    requestPath = isAbsolute8(checkpoint.request_path) ? resolve8(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
+    requestPath = isAbsolute9(checkpoint.request_path) ? resolve10(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
   } catch {
     return void 0;
   }
-  if (!isInsideOrSame4(resolve8(runFolder), requestPath))
+  if (!isInsideOrSame4(resolve10(runFolder), requestPath))
     return void 0;
-  if (!existsSync14(requestPath))
+  if (!existsSync17(requestPath))
     return void 0;
   try {
-    const parsed = JSON.parse(readFileSync26(requestPath, "utf8"));
-    return isObject3(parsed) ? parsed : void 0;
+    const parsed = JSON.parse(readFileSync29(requestPath, "utf8"));
+    return isObject4(parsed) ? parsed : void 0;
   } catch {
     return void 0;
   }
@@ -53040,10 +55518,10 @@ function readCheckpointRequest(runFolder, checkpoint) {
 function checkpointProjectRoot(runFolder, checkpoint) {
   const request = readCheckpointRequest(runFolder, checkpoint);
   const executionContext = request?.execution_context;
-  if (!isObject3(executionContext))
+  if (!isObject4(executionContext))
     return void 0;
   const projectRoot = stringField2(executionContext, "project_root");
-  return projectRoot !== void 0 && isAbsolute8(projectRoot) ? projectRoot : void 0;
+  return projectRoot !== void 0 && isAbsolute9(projectRoot) ? projectRoot : void 0;
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -53054,7 +55532,7 @@ function reportLink(runFolder, label, relPath, schema) {
 }
 function warningRecords(report) {
   return arrayField(report, "evidence_warnings").flatMap((item) => {
-    if (!isObject3(item))
+    if (!isObject4(item))
       return [];
     const kind = stringField2(item, "kind");
     const message = stringField2(item, "message");
@@ -53066,7 +55544,7 @@ function warningRecords(report) {
 }
 function evidenceLinks2(runFolder, report) {
   return arrayField(report, "evidence_links").flatMap((item) => {
-    if (!isObject3(item))
+    if (!isObject4(item))
       return [];
     const reportId = stringField2(item, "report_id");
     const path = stringField2(item, "path");
@@ -53080,11 +55558,11 @@ function evidenceLinks2(runFolder, report) {
   });
 }
 function readAutoResolutions(runFolder) {
-  const tracePath = join13(runFolder, "trace.ndjson");
-  if (!existsSync14(tracePath))
+  const tracePath = join14(runFolder, "trace.ndjson");
+  if (!existsSync17(tracePath))
     return [];
   const records = [];
-  for (const line of readFileSync26(tracePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync29(tracePath, "utf8").split(/\r?\n/)) {
     if (line.trim().length === 0)
       continue;
     let entry;
@@ -53093,7 +55571,7 @@ function readAutoResolutions(runFolder) {
     } catch {
       continue;
     }
-    if (!isObject3(entry))
+    if (!isObject4(entry))
       continue;
     if (entry.kind !== "checkpoint.resolved" || entry.auto_resolved !== true)
       continue;
@@ -53101,7 +55579,7 @@ function readAutoResolutions(runFolder) {
     if (responsePath === void 0)
       continue;
     const response = readJsonIfPresent(runFolder, responsePath);
-    const autoResolution = isObject3(response) ? response.auto_resolution : void 0;
+    const autoResolution = isObject4(response) ? response.auto_resolution : void 0;
     const parsed = OperatorAutoResolution.safeParse(autoResolution);
     if (parsed.success)
       records.push(parsed.data);
@@ -53128,7 +55606,7 @@ function checkpointOptionDetails(runFolder, allowedChoices) {
   const optionsReport = readJsonIfPresent(runFolder, "reports/decision-options.json");
   const labelsById = /* @__PURE__ */ new Map();
   for (const option of arrayField(optionsReport, "options")) {
-    if (!isObject3(option))
+    if (!isObject4(option))
       continue;
     const id = stringField2(option, "id");
     const label = stringField2(option, "label");
@@ -53183,7 +55661,7 @@ function writeOperatorSummary(input) {
   const autoResolutions = readAutoResolutions(input.runFolder);
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
-  mkdirSync(dirname5(outJsonPath), { recursive: true });
+  mkdirSync2(dirname5(outJsonPath), { recursive: true });
   const projector = HTML_PROJECTORS[flowId];
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath;
@@ -53214,14 +55692,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync14(candidateHtmlPath))
+    if (existsSync17(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
-      writeFileSync(candidateHtmlPath, renderedHtml);
+      writeFileSync2(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync14(candidateHtmlPath))
+      if (existsSync17(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -53291,9 +55769,9 @@ function writeOperatorSummary(input) {
     ...autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions },
     ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {}
   });
-  writeFileSync(outJsonPath, `${JSON.stringify(candidate, null, 2)}
+  writeFileSync2(outJsonPath, `${JSON.stringify(candidate, null, 2)}
 `);
-  writeFileSync(outMarkdownPath, renderMarkdown(candidate));
+  writeFileSync2(outMarkdownPath, renderMarkdown(candidate));
   return outHtmlPath === void 0 ? { summary: candidate, jsonPath: outJsonPath, markdownPath: outMarkdownPath } : {
     summary: candidate,
     jsonPath: outJsonPath,
@@ -53304,13 +55782,13 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync15, mkdirSync as mkdirSync2, readFileSync as readFileSync28, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync18, mkdirSync as mkdirSync3, readFileSync as readFileSync31, rmSync as rmSync2, writeFileSync as writeFileSync3 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname7, join as join14, resolve as resolve10 } from "node:path";
+import { dirname as dirname7, join as join15, resolve as resolve12 } from "node:path";
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync27 } from "node:fs";
-import { dirname as dirname6, relative as relative9, resolve as resolve9 } from "node:path";
+import { readFileSync as readFileSync30 } from "node:fs";
+import { dirname as dirname6, relative as relative10, resolve as resolve11 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -53321,14 +55799,14 @@ var RUNTIME_POLICY_REASONS = {
 var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit create` publish a normal runnable flow command.";
 var CLI_RUNTIME_ROUTING_POLICY = "Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.";
 function pathIsInside(parent, child) {
-  const rel = relative9(parent, child);
+  const rel = relative10(parent, child);
   return rel.length === 0 || !rel.startsWith("..") && !rel.startsWith("/");
 }
 function fixtureEligibleForRuntime(input) {
   if (input.args.fixturePath === void 0 && input.args.flowRoot === void 0)
     return true;
-  const fixturePath = resolve9(input.fixturePath);
-  if (pathIsInside(resolve9(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
+  const fixturePath = resolve11(input.fixturePath);
+  if (pathIsInside(resolve11(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
     return true;
   }
   if (input.args.flowRoot !== void 0 && publishedCustomFlowMatches(input.args.flowRoot, fixturePath)) {
@@ -53338,12 +55816,12 @@ function fixtureEligibleForRuntime(input) {
   if (mirrorRoot === void 0 || mirrorRoot.length === 0 || input.args.flowRoot === void 0) {
     return false;
   }
-  const trustedMirrorRoot = resolve9(mirrorRoot);
-  return resolve9(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
+  const trustedMirrorRoot = resolve11(mirrorRoot);
+  return resolve11(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync27(resolve9(dirname6(resolve9(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync30(resolve11(dirname6(resolve11(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -53354,7 +55832,7 @@ function publishedCustomFlowMatches(flowRoot2, fixturePath) {
         return false;
       }
       const flowPath = candidate.flow_path;
-      return typeof flowPath === "string" && resolve9(flowPath) === fixturePath;
+      return typeof flowPath === "string" && resolve11(flowPath) === fixturePath;
     });
   } catch {
     return false;
@@ -53462,38 +55940,38 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve10(args.home ?? join14(homedir3(), ".config", "circuit", "custom"));
+  return resolve12(args.home ?? join15(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
-  return join14(home, "drafts", slug);
+  return join15(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join14(home, "skills", slug);
+  return join15(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join14(home, "flows");
+  return join15(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join14(home, "commands");
+  return join15(home, "commands");
 }
 function reportsRoot(home) {
-  return join14(home, "reports");
+  return join15(home, "reports");
 }
 function manifestPath(home) {
-  return join14(home, "manifest.json");
+  return join15(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join14(reportsRoot(home), `${slug}-create-result.json`);
+  return join15(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join14(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join15(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
-  mkdirSync2(dirname7(path), { recursive: true });
-  writeFileSync2(path, text.endsWith("\n") ? text : `${text}
+  mkdirSync3(dirname7(path), { recursive: true });
+  writeFileSync3(path, text.endsWith("\n") ? text : `${text}
 `);
 }
 function writeJson(path, value) {
@@ -53510,13 +55988,13 @@ function validateCustomFlow(slug, flow, source) {
 }
 function candidateTemplatePaths(args) {
   const roots = [args.templateFlowRoot, "generated/flows", "plugins/codex/flows"].filter((root) => root !== void 0);
-  return roots.map((root) => resolve10(root, "build", "circuit.json"));
+  return roots.map((root) => resolve12(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync15(candidate))
+    if (!existsSync18(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync28(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync31(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -53595,8 +56073,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync15(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync28(manifestPath(input.home), "utf8"));
+  if (existsSync18(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync31(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -53607,16 +56085,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join14(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join14(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join14(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join15(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join15(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join15(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join14(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join15(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -53626,11 +56104,11 @@ function writeValidationResult(input) {
 function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
-  mkdirSync2(root, { recursive: true });
-  writeText(join14(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join14(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
-  writeJson(join14(root, "circuit.json"), input.flow);
-  writeText(join14(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  mkdirSync3(root, { recursive: true });
+  writeText(join15(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join15(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
+  writeJson(join15(root, "circuit.json"), input.flow);
+  writeText(join15(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -53639,24 +56117,24 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join14(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync28(path, "utf8")));
+  const path = join15(draftRoot(home, slug), "circuit.json");
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync31(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync15(join14(draft, "SKILL.md"))) {
+  if (!existsSync18(join15(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join14(flowRoot(input.home), input.slug);
-  mkdirSync2(skillRoot, { recursive: true });
-  mkdirSync2(customFlowRoot, { recursive: true });
-  writeText(join14(skillRoot, "SKILL.md"), readFileSync28(join14(draft, "SKILL.md"), "utf8"));
-  writeText(join14(skillRoot, "circuit.yaml"), readFileSync28(join14(draft, "circuit.yaml"), "utf8"));
-  writeText(join14(customFlowRoot, "circuit.json"), readFileSync28(join14(draft, "circuit.json"), "utf8"));
-  writeText(join14(commandRoot(input.home), `${input.slug}.md`), readFileSync28(join14(draft, "command.md"), "utf8"));
+  const customFlowRoot = join15(flowRoot(input.home), input.slug);
+  mkdirSync3(skillRoot, { recursive: true });
+  mkdirSync3(customFlowRoot, { recursive: true });
+  writeText(join15(skillRoot, "SKILL.md"), readFileSync31(join15(draft, "SKILL.md"), "utf8"));
+  writeText(join15(skillRoot, "circuit.yaml"), readFileSync31(join15(draft, "circuit.yaml"), "utf8"));
+  writeText(join15(customFlowRoot, "circuit.json"), readFileSync31(join15(draft, "circuit.json"), "utf8"));
+  writeText(join15(commandRoot(input.home), `${input.slug}.md`), readFileSync31(join15(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -53720,11 +56198,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync15(join14(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync18(join15(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync15(join14(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync18(join15(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -53748,11 +56226,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join14(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join15(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join14(flowRoot(home), slug, "circuit.json"),
-        command_path: join14(commandRoot(home), `${slug}.md`),
+        flow_path: join15(flowRoot(home), slug, "circuit.json"),
+        command_path: join15(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -53790,23 +56268,23 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync17, mkdirSync as mkdirSync3, readFileSync as readFileSync31, writeFileSync as writeFileSync4 } from "node:fs";
+import { copyFileSync, existsSync as existsSync20, mkdirSync as mkdirSync4, readFileSync as readFileSync34, writeFileSync as writeFileSync5 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname8, join as join18, resolve as resolve12 } from "node:path";
+import { dirname as dirname8, join as join19, resolve as resolve14 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/run-folder-projector.js
-import { constants, accessSync, statSync } from "node:fs";
-import { resolve as resolve11 } from "node:path";
+import { constants, accessSync, statSync as statSync3 } from "node:fs";
+import { resolve as resolve13 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync29, writeFileSync as writeFileSync3 } from "node:fs";
-import { join as join15 } from "node:path";
+import { readFileSync as readFileSync32, writeFileSync as writeFileSync4 } from "node:fs";
+import { join as join16 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join15(runFolder, "manifest.snapshot.json");
+  return join16(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync29(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync32(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -53815,131 +56293,8 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync16 } from "node:fs";
-import { join as join16 } from "node:path";
-
-// dist/schemas/run-status.js
-var RunStatusEngineState = external_exports.enum([
-  "open",
-  "waiting_checkpoint",
-  "completed",
-  "aborted",
-  "invalid"
-]);
-var RunStatusValidReason = external_exports.enum([
-  "active_or_unknown",
-  "checkpoint_waiting",
-  "run_closed"
-]);
-var RunStatusInvalidReason = external_exports.enum([
-  "manifest_invalid",
-  "trace_invalid",
-  "identity_mismatch",
-  "checkpoint_invalid",
-  "unknown"
-]);
-var RunStatusAction = external_exports.enum(["inspect", "resume", "none"]);
-var CurrentStepStatus = external_exports.object({
-  step_id: StepId,
-  attempt: external_exports.number().int().positive().optional(),
-  stage_id: StageId.optional(),
-  label: external_exports.string().min(1).optional()
-}).strict();
-var CheckpointChoiceStatus = external_exports.object({
-  id: external_exports.string().min(1),
-  label: external_exports.string().min(1),
-  value: external_exports.string().min(1)
-}).strict();
-var WaitingCheckpointStatus = external_exports.object({
-  checkpoint_id: external_exports.string().min(1),
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  prompt: external_exports.string().min(1).optional(),
-  choices: external_exports.array(CheckpointChoiceStatus).min(1),
-  request_path: external_exports.string().min(1).optional()
-}).strict();
-var LastRunStatusEvent = external_exports.object({
-  sequence: external_exports.number().int().nonnegative(),
-  type: external_exports.string().min(1),
-  timestamp: external_exports.string().datetime()
-}).strict();
-var RunStatusError = external_exports.object({
-  code: external_exports.string().min(1),
-  message: external_exports.string().min(1)
-}).strict();
-var ValidRunStatusBase = external_exports.object({
-  api_version: external_exports.literal("run-status-v1"),
-  schema_version: external_exports.literal(1),
-  run_folder: external_exports.string().min(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  goal: external_exports.string().min(1),
-  last_event: LastRunStatusEvent.optional(),
-  operator_summary_path: external_exports.string().min(1).optional(),
-  operator_summary_markdown_path: external_exports.string().min(1).optional(),
-  result_path: external_exports.string().min(1).optional()
-}).strict();
-var OpenRunStatusProjectionV1 = ValidRunStatusBase.extend({
-  engine_state: external_exports.literal("open"),
-  reason: external_exports.literal("active_or_unknown"),
-  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
-  current_step: CurrentStepStatus.optional()
-}).strict();
-var WaitingCheckpointRunStatusProjectionV1 = ValidRunStatusBase.extend({
-  engine_state: external_exports.literal("waiting_checkpoint"),
-  reason: external_exports.literal("checkpoint_waiting"),
-  legal_next_actions: external_exports.tuple([external_exports.literal("inspect"), external_exports.literal("resume")]),
-  current_step: CurrentStepStatus.optional(),
-  checkpoint: WaitingCheckpointStatus
-}).strict();
-var CompletedRunStatusProjectionV1 = ValidRunStatusBase.extend({
-  engine_state: external_exports.literal("completed"),
-  reason: external_exports.literal("run_closed"),
-  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
-  terminal_outcome: RunClosedOutcome.exclude(["aborted"])
-}).strict();
-var AbortedRunStatusProjectionV1 = ValidRunStatusBase.extend({
-  engine_state: external_exports.literal("aborted"),
-  reason: external_exports.literal("run_closed"),
-  legal_next_actions: external_exports.tuple([external_exports.literal("inspect")]),
-  terminal_outcome: external_exports.literal("aborted")
-}).strict();
-var InvalidRunStatusProjectionV1 = external_exports.object({
-  api_version: external_exports.literal("run-status-v1"),
-  schema_version: external_exports.literal(1),
-  run_folder: external_exports.string().min(1),
-  engine_state: external_exports.literal("invalid"),
-  reason: RunStatusInvalidReason,
-  legal_next_actions: external_exports.tuple([external_exports.literal("none")]),
-  error: RunStatusError,
-  run_id: RunId.optional(),
-  flow_id: CompiledFlowId.optional(),
-  goal: external_exports.string().min(1).optional()
-}).strict();
-var RunStatusProjectionV1 = external_exports.discriminatedUnion("engine_state", [
-  OpenRunStatusProjectionV1,
-  WaitingCheckpointRunStatusProjectionV1,
-  CompletedRunStatusProjectionV1,
-  AbortedRunStatusProjectionV1,
-  InvalidRunStatusProjectionV1
-]);
-var EngineErrorCodeV1 = external_exports.enum([
-  "invalid_invocation",
-  "folder_not_found",
-  "folder_unreadable",
-  "internal_error"
-]);
-var EngineErrorV1 = external_exports.object({
-  api_version: external_exports.literal("engine-error-v1"),
-  schema_version: external_exports.literal(1),
-  error: external_exports.object({
-    code: EngineErrorCodeV1,
-    message: external_exports.string().min(1)
-  }).strict(),
-  run_folder: external_exports.string().min(1).optional()
-}).strict();
-
-// dist/run-status/projection-common.js
+import { existsSync as existsSync19 } from "node:fs";
+import { join as join17 } from "node:path";
 function errorMessage3(err) {
   return err instanceof Error ? err.message : String(err);
 }
@@ -53974,12 +56329,12 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join16(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join16(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join17(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join17(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync16(result) ? { result_path: result } : {},
-    ...existsSync16(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync16(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync19(result) ? { result_path: result } : {},
+    ...existsSync19(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync19(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -53994,14 +56349,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync30 } from "node:fs";
-import { join as join17 } from "node:path";
+import { readFileSync as readFileSync33 } from "node:fs";
+import { join as join18 } from "node:path";
 function isRecord6(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join17(runFolder, "trace.ndjson");
-  const text = readFileSync30(tracePath, "utf8");
+  const tracePath = join18(runFolder, "trace.ndjson");
+  const text = readFileSync33(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -54186,7 +56541,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync30(requestAbs, "utf8");
+    requestText = readFileSync33(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -54247,7 +56602,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync30(join17(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync33(join18(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -54433,7 +56788,7 @@ var RunStatusFolderError = class extends Error {
 function assertReadableRunFolder(runFolder) {
   let stat2;
   try {
-    stat2 = statSync(runFolder);
+    stat2 = statSync3(runFolder);
   } catch (err) {
     const nodeCode = err.code;
     if (nodeCode === "ENOENT" || nodeCode === "ENOTDIR") {
@@ -54451,7 +56806,7 @@ function assertReadableRunFolder(runFolder) {
   }
 }
 function projectRunStatusFromRunFolder(runFolder) {
-  const resolvedRunFolder = resolve11(runFolder);
+  const resolvedRunFolder = resolve13(runFolder);
   assertReadableRunFolder(resolvedRunFolder);
   let manifest;
   try {
@@ -54478,131 +56833,6 @@ function projectRunStatusFromRunFolder(runFolder) {
     }
   });
 }
-
-// dist/schemas/snapshot.js
-var StepStatus = external_exports.enum(["pending", "in_progress", "check_failed", "complete", "aborted"]);
-var StepState = external_exports.object({
-  step_id: StepId,
-  status: StepStatus,
-  attempts: external_exports.number().int().nonnegative(),
-  last_report_path: external_exports.string().optional(),
-  last_checkpoint_selection: external_exports.string().optional(),
-  last_route_taken: external_exports.string().optional()
-}).strict();
-var SnapshotStatus = external_exports.enum([
-  "in_progress",
-  "complete",
-  "aborted",
-  "handoff",
-  "stopped",
-  "escalated"
-]);
-var Snapshot = external_exports.object({
-  schema_version: external_exports.literal(1),
-  run_id: RunId,
-  flow_id: CompiledFlowId,
-  invocation_id: InvocationId.optional(),
-  depth: Depth,
-  change_kind: ChangeKindDeclaration,
-  current_step: StepId.optional(),
-  status: SnapshotStatus,
-  steps: external_exports.array(StepState),
-  trace_entries_consumed: external_exports.number().int().nonnegative(),
-  manifest_hash: external_exports.string().min(1),
-  updated_at: external_exports.string().datetime()
-}).strict();
-
-// dist/schemas/continuity.js
-var GitState = external_exports.object({
-  cwd: external_exports.string().min(1),
-  branch: external_exports.string().optional(),
-  head: external_exports.string().optional(),
-  base_commit: external_exports.string().optional()
-}).strict();
-var ContinuityNarrative = external_exports.object({
-  goal: external_exports.string().min(1),
-  next: external_exports.string().min(1),
-  state_markdown: external_exports.string().min(1),
-  debt_markdown: external_exports.string().min(1)
-}).strict();
-var RunAttachedProvenance = external_exports.object({
-  run_id: RunId,
-  invocation_id: InvocationId.optional(),
-  current_stage: StageId,
-  current_step: StepId,
-  runtime_status: SnapshotStatus,
-  runtime_updated_at: external_exports.string().datetime()
-}).strict();
-var resumeContractRefine = (v) => v.auto_resume !== v.requires_explicit_resume;
-var resumeContractRefineMessage = {
-  message: "auto_resume and requires_explicit_resume are contradictory: exactly one must be true"
-};
-var StandaloneResumeContract = external_exports.object({
-  mode: external_exports.literal("resume_standalone"),
-  auto_resume: external_exports.boolean(),
-  requires_explicit_resume: external_exports.boolean()
-}).strict().refine(resumeContractRefine, resumeContractRefineMessage);
-var RunBackedResumeContract = external_exports.object({
-  mode: external_exports.literal("resume_run"),
-  auto_resume: external_exports.boolean(),
-  requires_explicit_resume: external_exports.boolean()
-}).strict().refine(resumeContractRefine, resumeContractRefineMessage);
-var ContinuityBase = external_exports.object({
-  schema_version: external_exports.literal(1),
-  record_id: ControlPlaneFileStem,
-  project_root: external_exports.string().min(1),
-  created_at: external_exports.string().datetime(),
-  git: GitState,
-  narrative: ContinuityNarrative
-});
-var StandaloneContinuity = ContinuityBase.extend({
-  continuity_kind: external_exports.literal("standalone"),
-  resume_contract: StandaloneResumeContract
-}).strict();
-var RunBackedContinuity = ContinuityBase.extend({
-  continuity_kind: external_exports.literal("run-backed"),
-  run_ref: RunAttachedProvenance,
-  resume_contract: RunBackedResumeContract
-}).strict();
-var recordOwnPropertyGuard = external_exports.custom((raw) => {
-  if (raw === null || typeof raw !== "object")
-    return true;
-  const guarded = ["schema_version", "record_id", "continuity_kind", "resume_contract"];
-  for (const f of guarded)
-    if (!Object.hasOwn(raw, f))
-      return false;
-  return true;
-}, "continuity record has inherited (not own) identity/discriminator field; prototype-chain smuggle rejected");
-var ContinuityRecord = recordOwnPropertyGuard.pipe(external_exports.discriminatedUnion("continuity_kind", [StandaloneContinuity, RunBackedContinuity]));
-var PendingRecordPointer = external_exports.object({
-  record_id: ControlPlaneFileStem,
-  continuity_kind: external_exports.union([external_exports.literal("standalone"), external_exports.literal("run-backed")]),
-  created_at: external_exports.string().datetime()
-}).strict();
-var AttachedRunPointer = external_exports.object({
-  run_id: RunId,
-  current_stage: StageId,
-  current_step: StepId,
-  runtime_status: SnapshotStatus,
-  attached_at: external_exports.string().datetime(),
-  last_validated_at: external_exports.string().datetime()
-}).strict();
-var ContinuityIndexBody = external_exports.object({
-  schema_version: external_exports.literal(1),
-  project_root: external_exports.string().min(1),
-  pending_record: PendingRecordPointer.nullable(),
-  current_run: AttachedRunPointer.nullable()
-}).strict();
-var indexOwnPropertyGuard = external_exports.custom((raw) => {
-  if (raw === null || typeof raw !== "object")
-    return true;
-  const guarded = ["schema_version", "project_root", "pending_record", "current_run"];
-  for (const f of guarded)
-    if (!Object.hasOwn(raw, f))
-      return false;
-  return true;
-}, "continuity index has inherited (not own) required field; prototype-chain smuggle rejected");
-var ContinuityIndex = indexOwnPropertyGuard.pipe(ContinuityIndexBody);
 
 // dist/cli/handoff.js
 var DEFAULT_CONTROL_PLANE = ".circuit";
@@ -54684,45 +56914,45 @@ function parseArgs2(argv) {
   };
 }
 function resolveProjectRootArg(args) {
-  return resolve12(args.projectRoot ?? process.cwd());
+  return resolve14(args.projectRoot ?? process.cwd());
 }
 function resolveControlPlaneArg(args) {
   if (args.controlPlane !== void 0)
-    return resolve12(args.controlPlane);
-  return resolve12(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
+    return resolve14(args.controlPlane);
+  return resolve14(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
 }
 function continuityRoot(controlPlane) {
-  return resolve12(controlPlane, "continuity");
+  return resolve14(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join18(continuityRoot(controlPlane), "records");
+  return join19(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join18(continuityRoot(controlPlane), "index.json");
+  return join19(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join18(recordsRoot(controlPlane), `${recordId}.json`);
+  return join19(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join18(continuityRoot(controlPlane), "reports");
+  return join19(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join18(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join19(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join18(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join19(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join18(controlPlane, "active-run.md");
+  return join19(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
-  mkdirSync3(dirname8(path), { recursive: true });
-  writeFileSync4(path, `${JSON.stringify(value, null, 2)}
+  mkdirSync4(dirname8(path), { recursive: true });
+  writeFileSync5(path, `${JSON.stringify(value, null, 2)}
 `);
 }
 function writeMarkdown(path, value) {
-  mkdirSync3(dirname8(path), { recursive: true });
-  writeFileSync4(path, value.endsWith("\n") ? value : `${value}
+  mkdirSync4(dirname8(path), { recursive: true });
+  writeFileSync5(path, value.endsWith("\n") ? value : `${value}
 `);
 }
 function composeHandoffBrief(record2, state, debt) {
@@ -54831,23 +57061,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync17(indexAbs))
+  if (!existsSync20(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync31(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync34(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync17(recordAbs)) {
+  if (!existsSync20(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
   try {
-    record2 = ContinuityRecord.parse(JSON.parse(readFileSync31(recordAbs, "utf8")));
+    record2 = ContinuityRecord.parse(JSON.parse(readFileSync34(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -54880,7 +57110,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync31(0, "utf8");
+  const raw = readFileSync34(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -54944,14 +57174,14 @@ function runHandoffHook(args) {
   return 0;
 }
 function defaultCodexHooksFile() {
-  const codexHome = process.env.CODEX_HOME ?? resolve12(homedir4(), ".codex");
-  return resolve12(codexHome, "hooks.json");
+  const codexHome = process.env.CODEX_HOME ?? resolve14(homedir4(), ".codex");
+  return resolve14(codexHome, "hooks.json");
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve12(pluginRoot, "scripts/circuit.ts");
+    return resolve14(pluginRoot, "scripts/circuit.ts");
   }
-  return resolve12(moduleDir, "../..", "bin/circuit");
+  return resolve14(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
@@ -54969,11 +57199,11 @@ function parseCodexHooksHost(args) {
   throw new Error("handoff hooks requires --host codex");
 }
 function resolveHooksFileArg(args) {
-  return resolve12(args.hooksFile ?? defaultCodexHooksFile());
+  return resolve14(args.hooksFile ?? defaultCodexHooksFile());
 }
 function resolveLauncherArg(args) {
-  const launcher = resolve12(args.launcher ?? defaultLauncherPath());
-  if (!existsSync17(launcher)) {
+  const launcher = resolve14(args.launcher ?? defaultLauncherPath());
+  if (!existsSync20(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -54999,9 +57229,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync17(path))
+  if (!existsSync20(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync31(path, "utf8"));
+  const parsed = JSON.parse(readFileSync34(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -55109,16 +57339,16 @@ function launcherPathFromCircuitHookCommand(command) {
   return launcher;
 }
 function writeHooksConfig(path, config2) {
-  mkdirSync3(dirname8(path), { recursive: true });
+  mkdirSync4(dirname8(path), { recursive: true });
   let backupPath;
-  if (existsSync17(path)) {
+  if (existsSync20(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync17(candidate)) {
+    if (!existsSync20(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
   }
-  writeFileSync4(path, `${JSON.stringify(config2, null, 2)}
+  writeFileSync5(path, `${JSON.stringify(config2, null, 2)}
 `);
   return backupPath === void 0 ? {} : { backupPath };
 }
@@ -55164,7 +57394,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync17(hooksPath)) {
+  if (!existsSync20(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -55203,7 +57433,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync17(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync20(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -55234,7 +57464,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync17(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync20(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -55258,7 +57488,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync17(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync20(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -55354,7 +57584,7 @@ function buildRecord(args, now) {
       }
     });
   }
-  const runFolder = resolve12(args.runFolder);
+  const runFolder = resolve14(args.runFolder);
   const { snapshot, currentStage } = loadRunBackedSnapshot(runFolder);
   if (snapshot.current_step === void 0) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
@@ -55456,7 +57686,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync31(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync34(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -55482,7 +57712,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync17(indexAbs)) {
+  if (!existsSync20(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -55520,7 +57750,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync17(recordAbs)) {
+  if (!existsSync20(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -55674,2085 +57904,6 @@ async function runHandoffCommand(argv, options = {}) {
 `);
     return 1;
   }
-}
-
-// dist/history/indexer.js
-import { existsSync as existsSync19, mkdirSync as mkdirSync4, readFileSync as readFileSync33, readdirSync as readdirSync3, renameSync, statSync as statSync3, writeFileSync as writeFileSync5 } from "node:fs";
-import { basename as basename2, join as join19, resolve as resolve14 } from "node:path";
-
-// dist/schemas/memory-input.js
-var ReasonCode2 = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
-var CONTINUITY_RECORD_REF_PATTERN = /(?:^|\/)continuity\/records\/[a-z0-9][a-z0-9._-]*\.json$/;
-var MemoryInputKind = external_exports.enum([
-  "repo",
-  "user",
-  "project",
-  "prior_run",
-  "continuity",
-  "handoff_brief"
-]);
-var MemoryHintAppliesTo = external_exports.enum([
-  "context",
-  "verification",
-  "preference",
-  "prior_failure",
-  "repo_convention",
-  "operator_note"
-]);
-var MemoryStalenessStatus = external_exports.enum(["fresh", "stale", "unknown"]);
-var MemorySource = external_exports.object({
-  ref: Ref,
-  captured_at: external_exports.string().datetime(),
-  source_updated_at: external_exports.string().datetime().optional(),
-  sha256: Sha256.optional()
-}).strict();
-var MemoryHint = external_exports.object({
-  id: ControlPlaneFileStem,
-  text: external_exports.string().min(1),
-  applies_to: MemoryHintAppliesTo
-}).strict();
-var MemoryStaleness = external_exports.object({
-  status: MemoryStalenessStatus,
-  checked_at: external_exports.string().datetime(),
-  reason_codes: external_exports.array(ReasonCode2).min(1)
-}).strict();
-var MemoryInputV0 = external_exports.object({
-  schema_version: external_exports.literal(1),
-  memory_id: ControlPlaneFileStem,
-  kind: MemoryInputKind,
-  source: MemorySource,
-  summary: external_exports.string().min(1),
-  hints: external_exports.array(MemoryHint).min(1),
-  staleness: MemoryStaleness,
-  authority: external_exports.literal("hint_only")
-}).strict().superRefine((memory, ctx) => {
-  if (memory.source.sha256 !== void 0 && memory.source.ref.sha256 !== void 0 && memory.source.sha256 !== memory.source.ref.sha256) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["source", "sha256"],
-      message: "source.sha256 must match source.ref.sha256 when both are present"
-    });
-  }
-  if (memory.kind === "continuity" && memory.source.ref.kind !== "report") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["source", "ref", "kind"],
-      message: "continuity memory must point at a continuity report ref"
-    });
-  }
-  if (memory.kind === "continuity" && !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["source", "ref", "ref"],
-      message: "continuity memory must point at continuity/records/<record>.json"
-    });
-  }
-  if (memory.kind === "handoff_brief" && memory.source.ref.kind !== "report" && memory.source.ref.kind !== "context_packet") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["source", "ref", "kind"],
-      message: "handoff brief memory must point at report or context_packet refs"
-    });
-  }
-  if (memory.staleness.status === "unknown" && !memory.staleness.reason_codes.includes("memory_unverified")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["staleness", "reason_codes"],
-      message: "unknown memory staleness requires memory_unverified reason code"
-    });
-  }
-  if (memory.staleness.status === "stale" && !memory.staleness.reason_codes.includes("memory_stale")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["staleness", "reason_codes"],
-      message: "stale memory requires memory_stale reason code"
-    });
-  }
-  const seenHints = /* @__PURE__ */ new Set();
-  for (const [index, hint] of memory.hints.entries()) {
-    if (seenHints.has(hint.id)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["hints", index, "id"],
-        message: `duplicate memory hint id: ${hint.id}`
-      });
-    }
-    seenHints.add(hint.id);
-  }
-});
-
-// dist/schemas/run.js
-var RunTraceBody = external_exports.array(TraceEntry).min(1);
-var issueAt4 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
-};
-function isGuidanceDecision(entry) {
-  return entry.kind === "guidance.decision";
-}
-function stableJson6(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
-function sameJson2(a, b) {
-  return stableJson6(a) === stableJson6(b);
-}
-function selectedRecord(entry) {
-  return entry.selected;
-}
-function priorFlowSelectionIndex(traceEntries, beforeIndex) {
-  return traceEntries.findIndex((entry, index) => {
-    return index < beforeIndex && isGuidanceDecision(entry) && entry.subject === "flow_selection";
-  });
-}
-function findPriorRelayGuidance(traceEntries, relay, beforeIndex) {
-  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "relay_execution") {
-      continue;
-    }
-    if (entry.scope.step_id !== relay.step_id || entry.scope.attempt !== relay.attempt) {
-      continue;
-    }
-    return entry;
-  }
-  return void 0;
-}
-function findFollowingRelayRequest(traceEntries, relay, afterIndex) {
-  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0)
-      continue;
-    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
-      return { entry, index };
-    }
-    if ((entry.kind === "relay.started" || entry.kind === "relay.completed") && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
-      return void 0;
-    }
-  }
-  return void 0;
-}
-function findFollowingSkillsLoaded(traceEntries, relay, afterIndex) {
-  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0)
-      continue;
-    if (entry.kind === "skills.loaded" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
-      return entry;
-    }
-    if (entry.kind === "relay.request" && entry.step_id === relay.step_id && entry.attempt === relay.attempt) {
-      return void 0;
-    }
-  }
-  return void 0;
-}
-function findPriorCheckpointGuidance(traceEntries, checkpoint, beforeIndex) {
-  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "checkpoint_resolution") {
-      continue;
-    }
-    if (entry.scope.step_id !== checkpoint.step_id || entry.scope.attempt !== checkpoint.attempt) {
-      continue;
-    }
-    return entry;
-  }
-  return void 0;
-}
-function findPriorProofPolicyGuidance(traceEntries, proof, beforeIndex) {
-  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "proof_policy" || entry.decision_id !== proof.proof_policy_decision_id) {
-      continue;
-    }
-    return entry;
-  }
-  return void 0;
-}
-function findPriorSafeApplyGuidance(traceEntries, result, beforeIndex) {
-  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply" || entry.decision_id !== result.decision_id) {
-      continue;
-    }
-    return entry;
-  }
-  return void 0;
-}
-function findFollowingStepCompleted(traceEntries, guidance, afterIndex) {
-  for (let index = afterIndex + 1; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0)
-      continue;
-    if (entry.kind === "step.completed" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
-      return { entry, index };
-    }
-    if (entry.kind === "step.entered" && entry.step_id === guidance.scope.step_id && entry.attempt === guidance.scope.attempt) {
-      return void 0;
-    }
-  }
-  return void 0;
-}
-function selectedSkills(selected) {
-  if (!Array.isArray(selected.skills))
-    return [];
-  return selected.skills.filter((skill) => skill !== null && typeof skill === "object" && !Array.isArray(skill));
-}
-function skillIdentity(skill) {
-  return {
-    id: skill.id,
-    ...skill.slot === void 0 ? {} : { slot: skill.slot }
-  };
-}
-function selectedSafeApplyActionMatches(selectedAction, resultAction) {
-  return selectedAction === "reject" && resultAction === "rejected" || selectedAction === "accept" && resultAction === "accepted_for_review" || selectedAction === "apply" && resultAction === "applied";
-}
-function scopeMatchesGuidance(entry, guidance) {
-  return entry.scope.flow_id === guidance.scope.flow_id && entry.scope.step_id === guidance.scope.step_id && entry.scope.attempt === guidance.scope.attempt;
-}
-function proofPolicyRequiresProvenClose(guidance) {
-  if (guidance.subject !== "proof_policy")
-    return false;
-  return selectedRecord(guidance).close_requires_proven === true;
-}
-function isPassingCloseProof(entry, guidance) {
-  return entry.proof_policy_decision_id === guidance.decision_id && entry.overall_status === "proven" && entry.close_allowed && scopeMatchesGuidance(entry, guidance);
-}
-function isPassingSafeApplyResult(entry) {
-  return entry.action === "applied" && entry.outcome === "pass" && entry.final_verification_ref !== void 0;
-}
-function proofPolicyCloseGateKey(guidance) {
-  const selected = selectedRecord(guidance);
-  return JSON.stringify({
-    flow_id: guidance.scope.flow_id,
-    step_id: guidance.scope.step_id,
-    proof_profile: selected.proof_profile,
-    required_claim_kinds: selected.required_claim_kinds,
-    required_evidence_kinds: selected.required_evidence_kinds
-  });
-}
-function validateCompleteCloseGates(traceEntries, ctx) {
-  const closeIndex = traceEntries.findIndex((entry) => entry?.kind === "run.closed" && entry.outcome === "complete");
-  if (closeIndex < 0)
-    return;
-  const latestRequiredProofByRequirement = /* @__PURE__ */ new Map();
-  for (let index = 0; index < closeIndex; index += 1) {
-    const guidance = traceEntries[index];
-    if (guidance === void 0 || !isGuidanceDecision(guidance) || !proofPolicyRequiresProvenClose(guidance)) {
-      continue;
-    }
-    latestRequiredProofByRequirement.set(proofPolicyCloseGateKey(guidance), { guidance, index });
-  }
-  for (const { guidance, index } of latestRequiredProofByRequirement.values()) {
-    const hasPassingProof = traceEntries.some((entry, proofIndex) => {
-      return proofIndex > index && proofIndex < closeIndex && entry?.kind === "proof.assessed" && isPassingCloseProof(entry, guidance);
-    });
-    if (!hasPassingProof) {
-      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing proof.assessed for proof_policy decision '${guidance.decision_id}'`);
-    }
-  }
-  let lastSafeApplyResult;
-  for (let index = 0; index < closeIndex; index += 1) {
-    const entry = traceEntries[index];
-    if (entry?.kind === "safe_apply.result") {
-      lastSafeApplyResult = { entry, index };
-    }
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "safe_apply") {
-      continue;
-    }
-    if (selectedRecord(entry).action !== "apply")
-      continue;
-    const hasPassingResult = traceEntries.some((candidate, resultIndex) => {
-      return resultIndex > index && resultIndex < closeIndex && candidate?.kind === "safe_apply.result" && candidate.decision_id === entry.decision_id && isPassingSafeApplyResult(candidate) && scopeMatchesGuidance(candidate, entry);
-    });
-    if (!hasPassingResult) {
-      issueAt4(ctx, [closeIndex, "kind"], `run.closed complete requires passing safe_apply.result for safe_apply decision '${entry.decision_id}'`);
-    }
-  }
-  if (lastSafeApplyResult !== void 0 && !isPassingSafeApplyResult(lastSafeApplyResult.entry)) {
-    issueAt4(ctx, [closeIndex, "kind"], `run.closed complete cannot follow non-passing safe_apply.result at index ${lastSafeApplyResult.index}`);
-  }
-}
-function validateGuidanceTraceSequence(traceEntries, ctx) {
-  const decisionIds = /* @__PURE__ */ new Map();
-  let hasGuidance = false;
-  let hasProofAssessment = false;
-  let hasSafeApplyResult = false;
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry?.kind === "proof.assessed") {
-      hasProofAssessment = true;
-    }
-    if (entry?.kind === "safe_apply.result") {
-      hasSafeApplyResult = true;
-    }
-    if (entry === void 0 || !isGuidanceDecision(entry))
-      continue;
-    hasGuidance = true;
-    const priorIndex = decisionIds.get(entry.decision_id);
-    if (priorIndex !== void 0) {
-      issueAt4(ctx, [index, "decision_id"], `duplicate guidance.decision id '${entry.decision_id}' first appeared at index ${priorIndex}`);
-    } else {
-      decisionIds.set(entry.decision_id, index);
-    }
-  }
-  if (!hasGuidance && !hasProofAssessment && !hasSafeApplyResult)
-    return;
-  const bootstrap = traceEntries[0];
-  if (bootstrap?.kind !== "run.bootstrapped")
-    return;
-  const firstMaterial = traceEntries[1];
-  if (firstMaterial === void 0 || !isGuidanceDecision(firstMaterial) || firstMaterial.subject !== "flow_selection") {
-    issueAt4(ctx, [1, "kind"], "when guidance decisions are present, flow_selection guidance must be the first entry after run.bootstrapped");
-  } else {
-    const selected = selectedRecord(firstMaterial);
-    if (selected.flow_id !== bootstrap.flow_id) {
-      issueAt4(ctx, [1, "selected", "flow_id"], `flow_selection guidance selected flow '${String(selected.flow_id)}' but bootstrap flow_id is '${bootstrap.flow_id}'`);
-    }
-  }
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0)
-      continue;
-    if (entry.kind === "step.entered" && priorFlowSelectionIndex(traceEntries, index) < 0) {
-      issueAt4(ctx, [index, "kind"], "step.entered requires prior flow_selection guidance when guidance decisions are present");
-    }
-    if (isGuidanceDecision(entry) && entry.subject !== "flow_selection") {
-      if (entry.scope.flow_id !== bootstrap.flow_id) {
-        issueAt4(ctx, [index, "scope", "flow_id"], `guidance.decision scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
-      }
-    }
-    if (entry.kind !== "relay.started" && entry.kind !== "relay.failed")
-      continue;
-    const guidance = findPriorRelayGuidance(traceEntries, entry, index);
-    if (guidance === void 0) {
-      issueAt4(ctx, [index, "kind"], `${entry.kind} requires prior matching relay_execution guidance when guidance decisions are present`);
-      continue;
-    }
-    const selected = selectedRecord(guidance);
-    if (selected.role !== entry.role) {
-      issueAt4(ctx, [index, "role"], `${entry.kind} role '${entry.role}' does not match relay_execution guidance role '${String(selected.role)}'`);
-    }
-    if (!sameJson2(selected.connector, entry.connector)) {
-      issueAt4(ctx, [index, "connector"], `${entry.kind} connector does not match relay_execution guidance connector`);
-    }
-    if (!sameJson2(selected.model, entry.resolved_selection.model)) {
-      issueAt4(ctx, [index, "resolved_selection", "model"], `${entry.kind} resolved_selection.model does not match relay_execution guidance model`);
-    }
-    if (selected.effort !== entry.resolved_selection.effort) {
-      issueAt4(ctx, [index, "resolved_selection", "effort"], `${entry.kind} resolved_selection.effort does not match relay_execution guidance effort`);
-    }
-    if (entry.kind === "relay.started") {
-      const request = findFollowingRelayRequest(traceEntries, entry, index);
-      if (request === void 0) {
-        issueAt4(ctx, [index, "kind"], "relay.started requires a following relay.request for the same step attempt when guidance decisions are present");
-      } else if (selected.request_payload_hash !== request.entry.request_payload_hash) {
-        issueAt4(ctx, [request.index, "request_payload_hash"], "relay.request request_payload_hash does not match relay_execution guidance request_payload_hash");
-      }
-      const selectedLoadedSkills = selectedSkills(selected).map(skillIdentity);
-      const loaded = findFollowingSkillsLoaded(traceEntries, entry, index);
-      if (loaded === void 0) {
-        if (selectedLoadedSkills.length > 0) {
-          issueAt4(ctx, [index, "kind"], "relay.started with selected skills requires a following skills.loaded entry for the same step attempt");
-        }
-      } else {
-        const loadedSkills = loaded.skills.map(skillIdentity);
-        if (!sameJson2(selectedLoadedSkills, loadedSkills)) {
-          issueAt4(ctx, [index, "kind"], "skills.loaded entries do not match relay_execution guidance skills");
-        }
-      }
-    }
-    if (entry.kind === "relay.failed" && selected.request_payload_hash !== entry.request_payload_hash) {
-      issueAt4(ctx, [index, "request_payload_hash"], "relay.failed request_payload_hash does not match relay_execution guidance request_payload_hash");
-    }
-  }
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry?.kind !== "checkpoint.resolved")
-      continue;
-    const guidance = findPriorCheckpointGuidance(traceEntries, entry, index);
-    if (guidance === void 0) {
-      issueAt4(ctx, [index, "kind"], "checkpoint.resolved requires prior matching checkpoint_resolution guidance when guidance decisions are present");
-      continue;
-    }
-    const selected = selectedRecord(guidance);
-    if (selected.choice_id !== entry.selection) {
-      issueAt4(ctx, [index, "selection"], `checkpoint.resolved selection '${entry.selection}' does not match checkpoint guidance choice '${String(selected.choice_id)}'`);
-    }
-    if (selected.route_id !== entry.route_id) {
-      issueAt4(ctx, [index, "route_id"], `checkpoint.resolved route_id '${entry.route_id}' does not match checkpoint guidance route '${String(selected.route_id)}'`);
-    }
-    if (selected.auto_resolved !== entry.auto_resolved) {
-      issueAt4(ctx, [index, "auto_resolved"], "checkpoint.resolved auto_resolved does not match checkpoint guidance");
-    }
-    if (selected.resolution_source !== entry.resolution_source) {
-      issueAt4(ctx, [index, "resolution_source"], `checkpoint.resolved resolution_source '${entry.resolution_source}' does not match checkpoint guidance source '${String(selected.resolution_source)}'`);
-    }
-  }
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry?.kind !== "proof.assessed")
-      continue;
-    if (entry.scope.flow_id !== bootstrap.flow_id) {
-      issueAt4(ctx, [index, "scope", "flow_id"], `proof.assessed scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
-    }
-    const guidance = findPriorProofPolicyGuidance(traceEntries, entry, index);
-    if (guidance === void 0) {
-      issueAt4(ctx, [index, "proof_policy_decision_id"], "proof.assessed requires prior matching proof_policy guidance when guidance decisions are present");
-      continue;
-    }
-    if (guidance.scope.flow_id !== entry.scope.flow_id) {
-      issueAt4(ctx, [index, "scope", "flow_id"], "proof.assessed flow scope does not match proof_policy guidance");
-    }
-    if (guidance.scope.step_id !== entry.scope.step_id) {
-      issueAt4(ctx, [index, "scope", "step_id"], "proof.assessed step scope does not match proof_policy guidance");
-    }
-    if (guidance.scope.attempt !== entry.scope.attempt) {
-      issueAt4(ctx, [index, "scope", "attempt"], "proof.assessed attempt scope does not match proof_policy guidance");
-    }
-  }
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry === void 0 || !isGuidanceDecision(entry) || entry.subject !== "recovery_route") {
-      continue;
-    }
-    const completed = findFollowingStepCompleted(traceEntries, entry, index);
-    if (completed === void 0) {
-      issueAt4(ctx, [index, "kind"], "recovery_route guidance requires a following step.completed for the same step attempt");
-      continue;
-    }
-    const selected = selectedRecord(entry);
-    if (selected.route_id !== completed.entry.route_taken) {
-      issueAt4(ctx, [completed.index, "route_taken"], `step.completed route_taken '${completed.entry.route_taken}' does not match recovery guidance route '${String(selected.route_id)}'`);
-    }
-  }
-  for (let index = 0; index < traceEntries.length; index += 1) {
-    const entry = traceEntries[index];
-    if (entry?.kind !== "safe_apply.result")
-      continue;
-    if (entry.scope.flow_id !== bootstrap.flow_id) {
-      issueAt4(ctx, [index, "scope", "flow_id"], `safe_apply.result scope.flow_id '${String(entry.scope.flow_id)}' does not match bootstrap flow_id '${bootstrap.flow_id}'`);
-    }
-    const guidance = findPriorSafeApplyGuidance(traceEntries, entry, index);
-    if (guidance === void 0) {
-      issueAt4(ctx, [index, "decision_id"], "safe_apply.result requires prior matching safe_apply guidance when guidance decisions are present");
-      continue;
-    }
-    if (guidance.scope.flow_id !== entry.scope.flow_id) {
-      issueAt4(ctx, [index, "scope", "flow_id"], "safe_apply.result flow scope does not match safe_apply guidance");
-    }
-    if (guidance.scope.step_id !== entry.scope.step_id) {
-      issueAt4(ctx, [index, "scope", "step_id"], "safe_apply.result step scope does not match safe_apply guidance");
-    }
-    if (guidance.scope.attempt !== entry.scope.attempt) {
-      issueAt4(ctx, [index, "scope", "attempt"], "safe_apply.result attempt scope does not match safe_apply guidance");
-    }
-    const selected = selectedRecord(guidance);
-    if (!selectedSafeApplyActionMatches(selected.action, entry.action)) {
-      issueAt4(ctx, [index, "action"], `safe_apply.result action '${entry.action}' does not match safe_apply guidance action '${String(selected.action)}'`);
-    }
-    if (!sameJson2(selected.change_packet_ref, entry.change_packet_ref)) {
-      issueAt4(ctx, [index, "change_packet_ref"], "safe_apply.result change_packet_ref does not match safe_apply guidance");
-    }
-    if (!sameJson2(selected.base_ref, entry.base_ref)) {
-      issueAt4(ctx, [index, "base_ref"], "safe_apply.result base_ref does not match safe_apply guidance");
-    }
-    if (selected.protected_file_decision !== entry.protected_file_decision) {
-      issueAt4(ctx, [index, "protected_file_decision"], "safe_apply.result protected_file_decision does not match safe_apply guidance");
-    }
-    if (!sameJson2(selected.final_verification_ref, entry.final_verification_ref)) {
-      issueAt4(ctx, [index, "final_verification_ref"], "safe_apply.result final_verification_ref does not match safe_apply guidance");
-    }
-  }
-  validateCompleteCloseGates(traceEntries, ctx);
-}
-var GUARDED_OWN_FIELDS = ["run_id", "kind", "sequence"];
-var ownPropertyGuardedArray = external_exports.custom((raw) => {
-  if (!Array.isArray(raw))
-    return true;
-  for (const entry of raw) {
-    if (entry === null || typeof entry !== "object")
-      continue;
-    for (const field of GUARDED_OWN_FIELDS) {
-      if (!Object.hasOwn(entry, field))
-        return false;
-    }
-  }
-  return true;
-}, "trace_entry has inherited (not own) identity field; prototype-chain smuggle rejected");
-var RunTrace = ownPropertyGuardedArray.pipe(RunTraceBody.superRefine((trace_entries, ctx) => {
-  const first = trace_entries[0];
-  if (first === void 0 || first.kind !== "run.bootstrapped") {
-    issueAt4(ctx, [0, "kind"], `first trace_entry must be 'run.bootstrapped', got '${first?.kind ?? "<empty>"}'`);
-  }
-  let bootstrapCount = 0;
-  for (let i = 0; i < trace_entries.length; i++) {
-    const e = trace_entries[i];
-    if (e?.kind === "run.bootstrapped") {
-      bootstrapCount += 1;
-      if (bootstrapCount > 1) {
-        issueAt4(ctx, [i, "kind"], `second 'run.bootstrapped' at index ${i}; a RunTrace must bootstrap exactly once`);
-      }
-    }
-  }
-  for (let i = 0; i < trace_entries.length; i++) {
-    const e = trace_entries[i];
-    if (e === void 0)
-      continue;
-    if (e.sequence !== i) {
-      issueAt4(ctx, [i, "sequence"], `trace_entry at index ${i} has sequence=${e.sequence}; expected contiguous 0-based sequence (should be ${i})`);
-    }
-  }
-  const canonical = first?.run_id;
-  for (let i = 0; i < trace_entries.length; i++) {
-    const e = trace_entries[i];
-    if (e === void 0 || canonical === void 0)
-      continue;
-    if (e.run_id !== canonical) {
-      issueAt4(ctx, [i, "run_id"], `trace_entry at index ${i} has run_id='${e.run_id}' but RunTrace is for run_id='${canonical}'`);
-    }
-  }
-  let closedAt = -1;
-  for (let i = 0; i < trace_entries.length; i++) {
-    const e = trace_entries[i];
-    if (e?.kind !== "run.closed")
-      continue;
-    if (closedAt >= 0) {
-      issueAt4(ctx, [i, "kind"], `second 'run.closed' at index ${i}; a RunTrace closes at most once`);
-    } else {
-      closedAt = i;
-    }
-  }
-  if (closedAt >= 0 && closedAt !== trace_entries.length - 1) {
-    issueAt4(ctx, [closedAt + 1, "kind"], `trace_entries after 'run.closed' at index ${closedAt}; nothing may be appended after closure`);
-  }
-  validateGuidanceTraceSequence(trace_entries, ctx);
-}));
-var SNAPSHOT_STATUS_FOR_OUTCOME = {
-  complete: "complete",
-  aborted: "aborted",
-  handoff: "handoff",
-  stopped: "stopped",
-  escalated: "escalated"
-};
-var RunProjectionBody = external_exports.object({
-  log: RunTrace,
-  snapshot: Snapshot
-}).strict();
-var RunProjection = RunProjectionBody.superRefine(({ log, snapshot }, ctx) => {
-  const bootstrapTraceEntry = log[0];
-  if (bootstrapTraceEntry === void 0 || bootstrapTraceEntry.kind !== "run.bootstrapped") {
-    return;
-  }
-  const bootstrap = bootstrapTraceEntry;
-  if (snapshot.run_id !== bootstrap.run_id) {
-    issueAt4(ctx, ["snapshot", "run_id"], "snapshot.run_id differs from bootstrap.run_id");
-  }
-  if (snapshot.flow_id !== bootstrap.flow_id) {
-    issueAt4(ctx, ["snapshot", "flow_id"], "snapshot.flow_id differs from bootstrap.flow_id");
-  }
-  if (snapshot.manifest_hash !== bootstrap.manifest_hash) {
-    issueAt4(ctx, ["snapshot", "manifest_hash"], "snapshot.manifest_hash differs from bootstrap.manifest_hash; manifest is immutable per run");
-  }
-  if (snapshot.depth !== bootstrap.depth) {
-    issueAt4(ctx, ["snapshot", "depth"], "snapshot.depth differs from bootstrap.depth");
-  }
-  if (!change_kindEquals(snapshot.change_kind, bootstrap.change_kind)) {
-    issueAt4(ctx, ["snapshot", "change_kind"], "snapshot.change_kind differs from bootstrap.change_kind; change_kind is frozen at bootstrap");
-  }
-  if (snapshot.invocation_id !== bootstrap.invocation_id) {
-    issueAt4(ctx, ["snapshot", "invocation_id"], "snapshot.invocation_id differs from bootstrap.invocation_id");
-  }
-  if (snapshot.trace_entries_consumed !== log.length) {
-    issueAt4(ctx, ["snapshot", "trace_entries_consumed"], `snapshot.trace_entries_consumed=${snapshot.trace_entries_consumed} must equal log length=${log.length}; prefix snapshots are rejected`);
-  }
-  const closed = log.find((e) => e.kind === "run.closed");
-  if (closed === void 0) {
-    if (snapshot.status !== "in_progress") {
-      issueAt4(ctx, ["snapshot", "status"], `log has no 'run.closed' trace_entry so snapshot.status must be 'in_progress', got '${snapshot.status}'`);
-    }
-  } else {
-    const expected = SNAPSHOT_STATUS_FOR_OUTCOME[closed.outcome];
-    if (snapshot.status !== expected) {
-      issueAt4(ctx, ["snapshot", "status"], `run.closed.outcome='${closed.outcome}' requires snapshot.status='${expected}', got '${snapshot.status}'`);
-    }
-  }
-});
-function change_kindEquals(a, b) {
-  if (a.change_kind !== b.change_kind)
-    return false;
-  if (a.failure_mode !== b.failure_mode)
-    return false;
-  if (a.acceptance_evidence !== b.acceptance_evidence)
-    return false;
-  if (a.alternate_framing !== b.alternate_framing)
-    return false;
-  if (a.change_kind === "migration-escrow" && b.change_kind === "migration-escrow") {
-    return a.expires_at === b.expires_at && a.restoration_plan === b.restoration_plan;
-  }
-  if (a.change_kind === "break-glass" && b.change_kind === "break-glass") {
-    return a.post_hoc_adr_deadline_at === b.post_hoc_adr_deadline_at;
-  }
-  return true;
-}
-
-// dist/schemas/history.js
-var HISTORY_AUTHORITY_NOTICE = "History results are hint-only prior-run context. They cannot satisfy current proof, checkpoint, policy, route, recovery, verification, or write authority.";
-var HistoryWarningCodeV1 = external_exports.enum([
-  "run_skipped",
-  "report_skipped",
-  "trace_skipped",
-  "source_unreadable",
-  "source_invalid",
-  "source_pruned"
-]);
-var HistoryWarningV1 = external_exports.object({
-  code: HistoryWarningCodeV1,
-  message: external_exports.string().min(1),
-  run_folder: external_exports.string().min(1).optional(),
-  source_path: external_exports.string().min(1).optional()
-}).strict();
-var HistoryManifestV1 = external_exports.object({
-  api_version: external_exports.literal("history-index-v1"),
-  schema_version: external_exports.literal(1),
-  created_at: external_exports.string().datetime(),
-  repo_root: external_exports.string().min(1),
-  runs_base: external_exports.string().min(1),
-  index_dir: external_exports.string().min(1),
-  documents_path: external_exports.literal("documents.v1.jsonl"),
-  run_count: external_exports.number().int().nonnegative(),
-  document_count: external_exports.number().int().nonnegative(),
-  source_fingerprint: external_exports.object({
-    run_folder_names_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/),
-    latest_source_mtime_ms: external_exports.number().int().nonnegative()
-  }).strict(),
-  warnings: external_exports.array(HistoryWarningV1)
-}).strict();
-var HistoryDocumentKindV1 = external_exports.enum(["run", "report", "trace", "checkpoint"]);
-var HistoryDocumentV1 = external_exports.object({
-  api_version: external_exports.literal("history-document-v1"),
-  schema_version: external_exports.literal(1),
-  doc_id: external_exports.string().min(1),
-  doc_kind: HistoryDocumentKindV1,
-  run_id: external_exports.string().min(1),
-  flow_id: external_exports.string().min(1).optional(),
-  run_folder: external_exports.string().min(1),
-  source_path: external_exports.string().min(1),
-  source_ref: Ref,
-  source_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/).optional(),
-  source_mtime_ms: external_exports.number().int().nonnegative().optional(),
-  report_schema: external_exports.string().min(1).optional(),
-  step_id: external_exports.string().min(1).optional(),
-  attempt: external_exports.number().int().positive().optional(),
-  sequence: external_exports.number().int().nonnegative().optional(),
-  recorded_at: external_exports.string().datetime().optional(),
-  outcome: external_exports.string().min(1).optional(),
-  title: external_exports.string().min(1),
-  summary: external_exports.string().min(1),
-  text: external_exports.string(),
-  extracted_from: external_exports.array(external_exports.object({
-    json_pointer: external_exports.string().min(1).optional(),
-    field_role: external_exports.string().min(1)
-  }).strict()),
-  facets: external_exports.array(external_exports.string().min(1)),
-  memory_safe: external_exports.boolean()
-}).strict();
-var HistoryStalenessV1 = external_exports.object({
-  status: external_exports.enum(["fresh", "stale", "unknown"]),
-  reason_codes: external_exports.array(external_exports.string().regex(/^[a-z][a-z0-9_]*$/)).min(1),
-  checked_at: external_exports.string().datetime()
-}).strict().superRefine((staleness, ctx) => {
-  if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["reason_codes"],
-      message: "unknown history staleness requires memory_unverified reason code"
-    });
-  }
-  if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["reason_codes"],
-      message: "stale history staleness requires memory_stale reason code"
-    });
-  }
-});
-var HistoryQueryHitV1 = external_exports.object({
-  rank: external_exports.number().int().positive(),
-  score: external_exports.number(),
-  doc: HistoryDocumentV1,
-  snippet: external_exports.string(),
-  matched_terms: external_exports.array(external_exports.string().min(1)),
-  ranking_reasons: external_exports.array(external_exports.string().min(1)),
-  staleness: HistoryStalenessV1
-}).strict();
-var HistoryQueryResultV1 = external_exports.object({
-  api_version: external_exports.literal("history-query-result-v1"),
-  schema_version: external_exports.literal(1),
-  query: external_exports.string(),
-  format: external_exports.literal("json"),
-  index_state: external_exports.enum(["fresh", "possibly_stale"]),
-  rebuilt: external_exports.boolean(),
-  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
-  warnings: external_exports.array(HistoryWarningV1),
-  results: external_exports.array(HistoryQueryHitV1)
-}).strict();
-var HistoryMemoryInputPreviewV1 = external_exports.object({
-  api_version: external_exports.literal("history-memory-input-preview-v1"),
-  schema_version: external_exports.literal(1),
-  query: external_exports.string(),
-  format: external_exports.literal("memory-input"),
-  index_state: external_exports.enum(["fresh", "possibly_stale"]),
-  rebuilt: external_exports.boolean(),
-  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
-  warnings: external_exports.array(HistoryWarningV1),
-  memory_inputs: external_exports.array(MemoryInputV0),
-  matches: external_exports.array(external_exports.object({
-    memory_id: external_exports.string().min(1),
-    rank: external_exports.number().int().positive(),
-    score: external_exports.number(),
-    source_doc_id: external_exports.string().min(1),
-    source_ref: Ref,
-    snippet: external_exports.string()
-  }).strict())
-}).strict();
-var HistoryStatusV1 = external_exports.object({
-  api_version: external_exports.literal("history-status-v1"),
-  schema_version: external_exports.literal(1),
-  index_exists: external_exports.boolean(),
-  index_state: external_exports.enum(["fresh", "possibly_stale", "missing", "corrupt", "unsupported"]),
-  runs_base: external_exports.string().min(1),
-  index_dir: external_exports.string().min(1),
-  manifest: HistoryManifestV1.optional(),
-  warnings: external_exports.array(HistoryWarningV1)
-}).strict();
-var HistoryErrorCodeV1 = external_exports.enum([
-  "invalid_invocation",
-  "runs_base_not_found",
-  "runs_base_unreadable",
-  "index_missing",
-  "index_unsupported",
-  "index_corrupt",
-  "source_unreadable",
-  "internal_error"
-]);
-var HistoryErrorV1 = external_exports.object({
-  api_version: external_exports.literal("history-error-v1"),
-  schema_version: external_exports.literal(1),
-  error: external_exports.object({
-    code: HistoryErrorCodeV1,
-    message: external_exports.string().min(1)
-  }).strict(),
-  runs_base: external_exports.string().min(1).optional(),
-  index_dir: external_exports.string().min(1).optional()
-}).strict();
-
-// dist/history/extract.js
-import { existsSync as existsSync18, lstatSync as lstatSync5, readFileSync as readFileSync32, readdirSync as readdirSync2, realpathSync as realpathSync4, statSync as statSync2 } from "node:fs";
-import { basename, isAbsolute as isAbsolute9, relative as relative10, resolve as resolve13 } from "node:path";
-var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
-  "goal",
-  "objective",
-  "summary",
-  "verdict",
-  "decision",
-  "rationale",
-  "recommendation",
-  "findings",
-  "reason",
-  "outcome",
-  "status",
-  "acceptance_criteria"
-]);
-var NOISY_FIELDS = /* @__PURE__ */ new Set([
-  "unstaged_diff",
-  "staged_diff",
-  "diff",
-  "patch",
-  "stdout",
-  "stderr",
-  "transcript",
-  "payload",
-  "request",
-  "response",
-  "raw",
-  "body"
-]);
-var REPORT_TEXT_LIMIT = 8e3;
-var HIGH_VALUE_TEXT_LIMIT = 2e3;
-var NORMAL_TEXT_LIMIT = 500;
-function isObject4(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-function stringValue(value) {
-  return typeof value === "string" && value.trim().length > 0 ? value : void 0;
-}
-function numberValue(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
-}
-function safeDateString(value) {
-  const raw = stringValue(value);
-  if (raw === void 0)
-    return void 0;
-  return Number.isNaN(Date.parse(raw)) ? void 0 : new Date(raw).toISOString();
-}
-function readJson2(path) {
-  return JSON.parse(readFileSync32(path, "utf8"));
-}
-function readJsonRecord(path) {
-  try {
-    const parsed = readJson2(path);
-    return isObject4(parsed) ? parsed : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function sha256File(path) {
-  return sha256Hex(readFileSync32(path, "utf8"));
-}
-function mtimeMs(path) {
-  return Math.trunc(statSync2(path).mtimeMs);
-}
-function isInside3(root, target) {
-  const fromRoot = relative10(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
-}
-function listFiles(root, prefix = "") {
-  const absRoot = resolve13(root);
-  if (!existsSync18(absRoot))
-    return [];
-  const rootReal = realpathSync4.native(absRoot);
-  const out = [];
-  function walk(absDir, relDir) {
-    for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
-      const absPath = resolve13(absDir, entry.name);
-      if (lstatSync5(absPath).isSymbolicLink())
-        continue;
-      const real = realpathSync4.native(absPath);
-      if (!isInside3(rootReal, real))
-        continue;
-      const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
-      if (entry.isDirectory()) {
-        walk(absPath, relPath);
-      } else if (entry.isFile()) {
-        out.push(prefix.length === 0 ? relPath : `${prefix}/${relPath}`);
-      }
-    }
-  }
-  walk(absRoot, "");
-  return out;
-}
-function addOptional(object2, key, value) {
-  if (value !== void 0) {
-    object2[key] = value;
-  }
-}
-function validRunId(value) {
-  if (value === void 0)
-    return void 0;
-  return RunId.safeParse(value).success ? value : void 0;
-}
-function validFlowId(value) {
-  if (value === void 0)
-    return void 0;
-  return CompiledFlowId.safeParse(value).success ? value : void 0;
-}
-function validStepId(value) {
-  if (value === void 0)
-    return void 0;
-  return StepId.safeParse(value).success ? value : void 0;
-}
-function parseTrace(runFolder, runFolderName) {
-  const tracePath = resolve13(runFolder, "trace.ndjson");
-  if (!existsSync18(tracePath)) {
-    return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
-  }
-  let entries = [];
-  try {
-    entries = readFileSync32(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject4);
-  } catch (error51) {
-    return {
-      entries: [],
-      reportWrites: /* @__PURE__ */ new Map(),
-      traceValidForDocs: false,
-      warning: {
-        code: "trace_skipped",
-        message: `trace.ndjson could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
-        run_folder: runFolder,
-        source_path: "trace.ndjson"
-      }
-    };
-  }
-  const firstRunId = stringValue(entries[0]?.run_id) ?? runFolderName;
-  let traceValidForDocs = entries.length > 0 && validRunId(firstRunId) !== void 0;
-  for (const [index, entry] of entries.entries()) {
-    if (numberValue(entry.sequence) !== index || stringValue(entry.run_id) !== firstRunId) {
-      traceValidForDocs = false;
-    }
-  }
-  const reportWrites = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    if (entry.kind !== "step.report_written")
-      continue;
-    const reportPath = stringValue(entry.report_path);
-    const reportSchema = stringValue(entry.report_schema);
-    if (reportPath === void 0 || reportSchema === void 0)
-      continue;
-    const write = {
-      report_schema: reportSchema
-    };
-    addOptional(write, "step_id", stringValue(entry.step_id));
-    const attempt = numberValue(entry.attempt);
-    addOptional(write, "attempt", attempt !== void 0 && attempt > 0 ? attempt : void 0);
-    reportWrites.set(reportPath, write);
-  }
-  return {
-    entries,
-    reportWrites,
-    traceValidForDocs,
-    ...traceValidForDocs ? {} : {
-      warning: {
-        code: "trace_skipped",
-        message: "trace.ndjson is not valid for trace-document indexing",
-        run_folder: runFolder,
-        source_path: "trace.ndjson"
-      }
-    }
-  };
-}
-function jsonPointer(path) {
-  return `/${path.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
-}
-function stringifyForPrune(value) {
-  try {
-    return JSON.stringify(value) ?? "";
-  } catch {
-    return "";
-  }
-}
-function extractText(value, options) {
-  const lines = [];
-  const extractedFrom = [];
-  const highValue = /* @__PURE__ */ new Map();
-  let prunedChars = 0;
-  function visit(current, path) {
-    const segment = path.at(-1);
-    if (segment !== void 0 && NOISY_FIELDS.has(segment) && !(options.allowCheckpointResponseFields && ["response"].includes(segment))) {
-      prunedChars += stringifyForPrune(current).length;
-      return;
-    }
-    if (Array.isArray(current)) {
-      for (const [index, item] of current.entries())
-        visit(item, [...path, String(index)]);
-      return;
-    }
-    if (isObject4(current)) {
-      for (const [key, item] of Object.entries(current)) {
-        if (options.allowCheckpointResponseFields && ["selection", "route_id", "resolution_source"].includes(key)) {
-          visit(item, [...path, key]);
-          continue;
-        }
-        visit(item, [...path, key]);
-      }
-      return;
-    }
-    if (current === null || current === void 0)
-      return;
-    const raw = String(current).trim();
-    if (raw.length === 0)
-      return;
-    const role = segment ?? "value";
-    const isHighValue = HIGH_VALUE_FIELDS.has(role);
-    const limit = isHighValue ? HIGH_VALUE_TEXT_LIMIT : NORMAL_TEXT_LIMIT;
-    const clipped = raw.length > limit ? `${raw.slice(0, limit)}...` : raw;
-    lines.push(`${role}: ${clipped}`);
-    extractedFrom.push({ json_pointer: jsonPointer(path), field_role: role });
-    if (isHighValue && !highValue.has(role))
-      highValue.set(role, clipped);
-  }
-  visit(value, []);
-  return {
-    text: lines.join("\n").slice(0, REPORT_TEXT_LIMIT),
-    extractedFrom,
-    prunedChars,
-    highValue
-  };
-}
-function firstHighValue(extraction, fields) {
-  for (const field of fields) {
-    const value = extraction.highValue.get(field);
-    if (value !== void 0 && value.trim().length > 0)
-      return value;
-  }
-  return void 0;
-}
-function buildFacets(input) {
-  const facets = /* @__PURE__ */ new Set([`kind:${input.docKind}`]);
-  if (input.flowId !== void 0)
-    facets.add(`flow:${input.flowId}`);
-  if (input.outcome !== void 0)
-    facets.add(`outcome:${input.outcome}`);
-  if (input.reportSchema !== void 0)
-    facets.add(`schema:${input.reportSchema}`);
-  if (input.stepId !== void 0)
-    facets.add(`step:${input.stepId}`);
-  const haystack = `${input.sourcePath} ${input.reportSchema ?? ""} ${input.traceKind ?? ""}`.toLowerCase();
-  if (input.outcome === "aborted" || input.traceKind === "relay.failed" || input.traceKind === "step.aborted" || input.checkOutcome === "fail") {
-    facets.add("failure");
-  }
-  if (haystack.includes("checkpoint"))
-    facets.add("checkpoint");
-  if (haystack.includes("decision"))
-    facets.add("decision");
-  if (haystack.includes("verification") || haystack.includes("proof") || haystack.includes("check") || input.traceKind === "proof.assessed" || input.traceKind === "safe_apply.result") {
-    facets.add("verification");
-  }
-  if (input.docKind === "checkpoint" && input.sourcePath.includes("-response")) {
-    facets.add("operator-note");
-  }
-  if (input.traceKind === "checkpoint.resolved")
-    facets.add("operator-note");
-  return [...facets].sort();
-}
-function reportSourceRef(input) {
-  const ref = {
-    kind: "report",
-    ref: input.relPath,
-    sha256: input.sha256
-  };
-  addOptional(ref, "run_id", validRunId(input.runId));
-  addOptional(ref, "flow_id", validFlowId(input.flowId));
-  addOptional(ref, "step_id", validStepId(input.stepId));
-  addOptional(ref, "attempt", input.attempt);
-  return Ref.parse(ref);
-}
-function traceSourceRef(input) {
-  const parsedRunId = validRunId(input.runId);
-  if (parsedRunId === void 0)
-    return void 0;
-  const ref = {
-    kind: "trace",
-    ref: `trace.ndjson#sequence=${input.sequence}`,
-    run_id: parsedRunId,
-    sequence: input.sequence
-  };
-  addOptional(ref, "flow_id", validFlowId(input.flowId));
-  addOptional(ref, "step_id", validStepId(input.stepId));
-  addOptional(ref, "attempt", input.attempt);
-  return Ref.parse(ref);
-}
-function docId(input) {
-  return `${input.runId}/${input.docKind}/${sha256Hex(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
-}
-function skipReport(relPath) {
-  const name = basename(relPath);
-  if (!relPath.endsWith(".json"))
-    return true;
-  if (relPath.startsWith("reports/relay/"))
-    return true;
-  if (["operator-summary.json", "operator-summary.md", "operator-summary.html"].includes(name)) {
-    return true;
-  }
-  if ((relPath.includes("/tournament-branches/") || relPath.includes("/variant-branches/")) && name !== "report.json") {
-    return true;
-  }
-  return false;
-}
-function reportKind(relPath) {
-  return relPath.startsWith("reports/checkpoints/") ? "checkpoint" : "report";
-}
-function isCheckpointRequest(relPath) {
-  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-request.json");
-}
-function isCheckpointResponse(relPath) {
-  return relPath.startsWith("reports/checkpoints/") && relPath.endsWith("-response.json");
-}
-function asStringRecordValue(record2, key) {
-  return record2 === void 0 ? void 0 : stringValue(record2[key]);
-}
-function resolveRunIdentity(input) {
-  const bootstrap = input.traceEntries.find((entry) => entry.kind === "run.bootstrapped");
-  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
-  const runId = stringValue(bootstrap?.run_id) ?? asStringRecordValue(input.result, "run_id") ?? asStringRecordValue(input.manifest, "run_id") ?? input.runFolderName;
-  const flowId = stringValue(bootstrap?.flow_id) ?? asStringRecordValue(input.result, "flow_id") ?? asStringRecordValue(input.manifest, "flow_id");
-  const goal = stringValue(bootstrap?.goal) ?? asStringRecordValue(input.result, "goal") ?? asStringRecordValue(input.manifest, "goal");
-  const recordedAt = safeDateString(bootstrap?.recorded_at) ?? safeDateString(input.result?.recorded_at) ?? safeDateString(input.manifest?.captured_at);
-  const outcome = asStringRecordValue(input.result, "outcome") ?? stringValue(closed?.outcome) ?? asStringRecordValue(input.result, "status") ?? asStringRecordValue(input.result, "verdict");
-  return {
-    runId,
-    ...flowId === void 0 ? {} : { flowId },
-    ...goal === void 0 ? {} : { goal },
-    ...recordedAt === void 0 ? {} : { recordedAt },
-    ...outcome === void 0 ? {} : { outcome }
-  };
-}
-function makeRunDocument(input) {
-  const sourcePath = input.resultPath ?? "trace.ndjson";
-  const sourceAbs = resolve13(input.runFolder, sourcePath);
-  if (!existsSync18(sourceAbs))
-    return void 0;
-  const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
-  if (sourceSha === void 0)
-    return void 0;
-  const sourceMtime = input.resultPath === void 0 ? input.traceMtime : mtimeMs(sourceAbs);
-  const extraction = extractText(input.result ?? {}, { allowCheckpointResponseFields: false });
-  const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
-  const summary = firstHighValue(extraction, ["summary", "reason", "goal", "outcome", "verdict"]) ?? stringValue(closed?.reason) ?? input.identity.goal ?? `Circuit ${input.identity.flowId ?? "run"} ${input.identity.outcome ?? "history"}`;
-  const textParts = [
-    `goal: ${input.identity.goal ?? ""}`,
-    `flow: ${input.identity.flowId ?? ""}`,
-    `outcome: ${input.identity.outcome ?? ""}`,
-    extraction.text
-  ].filter((part) => part.trim().length > 0);
-  const ref = input.resultPath === void 0 ? traceSourceRef({
-    sequence: 0,
-    runId: input.identity.runId,
-    flowId: input.identity.flowId
-  }) : reportSourceRef({
-    relPath: input.resultPath,
-    sha256: sourceSha,
-    runId: input.identity.runId,
-    flowId: input.identity.flowId
-  });
-  if (ref === void 0)
-    return void 0;
-  const facets = buildFacets({
-    docKind: "run",
-    flowId: input.identity.flowId,
-    outcome: input.identity.outcome,
-    sourcePath
-  });
-  return HistoryDocumentV1.parse({
-    api_version: "history-document-v1",
-    schema_version: 1,
-    doc_id: docId({
-      runId: input.identity.runId,
-      docKind: "run",
-      sourcePath,
-      selector: "run"
-    }),
-    doc_kind: "run",
-    run_id: input.identity.runId,
-    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
-    run_folder: input.runFolder,
-    source_path: sourcePath,
-    source_ref: ref,
-    source_sha256: sourceSha,
-    source_mtime_ms: sourceMtime,
-    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
-    ...input.identity.outcome === void 0 ? {} : { outcome: input.identity.outcome },
-    title: `${input.identity.flowId ?? "Circuit"} run ${input.identity.outcome ?? ""}`.trim(),
-    summary,
-    text: textParts.join("\n").slice(0, REPORT_TEXT_LIMIT),
-    extracted_from: extraction.extractedFrom,
-    facets,
-    memory_safe: true
-  });
-}
-function makeReportDocument(input) {
-  const absPath = resolveRunFilePath(input.runFolder, input.relPath);
-  const sourceSha = sha256File(absPath);
-  const sourceMtime = mtimeMs(absPath);
-  const docKind = reportKind(input.relPath);
-  const allowCheckpointResponseFields = isCheckpointResponse(input.relPath);
-  const extraction = extractText(input.body, { allowCheckpointResponseFields });
-  const reportSchema = input.reportWrite?.report_schema ?? stringValue(input.body.report_schema) ?? stringValue(input.body.schema);
-  const stepId = input.reportWrite?.step_id ?? stringValue(input.body.step_id);
-  const attempt = input.reportWrite?.attempt;
-  const outcome = stringValue(input.body.outcome) ?? stringValue(input.body.status) ?? input.identity.outcome;
-  const summary = firstHighValue(extraction, [
-    "summary",
-    "decision",
-    "rationale",
-    "reason",
-    "goal",
-    "objective",
-    "verdict",
-    "outcome",
-    "status"
-  ]) ?? `${reportSchema ?? input.relPath}`;
-  const facets = buildFacets({
-    docKind,
-    flowId: input.identity.flowId,
-    outcome,
-    reportSchema,
-    stepId,
-    sourcePath: input.relPath
-  });
-  const ref = reportSourceRef({
-    relPath: input.relPath,
-    sha256: sourceSha,
-    runId: input.identity.runId,
-    flowId: input.identity.flowId,
-    stepId,
-    attempt
-  });
-  const title = `${reportSchema ?? docKind} ${input.relPath}`;
-  const document = HistoryDocumentV1.parse({
-    api_version: "history-document-v1",
-    schema_version: 1,
-    doc_id: docId({
-      runId: input.identity.runId,
-      docKind,
-      sourcePath: input.relPath,
-      selector: "/"
-    }),
-    doc_kind: docKind,
-    run_id: input.identity.runId,
-    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
-    run_folder: input.runFolder,
-    source_path: input.relPath,
-    source_ref: ref,
-    source_sha256: sourceSha,
-    source_mtime_ms: sourceMtime,
-    ...reportSchema === void 0 ? {} : { report_schema: reportSchema },
-    ...stepId === void 0 ? {} : { step_id: stepId },
-    ...attempt === void 0 ? {} : { attempt },
-    ...input.identity.recordedAt === void 0 ? {} : { recorded_at: input.identity.recordedAt },
-    ...outcome === void 0 ? {} : { outcome },
-    title,
-    summary,
-    text: extraction.text,
-    extracted_from: extraction.extractedFrom,
-    facets,
-    memory_safe: !isCheckpointRequest(input.relPath)
-  });
-  const warning = extraction.prunedChars > 1e4 ? {
-    code: "source_pruned",
-    message: `pruned ${extraction.prunedChars} noisy characters from ${input.relPath}`,
-    run_folder: input.runFolder,
-    source_path: input.relPath
-  } : void 0;
-  return warning === void 0 ? { document } : { document, warning };
-}
-function traceDocumentSummary(entry) {
-  return stringValue(entry.reason) ?? stringValue(entry.outcome) ?? stringValue(entry.overall_status) ?? String(entry.kind ?? "trace");
-}
-function shouldIndexTrace(entry) {
-  switch (entry.kind) {
-    case "relay.failed":
-    case "step.aborted":
-    case "checkpoint.resolved":
-    case "proof.assessed":
-    case "safe_apply.result":
-      return true;
-    case "check.evaluated":
-      return entry.outcome === "fail" || entry.status === "failed";
-    case "run.closed":
-      return entry.outcome !== "complete";
-    default:
-      return false;
-  }
-}
-function makeTraceDocument(input) {
-  const sequence = numberValue(input.entry.sequence);
-  if (sequence === void 0 || sequence < 0 || !Number.isInteger(sequence))
-    return void 0;
-  const ref = traceSourceRef({
-    sequence,
-    runId: input.identity.runId,
-    flowId: input.identity.flowId,
-    stepId: stringValue(input.entry.step_id),
-    attempt: numberValue(input.entry.attempt)
-  });
-  if (ref === void 0)
-    return void 0;
-  const extraction = extractText(input.entry, { allowCheckpointResponseFields: true });
-  const traceKind = stringValue(input.entry.kind);
-  const stepId = stringValue(input.entry.step_id);
-  const attempt = numberValue(input.entry.attempt);
-  const outcome = stringValue(input.entry.outcome) ?? input.identity.outcome;
-  const docKind = traceKind === "checkpoint.resolved" ? "checkpoint" : "trace";
-  const summary = traceDocumentSummary(input.entry);
-  const facets = buildFacets({
-    docKind,
-    flowId: input.identity.flowId,
-    outcome,
-    stepId,
-    sourcePath: "trace.ndjson",
-    traceKind,
-    checkOutcome: stringValue(input.entry.outcome)
-  });
-  return HistoryDocumentV1.parse({
-    api_version: "history-document-v1",
-    schema_version: 1,
-    doc_id: docId({
-      runId: input.identity.runId,
-      docKind,
-      sourcePath: "trace.ndjson",
-      selector: String(sequence)
-    }),
-    doc_kind: docKind,
-    run_id: input.identity.runId,
-    ...input.identity.flowId === void 0 ? {} : { flow_id: input.identity.flowId },
-    run_folder: input.runFolder,
-    source_path: "trace.ndjson",
-    source_ref: ref,
-    source_sha256: input.traceSha,
-    source_mtime_ms: input.traceMtime,
-    ...stepId === void 0 ? {} : { step_id: stepId },
-    ...attempt === void 0 ? {} : { attempt },
-    sequence,
-    ...safeDateString(input.entry.recorded_at) === void 0 ? {} : { recorded_at: safeDateString(input.entry.recorded_at) },
-    ...outcome === void 0 ? {} : { outcome },
-    title: `${traceKind ?? "trace"} sequence ${sequence}`,
-    summary,
-    text: extraction.text,
-    extracted_from: extraction.extractedFrom,
-    facets,
-    memory_safe: true
-  });
-}
-function extractRunHistoryDocuments(runFolder) {
-  const runFolderAbs = resolve13(runFolder);
-  const runFolderName = basename(runFolderAbs);
-  const warnings = [];
-  const documents = [];
-  const sourceFiles = /* @__PURE__ */ new Set();
-  const manifestPath2 = resolve13(runFolderAbs, "manifest.snapshot.json");
-  const resultPath2 = resolve13(runFolderAbs, "reports/result.json");
-  const manifest = existsSync18(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
-  const result = existsSync18(resultPath2) ? readJsonRecord(resultPath2) : void 0;
-  if (existsSync18(manifestPath2))
-    sourceFiles.add(manifestPath2);
-  if (existsSync18(resultPath2))
-    sourceFiles.add(resultPath2);
-  const trace = parseTrace(runFolderAbs, runFolderName);
-  if (trace.warning !== void 0)
-    warnings.push(trace.warning);
-  const tracePath = resolve13(runFolderAbs, "trace.ndjson");
-  const traceExists = existsSync18(tracePath);
-  const traceSha = traceExists ? sha256File(tracePath) : void 0;
-  const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
-  if (traceExists)
-    sourceFiles.add(tracePath);
-  const identity = resolveRunIdentity({
-    runFolderName,
-    traceEntries: trace.entries,
-    manifest,
-    result
-  });
-  const runDocument = makeRunDocument({
-    runFolder: runFolderAbs,
-    identity,
-    ...existsSync18(resultPath2) ? { resultPath: "reports/result.json" } : {},
-    result,
-    traceEntries: trace.entries,
-    traceSha,
-    traceMtime
-  });
-  if (runDocument !== void 0)
-    documents.push(runDocument);
-  const reportRoot = resolve13(runFolderAbs, "reports");
-  for (const relPath of listFiles(reportRoot, "reports")) {
-    const absPath = resolve13(runFolderAbs, relPath);
-    if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
-      continue;
-    sourceFiles.add(absPath);
-    if (skipReport(relPath))
-      continue;
-    const validation = validateRunFilePath(relPath);
-    if (validation.length > 0) {
-      warnings.push({
-        code: "report_skipped",
-        message: `report path rejected: ${validation.join("; ")}`,
-        run_folder: runFolderAbs,
-        source_path: relPath
-      });
-      continue;
-    }
-    let body;
-    try {
-      const parsed = readJson2(absPath);
-      body = isObject4(parsed) ? parsed : void 0;
-    } catch (error51) {
-      warnings.push({
-        code: "report_skipped",
-        message: `report could not be parsed: ${error51 instanceof Error ? error51.message : String(error51)}`,
-        run_folder: runFolderAbs,
-        source_path: relPath
-      });
-      continue;
-    }
-    if (body === void 0)
-      continue;
-    const built = makeReportDocument({
-      runFolder: runFolderAbs,
-      relPath,
-      body,
-      identity,
-      reportWrite: trace.reportWrites.get(relPath)
-    });
-    if (built.document !== void 0)
-      documents.push(built.document);
-    if (built.warning !== void 0)
-      warnings.push(built.warning);
-  }
-  if (trace.traceValidForDocs && traceSha !== void 0 && traceMtime !== void 0) {
-    for (const entry of trace.entries) {
-      if (!shouldIndexTrace(entry))
-        continue;
-      const document = makeTraceDocument({
-        runFolder: runFolderAbs,
-        traceSha,
-        traceMtime,
-        entry,
-        identity
-      });
-      if (document !== void 0)
-        documents.push(document);
-    }
-  }
-  return {
-    documents,
-    warnings,
-    sourceFiles: [...sourceFiles].sort()
-  };
-}
-
-// dist/history/indexer.js
-var DEFAULT_RUNS_BASE = ".circuit/runs";
-var DEFAULT_INDEX_DIR = ".circuit/history";
-var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
-var HISTORY_MANIFEST_FILE = "manifest.v1.json";
-var HistoryCommandError = class extends Error {
-  code;
-  paths;
-  constructor(code, message, paths = {}) {
-    super(message);
-    this.code = code;
-    this.paths = paths;
-  }
-};
-function resolveHistoryPaths(options = {}) {
-  const repoRoot = resolve14(options.repoRoot ?? process.cwd());
-  const runsBase = resolve14(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
-  const indexDir = resolve14(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
-  return {
-    repoRoot,
-    runsBase,
-    indexDir,
-    manifestPath: join19(indexDir, HISTORY_MANIFEST_FILE),
-    documentsPath: join19(indexDir, HISTORY_DOCUMENTS_FILE)
-  };
-}
-function isCandidateRunFolder(runFolder) {
-  return existsSync19(join19(runFolder, "manifest.snapshot.json")) || existsSync19(join19(runFolder, "trace.ndjson")) || existsSync19(join19(runFolder, "reports/result.json"));
-}
-function listCandidateRunFolders(runsBase) {
-  if (!existsSync19(runsBase)) {
-    throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
-      runsBase
-    });
-  }
-  let stat2;
-  try {
-    stat2 = statSync3(runsBase);
-  } catch (error51) {
-    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
-  }
-  if (!stat2.isDirectory()) {
-    throw new HistoryCommandError("runs_base_unreadable", `runs base is not a directory: ${runsBase}`, {
-      runsBase
-    });
-  }
-  try {
-    return readdirSync3(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join19(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
-  } catch (error51) {
-    throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
-  }
-}
-function computeRunFolderNamesHash(runFolders) {
-  return sha256Hex(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
-}
-function computeLatestSourceMtime(sourceFiles) {
-  let latest = 0;
-  for (const file2 of sourceFiles) {
-    try {
-      latest = Math.max(latest, Math.trunc(statSync3(file2).mtimeMs));
-    } catch {
-    }
-  }
-  return latest;
-}
-function computeHistoryFingerprint(input) {
-  const runFolders = listCandidateRunFolders(input.runsBase);
-  return {
-    run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
-    latest_source_mtime_ms: computeLatestSourceMtime(input.sourceFiles ?? collectSourceFiles(runFolders))
-  };
-}
-function collectSourceFiles(runFolders) {
-  const files = [];
-  for (const runFolder of runFolders) {
-    for (const candidate of [
-      join19(runFolder, "manifest.snapshot.json"),
-      join19(runFolder, "trace.ndjson"),
-      join19(runFolder, "reports/result.json")
-    ]) {
-      if (existsSync19(candidate))
-        files.push(candidate);
-    }
-    const reportsRoot2 = join19(runFolder, "reports");
-    if (!existsSync19(reportsRoot2))
-      continue;
-    const stack = [reportsRoot2];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === void 0)
-        continue;
-      for (const entry of readdirSync3(current, { withFileTypes: true })) {
-        const path = join19(current, entry.name);
-        if (entry.isDirectory()) {
-          stack.push(path);
-        } else if (entry.isFile() && entry.name.endsWith(".json")) {
-          files.push(path);
-        }
-      }
-    }
-  }
-  return files.sort();
-}
-function errorEnvelope(error51) {
-  return HistoryErrorV1.parse({
-    api_version: "history-error-v1",
-    schema_version: 1,
-    error: {
-      code: error51.code,
-      message: error51.message
-    },
-    ...error51.paths.runsBase === void 0 ? {} : { runs_base: error51.paths.runsBase },
-    ...error51.paths.indexDir === void 0 ? {} : { index_dir: error51.paths.indexDir }
-  });
-}
-function rebuildHistoryIndex(options = {}) {
-  const paths = resolveHistoryPaths(options);
-  const runFolders = listCandidateRunFolders(paths.runsBase);
-  const documents = [];
-  const warnings = [];
-  const sourceFiles = [];
-  for (const runFolder of runFolders) {
-    try {
-      const extracted = extractRunHistoryDocuments(runFolder);
-      documents.push(...extracted.documents);
-      warnings.push(...extracted.warnings);
-      sourceFiles.push(...extracted.sourceFiles);
-    } catch (error51) {
-      warnings.push({
-        code: "run_skipped",
-        message: `run skipped: ${error51 instanceof Error ? error51.message : String(error51)}`,
-        run_folder: runFolder
-      });
-    }
-  }
-  const manifest = HistoryManifestV1.parse({
-    api_version: "history-index-v1",
-    schema_version: 1,
-    created_at: (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString(),
-    repo_root: paths.repoRoot,
-    runs_base: paths.runsBase,
-    index_dir: paths.indexDir,
-    documents_path: HISTORY_DOCUMENTS_FILE,
-    run_count: runFolders.length,
-    document_count: documents.length,
-    source_fingerprint: {
-      run_folder_names_sha256: computeRunFolderNamesHash(runFolders),
-      latest_source_mtime_ms: computeLatestSourceMtime(sourceFiles)
-    },
-    warnings
-  });
-  mkdirSync4(paths.indexDir, { recursive: true });
-  const documentsJsonl = `${documents.map((doc) => JSON.stringify(HistoryDocumentV1.parse(doc))).join("\n")}
-`;
-  const manifestJson = `${JSON.stringify(manifest, null, 2)}
-`;
-  const documentsTmp = `${paths.documentsPath}.tmp-${process.pid}`;
-  const manifestTmp = `${paths.manifestPath}.tmp-${process.pid}`;
-  writeFileSync5(documentsTmp, documentsJsonl, "utf8");
-  writeFileSync5(manifestTmp, manifestJson, "utf8");
-  HistoryManifestV1.parse(JSON.parse(readFileSync33(manifestTmp, "utf8")));
-  for (const line of readFileSync33(documentsTmp, "utf8").split("\n")) {
-    if (line.trim().length === 0)
-      continue;
-    HistoryDocumentV1.parse(JSON.parse(line));
-  }
-  renameSync(documentsTmp, paths.documentsPath);
-  renameSync(manifestTmp, paths.manifestPath);
-  return {
-    manifest,
-    documents
-  };
-}
-function readHistoryManifest(paths) {
-  if (!existsSync19(paths.manifestPath) || !existsSync19(paths.documentsPath)) {
-    throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
-      runsBase: paths.runsBase,
-      indexDir: paths.indexDir
-    });
-  }
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync33(paths.manifestPath, "utf8"));
-  } catch (error51) {
-    throw new HistoryCommandError("index_corrupt", `history manifest corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
-  }
-  if (raw !== null && typeof raw === "object" && !Array.isArray(raw) && "schema_version" in raw && raw.schema_version !== 1) {
-    throw new HistoryCommandError("index_unsupported", "history index schema is unsupported", {
-      runsBase: paths.runsBase,
-      indexDir: paths.indexDir
-    });
-  }
-  const parsed = HistoryManifestV1.safeParse(raw);
-  if (!parsed.success) {
-    throw new HistoryCommandError("index_corrupt", parsed.error.message, {
-      runsBase: paths.runsBase,
-      indexDir: paths.indexDir
-    });
-  }
-  return parsed.data;
-}
-function readHistoryIndex(options = {}) {
-  const paths = resolveHistoryPaths(options);
-  const manifest = readHistoryManifest(paths);
-  let documentsRaw = "";
-  try {
-    documentsRaw = readFileSync33(paths.documentsPath, "utf8");
-  } catch (error51) {
-    throw new HistoryCommandError("index_corrupt", `history documents unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
-  }
-  const documents = [];
-  for (const [index, line] of documentsRaw.split("\n").entries()) {
-    if (line.trim().length === 0)
-      continue;
-    try {
-      documents.push(HistoryDocumentV1.parse(JSON.parse(line)));
-    } catch (error51) {
-      throw new HistoryCommandError("index_corrupt", `history document line ${index + 1} corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
-    }
-  }
-  return { manifest, documents };
-}
-function historyIndexState(paths, manifest) {
-  const current = computeHistoryFingerprint({ runsBase: paths.runsBase });
-  return current.run_folder_names_sha256 === manifest.source_fingerprint.run_folder_names_sha256 && current.latest_source_mtime_ms === manifest.source_fingerprint.latest_source_mtime_ms ? "fresh" : "possibly_stale";
-}
-function historyStatus(options = {}) {
-  const paths = resolveHistoryPaths(options);
-  try {
-    const manifest = readHistoryManifest(paths);
-    const state = historyIndexState(paths, manifest);
-    return HistoryStatusV1.parse({
-      api_version: "history-status-v1",
-      schema_version: 1,
-      index_exists: true,
-      index_state: state,
-      runs_base: paths.runsBase,
-      index_dir: paths.indexDir,
-      manifest,
-      warnings: manifest.warnings
-    });
-  } catch (error51) {
-    if (error51 instanceof HistoryCommandError) {
-      if (error51.code === "index_missing") {
-        return HistoryStatusV1.parse({
-          api_version: "history-status-v1",
-          schema_version: 1,
-          index_exists: false,
-          index_state: "missing",
-          runs_base: paths.runsBase,
-          index_dir: paths.indexDir,
-          warnings: []
-        });
-      }
-      if (error51.code === "index_unsupported" || error51.code === "index_corrupt") {
-        return HistoryStatusV1.parse({
-          api_version: "history-status-v1",
-          schema_version: 1,
-          index_exists: true,
-          index_state: error51.code === "index_unsupported" ? "unsupported" : "corrupt",
-          runs_base: paths.runsBase,
-          index_dir: paths.indexDir,
-          warnings: [
-            {
-              code: "source_invalid",
-              message: error51.message
-            }
-          ]
-        });
-      }
-    }
-    throw error51;
-  }
-}
-
-// dist/history/memory-preview.js
-function fileStem(value) {
-  const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
-  const trimmed = normalized.replace(/^[^a-z0-9]+/, "").slice(0, 96);
-  return trimmed.length === 0 ? "memory" : trimmed;
-}
-function appliesTo(hit) {
-  const facets = new Set(hit.doc.facets);
-  if (facets.has("failure"))
-    return "prior_failure";
-  if (facets.has("verification"))
-    return "verification";
-  if (facets.has("operator-note"))
-    return "operator_note";
-  return "context";
-}
-function hintText(hit) {
-  const caution = hit.doc.facets.includes("checkpoint") || hit.doc.facets.includes("verification") ? " This is prior-run context only; rerun current checks before relying on it." : "";
-  const base = hit.snippet.trim().length > 0 ? hit.snippet.trim() : hit.doc.summary;
-  return `${base}
-Source: ${hit.doc.run_id} ${hit.doc.source_path}.${caution}`.trim();
-}
-function historyMemoryInputPreview(input) {
-  const memoryInputs = [];
-  const matches = [];
-  for (const hit of input.hits) {
-    if (!hit.doc.memory_safe)
-      continue;
-    const hash2 = sha256Hex(hit.doc.doc_id).slice(0, 12);
-    const runPrefix = fileStem(hit.doc.run_id).slice(0, 32);
-    const memoryId = `prior-run-${runPrefix}-${hash2}`.slice(0, 128);
-    const source = hit.doc.source_ref.sha256 !== void 0 && hit.doc.source_sha256 !== void 0 && hit.doc.source_ref.sha256 === hit.doc.source_sha256 ? {
-      ref: hit.doc.source_ref,
-      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() },
-      sha256: hit.doc.source_sha256
-    } : {
-      ref: hit.doc.source_ref,
-      captured_at: hit.doc.recorded_at ?? input.capturedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      ...hit.doc.source_mtime_ms === void 0 ? {} : { source_updated_at: new Date(hit.doc.source_mtime_ms).toISOString() }
-    };
-    const memory = MemoryInputV0.parse({
-      schema_version: 1,
-      memory_id: memoryId,
-      kind: "prior_run",
-      source,
-      summary: hit.doc.summary,
-      hints: [
-        {
-          id: `hint-${hash2}`,
-          text: hintText(hit),
-          applies_to: appliesTo(hit)
-        }
-      ],
-      staleness: hit.staleness,
-      authority: "hint_only"
-    });
-    memoryInputs.push(memory);
-    matches.push({
-      memory_id: memoryId,
-      rank: hit.rank,
-      score: hit.score,
-      source_doc_id: hit.doc.doc_id,
-      source_ref: hit.doc.source_ref,
-      snippet: hit.snippet
-    });
-  }
-  return HistoryMemoryInputPreviewV1.parse({
-    api_version: "history-memory-input-preview-v1",
-    schema_version: 1,
-    query: input.query,
-    format: "memory-input",
-    index_state: input.indexState,
-    rebuilt: input.rebuilt,
-    authority_notice: HISTORY_AUTHORITY_NOTICE,
-    warnings: input.warnings,
-    memory_inputs: memoryInputs,
-    matches
-  });
-}
-
-// dist/history/query.js
-import { existsSync as existsSync20, readFileSync as readFileSync34 } from "node:fs";
-var STOPWORDS = /* @__PURE__ */ new Set([
-  "the",
-  "and",
-  "for",
-  "that",
-  "this",
-  "with",
-  "from",
-  "into",
-  "what",
-  "when",
-  "where",
-  "why",
-  "how",
-  "run",
-  "runs",
-  "circuit",
-  "history",
-  "query",
-  "report",
-  "reports"
-]);
-var FAILURE_TERMS = /* @__PURE__ */ new Set(["fail", "failed", "failure", "aborted", "abort", "error"]);
-var CHECKPOINT_TERMS = /* @__PURE__ */ new Set(["checkpoint", "choice", "selection", "resume"]);
-var VERIFICATION_TERMS = /* @__PURE__ */ new Set(["verify", "verification", "proof", "check", "test"]);
-function tokenize(text) {
-  return text.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length >= 2 && !STOPWORDS.has(term));
-}
-function termCounts(tokens) {
-  const counts = /* @__PURE__ */ new Map();
-  for (const token of tokens)
-    counts.set(token, (counts.get(token) ?? 0) + 1);
-  return counts;
-}
-function unique(values) {
-  return [...new Set(values)];
-}
-function idf(documents) {
-  const docFreq = /* @__PURE__ */ new Map();
-  for (const doc of documents) {
-    const terms = unique(tokenize(`${doc.title}
-${doc.summary}
-${doc.text}
-${doc.facets.join(" ")}`));
-    for (const term of terms)
-      docFreq.set(term, (docFreq.get(term) ?? 0) + 1);
-  }
-  const out = /* @__PURE__ */ new Map();
-  for (const [term, count] of docFreq) {
-    out.set(term, Math.log((documents.length + 1) / (count + 1)) + 1);
-  }
-  return out;
-}
-function weightedTf(doc, term) {
-  const title = termCounts(tokenize(doc.title)).get(term) ?? 0;
-  const summary = termCounts(tokenize(doc.summary)).get(term) ?? 0;
-  const text = termCounts(tokenize(doc.text)).get(term) ?? 0;
-  const facets = termCounts(tokenize(doc.facets.join(" "))).get(term) ?? 0;
-  return title * 5 + summary * 4 + facets * 2 + text;
-}
-function queryBigrams(terms) {
-  const bigrams = [];
-  for (let index = 0; index < terms.length - 1; index += 1) {
-    const left = terms[index];
-    const right = terms[index + 1];
-    if (left !== void 0 && right !== void 0)
-      bigrams.push(`${left} ${right}`);
-  }
-  return bigrams;
-}
-function facetBoost(queryTerms, doc) {
-  let score = 0;
-  const reasons = [];
-  const facets = new Set(doc.facets);
-  if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has("failure")) {
-    score += 3;
-    reasons.push("failure facet matched");
-  }
-  if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has("checkpoint")) {
-    score += 2;
-    reasons.push("checkpoint facet matched");
-  }
-  if (queryTerms.some((term) => VERIFICATION_TERMS.has(term)) && facets.has("verification")) {
-    score += 2;
-    reasons.push("verification facet matched");
-  }
-  return { score, reasons };
-}
-function scoreDocument(input) {
-  let score = 0;
-  const reasons = [];
-  const matchedTerms = [];
-  for (const term of input.queryTerms) {
-    const tf = Math.min(weightedTf(input.doc, term), 3);
-    if (tf <= 0)
-      continue;
-    matchedTerms.push(term);
-    score += (input.queryIdf.get(term) ?? 1) * tf;
-  }
-  const haystack = `${input.doc.title}
-${input.doc.summary}
-${input.doc.text}`.toLowerCase();
-  const queryPhrase = input.query.trim().toLowerCase();
-  if (queryPhrase.length > 0 && haystack.includes(queryPhrase)) {
-    score += 2;
-    reasons.push("exact phrase matched");
-  }
-  for (const bigram of queryBigrams(input.queryTerms)) {
-    if (haystack.includes(bigram)) {
-      score += 0.5;
-      reasons.push(`bigram matched: ${bigram}`);
-    }
-  }
-  const boosted = facetBoost(input.queryTerms, input.doc);
-  score += boosted.score;
-  reasons.push(...boosted.reasons);
-  if (!input.doc.memory_safe) {
-    score -= 3;
-    reasons.push("memory-unsafe source penalized");
-  }
-  if (input.indexState === "possibly_stale") {
-    score -= 0.5;
-    reasons.push("possibly stale index penalty");
-  }
-  if (matchedTerms.length > 0)
-    reasons.push(`matched terms: ${matchedTerms.join(", ")}`);
-  return {
-    score,
-    matchedTerms: unique(matchedTerms),
-    reasons
-  };
-}
-function normalizeText(text) {
-  return tokenize(text).join(" ");
-}
-function snippet(doc, matchedTerms) {
-  const haystack = `${doc.summary}
-${doc.text}`.replace(/\s+/g, " ").trim();
-  if (haystack.length <= 420)
-    return haystack;
-  const lower = haystack.toLowerCase();
-  const firstMatch = matchedTerms.map((term) => lower.indexOf(term)).filter((index) => index >= 0).sort((left, right) => left - right)[0];
-  const start = Math.max(0, (firstMatch ?? 0) - 120);
-  return haystack.slice(start, start + 420).trim();
-}
-function sourceStaleness(doc, checkedAt) {
-  if (doc.source_sha256 === void 0) {
-    return {
-      status: "unknown",
-      reason_codes: ["memory_unverified"],
-      checked_at: checkedAt
-    };
-  }
-  try {
-    const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
-    if (!existsSync20(sourcePath)) {
-      return {
-        status: "stale",
-        reason_codes: ["memory_stale"],
-        checked_at: checkedAt
-      };
-    }
-    const currentHash = sha256Hex(readFileSync34(sourcePath, "utf8"));
-    return currentHash === doc.source_sha256 ? {
-      status: "fresh",
-      reason_codes: ["source_hash_verified"],
-      checked_at: checkedAt
-    } : {
-      status: "stale",
-      reason_codes: ["memory_stale"],
-      checked_at: checkedAt
-    };
-  } catch {
-    return {
-      status: "unknown",
-      reason_codes: ["memory_unverified"],
-      checked_at: checkedAt
-    };
-  }
-}
-function queryHistory(options) {
-  const limit = options.limit ?? 8;
-  const perRunLimit = options.perRunLimit ?? 1;
-  if (limit < 1 || limit > 50 || !Number.isInteger(limit)) {
-    throw new HistoryCommandError("invalid_invocation", "--limit must be an integer from 1 to 50");
-  }
-  if (perRunLimit < 1 || perRunLimit > 5 || !Number.isInteger(perRunLimit)) {
-    throw new HistoryCommandError("invalid_invocation", "--per-run-limit must be an integer from 1 to 5");
-  }
-  const queryTerms = unique(tokenize(options.query));
-  const paths = resolveHistoryPaths(options);
-  let rebuilt = false;
-  let index;
-  try {
-    index = readHistoryIndex(options);
-  } catch (error51) {
-    if (error51 instanceof HistoryCommandError && error51.code === "index_missing" && options.rebuildIfStale === true) {
-      index = rebuildHistoryIndex(options);
-      rebuilt = true;
-    } else {
-      throw error51;
-    }
-  }
-  let indexState = historyIndexState(paths, index.manifest);
-  if (indexState === "possibly_stale" && options.rebuildIfStale === true) {
-    index = rebuildHistoryIndex(options);
-    rebuilt = true;
-    indexState = historyIndexState(paths, index.manifest);
-  }
-  const warnings = [...index.manifest.warnings];
-  if (indexState === "possibly_stale") {
-    warnings.push({
-      code: "source_invalid",
-      message: "history index may be stale; run circuit history rebuild --json to refresh it"
-    });
-  }
-  const candidates = index.documents.filter((doc) => {
-    if (options.flow !== void 0 && doc.flow_id !== options.flow)
-      return false;
-    if (options.kind !== void 0 && doc.doc_kind !== options.kind)
-      return false;
-    return true;
-  });
-  const idfMap = idf(candidates);
-  const scored = candidates.map((doc) => {
-    const score = scoreDocument({
-      query: options.query,
-      queryTerms,
-      queryIdf: idfMap,
-      doc,
-      indexState
-    });
-    return { doc, ...score };
-  }).filter((candidate) => candidate.score > 0 || options.query.trim().length === 0).sort((left, right) => {
-    if (right.score !== left.score)
-      return right.score - left.score;
-    const rightDate = Date.parse(right.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
-    const leftDate = Date.parse(left.doc.recorded_at ?? "1970-01-01T00:00:00.000Z");
-    if (rightDate !== leftDate)
-      return rightDate - leftDate;
-    return left.doc.doc_id.localeCompare(right.doc.doc_id);
-  });
-  const seenText = /* @__PURE__ */ new Set();
-  const runCounts = /* @__PURE__ */ new Map();
-  const selected = [];
-  for (const candidate of scored) {
-    const textHash = sha256Hex(normalizeText(candidate.doc.text));
-    if (seenText.has(textHash))
-      continue;
-    const runCount = runCounts.get(candidate.doc.run_id) ?? 0;
-    if (runCount >= perRunLimit)
-      continue;
-    seenText.add(textHash);
-    runCounts.set(candidate.doc.run_id, runCount + 1);
-    selected.push(candidate);
-    if (selected.length >= limit)
-      break;
-  }
-  const checkedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-  const hits = selected.map((candidate, index2) => {
-    const staleness = sourceStaleness(candidate.doc, checkedAt);
-    const freshBoost = staleness.status === "fresh" ? 0.25 : 0;
-    return {
-      rank: index2 + 1,
-      score: Number((candidate.score + freshBoost).toFixed(6)),
-      doc: candidate.doc,
-      snippet: snippet(candidate.doc, candidate.matchedTerms),
-      matched_terms: [...candidate.matchedTerms],
-      ranking_reasons: freshBoost > 0 ? [...candidate.reasons, "source hash verified"] : [...candidate.reasons],
-      staleness
-    };
-  });
-  return HistoryQueryResultV1.parse({
-    api_version: "history-query-result-v1",
-    schema_version: 1,
-    query: options.query,
-    format: "json",
-    index_state: indexState,
-    rebuilt,
-    authority_notice: HISTORY_AUTHORITY_NOTICE,
-    warnings,
-    results: hits
-  });
 }
 
 // dist/cli/history.js
@@ -58403,6 +58554,28 @@ function classifyRuntimeSupport(input) {
     reason: `runtime supports fresh ${flowId} axis selection '${entryModeName}' at depth '${depth}'`
   };
 }
+function historyRecallOutputFields(input) {
+  return {
+    history_recall: {
+      status: input.report.status,
+      memory_input_count: input.report.memory_input_count,
+      report_path: join20(input.runFolder, HISTORY_RECALL_REPORT_PATH),
+      rebuilt: input.report.rebuilt,
+      ...input.report.index_state === void 0 ? {} : { index_state: input.report.index_state },
+      warnings: input.report.warnings.map((warning) => ({
+        code: warning.code,
+        message: warning.message
+      }))
+    }
+  };
+}
+function shouldPrepareHistoryRecall(options) {
+  if (options.historyRecall === "enabled")
+    return true;
+  if (options.historyRecall === "disabled")
+    return false;
+  return options.relayer === void 0 && options.runtimeExecutors === void 0 && options.composeWriter === void 0;
+}
 async function main(argv, options = {}) {
   let invocation;
   try {
@@ -58542,6 +58715,11 @@ async function main(argv, options = {}) {
   const routeToRuntime = defaultRuntimeSupport.kind === "supported";
   if (routeToRuntime) {
     const progressSurface = progressSurfaceForFlowId(flow.id);
+    const historyRecall = shouldPrepareHistoryRecall(options) ? prepareRunStartHistoryRecall({
+      repoRoot: projectRoot,
+      query: args.goal,
+      now
+    }) : void 0;
     const runtimeResult = await runCompiledFlowWithWaiting({
       flowBytes: bytes,
       compiledFlowPath: fixturePath,
@@ -58560,6 +58738,8 @@ async function main(argv, options = {}) {
       ...policyLayers.length === 0 ? {} : { policyLayers },
       ...progress === void 0 ? {} : { progress },
       ...progressSurface === void 0 ? {} : { progressSurface },
+      ...historyRecall === void 0 ? {} : { memoryInputs: historyRecall.memory_inputs },
+      ...historyRecall === void 0 ? {} : { historyRecallReport: historyRecall },
       ...args.includeUntrackedContent ? { evidencePolicy: { includeUntrackedFileContent: true } } : {}
     });
     if (isGraphCheckpointWaitingResult(runtimeResult)) {
@@ -58606,6 +58786,7 @@ async function main(argv, options = {}) {
           include: runtimeDecisionDiagnostics,
           decision: defaultRuntimeSupport
         }),
+        ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
         ...operatorSummaryOutputFields({ operatorSummary: operatorSummary2 }),
         checkpoint: waitingResult.checkpoint
       }, null, 2)}
@@ -58642,6 +58823,7 @@ async function main(argv, options = {}) {
         include: runtimeDecisionDiagnostics,
         decision: defaultRuntimeSupport
       }),
+      ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
       ...operatorSummaryOutputFields({ operatorSummary })
     }, null, 2)}
 `);

@@ -20,6 +20,8 @@ describe('runtime capabilities', () => {
       'policyLayers',
       'progress',
       'progressSurface',
+      'memoryInputs',
+      'historyRecallReport',
     ]);
   });
 });

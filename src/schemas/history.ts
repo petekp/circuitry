@@ -142,6 +142,18 @@ export const HistoryQueryResultV1 = z
   .strict();
 export type HistoryQueryResultV1 = z.infer<typeof HistoryQueryResultV1>;
 
+export const HistoryMemoryInputMatchV1 = z
+  .object({
+    memory_id: z.string().min(1),
+    rank: z.number().int().positive(),
+    score: z.number(),
+    source_doc_id: z.string().min(1),
+    source_ref: Ref,
+    snippet: z.string(),
+  })
+  .strict();
+export type HistoryMemoryInputMatchV1 = z.infer<typeof HistoryMemoryInputMatchV1>;
+
 export const HistoryMemoryInputPreviewV1 = z
   .object({
     api_version: z.literal('history-memory-input-preview-v1'),
@@ -153,21 +165,60 @@ export const HistoryMemoryInputPreviewV1 = z
     authority_notice: z.literal(HISTORY_AUTHORITY_NOTICE),
     warnings: z.array(HistoryWarningV1),
     memory_inputs: z.array(MemoryInputV0),
-    matches: z.array(
-      z
-        .object({
-          memory_id: z.string().min(1),
-          rank: z.number().int().positive(),
-          score: z.number(),
-          source_doc_id: z.string().min(1),
-          source_ref: Ref,
-          snippet: z.string(),
-        })
-        .strict(),
-    ),
+    matches: z.array(HistoryMemoryInputMatchV1),
   })
   .strict();
 export type HistoryMemoryInputPreviewV1 = z.infer<typeof HistoryMemoryInputPreviewV1>;
+
+export const HistoryRecallStatusV1 = z.enum(['used', 'empty', 'unavailable']);
+export type HistoryRecallStatusV1 = z.infer<typeof HistoryRecallStatusV1>;
+
+export const HistoryRecallReportV1 = z
+  .object({
+    api_version: z.literal('history-recall-report-v1'),
+    schema_version: z.literal(1),
+    status: HistoryRecallStatusV1,
+    query: z.string(),
+    index_state: z.enum(['fresh', 'possibly_stale']).optional(),
+    rebuilt: z.boolean(),
+    authority_notice: z.literal(HISTORY_AUTHORITY_NOTICE),
+    memory_input_count: z.number().int().nonnegative(),
+    memory_inputs: z.array(MemoryInputV0),
+    matches: z.array(HistoryMemoryInputMatchV1),
+    warnings: z.array(HistoryWarningV1),
+  })
+  .strict()
+  .superRefine((report, ctx) => {
+    if (report.memory_input_count !== report.memory_inputs.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['memory_input_count'],
+        message: 'memory_input_count must equal memory_inputs.length',
+      });
+    }
+    if (report.status === 'used' && report.memory_inputs.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status'],
+        message: "status 'used' requires at least one memory input",
+      });
+    }
+    if (report.status !== 'used' && report.memory_inputs.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['memory_inputs'],
+        message: "only status 'used' may include memory inputs",
+      });
+    }
+    if (report.status === 'unavailable' && report.index_state !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['index_state'],
+        message: "status 'unavailable' must not claim an index_state",
+      });
+    }
+  });
+export type HistoryRecallReportV1 = z.infer<typeof HistoryRecallReportV1>;
 
 export const HistoryStatusV1 = z
   .object({
