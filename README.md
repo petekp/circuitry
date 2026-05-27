@@ -196,8 +196,7 @@ Contribute or verify:
 
 - [`docs/generated-surfaces.md`](docs/generated-surfaces.md): source map for
   generated command, skill, schematic, and plugin output.
-- [`docs/architecture/codebase-walkthrough.md`](docs/architecture/codebase-walkthrough.md):
-  codebase walkthrough for contributors.
+- [`src/README.md`](src/README.md): source tree map for contributors.
 - [`docs/release/proofs/index.yaml`](docs/release/proofs/index.yaml):
   checked-in proof set covering doing work, deciding, continuity,
   customization, failure, first run, and plan execution for this alpha.

@@ -24,8 +24,6 @@ only the layer you need, then go deeper when the change touches that layer.
   checkout.
 - [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) - product vocabulary and
   terms to avoid.
-- [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md)
-  - codebase walkthrough for contributors opening the repo for the first time.
 - [src/README.md](../src/README.md) - source tree map from CLI, runtime,
   schemas, flows, generated outputs, and shared helpers.
 
@@ -87,8 +85,6 @@ locations:
 
 Historical plans, specs, audits, ideas, learnings, and checked-in proof runs are
 not active instructions unless one of the sources above links to a live section.
-The 2026-05-20 documentation audit inventory is
-[docs/documentation-surface-inventory.md](documentation-surface-inventory.md).
 
 ## Document Classes
 
@@ -97,12 +93,12 @@ The 2026-05-20 documentation audit inventory is
 | Operator entry | [README.md](../README.md), [docs/first-run.md](first-run.md), [docs/operator-guide.md](operator-guide.md), [docs/configuration.md](configuration.md) | Current user-facing setup and operation. |
 | Agent setup | [docs/agent-setup.md](agent-setup.md), [AGENTS.md](../AGENTS.md) | Instructions for coding agents in this checkout. |
 | Vocabulary | [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) | Current product terms for product prose, docs, contracts, and flow authoring notes. |
-| Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md), [plugins/README.md](../plugins/README.md) | Current codebase, flow, block, contract, source tree, host package, and script ownership reference. |
+| Contributor reference | [docs/repository-map.md](repository-map.md), [docs/architecture/](architecture/), [docs/contracts/](contracts/), [docs/flows/](flows/), [docs/reference/script-inventory.md](reference/script-inventory.md), [src/README.md](../src/README.md), [plugins/README.md](../plugins/README.md) | Current codebase, flow, block, contract, source tree, host package, and script ownership reference. |
 | Generated/evidence | [docs/generated-surfaces.md](generated-surfaces.md), [docs/flows/block-catalog.json](flows/block-catalog.json), [generated/](../generated/), [docs/release/](release/), [plugins/](../plugins/) generated mirrors | Generated truth, release truth, or proof evidence. Generated mirrors are regenerated from source. |
 | Release QA | [docs/host-trial-checklist.md](host-trial-checklist.md) | Checklist for validating host readiness before broader use. |
 | Active pivot reference | [docs/pivot/contract-guidance-proof-recovery/](pivot/contract-guidance-proof-recovery/) | Consolidated reference for the contract, guidance, proof, and recovery pivot. Validate claims against code, tests, and generated surfaces before treating them as current behavior. |
 | Working strategy | [docs/positioning-and-strategy.md](positioning-and-strategy.md) | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |
-| Research note | [docs/ideas/](ideas/), [docs/learnings/](learnings/), [docs/flows/research-intake.md](flows/research-intake.md), [docs/flows/cloudflare-glasswing-block-review.md](flows/cloudflare-glasswing-block-review.md) | Prior-art, product-shape, or design intake material. Useful context, not current behavior. |
+| Research note | [docs/ideas/](ideas/) and [docs/learnings/](learnings/) | Prior-art or product-shape material. Useful context, not current behavior. |
 | Archived | Completed or historical files in [docs/specs/](specs/) and [docs/internal/archive/](internal/archive/) | Dated target specs, design records, and local-only historical notes. Do not treat as active instructions unless a current doc links to a live section. |
 
 ## Low-Noise Rules
@@ -111,7 +107,7 @@ The 2026-05-20 documentation audit inventory is
 - Keep generated ownership in [docs/generated-surfaces.md](generated-surfaces.md);
   do not repeat it in every guide.
 - Do not add a new active runbook or playbook outside the approved locations
-  without updating this map and the documentation-surface tests.
+  without updating this map.
 - Move completed execution records that are not public release evidence into
   local-only [docs/internal/archive/](internal/archive/) after repo-wide
   reference probes.

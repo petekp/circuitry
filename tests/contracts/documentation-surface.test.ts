@@ -3,7 +3,6 @@ import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '..', '..');
-const INVENTORY_PATH = 'docs/documentation-surface-inventory.md';
 
 function readRepoFile(path: string): string {
   return readFileSync(resolve(REPO_ROOT, path), 'utf8');
@@ -26,7 +25,6 @@ function markdownFilesUnder(path: string): string[] {
 
 function isExcludedHistoricalPath(path: string): boolean {
   return (
-    path === INVENTORY_PATH ||
     path.startsWith('docs/internal/archive/') ||
     path.startsWith('docs/release/proofs/runs/') ||
     path.startsWith('docs/ideas/') ||
@@ -39,9 +37,8 @@ function isFlowCommandSource(path: string): boolean {
 }
 
 describe('documentation surface', () => {
-  it('documents the approved active how-to sources and the consolidation inventory', () => {
+  it('documents the approved active how-to sources', () => {
     const docsMap = readRepoFile('docs/README.md');
-    const inventory = readRepoFile(INVENTORY_PATH);
 
     expect(existsSync(resolve(REPO_ROOT, 'CLAUDE.md'))).toBe(false);
     expect(docsMap).toContain('## Approved Active How-To Locations');
@@ -64,26 +61,6 @@ describe('documentation surface', () => {
     ]) {
       expect(docsMap).toContain(link);
     }
-    expect(docsMap).toContain(INVENTORY_PATH);
-
-    for (const decision of [
-      '| Agent operating rules | `AGENTS.md` | Merge duplicate |',
-      '| Flow authoring | `docs/flows/authoring-model.md` | Keep and expand |',
-      '| Generated ownership | `docs/generated-surfaces.md` | Keep generated |',
-      '| Host package maps | `plugins/README.md`, `plugins/claude/README.md`, `plugins/codex/README.md` | Keep thin |',
-      '| Source layer maps | `src/README.md`, `src/runtime/README.md`, `src/schemas/README.md`, `src/flows/README.md`, `src/shared/README.md`, `src/types/README.md` | Keep thin |',
-      '| Removed Claude guide | `CLAUDE.md` | Remove |',
-      '| Generated host mirrors | `plugins/claude/**`, `plugins/codex/**` | Generated |',
-    ]) {
-      expect(inventory).toContain(decision);
-    }
-
-    expect(inventory).toContain(
-      'rg --files README.md AGENTS.md UBIQUITOUS_LANGUAGE.md docs plugins src/README.md src/*/README.md src/commands src/flows',
-    );
-    expect(inventory).toContain(
-      'plugins/README.md plugins/claude/README.md plugins/codex/README.md src/README.md src/*/README.md',
-    );
   });
 
   it('keeps the host-ready flow-authoring playbook centralized', () => {
@@ -107,7 +84,6 @@ describe('documentation surface', () => {
     for (const pointerFile of [
       'AGENTS.md',
       'docs/architecture/declarative-flow-architecture.md',
-      'docs/architecture/codebase-walkthrough.md',
       'src/commands/README.md',
       'docs/flows/pursue.md',
     ]) {
@@ -135,11 +111,9 @@ describe('documentation surface', () => {
       'docs/flows/blocks.md',
       'docs/flows/explore-tournament.md',
       'docs/flows/pursue.md',
-      'docs/architecture/codebase-walkthrough.md',
       'docs/operator-guide.md',
       'docs/generated-surfaces.md',
       'docs/reference/script-inventory.md',
-      'docs/release/public-announcement-demo-plan.md',
       'src/commands/README.md',
       'src/commands/create.md',
       'src/commands/run.md',
@@ -162,7 +136,6 @@ describe('documentation surface', () => {
 
     for (const link of [
       '[docs/repository-map.md](repository-map.md)',
-      '[docs/architecture/codebase-walkthrough.md](architecture/codebase-walkthrough.md)',
       '[docs/reference/script-inventory.md](reference/script-inventory.md)',
       '[plugins/README.md](../plugins/README.md)',
       '[src/README.md](../src/README.md)',
@@ -174,7 +147,6 @@ describe('documentation surface', () => {
       '## Before Map',
       '## After Map',
       '## Migration Rationale',
-      'docs/architecture/codebase-walkthrough.md',
       'docs/reference/script-inventory.md',
       'plugins/codex/README.md',
       'src/runtime/README.md',

@@ -74,10 +74,8 @@ connectors, child-runner, worktree runner, progress reporter, and clock
 interfaces. That is intentional. The graph walk remains plain: enter step, run
 executor, evaluate route, append trace, and move to the next step.
 
-The follow-on direction is captured in
-[docs/architecture/data-first-functional-flow-architecture.md](data-first-functional-flow-architecture.md).
-Treat that file as the next design target, not as a claim that the runtime has
-already moved to Effect or a separate functional kernel.
+Future runtime changes should stay grounded in the current graph runner,
+contracts, generated surfaces, and tests before claiming a new kernel.
 
 ## Generated Surface Policy
 

@@ -2,10 +2,8 @@
 
 Status: implemented V1 record. Current behavior is defined by the source,
 generated surfaces, tests, config, and contracts. The original same-connector
-V1 was extended on 2026-05-20 by
-[`write-capable-implementer-connectors-v1.md`](write-capable-implementer-connectors-v1.md)
-so Prototype tournaments can route variants across connector-aware
-implementers.
+V1 was extended so Prototype tournaments can route variants across
+connector-aware implementers.
 
 ## Goal
 
@@ -30,7 +28,6 @@ This spec is grounded in the current repo state:
 | --- | --- |
 | `UBIQUITOUS_LANGUAGE.md` | Circuit vocabulary names flows, schematics, blocks, steps, checkpoints, checks, traces, reports, evidence, generated surfaces, selection overrides, resolved selection, and provider-scoped models. |
 | `docs/specs/prototype-flow-v1.md` | Prototype V1 is a reusable durable flow, independent of the announcement demo plan. It explicitly forbids model/provider, deployment, screenshot, and branch-preview claims without typed evidence. It names provider/model variants as a later slice after single-artifact V1. |
-| `docs/release/public-announcement-demo-plan.md` | The announcement demo plan wants model-specific variants, comparison HTML, selected implementation, tests, and deployment proof. It also says the smallest defensible demo slice should compare typed branch reports first and only claim provider/model/deployment facts when run reports prove them. |
 | `src/flows/prototype/data.ts` and `generated/flows/prototype/circuit.json` | Prototype currently has `supports_tournament: false` and a single Frame, Plan, Act, Verify, Review, Close path: one `prototype.artifact@v1`, one verification report, one static checkpoint, one result. |
 | `src/flows/prototype/reports.ts` and `src/flows/prototype/contract.md` | Prototype reports enforce local path containment under `prototype_root`, require `not production` and `not deployed` claim limits, and forbid provider/model and branch-preview claims in V1. |
 | `src/flows/prototype/writers/verification.ts` | Current artifact proof checks that planned, created, and entry-point files exist, are not symlinks, stay under `prototype_root`, and do not escape the project root. |
@@ -52,7 +49,6 @@ rg --files docs/specs
 rg -n "tournament|tournament_n|supports_tournament" src/cli src/runtime tests/runner
 nl -ba UBIQUITOUS_LANGUAGE.md
 nl -ba docs/specs/prototype-flow-v1.md
-nl -ba docs/release/public-announcement-demo-plan.md
 nl -ba src/flows/prototype/data.ts
 nl -ba src/flows/prototype/reports.ts
 nl -ba src/flows/prototype/writers/verification.ts
@@ -106,14 +102,6 @@ Build changes production code. Prototype model-comparison must not apply the
 selected artifact to production code and must not run Build as a child flow.
 The close report may save a Build-ready follow-up prompt that names the selected
 variant and its evidence.
-
-### Versus The Announcement Demo Plan
-
-The announcement demo plan is allowed to tell a bigger story: model-specific
-variants, comparison checkpoint, selected implementation, tests, and deployment
-proof. This Prototype mode is reusable product behavior and stops at selected
-local prototype evidence. It does not deploy and does not claim a final
-production app.
 
 ## Existing Gaps To Retire
 

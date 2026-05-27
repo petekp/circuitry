@@ -52,10 +52,8 @@ work, recover a run, or write files.
   cannot become evidence refs, constraint refs, contract refs, policy refs, or
   blockers for guidance options. See `src/schemas/guidance-decision.ts` and
   `tests/contracts/guidance-decision-schema.test.ts`.
-- Checkpoint planning requires memory-derived facts to be frozen into the
-  checkpoint packet and forbids hidden memory mutation or silent project-memory
-  authority during resume. See
-  [docs/specs/checkpoint-experience-v1.md:309-334](checkpoint-experience-v1.md#L309-L334).
+- Checkpoint planning must keep recalled facts explicit and auditable in the
+  current run. Recall must not silently mutate checkpoint or resume authority.
 
 ### Run And Source Boundaries
 

@@ -35,7 +35,6 @@ This spec is grounded in the current repo snapshot:
 | `src/shared/html/index.ts:1-16`, `src/shared/html/build-checkpoint.ts:160-234`, `src/shared/html/explore-tournament.ts:183-258`, `src/shared/operator-summary-writer.ts:265-435` | HTML summaries are flow-specific projectors. Build renders waiting checkpoint HTML; Explore renders finalized tournament HTML; missing HTML cleans up stale files. |
 | `tests/runner/build-runtime-wiring.test.ts:123-175`, `tests/runner/explore-tournament-runtime.test.ts:208-358`, `tests/runner/operator-summary-writer.test.ts:1092-1144` | Current tests prove Build runtime wiring, Explore tournament fanout/checkpoint/resume, and Build checkpoint HTML linkage. |
 | `package.json:13-48`, `docs/release/proofs/README.md:16-31`, `docs/release/proofs/index.yaml:67-188` | Verification, drift, release, and proof commands; proof scenarios must back public claims. |
-| `docs/release/public-announcement-demo-plan.md:286-312` | Context only: the demo plan proposes a `demo-build` flow that compares variants, builds the chosen app, and captures deployment proof. Prototype V1 intentionally stays smaller and more reusable. |
 
 ## User Promise
 
@@ -88,11 +87,7 @@ Use **Prototype** when the operator expects an inspectable artifact. Prototype
 must produce a file-backed prototype and verification evidence. It may include a
 later tournament slice, but V1 should not be "Explore with a different name."
 
-### Prototype Versus The Announcement Demo
-
-The demo plan optimizes for one recorded public moment: compare app variants,
-choose one, build the final app, and capture deployment proof
-(`docs/release/public-announcement-demo-plan.md:286-312`).
+### Prototype Versus Public Demo Work
 
 Prototype optimizes for repeated use:
 

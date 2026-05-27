@@ -132,7 +132,6 @@ Layer maps live at `src/runtime/README.md`, `src/schemas/README.md`,
 
 | Change | Rationale | Behavior impact |
 | --- | --- | --- |
-| `docs/literate-guide.md` -> `docs/architecture/codebase-walkthrough.md` | The file is a deep architecture walkthrough, not an operator entry doc. Putting it under architecture reduces first-level docs noise and matches its audience. | Docs-only path move. |
 | `docs/script-inventory.md` -> `docs/reference/script-inventory.md` | Script ownership is maintenance reference material. It should sit behind the docs map, not beside first-run and operator docs. | Docs-only path move. |
 | Added `plugins/README.md` | Generated host packages need a parent map before readers enter Claude Code or Codex-specific output. | Docs-only addition. |
 | Added `plugins/codex/README.md` | Codex needed the same package-level map Claude Code already had, especially because Codex has both generated skill instructions and command mirrors. | Docs-only addition. |

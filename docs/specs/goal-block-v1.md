@@ -64,9 +64,7 @@ Circuit already has the pieces this design should use:
   outcome. See [docs/contracts/host-adapter.md](../contracts/host-adapter.md)
   and [docs/contracts/host-rendering.md](../contracts/host-rendering.md).
 - Checkpoints are step-level pauses with request/response files, trace evidence,
-  and validated resume. See
-  [docs/specs/checkpoint-experience-v1.md](checkpoint-experience-v1.md) and
-  `src/runtime/executors/checkpoint.ts`.
+  and validated resume. See `src/runtime/executors/checkpoint.ts`.
 - Sub-run V1 uses registered `flow_ref` values. Inline child flow definitions
   are out of scope. See `src/schemas/step.ts`.
 - Cross-run query and recall are still a gap, not current behavior. Goal V1 must
