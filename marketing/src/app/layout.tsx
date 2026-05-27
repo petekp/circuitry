@@ -8,9 +8,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Circuit — structured flows for coding agents",
+  title: "Circuit - repeatable work patterns for coding agents",
   description:
-    "Circuit changes what your coding agent is allowed to call done. Structured, resumable, multi-stage flows for Claude Code and Codex.",
+    "Circuit gives coding agents a better working environment: clear flows, timely skills, evidence, and checkpoints for agentic coding.",
 };
 
 export default function RootLayout({

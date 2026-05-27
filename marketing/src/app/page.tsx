@@ -1,12 +1,12 @@
-import { FlowGlyph, type Shape } from "@/components/flow-glyph";
+import { FlowGlyph, type MotifCell } from "@/components/flow-glyph";
 import { Wordmark } from "@/components/wordmark";
 
 type Flow = {
   name: string;
   command: string;
   color: string;
-  ghost: string;
-  shapes: Shape[];
+  accent: string;
+  motif: MotifCell[];
   summary: string;
 };
 
@@ -14,87 +14,103 @@ const flows: Flow[] = [
   {
     name: "EXPLORE",
     command: "/circuit:explore",
-    color: "#00B8D4",
-    ghost: "#FF6B6B",
-    shapes: [
-      "qbr", "ht", "qbl",
-      "hl", "dot", "hr",
-      "qtr", "hb", "qtl",
+    color: "var(--flow-explore)",
+    accent: "var(--flow-explore-accent)",
+    motif: [
+      "filled", "empty", "filled",
+      "empty", "filled", "empty",
+      "filled", "empty", "filled",
     ],
     summary:
-      "Investigate, compare options, and shape a plan before you commit code.",
+      "Compare directions before the agent commits to a path.",
   },
   {
     name: "BUILD",
     command: "/circuit:build",
-    color: "#FF6B1A",
-    ghost: "#1AB8FF",
-    shapes: [
-      "outline", "outline", "outline",
-      "outline", "square", "outline",
-      "square", "square", "square",
+    color: "var(--flow-build)",
+    accent: "var(--flow-build-accent)",
+    motif: [
+      "empty", "empty", "filled",
+      "empty", "filled", "filled",
+      "filled", "filled", "filled",
     ],
     summary:
-      "Implement a feature end-to-end with checkpoints along the way.",
+      "Move from framing to plan, implementation, verification, and review.",
   },
   {
     name: "FIX",
     command: "/circuit:fix",
-    color: "#E91E63",
-    ghost: "#1AFFB8",
-    shapes: [
-      "qtl", "hb", "qtr",
-      "hr", "square", "hl",
-      "qbl", "ht", "qbr",
+    color: "var(--flow-fix)",
+    accent: "var(--flow-fix-accent)",
+    motif: [
+      "empty", "filled", "empty",
+      "filled", "filled", "filled",
+      "empty", "filled", "empty",
     ],
     summary:
-      "Reproduce the bug, fix it, and produce a proof the regression is gone.",
+      "Reproduce the bug, make the fix, and keep the proof attached.",
   },
   {
     name: "REVIEW",
     command: "/circuit:review",
-    color: "#00C853",
-    ghost: "#FF1A4A",
-    shapes: [
-      "outline", "circle", "outline",
-      "circle", "dot", "circle",
-      "outline", "circle", "outline",
+    color: "var(--flow-review)",
+    accent: "var(--flow-review-accent)",
+    motif: [
+      "filled", "filled", "filled",
+      "filled", "empty", "filled",
+      "filled", "filled", "filled",
     ],
-    summary: "Audit a scoped change against the contract you set for it.",
+    summary: "Check a scoped change against evidence, not guesswork.",
   },
   {
-    name: "RUN",
-    command: "/circuit:run",
-    color: "#7C4DFF",
-    ghost: "#FFC107",
-    shapes: [
-      "outline", "outline", "tur",
-      "outline", "tur", "outline",
-      "tur", "outline", "outline",
+    name: "GOAL",
+    command: "/circuit:goal",
+    color: "var(--flow-goal)",
+    accent: "var(--flow-goal-accent)",
+    motif: [
+      "empty", "filled", "empty",
+      "filled", "empty", "filled",
+      "empty", "filled", "empty",
     ],
     summary:
-      "Describe a task in plain English. Circuit picks the right flow.",
+      "Keep a bounded objective moving until it is done, blocked, or needs recovery.",
   },
 ];
 
 const principles = [
   {
-    title: "Configurable relay steps",
-    body: "Pick the model, reasoning effort, and connector for each step in the flow.",
+    title: "Process above skills",
+    body: "A skill teaches one move. A flow gives the agent a repeatable way to use the right moves in the right order.",
   },
   {
-    title: "Resumable",
-    body: "If a session dies mid-run, pick up where it left off.",
+    title: "A better working environment",
+    body: "The human stops carrying every thread, prompt, and routine step. The agent gets a clearer path through the work.",
   },
   {
-    title: "Adjustable autonomy",
-    body: "Steer at checkpoints, or run unattended.",
+    title: "Evidence to check against",
+    body: "Runs leave traces, reports, and verification results so the agent and operator can see what happened.",
   },
   {
-    title: "Mode-driven depth",
-    body: "Lite for a fast pass. Deep for a thorough one. Default in between.",
+    title: "Judgment still matters",
+    body: "Checkpoints pause for decisions when they matter, while declared safe defaults can keep routine work moving.",
   },
 ];
+
+const agentInstallInstructions = `Please install Circuit for the coding-agent tool I am using in this project.
+
+If this is Claude Code, run:
+/plugin marketplace add petekp/circuit
+/plugin install circuit@circuit
+/reload-plugins
+
+If this is Codex, run:
+codex plugin marketplace add petekp/circuit
+
+After Circuit is installed, start with:
+/circuit:run <my task>
+
+Use a direct flow only when it is clearly the right fit:
+/circuit:explore, /circuit:build, /circuit:fix, /circuit:review, or /circuit:goal`;
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -108,44 +124,62 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
       <section className="flex flex-col gap-10">
-        <Label>[ Pre-release Alpha ]</Label>
-
         <Wordmark />
 
-        <p className="max-w-2xl text-[15px] leading-relaxed">
-          Structured flows for coding agents. Each step runs against a
-          contract, so the next step only starts when the previous one
-          actually finished.
+        <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
+          Powerful, repeatable work patterns for coding agents.
+        </h1>
+
+        <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+          Circuit helps agents work like experienced practitioners: following a
+          clear process, applying the right skills at the right time, and
+          checking the work against evidence. Ad-hoc chat asks the human to
+          remember the state, choose the next move, and keep nudging the work
+          forward. Circuit puts that process into flows, giving both the human
+          and the agent a better working environment.
         </p>
 
-        <div className="flex items-end gap-2 mt-2">
-          {flows.map((f) => (
-            <FlowGlyph
-              key={f.name}
-              name={f.name}
-              color={f.color}
-              ghost={f.ghost}
-              shapes={f.shapes}
-              cellSize={24}
-            />
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-3 mt-2">
-          <Label>[ Install · Claude Code ]</Label>
-          <pre className="bg-black/40 border border-border text-foreground px-5 py-4 text-[13px] leading-7 overflow-x-auto">
-            <code>
-              {`/plugin marketplace add petekp/circuit-next
-/plugin install circuit@circuit-next
+        <div className="flex w-full max-w-3xl flex-col gap-5 mt-2">
+          <Label>[ Install ]</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[15px] font-medium tracking-tight">
+                Claude Code
+              </h2>
+              <pre className="bg-[var(--panel)] border border-border text-foreground px-5 py-4 text-[13px] leading-7 overflow-x-auto">
+                <code>
+                  {`/plugin marketplace add petekp/circuit
+/plugin install circuit@circuit
 /reload-plugins`}
-            </code>
-          </pre>
+                </code>
+              </pre>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[15px] font-medium tracking-tight">
+                Codex
+              </h2>
+              <pre className="bg-[var(--panel)] border border-border text-foreground px-5 py-4 text-[13px] leading-7 overflow-x-auto">
+                <code>{`codex plugin marketplace add petekp/circuit`}</code>
+              </pre>
+            </div>
+          </div>
           <p className="text-[13px] text-muted-foreground">
             Then run{" "}
             <code className="px-1.5 py-0.5 bg-muted text-foreground">
               /circuit:run &lt;your task&gt;
             </code>
           </p>
+        </div>
+
+        <div className="flex w-full max-w-3xl flex-col gap-3">
+          <Label>[ Copy Agent Instructions ]</Label>
+          <textarea
+            readOnly
+            rows={9}
+            value={agentInstallInstructions}
+            className="max-h-56 min-h-36 w-full resize-y overflow-y-auto border border-border bg-[var(--panel)] px-5 py-4 font-mono text-[13px] leading-6 text-foreground outline-none"
+          />
         </div>
       </section>
 
@@ -157,9 +191,9 @@ export default function Home() {
               <FlowGlyph
                 name={f.name}
                 color={f.color}
-                ghost={f.ghost}
-                shapes={f.shapes}
-                cellSize={36}
+                accent={f.accent}
+                motif={f.motif}
+                cellSize={25}
               />
               <div className="flex flex-col gap-1">
                 <div className="text-[15px] font-medium tracking-tight">
@@ -169,7 +203,7 @@ export default function Home() {
                   {f.command}
                 </code>
               </div>
-              <p className="text-[13px] leading-relaxed text-muted-foreground">
+              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
                 {f.summary}
               </p>
             </div>
@@ -178,7 +212,7 @@ export default function Home() {
       </section>
 
       <section className="mt-28 flex flex-col gap-10">
-        <Label>[ What you get ]</Label>
+        <Label>[ Why flows ]</Label>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
           {principles.map((p) => (
             <li key={p.title} className="flex flex-col gap-1.5">
@@ -194,12 +228,12 @@ export default function Home() {
       </section>
 
       <footer className="mt-28 pt-8 border-t border-border flex flex-col sm:flex-row gap-2 sm:justify-between text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-        <span>[ Circuit · Pre-release ]</span>
+        <span>[ Circuit ]</span>
         <a
-          href="https://github.com/petekp/circuit-next"
+          href="https://github.com/petekp/circuit"
           className="hover:text-foreground transition-colors"
         >
-          github.com/petekp/circuit-next
+          github.com/petekp/circuit
         </a>
       </footer>
     </main>

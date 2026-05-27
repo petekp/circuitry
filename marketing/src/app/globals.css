@@ -51,72 +51,178 @@
 }
 
 :root {
-  --background: oklch(0.16 0.006 60);
-  --foreground: oklch(0.94 0.008 80);
-  --card: oklch(0.18 0.006 60);
-  --card-foreground: oklch(0.94 0.008 80);
-  --popover: oklch(0.18 0.006 60);
-  --popover-foreground: oklch(0.94 0.008 80);
-  --primary: oklch(0.94 0.008 80);
-  --primary-foreground: oklch(0.16 0.006 60);
-  --secondary: oklch(0.24 0.008 60);
-  --secondary-foreground: oklch(0.94 0.008 80);
-  --muted: oklch(0.24 0.008 60);
-  --muted-foreground: oklch(0.65 0.01 70);
-  --accent: oklch(0.24 0.008 60);
-  --accent-foreground: oklch(0.94 0.008 80);
-  --destructive: oklch(0.65 0.22 27);
-  --border: oklch(0.28 0.008 60);
-  --input: oklch(0.28 0.008 60);
-  --ring: oklch(0.55 0.01 70);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: hsl(40 15% 9%);
+  --foreground: hsl(45 28% 93%);
+  --card: hsl(40 12% 12%);
+  --card-foreground: hsl(45 28% 93%);
+  --popover: hsl(40 12% 12%);
+  --popover-foreground: hsl(45 28% 93%);
+  --primary: hsl(45 28% 93%);
+  --primary-foreground: hsl(40 15% 9%);
+  --secondary: hsl(40 12% 18%);
+  --secondary-foreground: hsl(45 28% 93%);
+  --muted: hsl(40 12% 18%);
+  --muted-foreground: hsl(42 10% 62%);
+  --accent: hsl(40 12% 18%);
+  --accent-foreground: hsl(45 28% 93%);
+  --destructive: hsl(3 75% 58%);
+  --border: hsl(40 10% 24%);
+  --input: hsl(40 10% 24%);
+  --ring: hsl(42 8% 52%);
+  --chart-1: hsl(0 0% 87%);
+  --chart-2: hsl(0 0% 56%);
+  --chart-3: hsl(0 0% 44%);
+  --chart-4: hsl(0 0% 37%);
+  --chart-5: hsl(0 0% 27%);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(0 0% 15%);
+  --sidebar-primary: hsl(0 0% 21%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(0 0% 97%);
+  --sidebar-accent-foreground: hsl(0 0% 21%);
+  --sidebar-border: hsl(0 0% 92%);
+  --sidebar-ring: hsl(0 0% 71%);
+  --panel: hsl(0 0% 0% / 40%);
+  --sticker-light: hsl(0 0% 100%);
+  --sticker-shadow: hsl(0 0% 0%);
+  --wordmark-a: hsl(169 100% 50%);
+  --wordmark-b: hsl(334 100% 59%);
+  --wordmark-c: hsl(46 100% 62%);
+  --wordmark-d: hsl(254 100% 65%);
+  --wordmark-e: hsl(188 100% 42%);
+  --flow-explore: hsl(188 100% 42%);
+  --flow-explore-accent: hsl(72 100% 62%);
+  --flow-build: hsl(21 100% 55%);
+  --flow-build-accent: hsl(254 100% 50%);
+  --flow-fix: hsl(339 82% 52%);
+  --flow-fix-accent: hsl(73 100% 50%);
+  --flow-review: hsl(145 100% 39%);
+  --flow-review-accent: hsl(338 100% 65%);
+  --flow-goal: hsl(46 100% 62%);
+  --flow-goal-accent: hsl(334 100% 59%);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: hsl(0 0% 14%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(0 0% 21%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(0 0% 21%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(0 0% 92%);
+  --primary-foreground: hsl(0 0% 21%);
+  --secondary: hsl(0 0% 27%);
+  --secondary-foreground: hsl(0 0% 98%);
+  --muted: hsl(0 0% 27%);
+  --muted-foreground: hsl(0 0% 71%);
+  --accent: hsl(0 0% 27%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(2 73% 60%);
+  --border: hsl(0 0% 100% / 10%);
+  --input: hsl(0 0% 100% / 15%);
+  --ring: hsl(0 0% 56%);
+  --chart-1: hsl(0 0% 87%);
+  --chart-2: hsl(0 0% 56%);
+  --chart-3: hsl(0 0% 44%);
+  --chart-4: hsl(0 0% 37%);
+  --chart-5: hsl(0 0% 27%);
+  --sidebar: hsl(0 0% 21%);
+  --sidebar-foreground: hsl(0 0% 98%);
+  --sidebar-primary: hsl(263 82% 58%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(0 0% 27%);
+  --sidebar-accent-foreground: hsl(0 0% 98%);
+  --sidebar-border: hsl(0 0% 100% / 10%);
+  --sidebar-ring: hsl(0 0% 56%);
+}
+
+@supports (color: color(display-p3 1 1 1)) {
+  :root {
+    --background: color(display-p3 0.093 0.085 0.074);
+    --foreground: color(display-p3 0.945 0.93 0.89);
+    --card: color(display-p3 0.12 0.11 0.095);
+    --card-foreground: color(display-p3 0.945 0.93 0.89);
+    --popover: color(display-p3 0.12 0.11 0.095);
+    --popover-foreground: color(display-p3 0.945 0.93 0.89);
+    --primary: color(display-p3 0.945 0.93 0.89);
+    --primary-foreground: color(display-p3 0.093 0.085 0.074);
+    --secondary: color(display-p3 0.18 0.165 0.145);
+    --secondary-foreground: color(display-p3 0.945 0.93 0.89);
+    --muted: color(display-p3 0.18 0.165 0.145);
+    --muted-foreground: color(display-p3 0.66 0.62 0.55);
+    --accent: color(display-p3 0.18 0.165 0.145);
+    --accent-foreground: color(display-p3 0.945 0.93 0.89);
+    --destructive: color(display-p3 0.84 0.22 0.16);
+    --border: color(display-p3 0.25 0.23 0.2);
+    --input: color(display-p3 0.25 0.23 0.2);
+    --ring: color(display-p3 0.57 0.53 0.47);
+    --chart-1: color(display-p3 0.87 0.87 0.87);
+    --chart-2: color(display-p3 0.56 0.56 0.56);
+    --chart-3: color(display-p3 0.44 0.44 0.44);
+    --chart-4: color(display-p3 0.37 0.37 0.37);
+    --chart-5: color(display-p3 0.27 0.27 0.27);
+    --sidebar: color(display-p3 0.98 0.98 0.98);
+    --sidebar-foreground: color(display-p3 0.15 0.15 0.15);
+    --sidebar-primary: color(display-p3 0.21 0.21 0.21);
+    --sidebar-primary-foreground: color(display-p3 0.98 0.98 0.98);
+    --sidebar-accent: color(display-p3 0.97 0.97 0.97);
+    --sidebar-accent-foreground: color(display-p3 0.21 0.21 0.21);
+    --sidebar-border: color(display-p3 0.92 0.92 0.92);
+    --sidebar-ring: color(display-p3 0.71 0.71 0.71);
+    --panel: color(display-p3 0 0 0 / 40%);
+    --sticker-light: color(display-p3 1 1 1);
+    --sticker-shadow: color(display-p3 0 0 0);
+    --wordmark-a: color(display-p3 0 1 0.82);
+    --wordmark-b: color(display-p3 1 0.18 0.53);
+    --wordmark-c: color(display-p3 1 0.82 0.25);
+    --wordmark-d: color(display-p3 0.49 0.3 1);
+    --wordmark-e: color(display-p3 0 0.72 0.83);
+    --flow-explore: color(display-p3 0 0.72 0.83);
+    --flow-explore-accent: color(display-p3 0.85 1 0.25);
+    --flow-build: color(display-p3 1 0.42 0.1);
+    --flow-build-accent: color(display-p3 0.23 0 1);
+    --flow-fix: color(display-p3 0.91 0.12 0.39);
+    --flow-fix-accent: color(display-p3 0.78 1 0);
+    --flow-review: color(display-p3 0 0.78 0.33);
+    --flow-review-accent: color(display-p3 1 0.3 0.55);
+    --flow-goal: color(display-p3 1 0.82 0.25);
+    --flow-goal-accent: color(display-p3 1 0.18 0.53);
+  }
+
+  .dark {
+    --background: color(display-p3 0.14 0.14 0.14);
+    --foreground: color(display-p3 0.98 0.98 0.98);
+    --card: color(display-p3 0.21 0.21 0.21);
+    --card-foreground: color(display-p3 0.98 0.98 0.98);
+    --popover: color(display-p3 0.21 0.21 0.21);
+    --popover-foreground: color(display-p3 0.98 0.98 0.98);
+    --primary: color(display-p3 0.92 0.92 0.92);
+    --primary-foreground: color(display-p3 0.21 0.21 0.21);
+    --secondary: color(display-p3 0.27 0.27 0.27);
+    --secondary-foreground: color(display-p3 0.98 0.98 0.98);
+    --muted: color(display-p3 0.27 0.27 0.27);
+    --muted-foreground: color(display-p3 0.71 0.71 0.71);
+    --accent: color(display-p3 0.27 0.27 0.27);
+    --accent-foreground: color(display-p3 0.98 0.98 0.98);
+    --destructive: color(display-p3 0.84 0.2 0.16);
+    --border: color(display-p3 1 1 1 / 10%);
+    --input: color(display-p3 1 1 1 / 15%);
+    --ring: color(display-p3 0.56 0.56 0.56);
+    --chart-1: color(display-p3 0.87 0.87 0.87);
+    --chart-2: color(display-p3 0.56 0.56 0.56);
+    --chart-3: color(display-p3 0.44 0.44 0.44);
+    --chart-4: color(display-p3 0.37 0.37 0.37);
+    --chart-5: color(display-p3 0.27 0.27 0.27);
+    --sidebar: color(display-p3 0.21 0.21 0.21);
+    --sidebar-foreground: color(display-p3 0.98 0.98 0.98);
+    --sidebar-primary: color(display-p3 0.49 0.24 0.93);
+    --sidebar-primary-foreground: color(display-p3 0.98 0.98 0.98);
+    --sidebar-accent: color(display-p3 0.27 0.27 0.27);
+    --sidebar-accent-foreground: color(display-p3 0.98 0.98 0.98);
+    --sidebar-border: color(display-p3 1 1 1 / 10%);
+    --sidebar-ring: color(display-p3 0.56 0.56 0.56);
+  }
 }
 
 @layer base {
@@ -128,5 +234,47 @@
   }
   html {
     @apply font-mono;
+  }
+}
+
+.circuit-wordmark {
+  width: fit-content;
+  color: transparent;
+  background-image: radial-gradient(
+    circle at -18% 46%,
+    var(--wordmark-a) 0%,
+    var(--wordmark-b) 18%,
+    var(--wordmark-c) 36%,
+    var(--wordmark-d) 58%,
+    var(--wordmark-e) 78%,
+    var(--wordmark-a) 100%
+  );
+  background-position: -24% 50%;
+  background-size: 110% 110%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation:
+    circuit-wordmark-bloom 4.8s ease-in-out infinite alternate,
+    circuit-wordmark-hue 11s linear infinite;
+  filter: saturate(1.35);
+}
+
+@keyframes circuit-wordmark-bloom {
+  from {
+    background-position: -34% 50%;
+    background-size: 92% 92%;
+  }
+  to {
+    background-position: -6% 50%;
+    background-size: 245% 245%;
+  }
+}
+
+@keyframes circuit-wordmark-hue {
+  from {
+    filter: hue-rotate(0deg) saturate(1.35);
+  }
+  to {
+    filter: hue-rotate(360deg) saturate(1.35);
   }
 }

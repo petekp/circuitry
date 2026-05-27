@@ -1,15 +1,11 @@
-import Image from "next/image";
-
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <Image
-      src="/circuit-wordmark.png"
-      alt="Circuit"
-      width={2063}
-      height={452}
-      priority
-      className={className}
-      style={{ width: "50%", height: "auto" }}
-    />
+    <div
+      className={`circuit-wordmark font-mono text-xl font-semibold leading-none tracking-[0.18em] sm:text-3xl ${
+        className ?? ""
+      }`}
+    >
+      CIRCUIT
+    </div>
   );
 }
