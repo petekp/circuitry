@@ -631,4 +631,7 @@ export const goalFlowData = {
       ],
     },
   },
+  engineFlags: {
+    bindsTerminalOutcomeToPrimaryResult: true,
+  },
 } satisfies FlowData;

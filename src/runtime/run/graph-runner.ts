@@ -6,6 +6,7 @@
 // only interprets the executable graph and appends durable trace entries.
 
 import { randomUUID } from 'node:crypto';
+import { findCompiledFlowPackageById } from '../../flows/catalog.js';
 import type { Axes } from '../../schemas/axes.js';
 import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
@@ -128,6 +129,35 @@ function outcomeForTerminal(target: TerminalTarget): RunClosedOutcome {
   if (target === '@stop') return 'stopped';
   if (target === '@handoff') return 'handoff';
   return 'escalated';
+}
+
+function runOutcomeForPrimaryResultOutcome(outcome: string): RunClosedOutcome | undefined {
+  if (outcome === 'complete') return undefined;
+  if (outcome === 'handoff') return 'handoff';
+  return 'stopped';
+}
+
+async function terminalOutcomeBoundToPrimaryResult(
+  context: RunContext,
+  outcome: RunClosedOutcome,
+): Promise<{ readonly outcome: RunClosedOutcome; readonly reason: string } | undefined> {
+  if (outcome !== 'complete') return undefined;
+  const pkg = findCompiledFlowPackageById(context.flow.id);
+  if (pkg?.engineFlags?.bindsTerminalOutcomeToPrimaryResult !== true) return undefined;
+  const primaryResultPath = pkg.runtimeSurface?.primaryResult?.path;
+  if (primaryResultPath === undefined) return undefined;
+
+  const primaryResult = await context.files.readJson(primaryResultPath);
+  if (typeof primaryResult !== 'object' || primaryResult === null) return undefined;
+  const primaryOutcome = (primaryResult as { readonly outcome?: unknown }).outcome;
+  if (typeof primaryOutcome !== 'string') return undefined;
+
+  const boundOutcome = runOutcomeForPrimaryResultOutcome(primaryOutcome);
+  if (boundOutcome === undefined) return undefined;
+  return {
+    outcome: boundOutcome,
+    reason: `primary result '${primaryResultPath}' reported outcome '${primaryOutcome}'`,
+  };
 }
 
 function latestAdmittedVerdict(context: RunContext): string | undefined {
@@ -527,9 +557,15 @@ async function closeRun(
   reason?: string,
 ): Promise<GraphClosedOutcome> {
   const proofGap = outcome === 'complete' ? completeCloseProofGap(context) : undefined;
-  const finalOutcome: RunClosedOutcome = proofGap === undefined ? outcome : 'aborted';
-  const finalReason = proofGap ?? reason;
-  const finalTerminalTarget = proofGap === undefined ? terminalTarget : undefined;
+  const proofOutcome: RunClosedOutcome = proofGap === undefined ? outcome : 'aborted';
+  const primaryResultOutcome =
+    proofGap === undefined
+      ? await terminalOutcomeBoundToPrimaryResult(context, proofOutcome)
+      : undefined;
+  const finalOutcome: RunClosedOutcome = primaryResultOutcome?.outcome ?? proofOutcome;
+  const finalReason = proofGap ?? primaryResultOutcome?.reason ?? reason;
+  const finalTerminalTarget =
+    proofGap === undefined && primaryResultOutcome === undefined ? terminalTarget : undefined;
   await context.trace.append({
     run_id: context.runId,
     kind: 'run.closed',

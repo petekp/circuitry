@@ -15,6 +15,7 @@ import {
   GoalRecovery,
   GoalResult,
 } from '../../src/flows/goal/reports.js';
+import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import type { StepOutcome } from '../../src/runtime/domain/step.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import type { ExecutableStep } from '../../src/runtime/manifest/executable-flow.js';
@@ -265,6 +266,28 @@ function missingEvidenceExecutors(): Partial<ExecutorRegistry> {
       return { route: 'pass', details: { omitted_child_result: true } };
     },
   };
+}
+
+function expectStoppedRunWithGoalOutcome(
+  runFolder: string,
+  result: Awaited<ReturnType<typeof runCompiledFlow>>,
+  goalOutcome: GoalResult['outcome'],
+): void {
+  expect(result.outcome).toBe('stopped');
+
+  const runResult = RunResult.parse(readJson(runFolder, 'reports/result.json'));
+  expect(runResult.outcome).toBe('stopped');
+  expect(runResult.reason).toContain("reported outcome 'needs_attention'");
+  expect(runResult.verdict).toBeUndefined();
+
+  const projected = projectRunStatusFromRunFolder(runFolder);
+  expect(projected.engine_state).toBe('completed');
+  if (projected.engine_state !== 'completed') throw new Error('expected completed run status');
+  expect(projected.terminal_outcome).toBe('stopped');
+
+  const goalResult = GoalResult.parse(readJson(runFolder, 'reports/goal-result.json'));
+  expect(goalResult.outcome).toBe(goalOutcome);
+  expect(goalResult.outcome).not.toBe('complete');
 }
 
 let runFolderBase: string;
@@ -535,5 +558,37 @@ describe('Goal flow package', () => {
     expect(recovery.selected_route).toBe('checkpoint');
     expect(recovery.operator_input_required).toBe(true);
     expect(() => readJson(runFolder, 'reports/goal-result.json')).toThrow();
+  });
+
+  it('does not report run-level success when standard Goal closes with missing evidence', async () => {
+    const runFolder = join(runFolderBase, 'standard-missing-evidence-close');
+    const result = await runCompiledFlow({
+      flowBytes: goalFlowBytes(),
+      runDir: runFolder,
+      runId: '00000000-0000-0000-0000-000000000205',
+      goal: 'Fix the flaky login bug and prove it stays fixed',
+      depth: 'standard',
+      now: () => new Date('2026-05-20T12:00:00.000Z'),
+      executors: missingEvidenceExecutors(),
+      maxSteps: 20,
+    });
+
+    expectStoppedRunWithGoalOutcome(runFolder, result, 'needs_attention');
+  });
+
+  it('does not report run-level success when standard Goal closes after a blocked gate', async () => {
+    const runFolder = join(runFolderBase, 'standard-blocked-gate-close');
+    const result = await runCompiledFlow({
+      flowBytes: goalFlowBytes(),
+      runDir: runFolder,
+      runId: '00000000-0000-0000-0000-000000000206',
+      goal: 'Fix the flaky login bug and prove it stays fixed',
+      depth: 'standard',
+      now: () => new Date('2026-05-20T12:00:00.000Z'),
+      executors: blockedGateExecutors(),
+      maxSteps: 20,
+    });
+
+    expectStoppedRunWithGoalOutcome(runFolder, result, 'needs_attention');
   });
 });

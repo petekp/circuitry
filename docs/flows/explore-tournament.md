@@ -379,6 +379,12 @@ If the run stops at checkpoint, the summary must show the checkpoint prompt,
 the recommendation, and the option-selection choices without pretending the
 decision is final.
 
+TODO: Revisit whether Explore Tournament should emit a final rich HTML summary
+at all. Rich HTML is most useful for active choice surfaces where visual
+comparison helps the operator decide. After the checkpoint is resolved, the
+final summary can likely stay in the chat thread, while any rich artifact should
+belong to the waiting checkpoint state.
+
 ## Acceptance Tests
 
 Minimum tests that clear the release blocker:

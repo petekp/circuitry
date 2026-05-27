@@ -113,6 +113,11 @@ export interface CompiledFlowEngineFlags {
   // chosen based on depth (Build's pattern). Other flows resolve
   // selection without an injected depth layer.
   readonly bindsExecutionDepthToRelaySelection?: boolean;
+  // When true, an @complete terminal close is downgraded to a
+  // non-success run outcome when the flow's primary result report has
+  // a non-complete semantic outcome. This keeps host-visible run status
+  // honest for flows whose close writer can finish with follow-up needed.
+  readonly bindsTerminalOutcomeToPrimaryResult?: boolean;
 }
 
 export interface CompiledFlowPrimaryResult {

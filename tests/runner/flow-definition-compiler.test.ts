@@ -508,5 +508,8 @@ describe('FlowDefinition compiler', () => {
     expect(packageFor('prototype').engineFlags).toEqual({
       bindsExecutionDepthToRelaySelection: true,
     });
+    expect(packageFor('goal').engineFlags).toEqual({
+      bindsTerminalOutcomeToPrimaryResult: true,
+    });
   });
 });
