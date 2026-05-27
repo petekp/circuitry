@@ -1,7 +1,11 @@
 # Ubiquitous Language
 
-Circuit runs flows for structured developer work. Use these terms in product
-prose, operator docs, contracts, and flow authoring notes.
+Circuit gives coding agents repeatable work patterns. It helps agents work
+more like experienced practitioners: follow a clear process, use the right
+skills at the right time, and check the work against evidence.
+
+Use these terms in product prose, operator docs, contracts, and flow authoring
+notes. Prefer plain human work language before runtime language.
 
 If you are reading this for the first time, learn the core path first:
 **Flow**, **Schematic**, **Block**, **Stage**, **Step**, **Run**,

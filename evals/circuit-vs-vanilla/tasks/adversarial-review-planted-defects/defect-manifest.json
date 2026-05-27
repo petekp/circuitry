@@ -66,5 +66,5 @@
     }
   ],
   "red_herrings": [],
-  "notes": "RH1 was originally drafted as a red herring (readPublicAsset assumed safe because of the path-traversal check) but Circuit identified a real symlink-following defect that the author had not anticipated. The function is now scored as planted defect D6, severity medium, subtlety very subtle. This is documented in RESULT-NOTES.md."
+  "notes": "RH1 was originally drafted as a red herring (readPublicAsset assumed safe because of the path-traversal check) but Circuit identified a real symlink-following defect that the author had not anticipated. The function is now scored as planted defect D6, severity medium, subtlety very subtle."
 }
