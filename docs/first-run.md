@@ -62,7 +62,7 @@ Claude Code:
 Codex:
 
 ```text
-@Circuit review this checkout for obvious release blockers
+/circuit:review review this checkout for obvious release blockers
 ```
 
 CLI from this checkout:

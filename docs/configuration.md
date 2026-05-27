@@ -47,8 +47,8 @@ relay:
 
 Codex has two separate Circuit roles:
 
-- **Codex host/orchestrator:** you ask `@Circuit` to run a task through the
-  Codex plugin.
+- **Codex host/orchestrator:** you use `/circuit:run` to run a task through
+  the Codex plugin.
 - **Codex worker connector:** Circuit launches `codex exec` for worker relay
   steps from any host, including write-capable implementer steps.
 
@@ -100,7 +100,7 @@ The skill contract is [`docs/contracts/skill.md`](contracts/skill.md).
 
 The same distinction from the starter section applies throughout config:
 
-- **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
+- **host/orchestrator behavior:** in Codex, use `/circuit:run` for a task.
   Codex can recommend the right Circuit flow and invoke the local Circuit
   engine.
 - **worker connector behavior:** Circuit can relay worker steps through the

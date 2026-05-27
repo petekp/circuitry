@@ -14,15 +14,15 @@ for normal first-run setup; use [docs/first-run.md](first-run.md) instead.
 ## Codex Scenarios
 
 - Natural Fix: run
-  `@Circuit the checkout total is wrong when discounts and tax both apply` and
+  `/circuit:run the checkout total is wrong when discounts and tax both apply` and
   confirm Codex invokes Circuit with the Fix flow.
-- Natural Review: run `@Circuit please review my current diff` and confirm
+- Natural Review: run `/circuit:run please review my current diff` and confirm
   Codex invokes Circuit with the Review flow.
-- Natural Build: run `@Circuit add billing settings to the account page` and
+- Natural Build: run `/circuit:run add billing settings to the account page` and
   confirm Codex invokes Circuit with the Build flow.
 - Natural Explore: run
-  `Use Circuit to decide whether we should replace auth providers` and confirm
-  Codex invokes Circuit with the Explore flow or an explicit decision flow path.
+  `/circuit:run decide: should we replace auth providers?` and confirm Codex
+  invokes Circuit with the Explore flow or an explicit decision flow path.
 - Explicit Build: invoke the Build flow skill directly for the same kind of
   change.
 - Checkpoint: exercise a checkpointing run and confirm the question/choice is

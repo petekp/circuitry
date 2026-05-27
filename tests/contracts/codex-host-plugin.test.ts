@@ -126,7 +126,8 @@ describe('Codex host plugin package', () => {
     expect(manifest.interface.capabilities).toContain('Write');
     expect(manifest.description).toContain('coding intents');
     expect(manifest.interface.shortDescription).toContain('coding intents');
-    expect(manifest.interface.longDescription).toContain('@Circuit');
+    expect(manifest.interface.longDescription).toContain('/circuit:run');
+    expect(manifest.interface.longDescription).not.toContain('@Circuit');
     expect(manifest.interface.longDescription).toContain('recommend a Circuit flow');
     expect(manifest.interface.longDescription).toContain('expert controls');
     expect(manifest.interface.defaultPrompt).toEqual([

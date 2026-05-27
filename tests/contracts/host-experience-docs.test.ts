@@ -68,10 +68,13 @@ describe('host experience docs', () => {
   it('keeps a repeatable Codex and Claude Code host trial checklist', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'docs/host-trial-checklist.md'), 'utf8');
 
-    expect(doc).toContain('@Circuit the checkout total is wrong when discounts and tax both apply');
-    expect(doc).toContain('@Circuit please review my current diff');
-    expect(doc).toContain('@Circuit add billing settings to the account page');
-    expect(doc).toContain('Use Circuit to decide whether we should replace auth providers');
+    expect(doc).toContain(
+      '/circuit:run the checkout total is wrong when discounts and tax both apply',
+    );
+    expect(doc).toContain('/circuit:run please review my current diff');
+    expect(doc).toContain('/circuit:run add billing settings to the account page');
+    expect(doc).toContain('/circuit:run decide: should we replace auth providers?');
+    expect(doc).not.toContain('@Circuit');
     expect(doc).toContain('/circuit:run <natural task>');
     expect(doc).toContain('Explicit Build');
     expect(doc).toContain('Checkpoint');
@@ -98,10 +101,11 @@ describe('host experience docs', () => {
     expect(doc).toContain(
       '/circuit:run the checkout total is wrong when discounts and tax both apply',
     );
-    expect(doc).toMatch(/with less\s+babysitting/);
+    expect(doc).toContain('Powerful, repeatable work patterns for coding agents');
+    expect(doc).toMatch(/better working\s+environment/);
     expect(doc).toContain('Go from this:');
     expect(doc).toContain('To this:');
-    expect(doc).toContain('@Circuit the checkout total is wrong when discounts and tax both apply');
+    expect(doc).not.toContain('@Circuit');
     expect(doc).toMatch(/Codex can recommend the right Circuit flow/);
     expect(doc).toContain('host/orchestrator behavior');
     expect(doc).toContain('worker connector behavior');
@@ -115,6 +119,21 @@ describe('host experience docs', () => {
     expect(operatorGuide).not.toContain('old intent prefixes');
     expect(operatorGuide).not.toContain('develop:');
     expect(operatorGuide).toContain('Circuit records the selected flow');
+  });
+
+  it('keeps active Codex invocation docs on slash commands', () => {
+    for (const file of [
+      'README.md',
+      'docs/operator-guide.md',
+      'docs/configuration.md',
+      'docs/first-run.md',
+      'docs/host-trial-checklist.md',
+      'plugins/codex/README.md',
+      'plugins/codex/.codex-plugin/plugin.json',
+    ]) {
+      const doc = readFileSync(resolve(REPO_ROOT, file), 'utf8');
+      expect(doc, file).not.toContain('@Circuit');
+    }
   });
 
   it('links navigation doc references in the docs map', () => {

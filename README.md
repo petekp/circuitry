@@ -1,28 +1,26 @@
 <div align="center">
   <img src="assets/circuit.png" alt="Circuit" width="100%" />
 </div>
-<h3 align="center"><strong>Structured developer flows for Claude Code and Codex</strong></h3>
+<h3 align="center"><strong>Powerful, repeatable work patterns for coding agents</strong></h3>
 <br />
-Circuit runs coding tasks through structured flows with trace, reports, and
-evidence. It helps produce more consistent and reliable results, with less
-babysitting.
+Circuit helps coding agents work like experienced practitioners: following a
+clear process, applying the right skills at the right time, and checking their
+work against evidence. It gives agents and operators a better working
+environment than ad-hoc chat.
 
 Go from this:
 
-- Prompt the agent with a skill
-- Ask the agent to make a plan
-- Ask the agent to review the plan and update it
-- Ask the agent to execute the plan
-- Ask the agent to review its work using a skill
-- Ask the agent to use another skill for a different part of the code
-- ...and so on, all the while feeling a sense of unease if the agent drifted or
-  missed any crucial details
+- Remember which chat thread has the latest state
+- Remember which skill to use and when
+- Ask for routine planning, checking, and review steps by hand
+- Wonder whether the agent took shortcuts or repeated an old mistake
+- Keep nudging the process forward yourself
 
 To this:
 
 - `/circuit:run build the thing`
 
-Circuit automates all the tedium and produces sounder results:
+Circuit puts the process into a repeatable flow:
 
 - Records the chosen built-in, custom, or dynamically determined flow
 - Moves through each step in sequence and/or parallelizes non-dependent steps
@@ -71,7 +69,7 @@ npm run sync:codex-plugin-cache
 Then ask Codex to use Circuit:
 
 ```text
-@Circuit the checkout total is wrong when discounts and tax both apply
+/circuit:run the checkout total is wrong when discounts and tax both apply
 ```
 
 Codex can recommend the right Circuit flow from your natural-language request.
@@ -97,7 +95,7 @@ Use one front door unless you already know the flow you want:
 | Host | You type | What happens |
 | --- | --- | --- |
 | Claude Code | `/circuit:run the checkout total is wrong when discounts and tax both apply` | The host may recommend a flow; Circuit records the selected flow when the run starts. |
-| Codex | `@Circuit the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
+| Codex | `/circuit:run the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
 | CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
 If the flow choice is obvious, use direct commands such as `/circuit:fix`,
@@ -137,7 +135,7 @@ OS sandbox.
 
 Codex has two separate roles:
 
-- **host/orchestrator behavior:** in Codex, ask `@Circuit` to handle a task.
+- **host/orchestrator behavior:** in Codex, use `/circuit:run` for a task.
   Codex can recommend the right Circuit flow and invoke the local Circuit
   engine.
 - **worker connector behavior:** Circuit can relay worker steps through the

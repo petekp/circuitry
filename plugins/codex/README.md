@@ -3,7 +3,7 @@
 This directory is the self-contained Codex plugin package for Circuit. This
 README is for plugin development and from-checkout testing. End users should
 start from the root [`README.md`](../../README.md) and ask Codex through
-`@Circuit`.
+`/circuit:run` or a direct Circuit slash command.
 
 ## What Lives Here
 
