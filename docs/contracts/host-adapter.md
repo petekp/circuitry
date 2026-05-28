@@ -44,8 +44,14 @@ Every host adapter MUST support:
 Host plugins may let the host model choose a flow before calling Circuit.
 For example, Claude Code `/circuit:run` can select Fix, Review, Build,
 Explore, or Pursue and then invoke `circuit run <flow> --goal
-"<task>"`. Codex may choose a bundled Circuit flow skill or the router skill
-from the user's natural-language request.
+"<task>"`. Codex should start from the bundled `run` skill and may recommend a
+flow before invoking the wrapper.
+
+The current host plugin package model exposes file-backed commands as
+`/circuit:<command>`. Circuit therefore ships `/circuit:run` as the single
+normal coding command rather than a root `/circuit` alias. Flow-specific host
+commands and Codex flow skills are not published by default; the flow package
+JSON remains available for routed runtime execution.
 
 The deterministic router remains the CLI authority when a host calls
 `circuit run --goal "<task>"` without an explicit flow. Public docs must

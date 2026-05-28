@@ -201,7 +201,7 @@ architecture:
 
 | Residue | Evidence | Target Direction |
 | --- | --- | --- |
-| Flow commands as equal public choices | Public generated command surfaces exist for Build, Explore, Fix, Goal, Prototype, and Review, while product alignment says Run should dominate. | Make Run default; keep direct flow commands as expert controls unless demand proves otherwise. |
+| Flow commands as equal public choices | Public generated command surfaces existed for Build, Explore, Fix, Goal, Prototype, and Review, while product alignment says Run should dominate. | Make Run default; hide direct built-in flow host commands once Run parity is proven. |
 | Goal as a public flow peer | Goal is listed and emitted as a public flow, but product alignment says Goal primitives may fold into Run. | Internalize Goal as contract/completion primitives. |
 | Host prompt does flow recommendation | `/circuit:run` currently asks the host to recommend a flow before invoking CLI. | Make process selection source-owned and auditable. |
 | Static one-child Goal execution | Goal has one authored sub-run step per target and tests lock that shape. | Use a process-attempt model that can represent one or more process runs. |
@@ -306,9 +306,9 @@ five concepts:
 2. **Which parts should move, collapse, or become internal?**
    Run behavior should move out of host instruction text into source-owned
    supervisor logic. Router should collapse into process selection. Goal should
-   become internal contract/completion machinery. Direct flow commands should
-   become expert controls. Human-facing output should become a projection over
-   artifacts rather than the artifact itself.
+   become internal contract/completion machinery. Direct flow host commands
+   should be hidden by default once Run parity is proven. Human-facing output
+   should become a projection over artifacts rather than the artifact itself.
 
 3. **Which contracts make migration safe?**
    Run trace contracts, generated-surface checks, engine-flow boundary tests,
@@ -331,7 +331,7 @@ five concepts:
 | Run supervisor becomes a second runtime. | The design starts interpreting graph steps, checkpoint mechanics, or connector calls directly instead of calling the runtime kernel. |
 | Goal primitives are too Goal-specific to reuse. | Goal report schemas cannot be generalized without weakening false-complete protection or two-pass gate behavior. |
 | Multi-process Run cannot fit current artifacts. | A prototype cannot represent process attempts and child run evidence in run folders without breaking trace/result contracts. |
-| Hiding direct flow commands breaks real host behavior. | Host tests or user workflows require direct command parity as a default, not just expert access. |
+| Hiding direct flow commands breaks real host behavior. | Host tests or user workflows require direct command parity as a default, not just CLI/runtime access. |
 | Memory becomes spooky. | Memory can affect process selection or proof without an explicit indicator, citation, and authority limit. |
 | Checkpoint UX becomes routine handholding. | Decision packets appear for normal progress where no human judgment materially changes the outcome. |
 

@@ -30,7 +30,6 @@ export const exploreFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/explore/schematic.json',
-    command: 'src/flows/explore/command.md',
     contract: 'src/flows/explore/contract.md',
   },
   routing: {

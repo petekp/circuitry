@@ -113,7 +113,8 @@ const CODEX_PLUGIN_ROOT_REL = 'plugins/codex';
 const SOURCE_COMMAND_ROOT_REL = 'src/commands';
 const GENERATED_SURFACE_MAP_REL = 'docs/generated-surfaces.md';
 const BLOCK_CATALOG_REL = 'docs/flows/block-catalog.json';
-const HOST_DIRECT_COMMANDS = ['create', 'handoff', 'run'];
+const HOST_DIRECT_COMMANDS = ['handoff', 'run'];
+const CLI_ONLY_COMMANDS = ['create'];
 const ROOT_CLAUDE_MARKETPLACE_REL = '.claude-plugin/marketplace.json';
 const OBSOLETE_ROOT_HOST_SURFACES = ['commands', 'hooks'];
 
@@ -291,13 +292,22 @@ function renderSurfaceInventory(): string {
       'Only public flows with `paths.command` emit these surfaces. Generated headers are omitted to preserve host command and skill parsing.',
     ],
     [
-      'Direct command sources',
+      'Host direct command sources',
       '`src/commands/<id>.md`',
       '`scripts/flows/emit.ts` mirrors to host plugin surfaces',
       'source yes; outputs no',
       '`plugins/claude/commands/<id>.md`<br>`plugins/codex/commands/<id>.md`<br>`plugins/codex/skills/<id>/SKILL.md`',
       '`node scripts/flows/emit.ts --check`',
-      'Covers router/direct commands such as run, create, and handoff.',
+      'Covers visible host utilities such as run and handoff.',
+    ],
+    [
+      'CLI-only utility sources',
+      '`src/commands/<id>.md`',
+      'none',
+      'source yes',
+      'none',
+      'normal CLI and docs tests',
+      'Covers utilities such as create that remain available through `./bin/circuit` but are not published as host command or skill surfaces.',
     ],
     [
       'Generated schematic files',
@@ -469,6 +479,14 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
       'Edit the direct command source; run `npm run emit-flows`.',
     ]),
   );
+  const cliOnlyRows = CLI_ONLY_COMMANDS.map((command) =>
+    markdownTableRow([
+      `\`${command}\``,
+      `\`${SOURCE_COMMAND_ROOT_REL}/${command}.md\``,
+      'none',
+      'Edit the CLI utility source and run focused CLI tests. No host mirrors should exist.',
+    ]),
+  );
 
   return `${[
     '# Generated Surface Source Map',
@@ -517,15 +535,23 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
     '',
     '## Direct Commands',
     '',
-    'Direct commands are source files under `src/commands/`. Some also correspond to routable flows that do not own `paths.command`.',
+    'Direct commands are source files under `src/commands/` that are mirrored into host packages.',
     '',
     markdownTableRow(['Command', 'Command source', 'Host mirrors', 'Edit rule']),
     markdownTableRow(['---', '---', '---', '---']),
     ...commandRows,
     '',
+    '## CLI-only Utilities',
+    '',
+    'CLI-only utilities are source files under `src/commands/` that remain callable through `./bin/circuit` but are intentionally hidden from host command and skill surfaces.',
+    '',
+    markdownTableRow(['Utility', 'Source', 'Host mirrors', 'Edit rule']),
+    markdownTableRow(['---', '---', '---', '---']),
+    ...cliOnlyRows,
+    '',
     '## Drift Check',
     '',
-    '`node scripts/flows/emit.ts --check` verifies this file, the generated block catalog, generated schematics, generated manifests, command mirrors, host flow mirrors, stale per-mode siblings, stale internal host mirrors, and stale Codex skill directories.',
+    '`node scripts/flows/emit.ts --check` verifies this file, the generated block catalog, generated schematics, generated manifests, command mirrors, host flow mirrors, stale per-mode siblings, stale internal host mirrors, stale host command files, and stale Codex skill directories.',
     '',
   ].join('\n')}\n`;
 }
@@ -567,12 +593,38 @@ function expectedCodexSkillIds(): Set<string> {
   ]);
 }
 
+function expectedHostCommandIds(): Set<string> {
+  return new Set([
+    ...SCHEMATICS.filter(
+      (entry) => entry.visibility === 'public' && entry.commandSourcePath !== undefined,
+    ).map((entry) => entry.id),
+    ...HOST_DIRECT_COMMANDS,
+  ]);
+}
+
 function findStaleCodexSkillDirs(expected: Set<string>): string[] {
   const skillsRoot = resolve(projectRoot, `${CODEX_PLUGIN_ROOT_REL}/skills`);
   if (!existsSync(skillsRoot)) return [];
   return readdirSync(skillsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !expected.has(entry.name))
     .map((entry) => `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.name}`);
+}
+
+function findStaleHostCommandFiles(expected: Set<string>): string[] {
+  const stale: string[] = [];
+  for (const rootRel of [
+    `${CLAUDE_PLUGIN_ROOT_REL}/commands`,
+    `${CODEX_PLUGIN_ROOT_REL}/commands`,
+  ]) {
+    const rootAbs = resolve(projectRoot, rootRel);
+    if (!existsSync(rootAbs)) continue;
+    for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      const id = entry.name.slice(0, -'.md'.length);
+      if (!expected.has(id)) stale.push(`${rootRel}/${entry.name}`);
+    }
+  }
+  return stale;
 }
 
 async function loadCompilerModule(): Promise<typeof CompilerModule> {
@@ -854,6 +906,7 @@ async function checkBlockCatalog(tmpDir: string): Promise<boolean> {
 
 async function emitMode(): Promise<void> {
   const expectedSkills = expectedCodexSkillIds();
+  const expectedHostCommands = expectedHostCommandIds();
   const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
   await emitBlockCatalog();
   for (const entry of SCHEMATICS) {
@@ -921,6 +974,10 @@ async function emitMode(): Promise<void> {
     rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
     console.log(`removed stale ${stale}`);
   }
+  for (const stale of findStaleHostCommandFiles(expectedHostCommands)) {
+    unlinkSync(resolve(projectRoot, stale));
+    console.log(`removed stale ${stale}`);
+  }
   for (const stale of findObsoleteRootHostSurfaces()) {
     rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
     console.log(`removed obsolete root host surface ${stale}`);
@@ -931,6 +988,7 @@ async function checkMode(): Promise<void> {
   const tmpDir = mkdtempSync(join(tmpdir(), 'flow-drift-'));
   let drifted = false;
   const expectedSkills = expectedCodexSkillIds();
+  const expectedHostCommands = expectedHostCommandIds();
   const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
   try {
     if (await checkBlockCatalog(tmpDir)) {
@@ -1078,6 +1136,12 @@ async function checkMode(): Promise<void> {
     for (const stale of findStaleCodexSkillDirs(expectedSkills)) {
       console.error(
         `✗ ${stale} is not an expected Codex skill. Run \`npm run emit-flows\` to clean up stale skills, then commit the deletion.`,
+      );
+      drifted = true;
+    }
+    for (const stale of findStaleHostCommandFiles(expectedHostCommands)) {
+      console.error(
+        `✗ ${stale} is not an expected host command. Run \`npm run emit-flows\` to clean up stale commands, then commit the deletion.`,
       );
       drifted = true;
     }

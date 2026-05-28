@@ -102,7 +102,7 @@ public default, Goal de-emphasis, and closeout.
 | Decision packet contract | Ready | Gives checkpoints, Skill Moment `ask`, and missing-evidence choices one shared shape. |
 | Memory update event contract | Ready | Preserves hint-only memory while adding update reasons and operator indicators. |
 | Run-backed handoff relation | Ready | Explains handoff as the continuity carrier for active Run state. |
-| Public surface compatibility plan | Ready | Defines when Run can become default and when Goal/direct flows can be de-emphasized. |
+| Public surface compatibility plan | Ready | Defines when Run can become default and when Goal/direct host commands can be removed after parity. |
 
 ### Risky Assumptions
 
@@ -113,7 +113,7 @@ public default, Goal de-emphasis, and closeout.
 | Skill Moment policy can stay deterministic. | Fuzzy skill activation could creep back in. | Policy fixtures must reject flow-step skill binding matrices and require observed activation proof. |
 | Decision packets can cover checkpoints and `ask` mode. | Two parallel human-decision models could emerge. | One packet schema must represent both process checkpoints and Run-level choices. |
 | Memory updates can be automatic without hidden authority. | Memory could silently steer or falsely prove work. | Memory update fixtures must reject route, proof, checkpoint, recovery, write, or policy authority. |
-| Public simplification can wait. | Users may still see the old flow taxonomy longer than ideal. | Keep direct flows lightly visible until Run parity evidence exists, then simplify under compatibility tests. |
+| Public simplification can wait. | Users may still see the old flow taxonomy longer than ideal. | Simplify direct flow host surfaces only after Run parity evidence exists, then keep explicit CLI flow starts for debugging and tests. |
 
 ### 1. Migration Ledger
 
@@ -210,7 +210,9 @@ Some slices need extra gates:
 ## What Not To Start Yet
 
 - Do not rename Goal to Run.
-- Do not hide direct flows.
+- Do not hide direct flows before Run parity evidence exists; after parity,
+  remove direct host command surfaces while preserving packaged flow manifests
+  and explicit CLI flow starts.
 - Do not add runtime dispatch for Skill Moments before policy fixtures pass.
 - Do not ship default concrete skill mappings unless missing skills are
   availability-gated.

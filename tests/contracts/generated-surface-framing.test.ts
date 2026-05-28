@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -32,20 +32,20 @@ const directFlowGeneratedPaths = [
   ]),
 ];
 
-const goalSurfacePaths = [
-  'src/flows/goal/command.md',
-  'plugins/claude/commands/goal.md',
-  'plugins/codex/commands/goal.md',
-  'plugins/codex/skills/goal/SKILL.md',
+const cliOnlyUtilityGeneratedPaths = [
+  'plugins/claude/commands/create.md',
+  'plugins/codex/commands/create.md',
+  'plugins/codex/skills/create/SKILL.md',
 ];
 
 describe('generated host surface framing', () => {
-  it('makes run the intent front door instead of a flow selector', () => {
+  it('makes run the default Circuit command instead of a flow selector', () => {
     for (const path of runSurfacePaths) {
       const content = readRepoFile(path);
 
-      expect(content, path).toContain('intent front door');
+      expect(content, path).toMatch(/intent\s+front\s+door/);
       expect(content, path).toContain('records the selected flow');
+      expect(content, path).toContain('not published as separate host commands');
       expect(content, path).not.toMatch(/flow selector/i);
       expect(content, path).not.toContain('Direct Flow Bypass');
       expect(content, path).not.toContain('host model chooses the flow before invoking Circuit');
@@ -54,42 +54,45 @@ describe('generated host surface framing', () => {
     }
   });
 
-  it('marks direct flow sources as expert controls, not runtime bypasses', () => {
+  it('does not publish direct flow command or skill surfaces', () => {
     for (const path of [...directFlowSourcePaths, ...directFlowGeneratedPaths]) {
-      const content = readRepoFile(path);
-
-      expect(content, path).toMatch(/expert control|deliberate starting point/i);
-      expect(content, path).toContain('This is not a runtime bypass');
-      expect(content, path).toContain('records the selected flow');
-      expect(content, path).toContain('trace');
-      expect(content, path).toContain('reports');
-      expect(content, path).toContain('evidence');
-      expect(content, path).not.toContain('without asking the router to choose');
-      expect(content, path).not.toContain('router bypass behavior');
+      expect(existsSync(resolve(REPO_ROOT, path)), path).toBe(false);
     }
   });
 
-  it('keeps manifests intent-first and direct skills expert-only', () => {
+  it('keeps Create as a CLI-only utility instead of a host command', () => {
+    const generatedSurfaceMap = readRepoFile('docs/generated-surfaces.md');
+
+    expect(existsSync(resolve(REPO_ROOT, 'src/commands/create.md'))).toBe(true);
+    for (const path of cliOnlyUtilityGeneratedPaths) {
+      expect(existsSync(resolve(REPO_ROOT, path)), path).toBe(false);
+    }
+    expect(generatedSurfaceMap).toContain('## CLI-only Utilities');
+    expect(generatedSurfaceMap).toContain('| `create` | `src/commands/create.md` | none |');
+  });
+
+  it('keeps manifests intent-first and run-only for normal coding work', () => {
     const codexManifest = readRepoFile('plugins/codex/.codex-plugin/plugin.json');
     const claudeManifest = readRepoFile('plugins/claude/.claude-plugin/plugin.json');
 
     expect(codexManifest).toContain('coding intents');
-    expect(codexManifest).toContain('expert controls');
+    expect(codexManifest).toContain('single normal Circuit entry point');
     expect(codexManifest).not.toContain('choose the best bundled Circuit flow');
 
-    expect(claudeManifest).toContain('intent front door');
-    expect(claudeManifest).toContain('expert controls');
+    expect(claudeManifest).toContain('default Circuit command');
+    expect(claudeManifest).not.toContain('expert controls');
     expect(claudeManifest).not.toContain('selects the best flow');
   });
 
-  it('de-emphasizes Goal as a separate public concept', () => {
-    for (const path of goalSurfacePaths) {
-      const content = readRepoFile(path);
+  it('keeps Goal as a routed flow and not a separate host command', () => {
+    const generatedSurfaceMap = readRepoFile('docs/generated-surfaces.md');
+    const runSkill = readRepoFile('plugins/codex/skills/run/SKILL.md');
 
-      expect(content, path).toContain('Circuit Run');
-      expect(content, path).toContain('Goal-style completion discipline');
-      expect(content, path).toContain('existing Goal use cases');
-      expect(content, path).toContain('old Goal run folders');
-    }
+    expect(generatedSurfaceMap).toContain('| `goal` | `public` |');
+    expect(generatedSurfaceMap).toContain(
+      '`plugins/claude/skills/goal/circuit.json`<br>`plugins/codex/flows/goal/circuit.json` | none | none |',
+    );
+    expect(runSkill).toContain('Goal is not a kind of work');
+    expect(runSkill).toMatch(/completion\s+standard\s+Run\s+uses\s+by\s+default/);
   });
 });

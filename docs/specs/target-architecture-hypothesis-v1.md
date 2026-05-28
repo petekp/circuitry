@@ -146,7 +146,7 @@ other concepts support Run:
 | Change | Reason |
 | --- | --- |
 | Fold Goal primitives into Run | Run should own goal formulation, completion, and honest blocking because that is the dominant product experience. |
-| Treat direct flow commands as expert controls | Users should not start by choosing among Build, Fix, Review, Explore, Prototype, Goal, and Pursue. |
+| Treat direct flow commands as routed internals by default | Users should not start by choosing among Build, Fix, Review, Explore, Prototype, Goal, and Pursue. |
 | Make process selection an internal Run decision | This reduces the steering burden before the agent even starts working. |
 | Add an explicit Run supervisor boundary above the runtime kernel | The runtime should execute graphs; the supervisor should decide what goal/process loop to run. |
 | Separate surface output from run artifacts | Humans need succinct status; agents need the rich detail. These should not be the same object with two audiences. |
@@ -173,7 +173,7 @@ other concepts support Run:
 | Existing FlowData/compiled package architecture can remain the process library behind Run. | Avoids unnecessary rewrite of the most useful current boundary. | A deeper audit shows process packages cannot support Run's goal loop without flow-specific runtime hacks. |
 | Goal's contract, evidence evaluation, recovery, and safety review primitives are reusable enough to become Run primitives. | Lets the target reuse current work instead of inventing a new supervisor from scratch. | Goal reports or routes prove too specific to today's Goal flow semantics. |
 | Run folder artifacts can support parent Run plus one or more child process executions. | The target needs durable multi-process execution without chat state. | Current trace/report contracts cannot represent multi-flow goal pursuit without breaking compatibility. |
-| Host surfaces can hide most direct flow commands while keeping generated internals available. | The public product surface gets simpler without deleting useful expert controls. | Host plugin contracts or user behavior require direct command parity. |
+| Host surfaces can hide direct flow commands while keeping generated internals available. | The public product surface gets simpler without deleting useful CLI/runtime controls. | Host plugin contracts or user behavior require direct command parity. |
 | Memory can start as project and flow execution hints without becoming routing authority. | Keeps memory useful and safe while the effectiveness ratchet matures. | The only valuable memory use cases require changing flow selection immediately. |
 | Rich checkpoints can be projections over structured decision packets. | Keeps runtime simple while preserving the HTML decision-surface bet. | Existing checkpoint use cases need arbitrary UI behavior that cannot be represented by a bounded decision packet. |
 
@@ -197,7 +197,7 @@ other concepts support Run:
 3. Can the current `route.decision@v1`, `goal.contract@v1`, child-run reports,
    and `run.closed` outcome model represent "run multiple flows until done"?
 4. What generated-surface migration would make Run dominant while keeping
-   direct flow commands available as expert controls?
+   direct flow commands available as CLI-only controls?
 5. Can checkpoint requests be recast as rich decision packets with optional
    HTML projections, while preserving current resume safety?
 6. What is the minimal memory boundary for project and flow execution memory:

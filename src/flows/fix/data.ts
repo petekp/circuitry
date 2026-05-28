@@ -49,7 +49,6 @@ export const fixFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/fix/schematic.json',
-    command: 'src/flows/fix/command.md',
     contract: 'src/flows/fix/contract.md',
   },
   routing: {

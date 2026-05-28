@@ -82,7 +82,6 @@ export const goalFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/goal/schematic.json',
-    command: 'src/flows/goal/command.md',
   },
   routing: {
     order: 5,

@@ -256,7 +256,7 @@ The four properties Circuit has and direct competitors don't:
 1. **Flow taxonomy.** Competitors ship one pipeline. Circuit ships distinct shapes for Build, Explore, Fix, and Review. *Different work needs different shapes* is a different theory of the field than *one universal pipeline.*
 2. **Schema-versioned typed records.** Competitors produce markdown. Circuit's typed JSON reports are queryable in ways markdown isn't — the foundation for the project-memory positioning in Section 7.
 3. **Six-layer override chain + depth modes.** No other project found has this granularity. Per-step model/effort selection plus lite/standard/deep/autonomous as per-invocation choice is genuinely unique.
-4. **Custom flow shapes.** `/circuit:create` lets users author their own typed schematic flows that the engine runs as first-class peers to the built-in ones. Most competitors offer skill/agent extensibility, not flow-shape extensibility. (See Section 10 for the personalized-flow direction.)
+4. **Custom flow shapes.** Circuit can author typed schematic flows that the engine runs as first-class peers to the built-in ones. The current Create path is CLI-only and experimental, while the product direction is Circuit proposing reusable flow shapes at the right moment. Most competitors offer skill/agent extensibility, not flow-shape extensibility. (See Section 10 for the personalized-flow direction.)
 
 ### Where Circuit is NOT differentiated (drop from lead)
 
@@ -269,7 +269,7 @@ The four properties Circuit has and direct competitors don't:
 
 ### Open ground (no competitor found doing this)
 
-- **YAML/JSON-defined flows as a product** (not a framework). `/circuit:create` is unusual.
+- **YAML/JSON-defined flows as a product** (not a framework). Circuit's CLI-only Create utility proves the underlying shape, and the product opportunity is making that authoring feel proposed and timely rather than menu-driven.
 - **Per-step model/effort overrides** at six layers of granularity.
 - **Standalone Review surface** as a peer to Build (not a step inside Build).
 - **Different flow shapes for thinking, changing, fixing, and reviewing** — the kinds of work the universal-pipeline competitors don't address well.
@@ -320,7 +320,7 @@ Every personalization move uses *real signal* (codebase shape, past runs, stated
 
 ### Sober status
 
-- **Today (architecture supports):** custom flow authoring via `/circuit:create`; schematic-as-data so changes are auditable, editable, exportable.
+- **Today (architecture supports):** custom flow authoring via the CLI-only Create utility; schematic-as-data so changes are auditable, editable, exportable.
 - **Near-term (small builds):** project-shape detection at install; `/circuit:propose <description>`; flow-diff visualization; conversational editing.
 - **Aspirational (real product work):** adaptive defaults from past runs (depends on cross-run recall surface); behavior-based personalization (observing what the user actually does).
 

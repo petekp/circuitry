@@ -85,7 +85,7 @@ explicitly changes them.
 | Invariant | Evidence |
 | --- | --- |
 | Circuit is a plugin and CLI that gives agents repeatable flows with evidence, checks, traces, and reports. | [README.md](../../README.md), [package.json](../../package.json) |
-| `/circuit:run` and `./bin/circuit run` are the normal front doors; direct flow commands are expert controls, not bypasses. | [README.md](../../README.md), [src/cli/circuit.ts](../../src/cli/circuit.ts) |
+| `/circuit:run` and `./bin/circuit run` are the normal front doors; direct flow host commands are hidden by default, while explicit CLI flow starts remain available for tests, debugging, and old run folders. | [README.md](../../README.md), [src/cli/circuit.ts](../../src/cli/circuit.ts) |
 | Flow authoring starts from typed `FlowData` and generated schematics, compiled manifests, host mirrors, and WorkContract projections. | [docs/architecture/declarative-flow-architecture.md](../architecture/declarative-flow-architecture.md), [docs/generated-surfaces.md](../generated-surfaces.md) |
 | The runtime executes compiled flow graphs and must not own flow-specific product behavior. | [src/runtime/README.md](../../src/runtime/README.md), [docs/architecture/runtime.md](../architecture/runtime.md), [tests/contracts/engine-flow-boundary.test.ts](../../tests/contracts/engine-flow-boundary.test.ts) |
 | Run folders are defined by manifest snapshots, append-only traces, reports, and result files. | [docs/contracts/run.md](../contracts/run.md), [src/runtime/run/graph-runner.ts](../../src/runtime/run/graph-runner.ts) |

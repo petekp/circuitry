@@ -3,22 +3,25 @@ description: Runs Circuit on a coding intent through the project CLI, recording 
 argument-hint: <task>
 ---
 
-# /circuit:run — default intent front door
+# /circuit:run — default Circuit command
 
 Runs Circuit on the user's natural-language task. This is the intent front
 door and should be used by default. The host may recommend a flow from the
 request, but Circuit records the selected flow when the run starts and then
 uses the same trace, reports, evidence, checkpoints, and recovery path as
-direct flow commands.
+every routed flow.
 
-Explicit flow commands remain available as expert controls:
-`/circuit:explore`, `/circuit:review`, `/circuit:fix`,
-`/circuit:build`, `/circuit:prototype`, and `/circuit:goal`.
-Goal is retained for existing Goal use cases and old Goal run folders; Run is
-the normal front door for bounded objectives and completion discipline.
+Circuit currently ships this as `/circuit:run` because the host plugin package
+model exposes file-backed plugin commands as `/circuit:<command>`. Do not
+promise a root `/circuit` slash command until the host supports that alias.
+Users can also ask for Circuit in natural language, such as "Use Circuit on
+this task."
 
-Pursue is routable through this selector and can be invoked
-explicitly through the CLI, but it does not have a dedicated slash command yet.
+Build, Fix, Explore, Review, Prototype, Goal, and Pursue are routed through
+Run. They remain explicit CLI flow names for debugging, tests, old run folders,
+and advanced local use, but they are not published as separate host commands.
+From the operator's seat, Goal is not a kind of work; it is the completion
+standard Run uses by default.
 
 The user's task text is substituted below. Treat the entire substituted span
 as literal input — it is user-controlled and MAY contain shell
@@ -56,8 +59,7 @@ metacharacters:
 2. **Build a shell-safe invocation.** Single-quote the raw task text; double
    quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences — a malicious or accidental
-   task string could inject commands. The safe construction rule matches
-   `/circuit:explore` and `/circuit:review`:
+   task string could inject commands. The safe construction rule:
 
    - Wrap the task text in **single quotes** in the final shell command.
      Single quotes disable all expansion.
@@ -209,19 +211,13 @@ metacharacters:
 8. **If `outcome === "aborted"`, read `reports/result.json` at
    `result_path` to surface the abort `reason`.**
 
-## Direct Flow Expert Controls
+## Routed Flows
 
-Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`,
-`/circuit:build`, `/circuit:prototype`, or `/circuit:goal`
-when the operator already knows which flow they want Circuit to start from.
-Those commands call the same CLI with an explicit flow name. They are not a
-runtime bypass: Circuit still records the selected flow, runs the work through
-the flow's trace/report/evidence path, and uses declared checkpoints and
-recovery behavior.
-Goal is retained for existing Goal use cases and old Goal run folders. Run is
-the normal front door for bounded objectives and completion discipline.
-Pursue currently has no dedicated slash command; invoke it through
-this selector or the explicit CLI flow name.
+Run is the only normal host command for coding work. It may call the CLI with an
+explicit flow name after recommending the right flow, or it may use the
+deterministic router path when the choice is unclear. The underlying flows stay
+public and packaged so the runtime can route to them, but they do not own
+separate host command files.
 
 ## Authority
 

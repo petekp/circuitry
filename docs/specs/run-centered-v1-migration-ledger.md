@@ -18,10 +18,10 @@ session.
 | Field | Value |
 | --- | --- |
 | Mission | Move Circuit from a flow-forward product surface to a Run-centered product surface while preserving the existing flow library, runtime kernel, run folders, generated surfaces, checkpoints, and hint-only memory authority. |
-| Start state | `Run` is mostly a host prompt and router entry; direct flows and Goal are public peers; each flow owns its own report shapes. |
-| Target state | `Run` is the normal front door. Source-owned Run forms a goal, selects process attempts, prepares evidence and skill context, checks completion, follows up under budget, and closes honestly. |
+| Start state | `Run` was mostly a host prompt and router entry; direct flows and Goal were public peers; each flow owned its own report shapes. |
+| Target state | `Run` is the normal host front door. Source-owned Run forms a goal, selects process attempts, prepares evidence and skill context, checks completion, follows up under budget, and closes honestly. Built-in flows remain packaged and CLI-routable, but they are not separate host commands. |
 | Migration strategy | Contract, fixture, shadow artifact, source-owned Run, compact surface, public simplification. |
-| Non-goal | No blank-slate rewrite. No runtime graph replacement. No public command hiding before parity. No skill packaging as a hidden dependency. |
+| Non-goal | No blank-slate rewrite. No runtime graph replacement. No skill packaging as a hidden dependency. |
 | Operator invariant | The operator should see less steering load, not more concepts. |
 | Agent invariant | The agent should have goal, process, evidence, memory hints, skill moments, prior attempts, decision packets, and stop conditions close at hand. |
 
@@ -77,9 +77,10 @@ session.
 | 6. Compact human surface | Done | 4 | Added compact Run surface Markdown plus stdout fields and host rendering instructions. | Host rendering, host plugin, CLI router, and artifact tests passed. | Keep old operator summary as fallback. |
 | 7. Decision packets | Done | 5, 6 | Added shared decision packet artifacts for checkpoint and missing-evidence decisions plus pure Skill Moment ask/unavailable packet builders. | Decision packet fixtures, checkpoint artifact tests, router parity, and drift checks passed. | Keep current flow-specific checkpoint rendering. |
 | 8. Memory update events | Done | 4, 7 | Added hint-only memory context and explicit/proposed update events with indicators. | Memory authority, recall, Run envelope, host, router, and drift checks passed. | Keep recall-only memory. |
-| 9. Run public default | Done | 4, 5, 6, 7, 8 | Positioned Run as the default public front door and direct flows as expert controls in docs, manifests, and generated host skill metadata. | Generated-surface drift, host docs, host plugin, check, and lint gates passed. | Restore old command visibility wording and regenerate. |
+| 9. Run public default | Done | 4, 5, 6, 7, 8 | Positioned Run as the default public front door in docs, manifests, and generated host skill metadata. | Generated-surface drift, host docs, host plugin, check, and lint gates passed. | Restore old command visibility wording and regenerate. |
 | 10. Goal de-emphasis | Done | 9 | De-emphasized public Goal while preserving retained Goal command, schemas, reports, and old run-folder readability. | Goal schema/flow, host docs, host plugin, generated-surface framing, drift, check, and lint gates passed. | Re-expose Goal wording as a primary expert command. |
 | 11. Closeout | Done | All implementation slices | Completed residue sweep, docs reconciliation, dependency check, release proof, and final review passes. | Focused closeout gate, `npm run check-flow-drift`, `npm run verify:fast`, and `npm run verify` passed. | Reopen the owning slice. |
+| 12. Unified host command surface | Done | 9, 10, 11 | Removed direct built-in flow command surfaces and Codex flow skills while preserving public packaged flow manifests and explicit CLI flow starts. | Host-surface tests, generated-surface framing, Codex cache sync/check, and drift checks passed. | Restore `paths.command` on built-in flows and regenerate. |
 
 ## Dependency Graph
 
@@ -138,8 +139,8 @@ npm run verify
 Closeout must also confirm:
 
 - Run is the normal public entry.
-- Direct flows are still available as expert controls or documented escape
-  hatches.
+- Built-in flows are still available as packaged runtime flows and explicit CLI
+  flow starts, but not separate host commands.
 - Goal-style completion discipline is inside Run.
 - Old Goal run folders remain inspectable.
 - Generated host surfaces come from source, not hand edits.
@@ -397,16 +398,15 @@ Checkpoint YYYY-MM-DD:
   `npm run test -- tests/runner/run-envelope-source-writer.test.ts tests/runner/history-run-start-recall.test.ts tests/contracts/run-envelope-record-schema.test.ts tests/contracts/memory-input-schema.test.ts`,
   `npm run test -- tests/runner/cli-router.test.ts tests/runner/history-run-start-recall.test.ts tests/runner/run-envelope-source-writer.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts`,
   `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
-- Next: begin Slice 9 public Run default and expert-control positioning.
+- Next: begin Slice 9 public Run default positioning.
 
 ### Checkpoint 2026-05-28: Slice 9 Run Public Default
 
 - Completed: updated README, Run command guidance, plugin manifests, direct
   flow command descriptions, and Codex generated skill metadata so Run is the
-  default front door and direct flows read as expert controls.
+  default front door.
 - Now true: `/circuit:run` is the main public path in host-facing docs and
-  generated surfaces. Direct flow commands remain available when the operator
-  already knows the starting flow, and generated surfaces remain source-owned.
+  generated surfaces. Generated surfaces remain source-owned.
 - Cross-area review: this changes product positioning, not runtime routing or
   checkpoint behavior. It does not remove old commands, so rollback is a
   wording/generation change rather than a compatibility break.
@@ -439,13 +439,31 @@ Checkpoint YYYY-MM-DD:
   check, release-infra check through full verification, and two adversarial
   reviews.
 - Now true: the Run-centered V1 implementation slices are complete. The final
-  product surface makes Run the default, keeps direct flows as expert controls,
-  preserves Goal artifacts, and records Run envelope/process evidence/decision
-  packet/memory context artifacts without replacing the runtime kernel.
+  product surface makes Run the default, preserves Goal artifacts, and records
+  Run envelope/process evidence/decision packet/memory context artifacts
+  without replacing the runtime kernel.
 - Cross-area review: no public `Supervisor` vocabulary leak was found; Run
   envelope code does not import runtime executor internals; Skill Moments did
   not revive a flow-step skill binding matrix as the default product path; and
   generated host output is in sync with source.
+
+### Checkpoint 2026-05-28: Slice 12 Unified Host Command Surface
+
+- Completed: removed `paths.command` from built-in routed flows, deleted stale
+  source command files, taught the emitter to remove stale host command files,
+  regenerated plugin surfaces, and updated docs/tests so Run is the single
+  normal coding command.
+- Now true: Claude and Codex host packages publish `run` and `handoff`
+  command/skill surfaces only. Create remains a CLI-only experimental utility.
+  Build, Explore, Fix, Goal, Prototype, Pursue, and Review remain public
+  packaged flow manifests for Run and CLI routing.
+- Cross-area review: current host plugin packages expose file-backed commands
+  as `/circuit:<command>`, so `/circuit:run` remains the shipped slash command.
+  A root `/circuit` alias should wait for host support instead of being
+  promised in docs.
+- Verification:
+  `npm run test -- tests/contracts/claude-host-plugin.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/generated-surface-framing.test.ts tests/contracts/host-experience-docs.test.ts tests/runner/plugin-command-invocation.test.ts`
+  passed.
 - Verification:
   `npm run test -- tests/contracts/goal-report-schemas.test.ts tests/contracts/memory-input-schema.test.ts tests/runtime/checkpoint-resume.test.ts tests/runner/cli-router.test.ts tests/contracts/documentation-surface.test.ts`,
   `npm run check-flow-drift`, `npm run verify:fast`, and `npm run verify`

@@ -62,7 +62,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('no report section by default');
     expect(doc).toContain('max 4-6 visible final bullets');
     expect(doc).toContain('max 3 visible reviewer cautions');
-    expect(doc).toContain('explicit `/circuit:explore`');
+    expect(doc).toContain('`/circuit:run`');
   });
 
   it('keeps a repeatable Codex and Claude Code host trial checklist', () => {
@@ -76,7 +76,7 @@ describe('host experience docs', () => {
     expect(doc).toContain('/circuit:run decide: should we replace auth providers?');
     expect(doc).not.toContain('@Circuit');
     expect(doc).toContain('/circuit:run <natural task>');
-    expect(doc).toContain('Explicit Build');
+    expect(doc).toContain('Run-selected Build');
     expect(doc).toContain('Checkpoint');
     expect(doc).toContain('Failure');
     expect(doc).toContain('Codex Scenarios');
@@ -86,7 +86,7 @@ describe('host experience docs', () => {
   it('keeps /circuit:run host guidance aligned with model-mediated selection', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'plugins/claude/commands/run.md'), 'utf8');
 
-    expect(doc).toContain('/circuit:run — default intent front door');
+    expect(doc).toContain('/circuit:run — default Circuit command');
     expect(doc).toContain('Recommend the flow before invoking the CLI');
     expect(doc).toContain('Circuit records the selected flow');
     expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run --goal');

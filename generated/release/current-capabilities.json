@@ -5,7 +5,6 @@
     {
       "id": "review",
       "source": "src/flows/review/schematic.json",
-      "command_path": "src/flows/review/command.md",
       "contract_path": "src/flows/review/contract.md",
       "routing": {
         "routable": true,
@@ -47,7 +46,6 @@
     {
       "id": "fix",
       "source": "src/flows/fix/schematic.json",
-      "command_path": "src/flows/fix/command.md",
       "contract_path": "src/flows/fix/contract.md",
       "routing": {
         "routable": true,
@@ -142,7 +140,6 @@
     {
       "id": "prototype",
       "source": "src/flows/prototype/schematic.json",
-      "command_path": "src/flows/prototype/command.md",
       "contract_path": "src/flows/prototype/contract.md",
       "routing": {
         "routable": true,
@@ -189,7 +186,6 @@
     {
       "id": "build",
       "source": "src/flows/build/schematic.json",
-      "command_path": "src/flows/build/command.md",
       "contract_path": "src/flows/build/contract.md",
       "routing": {
         "routable": true,
@@ -235,7 +231,6 @@
     {
       "id": "explore",
       "source": "src/flows/explore/schematic.json",
-      "command_path": "src/flows/explore/command.md",
       "contract_path": "src/flows/explore/contract.md",
       "routing": {
         "routable": true,
@@ -281,7 +276,6 @@
     {
       "id": "goal",
       "source": "src/flows/goal/schematic.json",
-      "command_path": "src/flows/goal/command.md",
       "routing": {
         "routable": true,
         "is_default": false,
@@ -407,28 +401,8 @@
   ],
   "commands": {
     "source": ["create", "handoff", "run"],
-    "claude_plugin": [
-      "build",
-      "create",
-      "explore",
-      "fix",
-      "goal",
-      "handoff",
-      "prototype",
-      "review",
-      "run"
-    ],
-    "codex_plugin": [
-      "build",
-      "create",
-      "explore",
-      "fix",
-      "goal",
-      "handoff",
-      "prototype",
-      "review",
-      "run"
-    ],
+    "claude_plugin": ["handoff", "run"],
+    "codex_plugin": ["handoff", "run"],
     "claude_plugin_skills": ["build", "explore", "fix", "goal", "prototype", "pursue", "review"]
   },
   "connectors": [
@@ -498,117 +472,12 @@
   ],
   "capabilities": [
     {
-      "id": "command:build",
-      "kind": "flow",
-      "title": "claude-code command build",
-      "status": "implemented",
-      "summary": "Command build is present for claude-code.",
-      "evidence": ["plugins/claude/commands/build.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:create",
-      "kind": "flow",
-      "title": "claude-code command create",
-      "status": "implemented",
-      "summary": "Command create is present for claude-code.",
-      "evidence": ["plugins/claude/commands/create.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:explore",
-      "kind": "flow",
-      "title": "claude-code command explore",
-      "status": "implemented",
-      "summary": "Command explore is present for claude-code.",
-      "evidence": ["plugins/claude/commands/explore.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:fix",
-      "kind": "flow",
-      "title": "claude-code command fix",
-      "status": "implemented",
-      "summary": "Command fix is present for claude-code.",
-      "evidence": ["plugins/claude/commands/fix.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:goal",
-      "kind": "flow",
-      "title": "claude-code command goal",
-      "status": "implemented",
-      "summary": "Command goal is present for claude-code.",
-      "evidence": ["plugins/claude/commands/goal.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
       "id": "command:handoff",
       "kind": "flow",
       "title": "claude-code command handoff",
       "status": "implemented",
       "summary": "Command handoff is present for claude-code.",
       "evidence": ["plugins/claude/commands/handoff.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:prototype",
-      "kind": "flow",
-      "title": "claude-code command prototype",
-      "status": "implemented",
-      "summary": "Command prototype is present for claude-code.",
-      "evidence": ["plugins/claude/commands/prototype.md"],
-      "readiness_refs": [],
-      "axes": {
-        "intent_hints": [],
-        "modes": [],
-        "stage_path": [],
-        "outputs": []
-      }
-    },
-    {
-      "id": "command:review",
-      "kind": "flow",
-      "title": "claude-code command review",
-      "status": "implemented",
-      "summary": "Command review is present for claude-code.",
-      "evidence": ["plugins/claude/commands/review.md"],
       "readiness_refs": [],
       "axes": {
         "intent_hints": [],
@@ -2332,7 +2201,7 @@
       "kind": "customization",
       "title": "Create utility",
       "status": "implemented",
-      "summary": "Create drafts, validates, and publishes a user-global custom flow package after explicit confirmation.",
+      "summary": "Create remains available as an experimental CLI utility for drafting, validating, and publishing user-global custom flow packages after explicit confirmation.",
       "evidence": [
         "src/commands/create.md",
         "src/cli/create.ts",
@@ -2340,6 +2209,7 @@
       ],
       "readiness_refs": [],
       "axes": {
+        "invocation": "./bin/circuit create --name <slug> --description <flow idea>",
         "intent_hints": [],
         "modes": [],
         "stage_path": [],
@@ -2376,15 +2246,16 @@
       "kind": "utility",
       "title": "Review utility",
       "status": "implemented",
-      "summary": "Standalone Review is present as a flow command.",
-      "evidence": ["plugins/claude/commands/review.md", "src/flows/review/schematic.json"],
+      "summary": "Review is present as a routed flow through Run.",
+      "evidence": ["plugins/claude/commands/run.md", "src/flows/review/schematic.json"],
       "readiness_refs": [],
       "axes": {
+        "invocation": "/circuit:run review <scope>",
         "intent_hints": [],
         "modes": [],
         "stage_path": [],
         "outputs": ["review.md"],
-        "review": "Standalone Review runs a fresh reviewer relay and writes a severity-ordered review result.",
+        "review": "Routed Review runs a fresh reviewer relay and writes a severity-ordered review result.",
         "proof": "Standalone Review golden run."
       }
     }

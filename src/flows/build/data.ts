@@ -43,7 +43,6 @@ export const buildFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/build/schematic.json',
-    command: 'src/flows/build/command.md',
     contract: 'src/flows/build/contract.md',
   },
   routing: {

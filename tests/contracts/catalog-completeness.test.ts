@@ -28,7 +28,8 @@ import { FlowSchematic } from '../../src/schemas/flow-schematic.js';
 import type { SelectionOverride } from '../../src/schemas/selection-policy.js';
 
 const WORKFLOWS_ROOT = 'src/flows';
-const DIRECT_COMMANDS = ['create', 'handoff', 'run'] as const;
+const HOST_DIRECT_COMMANDS = ['handoff', 'run'] as const;
+const CLI_ONLY_COMMANDS = ['create'] as const;
 const ALLOWED_WRITER_SCHEMA_ALIASES = new Map<string, readonly string[]>([
   [
     'runtime-proof',
@@ -444,7 +445,7 @@ describe('flow catalog completeness', () => {
         ?.map((value) => value.slice(1, -1))
         .sort() ?? [];
 
-    expect(routerCommands).toEqual([...DIRECT_COMMANDS].sort());
+    expect(routerCommands).toEqual([...HOST_DIRECT_COMMANDS].sort());
     expect(generatedSurfaceMap).toContain(
       '| Surface | Source of truth | Generator | Human-editable | Expected destinations | Validation / drift check | Notes |',
     );
@@ -455,12 +456,19 @@ describe('flow catalog completeness', () => {
       'Generated headers are omitted to preserve host command and skill parsing.',
     );
 
-    for (const command of DIRECT_COMMANDS) {
-      expect(isFile(`src/commands/${command}.md`), `direct command ${command} must exist`).toBe(
+    for (const command of HOST_DIRECT_COMMANDS) {
+      expect(isFile(`src/commands/${command}.md`), `host command ${command} must exist`).toBe(true);
+      expect(generatedSurfaceMap).toContain(
+        `| \`${command}\` | \`src/commands/${command}.md\` | \`plugins/claude/commands/${command}.md\`<br>\`plugins/codex/commands/${command}.md\`<br>\`plugins/codex/skills/${command}/SKILL.md\` |`,
+      );
+    }
+
+    for (const command of CLI_ONLY_COMMANDS) {
+      expect(isFile(`src/commands/${command}.md`), `CLI-only utility ${command} must exist`).toBe(
         true,
       );
       expect(generatedSurfaceMap).toContain(
-        `| \`${command}\` | \`src/commands/${command}.md\` | \`plugins/claude/commands/${command}.md\`<br>\`plugins/codex/commands/${command}.md\`<br>\`plugins/codex/skills/${command}/SKILL.md\` |`,
+        `| \`${command}\` | \`src/commands/${command}.md\` | none |`,
       );
     }
 

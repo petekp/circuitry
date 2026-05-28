@@ -29460,7 +29460,6 @@ var buildFlowData = {
   visibility: "public",
   paths: {
     schematic: "src/flows/build/schematic.json",
-    command: "src/flows/build/command.md",
     contract: "src/flows/build/contract.md"
   },
   routing: {
@@ -30721,7 +30720,6 @@ var exploreFlowData = {
   visibility: "public",
   paths: {
     schematic: "src/flows/explore/schematic.json",
-    command: "src/flows/explore/command.md",
     contract: "src/flows/explore/contract.md"
   },
   routing: {
@@ -32914,7 +32912,6 @@ var fixFlowData = {
   visibility: "public",
   paths: {
     schematic: "src/flows/fix/schematic.json",
-    command: "src/flows/fix/command.md",
     contract: "src/flows/fix/contract.md"
   },
   routing: {
@@ -36105,8 +36102,7 @@ var goalFlowData = {
   id: "goal",
   visibility: "public",
   paths: {
-    schematic: "src/flows/goal/schematic.json",
-    command: "src/flows/goal/command.md"
+    schematic: "src/flows/goal/schematic.json"
   },
   routing: {
     order: 5,
@@ -39282,7 +39278,6 @@ var prototypeFlowData = {
   visibility: "public",
   paths: {
     schematic: "src/flows/prototype/schematic.json",
-    command: "src/flows/prototype/command.md",
     contract: "src/flows/prototype/contract.md"
   },
   routing: {
@@ -41627,7 +41622,6 @@ var reviewFlowData = {
   visibility: "public",
   paths: {
     schematic: "src/flows/review/schematic.json",
-    command: "src/flows/review/command.md",
     contract: "src/flows/review/contract.md"
   },
   routing: {

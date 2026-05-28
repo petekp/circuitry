@@ -85,7 +85,7 @@ Migrate in this order:
 
 ```text
 contract -> fixture -> shadow artifact -> source-owned Run envelope -> default Run
--> thinner human surface -> expert-only direct flows -> deprecate public Goal
+-> thinner human surface -> routed-only built-in flows -> deprecate public Goal
 ```
 
 Do not start by hiding commands or renaming Goal. That would simplify the
@@ -101,7 +101,7 @@ Every phase should be either:
 
 | Area | Target State |
 | --- | --- |
-| Product entry | `Run` is the normal command. Direct flows remain expert controls unless demand proves they should be removed. |
+| Product entry | `Run` is the normal host command. Built-in flows remain packaged and CLI-routable, but they are not separate host commands unless demand proves they should return. |
 | Run envelope | Source-owned product loop above runtime calls. It owns intake, clarify decision, goal contract, process plan, process attempts, completion gate, memory update event, and short surface output. The current schema sketch may still use `Supervisor` internally. The V1 internal sub-structure is intentionally undecided; later slices may split intake, policy, and completion gate seams if the envelope gets hard to reason about. |
 | Goal | Internal done-checking discipline and reusable contract/gate semantics, not a prominent product peer. From the operator's seat, Goal is not a kind of work; it is the standard Run uses for done. |
 | Flows | Process packages behind Run: Build, Fix, Review, Explore, Prototype, Pursue, and any future authored flows. |
@@ -516,7 +516,7 @@ Goal: simplify the product surface after the architecture supports it.
 Work:
 
 - Rewrite Run command source around source-owned Run envelope behavior.
-- Update operator docs so direct flows are expert controls.
+- Update operator docs so built-in flows route through Run by default.
 - Change generated command/skill visibility only through source metadata and
   emitter rules.
 - Keep compatibility paths for explicit flow invocation.
@@ -569,7 +569,7 @@ Rollback point:
 | Phase 6 | Shorter final output with links when details matter. | Rich artifacts remain available for later agents and memory without becoming default human prose. |
 | Phase 7 | Rare high-value decision points become clearer and more digestible. | Decision packet with resume target, available choices, and relevant child process state. |
 | Phase 8 | Succinct memory update indicator when Circuit records a useful hint. | Hint-only memory update event with reason and source refs. |
-| Phase 9 | Run becomes the normal front door; direct flows are lightly visible expert controls. | Default entry has the same prepared goal/process/evidence envelope without the operator picking a flow. |
+| Phase 9 | Run becomes the normal front door; direct flow host commands can be removed once parity is proven. | Default entry has the same prepared goal/process/evidence envelope without the operator picking a flow. |
 | Phase 10 | Goal fades as a separate public concept. | Goal-style completion discipline remains inside Run as the done standard. |
 
 ## What The Agent Has At Hand
@@ -599,7 +599,7 @@ Rollback point:
 | Decision packet contract | Generic HTML checkpoint rendering | Rich UI should project structured decisions, not arbitrary flow state. |
 | Memory update event contract | Automatic memory updates | Update behavior needs authority rules before it becomes automatic. |
 | Run-backed continuity relation | Cross-session Run messaging | Handoff needs to be explained as the carrier for Run state before the surface is simplified. |
-| Source-owned Run decisions | Hiding direct flows | Surface simplification is safe only after Run can carry the work. |
+| Source-owned Run decisions | Hiding built-in flow host commands | Surface simplification is safe only after Run can carry the work. |
 | Run completion parity | Goal de-emphasis | Goal should not disappear before Run has its useful discipline. |
 
 ## Compatibility Risks
@@ -615,7 +615,7 @@ Rollback point:
 | Memory gains hidden authority | Automatic memory could silently steer or falsely prove work. | Keep `authority: "hint_only"` and reject route/proof/checkpoint/policy authority. |
 | Checkpoint resume breaks | Human decisions need durable pause/resume. | Runtime keeps checkpoint trace and resume validation ownership. |
 | Handoff becomes a second product model | Cross-session continuity would add a new concept beside Run. | Explain handoff as the carrier for unfinished Run state; run-backed continuity points to the active run folder. |
-| Direct flow users lose power tools | Expert paths help debugging and explicit control. | Keep direct flows as expert controls through at least the first Run-default release. |
+| Direct flow users lose power tools | Expert paths help debugging and explicit control. | Keep explicit CLI flow starts and packaged flow manifests even when host command files are hidden. |
 | Human output gets too thin for failures | Users still need to recover when things go wrong. | Short output must include next action and artifact links. |
 
 ## Growth Ceiling
@@ -706,7 +706,8 @@ the host proves it.
 ## What Not To Do First
 
 - Do not rename Goal to Run.
-- Do not hide or delete direct flow commands.
+- Do not hide or delete direct flow host commands before Run parity evidence
+  exists.
 - Do not rewrite the runtime kernel.
 - Do not make memory choose routes or prove claims.
 - Do not treat planned or requested skills as proof that a worker used those
@@ -746,7 +747,7 @@ current Run/router/Goal/flows/runtime
   -> normalized process evidence
   -> source-owned Run decisions
   -> Run as public default
-  -> Goal/direct flows de-emphasized only after parity
+  -> Goal/direct host commands de-emphasized only after parity
 ```
 
 This sequence gives the product the simpler model without discarding the tested

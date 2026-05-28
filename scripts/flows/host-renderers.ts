@@ -7,10 +7,6 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
     description:
       'Expert control for starting Circuit from Build when you already know the task is implementation or documentation work.',
   },
-  create: {
-    title: 'Circuit Create',
-    description: 'Runs Circuit Create to draft, validate, or publish a reusable custom flow.',
-  },
   explore: {
     title: 'Circuit Explore',
     description:
@@ -73,10 +69,6 @@ function renderClaudePresentationInvocations(content: string): string {
     .replaceAll(
       `${CLAUDE_PLUGIN_WRAPPER_COMMAND} resume`,
       `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present resume`,
-    )
-    .replaceAll(
-      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} create`,
-      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present create`,
     )
     .replaceAll(' --progress jsonl', '');
 }
@@ -198,6 +190,9 @@ function renderCodexNativeSkillBody(body: string): string {
       '\n',
     )
     .replace(/\n## Authority\n[\s\S]*$/g, '\n')
+    .replace(/`\/circuit:run`/g, 'Circuit Run')
+    .replace(/`\/circuit:<command>`/g, 'a Circuit host command')
+    .replace(/\/circuit:([a-z][a-z-]*)/g, 'Circuit $1')
     .replace(/\bslash-command\b/g, 'host-command')
     .replace(/\bslash command\b/gi, 'host command')
     .trim();

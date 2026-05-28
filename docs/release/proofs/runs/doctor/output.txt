@@ -63,47 +63,12 @@ stdout:
     {
       "name": "skills_present",
       "ok": true,
-      "detail": "9 skills"
-    },
-    {
-      "name": "skill_name_build",
-      "ok": true,
-      "detail": "name=build"
-    },
-    {
-      "name": "skill_name_create",
-      "ok": true,
-      "detail": "name=create"
-    },
-    {
-      "name": "skill_name_explore",
-      "ok": true,
-      "detail": "name=explore"
-    },
-    {
-      "name": "skill_name_fix",
-      "ok": true,
-      "detail": "name=fix"
-    },
-    {
-      "name": "skill_name_goal",
-      "ok": true,
-      "detail": "name=goal"
+      "detail": "2 skills"
     },
     {
       "name": "skill_name_handoff",
       "ok": true,
       "detail": "name=handoff"
-    },
-    {
-      "name": "skill_name_prototype",
-      "ok": true,
-      "detail": "name=prototype"
-    },
-    {
-      "name": "skill_name_review",
-      "ok": true,
-      "detail": "name=review"
     },
     {
       "name": "skill_name_run",
@@ -146,44 +111,9 @@ stdout:
       "detail": "<repo>/plugins/codex/commands"
     },
     {
-      "name": "command_build.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/build.md"
-    },
-    {
-      "name": "command_create.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/create.md"
-    },
-    {
-      "name": "command_explore.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/explore.md"
-    },
-    {
-      "name": "command_fix.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/fix.md"
-    },
-    {
-      "name": "command_goal.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/goal.md"
-    },
-    {
       "name": "command_handoff.md_uses_wrapper",
       "ok": true,
       "detail": "<repo>/plugins/codex/commands/handoff.md"
-    },
-    {
-      "name": "command_prototype.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/prototype.md"
-    },
-    {
-      "name": "command_review.md_uses_wrapper",
-      "ok": true,
-      "detail": "<repo>/plugins/codex/commands/review.md"
     },
     {
       "name": "command_run.md_uses_wrapper",

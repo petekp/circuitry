@@ -36,4 +36,4 @@ Transcript acceptance checks are mandatory:
 - no path unless failure, checkpoint resume, debug, or user request
 - max 4-6 visible final bullets
 - max 3 visible reviewer cautions
-- explicit `/circuit:explore` starts with useful work progress, not route chatter
+- `/circuit:run` starts with useful work progress, not route chatter
