@@ -124,6 +124,45 @@ interface AxisSupport {
   supportsAutonomous: boolean;
 }
 
+type PostRunArtifactWarning = {
+  readonly label: string;
+  readonly message: string;
+};
+
+type PostRunArtifactContext = {
+  readonly progressJsonl: boolean;
+  readonly warnings: PostRunArtifactWarning[];
+};
+
+function tryPostRunArtifact<T>(
+  label: string,
+  context: PostRunArtifactContext,
+  write: () => T,
+): T | undefined {
+  try {
+    return write();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    context.warnings.push({ label, message });
+    if (!context.progressJsonl) {
+      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}\n`);
+    }
+    return undefined;
+  }
+}
+
+function postRunArtifactWarningOutputFields(
+  warnings: readonly PostRunArtifactWarning[],
+): Record<string, unknown> {
+  if (warnings.length === 0) return {};
+  return {
+    post_run_artifact_warnings: warnings.map((warning) => ({
+      label: warning.label,
+      message: warning.message,
+    })),
+  };
+}
+
 export interface CliMainOptions {
   relayer?: RelayFn;
   composeWriter?: ComposeWriterFn;
@@ -749,52 +788,65 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       });
       const runResult = RunResult.parse(JSON.parse(readFileSync(runtimeResult.resultPath, 'utf8')));
       const priorRoute = readPriorRoute(runFolder);
-      const operatorSummary = writeOperatorSummary({
-        runFolder,
-        runResult,
-        route: {
-          selectedFlow: runResult.flow_id as unknown as string,
-          ...(priorRoute.routedBy === undefined ? {} : { routedBy: priorRoute.routedBy }),
-          ...(priorRoute.routerReason === undefined
-            ? {}
-            : { routerReason: priorRoute.routerReason }),
-        },
-      });
-      const recordedAt = (options.now ?? (() => new Date()))().toISOString();
-      writeRunEnvelopeShadowRecord({
-        runFolder,
-        operatorIntent: runResult.goal,
-        selectedProcess: {
-          process_id: runResult.flow_id,
-          routed_by: priorRoute.routedBy ?? 'explicit',
-          router_reason: priorRoute.routerReason ?? 'checkpoint resume',
-        },
-        child: {
-          kind: 'closed',
-          runResult,
-          resultPath: runtimeResult.resultPath,
-        },
-        recordedAt,
-      });
-      const processEvidence = writeProcessEvidenceProjection({
-        runFolder,
-        projection: projectClosedProcessEvidence({
+      const postRunArtifactWarnings: PostRunArtifactWarning[] = [];
+      const postRunArtifactContext: PostRunArtifactContext = {
+        progressJsonl: args.progress === 'jsonl',
+        warnings: postRunArtifactWarnings,
+      };
+      const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
+        writeOperatorSummary({
           runFolder,
           runResult,
-          resultPath: runtimeResult.resultPath,
+          route: {
+            selectedFlow: runResult.flow_id as unknown as string,
+            ...(priorRoute.routedBy === undefined ? {} : { routedBy: priorRoute.routedBy }),
+            ...(priorRoute.routerReason === undefined
+              ? {}
+              : { routerReason: priorRoute.routerReason }),
+          },
         }),
-      });
-      const runEnvelope = writeSourceRunEnvelopeRecord({
-        runFolder,
-        operatorIntent: runResult.goal,
-        selectedProcess: {
-          process_id: runResult.flow_id,
-          routed_by: priorRoute.routedBy ?? 'explicit',
-          router_reason: priorRoute.routerReason ?? 'checkpoint resume',
-        },
-        processEvidence,
-        recordedAt,
-      });
+      );
+      const recordedAt = (options.now ?? (() => new Date()))().toISOString();
+      const selectedProcess = {
+        process_id: runResult.flow_id as unknown as string,
+        ...(priorRoute.routedBy === undefined ? {} : { routed_by: priorRoute.routedBy }),
+        router_reason: priorRoute.routerReason ?? 'checkpoint resume',
+      };
+      tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
+        writeRunEnvelopeShadowRecord({
+          runFolder,
+          operatorIntent: runResult.goal,
+          selectedProcess,
+          child: {
+            kind: 'closed',
+            runResult,
+            resultPath: runtimeResult.resultPath,
+          },
+          recordedAt,
+        }),
+      );
+      const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
+        writeProcessEvidenceProjection({
+          runFolder,
+          projection: projectClosedProcessEvidence({
+            runFolder,
+            runResult,
+            resultPath: runtimeResult.resultPath,
+          }),
+        }),
+      );
+      const runEnvelope =
+        processEvidence === undefined
+          ? undefined
+          : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
+              writeSourceRunEnvelopeRecord({
+                runFolder,
+                operatorIntent: runResult.goal,
+                selectedProcess,
+                processEvidence,
+                recordedAt,
+              }),
+            );
       const resumeRuntimeFields = showRuntimeDecision()
         ? {
             runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume,
@@ -811,8 +863,11 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             trace_entries_observed: runResult.trace_entries_observed,
             result_path: runtimeResult.resultPath,
             ...resumeRuntimeFields,
-            ...operatorSummaryOutputFields({ operatorSummary }),
-            ...runEnvelopeOutputFields({ runEnvelope }),
+            ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
+            ...(operatorSummary === undefined
+              ? {}
+              : operatorSummaryOutputFields({ operatorSummary })),
+            ...(runEnvelope === undefined ? {} : runEnvelopeOutputFields({ runEnvelope })),
           },
           null,
           2,
@@ -827,6 +882,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
   if (args.goal === undefined) {
     throw new Error('internal error: --goal missing outside checkpoint resume mode');
   }
+  const operatorGoal = args.goal;
 
   const route = resolveCompiledFlowRoute(args);
   const entryModeSelection = resolveEntryModeSelection(args, route);
@@ -900,7 +956,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     const historyRecall = shouldPrepareHistoryRecall(options)
       ? prepareRunStartHistoryRecall({
           repoRoot: projectRoot,
-          query: args.goal,
+          query: operatorGoal,
           now,
         })
       : undefined;
@@ -909,7 +965,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       compiledFlowPath: fixturePath,
       runDir: runFolder,
       runId,
-      goal: args.goal,
+      goal: operatorGoal,
       now,
       projectRoot,
       childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
@@ -935,7 +991,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
         schema_version: 1 as const,
         run_id: RunId.parse(runtimeResult.runId),
         flow_id: CompiledFlowId.parse(runtimeResult.flowId),
-        goal: args.goal,
+        goal: operatorGoal,
         outcome: 'checkpoint_waiting' as const,
         summary: `checkpoint '${runtimeResult.checkpoint.stepId}' is waiting for an operator choice.`,
         trace_entries_observed: runtimeResult.traceEntriesObserved,
@@ -946,71 +1002,81 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
           allowed_choices: runtimeResult.checkpoint.allowedChoices,
         },
       };
-      const operatorSummary = writeOperatorSummary({
-        runFolder,
-        runResult: waitingResult,
-        route: {
-          selectedFlow: route.flowName,
-          routedBy: route.source,
-          routerReason: route.reason,
-        },
-      });
-      const recordedAt = now().toISOString();
-      writeRunEnvelopeShadowRecord({
-        runFolder,
-        operatorIntent: args.goal,
-        selectedProcess: {
-          process_id: flow.id,
-          routed_by: route.source,
-          router_reason: route.reason,
-          ...(entryModeSelection.entryModeName === undefined
-            ? {}
-            : { entry_mode: entryModeSelection.entryModeName }),
-        },
-        child: {
-          kind: 'checkpoint_waiting',
-          run_id: waitingResult.run_id,
-          flow_id: waitingResult.flow_id,
-          trace_entries_observed: waitingResult.trace_entries_observed,
-          manifest_hash: waitingResult.manifest_hash,
-          checkpoint: {
-            step_id: waitingResult.checkpoint.step_id,
-            request_path: runtimeResult.checkpoint.requestPath,
-            allowed_choices: waitingResult.checkpoint.allowed_choices,
-          },
-        },
-        recordedAt,
-      });
-      const processEvidence = writeProcessEvidenceProjection({
-        runFolder,
-        projection: projectCheckpointWaitingProcessEvidence({
+      const selectedProcess = {
+        process_id: flow.id,
+        routed_by: route.source,
+        router_reason: route.reason,
+        ...(entryModeSelection.entryModeName === undefined
+          ? {}
+          : { entry_mode: entryModeSelection.entryModeName }),
+      };
+      const postRunArtifactWarnings: PostRunArtifactWarning[] = [];
+      const postRunArtifactContext: PostRunArtifactContext = {
+        progressJsonl: args.progress === 'jsonl',
+        warnings: postRunArtifactWarnings,
+      };
+      const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
+        writeOperatorSummary({
           runFolder,
-          runId: waitingResult.run_id,
-          flowId: waitingResult.flow_id,
-          traceEntriesObserved: waitingResult.trace_entries_observed,
-          manifestHash: waitingResult.manifest_hash,
-          checkpoint: {
-            stepId: waitingResult.checkpoint.step_id,
-            requestPath: runtimeResult.checkpoint.requestPath,
-            allowedChoices: waitingResult.checkpoint.allowed_choices,
+          runResult: waitingResult,
+          route: {
+            selectedFlow: route.flowName,
+            routedBy: route.source,
+            routerReason: route.reason,
           },
         }),
-      });
-      const runEnvelope = writeSourceRunEnvelopeRecord({
-        runFolder,
-        operatorIntent: args.goal,
-        selectedProcess: {
-          process_id: flow.id,
-          routed_by: route.source,
-          router_reason: route.reason,
-          ...(entryModeSelection.entryModeName === undefined
-            ? {}
-            : { entry_mode: entryModeSelection.entryModeName }),
-        },
-        processEvidence,
-        recordedAt,
-        ...runEnvelopeMemoryContext(historyRecall),
-      });
+      );
+      const recordedAt = now().toISOString();
+      tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
+        writeRunEnvelopeShadowRecord({
+          runFolder,
+          operatorIntent: operatorGoal,
+          selectedProcess,
+          child: {
+            kind: 'checkpoint_waiting',
+            run_id: waitingResult.run_id,
+            flow_id: waitingResult.flow_id,
+            trace_entries_observed: waitingResult.trace_entries_observed,
+            manifest_hash: waitingResult.manifest_hash,
+            checkpoint: {
+              step_id: waitingResult.checkpoint.step_id,
+              request_path: runtimeResult.checkpoint.requestPath,
+              allowed_choices: waitingResult.checkpoint.allowed_choices,
+            },
+          },
+          recordedAt,
+        }),
+      );
+      const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
+        writeProcessEvidenceProjection({
+          runFolder,
+          projection: projectCheckpointWaitingProcessEvidence({
+            runFolder,
+            runId: waitingResult.run_id,
+            flowId: waitingResult.flow_id,
+            traceEntriesObserved: waitingResult.trace_entries_observed,
+            manifestHash: waitingResult.manifest_hash,
+            checkpoint: {
+              stepId: waitingResult.checkpoint.step_id,
+              requestPath: runtimeResult.checkpoint.requestPath,
+              allowedChoices: waitingResult.checkpoint.allowed_choices,
+            },
+          }),
+        }),
+      );
+      const runEnvelope =
+        processEvidence === undefined
+          ? undefined
+          : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
+              writeSourceRunEnvelopeRecord({
+                runFolder,
+                operatorIntent: operatorGoal,
+                selectedProcess,
+                processEvidence,
+                recordedAt,
+                ...runEnvelopeMemoryContext(historyRecall),
+              }),
+            );
       process.stdout.write(
         `${JSON.stringify(
           {
@@ -1039,8 +1105,11 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             ...(historyRecall === undefined
               ? {}
               : historyRecallOutputFields({ runFolder, report: historyRecall })),
-            ...operatorSummaryOutputFields({ operatorSummary }),
-            ...runEnvelopeOutputFields({ runEnvelope }),
+            ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
+            ...(operatorSummary === undefined
+              ? {}
+              : operatorSummaryOutputFields({ operatorSummary })),
+            ...(runEnvelope === undefined ? {} : runEnvelopeOutputFields({ runEnvelope })),
             checkpoint: waitingResult.checkpoint,
           },
           null,
@@ -1050,57 +1119,67 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       return 0;
     }
     const runResult = RunResult.parse(JSON.parse(readFileSync(runtimeResult.resultPath, 'utf8')));
-    const operatorSummary = writeOperatorSummary({
-      runFolder,
-      runResult,
-      route: {
-        selectedFlow: route.flowName,
-        routedBy: route.source,
-        routerReason: route.reason,
-      },
-    });
-    const recordedAt = now().toISOString();
-    writeRunEnvelopeShadowRecord({
-      runFolder,
-      operatorIntent: args.goal,
-      selectedProcess: {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...(entryModeSelection.entryModeName === undefined
-          ? {}
-          : { entry_mode: entryModeSelection.entryModeName }),
-      },
-      child: {
-        kind: 'closed',
-        runResult,
-        resultPath: runtimeResult.resultPath,
-      },
-      recordedAt,
-    });
-    const processEvidence = writeProcessEvidenceProjection({
-      runFolder,
-      projection: projectClosedProcessEvidence({
+    const selectedProcess = {
+      process_id: flow.id,
+      routed_by: route.source,
+      router_reason: route.reason,
+      ...(entryModeSelection.entryModeName === undefined
+        ? {}
+        : { entry_mode: entryModeSelection.entryModeName }),
+    };
+    const postRunArtifactWarnings: PostRunArtifactWarning[] = [];
+    const postRunArtifactContext: PostRunArtifactContext = {
+      progressJsonl: args.progress === 'jsonl',
+      warnings: postRunArtifactWarnings,
+    };
+    const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
+      writeOperatorSummary({
         runFolder,
         runResult,
-        resultPath: runtimeResult.resultPath,
+        route: {
+          selectedFlow: route.flowName,
+          routedBy: route.source,
+          routerReason: route.reason,
+        },
       }),
-    });
-    const runEnvelope = writeSourceRunEnvelopeRecord({
-      runFolder,
-      operatorIntent: args.goal,
-      selectedProcess: {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...(entryModeSelection.entryModeName === undefined
-          ? {}
-          : { entry_mode: entryModeSelection.entryModeName }),
-      },
-      processEvidence,
-      recordedAt,
-      ...runEnvelopeMemoryContext(historyRecall),
-    });
+    );
+    const recordedAt = now().toISOString();
+    tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
+      writeRunEnvelopeShadowRecord({
+        runFolder,
+        operatorIntent: operatorGoal,
+        selectedProcess,
+        child: {
+          kind: 'closed',
+          runResult,
+          resultPath: runtimeResult.resultPath,
+        },
+        recordedAt,
+      }),
+    );
+    const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
+      writeProcessEvidenceProjection({
+        runFolder,
+        projection: projectClosedProcessEvidence({
+          runFolder,
+          runResult,
+          resultPath: runtimeResult.resultPath,
+        }),
+      }),
+    );
+    const runEnvelope =
+      processEvidence === undefined
+        ? undefined
+        : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
+            writeSourceRunEnvelopeRecord({
+              runFolder,
+              operatorIntent: operatorGoal,
+              selectedProcess,
+              processEvidence,
+              recordedAt,
+              ...runEnvelopeMemoryContext(historyRecall),
+            }),
+          );
     process.stdout.write(
       `${JSON.stringify(
         {
@@ -1130,8 +1209,11 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
           ...(historyRecall === undefined
             ? {}
             : historyRecallOutputFields({ runFolder, report: historyRecall })),
-          ...operatorSummaryOutputFields({ operatorSummary }),
-          ...runEnvelopeOutputFields({ runEnvelope }),
+          ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
+          ...(operatorSummary === undefined
+            ? {}
+            : operatorSummaryOutputFields({ operatorSummary })),
+          ...(runEnvelope === undefined ? {} : runEnvelopeOutputFields({ runEnvelope })),
         },
         null,
         2,

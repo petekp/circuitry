@@ -18,7 +18,7 @@ capabilities:
     title: Explore
     summary: Investigate, decide among options, and shape execution plans.
     axes:
-      invocation: "/circuit:run decide:"
+      invocation: "/circuit:explore and /circuit:run decide:"
       intent_hints: ["decide:"]
       modes: [lite, default, deep, tournament, autonomous]
       stage_path: [Frame, Analyze, Plan or Decision, Close]
@@ -35,7 +35,7 @@ capabilities:
     title: Build
     summary: Build features, scoped refactors, docs, tests, and mixed changes.
     axes:
-      invocation: "/circuit:run develop:"
+      invocation: "/circuit:build and /circuit:run develop:"
       intent_hints: ["develop:"]
       modes: [lite, default, deep, autonomous]
       stage_path: [Frame, Plan, Act, Verify, Review, Close]
@@ -45,14 +45,14 @@ capabilities:
       verification: Verification commands rerun and recorded before close.
       worker_handoff: Implementation worker plus independent reviewer.
       continuity: Active run state survives session boundary.
-      proof: Routed Build golden runs.
+      proof: Routed and explicit Build golden runs.
     source_refs: [legacy-readme, legacy-circuits, legacy-run-command]
   - id: flow:fix
     kind: flow
     title: Fix
     summary: Fix bugs, regressions, flaky behavior, and incidents with regression discipline.
     axes:
-      invocation: "/circuit:run fix:"
+      invocation: "/circuit:fix and /circuit:run fix:"
       intent_hints: ["fix:"]
       modes: [lite, default, deep, autonomous]
       stage_path: [Frame, Analyze, Fix, Verify, Review, Close]
@@ -67,19 +67,19 @@ capabilities:
   - id: utility:review
     kind: utility
     title: Review
-    summary: Fresh-context code review routed through Run.
+    summary: Standalone fresh-context code review.
     axes:
-      invocation: "/circuit:run review <scope>"
+      invocation: "/circuit:review"
       outputs: [review.md]
-      review: Routed Review runs a fresh reviewer relay and writes a severity-ordered review result.
+      review: Independent reviewer starts fresh and reports findings by severity.
       proof: Standalone Review golden run.
     source_refs: [legacy-readme, legacy-circuits]
   - id: utility:create
     kind: customization
     title: Create
-    summary: Draft, validate, and publish user-global custom circuits from the CLI.
+    summary: Draft, validate, and publish user-global custom circuits.
     axes:
-      invocation: "./bin/circuit create --name <slug> --description <flow idea>"
+      invocation: "/circuit:create"
       outputs: [SKILL.md, circuit.yaml, publish summary]
       checkpoint: Waits for publish confirmation before promotion.
       verification: Validates the draft through engine bootstrap.

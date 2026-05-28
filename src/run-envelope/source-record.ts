@@ -21,7 +21,7 @@ export const RUN_DECISION_PACKET_RELATIVE_DIR = 'reports/decision-packets';
 
 type SelectedProcess = {
   readonly process_id: string;
-  readonly routed_by: 'explicit' | 'classifier';
+  readonly routed_by?: 'explicit' | 'classifier';
   readonly router_reason: string;
   readonly entry_mode?: string;
 };
@@ -105,7 +105,9 @@ function evidence(source: RunEvidenceRef['source'], ref: Ref): RunEvidenceRef {
   return { source, ref };
 }
 
-function artifactLabel(ref: Ref): string {
+type SurfaceArtifactRef = Pick<Ref, 'kind' | 'ref'>;
+
+function artifactLabel(ref: SurfaceArtifactRef): string {
   if (ref.ref === RUN_ENVELOPE_RELATIVE_PATH) return 'Run envelope';
   if (ref.ref === PROCESS_EVIDENCE_RELATIVE_PATH) return 'Process evidence';
   if (ref.ref === 'reports/result.json') return 'Child result';
@@ -120,15 +122,12 @@ function markdownLink(label: string, path: string): string {
 
 function renderSurfaceMarkdown(input: {
   readonly runFolder: string;
-  readonly envelopePath: string;
   readonly record: RunEnvelopeRecordValue;
 }): string {
-  const artifactRefs = [
+  const artifactRefs: readonly SurfaceArtifactRef[] = [
     {
       kind: 'report' as const,
       ref: RUN_ENVELOPE_RELATIVE_PATH,
-      sha256: sha256File(input.envelopePath),
-      run_id: input.record.run_id,
     },
     ...input.record.surface_output.artifact_links,
   ];
@@ -170,6 +169,14 @@ function runOutcome(input: {
   if (input.projection.outcome === 'checkpoint_waiting') return 'needs_attention';
   if (input.projection.outcome === 'aborted') return 'failed';
   return input.projection.outcome;
+}
+
+function selectionSourceFor(
+  routedBy: SelectedProcess['routed_by'],
+): RunEnvelopeRecordValue['process_plan']['selection_source'] {
+  if (routedBy === 'explicit') return 'explicit_operator_request';
+  if (routedBy === 'classifier') return 'router';
+  return 'recovery';
 }
 
 function gateFor(input: {
@@ -482,7 +489,7 @@ function surfaceFor(input: {
   }
   return {
     ...base,
-    status_text: `Failed: ${input.processId} could not close with enough process evidence.`,
+    status_text: `Stopped: ${input.processId} could not close with enough process evidence.`,
     next_action: 'Inspect the process evidence and rerun with a corrected goal.',
   };
 }
@@ -587,8 +594,7 @@ export function writeRunEnvelopeRecord(
     },
     process_plan: {
       schema: 'run.process-plan@v0',
-      selection_source:
-        input.selectedProcess.routed_by === 'explicit' ? 'explicit_operator_request' : 'router',
+      selection_source: selectionSourceFor(input.selectedProcess.routed_by),
       rationale: input.selectedProcess.router_reason,
       planned_attempts: [
         {
@@ -661,10 +667,7 @@ export function writeRunEnvelopeRecord(
   });
   writeFileSync(outPath, `${JSON.stringify(record, null, 2)}\n`);
   const surfacePath = join(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
-  writeFileSync(
-    surfacePath,
-    renderSurfaceMarkdown({ runFolder: input.runFolder, envelopePath: outPath, record }),
-  );
+  writeFileSync(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record }));
   return {
     path: outPath,
     processEvidencePath,

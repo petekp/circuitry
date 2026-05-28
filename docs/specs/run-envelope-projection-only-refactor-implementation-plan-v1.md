@@ -38,7 +38,7 @@ host-native skill roots, or runtime-kernel ownership.
 | Current source tests | `tests/runner/run-envelope-source-writer.test.ts:43-294` | Tests currently feed runtime-shaped children into the source writer. |
 | Process evidence tests | `tests/contracts/process-evidence-projection-schema.test.ts:46-217` | Projection tests already cover public processes, checkpoint waiting, and private-report rejection. |
 | Safety ratchets | `tests/contracts/run-centered-v1-safety.test.ts:52-67` | Existing boundary tests need to get stricter after the refactor. |
-| Generated surface rules | `docs/generated-surfaces.md:7-18` | Edit source files, not generated host outputs, unless normal drift workflow requires regeneration. |
+| Generated surface rules | `docs/generated-surfaces.md:7-18` | Edit source files, not generated host outputs, unless the normal drift-check process requires regeneration. |
 | Migration invariant | `docs/specs/run-centered-v1-migration-ledger.md:20-26` | Preserve flows, runtime kernel, run folders, generated surfaces, checkpoints, hint-only memory, and agent/operator balance. |
 
 ## Target Data Flow
@@ -716,7 +716,7 @@ Expected result:
 - All commands pass.
 - `npm run check-flow-drift` produces no generated-surface drift.
 - No host command or plugin generated output changes unless produced by the
-  normal emitter workflow.
+  normal emitter process.
 - `runEnvelopeOutputFields` still emits:
   - `run_envelope_path`;
   - `run_process_evidence_path`;

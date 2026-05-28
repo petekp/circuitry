@@ -311,6 +311,147 @@ describe('Run envelope source writer', () => {
     );
   });
 
+  it('records handoff as a handoff instead of claiming completion', () => {
+    const runFolder = join(tempDir, 'handoff-review-run');
+    const resultPath = join(runFolder, 'reports/result.json');
+    const handoffResult = RunResult.parse({
+      ...runResult('review'),
+      outcome: 'handoff',
+      summary: 'Review prepared a handoff before final closure.',
+      reason: 'The operator needs to resume the review in a fresh session.',
+    });
+    writeJson(resultPath, handoffResult);
+    const processEvidence = writtenClosedProcessEvidence({
+      runFolder,
+      runResult: handoffResult,
+      resultPath,
+    });
+
+    const written = writeRunEnvelopeRecord({
+      runFolder,
+      operatorIntent: 'Review the patch.',
+      selectedProcess: {
+        process_id: 'review',
+        routed_by: 'explicit',
+        router_reason: 'explicit flow positional argument',
+      },
+      processEvidence,
+      recordedAt: '2026-05-28T05:01:00.000Z',
+    });
+
+    const record = RunEnvelopeRecord.parse(JSON.parse(readFileSync(written.path, 'utf8')));
+    expect(record.outcome).toBe('handoff');
+    expect(record.completion_gate).toMatchObject({
+      verdict: 'handoff',
+      next_action: 'handoff',
+    });
+    expect(record.surface_output.status_text).toBe(
+      'Handoff ready: review paused with handoff evidence.',
+    );
+    expect(record.surface_output.status_text).not.toMatch(/\b(?:done|complete|completed)\b/i);
+  });
+
+  it('records aborted child processes as stopped without claiming completion', () => {
+    const runFolder = join(tempDir, 'aborted-review-run');
+    const resultPath = join(runFolder, 'reports/result.json');
+    const abortedResult = RunResult.parse({
+      ...runResult('review'),
+      outcome: 'aborted',
+      summary: 'Review aborted before producing full process evidence.',
+      reason: 'The relay process aborted.',
+    });
+    writeJson(resultPath, abortedResult);
+    const processEvidence = writtenClosedProcessEvidence({
+      runFolder,
+      runResult: abortedResult,
+      resultPath,
+    });
+
+    const written = writeRunEnvelopeRecord({
+      runFolder,
+      operatorIntent: 'Review the patch.',
+      selectedProcess: {
+        process_id: 'review',
+        routed_by: 'explicit',
+        router_reason: 'explicit flow positional argument',
+      },
+      processEvidence,
+      recordedAt: '2026-05-28T05:01:00.000Z',
+    });
+
+    const record = RunEnvelopeRecord.parse(JSON.parse(readFileSync(written.path, 'utf8')));
+    expect(record.outcome).toBe('failed');
+    expect(record.completion_gate).toMatchObject({
+      verdict: 'failed',
+      next_action: 'failed',
+    });
+    expect(record.process_attempts[0]?.outcome).toBe('failed');
+    expect(record.surface_output.status_text).toBe(
+      'Stopped: review could not close with enough process evidence.',
+    );
+    expect(record.surface_output.status_text).not.toMatch(/\b(?:done|complete|completed)\b/i);
+  });
+
+  it('records router-selected processes without fabricating an explicit process request', () => {
+    const runFolder = join(tempDir, 'router-review-run');
+    const resultPath = join(runFolder, 'reports/result.json');
+    const reviewResultPath = join(runFolder, 'reports/review-result.json');
+    const childResult = runResult('review');
+    writeJson(resultPath, childResult);
+    writeJson(reviewResultPath, { schema: 'review.result@v1', outcome: 'complete' });
+    const processEvidence = writtenClosedProcessEvidence({
+      runFolder,
+      runResult: childResult,
+      resultPath,
+    });
+
+    const written = writeRunEnvelopeRecord({
+      runFolder,
+      operatorIntent: 'Please review this PR.',
+      selectedProcess: {
+        process_id: 'review',
+        routed_by: 'classifier',
+        router_reason: 'matched review request',
+      },
+      processEvidence,
+      recordedAt: '2026-05-28T05:01:00.000Z',
+    });
+
+    const record = RunEnvelopeRecord.parse(JSON.parse(readFileSync(written.path, 'utf8')));
+    expect(record.explicit_process_request).toBeUndefined();
+    expect(record.process_plan.selection_source).toBe('router');
+    expect(record.process_plan.rationale).toBe('matched review request');
+  });
+
+  it('records missing resume route state as recovery provenance', () => {
+    const runFolder = join(tempDir, 'unknown-route-review-run');
+    const resultPath = join(runFolder, 'reports/result.json');
+    const reviewResultPath = join(runFolder, 'reports/review-result.json');
+    const childResult = runResult('review');
+    writeJson(resultPath, childResult);
+    writeJson(reviewResultPath, { schema: 'review.result@v1', outcome: 'complete' });
+    const processEvidence = writtenClosedProcessEvidence({
+      runFolder,
+      runResult: childResult,
+      resultPath,
+    });
+
+    const written = writeRunEnvelopeRecord({
+      runFolder,
+      operatorIntent: 'Review the patch.',
+      selectedProcess: {
+        process_id: 'review',
+        router_reason: 'checkpoint resume',
+      },
+      processEvidence,
+      recordedAt: '2026-05-28T05:01:00.000Z',
+    });
+
+    const record = RunEnvelopeRecord.parse(JSON.parse(readFileSync(written.path, 'utf8')));
+    expect(record.explicit_process_request).toBeUndefined();
+    expect(record.process_plan.selection_source).toBe('recovery');
+  });
+
   it('does not claim completion when a child process stops before full evidence', () => {
     const runFolder = join(tempDir, 'stopped-review-run');
     const resultPath = join(runFolder, 'reports/result.json');

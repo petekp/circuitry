@@ -57,6 +57,13 @@ export const ProcessEvidenceProjection = z
         message: 'child_run_ref must point to the child run trace',
       });
     }
+    if (projection.result_ref !== undefined && projection.result_ref.kind !== 'report') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['result_ref', 'kind'],
+        message: 'result_ref must point to a report',
+      });
+    }
 
     for (const [index, ref] of projection.evidence_refs.entries()) {
       if (ref.ref.startsWith('/')) {

@@ -269,6 +269,9 @@ Checkpoint YYYY-MM-DD:
   `npm run test -- tests/runner/cli-run-envelope-shadow.test.ts tests/runner/run-envelope-shadow-writer.test.ts tests/contracts/run-envelope-record-schema.test.ts`,
   `npm run check`, `npm run lint`, `npm run test -- tests/runner/cli-router.test.ts`,
   and `npm run check-flow-drift` passed.
+- Review fix: `tests/contracts/run-envelope-record-schema.test.ts` now includes
+  the `RunEnvelopeShadowRecord` negative cases for checkpoint/result-ref
+  cross-field guards.
 - Next: begin Slice 3 process evidence projection fixtures and unused
   projection writer.
 

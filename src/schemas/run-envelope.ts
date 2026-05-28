@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CompiledFlowId, RunId, StepId } from './ids.js';
 import { Ref } from './ref.js';
+import { RunClosedOutcome } from './trace-entry.js';
 
 const REQUIRED_GATE_PASSES = 2;
 
@@ -412,7 +413,7 @@ export const RunEnvelopeShadowRecord = z
     selected_process: z
       .object({
         process_id: CompiledFlowId,
-        routed_by: z.enum(['explicit', 'classifier']),
+        routed_by: z.enum(['explicit', 'classifier']).optional(),
         router_reason: z.string().min(1),
         entry_mode: z.string().min(1).optional(),
       })
@@ -422,14 +423,7 @@ export const RunEnvelopeShadowRecord = z
         run_id: RunId,
         run_folder: z.string().min(1),
         flow_id: CompiledFlowId,
-        outcome: z.enum([
-          'complete',
-          'aborted',
-          'handoff',
-          'stopped',
-          'escalated',
-          'checkpoint_waiting',
-        ]),
+        outcome: z.union([RunClosedOutcome, z.literal('checkpoint_waiting')]),
         trace_entries_observed: z.number().int().nonnegative(),
         manifest_hash: z.string().min(1),
         result_ref: RunEvidenceRef.optional(),

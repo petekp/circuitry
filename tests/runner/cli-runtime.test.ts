@@ -9,6 +9,7 @@ import {
   COMPOSE_WRITER_RUNTIME_POLICY,
   RUNTIME_POLICY_REASONS,
 } from '../../src/cli/runtime-routing-policy.js';
+import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { ComposeWriterFn, RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
@@ -179,6 +180,86 @@ describe('CLI runtime', () => {
     expect(
       RunResult.parse(JSON.parse(readFileSync(join(runFolder, 'reports/result.json'), 'utf8'))),
     ).toMatchObject({ flow_id: 'review', outcome: 'complete' });
+  });
+
+  it('keeps successful run stdout when post-run artifact writers fail', async () => {
+    const runFolder = join(runFolderBase, 'review-post-run-writer-failure');
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        mkdirSync(join(runFolder, 'reports', 'operator-summary.json'), { recursive: true });
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'stub-receipt-cli-runtime',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: 'stub',
+        };
+      },
+    };
+    const result = await captureMain(
+      ['run', 'review', '--goal', 'review this patch', '--run-folder', runFolder],
+      { relayer },
+    );
+
+    expect(result.code).toBe(0);
+    const output = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(output).toMatchObject({
+      flow_id: 'review',
+      outcome: 'complete',
+      result_path: join(runFolder, 'reports/result.json'),
+    });
+    expect(output).not.toHaveProperty('operator_summary_path');
+    expect(output.post_run_artifact_warnings).toEqual([
+      expect.objectContaining({ label: 'operator-summary' }),
+    ]);
+    expect(result.stderr).toContain('warning: post-run artifact operator-summary failed:');
+  });
+
+  it('keeps progress JSONL parseable when post-run artifact writers fail', async () => {
+    const runFolder = join(runFolderBase, 'review-post-run-writer-failure-progress');
+    const relayer: RelayFn = {
+      connectorName: 'claude-code',
+      relay: async (input: RelayInput): Promise<RelayResult> => {
+        mkdirSync(join(runFolder, 'reports', 'operator-summary.json'), { recursive: true });
+        return {
+          request_payload: input.prompt,
+          receipt_id: 'stub-receipt-cli-runtime-progress',
+          result_body: REVIEW_RELAY_BODY,
+          duration_ms: 1,
+          cli_version: 'stub',
+        };
+      },
+    };
+    const result = await captureMain(
+      [
+        'run',
+        'review',
+        '--goal',
+        'review this patch',
+        '--progress',
+        'jsonl',
+        '--run-folder',
+        runFolder,
+      ],
+      { relayer },
+    );
+
+    expect(result.code).toBe(0);
+    const output = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(output).toMatchObject({
+      flow_id: 'review',
+      outcome: 'complete',
+      result_path: join(runFolder, 'reports/result.json'),
+      post_run_artifact_warnings: [expect.objectContaining({ label: 'operator-summary' })],
+    });
+    expect(result.stderr).not.toContain('warning: post-run artifact');
+    const progress = result.stderr
+      .trim()
+      .split('\n')
+      .filter((line) => line.length > 0)
+      .map((line) => ProgressEvent.parse(JSON.parse(line)));
+    expect(progress.map((event) => event.type)).toContain('run.completed');
   });
 
   it('emits selector diagnostics only when requested', async () => {

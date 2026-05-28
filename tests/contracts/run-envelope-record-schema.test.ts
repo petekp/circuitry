@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RunEnvelopeRecord } from '../../src/index.js';
+import { RunEnvelopeRecord, RunEnvelopeShadowRecord } from '../../src/index.js';
 
 const sha = 'b'.repeat(64);
 
@@ -33,6 +33,11 @@ const childResultEvidence = evidence('child_result', 'report', 'reports/result.j
   flow_id: 'build',
 });
 const envelopeRef = ref('report', 'reports/run-envelope.json');
+const checkpointRequestRef = ref('request', 'reports/checkpoints/frame-step-request.json', {
+  run_id: childRunId,
+  flow_id: 'build',
+  step_id: 'frame-step',
+});
 
 function baseRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -166,6 +171,39 @@ function baseRecord(overrides: Record<string, unknown> = {}) {
     outcome: 'complete',
     ...overrides,
   };
+}
+
+function baseShadowRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    schema: 'run.envelope-shadow@v0',
+    mode: 'shadow',
+    shadow_reason: 'source-owned-run-not-active',
+    run_id: runId,
+    operator_intent: 'Add the dashboard filter and prove it works.',
+    recorded_at: '2026-05-28T05:05:00.000Z',
+    selected_process: {
+      process_id: 'build',
+      routed_by: 'classifier',
+      router_reason: 'Matched implementation request.',
+    },
+    child_run: {
+      run_id: childRunId,
+      run_folder: `.circuit/runs/${childRunId}`,
+      flow_id: 'build',
+      outcome: 'complete',
+      trace_entries_observed: 12,
+      manifest_hash: 'runtime:build@0.1.0',
+      result_ref: childResultEvidence,
+    },
+    artifact_links: [envelopeRef, childResultEvidence.ref],
+    ...overrides,
+  };
+}
+
+function shadowChildWithoutResultRef(): Record<string, unknown> {
+  const childRun = { ...(baseShadowRecord().child_run as Record<string, unknown>) };
+  childRun.result_ref = undefined;
+  return childRun;
 }
 
 describe('RunEnvelopeRecord schema', () => {
@@ -590,6 +628,49 @@ describe('RunEnvelopeRecord schema', () => {
             next_action: 'blocked',
           },
           outcome: 'blocked',
+        }),
+      ).success,
+    ).toBe(false);
+  });
+});
+
+describe('RunEnvelopeShadowRecord schema', () => {
+  it('rejects checkpoint-waiting shadow records with a child result ref', () => {
+    expect(
+      RunEnvelopeShadowRecord.safeParse(
+        baseShadowRecord({
+          child_run: {
+            ...(baseShadowRecord().child_run as Record<string, unknown>),
+            outcome: 'checkpoint_waiting',
+            checkpoint: {
+              step_id: 'frame-step',
+              request_ref: checkpointRequestRef,
+              allowed_choices: ['continue'],
+            },
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('rejects checkpoint-waiting shadow records without checkpoint metadata', () => {
+    expect(
+      RunEnvelopeShadowRecord.safeParse(
+        baseShadowRecord({
+          child_run: {
+            ...shadowChildWithoutResultRef(),
+            outcome: 'checkpoint_waiting',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('rejects closed shadow records without a child result ref', () => {
+    expect(
+      RunEnvelopeShadowRecord.safeParse(
+        baseShadowRecord({
+          child_run: shadowChildWithoutResultRef(),
         }),
       ).success,
     ).toBe(false);

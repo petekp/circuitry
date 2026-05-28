@@ -2,40 +2,10 @@ const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circu
 const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit.ts'";
 
 const CODEX_SKILL_METADATA: Record<string, { title: string; description: string }> = {
-  build: {
-    title: 'Circuit Build',
-    description:
-      'Expert control for starting Circuit from Build when you already know the task is implementation or documentation work.',
-  },
-  explore: {
-    title: 'Circuit Explore',
-    description:
-      'Expert control for starting Circuit from Explore when you already know the task is investigation, comparison, architecture analysis, or a pre-change decision.',
-  },
-  fix: {
-    title: 'Circuit Fix',
-    description:
-      'Expert control for starting Circuit from Fix when you already know the task is a bug, regression, failing test, crash, or production issue.',
-  },
-  goal: {
-    title: 'Circuit Goal',
-    description:
-      'Expert control for the retained Goal flow. Circuit Run is the default front door and carries Goal-style completion discipline.',
-  },
   handoff: {
     title: 'Circuit Handoff',
     description:
       'Runs Circuit Handoff to save, resume, clear, brief, or install continuity support across sessions.',
-  },
-  prototype: {
-    title: 'Circuit Prototype',
-    description:
-      'Expert control for starting Circuit from Prototype when you already know the task needs a disposable prototype, mockup, UI sketch, or model-comparison variant.',
-  },
-  review: {
-    title: 'Circuit Review',
-    description:
-      'Expert control for starting Circuit from Review when you already know the task is an audit without making changes.',
   },
   run: {
     title: 'Circuit Run',

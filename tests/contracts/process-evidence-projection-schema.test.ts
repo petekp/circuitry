@@ -203,6 +203,30 @@ describe('ProcessEvidenceProjection', () => {
     ).toThrow(/checkpoint_waiting projections must not have a result ref/);
   });
 
+  it('rejects non-report result refs', () => {
+    const runFolder = join(tempDir, 'invalid-result-ref-kind');
+    const resultPath = join(runFolder, 'reports/result.json');
+    writeJson(resultPath, closedRunResult('review'));
+    const projection = projectClosedProcessEvidence({
+      runFolder,
+      runResult: closedRunResult('review'),
+      resultPath,
+    });
+
+    expect(() =>
+      ProcessEvidenceProjection.parse({
+        ...projection,
+        result_ref: {
+          kind: 'evidence',
+          ref: 'reports/result.json',
+          sha256: projection.result_ref?.sha256,
+          run_id: projection.result_ref?.run_id,
+          flow_id: projection.result_ref?.flow_id,
+        },
+      }),
+    ).toThrow(/result_ref must point to a report/);
+  });
+
   it.each([
     {
       runOutcome: 'handoff' as const,

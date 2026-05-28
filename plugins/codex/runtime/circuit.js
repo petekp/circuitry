@@ -46465,6 +46465,13 @@ var ProcessEvidenceProjection = external_exports.object({
       message: "child_run_ref must point to the child run trace"
     });
   }
+  if (projection.result_ref !== void 0 && projection.result_ref.kind !== "report") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["result_ref", "kind"],
+      message: "result_ref must point to a report"
+    });
+  }
   for (const [index, ref] of projection.evidence_refs.entries()) {
     if (ref.ref.startsWith("/")) {
       ctx.addIssue({
@@ -47365,7 +47372,7 @@ var RunEnvelopeShadowRecord = external_exports.object({
   recorded_at: external_exports.string().datetime(),
   selected_process: external_exports.object({
     process_id: CompiledFlowId,
-    routed_by: external_exports.enum(["explicit", "classifier"]),
+    routed_by: external_exports.enum(["explicit", "classifier"]).optional(),
     router_reason: external_exports.string().min(1),
     entry_mode: external_exports.string().min(1).optional()
   }).strict(),
@@ -47373,14 +47380,7 @@ var RunEnvelopeShadowRecord = external_exports.object({
     run_id: RunId,
     run_folder: external_exports.string().min(1),
     flow_id: CompiledFlowId,
-    outcome: external_exports.enum([
-      "complete",
-      "aborted",
-      "handoff",
-      "stopped",
-      "escalated",
-      "checkpoint_waiting"
-    ]),
+    outcome: external_exports.union([RunClosedOutcome, external_exports.literal("checkpoint_waiting")]),
     trace_entries_observed: external_exports.number().int().nonnegative(),
     manifest_hash: external_exports.string().min(1),
     result_ref: RunEvidenceRef.optional(),
@@ -54624,7 +54624,7 @@ function childResultEvidence(input) {
 function writeRunEnvelopeShadowRecord(input) {
   const selectedProcess = {
     process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
-    routed_by: input.selectedProcess.routed_by,
+    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
     router_reason: input.selectedProcess.router_reason,
     ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
   };
@@ -54741,9 +54741,7 @@ function renderSurfaceMarkdown(input) {
   const artifactRefs = [
     {
       kind: "report",
-      ref: RUN_ENVELOPE_RELATIVE_PATH,
-      sha256: sha256File4(input.envelopePath),
-      run_id: input.record.run_id
+      ref: RUN_ENVELOPE_RELATIVE_PATH
     },
     ...input.record.surface_output.artifact_links
   ];
@@ -54777,6 +54775,13 @@ function runOutcome2(input) {
   if (input.projection.outcome === "aborted")
     return "failed";
   return input.projection.outcome;
+}
+function selectionSourceFor(routedBy) {
+  if (routedBy === "explicit")
+    return "explicit_operator_request";
+  if (routedBy === "classifier")
+    return "router";
+  return "recovery";
 }
 function gateFor(input) {
   if (input.projection.outcome === "complete") {
@@ -55038,7 +55043,7 @@ function surfaceFor(input) {
   }
   return {
     ...base,
-    status_text: `Failed: ${input.processId} could not close with enough process evidence.`,
+    status_text: `Stopped: ${input.processId} could not close with enough process evidence.`,
     next_action: "Inspect the process evidence and rerun with a corrected goal."
   };
 }
@@ -55128,7 +55133,7 @@ function writeRunEnvelopeRecord(input) {
     },
     process_plan: {
       schema: "run.process-plan@v0",
-      selection_source: input.selectedProcess.routed_by === "explicit" ? "explicit_operator_request" : "router",
+      selection_source: selectionSourceFor(input.selectedProcess.routed_by),
       rationale: input.selectedProcess.router_reason,
       planned_attempts: [
         {
@@ -55195,7 +55200,7 @@ function writeRunEnvelopeRecord(input) {
   writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
 `);
   const surfacePath = join15(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
-  writeFileSync4(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, envelopePath: outPath, record: record2 }));
+  writeFileSync4(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record: record2 }));
   return {
     path: outPath,
     processEvidencePath,
@@ -59797,6 +59802,29 @@ async function runRunsCommand(argv) {
 // dist/cli/circuit.js
 var DEFAULT_RUNS_BASE2 = ".circuit/runs";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
+function tryPostRunArtifact(label, context, write) {
+  try {
+    return write();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    context.warnings.push({ label, message });
+    if (!context.progressJsonl) {
+      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}
+`);
+    }
+    return void 0;
+  }
+}
+function postRunArtifactWarningOutputFields(warnings) {
+  if (warnings.length === 0)
+    return {};
+  return {
+    post_run_artifact_warnings: warnings.map((warning) => ({
+      label: warning.label,
+      message: warning.message
+    }))
+  };
+}
 function usage() {
   return [
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
@@ -60289,7 +60317,12 @@ async function main(argv, options = {}) {
       });
       const runResult = RunResult.parse(JSON.parse(readFileSync38(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder2);
-      const operatorSummary = writeOperatorSummary({
+      const postRunArtifactWarnings = [];
+      const postRunArtifactContext = {
+        progressJsonl: args.progress === "jsonl",
+        warnings: postRunArtifactWarnings
+      };
+      const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
         runFolder: runFolder2,
         runResult,
         route: {
@@ -60297,42 +60330,39 @@ async function main(argv, options = {}) {
           ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
           ...priorRoute.routerReason === void 0 ? {} : { routerReason: priorRoute.routerReason }
         }
-      });
+      }));
       const recordedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-      writeRunEnvelopeShadowRecord({
+      const selectedProcess = {
+        process_id: runResult.flow_id,
+        ...priorRoute.routedBy === void 0 ? {} : { routed_by: priorRoute.routedBy },
+        router_reason: priorRoute.routerReason ?? "checkpoint resume"
+      };
+      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
         runFolder: runFolder2,
         operatorIntent: runResult.goal,
-        selectedProcess: {
-          process_id: runResult.flow_id,
-          routed_by: priorRoute.routedBy ?? "explicit",
-          router_reason: priorRoute.routerReason ?? "checkpoint resume"
-        },
+        selectedProcess,
         child: {
           kind: "closed",
           runResult,
           resultPath: runtimeResult.resultPath
         },
         recordedAt
-      });
-      const processEvidence = writeProcessEvidenceProjection({
+      }));
+      const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
         runFolder: runFolder2,
         projection: projectClosedProcessEvidence({
           runFolder: runFolder2,
           runResult,
           resultPath: runtimeResult.resultPath
         })
-      });
-      const runEnvelope = writeRunEnvelopeRecord({
+      }));
+      const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
         runFolder: runFolder2,
         operatorIntent: runResult.goal,
-        selectedProcess: {
-          process_id: runResult.flow_id,
-          routed_by: priorRoute.routedBy ?? "explicit",
-          router_reason: priorRoute.routerReason ?? "checkpoint resume"
-        },
+        selectedProcess,
         processEvidence,
         recordedAt
-      });
+      }));
       const resumeRuntimeFields = showRuntimeDecision() ? {
         runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume
       } : {};
@@ -60345,8 +60375,9 @@ async function main(argv, options = {}) {
         trace_entries_observed: runResult.trace_entries_observed,
         result_path: runtimeResult.resultPath,
         ...resumeRuntimeFields,
-        ...operatorSummaryOutputFields({ operatorSummary }),
-        ...runEnvelopeOutputFields({ runEnvelope })
+        ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
+        ...operatorSummary === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary }),
+        ...runEnvelope === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope })
       }, null, 2)}
 `);
       return 0;
@@ -60357,6 +60388,7 @@ async function main(argv, options = {}) {
   if (args.goal === void 0) {
     throw new Error("internal error: --goal missing outside checkpoint resume mode");
   }
+  const operatorGoal = args.goal;
   const route = resolveCompiledFlowRoute(args);
   const entryModeSelection = resolveEntryModeSelection(args, route);
   const fixtureSelectionName = fixtureSelectionNameForAxes(selectedAxes(args, route));
@@ -60414,7 +60446,7 @@ async function main(argv, options = {}) {
     const progressSurface = progressSurfaceForFlowId(flow.id);
     const historyRecall = shouldPrepareHistoryRecall(options) ? prepareRunStartHistoryRecall({
       repoRoot: projectRoot,
-      query: args.goal,
+      query: operatorGoal,
       now
     }) : void 0;
     const runtimeResult = await runCompiledFlowWithWaiting({
@@ -60422,7 +60454,7 @@ async function main(argv, options = {}) {
       compiledFlowPath: fixturePath,
       runDir: runFolder,
       runId,
-      goal: args.goal,
+      goal: operatorGoal,
       now,
       projectRoot,
       childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
@@ -60444,7 +60476,7 @@ async function main(argv, options = {}) {
         schema_version: 1,
         run_id: RunId.parse(runtimeResult.runId),
         flow_id: CompiledFlowId.parse(runtimeResult.flowId),
-        goal: args.goal,
+        goal: operatorGoal,
         outcome: "checkpoint_waiting",
         summary: `checkpoint '${runtimeResult.checkpoint.stepId}' is waiting for an operator choice.`,
         trace_entries_observed: runtimeResult.traceEntriesObserved,
@@ -60455,7 +60487,18 @@ async function main(argv, options = {}) {
           allowed_choices: runtimeResult.checkpoint.allowedChoices
         }
       };
-      const operatorSummary2 = writeOperatorSummary({
+      const selectedProcess2 = {
+        process_id: flow.id,
+        routed_by: route.source,
+        router_reason: route.reason,
+        ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
+      };
+      const postRunArtifactWarnings2 = [];
+      const postRunArtifactContext2 = {
+        progressJsonl: args.progress === "jsonl",
+        warnings: postRunArtifactWarnings2
+      };
+      const operatorSummary2 = tryPostRunArtifact("operator-summary", postRunArtifactContext2, () => writeOperatorSummary({
         runFolder,
         runResult: waitingResult,
         route: {
@@ -60463,17 +60506,12 @@ async function main(argv, options = {}) {
           routedBy: route.source,
           routerReason: route.reason
         }
-      });
+      }));
       const recordedAt2 = now().toISOString();
-      writeRunEnvelopeShadowRecord({
+      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext2, () => writeRunEnvelopeShadowRecord({
         runFolder,
-        operatorIntent: args.goal,
-        selectedProcess: {
-          process_id: flow.id,
-          routed_by: route.source,
-          router_reason: route.reason,
-          ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-        },
+        operatorIntent: operatorGoal,
+        selectedProcess: selectedProcess2,
         child: {
           kind: "checkpoint_waiting",
           run_id: waitingResult.run_id,
@@ -60487,8 +60525,8 @@ async function main(argv, options = {}) {
           }
         },
         recordedAt: recordedAt2
-      });
-      const processEvidence2 = writeProcessEvidenceProjection({
+      }));
+      const processEvidence2 = tryPostRunArtifact("process-evidence", postRunArtifactContext2, () => writeProcessEvidenceProjection({
         runFolder,
         projection: projectCheckpointWaitingProcessEvidence({
           runFolder,
@@ -60502,20 +60540,15 @@ async function main(argv, options = {}) {
             allowedChoices: waitingResult.checkpoint.allowed_choices
           }
         })
-      });
-      const runEnvelope2 = writeRunEnvelopeRecord({
+      }));
+      const runEnvelope2 = processEvidence2 === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext2, () => writeRunEnvelopeRecord({
         runFolder,
-        operatorIntent: args.goal,
-        selectedProcess: {
-          process_id: flow.id,
-          routed_by: route.source,
-          router_reason: route.reason,
-          ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-        },
+        operatorIntent: operatorGoal,
+        selectedProcess: selectedProcess2,
         processEvidence: processEvidence2,
         recordedAt: recordedAt2,
         ...runEnvelopeMemoryContext(historyRecall)
-      });
+      }));
       process.stdout.write(`${JSON.stringify({
         schema_version: 1,
         run_id: waitingResult.run_id,
@@ -60536,15 +60569,27 @@ async function main(argv, options = {}) {
           decision: defaultRuntimeSupport
         }),
         ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
-        ...operatorSummaryOutputFields({ operatorSummary: operatorSummary2 }),
-        ...runEnvelopeOutputFields({ runEnvelope: runEnvelope2 }),
+        ...postRunArtifactWarningOutputFields(postRunArtifactWarnings2),
+        ...operatorSummary2 === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary: operatorSummary2 }),
+        ...runEnvelope2 === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope: runEnvelope2 }),
         checkpoint: waitingResult.checkpoint
       }, null, 2)}
 `);
       return 0;
     }
     const runResult = RunResult.parse(JSON.parse(readFileSync38(runtimeResult.resultPath, "utf8")));
-    const operatorSummary = writeOperatorSummary({
+    const selectedProcess = {
+      process_id: flow.id,
+      routed_by: route.source,
+      router_reason: route.reason,
+      ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
+    };
+    const postRunArtifactWarnings = [];
+    const postRunArtifactContext = {
+      progressJsonl: args.progress === "jsonl",
+      warnings: postRunArtifactWarnings
+    };
+    const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
       runFolder,
       runResult,
       route: {
@@ -60552,45 +60597,35 @@ async function main(argv, options = {}) {
         routedBy: route.source,
         routerReason: route.reason
       }
-    });
+    }));
     const recordedAt = now().toISOString();
-    writeRunEnvelopeShadowRecord({
+    tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
       runFolder,
-      operatorIntent: args.goal,
-      selectedProcess: {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-      },
+      operatorIntent: operatorGoal,
+      selectedProcess,
       child: {
         kind: "closed",
         runResult,
         resultPath: runtimeResult.resultPath
       },
       recordedAt
-    });
-    const processEvidence = writeProcessEvidenceProjection({
+    }));
+    const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
       runFolder,
       projection: projectClosedProcessEvidence({
         runFolder,
         runResult,
         resultPath: runtimeResult.resultPath
       })
-    });
-    const runEnvelope = writeRunEnvelopeRecord({
+    }));
+    const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
       runFolder,
-      operatorIntent: args.goal,
-      selectedProcess: {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-      },
+      operatorIntent: operatorGoal,
+      selectedProcess,
       processEvidence,
       recordedAt,
       ...runEnvelopeMemoryContext(historyRecall)
-    });
+    }));
     process.stdout.write(`${JSON.stringify({
       schema_version: 1,
       run_id: runResult.run_id,
@@ -60612,8 +60647,9 @@ async function main(argv, options = {}) {
         decision: defaultRuntimeSupport
       }),
       ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
-      ...operatorSummaryOutputFields({ operatorSummary }),
-      ...runEnvelopeOutputFields({ runEnvelope })
+      ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
+      ...operatorSummary === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary }),
+      ...runEnvelope === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope })
     }, null, 2)}
 `);
     return 0;
