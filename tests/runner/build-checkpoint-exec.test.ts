@@ -1094,6 +1094,7 @@ describe('Build checkpoint execution substrate', () => {
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
             skills: { bindings: {} },
+            moments: { policy: {}, detection: { disabled_patterns: {} } },
             circuits: {},
             defaults: {
               selection: {
@@ -1122,6 +1123,7 @@ describe('Build checkpoint execution substrate', () => {
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
             skills: { bindings: {} },
+            moments: { policy: {}, detection: { disabled_patterns: {} } },
             circuits: {},
             defaults: {
               selection: {
@@ -1189,6 +1191,7 @@ describe('Build checkpoint execution substrate', () => {
             host: { kind: 'generic-shell' },
             relay: { default: 'auto', roles: {}, circuits: {}, connectors: {} },
             skills: { bindings: {} },
+            moments: { policy: {}, detection: { disabled_patterns: {} } },
             circuits: {},
             defaults: {
               selection: {

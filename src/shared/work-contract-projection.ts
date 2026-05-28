@@ -158,7 +158,6 @@ const NORMAL_ROUTE_IDS = new Set(['pass', 'continue', 'complete', 'close']);
 
 const RECOVERY_BY_ROUTE: Readonly<Record<string, RecoveryRouteKind>> = {
   revise: 'narrow_scope',
-  review: 'run_independent_review',
   'run-review': 'run_independent_review',
   checkpoint: 'checkpoint_authority',
   ask: 'checkpoint_authority',

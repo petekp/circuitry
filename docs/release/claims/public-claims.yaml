@@ -65,7 +65,7 @@ claims:
     claim: Review sends untracked paths and sizes by default; untracked file contents require explicit opt-in and still apply skip/truncation safeguards.
     type: safety
     status: verified_current
-    surfaces: [README.md, plugins/claude/commands/run.md, plugins/claude/commands/review.md, docs/release/readiness-report.generated.md]
+    surfaces: [README.md, plugins/claude/commands/run.md]
     backing:
       capability_ids: [safety:review-untracked-evidence]
       test_paths:

@@ -49,7 +49,6 @@ export const prototypeFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/prototype/schematic.json',
-    command: 'src/flows/prototype/command.md',
     contract: 'src/flows/prototype/contract.md',
   },
   routing: {

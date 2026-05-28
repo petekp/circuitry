@@ -85,4 +85,36 @@ describe('operator-summary Goal projection', () => {
     );
     expect(projection.details).toContain('Safety review: 2/2 passes; final verdict gate-pass.');
   });
+
+  it('does not present non-complete Goal claims as final proof', () => {
+    const projection = projectSummary({
+      runFolder: '/tmp/circuit-run',
+      flowId: 'goal',
+      runOutcome: 'stopped',
+      resultSummary: 'Circuit run stopped.',
+      flowReport: {
+        schema: 'goal.result@v1',
+        outcome: 'needs_attention',
+        summary: 'Goal needs_attention: safety review did not pass',
+        proven_claims: ['objective-proved'],
+        missing_or_weak_claims: [],
+        recovery_history: ['The child result could not prove the contract without judgment.'],
+        residual_risks: [],
+        rerun_commands: ['./bin/circuit run goal --goal "verify the fixture"'],
+        evidence_links: [],
+        gate: {
+          clean_streak: 0,
+          required_passes: 2,
+          final_verdict: 'blocked',
+        },
+      },
+    });
+
+    expect(projection.headline).toBe(
+      'Circuit: Goal finished with outcome needs_attention. Safety review passed 0/2.',
+    );
+    expect(projection.details).toContain('Marked before final safety review: objective-proved.');
+    expect(projection.details).toContain('Weak or missing before final safety review: none.');
+    expect(projection.details).not.toContain('Proven: objective-proved.');
+  });
 });

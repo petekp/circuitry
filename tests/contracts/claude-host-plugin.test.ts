@@ -18,17 +18,9 @@ import { z } from 'zod';
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/claude');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
-const EXPECTED_CLAUDE_COMMANDS = [
-  'build',
-  'create',
-  'explore',
-  'fix',
-  'goal',
-  'handoff',
-  'prototype',
-  'review',
-  'run',
-];
+const EXPECTED_CLAUDE_COMMANDS = ['handoff', 'run'];
+const CLI_ONLY_UTILITIES = ['create'];
+const ROUTED_ONLY_FLOWS = ['build', 'explore', 'fix', 'goal', 'prototype', 'review'];
 const RAW_PROGRESS_INVOCATION =
   /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.ts" (?!present\b)[^\n]*--progress jsonl/;
 
@@ -94,6 +86,7 @@ describe('Claude Code host plugin package', () => {
     const manifest = PluginManifest.parse(JSON.parse(readFileSync(manifestPath, 'utf8')));
 
     expect(manifest.description).toContain('/circuit:run');
+    expect(manifest.description).toContain('default Circuit command');
     expect(manifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(true);
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.ts'))).toBe(true);
@@ -136,6 +129,20 @@ describe('Claude Code host plugin package', () => {
       expect(commandMarkdown).not.toContain('./bin/circuit');
       expect(commandMarkdown).not.toContain('repo-local launcher');
       expect(commandMarkdown).not.toContain('invokes `circuit`');
+    }
+  });
+
+  it('does not publish routed-only flows as Claude Code command files', () => {
+    for (const flow of ROUTED_ONLY_FLOWS) {
+      expect(existsSync(resolve(PLUGIN_ROOT, `commands/${flow}.md`))).toBe(false);
+      expect(existsSync(resolve(PLUGIN_ROOT, `skills/${flow}/circuit.json`))).toBe(true);
+    }
+  });
+
+  it('keeps CLI-only utilities out of Claude Code command files', () => {
+    for (const utility of CLI_ONLY_UTILITIES) {
+      expect(existsSync(resolve(REPO_ROOT, `src/commands/${utility}.md`))).toBe(true);
+      expect(existsSync(resolve(PLUGIN_ROOT, `commands/${utility}.md`))).toBe(false);
     }
   });
 

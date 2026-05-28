@@ -495,12 +495,21 @@ describe('FlowDefinition compiler', () => {
     }
   });
 
-  it('preserves per-flow runtime and command ownership expectations', () => {
+  it('preserves per-flow runtime and routed command ownership expectations', () => {
     for (const flowId of ['review', 'build', 'explore', 'prototype', 'pursue'] as const) {
       expect(packageFor(flowId).runtimeSurface).not.toHaveProperty('supportedEntryModes');
     }
-    expect(packageFor('pursue').paths.command).toBeUndefined();
-    expect(packageFor('prototype').paths.command).toBe('src/flows/prototype/command.md');
+    for (const flowId of [
+      'build',
+      'explore',
+      'fix',
+      'goal',
+      'prototype',
+      'review',
+      'pursue',
+    ] as const) {
+      expect(packageFor(flowId).paths.command).toBeUndefined();
+    }
     expect(packageFor('fix').runtimeSurface?.progress?.steps).toHaveLength(14);
     expect(packageFor('build').engineFlags).toEqual({
       bindsExecutionDepthToRelaySelection: true,

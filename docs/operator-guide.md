@@ -4,7 +4,7 @@ Commands, run details, verification, and troubleshooting for Circuit.
 
 ## Front Doors
 
-Use one front door unless you already know the flow you want:
+Use one front door for coding work:
 
 | Host | You type | What happens |
 | --- | --- | --- |
@@ -12,20 +12,23 @@ Use one front door unless you already know the flow you want:
 | Codex | `/circuit:run the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
 | CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
-Use a direct command as an expert control when the flow choice is clear:
+The host plugin package model currently exposes file-backed commands as
+`/circuit:<command>`, so `/circuit:run` remains the visible slash command. A
+root `/circuit` alias is not shipped until the hosts support that shape.
+
+The CLI can still start a specific flow when the flow choice is clear:
 
 | Host | You type | What runs |
 | --- | --- | --- |
-| Claude Code | `/circuit:fix checkout total is wrong` | Fix. |
-| Claude Code | `/circuit:review current diff` | Review. |
-| Claude Code | `/circuit:build add billing settings` | Build. |
-| Claude Code | `/circuit:explore compare auth providers` | Explore. |
-| Claude Code | `/circuit:prototype sketch a settings panel` | Prototype. |
-| Claude Code | `/circuit:goal finish the scoped objective` | Goal. |
-| Codex | Invoke `fix`, `review`, `build`, `explore`, `prototype`, or `goal` as a specific Circuit skill. | Runs that flow through the Codex plugin wrapper. |
 | CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Fix. |
+| CLI | `./bin/circuit run review --goal "current diff"` | Review. |
 | CLI | `./bin/circuit run goal --goal "finish the scoped objective"` | Goal. |
 | CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Pursue. |
+
+Use `/circuit:run` for bounded objectives and completion discipline. From the
+operator's seat, Goal is not a kind of work; it is the completion standard Run
+uses by default. Direct CLI flow starts remain useful for debugging, tests, old
+run folders, and advanced local use.
 
 The host commands wrap the same CLI. Each run accepts `--goal`. Direct CLI runs
 can also pass these controls when the selected flow supports them:
@@ -47,15 +50,23 @@ Unsupported combinations fail before the run starts.
 | Fix | Bugs, regressions, failing tests, crashes, flaky behavior, or production issues. | May invoke a write-capable worker. |
 | Build | Features, refactors, docs, tests, or focused code changes that are not mainly bug fixes. | May invoke a write-capable worker. |
 | Prototype | Disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build. | May invoke a write-capable worker and writes local prototype evidence. |
-| Goal | Bounded objectives that should run until typed evidence proves completion, recovery is needed, or stopping is more honest. | May run child flows; child flow write behavior applies. |
+| Goal | Existing Goal use cases and old Goal run folders. Run is the normal front door for bounded objectives and completion discipline. | May run child flows; child flow write behavior applies. |
 | Pursue | Broad goals with several coordinated pieces of work that need ordering. | May invoke a write-capable worker. |
 
-Circuit also ships two utilities:
+Circuit also ships one visible host utility:
 
 | Utility | Use it for |
 | --- | --- |
-| Create | Drafting, validating, and publishing a reusable custom flow after explicit confirmation. |
 | Handoff | Saving, resuming, clearing, briefing, or installing continuity handoff support. |
+
+Create remains available as an experimental CLI utility for drafting,
+validating, and publishing reusable custom flows after explicit confirmation:
+
+```bash
+./bin/circuit create --name '<slug>' --description '<flow idea>'
+```
+
+It is not published as a Claude or Codex host command.
 
 ## How A Run Works
 

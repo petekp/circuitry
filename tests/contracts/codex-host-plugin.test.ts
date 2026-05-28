@@ -20,34 +20,11 @@ import type { RelayInput } from '../../src/shared/relay-runtime-types.js';
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/codex');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
-const FLOW_COMMAND_SOURCES: Record<string, string> = {
-  build: 'src/flows/build/command.md',
-  explore: 'src/flows/explore/command.md',
-  fix: 'src/flows/fix/command.md',
-  goal: 'src/flows/goal/command.md',
-  prototype: 'src/flows/prototype/command.md',
-  review: 'src/flows/review/command.md',
-};
-const EXPECTED_CODEX_COMMANDS = [
-  'build',
-  'create',
-  'explore',
-  'fix',
-  'goal',
-  'handoff',
-  'prototype',
-  'review',
-  'run',
-];
+const EXPECTED_CODEX_COMMANDS = ['handoff', 'run'];
+const CLI_ONLY_UTILITIES = ['create'];
+const ROUTED_ONLY_FLOWS = ['build', 'explore', 'fix', 'goal', 'prototype', 'review'];
 const EXPECTED_CODEX_SKILL_TITLES: Record<string, string> = {
-  build: 'Circuit Build',
-  create: 'Circuit Create',
-  explore: 'Circuit Explore',
-  fix: 'Circuit Fix',
-  goal: 'Circuit Goal',
   handoff: 'Circuit Handoff',
-  prototype: 'Circuit Prototype',
-  review: 'Circuit Review',
   run: 'Circuit Run',
 };
 
@@ -108,7 +85,7 @@ function envWithOverride(fakeBin: string, extra: NodeJS.ProcessEnv = {}): NodeJS
 }
 
 function sourceCommandPath(command: string): string {
-  return resolve(REPO_ROOT, FLOW_COMMAND_SOURCES[command] ?? `src/commands/${command}.md`);
+  return resolve(REPO_ROOT, `src/commands/${command}.md`);
 }
 
 describe('Codex host plugin package', () => {
@@ -127,9 +104,10 @@ describe('Codex host plugin package', () => {
     expect(manifest.description).toContain('coding intents');
     expect(manifest.interface.shortDescription).toContain('coding intents');
     expect(manifest.interface.longDescription).toContain('/circuit:run');
+    expect(manifest.interface.longDescription).toContain('by default');
     expect(manifest.interface.longDescription).not.toContain('@Circuit');
     expect(manifest.interface.longDescription).toContain('recommend a Circuit flow');
-    expect(manifest.interface.longDescription).toContain('expert controls');
+    expect(manifest.interface.longDescription).toContain('single normal Circuit entry point');
     expect(manifest.interface.defaultPrompt).toEqual([
       'Use Circuit on this task',
       'Use Circuit to fix this bug',
@@ -204,7 +182,8 @@ describe('Codex host plugin package', () => {
       expect(JSON.stringify(syncSummary)).not.toContain(['plugins', 'circuit'].join('/'));
       expect(syncSummary.commands).toEqual([...EXPECTED_CODEX_COMMANDS].sort());
       expect(syncSummary.skills).toEqual([...EXPECTED_CODEX_COMMANDS].sort());
-      expect(existsSync(join(cachePath, 'skills/fix/SKILL.md'))).toBe(true);
+      expect(existsSync(join(cachePath, 'skills/run/SKILL.md'))).toBe(true);
+      expect(existsSync(join(cachePath, 'skills/fix/SKILL.md'))).toBe(false);
 
       const cleanCheck = spawnSync(
         process.execPath,
@@ -262,9 +241,11 @@ describe('Codex host plugin package', () => {
     expect(contract).toContain('--progress jsonl');
     expect(contract).toContain("node '<plugin root>/scripts/circuit.ts' doctor");
     expect(contract).toContain('final user-facing answer');
-    expect(contract).toContain('report paths, trace ids');
+    expect(contract).toContain('run_surface_markdown_path');
     expect(rendering).toContain('contract: host-rendering');
     expect(rendering).toContain('Prefer `presentation` when present');
+    expect(rendering).toContain('run_surface_status_text');
+    expect(rendering).toContain('run_surface_markdown_path');
     expect(rendering).toContain('operator_summary_status_text');
     expect(rendering).toContain('operator_summary_markdown_path');
   });
@@ -291,8 +272,9 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain('display.text');
     expect(skill).toContain('task_list.updated');
     expect(skill).toContain('user_input.requested');
+    expect(skill).toContain('run_surface_markdown_path');
     expect(skill).toContain('operator_summary_markdown_path');
-    expect(skill).toContain('Direct Circuit flow skills are expert controls');
+    expect(skill).toContain('not published as separate host commands');
     expect(skill).toContain('Do not use a path relative to the user');
     expect(skill).not.toMatch(/^# \/circuit:/m);
     expect(skill).not.toContain('/circuit:');
@@ -320,6 +302,22 @@ describe('Codex host plugin package', () => {
 
       expect(name).toBe(skillDir);
       expect(name).not.toMatch(/^circuit[:-]/);
+    }
+  });
+
+  it('does not publish routed-only flows as Codex commands or skills', () => {
+    for (const flow of ROUTED_ONLY_FLOWS) {
+      expect(existsSync(resolve(PLUGIN_ROOT, `commands/${flow}.md`))).toBe(false);
+      expect(existsSync(resolve(PLUGIN_ROOT, `skills/${flow}/SKILL.md`))).toBe(false);
+      expect(existsSync(resolve(PLUGIN_ROOT, `flows/${flow}/circuit.json`))).toBe(true);
+    }
+  });
+
+  it('keeps CLI-only utilities out of Codex command and skill surfaces', () => {
+    for (const utility of CLI_ONLY_UTILITIES) {
+      expect(existsSync(sourceCommandPath(utility))).toBe(true);
+      expect(existsSync(resolve(PLUGIN_ROOT, `commands/${utility}.md`))).toBe(false);
+      expect(existsSync(resolve(PLUGIN_ROOT, `skills/${utility}/SKILL.md`))).toBe(false);
     }
   });
 
@@ -846,9 +844,7 @@ describe('Codex host plugin package', () => {
     const rejectedPair = '--entry-mode deep --depth standard';
     const surfaces = [
       resolve(PLUGIN_ROOT, 'skills/run/SKILL.md'),
-      resolve(PLUGIN_ROOT, 'skills/build/SKILL.md'),
       resolve(PLUGIN_ROOT, 'commands/run.md'),
-      resolve(PLUGIN_ROOT, 'commands/build.md'),
     ];
 
     for (const surface of surfaces) {

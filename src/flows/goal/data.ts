@@ -82,13 +82,12 @@ export const goalFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/goal/schematic.json',
-    command: 'src/flows/goal/command.md',
   },
   routing: {
     order: 5,
     signals: GOAL_SIGNALS,
     reasonForMatch(signal) {
-      return `matched ${signal.label}; routed to Goal supervisor flow`;
+      return `matched ${signal.label}; routed to Goal flow`;
     },
   },
   schematic: {
@@ -419,11 +418,17 @@ export const goalFlowData = {
           result_path: 'reports/relay/goal-gate-pass-1.result.json',
         },
         check: {
-          pass: ['gate-pass'],
+          pass: ['gate-pass', 'blocked'],
+        },
+        route_from_report: {
+          path: ['next_route'],
         },
         routes: {
           continue: 'goal-gate-pass-2',
+          'run-next-gate-pass': 'goal-gate-pass-2',
+          recover: 'goal-recovery',
           retry: 'goal-recovery',
+          close: 'goal-recovery',
           stop: '@stop',
         },
       },
@@ -448,10 +453,16 @@ export const goalFlowData = {
           result_path: 'reports/relay/goal-gate-pass-2.result.json',
         },
         check: {
-          pass: ['gate-pass'],
+          pass: ['gate-pass', 'blocked'],
+        },
+        route_from_report: {
+          path: ['next_route'],
         },
         routes: {
           continue: 'goal-close',
+          close: 'goal-close',
+          'run-next-gate-pass': 'goal-gate-pass-2',
+          recover: 'goal-recovery',
           retry: 'goal-recovery',
           stop: '@stop',
         },

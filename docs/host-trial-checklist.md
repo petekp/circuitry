@@ -23,8 +23,8 @@ for normal first-run setup; use [docs/first-run.md](first-run.md) instead.
 - Natural Explore: run
   `/circuit:run decide: should we replace auth providers?` and confirm Codex
   invokes Circuit with the Explore flow or an explicit decision flow path.
-- Explicit Build: invoke the Build flow skill directly for the same kind of
-  change.
+- Run-selected Build: use `/circuit:run` for a build-like task and confirm
+  Codex invokes Circuit with the Build flow.
 - Checkpoint: exercise a checkpointing run and confirm the question/choice is
   understandable.
 - Failure: force a verification failure and confirm the final summary explains
@@ -32,9 +32,10 @@ for normal first-run setup; use [docs/first-run.md](first-run.md) instead.
 
 ## Claude Code Scenarios
 
-- Natural Run: invoke `/circuit:run <natural task>` and confirm the host selects
-  an explicit flow command before Circuit starts.
-- Explicit Build: invoke the Build command directly.
+- Natural Run: invoke `/circuit:run <natural task>` and confirm the host starts
+  Run and records the selected flow.
+- Run-selected Build: use `/circuit:run` for a build-like task and confirm the
+  selected flow is Build.
 - Review: review a real uncommitted diff and confirm evidence warnings are
   visible when present.
 - Explore: ask for an architectural recommendation and confirm the final summary

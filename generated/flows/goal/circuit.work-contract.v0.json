@@ -3,7 +3,7 @@
   "contract_ref": {
     "kind": "work_contract",
     "ref": "generated/flows/goal/circuit.work-contract.v0.json",
-    "sha256": "b07e6ee32a329851ff888a8fcc65286e09a051947712ae87c0577c5296108227",
+    "sha256": "27606139b83587ac01c018b57771a16bf82ef31f710ba38edf687cff90d5186f",
     "flow_id": "goal"
   },
   "work_contract": {
@@ -384,7 +384,22 @@
         },
         {
           "step_id": "goal-gate-pass-1",
+          "route_id": "run-next-gate-pass",
+          "target": "goal-gate-pass-2"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "recover",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
           "route_id": "retry",
+          "target": "goal-recovery"
+        },
+        {
+          "step_id": "goal-gate-pass-1",
+          "route_id": "close",
           "target": "goal-recovery"
         },
         {
@@ -401,6 +416,21 @@
           "step_id": "goal-gate-pass-2",
           "route_id": "pass",
           "target": "goal-close"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "close",
+          "target": "goal-close"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "run-next-gate-pass",
+          "target": "goal-gate-pass-2"
+        },
+        {
+          "step_id": "goal-gate-pass-2",
+          "route_id": "recover",
+          "target": "goal-recovery"
         },
         {
           "step_id": "goal-gate-pass-2",
@@ -838,13 +868,19 @@
             "kind": "relay_result",
             "ref": "result"
           },
-          "pass": ["gate-pass"]
+          "pass": ["gate-pass", "blocked"]
         },
         "routes": {
           "continue": "goal-gate-pass-2",
           "pass": "goal-gate-pass-2",
+          "run-next-gate-pass": "goal-gate-pass-2",
+          "recover": "goal-recovery",
           "retry": "goal-recovery",
+          "close": "goal-recovery",
           "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["next_route"]
         }
       },
       {
@@ -873,13 +909,19 @@
             "kind": "relay_result",
             "ref": "result"
           },
-          "pass": ["gate-pass"]
+          "pass": ["gate-pass", "blocked"]
         },
         "routes": {
           "continue": "goal-close",
           "pass": "goal-close",
+          "close": "goal-close",
+          "run-next-gate-pass": "goal-gate-pass-2",
+          "recover": "goal-recovery",
           "retry": "goal-recovery",
           "stop": "@stop"
+        },
+        "route_from_report": {
+          "path": ["next_route"]
         }
       },
       {
@@ -1298,7 +1340,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/clarify-goal/routes/ask",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1329,32 +1371,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/clarify-goal/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
-          "flow_id": "goal"
-        }
-      },
-      {
-        "schema_version": 0,
-        "step_id": "goal-contract",
-        "route_id": "review",
-        "route_target": "goal-run-review",
-        "kind": "run_independent_review",
-        "allowed_failure_causes": ["weak_proof", "contradicted_evidence", "scope_drift"],
-        "required_refs": ["proof_assessment", "report"],
-        "operator_authority": "not_required",
-        "attempt_budget": {
-          "consumes_step_attempt": false,
-          "must_respect_max_attempts": true,
-          "retry_target": "declared_step"
-        },
-        "guidance": {
-          "subject": "recovery_route",
-          "must_match_step_completed": true
-        },
-        "source_ref": {
-          "kind": "work_contract",
-          "ref": "compiled-flow/steps/goal-contract/routes/review",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1384,7 +1401,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-contract/routes/ask",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1415,7 +1432,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-contract/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1446,7 +1463,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-run-fix/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1477,7 +1494,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-run-build/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1508,7 +1525,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-run-review/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1539,7 +1556,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-run-explore/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1570,7 +1587,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-run-pursue/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1601,7 +1618,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-attempt/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1626,7 +1643,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/run-review",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1656,7 +1673,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/checkpoint",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1681,7 +1698,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/handoff",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1712,7 +1729,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/blocked",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1743,7 +1760,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-evidence-evaluation/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1768,7 +1785,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery/routes/run-review",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1798,7 +1815,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery/routes/checkpoint",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1829,7 +1846,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery/routes/blocked",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1854,7 +1871,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery/routes/handoff",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1885,7 +1902,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1916,7 +1933,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/blocked",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1941,7 +1958,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/handoff",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1972,7 +1989,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-recovery-checkpoint/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -1997,7 +2014,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-gate-pass-1/routes/retry",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -2028,7 +2045,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-gate-pass-1/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -2053,7 +2070,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-gate-pass-2/routes/retry",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -2084,7 +2101,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-gate-pass-2/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       },
@@ -2115,7 +2132,7 @@
         "source_ref": {
           "kind": "work_contract",
           "ref": "compiled-flow/steps/goal-close/routes/stop",
-          "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+          "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
           "flow_id": "goal"
         }
       }
@@ -2132,7 +2149,7 @@
       {
         "kind": "work_contract",
         "ref": "compiled-flow/steps/goal-recovery-checkpoint/policy/safe_default_choice",
-        "sha256": "65a1545a1a8e198d702d908ae7b88b5bc792ecd15aaf0974d7c5f204ec104a89",
+        "sha256": "086f8342b2478e886523565dce511e0a105d88414adcc0209fff419671e13ad1",
         "flow_id": "goal"
       }
     ],

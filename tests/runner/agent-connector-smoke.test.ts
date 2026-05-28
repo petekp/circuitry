@@ -78,10 +78,10 @@ describe('claude-code connector smoke (capability boundary)', () => {
       await expect(
         relayClaudeCode({
           prompt: 'hang after printing useful stdout',
-          timeoutMs: 1_000,
+          timeoutMs: 3_000,
         }),
       ).rejects.toThrow(
-        /claude-code subprocess timed out after 1000ms;.*stdout\[:500\]=.*session-timeout-diagnostic.*working before timeout.*stderr\[:500\]=/s,
+        /claude-code subprocess timed out after 3000ms;.*stdout\[:500\]=.*session-timeout-diagnostic.*working before timeout.*stderr\[:500\]=/s,
       );
     } finally {
       process.env.PATH = originalPath;

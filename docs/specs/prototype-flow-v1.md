@@ -104,8 +104,7 @@ Flow id: `prototype`.
 
 Visibility: public, routable through `./bin/circuit run prototype --goal ...` and
 through the existing `run` front door. Do not add a dedicated
-`/circuit:prototype` command in V1 unless the product surface decision is
-reopened.
+Prototype host command in V1 unless the product surface decision is reopened.
 
 Axes:
 
@@ -503,8 +502,8 @@ npm run publish:plugins:check
 
 ## Open Product Decisions
 
-1. Should Prototype get a direct `/circuit:prototype` command, or should it stay
-   behind `/circuit:run` until usage proves it deserves top-level host chrome?
+1. Resolved for V1: Prototype stays behind `/circuit:run` until usage proves it
+   deserves top-level host chrome.
 2. Should the default depth pause for operator review? Current runtime does not
    wait at standard depth, so changing that would be a runtime/product decision.
 3. Should operators be allowed to choose a custom prototype root, and if so what

@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { HISTORY_RECALL_REPORT_PATH } from '../../src/history/run-start-recall.js';
 import { HistoryRecallReportV1, MemoryInputV0 } from '../../src/index.js';
+import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
+import { RunEnvelopeRecord } from '../../src/schemas/run-envelope.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
@@ -189,6 +191,15 @@ describe('run-start history recall', () => {
     expect(report.memory_input_count).toBe(1);
     expect(MemoryInputV0.parse(report.memory_inputs[0]).authority).toBe('hint_only');
     expect(report.matches[0]?.source_ref.kind).toBe('report');
+    const envelope = RunEnvelopeRecord.parse(
+      JSON.parse(readFileSync(join(runFolder, RUN_ENVELOPE_RELATIVE_PATH), 'utf8')),
+    );
+    expect(envelope.memory_context).toEqual({
+      used: true,
+      memory_input_ids: [report.memory_inputs[0]?.memory_id],
+      authority: 'hint_only',
+    });
+    expect(envelope.memory_update_events).toEqual([]);
     expect(prompts.join('\n')).toContain('Prior Circuit History (hint-only):');
     expect(prompts.join('\n')).toContain('Recall must be cited and hint-only');
     expect(prompts.join('\n')).toContain('cannot satisfy current proof, checkpoint, policy, route');

@@ -51,7 +51,7 @@ export const goalCloseBuilder: CloseBuilder = {
     const gateClean = gate?.verdict === 'gate-pass' && gate.clean_streak >= 2;
     const lowGateFindings = gate?.low_findings.map((finding) => finding.text) ?? [];
     const outcome: GoalResult['outcome'] =
-      evaluation.verdict === 'satisfied' && gateClean && lowGateFindings.length === 0
+      evaluation.verdict === 'satisfied' && gateClean
         ? 'complete'
         : recovery?.selected_route === 'handoff'
           ? 'handoff'

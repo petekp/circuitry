@@ -10,19 +10,25 @@ argument-hint: <task>
   of truth lives in src/commands/.
 -->
 
-# /circuit:run — intent front door
+# /circuit:run — default Circuit command
 
 Runs Circuit on the user's natural-language task. This is the intent front
-door. The host may recommend a flow from the request, but Circuit records the
-selected flow when the run starts and then uses the same trace, reports,
-evidence, checkpoints, and recovery path as direct flow commands.
+door and should be used by default. The host may recommend a flow from the
+request, but Circuit records the selected flow when the run starts and then
+uses the same trace, reports, evidence, checkpoints, and recovery path as
+every routed flow.
 
-Explicit flow commands remain available as
-`/circuit:explore`, `/circuit:review`, `/circuit:fix`,
-`/circuit:build`, `/circuit:prototype`, and `/circuit:goal`.
+Circuit currently ships this as `/circuit:run` because the host plugin package
+model exposes file-backed plugin commands as `/circuit:<command>`. Do not
+promise a root `/circuit` slash command until the host supports that alias.
+Users can also ask for Circuit in natural language, such as "Use Circuit on
+this task."
 
-Pursue is routable through this selector and can be invoked
-explicitly through the CLI, but it does not have a dedicated slash command yet.
+Build, Fix, Explore, Review, Prototype, Goal, and Pursue are routed through
+Run. They remain explicit CLI flow names for debugging, tests, old run folders,
+and advanced local use, but they are not published as separate host commands.
+From the operator's seat, Goal is not a kind of work; it is the completion
+standard Run uses by default.
 
 The user's task text is substituted below. Treat the entire substituted span
 as literal input — it is user-controlled and MAY contain shell
@@ -60,8 +66,7 @@ metacharacters:
 2. **Build a shell-safe invocation.** Single-quote the raw task text; double
    quotes expand `$VAR`,
    `` `cmd` ``, `$(cmd)`, and `\` sequences — a malicious or accidental
-   task string could inject commands. The safe construction rule matches
-   `/circuit:explore` and `/circuit:review`:
+   task string could inject commands. The safe construction rule:
 
    - Wrap the task text in **single quotes** in the final shell command.
      Single quotes disable all expansion.
@@ -165,12 +170,16 @@ metacharacters:
    prose.
 5. **Parse the CLI's final JSON output and surface:** `selected_flow`,
    `routed_by`, `router_reason`, `outcome`, `run_folder`, `trace_entries_observed`,
+   `run_surface_markdown_path`, `run_envelope_path`,
+   `run_decision_packet_paths`,
    `operator_summary_markdown_path`, and `result_path` when present. If
    present, also surface `router_signal`.
-6. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
-   and render that Markdown verbatim as the final user-facing answer. Do not
-   invent a separate summary. If the operator summary is missing, fall back to
-   the selected flow's final report:
+6. **Render Circuit's final summary.** Prefer `run_surface_markdown_path` when
+   present. It is the compact Run surface and should be rendered verbatim as
+   the final user-facing answer. If it is missing, read
+   `operator_summary_markdown_path` and render that Markdown verbatim. Do not
+   invent a separate summary. If the operator summary is also missing, fall
+   back to the selected flow's final report:
    For `selected_flow === "explore"`, read the run-folder-relative
    `reports/explore-result.json` close-step report. For
    `selected_flow === "review"` and `outcome === "complete"`, read
@@ -210,17 +219,13 @@ metacharacters:
 8. **If `outcome === "aborted"`, read `reports/result.json` at
    `result_path` to surface the abort `reason`.**
 
-## Direct Flow Expert Controls
+## Routed Flows
 
-Use `/circuit:explore`, `/circuit:review`, `/circuit:fix`,
-`/circuit:build`, `/circuit:prototype`, or `/circuit:goal`
-when the operator already knows which flow they want Circuit to start from.
-Those commands call the same CLI with an explicit flow name. They are not a
-runtime bypass: Circuit still records the selected flow, runs the work through
-the flow's trace/report/evidence path, and uses declared checkpoints and
-recovery behavior.
-Pursue currently has no dedicated slash command; invoke it through
-this selector or the explicit CLI flow name.
+Run is the only normal host command for coding work. It may call the CLI with an
+explicit flow name after recommending the right flow, or it may use the
+deterministic router path when the choice is unclear. The underlying flows stay
+public and packaged so the runtime can route to them, but they do not own
+separate host command files.
 
 ## Authority
 

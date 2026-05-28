@@ -1,14 +1,14 @@
 ---
 contract: step
 status: draft
-version: 0.4
+version: 0.5
 schema_source: src/schemas/step.ts
-last_updated: 2026-05-20
-depends_on: [ids, check, selection-policy, scalars, skill, acceptance-criteria]
+last_updated: 2026-05-28
+depends_on: [ids, check, selection-policy, scalars, skill, skill-moment, acceptance-criteria]
 report_ids:
   - step.definition
-invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9, STEP-I10, STEP-I11]
-property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant, step.prop.skill_slots_unique, step.prop.relay_acceptance_criteria_shape]
+invariant_ids: [STEP-I1, STEP-I2, STEP-I3, STEP-I4, STEP-I5, STEP-I6, STEP-I7, STEP-I8, STEP-I9, STEP-I10, STEP-I11, STEP-I12]
+property_ids: [step.prop.budget_bounds, step.prop.relay_role_presence, step.prop.check_kind_source_kind_pairing, step.prop.check_source_ref_closure, step.prop.run_relative_paths, step.prop.writes_shape_per_variant, step.prop.skill_slots_unique, step.prop.skill_moments_unique, step.prop.relay_acceptance_criteria_shape]
 ---
 
 # Step Contract
@@ -150,6 +150,13 @@ enforced via `src/schemas/step.ts`, `src/schemas/check.ts`, and
   `RelayStep` in `src/schemas/step.ts`, and schematic execution-shape
   validation in `src/schemas/flow-schematic.ts`.
 
+- **STEP-I12 — Skill Moments are moment names only.** Every Step may carry
+  `skill_moments: SkillMomentName[]`; absence means the step publishes no
+  authored moments. The field names moments only. It cannot carry concrete
+  `SkillId`s, policy modes, host invocation options, or `{skills: [...]}` slot
+  matrices. Runtime policy may later map these moments to skills, but that
+  mapping lives in config/policy, not in the flow step.
+
 - **STEP-I7 — Protocol required.** Every Step carries a `ProtocolId`
   (`protocol:` field) — no default, no optional. Enforced by `StepBase`
   in `src/schemas/step.ts`. The `ProtocolId` brand is defined in
@@ -195,6 +202,7 @@ After a Step is accepted:
   run folder. Runtime writers still call the run-relative resolver as
   defense-in-depth when typed data is bypassed.
 - `skill_slots`, when present, is an array of typed optional slots.
+- `skill_moments`, when present, is an array of typed moment names.
 - `acceptance_criteria`, when present, belongs to a relay step and is
   preserved into compiled and runtime flow projections.
 
@@ -238,6 +246,9 @@ Property-based tests will cover:
 - **skill** (`src/schemas/skill.ts`) — Step's `skill_slots` field uses
   `SkillSlot[]`. Slot binding and local skill resolution are relay-time
   concerns owned by config and the user skill registry.
+- **skill-moment** (`src/schemas/skill-moment.ts`) — Step's
+  `skill_moments` field uses `SkillMomentName[]`. Policy resolution and
+  availability checks are Run/config concerns, not Step concerns.
 - **acceptance-criteria** (`src/schemas/acceptance-criteria.ts`) — Relay
   steps may embed deterministic advancement gates; the relay executor records
   their results as `check.evaluated` trace entries.
@@ -285,12 +296,15 @@ Property-based tests will cover:
 - **v0.2 (Slice 69)** — adds STEP-I8 so
   flow-controlled Step paths are `RunRelativePath` values and runtime
   call sites resolve them through a containment-checked helper.
-- **v0.3 (user skill loading slice, this version)** — adds STEP-I10 and
+- **v0.3 (user skill loading slice)** — adds STEP-I10 and
   the typed `skill_slots` field.
 - **v0.4 (Stage 2)** — ratify `property_ids` above by landing the
   corresponding property-test harness; introduce a disambiguator only
   if a new relay step emerges that writes multiple result-like
   slots (current `relay_result.ref = 'result'` is the v0.1 answer);
   absorb any future Codex challenger findings.
+- **v0.5 (Run-centered Skill Moment policy slice, this version)** — adds
+  STEP-I12 and the typed `skill_moments` field. This is a moment-only
+  authoring field; it deliberately rejects concrete skill binding matrices.
 - **v1.0 (Stage 2)** — ratified invariants + property tests + mutation
   score floor + operator-facing error-message catalog.

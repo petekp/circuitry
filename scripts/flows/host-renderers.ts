@@ -2,44 +2,10 @@ const CLAUDE_PLUGIN_WRAPPER_COMMAND = 'node "${CLAUDE_PLUGIN_ROOT}/scripts/circu
 const CODEX_PLUGIN_WRAPPER_COMMAND = "node '<plugin root>/scripts/circuit.ts'";
 
 const CODEX_SKILL_METADATA: Record<string, { title: string; description: string }> = {
-  build: {
-    title: 'Circuit Build',
-    description:
-      'Runs Circuit Build for code or documentation changes that are not primarily bug fixes.',
-  },
-  create: {
-    title: 'Circuit Create',
-    description: 'Runs Circuit Create to draft, validate, or publish a reusable custom flow.',
-  },
-  explore: {
-    title: 'Circuit Explore',
-    description:
-      'Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions.',
-  },
-  fix: {
-    title: 'Circuit Fix',
-    description:
-      'Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues.',
-  },
-  goal: {
-    title: 'Circuit Goal',
-    description:
-      'Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review.',
-  },
   handoff: {
     title: 'Circuit Handoff',
     description:
       'Runs Circuit Handoff to save, resume, clear, brief, or install continuity support across sessions.',
-  },
-  prototype: {
-    title: 'Circuit Prototype',
-    description:
-      'Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build.',
-  },
-  review: {
-    title: 'Circuit Review',
-    description:
-      'Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes.',
   },
   run: {
     title: 'Circuit Run',
@@ -73,10 +39,6 @@ function renderClaudePresentationInvocations(content: string): string {
     .replaceAll(
       `${CLAUDE_PLUGIN_WRAPPER_COMMAND} resume`,
       `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present resume`,
-    )
-    .replaceAll(
-      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} create`,
-      `${CLAUDE_PLUGIN_WRAPPER_COMMAND} present create`,
     )
     .replaceAll(' --progress jsonl', '');
 }
@@ -198,6 +160,9 @@ function renderCodexNativeSkillBody(body: string): string {
       '\n',
     )
     .replace(/\n## Authority\n[\s\S]*$/g, '\n')
+    .replace(/`\/circuit:run`/g, 'Circuit Run')
+    .replace(/`\/circuit:<command>`/g, 'a Circuit host command')
+    .replace(/\/circuit:([a-z][a-z-]*)/g, 'Circuit $1')
     .replace(/\bslash-command\b/g, 'host-command')
     .replace(/\bslash command\b/gi, 'host command')
     .trim();

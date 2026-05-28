@@ -275,7 +275,7 @@ describe('history indexer and query', () => {
     rebuildHistoryIndex({ repoRoot: root, runsBase, indexDir, now: () => new Date(RECORDED_AT) });
     const changed = join(runFolder, 'reports', 'decision.json');
     writeJson(changed, { decision: 'Changed after indexing.' });
-    const future = new Date('2026-05-27T00:00:00.000Z');
+    const future = new Date(Date.now() + 60_000);
     utimesSync(changed, future, future);
 
     const result = queryHistory({

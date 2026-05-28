@@ -56,13 +56,13 @@ For the safest first real run, use Review. Review is read-only:
 Claude Code:
 
 ```text
-/circuit:review review this checkout for obvious release blockers
+/circuit:run review this checkout for obvious release blockers
 ```
 
 Codex:
 
 ```text
-/circuit:review review this checkout for obvious release blockers
+/circuit:run review this checkout for obvious release blockers
 ```
 
 CLI from this checkout:

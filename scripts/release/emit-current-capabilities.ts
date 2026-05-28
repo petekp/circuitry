@@ -733,7 +733,10 @@ function supportCapabilities(
   const planExecutionImplemented =
     planExecutionRouterImplemented && typeof planExecutionProofAxes?.proof === 'string';
   const createProofAxes = proofAxesByCapability.get('utility:create');
-  const createImplemented = commandSet.has('create') && typeof createProofAxes?.proof === 'string';
+  const createImplemented =
+    existsSync(resolve(projectRoot, 'src/cli/create.ts')) &&
+    existsSync(resolve(projectRoot, 'src/commands/create.md')) &&
+    typeof createProofAxes?.proof === 'string';
   const handoffProofAxes = proofAxesByCapability.get('utility:handoff');
   const handoffImplemented =
     commandSet.has('handoff') && typeof handoffProofAxes?.proof === 'string';
@@ -745,13 +748,14 @@ function supportCapabilities(
       id: 'utility:review',
       kind: 'utility',
       title: 'Review utility',
-      status: commandSet.has('review') ? 'implemented' : 'missing',
-      summary: 'Standalone Review is present as a flow command.',
-      evidence: ['plugins/claude/commands/review.md', 'src/flows/review/schematic.json'],
+      status: commandSet.has('run') ? 'implemented' : 'missing',
+      summary: 'Review is present as a routed flow through Run.',
+      evidence: ['plugins/claude/commands/run.md', 'src/flows/review/schematic.json'],
       axes: {
+        invocation: '/circuit:run review <scope>',
         outputs: ['review.md'],
         review:
-          'Standalone Review runs a fresh reviewer relay and writes a severity-ordered review result.',
+          'Routed Review runs a fresh reviewer relay and writes a severity-ordered review result.',
         ...(proofAxesByCapability.get('utility:review') ?? {}),
       },
     },
@@ -759,15 +763,16 @@ function supportCapabilities(
       id: 'utility:create',
       kind: 'customization',
       title: 'Create utility',
-      status: createImplemented ? 'implemented' : commandSet.has('create') ? 'partial' : 'missing',
+      status: createImplemented ? 'implemented' : 'missing',
       summary: createImplemented
-        ? 'Create drafts, validates, and publishes a user-global custom flow package after explicit confirmation.'
-        : 'Create utility command is not fully proven in the current command surface.',
+        ? 'Create remains available as an experimental CLI utility for drafting, validating, and publishing user-global custom flow packages after explicit confirmation.'
+        : 'Create CLI utility is not fully proven in the current source tree.',
       evidence: createImplemented
         ? ['src/commands/create.md', 'src/cli/create.ts', 'tests/runner/utility-cli.test.ts']
         : [],
       readiness_refs: createImplemented ? [] : ['REL-013'],
       axes: {
+        invocation: './bin/circuit create --name <slug> --description <flow idea>',
         outputs: ['SKILL.md', 'circuit.yaml', 'publish summary'],
         checkpoint: 'Publishing requires an explicit --yes confirmation after draft validation.',
         verification: 'The generated compiled flow parses and passes flow-kind policy validation.',
@@ -962,7 +967,7 @@ async function main(): Promise<void> {
     ...flows.flatMap(routeCapabilities),
     ...routerCapabilities(routerIntents),
     ...claudeCommands.map((id) => commandCapability(id, 'claude-code', true)),
-    ...['create', 'handoff']
+    ...['handoff']
       .filter((id: string) => !claudeCommands.includes(id))
       .map((id: string) => commandCapability(id, 'claude-code', false)),
     ...connectorCapabilities(connectors),

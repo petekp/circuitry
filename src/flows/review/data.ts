@@ -40,7 +40,6 @@ export const reviewFlowData = {
   visibility: 'public',
   paths: {
     schematic: 'src/flows/review/schematic.json',
-    command: 'src/flows/review/command.md',
     contract: 'src/flows/review/contract.md',
   },
   routing: {

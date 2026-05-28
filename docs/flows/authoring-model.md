@@ -316,8 +316,8 @@ flow.
   undefined and document the intended entry path in the flow guide or
   `src/commands/run.md`.
 - Do not put flow-owned commands in `src/commands/`. That directory is only for
-  direct commands that are not owned by a flow package, such as `run`, `create`,
-  and `handoff`.
+  commands and CLI utilities that are not owned by a flow package, such as
+  `run`, `handoff`, and the CLI-only `create` utility.
 
 For a public flow with `paths.command`, the emitter creates all host-ready
 command surfaces:

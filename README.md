@@ -90,7 +90,7 @@ For the repo map, use [`docs/repository-map.md`](docs/repository-map.md).
 
 ## Start From An Intent
 
-Use one front door unless you already know the flow you want:
+Use `/circuit:run` as the normal front door:
 
 | Host | You type | What happens |
 | --- | --- | --- |
@@ -98,15 +98,17 @@ Use one front door unless you already know the flow you want:
 | Codex | `/circuit:run the checkout total is wrong when discounts and tax both apply` | Codex may recommend a flow; Circuit records the selected flow when the run starts. |
 | CLI | `./bin/circuit run --goal "the checkout total is wrong when discounts and tax both apply"` | Circuit's deterministic CLI router selects and records the flow. |
 
-If the flow choice is obvious, use direct commands such as `/circuit:fix`,
-`/circuit:review`, `/circuit:build`, `/circuit:explore`,
-`/circuit:prototype`, or `/circuit:goal` as expert controls. They start
-Circuit from that flow; they are not a bypass. The CLI form is
-`./bin/circuit run <flow> --goal "<task>"`. Use `/circuit:run` for Pursue from
-Claude Code; the CLI can run `pursue` directly.
+The host plugin package model currently exposes file-backed commands as
+`/circuit:<command>`, so `/circuit:run` is the single normal slash command for
+coding work. A root `/circuit` alias is not shipped until the hosts support
+that shape. The CLI can still run a specific flow directly with
+`./bin/circuit run <flow> --goal "<task>"` for debugging, tests, old run
+folders, and advanced local use.
 
-Create drafts reusable custom flows after explicit confirmation. Handoff saves,
-resumes, clears, briefs, or installs continuity support. See
+Handoff stays available as a visible continuity utility for saving, resuming,
+clearing, briefing, or installing continuity support. The CLI also has an
+experimental `./bin/circuit create` utility for drafting reusable custom flows
+after explicit confirmation, but Create is not published as a host command. See
 [`docs/operator-guide.md`](docs/operator-guide.md) for direct commands, flags,
 checkpoints, verification, and troubleshooting.
 

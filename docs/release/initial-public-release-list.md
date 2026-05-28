@@ -31,8 +31,8 @@ no errors, Claude tag `circuit--v0.1.0-alpha.6`, and Codex marketplace source
 
 | ID | Item | Evidence | Required action | Verification |
 | --- | --- | --- | --- | --- |
-| REL-PUB-001 | Closed: Claude plugin manifest description names current command surfaces. | Current `plugins/claude/.claude-plugin/plugin.json` names `/circuit:run`, direct expert controls, Pursue via `/circuit:run` or CLI, `/circuit:create`, and `/circuit:handoff`. | No remaining release action. Keep future manifest wording aligned with generated command surfaces. | Confirm current `/circuit:` commands, then run `npm run publish:plugins:check`. |
-| REL-PUB-002 | Closed: Explore command prose matches the current Explore stage model. | `src/flows/explore/command.md`, generated command mirrors, and `generated/flows/explore/circuit.json` no longer describe a stale separate canonical Review stage. | No remaining release action. Edit `src/flows/explore/command.md` and regenerate if Explore command semantics move again. | `npm run emit-flows`; `npm run check-flow-drift`; focused `rg` for the old stage sentence in `src/flows/explore/command.md` and generated command mirrors. |
+| REL-PUB-001 | Closed: Claude plugin manifest description names current command surfaces. | Current `plugins/claude/.claude-plugin/plugin.json` names `/circuit:run` and `/circuit:handoff`; built-in flows are routed through Run, and Create remains CLI-only. | No remaining release action. Keep future manifest wording aligned with generated command surfaces. | Confirm current `/circuit:` commands, then run `npm run publish:plugins:check`. |
+| REL-PUB-002 | Closed: Explore flow prose matches the current Explore stage model. | `src/flows/explore/data.ts`, generated flow mirrors, and `generated/flows/explore/circuit.json` no longer describe a stale separate canonical Review stage. | No remaining release action. Edit the Explore flow package and regenerate if Explore semantics move again. | `npm run emit-flows`; `npm run check-flow-drift`; focused `rg` for the old stage sentence in Explore source and generated mirrors. |
 
 ## Closed Or Scoped Before Announcement
 

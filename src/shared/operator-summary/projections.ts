@@ -230,6 +230,16 @@ function goalGateDetail(flowReport: JsonObject | undefined): string {
   return `Safety review: ${clean}/${required} passes; final verdict ${verdict}.`;
 }
 
+function goalClaimDetails(flowReport: JsonObject | undefined, outcome: string): string[] {
+  const proofLabel = outcome === 'complete' ? 'Proven' : 'Marked before final safety review';
+  const weakLabel =
+    outcome === 'complete' ? 'Still weak or missing' : 'Weak or missing before final safety review';
+  return [
+    goalArrayDetail(flowReport, 'proven_claims', proofLabel),
+    goalArrayDetail(flowReport, 'missing_or_weak_claims', weakLabel),
+  ];
+}
+
 // Fall back to the run-level outcome when the flow-result file is missing
 // (e.g., the flow hit @stop before close-step ran). Defaulting to 'complete'
 // would let the operator summary silently contradict result.json on any
@@ -293,8 +303,7 @@ const goalProjector: SummaryProjector = ({ flowReport, runOutcome }) => {
   return {
     headline,
     details: [
-      goalArrayDetail(flowReport, 'proven_claims', 'Proven'),
-      goalArrayDetail(flowReport, 'missing_or_weak_claims', 'Still weak or missing'),
+      ...goalClaimDetails(flowReport, outcome),
       goalEvidenceDetails(flowReport),
       goalGateDetail(flowReport),
       goalArrayDetail(flowReport, 'recovery_history', 'Recovery'),

@@ -1,8 +1,8 @@
 # Codex Plugin Package
 
 This is the Codex package for Circuit. End users should start from the root
-[`README.md`](../../README.md) and use `/circuit:run` or a direct Circuit slash
-command.
+[`README.md`](../../README.md) and use `/circuit:run` as the normal Circuit
+entry point.
 
 ## What Lives Here
 
