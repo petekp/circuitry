@@ -263,6 +263,24 @@ describe('WorkContractProjectionV0', () => {
     }
   });
 
+  it('does not treat normal review routes as recovery routes', () => {
+    const goal = compiledBuiltInFlows().find((flow) => flow.id === 'goal');
+    if (goal === undefined) throw new Error('Goal flow must be compiled');
+
+    const projection = buildProjection(goal);
+
+    expect(projection.work_contract.topology.routes).toContainEqual({
+      step_id: 'goal-contract',
+      route_id: 'review',
+      target: 'goal-run-review',
+    });
+    expect(
+      projection.work_contract.recovery.some(
+        (route) => route.step_id === 'goal-contract' && route.route_id === 'review',
+      ),
+    ).toBe(false);
+  });
+
   it('does not treat route ids as recovery kinds', () => {
     expect(RecoveryRouteKind.safeParse('retry').success).toBe(false);
     expect(RecoveryRouteKind.safeParse('revise').success).toBe(false);

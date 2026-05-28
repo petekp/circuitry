@@ -1,16 +1,17 @@
 ---
 contract: config
 status: ratified-v0.1
-version: 0.2
+version: 0.3
 schema_source: src/schemas/config.ts
-last_updated: 2026-05-20
-depends_on: [ids, selection-policy, connector, step, skill]
+last_updated: 2026-05-28
+depends_on: [ids, selection-policy, connector, step, skill, skill-moment]
 report_ids:
   - config.root
   - config.layered
   - config.circuit-override
   - config.skill-bindings
-invariant_ids: [CONFIG-I1, CONFIG-I2, CONFIG-I3, CONFIG-I4, CONFIG-I5, CONFIG-I6, CONFIG-I7, CONFIG-I8, CONFIG-I9]
+  - config.skill-moments
+invariant_ids: [CONFIG-I1, CONFIG-I2, CONFIG-I3, CONFIG-I4, CONFIG-I5, CONFIG-I6, CONFIG-I7, CONFIG-I8, CONFIG-I9, CONFIG-I10]
 property_ids: [config.prop.surplus_keys_rejected_transitively, config.prop.layered_composition_preserves_strictness, config.prop.circuit_override_record_closed_under_flow_id]
 ---
 
@@ -24,8 +25,9 @@ three related surfaces:
    `schema_version`, a `RelayConfig` (see
    [docs/contracts/connector.md](connector.md)), a map of per-circuit overrides
    (`CircuitOverride`), a top-level `skills.bindings` map for skill
-   slots, and a `defaults` object carrying a `SelectionOverride` (see
-   [docs/contracts/selection.md](selection.md)).
+   slots, a `moments` policy surface for deterministic Skill Moment
+   preparation, and a `defaults` object carrying a `SelectionOverride`
+   (see [docs/contracts/selection.md](selection.md)).
 2. **`LayeredConfig`** — the layer-identity wrapper around a `Config`:
    which `ConfigLayer` produced it and (optionally) the source path that
    backs it.
@@ -148,10 +150,11 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
 
 - **CONFIG-I7 — Bare `{schema_version: 1}` produces a fully-populated
   default `Config` via schema-level `.default(...)` on every
-  non-version field.** `relay`, `skills`, `circuits`, and `defaults` all
+  non-version field.** `relay`, `skills`, `moments`, `circuits`, and `defaults` all
   carry schema-level defaults (`RelayConfig` defaults to
   `{default: 'auto', roles: {}, circuits: {}, connectors: {}}`;
-  `skills` defaults to `{bindings: {}}`; `circuits` defaults to `{}`;
+  `skills` defaults to `{bindings: {}}`; `moments` defaults to empty
+  policy and detection records; `circuits` defaults to `{}`;
   `defaults` defaults to `{}`). This preserves the existing ergonomic:
   a minimal operator config file
   that sets only the schema version parses successfully and produces
@@ -160,7 +163,7 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
   (the parser would accept no surplus keys but also reject the bare
   form). The two are reconciled by schema-level defaults on required
   fields. Enforced at `src/schemas/config.ts` via `.default(...)` on
-  `relay`, `skills`, `circuits`, and `defaults`.
+  `relay`, `skills`, `moments`, `circuits`, and `defaults`.
 
 - **CONFIG-I8 — `Config.circuits` keys are `CompiledFlowId`s at parse time
   (closes Codex MED #5 fold-in).** `Config.circuits` is typed
@@ -188,6 +191,16 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
   invalid at both the top level and under `CircuitOverride`; concrete
   skill selection still flows through `SelectionOverride.skills`.
 
+- **CONFIG-I10 — Skill Moment policy is typed, deterministic, and
+  separate from flow-step skill slots.** `Config.moments.policy` maps
+  `SkillMomentName` keys to policy rules with `mode: auto | ask | mute`.
+  `auto` and `ask` rules require a non-empty unique list of concrete
+  `SkillId`s; `mute` rules must not name skills. Project layers replace
+  user-global entries by moment key; V1 does not merge skill arrays across
+  layers. `Config.moments.detection` carries optional literal file-pattern
+  declarations. This surface does not dispatch skills by itself; runtime
+  dispatch remains a later Run-owned behavior.
+
 ## Pre-conditions
 
 - A `Config` is produced by parsing one layer's on-disk YAML (or
@@ -214,6 +227,9 @@ After a `Config` is accepted:
   ([docs/contracts/connector.md](connector.md) connector-I1..connector-I11).
 - `skills.bindings` is present and maps valid `SkillSlotId` keys to
   concrete `SkillId` values.
+- `moments.policy` and `moments.detection` are present, strict, and empty
+  unless the layer explicitly declares Skill Moment policy or detection
+  patterns.
 - `circuits` is a record whose keys are `CompiledFlowId`s and whose values
   are `CircuitOverride`s.
 - `defaults.selection` (when present) is a `SelectionOverride` per
@@ -355,6 +371,12 @@ After a `CircuitOverride` is accepted:
   `SkillId` values. The config schema validates shape only; relay-time
   loading resolves those ids against the user skill registry.
 
+- **skill-moment** (`src/schemas/skill-moment.ts`) —
+  `Config.moments.policy` and `Config.moments.detection` use the
+  Skill Moment name, policy mode, detection config, and skill reference
+  shapes. The config schema validates deterministic policy shape only;
+  runtime dispatch is not part of this contract.
+
 - **step** (`src/schemas/step.ts`) — `RelayRole` (declared there)
   is used transitively by `Config.relay.roles`; out of this
   contract's direct scope but noted so the dependency graph is
@@ -445,6 +467,16 @@ After a `CircuitOverride` is accepted:
     through and produces all expected defaults on
     `relay.default`/`.roles`/`.circuits`/`.connectors`, `circuits`,
     and `defaults` (Codex LOW #6).
+
+- **v0.3 (Run-centered Skill Moment policy slice, this version)** —
+  CONFIG-I10 added. Schema-level landings:
+  - `moments.policy` added as a strict record keyed by `SkillMomentName`.
+    Policy rules support only `auto`, `ask`, and `mute`; concrete skill ids
+    are availability-gated later and no dispatch happens at config parse time.
+  - `moments.detection` added as a strict holder for literal detection
+    patterns. Detection remains observable-state based; natural-language
+    inference is not a config feature.
+  - CONFIG-I7 updated so bare config receives empty `moments` defaults.
 
 - **v0.2 (Stage 1)** — Ratify `property_ids` above by landing the
   corresponding property-test harness at

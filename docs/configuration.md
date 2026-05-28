@@ -96,6 +96,32 @@ slot, path, SHA-256, and byte count.
 
 The skill contract is [`docs/contracts/skill.md`](contracts/skill.md).
 
+## Skill Moment Policy
+
+Run-centered V1 adds a typed `moments` config surface for future automatic
+skill preparation. This only records deterministic policy today; it does not
+dispatch skills by itself.
+
+```yaml
+schema_version: 1
+
+moments:
+  policy:
+    after:react-ui-change:
+      mode: auto
+      skills:
+        - react-doctor
+    before:high-impact-alignment:
+      mode: ask
+      skills:
+        - grill-with-docs
+    before:architecture-analysis:
+      mode: mute
+```
+
+`auto` and `ask` need at least one concrete skill id. `mute` names no skills.
+Project config replaces user-global policy by moment key.
+
 ## Codex Host And Codex Worker
 
 The same distinction from the starter section applies throughout config:

@@ -86,7 +86,7 @@ describe('host experience docs', () => {
   it('keeps /circuit:run host guidance aligned with model-mediated selection', () => {
     const doc = readFileSync(resolve(REPO_ROOT, 'plugins/claude/commands/run.md'), 'utf8');
 
-    expect(doc).toContain('/circuit:run — intent front door');
+    expect(doc).toContain('/circuit:run — default intent front door');
     expect(doc).toContain('Recommend the flow before invoking the CLI');
     expect(doc).toContain('Circuit records the selected flow');
     expect(doc).toContain('node "${CLAUDE_PLUGIN_ROOT}/scripts/circuit.ts" present run --goal');

@@ -1,13 +1,13 @@
 ---
 name: build
-description: "Runs Circuit Build for code or documentation changes that are not primarily bug fixes."
+description: "Expert control for starting Circuit from Build when you already know the task is implementation or documentation work."
 ---
 
 # Circuit Build
 
 ## Use Case
 
-Runs Circuit Build for code or documentation changes that are not primarily bug fixes.
+Expert control for starting Circuit from Build when you already know the task is implementation or documentation work.
 
 ## Codex Host Invocation
 

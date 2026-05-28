@@ -94,6 +94,7 @@ describe('Claude Code host plugin package', () => {
     const manifest = PluginManifest.parse(JSON.parse(readFileSync(manifestPath, 'utf8')));
 
     expect(manifest.description).toContain('/circuit:run');
+    expect(manifest.description).toContain('default intent front door');
     expect(manifest).not.toHaveProperty('hooks');
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/hooks.json'))).toBe(true);
     expect(existsSync(resolve(PLUGIN_ROOT, 'hooks/session-start.ts'))).toBe(true);

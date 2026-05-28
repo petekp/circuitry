@@ -326,6 +326,7 @@
         "blocked",
         "build",
         "checkpoint",
+        "close",
         "complete",
         "completion-gate",
         "continue",
@@ -333,11 +334,13 @@
         "fix",
         "handoff",
         "pursue",
+        "recover",
         "retry",
         "retry-selected-flow",
         "review",
         "run-explore",
         "run-fix",
+        "run-next-gate-pass",
         "run-review",
         "split-to-pursue",
         "stop"
@@ -346,14 +349,17 @@
         "blocked",
         "build",
         "checkpoint",
+        "close",
         "completion-gate",
         "explore",
         "fix",
         "pursue",
+        "recover",
         "retry-selected-flow",
         "review",
         "run-explore",
         "run-fix",
+        "run-next-gate-pass",
         "run-review",
         "split-to-pursue"
       ]
@@ -1726,6 +1732,21 @@
       }
     },
     {
+      "id": "route-outcome:goal:close",
+      "kind": "route_outcome",
+      "title": "goal route close",
+      "status": "partial",
+      "summary": "close is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
       "id": "route-outcome:goal:complete",
       "kind": "route_outcome",
       "title": "goal route complete",
@@ -1831,6 +1852,21 @@
       }
     },
     {
+      "id": "route-outcome:goal:recover",
+      "kind": "route_outcome",
+      "title": "goal route recover",
+      "status": "partial",
+      "summary": "recover is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
       "id": "route-outcome:goal:retry",
       "kind": "route_outcome",
       "title": "goal route retry",
@@ -1896,6 +1932,21 @@
       "title": "goal route run-fix",
       "status": "partial",
       "summary": "run-fix is declared in the schematic but not executable in compiled routes.",
+      "evidence": ["src/flows/goal/schematic.json"],
+      "readiness_refs": ["REL-003"],
+      "axes": {
+        "intent_hints": [],
+        "modes": [],
+        "stage_path": [],
+        "outputs": []
+      }
+    },
+    {
+      "id": "route-outcome:goal:run-next-gate-pass",
+      "kind": "route_outcome",
+      "title": "goal route run-next-gate-pass",
+      "status": "partial",
+      "summary": "run-next-gate-pass is declared in the schematic but not executable in compiled routes.",
       "evidence": ["src/flows/goal/schematic.json"],
       "readiness_refs": ["REL-003"],
       "axes": {

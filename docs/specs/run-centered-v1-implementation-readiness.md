@@ -143,7 +143,7 @@ The first implementation work remains fixture-first:
 | Run envelope negative cases | Missing evidence cannot close complete; memory cannot grant authority; checkpoint resume targets must match waiting attempts; surface output cannot contradict record outcome. |
 | Skill Moment policy | Moment names, config shape, step-authored `skill_moments`, availability, `ask`/`auto`/`mute`, and activation provenance all validate without dispatch. |
 | Process evidence projection | Every public process can expose a normalized evidence record without Run learning private report paths. |
-| Surface lint | Internal `Supervisor` vocabulary cannot leak into operator docs, CLI output, generated host surfaces, release notes, or product messaging. Account for the current `Goal supervisor flow` wording before enforcing zero matches. |
+| Surface lint | Internal `Supervisor` vocabulary cannot leak into operator docs, CLI output, generated host surfaces, release notes, or product messaging. Slice 0 cleared the previous `Goal supervisor flow` wording before enforcing zero matches. |
 | Runtime import boundary | Run envelope code cannot import runtime executors directly. |
 
 These fixtures are the readiness gate for Phase 4. Without them, moving Run

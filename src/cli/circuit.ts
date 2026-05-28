@@ -26,6 +26,13 @@ import {
   HISTORY_RECALL_REPORT_PATH,
   prepareRunStartHistoryRecall,
 } from '../history/run-start-recall.js';
+import {
+  projectCheckpointWaitingProcessEvidence,
+  projectClosedProcessEvidence,
+  writeProcessEvidenceProjection,
+} from '../process-evidence/projection.js';
+import { writeRunEnvelopeShadowRecord } from '../run-envelope/shadow-record.js';
+import { writeRunEnvelopeRecord as writeSourceRunEnvelopeRecord } from '../run-envelope/source-record.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
@@ -34,7 +41,11 @@ import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js'
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runHistoryCommand } from './history.js';
-import { operatorSummaryOutputFields, routeOutputFields } from './run-output.js';
+import {
+  operatorSummaryOutputFields,
+  routeOutputFields,
+  runEnvelopeOutputFields,
+} from './run-output.js';
 import { runRunsCommand } from './runs.js';
 import {
   CLI_RUNTIME_ROUTING_POLICY,
@@ -660,6 +671,18 @@ function historyRecallOutputFields(input: {
   };
 }
 
+function runEnvelopeMemoryContext(
+  report: ReturnType<typeof prepareRunStartHistoryRecall> | undefined,
+): Record<string, unknown> {
+  if (report === undefined) return {};
+  return {
+    memoryContext: {
+      used: report.status === 'used',
+      memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id),
+    },
+  };
+}
+
 function shouldPrepareHistoryRecall(options: CliMainOptions): boolean {
   if (options.historyRecall === 'enabled') return true;
   if (options.historyRecall === 'disabled') return false;
@@ -737,6 +760,41 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             : { routerReason: priorRoute.routerReason }),
         },
       });
+      const recordedAt = (options.now ?? (() => new Date()))().toISOString();
+      writeRunEnvelopeShadowRecord({
+        runFolder,
+        operatorIntent: runResult.goal,
+        selectedProcess: {
+          process_id: runResult.flow_id,
+          routed_by: priorRoute.routedBy ?? 'explicit',
+          router_reason: priorRoute.routerReason ?? 'checkpoint resume',
+        },
+        child: {
+          kind: 'closed',
+          runResult,
+          resultPath: runtimeResult.resultPath,
+        },
+        recordedAt,
+      });
+      const processEvidence = writeProcessEvidenceProjection({
+        runFolder,
+        projection: projectClosedProcessEvidence({
+          runFolder,
+          runResult,
+          resultPath: runtimeResult.resultPath,
+        }),
+      });
+      const runEnvelope = writeSourceRunEnvelopeRecord({
+        runFolder,
+        operatorIntent: runResult.goal,
+        selectedProcess: {
+          process_id: runResult.flow_id,
+          routed_by: priorRoute.routedBy ?? 'explicit',
+          router_reason: priorRoute.routerReason ?? 'checkpoint resume',
+        },
+        processEvidence,
+        recordedAt,
+      });
       const resumeRuntimeFields = showRuntimeDecision()
         ? {
             runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume,
@@ -754,6 +812,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             result_path: runtimeResult.resultPath,
             ...resumeRuntimeFields,
             ...operatorSummaryOutputFields({ operatorSummary }),
+            ...runEnvelopeOutputFields({ runEnvelope }),
           },
           null,
           2,
@@ -896,6 +955,62 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
           routerReason: route.reason,
         },
       });
+      const recordedAt = now().toISOString();
+      writeRunEnvelopeShadowRecord({
+        runFolder,
+        operatorIntent: args.goal,
+        selectedProcess: {
+          process_id: flow.id,
+          routed_by: route.source,
+          router_reason: route.reason,
+          ...(entryModeSelection.entryModeName === undefined
+            ? {}
+            : { entry_mode: entryModeSelection.entryModeName }),
+        },
+        child: {
+          kind: 'checkpoint_waiting',
+          run_id: waitingResult.run_id,
+          flow_id: waitingResult.flow_id,
+          trace_entries_observed: waitingResult.trace_entries_observed,
+          manifest_hash: waitingResult.manifest_hash,
+          checkpoint: {
+            step_id: waitingResult.checkpoint.step_id,
+            request_path: runtimeResult.checkpoint.requestPath,
+            allowed_choices: waitingResult.checkpoint.allowed_choices,
+          },
+        },
+        recordedAt,
+      });
+      const processEvidence = writeProcessEvidenceProjection({
+        runFolder,
+        projection: projectCheckpointWaitingProcessEvidence({
+          runFolder,
+          runId: waitingResult.run_id,
+          flowId: waitingResult.flow_id,
+          traceEntriesObserved: waitingResult.trace_entries_observed,
+          manifestHash: waitingResult.manifest_hash,
+          checkpoint: {
+            stepId: waitingResult.checkpoint.step_id,
+            requestPath: runtimeResult.checkpoint.requestPath,
+            allowedChoices: waitingResult.checkpoint.allowed_choices,
+          },
+        }),
+      });
+      const runEnvelope = writeSourceRunEnvelopeRecord({
+        runFolder,
+        operatorIntent: args.goal,
+        selectedProcess: {
+          process_id: flow.id,
+          routed_by: route.source,
+          router_reason: route.reason,
+          ...(entryModeSelection.entryModeName === undefined
+            ? {}
+            : { entry_mode: entryModeSelection.entryModeName }),
+        },
+        processEvidence,
+        recordedAt,
+        ...runEnvelopeMemoryContext(historyRecall),
+      });
       process.stdout.write(
         `${JSON.stringify(
           {
@@ -925,6 +1040,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
               ? {}
               : historyRecallOutputFields({ runFolder, report: historyRecall })),
             ...operatorSummaryOutputFields({ operatorSummary }),
+            ...runEnvelopeOutputFields({ runEnvelope }),
             checkpoint: waitingResult.checkpoint,
           },
           null,
@@ -942,6 +1058,48 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
         routedBy: route.source,
         routerReason: route.reason,
       },
+    });
+    const recordedAt = now().toISOString();
+    writeRunEnvelopeShadowRecord({
+      runFolder,
+      operatorIntent: args.goal,
+      selectedProcess: {
+        process_id: flow.id,
+        routed_by: route.source,
+        router_reason: route.reason,
+        ...(entryModeSelection.entryModeName === undefined
+          ? {}
+          : { entry_mode: entryModeSelection.entryModeName }),
+      },
+      child: {
+        kind: 'closed',
+        runResult,
+        resultPath: runtimeResult.resultPath,
+      },
+      recordedAt,
+    });
+    const processEvidence = writeProcessEvidenceProjection({
+      runFolder,
+      projection: projectClosedProcessEvidence({
+        runFolder,
+        runResult,
+        resultPath: runtimeResult.resultPath,
+      }),
+    });
+    const runEnvelope = writeSourceRunEnvelopeRecord({
+      runFolder,
+      operatorIntent: args.goal,
+      selectedProcess: {
+        process_id: flow.id,
+        routed_by: route.source,
+        router_reason: route.reason,
+        ...(entryModeSelection.entryModeName === undefined
+          ? {}
+          : { entry_mode: entryModeSelection.entryModeName }),
+      },
+      processEvidence,
+      recordedAt,
+      ...runEnvelopeMemoryContext(historyRecall),
     });
     process.stdout.write(
       `${JSON.stringify(
@@ -973,6 +1131,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             ? {}
             : historyRecallOutputFields({ runFolder, report: historyRecall })),
           ...operatorSummaryOutputFields({ operatorSummary }),
+          ...runEnvelopeOutputFields({ runEnvelope }),
         },
         null,
         2,

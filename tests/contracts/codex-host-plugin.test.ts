@@ -127,6 +127,7 @@ describe('Codex host plugin package', () => {
     expect(manifest.description).toContain('coding intents');
     expect(manifest.interface.shortDescription).toContain('coding intents');
     expect(manifest.interface.longDescription).toContain('/circuit:run');
+    expect(manifest.interface.longDescription).toContain('by default');
     expect(manifest.interface.longDescription).not.toContain('@Circuit');
     expect(manifest.interface.longDescription).toContain('recommend a Circuit flow');
     expect(manifest.interface.longDescription).toContain('expert controls');
@@ -262,9 +263,11 @@ describe('Codex host plugin package', () => {
     expect(contract).toContain('--progress jsonl');
     expect(contract).toContain("node '<plugin root>/scripts/circuit.ts' doctor");
     expect(contract).toContain('final user-facing answer');
-    expect(contract).toContain('report paths, trace ids');
+    expect(contract).toContain('run_surface_markdown_path');
     expect(rendering).toContain('contract: host-rendering');
     expect(rendering).toContain('Prefer `presentation` when present');
+    expect(rendering).toContain('run_surface_status_text');
+    expect(rendering).toContain('run_surface_markdown_path');
     expect(rendering).toContain('operator_summary_status_text');
     expect(rendering).toContain('operator_summary_markdown_path');
   });
@@ -291,6 +294,7 @@ describe('Codex host plugin package', () => {
     expect(skill).toContain('display.text');
     expect(skill).toContain('task_list.updated');
     expect(skill).toContain('user_input.requested');
+    expect(skill).toContain('run_surface_markdown_path');
     expect(skill).toContain('operator_summary_markdown_path');
     expect(skill).toContain('Direct Circuit flow skills are expert controls');
     expect(skill).toContain('Do not use a path relative to the user');
@@ -820,7 +824,7 @@ describe('Codex host plugin package', () => {
       expect(skill).toContain(`name: ${command}`);
       expect(skill).toContain(`# ${EXPECTED_CODEX_SKILL_TITLES[command]}`);
       expect(skill).toContain('## Use Case');
-      expect(skill).toMatch(/description: "(Runs Circuit|Chooses and runs)/);
+      expect(skill).toMatch(/description: "(Runs Circuit|Chooses and runs|Expert control)/);
       expect(skill).toContain("node '<plugin root>/scripts/circuit.ts'");
       expect(skill).toContain('--progress jsonl');
       expect(skill).toContain('presentation');

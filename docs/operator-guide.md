@@ -27,6 +27,9 @@ Use a direct command as an expert control when the flow choice is clear:
 | CLI | `./bin/circuit run goal --goal "finish the scoped objective"` | Goal. |
 | CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Pursue. |
 
+Use `/circuit:run` for bounded objectives and completion discipline. Goal is
+retained for existing Goal use cases and old Goal run folders.
+
 The host commands wrap the same CLI. Each run accepts `--goal`. Direct CLI runs
 can also pass these controls when the selected flow supports them:
 
@@ -47,7 +50,7 @@ Unsupported combinations fail before the run starts.
 | Fix | Bugs, regressions, failing tests, crashes, flaky behavior, or production issues. | May invoke a write-capable worker. |
 | Build | Features, refactors, docs, tests, or focused code changes that are not mainly bug fixes. | May invoke a write-capable worker. |
 | Prototype | Disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build. | May invoke a write-capable worker and writes local prototype evidence. |
-| Goal | Bounded objectives that should run until typed evidence proves completion, recovery is needed, or stopping is more honest. | May run child flows; child flow write behavior applies. |
+| Goal | Existing Goal use cases and old Goal run folders. Run is the normal front door for bounded objectives and completion discipline. | May run child flows; child flow write behavior applies. |
 | Pursue | Broad goals with several coordinated pieces of work that need ordering. | May invoke a write-capable worker. |
 
 Circuit also ships two utilities:

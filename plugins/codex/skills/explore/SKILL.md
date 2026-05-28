@@ -1,13 +1,13 @@
 ---
 name: explore
-description: "Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions."
+description: "Expert control for starting Circuit from Explore when you already know the task is investigation, comparison, architecture analysis, or a pre-change decision."
 ---
 
 # Circuit Explore
 
 ## Use Case
 
-Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions.
+Expert control for starting Circuit from Explore when you already know the task is investigation, comparison, architecture analysis, or a pre-change decision.
 
 ## Codex Host Invocation
 

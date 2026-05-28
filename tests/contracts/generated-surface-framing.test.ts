@@ -32,6 +32,13 @@ const directFlowGeneratedPaths = [
   ]),
 ];
 
+const goalSurfacePaths = [
+  'src/flows/goal/command.md',
+  'plugins/claude/commands/goal.md',
+  'plugins/codex/commands/goal.md',
+  'plugins/codex/skills/goal/SKILL.md',
+];
+
 describe('generated host surface framing', () => {
   it('makes run the intent front door instead of a flow selector', () => {
     for (const path of runSurfacePaths) {
@@ -73,5 +80,16 @@ describe('generated host surface framing', () => {
     expect(claudeManifest).toContain('intent front door');
     expect(claudeManifest).toContain('expert controls');
     expect(claudeManifest).not.toContain('selects the best flow');
+  });
+
+  it('de-emphasizes Goal as a separate public concept', () => {
+    for (const path of goalSurfacePaths) {
+      const content = readRepoFile(path);
+
+      expect(content, path).toContain('Circuit Run');
+      expect(content, path).toContain('Goal-style completion discipline');
+      expect(content, path).toContain('existing Goal use cases');
+      expect(content, path).toContain('old Goal run folders');
+    }
   });
 });

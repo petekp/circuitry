@@ -1,6 +1,6 @@
 # Run-Centered V1 Migration Ledger
 
-Status: readiness control plane, not current behavior.
+Status: implementation complete; Slice 11 is complete.
 
 Date: 2026-05-28
 
@@ -67,19 +67,19 @@ session.
 
 | Slice | State | Depends On | Scope | Proof Gate | Rollback |
 | --- | --- | --- | --- | --- | --- |
-| 0. Safety perimeter | Ready to start | None | Add guard tests and residue checks that do not change behavior. | Focused guard tests, `npm run check-flow-drift`. | Remove guards if they block valid current behavior. |
-| 1. Run envelope schema and fixtures | Ready to start | 0 | Schema/data only for Run envelope records and fixture validation. | Run envelope fixture tests, Goal report schema tests, memory schema tests. | Delete schema and tests. |
-| 2. Shadow Run envelope artifacts | Ready after 1 | 1 | Optional artifact beside current runs; no routing/output change. | CLI/router parity, checkpoint waiting still has no `result_path`. | Disable artifact writer. |
-| 3. Process evidence projection | Ready after 1 | 1 | Normalized evidence projection for each public process. | Projection fixtures for every public flow, existing report tests. | Keep projections unused. |
-| 3.5. Skill Moment policy | Ready after 1 | 1 | Config/step schema and pure policy fixtures; no dispatch. | Policy, availability, and provenance fixtures. | Keep existing skill slots/selection only. |
-| 4. Source-owned Run decisions | Ready after 2, 3, 3.5 | 2, 3, 3.5 | Move routing, goal contract, process plan, and close/follow-up/block decision into source in parity mode. | Router parity, boundary tests, Goal false-complete tests. | Fall back to current explicit flow path. |
-| 5. Follow-up loop | Ready after 4 | 4 | One bounded follow-up process for missing evidence. | Missing-evidence and false-complete regression tests. | Return needs-attention without follow-up. |
-| 6. Compact human surface | Ready after 4 | 4 | Short human output with artifact links. | Host rendering tests and operator summary tests. | Keep old summary as fallback. |
-| 7. Decision packets | Ready after 5, 6 | 5, 6 | Shared packet for checkpoint, missing-evidence, and Skill Moment `ask` decisions. | Decision packet fixtures and checkpoint resume tests. | Keep current flow-specific checkpoint rendering. |
-| 8. Memory update events | Ready after 4, 7 | 4, 7 | Record/propose hint-only memory updates with indicators. | Memory authority tests and Run envelope validators. | Keep recall-only memory. |
-| 9. Run public default | Ready after 4-8 | 4, 5, 6, 7, 8 | Make Run normal front door; direct flows become expert controls. | Generated-surface drift, host tests, installed-plugin smoke. | Restore old command visibility and regenerate. |
-| 10. Goal de-emphasis | Ready, last | 9 | De-emphasize public Goal only after Run owns done discipline. | Goal-equivalent tests, old Goal artifact readability, release checks. | Re-expose Goal as expert command. |
-| 11. Closeout | Reserved | All implementation slices | Residue sweep, docs reconciliation, dependency check, release proof. | `npm run verify`, release readiness checks, two clean reviews. | Reopen the owning slice. |
+| 0. Safety perimeter | Done | None | Added guard tests and residue checks without changing Run behavior. | `npm run test -- tests/contracts/run-centered-v1-safety.test.ts`; `npm run check-flow-drift`. | Remove guards if they block valid current behavior. |
+| 1. Run envelope schema and fixtures | Done | 0 | Added schema/data only for Run envelope records and fixture validation. | `npm run test -- tests/contracts/run-envelope-record-schema.test.ts tests/contracts/schemas-barrel.test.ts tests/contracts/memory-input-schema.test.ts tests/contracts/goal-report-schemas.test.ts`; `npm run check`; `npm run lint`. | Delete schema and tests. |
+| 2. Shadow Run envelope artifacts | Done | 1 | Added optional `RunEnvelopeShadowRecord` beside current runs; no routing/output change and no source-owned completion claim. | `npm run test -- tests/runner/cli-run-envelope-shadow.test.ts tests/runner/run-envelope-shadow-writer.test.ts tests/contracts/run-envelope-record-schema.test.ts`; `npm run test -- tests/runner/cli-router.test.ts`; `npm run check-flow-drift`. | Disable artifact writer. |
+| 3. Process evidence projection | Done | 1 | Added normalized evidence projection schema and pure writer for each public process. | `npm run test -- tests/contracts/process-evidence-projection-schema.test.ts tests/contracts/schemas-barrel.test.ts`; existing public flow report schema tests; `npm run check`; `npm run lint`. | Keep projections unused. |
+| 3.5. Skill Moment policy | Done | 1 | Added config/step schema and pure policy fixtures; no dispatch. | `npm run test -- tests/contracts/skill-moment-policy-schema.test.ts tests/contracts/config-schema.test.ts tests/contracts/skill-schema.test.ts tests/runner/user-skill-loading.test.ts tests/contracts/schemas-barrel.test.ts tests/contracts/run-centered-v1-safety.test.ts tests/contracts/documentation-surface.test.ts`; `npm run check`; `npm run lint`; `npm run check-flow-drift`. | Keep existing skill slots/selection only. |
+| 4. Source-owned Run decisions | Done | 2, 3, 3.5 | Wrote source-owned Run envelope and process evidence records in parity mode while preserving current routing and stdout. | CLI artifact parity, router parity, boundary tests, and source writer fixtures passed. | Disable source envelope writer and keep shadow/current flow path. |
+| 5. Follow-up loop | Done | 4 | Added one bounded follow-up plan when child completion lacks expected process evidence. | Missing-evidence fixture, false-complete regression, router parity, and drift checks passed. | Return needs-attention without follow-up. |
+| 6. Compact human surface | Done | 4 | Added compact Run surface Markdown plus stdout fields and host rendering instructions. | Host rendering, host plugin, CLI router, and artifact tests passed. | Keep old operator summary as fallback. |
+| 7. Decision packets | Done | 5, 6 | Added shared decision packet artifacts for checkpoint and missing-evidence decisions plus pure Skill Moment ask/unavailable packet builders. | Decision packet fixtures, checkpoint artifact tests, router parity, and drift checks passed. | Keep current flow-specific checkpoint rendering. |
+| 8. Memory update events | Done | 4, 7 | Added hint-only memory context and explicit/proposed update events with indicators. | Memory authority, recall, Run envelope, host, router, and drift checks passed. | Keep recall-only memory. |
+| 9. Run public default | Done | 4, 5, 6, 7, 8 | Positioned Run as the default public front door and direct flows as expert controls in docs, manifests, and generated host skill metadata. | Generated-surface drift, host docs, host plugin, check, and lint gates passed. | Restore old command visibility wording and regenerate. |
+| 10. Goal de-emphasis | Done | 9 | De-emphasized public Goal while preserving retained Goal command, schemas, reports, and old run-folder readability. | Goal schema/flow, host docs, host plugin, generated-surface framing, drift, check, and lint gates passed. | Re-expose Goal wording as a primary expert command. |
+| 11. Closeout | Done | All implementation slices | Completed residue sweep, docs reconciliation, dependency check, release proof, and final review passes. | Focused closeout gate, `npm run check-flow-drift`, `npm run verify:fast`, and `npm run verify` passed. | Reopen the owning slice. |
 
 ## Dependency Graph
 
@@ -116,10 +116,8 @@ ones into tests or scripts before behavior changes.
 
 Known baseline residue:
 
-- `src/flows/goal/data.ts` and generated plugin runtimes currently contain the
-  phrase `Goal supervisor flow`. Slice 0 should either remove that source
-  wording and regenerate, or define a narrower lint scope with evidence that
-  the phrase is not operator-visible. The final closeout budget remains zero.
+- Cleared in Slice 0: `Goal supervisor flow` was removed from source and
+  regenerated plugin runtimes. The final closeout budget remains zero.
 
 ## Ship Checklist
 
@@ -211,6 +209,255 @@ Checkpoint YYYY-MM-DD:
   readiness run.
 - Next: begin Slice 0 safety perimeter with guard tests and residue checks.
 
+### Checkpoint 2026-05-28: Slice 0 Safety Perimeter
+
+- Completed: added `tests/contracts/run-centered-v1-safety.test.ts` covering
+  Supervisor vocabulary leakage, future Run envelope import boundaries, future
+  private report-path scraping, and Skill Moment slot-matrix revival.
+- Now true: the known `Goal supervisor flow` residue is removed from source and
+  regenerated plugin runtimes.
+- Cross-area review: Slice 0 only adds guardrails and wording cleanup; no Run
+  behavior, routing behavior, command visibility, memory behavior, or checkpoint
+  behavior changed.
+- Verification: `npm run test -- tests/contracts/run-centered-v1-safety.test.ts`
+  passed. `npm run check-flow-drift` remains the slice close gate.
+- Next: run `npm run check-flow-drift`, then begin Slice 1 Run envelope schema
+  and fixture tests.
+
+### Checkpoint 2026-05-28: Slice 1 Run Envelope Schema
+
+- Completed: added `RunEnvelopeRecord` and related pure schemas in
+  `src/schemas/run-envelope.ts`, exported them through the schema barrel, and
+  added fixture tests for complete, needs-followup, checkpoint-waiting, blocked,
+  and false-complete negative cases.
+- Now true: Run can be represented as a top-level envelope record without
+  runtime execution, generated surface changes, checkpoint resume changes, or
+  real memory writes.
+- Cross-area review: the implementation settled the code name as
+  `RunEnvelopeRecord` with schema `run.envelope@v0`; the older supervisor
+  fixture plan was updated so downstream slices use the Run envelope names.
+- Verification:
+  `npm run test -- tests/contracts/run-envelope-record-schema.test.ts tests/contracts/schemas-barrel.test.ts tests/contracts/memory-input-schema.test.ts tests/contracts/goal-report-schemas.test.ts`,
+  `npm run check`, and `npm run lint` passed.
+- Next: begin Slice 2 shadow Run envelope artifacts beside current runs.
+
+### Checkpoint 2026-05-28: Slice 2 Design Correction
+
+- Discovery: a complete child process result cannot honestly produce a complete
+  `RunEnvelopeRecord` before source-owned Run completion gates exist, because
+  the record requires two clean Run-level gate passes.
+- Plan revision: Slice 2 writes `RunEnvelopeShadowRecord` with schema
+  `run.envelope-shadow@v0`. It observes route, child runtime result, checkpoint
+  waiting state, and artifact refs, but it must not claim Run-level completion.
+- Cross-area review: this preserves the done-discipline boundary for Slice 4
+  while still giving later slices a durable artifact to compare against.
+- Verification: pending Slice 2 implementation.
+- Next: implement the shadow schema/writer and prove CLI output parity.
+
+### Checkpoint 2026-05-28: Slice 2 Shadow Run Envelope Artifacts
+
+- Completed: added `RunEnvelopeShadowRecord` and a writer at
+  `reports/run-envelope-shadow.json` for complete child runs and
+  checkpoint-waiting runs.
+- Now true: current CLI Run output remains unchanged while each runtime-backed
+  Run records selected process, child result or checkpoint refs, and artifact
+  links as observation-only shadow data.
+- Cross-area review: the shadow record deliberately has no completion gate and
+  cannot claim Run-level done discipline before source-owned Run exists.
+- Verification:
+  `npm run test -- tests/runner/cli-run-envelope-shadow.test.ts tests/runner/run-envelope-shadow-writer.test.ts tests/contracts/run-envelope-record-schema.test.ts`,
+  `npm run check`, `npm run lint`, `npm run test -- tests/runner/cli-router.test.ts`,
+  and `npm run check-flow-drift` passed.
+- Next: begin Slice 3 process evidence projection fixtures and unused
+  projection writer.
+
+### Checkpoint 2026-05-28: Slice 3 Process Evidence Projection
+
+- Completed: added `ProcessEvidenceProjection` and a pure projection writer
+  that can normalize every public runtime process without reading private flow
+  report shapes.
+- Now true: process evidence refs come from child `reports/result.json`,
+  checkpoint requests, and flow-owned `runtimeSurface.primaryResult` paths.
+- Cross-area review: the implemented contract adds `declared_report_paths` so
+  ad hoc private report refs are rejected structurally; current runtime
+  `stopped` and `escalated` outcomes normalize to `blocked` while the child
+  result artifact keeps the original outcome inspectable.
+- Verification:
+  `npm run test -- tests/contracts/process-evidence-projection-schema.test.ts tests/contracts/schemas-barrel.test.ts`,
+  public flow report schema tests, `npm run check`, and `npm run lint` passed.
+- Next: begin Slice 3.5 Skill Moment policy fixtures without dispatch.
+
+### Checkpoint 2026-05-28: Slice 3.5 Skill Moment Policy
+
+- Completed: added Skill Moment vocabulary/schema, typed `moments` config,
+  typed `skill_moments` step metadata, pure policy layering, availability
+  checks, ask-mode event behavior, and activation-provenance fixtures.
+- Now true: moment policy can be represented deterministically without
+  dispatching skills, binding concrete skill ids to flow steps, or claiming a
+  skill was observed when Circuit only planned it.
+- Cross-area review: existing `skill_slots` and `SelectionOverride.skills`
+  remain intact; missing mapped skills are recorded as unavailable and are not
+  hidden dependencies; `ask` mode records a decision packet id before skill
+  preparation.
+- Verification:
+  `npm run test -- tests/contracts/skill-moment-policy-schema.test.ts tests/contracts/config-schema.test.ts tests/contracts/skill-schema.test.ts tests/runner/user-skill-loading.test.ts tests/contracts/schemas-barrel.test.ts tests/contracts/run-centered-v1-safety.test.ts tests/contracts/documentation-surface.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 4 source-owned Run decisions in parity mode.
+
+### Checkpoint 2026-05-28: Slice 4 Source-Owned Run Decisions
+
+- Completed: added the source-owned Run envelope writer at
+  `reports/run-envelope.json`, wired it into fresh and resumed CLI runs, and
+  kept existing stdout unchanged while the current flow runtime still executes
+  the child process.
+- Now true: each covered Run can carry a source-owned goal contract, process
+  plan, process attempt, completion gate, decision packet for checkpoint
+  waiting, surface output, and normalized process evidence projection beside
+  the existing child result or checkpoint request.
+- Cross-area review: the writer stays above the runtime kernel, consumes the
+  process evidence projection instead of private report shapes, handles stopped
+  or aborted child runs without claiming completion, and keeps checkpoint
+  waiting states free of child result refs.
+- Verification:
+  `npm run test -- tests/runner/cli-run-envelope-shadow.test.ts tests/runner/run-envelope-source-writer.test.ts tests/contracts/run-envelope-record-schema.test.ts tests/contracts/process-evidence-projection-schema.test.ts`,
+  `npm run test -- tests/contracts/process-evidence-projection-schema.test.ts tests/runner/run-envelope-source-writer.test.ts tests/runner/cli-router.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 5 bounded follow-up loop for missing evidence and
+  false-complete prevention.
+
+### Checkpoint 2026-05-28: Slice 5 Bounded Follow-Up Plan
+
+- Completed: added `followup_for` provenance to planned attempts and taught
+  the Run envelope writer to refuse Run completion when a complete child run is
+  missing expected process evidence.
+- Now true: a missing-evidence case produces `needs_followup`, keeps the first
+  process attempt inspectable as complete, adds one unexecuted follow-up plan,
+  and cites the missing claim, prior attempt id, and missing evidence refs.
+- Cross-area review: the slice does not add a second graph runner or execute a
+  hidden child process. It keeps the follow-up loop bounded and source-owned
+  while preserving current CLI stdout compatibility.
+- Verification:
+  `npm run test -- tests/contracts/run-envelope-record-schema.test.ts tests/runner/run-envelope-source-writer.test.ts tests/runner/cli-run-envelope-shadow.test.ts`,
+  `npm run test -- tests/runner/cli-router.test.ts tests/contracts/process-evidence-projection-schema.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 6 compact human surface over the Run envelope artifacts.
+
+### Checkpoint 2026-05-28: Slice 6 Compact Run Surface
+
+- Completed: added `reports/run-surface.md`, surfaced
+  `run_surface_markdown_path`, `run_surface_status_text`,
+  `run_envelope_path`, and `run_process_evidence_path` in CLI output, and
+  updated generated Run host instructions to prefer the compact Run surface.
+- Now true: human-facing Run output can be a short status line with artifact
+  links while the richer operator summary, Run envelope, child result, and
+  process evidence remain available for agents and tooling.
+- Cross-area review: this is additive for machine-readable CLI output and keeps
+  `operator_summary_markdown_path` as a fallback. The shadow artifact remains
+  internal and is not exposed as a public output field.
+- Verification:
+  `npm run test -- tests/runner/cli-run-envelope-shadow.test.ts tests/runner/run-envelope-source-writer.test.ts tests/contracts/run-envelope-record-schema.test.ts tests/contracts/documentation-surface.test.ts`,
+  `npm run test -- tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts tests/contracts/host-experience-docs.test.ts tests/runner/cli-router.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 7 decision packet artifacts for checkpoint, missing
+  evidence, and Skill Moment `ask` decisions.
+
+### Checkpoint 2026-05-28: Slice 7 Decision Packet Artifacts
+
+- Completed: wrote standalone decision packet artifacts under
+  `reports/decision-packets/`, surfaced `run_decision_packet_paths`, linked the
+  first packet from the compact Run surface, added missing-evidence decision
+  packets, and added pure builders for Skill Moment `ask` and strict missing
+  skill decisions.
+- Now true: checkpoint decisions, missing-evidence follow-up choices, Skill
+  Moment `ask`, and strict unavailable-skill cases share one packet schema
+  instead of each inventing its own human decision shape.
+- Cross-area review: packets do not bypass runtime checkpoint resume
+  validation, do not claim skills ran, and do not execute hidden follow-up
+  processes. They give the host a digestible decision artifact over the source
+  envelope.
+- Verification:
+  `npm run test -- tests/runner/run-envelope-source-writer.test.ts tests/runner/cli-run-envelope-shadow.test.ts tests/contracts/skill-moment-policy-schema.test.ts tests/contracts/run-envelope-record-schema.test.ts`,
+  `npm run test -- tests/runner/cli-router.test.ts tests/contracts/skill-moment-policy-schema.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 8 hint-only memory update events.
+
+### Checkpoint 2026-05-28: Slice 8 Hint-Only Memory Events
+
+- Completed: wired history recall into the Run envelope memory context and
+  added explicit/proposed memory update events with source refs, hint-only
+  authority, and a compact surface indicator.
+- Now true: Run artifacts can say which memory hints were used and can record
+  why a memory update was proposed or recorded. The implementation does not
+  silently write project, flow, or operator memory.
+- Cross-area review: memory remains hint-only and cannot route, prove,
+  authorize checkpoint resume, override policy, or change recovery behavior.
+  The compact surface only shows a succinct indicator when an update is
+  proposed or recorded.
+- Verification:
+  `npm run test -- tests/runner/run-envelope-source-writer.test.ts tests/runner/history-run-start-recall.test.ts tests/contracts/run-envelope-record-schema.test.ts tests/contracts/memory-input-schema.test.ts`,
+  `npm run test -- tests/runner/cli-router.test.ts tests/runner/history-run-start-recall.test.ts tests/runner/run-envelope-source-writer.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 9 public Run default and expert-control positioning.
+
+### Checkpoint 2026-05-28: Slice 9 Run Public Default
+
+- Completed: updated README, Run command guidance, plugin manifests, direct
+  flow command descriptions, and Codex generated skill metadata so Run is the
+  default front door and direct flows read as expert controls.
+- Now true: `/circuit:run` is the main public path in host-facing docs and
+  generated surfaces. Direct flow commands remain available when the operator
+  already knows the starting flow, and generated surfaces remain source-owned.
+- Cross-area review: this changes product positioning, not runtime routing or
+  checkpoint behavior. It does not remove old commands, so rollback is a
+  wording/generation change rather than a compatibility break.
+- Verification:
+  `npm run test -- tests/contracts/host-experience-docs.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts tests/contracts/documentation-surface.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 10 Goal de-emphasis while preserving old Goal artifacts.
+
+### Checkpoint 2026-05-28: Slice 10 Goal De-emphasis
+
+- Completed: updated Goal command source, generated host commands, Codex Goal
+  skill metadata, README, operator guide, and Run guidance so Circuit Run is
+  the normal front door for bounded objectives and completion discipline.
+- Now true: Goal remains available for existing Goal use cases and old Goal
+  run folders, but the public guidance no longer presents Goal as a peer
+  default beside Run.
+- Cross-area review: this changes wording and generated surfaces only. It does
+  not delete Goal schemas, reports, relay hints, release proof readability, or
+  explicit `./bin/circuit run goal` behavior.
+- Verification:
+  `npm run test -- tests/contracts/goal-report-schemas.test.ts tests/runner/goal-flow.test.ts tests/contracts/codex-host-plugin.test.ts tests/contracts/claude-host-plugin.test.ts tests/contracts/host-experience-docs.test.ts tests/contracts/documentation-surface.test.ts tests/contracts/generated-surface-framing.test.ts`,
+  `npm run check`, `npm run lint`, and `npm run check-flow-drift` passed.
+- Next: begin Slice 11 closeout, including residue sweep, docs
+  reconciliation, dependency check, final verification, and two adversarial
+  reviews.
+
+### Checkpoint 2026-05-28: Slice 11 Closeout
+
+- Completed: residue sweep, docs reconciliation, generated-surface drift
+  check, release-infra check through full verification, and two adversarial
+  reviews.
+- Now true: the Run-centered V1 implementation slices are complete. The final
+  product surface makes Run the default, keeps direct flows as expert controls,
+  preserves Goal artifacts, and records Run envelope/process evidence/decision
+  packet/memory context artifacts without replacing the runtime kernel.
+- Cross-area review: no public `Supervisor` vocabulary leak was found; Run
+  envelope code does not import runtime executor internals; Skill Moments did
+  not revive a flow-step skill binding matrix as the default product path; and
+  generated host output is in sync with source.
+- Verification:
+  `npm run test -- tests/contracts/goal-report-schemas.test.ts tests/contracts/memory-input-schema.test.ts tests/runtime/checkpoint-resume.test.ts tests/runner/cli-router.test.ts tests/contracts/documentation-surface.test.ts`,
+  `npm run check-flow-drift`, `npm run verify:fast`, and `npm run verify`
+  passed. Full `npm run verify` included 202 passing test files, 2,159 passing
+  tests, eval checks, generated flow/plugin drift checks, and release-infra
+  checks.
+- Review result: two adversarial passes found no concrete blocking findings.
+  Residual risk is concentrated in future expansion pressure: Run envelope
+  behavior must keep using projections and source-owned records instead of
+  growing into a second runtime.
+- Next: prepare a commit or PR from this branch.
+
 ## Handoff
 
 If a session stops mid-migration, record:
@@ -226,5 +473,6 @@ Do not rely on chat memory as the migration state.
 
 ## Decision
 
-The migration is ready to start as a gated implementation program after this
-readiness package is verified. It is not a single implementation task.
+The Run-centered V1 migration has been implemented as a gated slice program.
+Future work should start from the completed ledger state above rather than
+reopening the migration shape by default.

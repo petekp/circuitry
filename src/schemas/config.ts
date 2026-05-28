@@ -8,6 +8,7 @@ import {
 import { HostConfig } from './host.js';
 import { CompiledFlowId, SkillId, SkillSlotId } from './ids.js';
 import { SelectionOverride } from './selection-policy.js';
+import { SkillMomentConfig } from './skill-moment.js';
 import { RelayRole } from './step.js';
 
 // connector-I5 + connector-I9: the registry-layer `ConnectorReference` is a
@@ -193,6 +194,7 @@ export const Config = z
       connectors: {},
     }),
     skills: SkillsConfig.default({ bindings: {} }),
+    moments: SkillMomentConfig.default({ policy: {}, detection: { disabled_patterns: {} } }),
     circuits: z.record(CompiledFlowId, CircuitOverride).default({}),
     defaults: z
       .object({

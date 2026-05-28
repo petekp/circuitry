@@ -1,5 +1,5 @@
 ---
-description: Starts Circuit from the Build flow through the project CLI, with optional Lite, Deep, or Autonomous entry behavior.
+description: Expert control that starts Circuit from the Build flow when you already know the task is implementation or documentation work.
 argument-hint: <task>
 ---
 

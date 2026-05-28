@@ -1,5 +1,5 @@
 ---
-description: Starts Circuit from the Prototype flow through the project CLI to create disposable local prototype artifacts, with optional model-comparison tournament mode.
+description: Expert control that starts Circuit from the Prototype flow when you already know the task needs a disposable prototype, mockup, UI sketch, or model-comparison variant.
 argument-hint: <prototype goal>
 ---
 

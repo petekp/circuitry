@@ -64,23 +64,24 @@ guess which prose lines belong together.
 
 ## Final Rendering
 
-After stdout JSON is parsed, hosts MUST read
+After stdout JSON is parsed, hosts MUST read `run_surface_markdown_path` when
+present and render that Markdown verbatim as the final user-facing answer. That
+Markdown is the compact Run surface: a status line plus links to the Run
+artifacts. If `run_surface_markdown_path` is absent, hosts MUST read
 `operator_summary_markdown_path` when present and render that Markdown
-verbatim as the final user-facing answer. That Markdown is the operator brief:
-it should provide the result, the important guidance, and any next step without
-printing run folders, report paths, trace ids, or debug-only evidence links by
-default.
+verbatim as the fallback operator brief.
 
 Transcript wrappers that have already rendered a status block MAY instead
-render `operator_summary_status_text`, or `status_text` from
-`operator_summary_path`, as one final `⎿` continuation line. They should keep
-`operator_summary_markdown_path` as the standalone fallback rather than
-rewriting that Markdown.
+render `run_surface_status_text`, `operator_summary_status_text`, or
+`status_text` from `operator_summary_path`, as one final `⎿` continuation
+line. They should keep `run_surface_markdown_path` and
+`operator_summary_markdown_path` as standalone fallbacks rather than rewriting
+that Markdown.
 
-Hosts MUST NOT invent a separate final summary when
-`operator_summary_markdown_path` is present. If that file is missing or cannot
-be read, hosts MAY fall back to `operator_summary_path`, then `result_path`,
-then the selected flow's final report.
+Hosts MUST NOT invent a separate final summary when `run_surface_markdown_path`
+or `operator_summary_markdown_path` is present. If both files are missing or
+cannot be read, hosts MAY fall back to `operator_summary_path`, then
+`result_path`, then the selected flow's final report.
 
 ## Summary Files
 
@@ -88,9 +89,17 @@ Circuit writes these files for top-level CLI `run` and `resume` invocations:
 
 - `reports/operator-summary.json` — typed data for host tooling.
 - `reports/operator-summary.md` — exact Markdown for the host's final answer.
+- `reports/run-surface.md` — compact Run Markdown for the host's final answer
+  when present.
 
 The final stdout JSON includes:
 
+- `run_envelope_path`
+- `run_process_evidence_path`
+- `run_decision_packet_paths` when Run wrote standalone decision packet
+  artifacts
+- `run_surface_markdown_path`
+- `run_surface_status_text`
 - `operator_summary_path`
 - `operator_summary_markdown_path`
 - `operator_summary_status_text` when a concise status-block continuation is

@@ -1,3 +1,4 @@
+import type { WriteRunEnvelopeRecordResult } from '../run-envelope/source-record.js';
 import type { OperatorSummaryWriteResult } from '../shared/operator-summary-writer.js';
 
 export interface RouteOutputFieldsInput {
@@ -11,6 +12,10 @@ export interface RouteOutputFieldsInput {
 
 export interface OperatorSummaryOutputFieldsInput {
   readonly operatorSummary: OperatorSummaryWriteResult;
+}
+
+export interface RunEnvelopeOutputFieldsInput {
+  readonly runEnvelope: WriteRunEnvelopeRecordResult;
 }
 
 export function routeOutputFields(input: RouteOutputFieldsInput): Record<string, unknown> {
@@ -37,5 +42,19 @@ export function operatorSummaryOutputFields(
     ...(operatorSummary.htmlPath === undefined
       ? {}
       : { operator_summary_html_path: operatorSummary.htmlPath }),
+  };
+}
+
+export function runEnvelopeOutputFields(
+  input: RunEnvelopeOutputFieldsInput,
+): Record<string, unknown> {
+  return {
+    run_envelope_path: input.runEnvelope.path,
+    run_process_evidence_path: input.runEnvelope.processEvidencePath,
+    run_surface_markdown_path: input.runEnvelope.surfacePath,
+    run_surface_status_text: input.runEnvelope.record.surface_output.status_text,
+    ...(input.runEnvelope.decisionPacketPaths.length === 0
+      ? {}
+      : { run_decision_packet_paths: input.runEnvelope.decisionPacketPaths }),
   };
 }

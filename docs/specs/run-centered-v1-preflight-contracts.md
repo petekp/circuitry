@@ -46,6 +46,7 @@ interface ProcessEvidenceProjectionV0 {
   child_run_ref: Ref;
   result_ref?: Ref;
   evidence_refs: Ref[];
+  declared_report_paths: string[];
   missing_evidence: Array<{
     claim_id: string;
     reason: string;
@@ -67,8 +68,14 @@ Rules:
 - `result_ref` is absent for `checkpoint_waiting`.
 - `evidence_refs` may point to child result, declared reports, operator input,
   or future projection files.
+- `declared_report_paths` is the enforceable allow-list for process report refs
+  and comes from flow-owned runtime surface metadata, not Run-private path
+  conventions.
 - The projection must not require Run to read child trace internals.
 - Every public process needs at least one positive projection fixture.
+- Current runtime `stopped` and `escalated` child outcomes normalize to
+  `blocked` at this layer; the child result artifact keeps the original runtime
+  outcome inspectable.
 
 Fixtures:
 
@@ -277,7 +284,7 @@ Gate before de-emphasizing Goal:
 | Boundary | Test Shape |
 | --- | --- |
 | Runtime import boundary | Future Run envelope modules must not import `src/runtime/executors/*`. |
-| No product `Supervisor` wording | Grep/lint operator docs, CLI output fixtures, generated host surfaces, release notes, and product messaging; account for the current `Goal supervisor flow` source wording before enforcing zero matches. |
+| No product `Supervisor` wording | Grep/lint operator docs, CLI output fixtures, generated host surfaces, release notes, and product messaging; Slice 0 cleared the previous `Goal supervisor flow` source wording, so the enforcement budget is now zero. |
 | No private report scraping | Run envelope modules must consume process evidence projection or declared refs, not hard-coded per-flow report paths. |
 | No slot matrix revival | Flow schematics reject concrete skill IDs; project policy may map skills to moments, but must not bind skills to specific flow steps. |
 | Memory authority | Memory update fixtures reject route, proof, checkpoint, recovery, write, and policy authority. |

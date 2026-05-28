@@ -15,9 +15,10 @@ Runs Circuit from the intent front door with recorded flow selection, trace, rep
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
 Runs Circuit on the user's natural-language task. This is the intent front
-door. The host may recommend a flow from the request, but Circuit records the
-selected flow when the run starts and then uses the same trace, reports,
-evidence, checkpoints, and recovery path as direct flow commands.
+door and should be used by default. The host may recommend a flow from the
+request, but Circuit records the selected flow when the run starts and then
+uses the same trace, reports, evidence, checkpoints, and recovery path as
+direct flow commands.
 
 Direct Circuit flow skills are expert controls for users who already know the flow.
 
@@ -160,12 +161,16 @@ as literal user-controlled text when constructing shell commands.
    prose.
 5. **Parse the CLI's final JSON output and surface:** `selected_flow`,
    `routed_by`, `router_reason`, `outcome`, `run_folder`, `trace_entries_observed`,
+   `run_surface_markdown_path`, `run_envelope_path`,
+   `run_decision_packet_paths`,
    `operator_summary_markdown_path`, and `result_path` when present. If
    present, also surface `router_signal`.
-6. **Render Circuit's final summary.** Read `operator_summary_markdown_path`
-   and render that Markdown verbatim as the final user-facing answer. Do not
-   invent a separate summary. If the operator summary is missing, fall back to
-   the selected flow's final report:
+6. **Render Circuit's final summary.** Prefer `run_surface_markdown_path` when
+   present. It is the compact Run surface and should be rendered verbatim as
+   the final user-facing answer. If it is missing, read
+   `operator_summary_markdown_path` and render that Markdown verbatim. Do not
+   invent a separate summary. If the operator summary is also missing, fall
+   back to the selected flow's final report:
    For `selected_flow === "explore"`, read the run-folder-relative
    `reports/explore-result.json` close-step report. For
    `selected_flow === "review"` and `outcome === "complete"`, read

@@ -510,8 +510,14 @@
       "routes": {
         "continue": "goal-gate-pass-2",
         "pass": "goal-gate-pass-2",
+        "run-next-gate-pass": "goal-gate-pass-2",
+        "recover": "goal-recovery",
         "retry": "goal-recovery",
+        "close": "goal-recovery",
         "stop": "@stop"
+      },
+      "route_from_report": {
+        "path": ["next_route"]
       },
       "executor": "worker",
       "kind": "relay",
@@ -531,7 +537,7 @@
           "kind": "relay_result",
           "ref": "result"
         },
-        "pass": ["gate-pass"]
+        "pass": ["gate-pass", "blocked"]
       }
     },
     {
@@ -546,8 +552,14 @@
       "routes": {
         "continue": "goal-close",
         "pass": "goal-close",
+        "close": "goal-close",
+        "run-next-gate-pass": "goal-gate-pass-2",
+        "recover": "goal-recovery",
         "retry": "goal-recovery",
         "stop": "@stop"
+      },
+      "route_from_report": {
+        "path": ["next_route"]
       },
       "executor": "worker",
       "kind": "relay",
@@ -567,7 +579,7 @@
           "kind": "relay_result",
           "ref": "result"
         },
-        "pass": ["gate-pass"]
+        "pass": ["gate-pass", "blocked"]
       }
     },
     {

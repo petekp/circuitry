@@ -1,5 +1,5 @@
 ---
-description: Starts Circuit from the Review flow to audit a scoped change or report, producing a run trace and review-result report under the run folder.
+description: Expert control that starts Circuit from the Review flow when you already know the task is an audit without making changes.
 argument-hint: <scope>
 ---
 

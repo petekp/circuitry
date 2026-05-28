@@ -1,13 +1,13 @@
 ---
 name: review
-description: "Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes."
+description: "Expert control for starting Circuit from Review when you already know the task is an audit without making changes."
 ---
 
 # Circuit Review
 
 ## Use Case
 
-Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes.
+Expert control for starting Circuit from Review when you already know the task is an audit without making changes.
 
 ## Codex Host Invocation
 

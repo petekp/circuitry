@@ -5,7 +5,7 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   build: {
     title: 'Circuit Build',
     description:
-      'Runs Circuit Build for code or documentation changes that are not primarily bug fixes.',
+      'Expert control for starting Circuit from Build when you already know the task is implementation or documentation work.',
   },
   create: {
     title: 'Circuit Create',
@@ -14,17 +14,17 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   explore: {
     title: 'Circuit Explore',
     description:
-      'Runs Circuit Explore for investigation, explanation, option comparison, architecture analysis, or pre-change decisions.',
+      'Expert control for starting Circuit from Explore when you already know the task is investigation, comparison, architecture analysis, or a pre-change decision.',
   },
   fix: {
     title: 'Circuit Fix',
     description:
-      'Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues.',
+      'Expert control for starting Circuit from Fix when you already know the task is a bug, regression, failing test, crash, or production issue.',
   },
   goal: {
     title: 'Circuit Goal',
     description:
-      'Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review.',
+      'Expert control for the retained Goal flow. Circuit Run is the default front door and carries Goal-style completion discipline.',
   },
   handoff: {
     title: 'Circuit Handoff',
@@ -34,12 +34,12 @@ const CODEX_SKILL_METADATA: Record<string, { title: string; description: string 
   prototype: {
     title: 'Circuit Prototype',
     description:
-      'Runs Circuit Prototype for disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build.',
+      'Expert control for starting Circuit from Prototype when you already know the task needs a disposable prototype, mockup, UI sketch, or model-comparison variant.',
   },
   review: {
     title: 'Circuit Review',
     description:
-      'Runs Circuit Review to audit code, diffs, PRs, implementations, plans, reports, or risk surfaces without making changes.',
+      'Expert control for starting Circuit from Review when you already know the task is an audit without making changes.',
   },
   run: {
     title: 'Circuit Run',

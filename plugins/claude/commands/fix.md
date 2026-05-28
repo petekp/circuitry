@@ -1,5 +1,5 @@
 ---
-description: Starts Circuit from the Fix flow through the project CLI, with optional Lite, Default (standard), Deep, or Autonomous entry behavior.
+description: Expert control that starts Circuit from the Fix flow when you already know the task is a bug, regression, failing test, crash, or production issue.
 argument-hint: <task>
 ---
 

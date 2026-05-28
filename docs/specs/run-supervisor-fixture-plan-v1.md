@@ -6,14 +6,19 @@ Date: 2026-05-28
 
 ## Purpose
 
-This plan defines the smallest fixture suite that can prove the
-`RunSupervisorRecord` contract shape before production implementation.
+This plan defines the smallest fixture suite that can prove the Run envelope
+record contract shape before production implementation.
 
-The fixtures should validate the supervisor envelope, not the runtime. Runtime
+Implementation note: Slice 1 landed this contract as `RunEnvelopeRecord` with
+schema `run.envelope@v0`. Older text in this planning file may still refer to
+the supervisor sketch, but downstream implementation should use the Run
+envelope names.
+
+The fixtures should validate the Run envelope, not the runtime. Runtime
 behavior is already owned by current compiled-flow runs, checkpoints, traces,
 and `RunResult`. The fixture suite should answer one question:
 
-> Can a Run supervisor record express complete, follow-up, checkpoint, and
+> Can a Run envelope record express complete, follow-up, checkpoint, and
 > blocked outcomes without becoming a second runtime or relying on ad hoc
 > evidence scraping?
 
@@ -55,10 +60,10 @@ packages, or choose real workers.
 
 Allowed test inputs:
 
-- a `RunSupervisorRecord` JSON object;
+- a `RunEnvelopeRecord` JSON object;
 - small child `RunResult`-shaped refs embedded as paths or reference objects;
 - small `MemoryInputV0`-shaped memory inputs;
-- optional decision packets that point at either a supervisor decision or a
+- optional decision packets that point at either a Run envelope decision or a
   child process checkpoint.
 
 Out of scope:
@@ -83,12 +88,12 @@ Use stable IDs and relative paths so fixtures stay readable:
 | Evidence refs | Use typed refs or ref-like paths from allowed sources: child `RunResult`, operator summary, declared process report, or future process evidence projection. |
 | Memory refs | Use `MemoryInputV0`-compatible `kind`, `source`, `hints`, `staleness`, and `authority: "hint_only"`. |
 | Gate passes | Use distinct attack lenses for the two required clean passes. |
-| Decision packets | Use `resume_target.kind = "process-checkpoint"` only when the attempt outcome is `checkpoint_waiting`; otherwise use `resume_target.kind = "supervisor"`. |
+| Decision packets | Use `resume_target.kind = "process-checkpoint"` only when the attempt outcome is `checkpoint_waiting`; otherwise use `resume_target.kind = "run-envelope"`. |
 
 ## Shared Fixture Defaults
 
 The JSON snippets below are illustrative. Actual fixtures should be complete
-`RunSupervisorRecord` objects. Use these defaults unless the case overrides
+`RunEnvelopeRecord` objects. Use these defaults unless the case overrides
 them:
 
 | Field | Default |
@@ -101,7 +106,7 @@ them:
 | `process_plan.planned_attempts` | One attempt matching the case's first `process_attempts` entry. |
 | `decision_packets` | `[]` unless the case needs operator input. |
 | `memory_update_events` | `[]` unless the case checks memory update behavior. |
-| `surface_output.artifact_links` | `["run.supervisor.json"]` |
+| `surface_output.artifact_links` | `["reports/run-envelope.json"]` |
 
 ## Positive Fixtures
 
@@ -114,7 +119,7 @@ Abbreviated shape:
 
 ```json
 {
-  "schema": "run.supervisor@v0",
+  "schema": "run.envelope@v0",
   "run_id": "00000000-0000-4000-8000-00000000f001",
   "operator_intent": "Add the dashboard filter and prove it works.",
   "goal_contract": {
@@ -191,7 +196,7 @@ Abbreviated shape:
       "reason": "The run confirmed the current verification command for this project.",
       "source_refs": ["process-report:reports/build/verification.json"],
       "summary": "Use npm run test:fast as a fast verification hint for dashboard work.",
-      "effect": "execution_hint_only",
+      "authority": "hint_only",
       "operator_indicator": "Updated Build memory: fast dashboard verification command."
     }
   ],
@@ -201,7 +206,7 @@ Abbreviated shape:
     "selected_processes": [{ "process_id": "build", "reason": "Implementation request." }],
     "outcome": "complete",
     "memory_indicator": "Updated Build memory: fast dashboard verification command.",
-    "artifact_links": ["run.supervisor.json"]
+    "artifact_links": ["reports/run-envelope.json"]
   },
   "outcome": "complete"
 }
@@ -214,11 +219,11 @@ Required validator rules:
 - `clean_streak >= required_passes`.
 - Gate passes use distinct attack lenses.
 - `surface_output.outcome` matches top-level `outcome`.
-- Memory update events have `effect = "execution_hint_only"`.
+- Memory update events have `authority = "hint_only"`.
 
 ### 2. Missing-Evidence Follow-Up
 
-Purpose: prove a child process can close complete while the supervisor refuses
+Purpose: prove a child process can close complete while the Run envelope refuses
 to close because required evidence is missing.
 
 Minimum differences from the complete fixture:
@@ -229,6 +234,8 @@ Minimum differences from the complete fixture:
 - `completion_gate.next_action = "plan-followup-process"`;
 - `process_plan.planned_attempts` includes a second attempt such as
   `attempt-review-2`;
+- that follow-up attempt includes `followup_for` with the missing claim id,
+  prior attempt id, and missing evidence refs;
 - top-level `outcome = "needs_attention"` or equivalent target spelling, not
   `complete`;
 - no close-shaped surface output.
@@ -238,8 +245,7 @@ Required validator rules:
 - Missing required evidence forbids `completion_gate.verdict = "complete"`.
 - Missing required evidence forbids top-level `outcome = "complete"`.
 - `needs_followup` requires a planned follow-up attempt or a decision packet.
-- Follow-up attempts must depend on an earlier attempt id or explain why they
-  are independent.
+- Follow-up attempts must cite the missing claim and prior attempt id.
 
 Current source anchor: `GoalEvidenceEvaluation` rejects completion-gate routing
 unless every claim is proved, and Goal tests cover weak child proof moving to
@@ -248,7 +254,7 @@ checkpoint rather than close.
 ### 3. Checkpoint Needed
 
 Purpose: prove a child process checkpoint can pause Run without pretending the
-supervisor wrote runtime checkpoint trace entries.
+Run envelope wrote runtime checkpoint trace entries.
 
 Minimum shape:
 
@@ -270,7 +276,7 @@ Required validator rules:
 - `checkpoint_waiting` attempts must not have `child_run.result_path`.
 - `process-checkpoint` resume targets require a matching waiting process
   attempt.
-- The supervisor fixture must not include fake `checkpoint.requested` or
+- The Run envelope fixture must not include fake `checkpoint.requested` or
   `checkpoint.resolved` trace entries.
 
 Current source anchor: `GraphCheckpointWaitingResult` carries `checkpoint`
@@ -327,8 +333,8 @@ The first validator test plan should include these invalid records:
 | Gate pass lenses are distinct | Avoids replaying the same review as two passes. | `GoalGate` schema tests. |
 | Missing evidence requires follow-up or decision | Keeps Run working until done or honestly blocked. | Goal weak-proof tests and target architecture audit. |
 | Checkpoint waiting has no result path | Matches current runtime waiting envelope. | `GraphCheckpointWaitingResult` and CLI checkpoint output. |
-| Process checkpoint resume target matches a waiting attempt | Prevents supervisor packets from inventing runtime resume authority. | Checkpoint executor and checkpoint resume contract. |
-| Memory is execution hint only | Prevents memory from becoming proof or route authority. | `MemoryInputV0` schema and tests. |
+| Process checkpoint resume target matches a waiting attempt | Prevents Run envelope packets from inventing runtime resume authority. | Checkpoint executor and checkpoint resume contract. |
+| Memory is hint-only | Prevents memory from becoming proof or route authority. | `MemoryInputV0` schema and tests. |
 | Evidence refs come from allowed source classes | Prevents ad hoc report scraping. | `Ref` schema plus contract sketch evidence-ref rule. |
 | Surface output matches record outcome | Keeps human output succinct but honest. | Host rendering contract and operator summary tests. |
 
@@ -346,14 +352,14 @@ The fixture validator should initially admit only these evidence-ref classes:
 | Operator input | `operator-input:decision-1` | Allowed for decisions, not for command/proof claims unless paired with current evidence. |
 
 For the first fixture suite, trace refs should be avoided as proof inputs unless
-they are only metadata. This keeps the supervisor out of child trace internals.
+they are only metadata. This keeps the Run envelope out of child trace internals.
 
 ## Suggested Test File Shape
 
 When implementation begins, keep the first slice narrow:
 
 ```text
-tests/contracts/run-supervisor-record-fixtures.test.ts
+tests/contracts/run-envelope-record-schema.test.ts
   valid fixtures
     accepts one-process complete
     accepts missing-evidence follow-up
@@ -375,9 +381,9 @@ surfaces.
 
 | Question | Why It Matters | Safe Default |
 | --- | --- | --- |
-| Should `needs_attention` or `needs_followup` be the top-level outcome string? | Current runtime uses `needs_attention`; the supervisor gate sketch uses `needs_followup`. | Use `needs_attention` at top level and `needs_followup` inside `completion_gate.verdict`. |
+| Should `needs_attention` or `needs_followup` be the top-level outcome string? | Current runtime uses `needs_attention`; the Run envelope gate uses `needs_followup`. | Use `needs_attention` at top level and `needs_followup` inside `completion_gate.verdict`. |
 | Should evidence refs use the existing `Ref` object or typed strings first? | `Ref` gives stronger provenance but makes fixtures noisier. | Use `Ref` objects in code; this plan uses compact strings for readability. |
-| Does every process need an evidence projection before Run supervisor implementation? | Without it, the supervisor may learn per-flow report paths. | Allow declared process reports in the fixture, but treat a process evidence projection as likely first-slice support. |
+| Does every process need an evidence projection before source-owned Run implementation? | Without it, the Run envelope may learn per-flow report paths. | Allow declared process reports in the fixture, but treat a process evidence projection as likely first-slice support. |
 | Should memory updates be `proposed` or `recorded` by default? | Product direction leans automatic, but the exact policy is still open. | Accept both; require `operator_indicator` whenever action is not `skipped`. |
 
 ## Completion Criteria For This Plan
@@ -387,7 +393,7 @@ This plan is ready to hand to implementation when:
 - every positive fixture can be written without runtime execution;
 - every negative fixture maps to one clear validator rule;
 - every validator rule has a current source anchor or is marked as a new
-  supervisor-only rule;
+  Run-envelope-only rule;
 - the suite can run without generated output changes;
 - no fixture relies on child trace internals as proof.
 

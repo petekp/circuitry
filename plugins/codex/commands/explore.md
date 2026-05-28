@@ -1,5 +1,5 @@
 ---
-description: Starts Circuit from the Explore flow to investigate, compare options, or shape a plan, producing a run trace and final report.
+description: Expert control that starts Circuit from the Explore flow when you already know the task is investigation, comparison, architecture analysis, or pre-change planning.
 argument-hint: <goal>
 ---
 

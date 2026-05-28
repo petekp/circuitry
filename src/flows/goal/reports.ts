@@ -140,7 +140,6 @@ export const GoalClarifiedTask = z
       ...task.proof_needed.map((proof) => proof.description),
       ...task.constraints,
       ...task.scope.in_bounds,
-      ...task.scope.out_of_bounds,
       ...task.assumptions,
       ...task.missing_information.flatMap((item) => [
         item.question,

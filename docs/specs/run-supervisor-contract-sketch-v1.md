@@ -223,6 +223,11 @@ type RunProcessPlan = {
     goal: string;
     expected_evidence: string[];
     depends_on_attempt_ids: string[];
+    followup_for?: {
+      claim_id: string;
+      prior_attempt_id: string;
+      missing_evidence: string[];
+    };
   }>;
 };
 ```
@@ -233,6 +238,8 @@ Rules:
 - A one-attempt plan can be produced by today's router.
 - A follow-up plan can be produced after the completion gate finds missing
   evidence.
+- A follow-up attempt must cite the missing claim, the prior attempt id, and
+  the missing evidence it is meant to resolve.
 - A process sequence is an array of runtime calls, not a new graph interpreter.
 
 ### Process Attempt

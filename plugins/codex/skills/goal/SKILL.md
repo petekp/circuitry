@@ -1,23 +1,23 @@
 ---
 name: goal
-description: "Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review."
+description: "Expert control for the retained Goal flow. Circuit Run is the default front door and carries Goal-style completion discipline."
 ---
 
 # Circuit Goal
 
 ## Use Case
 
-Runs Circuit Goal for bounded objectives with typed evidence, recovery, and a safety review.
+Expert control for the retained Goal flow. Circuit Run is the default front door and carries Goal-style completion discipline.
 
 ## Codex Host Invocation
 
 `<plugin root>` means the absolute path to the installed Circuit plugin directory,
 the directory that contains `.codex-plugin/plugin.json`. Do not use a path relative to the user's project.
 
-Starts Circuit from the Goal flow. Use this expert control when the operator
-already knows the work should be handled as a bounded objective. Goal
-supervises the objective until typed evidence proves it, recovery is needed, or
-a blocked result is more honest than continuing.
+Use Circuit Run by default. From the operator's seat, Goal is no longer the
+normal kind of work to choose first; it is the done standard Run uses by
+default. This command remains as an expert control for existing Goal use cases
+and old Goal run folders.
 
 This is not a runtime bypass. Circuit still records the selected flow, runs the
 Goal work contract, writes trace, reports, and evidence, and follows declared

@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Circuit",
     "shortDescription": "Run coding intents through Circuit",
-    "longDescription": "Use /circuit:run with a natural-language coding task. Codex can recommend a Circuit flow, run the local Circuit engine, render progress, and surface the Circuit summary. Direct Circuit flow skills are expert controls when you already know the flow.",
+    "longDescription": "Use /circuit:run by default with a natural-language coding task. Codex can recommend a Circuit flow, run the local Circuit engine, render progress, and surface the Circuit summary. Direct Circuit flow skills are expert controls when you already know the flow.",
     "developerName": "Circuit",
     "category": "Coding",
     "capabilities": ["Interactive", "Write"],

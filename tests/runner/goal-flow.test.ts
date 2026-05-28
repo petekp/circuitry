@@ -128,7 +128,12 @@ function gateReport(stepId: string): ReturnType<typeof GoalGate.parse> {
     clean_streak: 2,
     required_passes: 2,
     blocking_findings: [],
-    low_findings: [],
+    low_findings: [
+      {
+        text: 'A low-severity follow-up remains documented for the operator.',
+        refs: ['reports/goal/gate.json'],
+      },
+    ],
     passes: [
       {
         pass_id: 'gate-1',
@@ -329,6 +334,25 @@ describe('Goal flow package', () => {
     for (const target of CHILD_TARGETS) {
       expect(contract?.routes[target]).toBe(`goal-run-${target}`);
     }
+
+    const gatePass1 = flow.steps.find((step) => step.id === 'goal-gate-pass-1');
+    const gatePass2 = flow.steps.find((step) => step.id === 'goal-gate-pass-2');
+    expect(gatePass1?.kind).toBe('relay');
+    expect(gatePass2?.kind).toBe('relay');
+    if (gatePass1 === undefined || gatePass1.kind !== 'relay') {
+      throw new Error('Goal flow must include a first relay gate pass');
+    }
+    if (gatePass2 === undefined || gatePass2.kind !== 'relay') {
+      throw new Error('Goal flow must include a second relay gate pass');
+    }
+    for (const gate of [gatePass1, gatePass2]) {
+      expect(gate.check.pass).toEqual(['gate-pass', 'blocked']);
+      expect(gate.route_from_report).toEqual({ path: ['next_route'] });
+      expect(gate.routes.recover).toBe('goal-recovery');
+    }
+    expect(gatePass1.routes['run-next-gate-pass']).toBe('goal-gate-pass-2');
+    expect(gatePass1.routes.close).toBe('goal-recovery');
+    expect(gatePass2.routes.close).toBe('goal-close');
   });
 
   it('rejects Goal Clarify reports that smuggle completion-gate ceremony', () => {
@@ -351,6 +375,18 @@ describe('Goal flow package', () => {
         iteration_policy: ['Do the work, then require two clean reviews.'],
       }),
     ).toThrow(/adversarial review loop/);
+  });
+
+  it('allows Goal Clarify to keep completion-gate ceremony out of scope', () => {
+    expect(() =>
+      GoalClarifiedTask.parse({
+        ...clarifiedTask('Review the fixture'),
+        scope: {
+          ...clarifiedTask('Review the fixture').scope,
+          out_of_bounds: ['Adversarial multi-pass review ceremony or two-clean-review gating.'],
+        },
+      }),
+    ).not.toThrow();
   });
 
   it('rejects Goal Clarify ask or stop verdicts without recovery context', () => {
@@ -457,6 +493,9 @@ describe('Goal flow package', () => {
 
     const goalResult = GoalResult.parse(readJson(runFolder, 'reports/goal-result.json'));
     expect(goalResult.outcome).toBe('complete');
+    expect(goalResult.residual_risks).toEqual([
+      'A low-severity follow-up remains documented for the operator.',
+    ]);
     expect(goalResult.gate).toEqual({
       clean_streak: 2,
       required_passes: 2,

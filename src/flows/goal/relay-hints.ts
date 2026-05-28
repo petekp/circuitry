@@ -22,6 +22,7 @@ export const goalGateShapeHint: SchemaShapeHint = {
     '{ "schema": "goal.gate@v1", "verdict": "gate-pass|blocked", "clean_streak": 0, "required_passes": 2, "blocking_findings": [], "low_findings": [], "passes": [], "next_route": "run-next-gate-pass|recover|close" }',
     'Blocking findings are severities critical, high, or medium. Any blocking finding must set verdict to blocked, clean_streak to 0, and next_route to recover.',
     'A gate-pass verdict must have no blocking findings. Use next_route close only when clean_streak is at least 2. Use run-next-gate-pass when this pass is clean but another clean pass is still required.',
+    'The passes array must include every clean pass counted by clean_streak. If a prior gate report is present, copy its passes and append the current pass before using next_route close.',
     'Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
   ].join(' '),
 };
@@ -35,6 +36,7 @@ export const goalGatePassShapeHint: SchemaShapeHint = {
     'The report is bound as goal.gate-pass@v1, but the JSON schema field remains goal.gate@v1 so both gate passes share the same body validator.',
     'Blocking findings are severities critical, high, or medium. Any blocking finding must set verdict to blocked, clean_streak to 0, and next_route to recover.',
     'A gate-pass verdict must have no blocking findings. Use next_route run-next-gate-pass when this pass is clean but another clean pass is still required.',
+    'The passes array must include one object for each clean pass counted by clean_streak.',
     'Do not wrap the JSON in Markdown code fences. Do not include any prose before or after the JSON object.',
   ].join(' '),
 };

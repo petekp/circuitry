@@ -217,10 +217,11 @@ Hosts MUST preserve the distinction between:
   custom connector
 
 Host result JSON should retain `selected_flow`, `routed_by`, `router_reason`,
-`outcome`, `run_folder`, `trace_entries_observed`, and `result_path` when
-present for tooling and debug views. The final user-facing answer should render
-`operator_summary_markdown_path` verbatim when present and should not print run
-folders, report paths, trace ids, or other evidence links by default.
+`outcome`, `run_folder`, `trace_entries_observed`, `run_envelope_path`,
+`run_decision_packet_paths`, `run_surface_markdown_path`, and `result_path`
+when present for tooling and debug views. The final user-facing answer should render
+`run_surface_markdown_path` verbatim when present, then fall back to
+`operator_summary_markdown_path`.
 Checkpoint results should surface the allowed choices, `user_input.requested`
 question, and exact resume shape.
 

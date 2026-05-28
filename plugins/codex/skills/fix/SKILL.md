@@ -1,13 +1,13 @@
 ---
 name: fix
-description: "Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues."
+description: "Expert control for starting Circuit from Fix when you already know the task is a bug, regression, failing test, crash, or production issue."
 ---
 
 # Circuit Fix
 
 ## Use Case
 
-Runs Circuit Fix for bugs, regressions, failing tests, crashes, broken behavior, flaky behavior, or production issues.
+Expert control for starting Circuit from Fix when you already know the task is a bug, regression, failing test, crash, or production issue.
 
 ## Codex Host Invocation
 

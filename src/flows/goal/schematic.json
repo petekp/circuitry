@@ -556,10 +556,16 @@
       "skill_slots": [],
       "routes": {
         "continue": "goal-gate-pass-2",
+        "run-next-gate-pass": "goal-gate-pass-2",
+        "recover": "goal-recovery",
         "retry": "goal-recovery",
+        "close": "goal-recovery",
         "stop": "@stop"
       },
       "route_overrides": {},
+      "route_from_report": {
+        "path": ["next_route"]
+      },
       "protocol": "goal-gate-pass-1@v1",
       "writes": {
         "report_path": "reports/goal/gate-pass-1.json",
@@ -568,7 +574,7 @@
         "result_path": "reports/relay/goal-gate-pass-1.result.json"
       },
       "check": {
-        "pass": ["gate-pass"]
+        "pass": ["gate-pass", "blocked"]
       }
     },
     {
@@ -590,10 +596,16 @@
       "skill_slots": [],
       "routes": {
         "continue": "goal-close",
+        "close": "goal-close",
+        "run-next-gate-pass": "goal-gate-pass-2",
+        "recover": "goal-recovery",
         "retry": "goal-recovery",
         "stop": "@stop"
       },
       "route_overrides": {},
+      "route_from_report": {
+        "path": ["next_route"]
+      },
       "protocol": "goal-gate-pass-2@v1",
       "writes": {
         "report_path": "reports/goal/gate.json",
@@ -602,7 +614,7 @@
         "result_path": "reports/relay/goal-gate-pass-2.result.json"
       },
       "check": {
-        "pass": ["gate-pass"]
+        "pass": ["gate-pass", "blocked"]
       }
     },
     {
