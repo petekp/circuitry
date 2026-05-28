@@ -17,6 +17,8 @@
     "test:fast": "vitest run --exclude 'tests/runner/cli-router.test.ts'",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "emit-yaml-schemas": "npm run build && node scripts/schemas/emit-yaml-schemas.ts",
+    "check-yaml-schemas": "npm run build && node scripts/schemas/emit-yaml-schemas.ts --check",
     "evals:list": "node scripts/evals/list.ts",
     "check-evals": "node scripts/evals/check.ts",
     "evals:fix:dry-run": "node evals/fix-vs-vanilla/run-fix-comparison.ts --set held-out --dry-run",
@@ -43,8 +45,8 @@
     "publish:plugins:check": "node scripts/plugins/publish.ts check",
     "publish:plugins:local": "node scripts/plugins/publish.ts local",
     "publish:plugins:release": "node scripts/plugins/publish.ts release --codex-source petekp/circuit --codex-marketplace circuit",
-    "verify": "npm run check && npm run lint && npm run build && npm run test && npm run check-evals && node scripts/flows/emit.ts --check && npm run check-plugin-runtime && npm run check-release-infra",
-    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && npm run check-evals && node scripts/flows/emit.ts --check && npm run check-plugin-runtime",
+    "verify": "npm run check && npm run lint && npm run build && npm run test && npm run check-evals && npm run check-yaml-schemas && node scripts/flows/emit.ts --check && npm run check-plugin-runtime && npm run check-release-infra",
+    "verify:fast": "npm run check && npm run lint && npm run build && npm run test:fast && npm run check-evals && npm run check-yaml-schemas && node scripts/flows/emit.ts --check && npm run check-plugin-runtime",
     "circuit:run": "./bin/circuit"
   },
   "dependencies": {

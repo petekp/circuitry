@@ -1,0 +1,20 @@
+{
+  "yaml.schemas": {
+    "./schemas/yaml/circuit-config.schema.json": [
+      "**/.circuit/config.yaml",
+      ".circuit/config.yaml"
+    ],
+    "./schemas/yaml/custom-flow-descriptor.schema.json": [
+      "**/drafts/*/circuit.yaml",
+      "**/skills/*/circuit.yaml",
+      "docs/release/proofs/runs/customization/custom-home/drafts/release-note-flow/circuit.yaml",
+      "docs/release/proofs/runs/customization/custom-home/skills/release-note-flow/circuit.yaml"
+    ],
+    "./schemas/yaml/release-original-capabilities.schema.json": [
+      "docs/release/parity/original-circuit.yaml"
+    ],
+    "./schemas/yaml/release-parity-exceptions.schema.json": ["docs/release/parity/exceptions.yaml"],
+    "./schemas/yaml/release-proof-index.schema.json": ["docs/release/proofs/index.yaml"],
+    "./schemas/yaml/release-public-claims.schema.json": ["docs/release/claims/public-claims.yaml"]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.circuit.dev/yaml/release-parity-exceptions.schema.json",
+  "title": "Circuit release parity exceptions",
+  "description": "Release ledger for tracked parity exceptions and approved release blockers.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capability_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "claim_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proof_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": ["release_blocker", "approved_exception"]
+          },
+          "readiness_ref": {
+            "type": "string",
+            "pattern": "^REL-[0-9]+$"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "public_wording": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["id", "status", "readiness_ref", "rationale"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "exceptions"],
+  "additionalProperties": false
+}

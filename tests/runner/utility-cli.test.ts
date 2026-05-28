@@ -299,6 +299,56 @@ describe('utility CLI commands', () => {
     ).toMatchObject({ source: 'draft' });
   });
 
+  it('rejects a reviewed draft with a mismatched circuit.yaml descriptor', async () => {
+    const home = tempRoot('circuit-create-invalid-descriptor-');
+    const draft = await captureMain([
+      'create',
+      '--name',
+      'release-note-flow',
+      '--description',
+      'Draft release notes from a change summary',
+      '--home',
+      home,
+      '--template-flow-root',
+      resolve('generated/flows'),
+    ]);
+
+    expect(draft.code, draft.stderr).toBe(0);
+    const drafted = JSON.parse(draft.stdout) as { draft_path: string };
+    writeFileSync(
+      join(drafted.draft_path, 'circuit.yaml'),
+      [
+        'schema_version: 1',
+        'id: other-flow',
+        'format: compiled-flow-package',
+        'compiled_flow: circuit.json',
+        'archetype: build',
+        'purpose: tampered descriptor',
+      ].join('\n'),
+    );
+
+    const publish = await captureMain([
+      'create',
+      '--name',
+      'release-note-flow',
+      '--description',
+      'Draft release notes from a change summary',
+      '--home',
+      home,
+      '--publish',
+      '--yes',
+      '--created-at',
+      '2026-04-29T23:00:00.000Z',
+    ]);
+
+    expect(publish.code).toBe(1);
+    expect(publish.stderr).toContain('custom flow descriptor validation failed');
+    expect(publish.stderr).toContain("descriptor id 'other-flow' does not match custom flow");
+    expect(existsSync(join(home, 'skills/release-note-flow'))).toBe(false);
+    expect(existsSync(join(home, 'flows/release-note-flow'))).toBe(false);
+    expect(existsSync(join(home, 'skills/release-note-flow/circuit.yaml'))).toBe(false);
+  });
+
   it('requires explicit confirmation before publishing a custom flow', async () => {
     const home = tempRoot('circuit-create-no-yes-');
     const result = await captureMain([

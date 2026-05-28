@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.circuit.dev/yaml/release-proof-index.schema.json",
+  "title": "Circuit release proof index",
+  "description": "Release proof scenario index for golden proof runs and public claim backing.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "scenarios": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "doing-work",
+              "deciding",
+              "continuity",
+              "customization",
+              "first-run",
+              "failure",
+              "plan-execution"
+            ]
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_flow": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_outcome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary_contract": {
+            "type": "string",
+            "minLength": 1
+          },
+          "redaction_policy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required_files": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "verified_current",
+              "missing",
+              "planned",
+              "release_blocker",
+              "approved_exception"
+            ]
+          },
+          "backing_paths": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "exception_ids": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "readiness_refs": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^REL-[0-9]+$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "command",
+          "expected_outcome",
+          "summary_contract",
+          "redaction_policy",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "scenarios"],
+  "additionalProperties": false
+}

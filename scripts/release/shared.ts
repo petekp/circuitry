@@ -15,9 +15,8 @@ export function readJson<T = any>(relPath: string): T {
   return JSON.parse(readText(relPath)) as T;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: caller can provide a schema-specific generic.
-export function readYaml<T = any>(relPath: string): T {
-  return YAML.parse(readText(relPath)) as T;
+function readYaml(relPath: string): unknown {
+  return YAML.parse(readText(relPath));
 }
 
 export function loadYamlWithSchema<T extends z.ZodTypeAny>(relPath: string, schema: T): z.infer<T> {

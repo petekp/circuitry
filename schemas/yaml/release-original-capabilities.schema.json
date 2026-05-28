@@ -1,0 +1,160 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.circuit.dev/yaml/release-original-capabilities.schema.json",
+  "title": "Circuit original capability snapshot",
+  "description": "Release snapshot of original Circuit capabilities used for parity checks.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "sources": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["id", "path", "note"],
+        "additionalProperties": false
+      }
+    },
+    "capabilities": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "flow",
+              "utility",
+              "mode",
+              "router_intent",
+              "route_outcome",
+              "connector",
+              "host",
+              "continuity",
+              "checkpoint",
+              "customization",
+              "proof",
+              "plan_execution",
+              "safety",
+              "docs"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "release_required": {
+            "default": true,
+            "type": "boolean"
+          },
+          "axes": {
+            "default": {
+              "intent_hints": [],
+              "modes": [],
+              "stage_path": [],
+              "outputs": []
+            },
+            "type": "object",
+            "properties": {
+              "invocation": {
+                "type": "string"
+              },
+              "intent_hints": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "modes": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "stage_path": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "outputs": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "checkpoint": {
+                "type": "string"
+              },
+              "review": {
+                "type": "string"
+              },
+              "verification": {
+                "type": "string"
+              },
+              "worker_handoff": {
+                "type": "string"
+              },
+              "continuity": {
+                "type": "string"
+              },
+              "host_surface": {
+                "type": "string"
+              },
+              "proof": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "source_refs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": ["id", "kind", "title", "summary", "source_refs"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "sources", "capabilities"],
+  "additionalProperties": false
+}

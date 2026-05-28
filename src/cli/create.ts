@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { Command, CommanderError } from 'commander';
+import { parse as parseYaml } from 'yaml';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
+import { CustomFlowPackageDescriptor } from '../schemas/custom-flow-descriptor.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { progressPresentation } from '../shared/progress-output.js';
 import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from './runtime-routing-policy.js';
@@ -236,6 +238,35 @@ function circuitYaml(slug: string, description: string): string {
   ].join('\n');
 }
 
+function validateCircuitYamlDescriptor(
+  text: string,
+  sourcePath: string,
+  expectedSlug: string,
+): void {
+  let raw: unknown;
+  try {
+    raw = parseYaml(text);
+  } catch (err) {
+    throw new Error(
+      `custom flow descriptor YAML parse failed at ${sourcePath}: ${(err as Error).message}`,
+    );
+  }
+
+  let descriptor: CustomFlowPackageDescriptor;
+  try {
+    descriptor = CustomFlowPackageDescriptor.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `custom flow descriptor validation failed at ${sourcePath}: ${(err as Error).message}`,
+    );
+  }
+  if ((descriptor.id as unknown as string) !== expectedSlug) {
+    throw new Error(
+      `custom flow descriptor validation failed at ${sourcePath}: descriptor id '${descriptor.id}' does not match custom flow '${expectedSlug}'`,
+    );
+  }
+}
+
 function commandMarkdown(slug: string, description: string, home: string): string {
   return [
     '---',
@@ -312,8 +343,10 @@ function writeDraft(input: {
   const root = draftRoot(input.home, input.slug);
   rmSync(root, { recursive: true, force: true });
   mkdirSync(root, { recursive: true });
+  const descriptor = circuitYaml(input.slug, input.description);
+  validateCircuitYamlDescriptor(descriptor, join(root, 'circuit.yaml'), input.slug);
   writeText(join(root, 'SKILL.md'), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join(root, 'circuit.yaml'), circuitYaml(input.slug, input.description));
+  writeText(join(root, 'circuit.yaml'), descriptor);
   writeJson(join(root, 'circuit.json'), input.flow);
   writeText(join(root, 'command.md'), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
@@ -341,12 +374,14 @@ function publishDraft(input: {
   if (!existsSync(join(draft, 'SKILL.md'))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
+  const descriptor = readFileSync(join(draft, 'circuit.yaml'), 'utf8');
+  validateCircuitYamlDescriptor(descriptor, join(draft, 'circuit.yaml'), input.slug);
   const skillRoot = publishedRoot(input.home, input.slug);
   const customFlowRoot = join(flowRoot(input.home), input.slug);
   mkdirSync(skillRoot, { recursive: true });
   mkdirSync(customFlowRoot, { recursive: true });
   writeText(join(skillRoot, 'SKILL.md'), readFileSync(join(draft, 'SKILL.md'), 'utf8'));
-  writeText(join(skillRoot, 'circuit.yaml'), readFileSync(join(draft, 'circuit.yaml'), 'utf8'));
+  writeText(join(skillRoot, 'circuit.yaml'), descriptor);
   writeText(
     join(customFlowRoot, 'circuit.json'),
     readFileSync(join(draft, 'circuit.json'), 'utf8'),

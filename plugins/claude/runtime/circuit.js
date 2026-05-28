@@ -45913,6 +45913,16 @@ function findRelayShapeHint(step) {
   return void 0;
 }
 
+// dist/schemas/custom-flow-descriptor.js
+var CustomFlowPackageDescriptor = external_exports.object({
+  schema_version: external_exports.literal(1),
+  id: CompiledFlowId,
+  format: external_exports.literal("compiled-flow-package"),
+  compiled_flow: external_exports.literal("circuit.json"),
+  archetype: external_exports.literal("build"),
+  purpose: external_exports.string().min(1)
+}).strict();
+
 // dist/schemas/snapshot.js
 var StepStatus = external_exports.enum(["pending", "in_progress", "check_failed", "complete", "aborted"]);
 var StepState = external_exports.object({
@@ -57432,6 +57442,7 @@ import { randomUUID as randomUUID5 } from "node:crypto";
 import { existsSync as existsSync19, mkdirSync as mkdirSync6, readFileSync as readFileSync34, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname10, join as join18, resolve as resolve12 } from "node:path";
+var import_yaml3 = __toESM(require_dist(), 1);
 
 // dist/cli/runtime-routing-policy.js
 import { readFileSync as readFileSync33 } from "node:fs";
@@ -57697,6 +57708,23 @@ function circuitYaml(slug, description) {
     `  ${description.replace(/\n/g, "\n  ")}`
   ].join("\n");
 }
+function validateCircuitYamlDescriptor(text, sourcePath, expectedSlug) {
+  let raw;
+  try {
+    raw = (0, import_yaml3.parse)(text);
+  } catch (err) {
+    throw new Error(`custom flow descriptor YAML parse failed at ${sourcePath}: ${err.message}`);
+  }
+  let descriptor;
+  try {
+    descriptor = CustomFlowPackageDescriptor.parse(raw);
+  } catch (err) {
+    throw new Error(`custom flow descriptor validation failed at ${sourcePath}: ${err.message}`);
+  }
+  if (descriptor.id !== expectedSlug) {
+    throw new Error(`custom flow descriptor validation failed at ${sourcePath}: descriptor id '${descriptor.id}' does not match custom flow '${expectedSlug}'`);
+  }
+}
 function commandMarkdown(slug, description, home) {
   return [
     "---",
@@ -57752,8 +57780,10 @@ function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
   mkdirSync6(root, { recursive: true });
+  const descriptor = circuitYaml(input.slug, input.description);
+  validateCircuitYamlDescriptor(descriptor, join18(root, "circuit.yaml"), input.slug);
   writeText(join18(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join18(root, "circuit.yaml"), circuitYaml(input.slug, input.description));
+  writeText(join18(root, "circuit.yaml"), descriptor);
   writeJson(join18(root, "circuit.json"), input.flow);
   writeText(join18(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
@@ -57774,12 +57804,14 @@ function publishDraft(input) {
   if (!existsSync19(join18(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
+  const descriptor = readFileSync34(join18(draft, "circuit.yaml"), "utf8");
+  validateCircuitYamlDescriptor(descriptor, join18(draft, "circuit.yaml"), input.slug);
   const skillRoot = publishedRoot(input.home, input.slug);
   const customFlowRoot = join18(flowRoot(input.home), input.slug);
   mkdirSync6(skillRoot, { recursive: true });
   mkdirSync6(customFlowRoot, { recursive: true });
   writeText(join18(skillRoot, "SKILL.md"), readFileSync34(join18(draft, "SKILL.md"), "utf8"));
-  writeText(join18(skillRoot, "circuit.yaml"), readFileSync34(join18(draft, "circuit.yaml"), "utf8"));
+  writeText(join18(skillRoot, "circuit.yaml"), descriptor);
   writeText(join18(customFlowRoot, "circuit.json"), readFileSync34(join18(draft, "circuit.json"), "utf8"));
   writeText(join18(commandRoot(input.home), `${input.slug}.md`), readFileSync34(join18(draft, "command.md"), "utf8"));
   publishManifest(input);
