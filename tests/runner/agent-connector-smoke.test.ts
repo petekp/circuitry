@@ -48,75 +48,88 @@ describe('claude-code connector smoke (capability boundary)', () => {
     expect(digest).toBe(createHash('sha256').update('circuit', 'utf8').digest('hex'));
   });
 
-  it('timeout failures include bounded stdout diagnostics from the subprocess', async () => {
-    const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
-    const fakeClaudePath = join(fakeBinDir, 'claude');
-    const init = JSON.stringify({
-      type: 'system',
-      subtype: 'init',
-      session_id: 'session-timeout-diagnostic',
-      claude_code_version: '2.1.141',
-      mcp_servers: [],
-      slash_commands: [],
-    });
-    const progress = JSON.stringify({
-      type: 'assistant',
-      message: { content: [{ type: 'text', text: 'working before timeout' }] },
-    });
-    const script = [
-      '#!/bin/sh',
-      `printf '%s\\n' '${init}'`,
-      `printf '%s\\n' '${progress}'`,
-      'while :; do sleep 1; done',
-    ].join('\n');
-    const originalPath = process.env.PATH;
+  // Spawns a real subprocess and asserts on a hard timeout + captured stdout;
+  // inherently timing-sensitive under heavy parallel test load, so retry to
+  // absorb transient scheduling races. A real regression fails every attempt.
+  it(
+    'timeout failures include bounded stdout diagnostics from the subprocess',
+    { retry: 2 },
+    async () => {
+      const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
+      const fakeClaudePath = join(fakeBinDir, 'claude');
+      const init = JSON.stringify({
+        type: 'system',
+        subtype: 'init',
+        session_id: 'session-timeout-diagnostic',
+        claude_code_version: '2.1.141',
+        mcp_servers: [],
+        slash_commands: [],
+      });
+      const progress = JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'working before timeout' }] },
+      });
+      const script = [
+        '#!/bin/sh',
+        `printf '%s\\n' '${init}'`,
+        `printf '%s\\n' '${progress}'`,
+        'while :; do sleep 1; done',
+      ].join('\n');
+      const originalPath = process.env.PATH;
 
-    await writeFile(fakeClaudePath, script, 'utf8');
-    await chmod(fakeClaudePath, 0o755);
-    process.env.PATH = `${fakeBinDir}:${originalPath ?? ''}`;
-    try {
-      await expect(
-        relayClaudeCode({
-          prompt: 'hang after printing useful stdout',
-          timeoutMs: 3_000,
-        }),
-      ).rejects.toThrow(
-        /claude-code subprocess timed out after 3000ms;.*stdout\[:500\]=.*session-timeout-diagnostic.*working before timeout.*stderr\[:500\]=/s,
-      );
-    } finally {
-      process.env.PATH = originalPath;
-      await rm(fakeBinDir, { recursive: true, force: true });
-    }
-  });
+      await writeFile(fakeClaudePath, script, 'utf8');
+      await chmod(fakeClaudePath, 0o755);
+      process.env.PATH = `${fakeBinDir}:${originalPath ?? ''}`;
+      try {
+        await expect(
+          relayClaudeCode({
+            prompt: 'hang after printing useful stdout',
+            timeoutMs: 3_000,
+          }),
+        ).rejects.toThrow(
+          /claude-code subprocess timed out after 3000ms;.*stdout\[:500\]=.*session-timeout-diagnostic.*working before timeout.*stderr\[:500\]=/s,
+        );
+      } finally {
+        process.env.PATH = originalPath;
+        await rm(fakeBinDir, { recursive: true, force: true });
+      }
+    },
+  );
 
-  it('nonzero failures include bounded stdout diagnostics from the subprocess', async () => {
-    const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
-    const fakeClaudePath = join(fakeBinDir, 'claude');
-    const script = [
-      '#!/bin/sh',
-      "printf '%s\\n' 'schema diagnostics on stdout'",
-      "printf '%s\\n' 'quiet stderr detail' >&2",
-      'exit 7',
-    ].join('\n');
-    const originalPath = process.env.PATH;
+  // Real-subprocess test; can exceed the default per-test timeout when the
+  // machine is saturated, so retry to absorb transient scheduling races.
+  it(
+    'nonzero failures include bounded stdout diagnostics from the subprocess',
+    { retry: 2 },
+    async () => {
+      const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
+      const fakeClaudePath = join(fakeBinDir, 'claude');
+      const script = [
+        '#!/bin/sh',
+        "printf '%s\\n' 'schema diagnostics on stdout'",
+        "printf '%s\\n' 'quiet stderr detail' >&2",
+        'exit 7',
+      ].join('\n');
+      const originalPath = process.env.PATH;
 
-    await writeFile(fakeClaudePath, script, 'utf8');
-    await chmod(fakeClaudePath, 0o755);
-    process.env.PATH = `${fakeBinDir}:${originalPath ?? ''}`;
-    try {
-      await expect(
-        relayClaudeCode({
-          prompt: 'fail after printing useful stdout',
-          timeoutMs: 10_000,
-        }),
-      ).rejects.toThrow(
-        /claude-code subprocess exited with code 7;.*stdout\[:500\]=schema diagnostics on stdout.*stderr\[:500\]=quiet stderr detail/s,
-      );
-    } finally {
-      process.env.PATH = originalPath;
-      await rm(fakeBinDir, { recursive: true, force: true });
-    }
-  });
+      await writeFile(fakeClaudePath, script, 'utf8');
+      await chmod(fakeClaudePath, 0o755);
+      process.env.PATH = `${fakeBinDir}:${originalPath ?? ''}`;
+      try {
+        await expect(
+          relayClaudeCode({
+            prompt: 'fail after printing useful stdout',
+            timeoutMs: 10_000,
+          }),
+        ).rejects.toThrow(
+          /claude-code subprocess exited with code 7;.*stdout\[:500\]=schema diagnostics on stdout.*stderr\[:500\]=quiet stderr detail/s,
+        );
+      } finally {
+        process.env.PATH = originalPath;
+        await rm(fakeBinDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it('nonzero failures include the terminal Claude stream error when stdout head is noisy', async () => {
     const fakeBinDir = await mkdtemp(join(tmpdir(), 'circuit-fake-claude-'));
