@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/run-envelope/shadow-record.js';
@@ -39,24 +39,16 @@ async function runMainJsonInProject(
   argv: readonly string[],
   configCwd: string,
 ): Promise<Record<string, unknown>> {
-  let stdout = '';
-  const originalStdout = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 4, 28, 5, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(tempDir, 'empty-home'),
       configCwd,
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = originalStdout;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 

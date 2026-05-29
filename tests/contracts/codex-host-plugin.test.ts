@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { main } from '../../src/cli/circuit.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayInput } from '../../src/shared/relay-runtime-types.js';
+import { captureStreams } from '../helpers/runtime-fixtures.js';
 
 const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/codex');
@@ -714,48 +715,44 @@ describe('Codex host plugin package', () => {
   it('Circuit CLI can load routed flows from the packaged Codex flow root outside this checkout', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-codex-cli-root-'));
     const runFolder = join(tempDir, 'run');
-    let captured = '';
-    const originalWrite = process.stdout.write;
     const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-      captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-      return true;
-    }) as typeof process.stdout.write;
     try {
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = resolve(PLUGIN_ROOT, 'flows');
-      const exit = await main(
-        [
-          'run',
-          '--goal',
-          'review this patch',
-          '--flow-root',
-          resolve(PLUGIN_ROOT, 'flows'),
-          '--run-folder',
-          runFolder,
-        ],
-        {
-          configCwd: tempDir,
-          configHomeDir: join(tempDir, 'home'),
-          runId: '85000000-0000-0000-0000-000000000001',
-          now: () => new Date(Date.UTC(2026, 3, 28, 12, 0, 0)),
-          relayer: {
-            connectorName: 'claude-code',
-            relay: async (_input: RelayInput): Promise<RelayResult> => ({
-              request_payload: 'stub-request',
-              receipt_id: 'stub-receipt',
-              result_body: JSON.stringify({
-                verdict: 'NO_ISSUES_FOUND',
-                findings: [],
-                assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
-                verification: ['Inspected the relayed intake report.'],
-                confidence_limitations: [],
+      const { result: exit, stdout: captured } = await captureStreams(async () => {
+        process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = resolve(PLUGIN_ROOT, 'flows');
+        return main(
+          [
+            'run',
+            '--goal',
+            'review this patch',
+            '--flow-root',
+            resolve(PLUGIN_ROOT, 'flows'),
+            '--run-folder',
+            runFolder,
+          ],
+          {
+            configCwd: tempDir,
+            configHomeDir: join(tempDir, 'home'),
+            runId: '85000000-0000-0000-0000-000000000001',
+            now: () => new Date(Date.UTC(2026, 3, 28, 12, 0, 0)),
+            relayer: {
+              connectorName: 'claude-code',
+              relay: async (_input: RelayInput): Promise<RelayResult> => ({
+                request_payload: 'stub-request',
+                receipt_id: 'stub-receipt',
+                result_body: JSON.stringify({
+                  verdict: 'NO_ISSUES_FOUND',
+                  findings: [],
+                  assessment: 'Stub reviewer: nothing actionable in the relayed evidence.',
+                  verification: ['Inspected the relayed intake report.'],
+                  confidence_limitations: [],
+                }),
+                duration_ms: 1,
+                cli_version: '0.0.0-stub',
               }),
-              duration_ms: 1,
-              cli_version: '0.0.0-stub',
-            }),
+            },
           },
-        },
-      );
+        );
+      });
 
       expect(exit).toBe(0);
       const output = JSON.parse(captured) as { flow_id: string; selected_flow: string };
@@ -763,7 +760,6 @@ describe('Codex host plugin package', () => {
       expect(output.selected_flow).toBe('review');
       expect(existsSync(join(runFolder, 'reports/review-result.json'))).toBe(true);
     } finally {
-      process.stdout.write = originalWrite;
       process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
       rmSync(tempDir, { recursive: true, force: true });
     }

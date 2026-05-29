@@ -12,7 +12,7 @@ import {
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import type { ComposeWriterFn, RelayFn } from '../../src/shared/relay-runtime-types.js';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -54,32 +54,17 @@ async function captureMain(
     readonly runId?: string;
   } = {},
 ): Promise<{ readonly code: number; readonly stdout: string; readonly stderr: string }> {
-  let stdout = '';
-  let stderr = '';
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await main(argv, {
+  const { result, stdout, stderr } = await captureStreams(() =>
+    main(argv, {
       ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
       ...(options.composeWriter === undefined ? {} : { composeWriter: options.composeWriter }),
       now: deterministicNow(Date.UTC(2026, 4, 3, 20, 0, 0)),
       runId: options.runId ?? '85000000-0000-4000-8000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+    }),
+  );
+  return { code: result, stdout, stderr };
 }
 
 function withRuntimeDiagnostics<T>(operation: () => Promise<T>): Promise<T> {

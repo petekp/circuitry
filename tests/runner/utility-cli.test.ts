@@ -14,7 +14,7 @@ import {
 } from '../../src/index.js';
 import { writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
-import { makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const BUILD_IMPLEMENTATION_BODY = JSON.stringify({
@@ -39,25 +39,8 @@ async function captureMain(
   argv: readonly string[],
   options: Parameters<typeof main>[1] = {},
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  let stdout = '';
-  let stderr = '';
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await main(argv, options);
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+  const { result, stdout, stderr } = await captureStreams(() => main(argv, options));
+  return { code: result, stdout, stderr };
 }
 
 function writeInvalidRunFolder(runFolder: string, runId: string): void {

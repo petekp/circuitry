@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { CompiledFlowId, SkillId } from '../../src/schemas/ids.js';
@@ -45,21 +45,6 @@ function writeSkill(id: string): void {
   writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`);
 }
 
-function captureStdout(): { restore: () => void; text: () => string } {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  return {
-    restore: () => {
-      process.stdout.write = origWrite;
-    },
-    text: () => captured,
-  };
-}
-
 async function runReviewWithCapturedOutput(input: {
   readonly relayer: RelayFn;
   readonly runFolder: string;
@@ -67,34 +52,34 @@ async function runReviewWithCapturedOutput(input: {
   readonly goal: string;
   readonly nowMs: number;
 }): Promise<Record<string, unknown>> {
-  const stdout = captureStdout();
-  const originalHome = process.env.HOME;
-  const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-  process.env.HOME = homeDir;
-  process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-  try {
-    const exit = await main(
-      ['run', 'review', '--goal', input.goal, '--run-folder', input.runFolder],
-      {
-        relayer: input.relayer,
-        now: deterministicNow(input.nowMs),
-        runId: input.runId,
-        configHomeDir: homeDir,
-        configCwd: cwdDir,
-      },
-    );
-    expect(exit).toBe(0);
-  } finally {
-    stdout.restore();
-    if (originalHome === undefined) {
-      Reflect.deleteProperty(process.env, 'HOME');
-    } else {
-      process.env.HOME = originalHome;
+  const { stdout } = await captureStreams(async () => {
+    const originalHome = process.env.HOME;
+    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+    process.env.HOME = homeDir;
+    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+    try {
+      const exit = await main(
+        ['run', 'review', '--goal', input.goal, '--run-folder', input.runFolder],
+        {
+          relayer: input.relayer,
+          now: deterministicNow(input.nowMs),
+          runId: input.runId,
+          configHomeDir: homeDir,
+          configCwd: cwdDir,
+        },
+      );
+      expect(exit).toBe(0);
+    } finally {
+      if (originalHome === undefined) {
+        Reflect.deleteProperty(process.env, 'HOME');
+      } else {
+        process.env.HOME = originalHome;
+      }
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
     }
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-  }
+  });
 
-  return JSON.parse(stdout.text()) as Record<string, unknown>;
+  return JSON.parse(stdout) as Record<string, unknown>;
 }
 
 beforeEach(() => {
@@ -248,54 +233,54 @@ circuits:
       { receipt_id: 'config-loader-receipt' },
     );
     const runFolder = join(root, 'run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalStrictRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalShowRuntimeDecision = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalCandidateRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalDisableRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
     for (const skill of ['tdd', 'api-design-patterns', 'react-doctor']) {
       writeSkill(skill);
     }
-    try {
-      const exit = await main(
-        [
-          'run',
-          'review',
-          '--goal',
-          'prove config reaches selection evidence',
-          '--run-folder',
-          runFolder,
-        ],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
-          runId: '86868686-8686-4686-8686-868686868686',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
+    const { stdout } = await captureStreams(async () => {
+      const originalHome = process.env.HOME;
+      const originalStrictRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
+      const originalShowRuntimeDecision = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
+      const originalCandidateRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
+      const originalDisableRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
+      const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+      process.env.HOME = homeDir;
+      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
+      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
+      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
+      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+      try {
+        const exit = await main(
+          [
+            'run',
+            'review',
+            '--goal',
+            'prove config reaches selection evidence',
+            '--run-folder',
+            runFolder,
+          ],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
+            runId: '86868686-8686-4686-8686-868686868686',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      } finally {
+        if (originalHome === undefined) {
+          Reflect.deleteProperty(process.env, 'HOME');
+        } else {
+          process.env.HOME = originalHome;
+        }
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalStrictRuntime;
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalShowRuntimeDecision;
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalCandidateRuntime;
+        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalDisableRuntime;
+        process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
       }
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalStrictRuntime;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalShowRuntimeDecision;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalCandidateRuntime;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalDisableRuntime;
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    });
 
     const expected: ResolvedSelection = {
       model: { provider: 'anthropic', model: 'claude-opus-4-7-project' },
@@ -333,7 +318,7 @@ circuits:
     const started = trace_entries.find((trace_entry) => trace_entry.kind === 'relay.started');
     expect(started?.resolved_selection).toEqual(expected);
 
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.flow_id).toBe('review');
     expect(output.outcome).toBe('complete');
   });
@@ -364,32 +349,39 @@ policy:
       { receipt_id: 'policy-v2-receipt' },
     );
     const runFolder = join(root, 'policy-v2-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'prove policy refs reach guidance', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 45, 0)),
-          runId: '86868686-8686-4686-8686-868686868688',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
+    const { stdout } = await captureStreams(async () => {
+      const originalHome = process.env.HOME;
+      const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+      process.env.HOME = homeDir;
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+      try {
+        const exit = await main(
+          [
+            'run',
+            'review',
+            '--goal',
+            'prove policy refs reach guidance',
+            '--run-folder',
+            runFolder,
+          ],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 45, 0)),
+            runId: '86868686-8686-4686-8686-868686868688',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      } finally {
+        if (originalHome === undefined) {
+          Reflect.deleteProperty(process.env, 'HOME');
+        } else {
+          process.env.HOME = originalHome;
+        }
+        process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
       }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    });
 
     expect(relayInputs[0]?.resolvedSelection?.effort).toBe('low');
     const trace_entries = readFileSync(join(runFolder, 'trace.ndjson'), 'utf8')
@@ -408,7 +400,7 @@ policy:
         expect.objectContaining({ kind: 'policy', ref: projectConfigPath(cwdDir) }),
       ]),
     );
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('complete');
   });
 
@@ -430,35 +422,35 @@ policy:
       { receipt_id: 'should-not-relay' },
     );
     const runFolder = join(root, 'policy-v2-connector-rejected-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'policy should block connector', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 46, 0)),
-          runId: '86868686-8686-4686-8686-868686868689',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
+    const { stdout } = await captureStreams(async () => {
+      const originalHome = process.env.HOME;
+      const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+      process.env.HOME = homeDir;
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+      try {
+        const exit = await main(
+          ['run', 'review', '--goal', 'policy should block connector', '--run-folder', runFolder],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 46, 0)),
+            runId: '86868686-8686-4686-8686-868686868689',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      } finally {
+        if (originalHome === undefined) {
+          Reflect.deleteProperty(process.env, 'HOME');
+        } else {
+          process.env.HOME = originalHome;
+        }
+        process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
       }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    });
 
     expect(relayCalls).toBe(0);
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('aborted');
     const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
       string,
@@ -507,35 +499,35 @@ policy:
       { connectorName: 'codex', receipt_id: 'should-not-relay' },
     );
     const runFolder = join(root, 'policy-v2-provider-rejected-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'policy should block provider', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 47, 0)),
-          runId: '86868686-8686-4686-8686-868686868690',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
+    const { stdout } = await captureStreams(async () => {
+      const originalHome = process.env.HOME;
+      const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
+      process.env.HOME = homeDir;
+      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
+      try {
+        const exit = await main(
+          ['run', 'review', '--goal', 'policy should block provider', '--run-folder', runFolder],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 47, 0)),
+            runId: '86868686-8686-4686-8686-868686868690',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      } finally {
+        if (originalHome === undefined) {
+          Reflect.deleteProperty(process.env, 'HOME');
+        } else {
+          process.env.HOME = originalHome;
+        }
+        process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
       }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    });
 
     expect(relayCalls).toBe(0);
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('aborted');
     const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
       string,

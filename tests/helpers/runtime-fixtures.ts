@@ -66,6 +66,55 @@ export function stubRelayResult(overrides: Partial<RelayResult> = {}): RelayResu
 }
 
 /**
+ * Run `fn` with `process.stdout.write` and `process.stderr.write` patched to
+ * accumulate everything written to them, restoring both originals in a `finally`
+ * even if `fn` throws. Returns `fn`'s own return value as `result` (this is how
+ * CLI-driving tests recover the exit code the invoked operation returns) plus the
+ * captured `stdout`/`stderr` strings.
+ *
+ * A leaked patch would silently corrupt every later test in the worker, so the
+ * restore is unconditional and restores the exact originals captured on entry.
+ * The `write` casts match how the codebase patches the (overloaded) write
+ * signature: accept a `string | Uint8Array` chunk, decode to UTF-8, return `true`.
+ */
+export async function captureStreams<T>(
+  fn: () => Promise<T>,
+): Promise<{ result: T; stdout: string; stderr: string }> {
+  const originalStdout = process.stdout.write;
+  const originalStderr = process.stderr.write;
+  let stdout = '';
+  let stderr = '';
+  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stdout.write;
+  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
+    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stderr.write;
+  try {
+    const result = await fn();
+    return { result, stdout, stderr };
+  } finally {
+    process.stdout.write = originalStdout;
+    process.stderr.write = originalStderr;
+  }
+}
+
+/**
+ * Thin wrapper over `captureStreams` for the common case of a CLI that prints a
+ * single JSON document to stdout: captures both streams, then `JSON.parse`s the
+ * captured stdout into `json` (typed `T`). `result` is `fn`'s return value (the
+ * exit code), and the raw `stdout`/`stderr` are passed through for assertions.
+ */
+export async function captureJson<T = unknown>(
+  fn: () => Promise<number>,
+): Promise<{ result: number; json: T; stdout: string; stderr: string }> {
+  const { result, stdout, stderr } = await captureStreams(fn);
+  return { result, json: JSON.parse(stdout) as T, stdout, stderr };
+}
+
+/**
  * Build a `RelayFn` whose `relay` yields `stubRelayResult` with `request_payload`
  * bound to the live `input.prompt` and `result_body` taken from `body` — either a
  * constant string or a function of the relay input (for prompt-dependent stubs).

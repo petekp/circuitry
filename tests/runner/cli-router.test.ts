@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { ReviewIntake } from '../../src/flows/review/reports.js';
@@ -218,24 +218,16 @@ async function runMainJson(
   relayBody: string,
   options: { readonly configCwd?: string } = {},
 ): Promise<Record<string, unknown>> {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout: captured } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody(relayBody),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const parsed: unknown = JSON.parse(captured);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -249,24 +241,16 @@ async function runMainJsonWithRelayer(
   relayer: RelayFn,
   options: { readonly configCwd?: string } = {},
 ): Promise<Record<string, unknown>> {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout: captured } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
   return JSON.parse(captured) as Record<string, unknown>;
 }
 
@@ -275,31 +259,20 @@ async function runMainJsonWithRelayerAndProgress(
   relayer: RelayFn,
   options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
-  let stdout = '';
-  let stderr = '';
-  const origStdoutWrite = process.stdout.write;
-  const origStderrWrite = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const {
+    result: exit,
+    stdout,
+    stderr,
+  } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const output = JSON.parse(stdout) as Record<string, unknown>;
   const progress = stderr
@@ -315,31 +288,20 @@ async function runMainJsonWithProgress(
   relayBody: string,
   options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
-  let stdout = '';
-  let stderr = '';
-  const origStdoutWrite = process.stdout.write;
-  const origStderrWrite = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const {
+    result: exit,
+    stdout,
+    stderr,
+  } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody(relayBody),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const output = JSON.parse(stdout) as Record<string, unknown>;
   const progress = stderr
@@ -351,24 +313,16 @@ async function runMainJsonWithProgress(
 }
 
 async function runMainExit(argv: readonly string[]): Promise<{ exit: number; stderr: string }> {
-  let stderr = '';
-  const origWrite = process.stderr.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stderr } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody('{"verdict":"accept"}'),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000099',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: process.cwd(),
-    });
-    return { exit, stderr };
-  } finally {
-    process.stderr.write = origWrite;
-  }
+    }),
+  );
+  return { exit, stderr };
 }
 
 async function withStrictruntime<T>(operation: () => Promise<T>): Promise<T> {

@@ -3,7 +3,12 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import {
+  captureJson,
+  captureStreams,
+  deterministicNow,
+  makeStubRelayer,
+} from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
@@ -149,18 +154,8 @@ async function captureStdout(fn: () => Promise<number>): Promise<{
   readonly code: number;
   readonly output: Record<string, unknown>;
 }> {
-  const originalWrite = process.stdout.write;
-  let stdout = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const code = await fn();
-    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
-  } finally {
-    process.stdout.write = originalWrite;
-  }
+  const { result, json } = await captureJson<Record<string, unknown>>(fn);
+  return { code: result, output: json };
 }
 
 async function captureOutput(fn: () => Promise<number>): Promise<{
@@ -168,25 +163,8 @@ async function captureOutput(fn: () => Promise<number>): Promise<{
   readonly stdout: string;
   readonly stderr: string;
 }> {
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  let stdout = '';
-  let stderr = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await fn();
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+  const { result, stdout, stderr } = await captureStreams(fn);
+  return { code: result, stdout, stderr };
 }
 
 function checkpointCompiledFlow(options: {

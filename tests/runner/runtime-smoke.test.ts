@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
@@ -268,21 +268,12 @@ describe('runtime-proof runner smoke', () => {
       // The env-check IS the subprocess-boundary contract.
       const runFolder = join(runFolderBase, 'cli-run');
       const { main } = await import('../../src/cli/circuit.js');
-      let captured = '';
-      const origWrite = process.stdout.write;
-      process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-        captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-        return true;
-      }) as typeof process.stdout.write;
-      let exit = -1;
-      try {
-        exit = await main(['runtime-proof', '--goal', 'smoke via CLI', '--run-folder', runFolder], {
+      const { result: exit, stdout: captured } = await captureStreams(() =>
+        main(['runtime-proof', '--goal', 'smoke via CLI', '--run-folder', runFolder], {
           configHomeDir: join(runFolderBase, 'empty-home'),
           configCwd: join(runFolderBase, 'empty-cwd'),
-        });
-      } finally {
-        process.stdout.write = origWrite;
-      }
+        }),
+      );
       expect(exit).toBe(0);
       const parsed: unknown = JSON.parse(captured);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {

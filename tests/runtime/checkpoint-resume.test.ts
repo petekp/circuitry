@@ -22,7 +22,7 @@ import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
-import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { captureJson, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -398,24 +398,6 @@ async function createWaitingFixture(input: {
   expect(isGraphCheckpointWaitingResult(result)).toBe(true);
   if (!isGraphCheckpointWaitingResult(result)) throw new Error('expected waiting checkpoint');
   return result;
-}
-
-async function captureStdout(fn: () => Promise<number>): Promise<{
-  readonly code: number;
-  readonly output: Record<string, unknown>;
-}> {
-  const originalWrite = process.stdout.write;
-  let stdout = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const code = await fn();
-    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
-  } finally {
-    process.stdout.write = originalWrite;
-  }
 }
 
 describe('runtime checkpoint pause/resume fixture', () => {
@@ -1088,7 +1070,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
     const oldDisable = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
     process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
     try {
-      const { code, output } = await captureStdout(() =>
+      const { result: code, json: output } = await captureJson<Record<string, unknown>>(() =>
         main(['resume', '--run-folder', runDir, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 0, 4)),
           relayer: fixtureRelayer(),
