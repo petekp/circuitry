@@ -46,6 +46,11 @@ describe('runtime connector safety', () => {
       id: 'relay-step',
       kind: 'relay',
       role: 'implementer',
+      check: {
+        kind: 'result_verdict',
+        source: { kind: 'relay_result', ref: 'result' },
+        pass: ['accept'],
+      },
       routes: { pass: { kind: 'terminal', target: '@complete' } },
       writes: { report: { path: 'reports/relay-report.json' } },
       ...overrides,
@@ -95,6 +100,11 @@ describe('runtime connector safety', () => {
       id: 'relay-step',
       kind: 'relay',
       role: input.role,
+      check: {
+        kind: 'result_verdict',
+        source: { kind: 'relay_result', ref: 'result' },
+        pass: ['accept'],
+      },
       routes: { pass: { kind: 'terminal', target: '@complete' } },
       writes: {
         request: { path: 'request.txt' },

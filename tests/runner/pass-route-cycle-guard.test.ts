@@ -22,6 +22,11 @@ function flowWithPassCycle(): ExecutableFlow {
         id: 'compose-step',
         kind: 'compose',
         writer: 'cycle-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         writes: { report: { path: 'reports/compose.json' } },
         routes: { pass: { kind: 'step', stepId: 'compose-step' } },
       },
@@ -41,18 +46,33 @@ function flowWithRecoveryCorridor(): ExecutableFlow {
         id: 'act-step',
         kind: 'compose',
         writer: 'act-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: { pass: { kind: 'step', stepId: 'verify-step' } },
       },
       {
         id: 'verify-step',
         kind: 'compose',
         writer: 'verify-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: { pass: { kind: 'step', stepId: 'change-set-step' } },
       },
       {
         id: 'change-set-step',
         kind: 'compose',
         writer: 'change-set-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: {
           pass: { kind: 'terminal', target: '@complete' },
           retry: { kind: 'step', stepId: 'act-step' },

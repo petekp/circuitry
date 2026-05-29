@@ -113,6 +113,11 @@ describe('handler-throw recovery — fix #4', () => {
       id: 'compose-step',
       kind: 'compose',
       writer: 'throwing-writer',
+      check: {
+        kind: 'schema_sections',
+        source: { kind: 'report', ref: 'report' },
+        required: ['summary'],
+      },
       writes: { report: { path: 'reports/compose.json' } },
       routes: { pass: { kind: 'terminal', target: '@complete' } },
     });

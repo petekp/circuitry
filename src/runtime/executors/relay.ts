@@ -105,8 +105,7 @@ export async function relayWithResolvedConnector(
 }
 
 function timeoutMs(step: RelayStep): number | undefined {
-  const wallClock = (step.budgets as { readonly wall_clock_ms?: unknown } | undefined)
-    ?.wall_clock_ms;
+  const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === 'number' ? wallClock : undefined;
 }
 

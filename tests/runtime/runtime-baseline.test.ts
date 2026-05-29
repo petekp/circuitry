@@ -16,6 +16,7 @@ import {
   writeRuntimeManifestSnapshot,
 } from '../../src/runtime/run/manifest-snapshot.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import type { ResultVerdictCheck, SchemaSectionsCheck } from '../../src/schemas/check.js';
 import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
 import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
@@ -28,6 +29,20 @@ const change_kind = {
   failure_mode: 'runtime baseline fixture failed',
   acceptance_evidence: 'runtime baseline assertions pass',
   alternate_framing: 'use a narrower executable flow fixture',
+};
+
+// Default per-kind checks for hand-built executable-step fixtures. The
+// ExecutableStep type now carries the same strict check shapes the compiled
+// flow does, so fixtures must declare a valid check per kind.
+const SCHEMA_SECTIONS_CHECK: SchemaSectionsCheck = {
+  kind: 'schema_sections',
+  source: { kind: 'report', ref: 'report' },
+  required: ['summary'],
+};
+const RESULT_VERDICT_CHECK: ResultVerdictCheck = {
+  kind: 'result_verdict',
+  source: { kind: 'relay_result', ref: 'result' },
+  pass: ['accept'],
 };
 
 function bootstrapTraceInput(runId: string) {
@@ -53,6 +68,7 @@ function validFlow(): ExecutableFlow {
         id: 'compose',
         kind: 'compose',
         writer: 'baseline-writer',
+        check: SCHEMA_SECTIONS_CHECK,
         body: { ok: true },
         writes: { result: { path: 'reports/compose.json' } },
         routes: { pass: { kind: 'step', stepId: 'relay' } },
@@ -62,6 +78,7 @@ function validFlow(): ExecutableFlow {
         kind: 'relay',
         role: 'reviewer',
         prompt: 'inspect the composed file',
+        check: RESULT_VERDICT_CHECK,
         writes: { report: { path: 'reports/relay.json' } },
         routes: { pass: { kind: 'terminal', target: '@complete' } },
       },
@@ -198,6 +215,7 @@ describe('runtime baseline', () => {
             id: 'compose',
             kind: 'compose',
             writer: 'guard-writer',
+            check: SCHEMA_SECTIONS_CHECK,
             routes: { pass: { kind: 'terminal', target: '@complete' } },
           },
         ],
@@ -272,6 +290,7 @@ describe('runtime baseline', () => {
           id: 'compose',
           kind: 'compose',
           writer: 'baseline-writer',
+          check: SCHEMA_SECTIONS_CHECK,
           routes: { pass: { kind: 'step', stepId: 'missing' } },
         },
       ],
@@ -416,6 +435,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'will-fail',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'terminal', target: '@complete' } },
             },
           ],
@@ -466,6 +486,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'wrong-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'terminal', target: '@complete' } },
             },
           ],
@@ -505,6 +526,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'step', stepId: 'compose' } },
             },
           ],
@@ -563,12 +585,14 @@ describe('runtime baseline', () => {
               id: 'first',
               kind: 'compose',
               writer: 'first',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'step', stepId: 'second' } },
             },
             {
               id: 'second',
               kind: 'compose',
               writer: 'second',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 continue: { kind: 'step', stepId: 'first' },
@@ -625,6 +649,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 continue: { kind: 'step', stepId: 'compose' },
@@ -685,6 +710,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'step', stepId: 'compose' },
@@ -734,6 +760,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'step', stepId: 'compose' },
@@ -799,6 +826,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'failure-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -866,6 +894,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'bare-recovery-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -923,6 +952,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'report-reason-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -988,6 +1018,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'failure-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },

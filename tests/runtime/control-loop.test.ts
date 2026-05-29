@@ -32,6 +32,11 @@ function terminalFlow(target: TerminalTarget): ExecutableFlow {
         id: 'close',
         kind: 'compose',
         writer: 'terminal-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         body: { target },
         writes: { report: { path: 'reports/terminal.json' } },
         routes: { pass: { kind: 'terminal', target } },
@@ -646,6 +651,11 @@ describe('runtime control-loop parity twins', () => {
           id: 'close-step',
           kind: 'compose',
           writer: 'test-close',
+          check: {
+            kind: 'schema_sections',
+            source: { kind: 'report', ref: 'report' },
+            required: ['summary'],
+          },
           body: {},
           writes: { report: { path: 'reports/close.json' } },
           routes: { pass: { kind: 'terminal', target: '@complete' } },

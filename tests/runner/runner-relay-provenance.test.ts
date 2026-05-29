@@ -82,6 +82,11 @@ function relayGuidanceExecution(input: {
     id: step.id,
     kind: 'relay',
     role: step.role,
+    check: {
+      kind: 'result_verdict',
+      source: { kind: 'relay_result', ref: 'result' },
+      pass: ['accept'],
+    },
     routes: { pass: { kind: 'terminal', target: '@complete' } },
     ...(selection === undefined ? {} : { selection }),
     ...(step.connector === undefined ? {} : { connector: step.connector }),

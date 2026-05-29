@@ -56,6 +56,11 @@ const StepBase = z.object({
     .optional(),
 });
 
+// Type-only projection of the step budgets shape. Derived from StepBase so the
+// schema stays the single source of truth; declaring this as a type (not a new
+// runtime schema var) keeps the compiled bundle byte-identical.
+export type StepBudgets = NonNullable<z.infer<typeof StepBase>['budgets']>;
+
 // `.strict()` rejects surplus keys (no `role` on compose/checkpoint, no
 // stray fields on writes); this backs STEP-I6.
 export const ComposeStep = StepBase.extend({

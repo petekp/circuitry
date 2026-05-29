@@ -26,9 +26,8 @@ import {
   type ResolvedSubRunBranch,
 } from './types.js';
 
-function admitList(step: FanoutStep): readonly string[] {
-  const admit = (step.check as { readonly verdicts?: { readonly admit?: unknown } }).verdicts
-    ?.admit;
+function admitList(step: FanoutStep): string[] {
+  const admit = step.check.verdicts?.admit;
   return Array.isArray(admit)
     ? admit.filter((entry): entry is string => typeof entry === 'string')
     : [];

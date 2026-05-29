@@ -38,24 +38,7 @@ export async function expandFanoutBranches(
   files: RunFileStore,
   context?: Pick<RunContext, 'axes'>,
 ): Promise<readonly ResolvedBranch[]> {
-  const branches = step.branches as
-    | {
-        readonly kind: 'static';
-        readonly branches: readonly unknown[];
-      }
-    | {
-        readonly kind: 'dynamic';
-        readonly source_report: string;
-        readonly items_path: string;
-        readonly template: unknown;
-        readonly max_branches:
-          | number
-          | { readonly kind: 'constant'; readonly value: number }
-          | { readonly kind: 'axis'; readonly axis: 'tournament_n' };
-        readonly required_count?:
-          | { readonly kind: 'constant'; readonly value: number }
-          | { readonly kind: 'axis'; readonly axis: 'tournament_n' };
-      };
+  const branches = step.branches;
 
   if (branches.kind === 'static') {
     return branches.branches.map((branch) => resolveBranch(FanoutBranchSchema.parse(branch)));

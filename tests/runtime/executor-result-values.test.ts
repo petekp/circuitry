@@ -18,6 +18,7 @@ import { RunFileStore } from '../../src/runtime/run-files/run-file-store.js';
 import { nodeExternalFileReader } from '../../src/runtime/run/external-files.js';
 import type { RunContext } from '../../src/runtime/run/run-context.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import type { CheckpointPolicy } from '../../src/schemas/step.js';
 
 function contextFor(
   flow: ExecutableFlow,
@@ -64,14 +65,18 @@ function verificationFlow(): ExecutableFlow {
         writes: {
           report: { path: 'reports/verification.json', schema: 'fixture.verification@v1' },
         },
-        check: { kind: 'schema_sections' },
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
       },
     ],
   };
 }
 
 function checkpointFlow(
-  policy: Record<string, unknown>,
+  policy: CheckpointPolicy,
   depth: string,
 ): {
   readonly flow: ExecutableFlow;

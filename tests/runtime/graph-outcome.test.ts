@@ -24,6 +24,11 @@ function singleStepFlow(): ExecutableFlow {
         id: 'compose-step',
         kind: 'compose',
         writer: 'typed-outcome-fixture',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: {
           pass: { kind: 'terminal', target: '@complete' },
         },

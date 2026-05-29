@@ -13,8 +13,11 @@ import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { CustomConnectorDescriptor } from '../../src/schemas/connector.js';
+import { CompiledFlowId } from '../../src/schemas/ids.js';
 import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 import { RunResult } from '../../src/schemas/result.js';
+import { RunRelativePath } from '../../src/schemas/scalars.js';
+import type { RelayRole } from '../../src/schemas/step.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 let baseDir: string;
@@ -80,6 +83,11 @@ function dynamicRelayFanoutFlow(
         routes: { pass: { kind: 'step', stepId: 'fanout' } },
         writes: { report: { path: 'reports/options.json', schema: 'options@v1' } },
         writer: 'options',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['options'],
+        },
       },
       {
         id: 'fanout',
@@ -93,15 +101,15 @@ function dynamicRelayFanoutFlow(
         },
         branches: {
           kind: 'dynamic',
-          source_report: 'reports/options.json',
+          source_report: RunRelativePath.parse('reports/options.json'),
           items_path: 'options',
           template: {
             branch_id: '$item.id',
-            ...(options.connector === undefined ? {} : { connector: options.connector }),
+            ...(options.connector === undefined ? {} : { connector: options.connector as string }),
             ...(options.selection === undefined ? {} : { selection: options.selection }),
             execution: {
               kind: 'relay',
-              role: options.role ?? 'researcher',
+              role: (options.role ?? 'researcher') as RelayRole,
               goal: '$item.prompt',
               report_schema: 'explore.tournament-proposal@v1',
               provenance_field: 'option_id',
@@ -111,7 +119,10 @@ function dynamicRelayFanoutFlow(
         },
         concurrency: { kind: 'bounded', max: 2 },
         onChildFailure: options.onChildFailure ?? 'abort-all',
-        join: { aggregate: { path: 'reports/aggregate.json' } },
+        join: {
+          aggregate: { path: 'reports/aggregate.json' },
+          on_child_failure: options.onChildFailure ?? 'abort-all',
+        },
         check: {
           kind: 'fanout_aggregate',
           source: { kind: 'fanout_results', ref: 'aggregate' },
@@ -267,13 +278,13 @@ function subRunFanoutFlow(
           branches: [
             {
               branch_id: 'one',
-              flow_ref: { flow_id: 'child-test', entry_mode: 'default' },
+              flow_ref: { flow_id: CompiledFlowId.parse('child-test'), entry_mode: 'default' },
               goal: 'child one',
               depth: 'standard',
             },
             {
               branch_id: 'two',
-              flow_ref: { flow_id: 'child-test', entry_mode: 'default' },
+              flow_ref: { flow_id: CompiledFlowId.parse('child-test'), entry_mode: 'default' },
               goal: 'child two',
               depth: 'standard',
             },
@@ -281,12 +292,15 @@ function subRunFanoutFlow(
         },
         concurrency: { kind: 'bounded', max: options.concurrencyMax ?? 2 },
         onChildFailure: options.onChildFailure ?? 'continue-others',
-        join: { aggregate: { path: 'reports/aggregate.json' } },
+        join: {
+          aggregate: { path: 'reports/aggregate.json' },
+          on_child_failure: options.onChildFailure ?? 'continue-others',
+        },
         check: {
           kind: 'fanout_aggregate',
           source: { kind: 'fanout_results', ref: 'aggregate' },
           join: { policy: options.joinPolicy ?? 'disjoint-merge' },
-          verdicts: { admit: options.admit ?? ['accept'] },
+          verdicts: { admit: [...(options.admit ?? ['accept'])] },
         },
       },
     ],

@@ -799,8 +799,7 @@ async function writeRelayFiles(step: ExecutableStep, context: RunContext): Promi
 
 function checkpointChoice(step: ExecutableStep): string {
   if (step.kind !== 'checkpoint') throw new Error('expected checkpoint step');
-  const policy = step.policy as { readonly safe_default_choice?: unknown } | undefined;
-  const candidates = [policy?.safe_default_choice, ...step.choices, 'pass'];
+  const candidates = [step.policy.safe_default_choice, ...step.choices, 'pass'];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && step.routes[candidate] !== undefined) return candidate;
   }
@@ -858,7 +857,7 @@ export function createSimpleParityExecutors(
       if (step.writes?.request !== undefined) {
         await context.files.writeJson(step.writes.request, {
           step_id: step.id,
-          prompt: (step.policy as { readonly prompt?: unknown } | undefined)?.prompt,
+          prompt: step.policy.prompt,
           choices: step.choices,
         });
       }

@@ -110,13 +110,13 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
     if (step.kind === 'fanout' && typeof step.join === 'object' && step.join !== null) {
-      const aggregate = (step.join as { readonly aggregate?: unknown }).aggregate;
+      const aggregate = step.join.aggregate;
       if (
         typeof aggregate === 'object' &&
         aggregate !== null &&
-        typeof (aggregate as { readonly path?: unknown }).path === 'string'
+        typeof aggregate.path === 'string'
       ) {
-        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate as RunFileRef);
+        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate);
       }
     }
 
@@ -124,7 +124,7 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
       const hasDynamicChoices =
         typeof step.policy === 'object' &&
         step.policy !== null &&
-        (step.policy as { readonly choices_from?: unknown }).choices_from !== undefined;
+        step.policy.choices_from !== undefined;
       if (step.choices.length === 0 && !hasDynamicChoices) {
         issues.push(`checkpoint step '${step.id}' must declare at least one choice`);
       }

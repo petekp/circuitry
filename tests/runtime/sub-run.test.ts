@@ -49,7 +49,7 @@ function parentFlow(
         check: {
           kind: 'result_verdict',
           source: { kind: 'sub_run_result', ref: 'result' },
-          pass,
+          pass: [...pass],
         },
       },
     ],
