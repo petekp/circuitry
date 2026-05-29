@@ -13,6 +13,14 @@ This is not an implementation spec. It is a first-cut design grounded in
 the evidence Circuit actually captures today. Every code and evidence
 claim below was checked against the repo at capture time.
 
+Updated 2026-05-29: an independent verification pass found that the
+verdict-missing abort used in the worked examples does not actually recur
+in the corpus. It appears in one run (`81b8e94c`), and there is only one
+goal run on record, so a second independent occurrence is impossible. The
+examples in Sections 3 and 7 have been reframed as illustrations of the
+target shape rather than observed recurrences. The mechanism is unchanged;
+the claim of an existing two-run cluster was wrong.
+
 ## One-liner
 
 A small, durable, project-scoped store of cited execution facts (verify
@@ -108,10 +116,14 @@ rebuilds population on signals that actually exist:
    This is the genuine surprise primitive, and it exists. Real
    `step.aborted` entries carry a human-readable `reason` such as
    `"sub-run step 'goal-run-build': child result body lacks a non-empty
-   string 'verdict' field"` (seen in two runs) or `"Writable relay fanout
-   branches are serialized because relay branches share the parent
-   checkout..."` (seen in five). Clustered per `(flow_id, reason)`,
-   repeated aborts are a real, citable recurring-failure fact.
+   string 'verdict' field"` (one goal run in the corpus) or `"Writable
+   relay fanout branches are serialized because relay branches share the
+   parent checkout..."` (five runs). Clustered per `(flow_id, reason)`,
+   reasons that recur across independent runs become a citable
+   recurring-failure fact. In today's corpus only the fanout serialization
+   reason actually repeats, and it is an environmental constraint rather
+   than an outcome-learned failure, so the clustering mechanism is sound
+   but the corpus does not yet contain a strong worked example.
 
 Two contract corrections are treated as prerequisites, not assertions:
 `RunMemoryUpdateEvent` has no `staleness` field and
@@ -143,8 +155,8 @@ one-to-one to the CONTEXT.md memory-use-priority list:
 | risky file / subsystem | `repo_convention` | source paths recurring across `outcome:aborted` docs of one flow |
 | recurring failure cause | `prior_failure` | clustered `step.aborted.reason` per `(flow_id, reason)` |
 
-**Example stored record** (a recurring-failure fact distilled from real
-`step.aborted` evidence):
+**Example stored record** (the shape of an auto-distilled recurring-failure
+fact):
 
 ```json
 {
@@ -166,7 +178,7 @@ one-to-one to the CONTEXT.md memory-use-priority list:
   "hints": [
     {
       "id": "hint-verdict-required",
-      "text": "Recurring failure: goal child build steps abort with \"child result body lacks a non-empty string 'verdict' field\". Seen in 2 runs. Ensure the build result carries a verdict before closing. This is prior-run context only; rerun current checks before relying on it.",
+      "text": "Recurring failure: goal child build steps abort with \"child result body lacks a non-empty string 'verdict' field\". Seen in runs <run-a> and <run-b>. Ensure the build result carries a verdict before closing. This is prior-run context only; rerun current checks before relying on it.",
       "applies_to": "prior_failure"
     }
   ],
@@ -178,6 +190,14 @@ one-to-one to the CONTEXT.md memory-use-priority list:
   "authority": "hint_only"
 }
 ```
+
+The auto-distillation gate (Section 4) only mints this fact once the same
+reason recurs across two or more independent runs. In the current corpus
+this abort has occurred once (run `81b8e94c`, the only goal run on record),
+so the record above shows the target shape, not an observed recurrence. The
+one genuinely repeated structured signal in the corpus today is a fanout
+serialization warning (five runs), and that is an environmental constraint
+rather than an outcome-learned failure, so it is a weak first fact.
 
 A `verification` fact (operator-supplied, Step 1) has the same shape with
 `applies_to:"verification"`, a `summary` like `"review flow: this repo
@@ -265,8 +285,8 @@ hits, so the consume side round-trips exactly as it does today.
 - On use: `"Project notes (hint-only): 2 facts loaded for review (verify
   command, recurring failure). Source runs cited; rerun current checks
   before relying on them."`
-- On write: `"Project notes: recorded 1 fact for goal (recurring 'verdict
-  missing' abort, seen in 2 runs)."`
+- On write: `"Project notes: recorded 1 fact for review (verify command),
+  citing run 8ef6eb57."`
 
 This is the "briefly say what changed and why" surface CONTEXT.md asks
 for, without turning memory into a report the operator must inspect.
@@ -329,11 +349,13 @@ not as hidden mutation:
   the goal-lexical hits. The agent sees "verify with `npm run verify`"
   instead of guessing or re-discovering it. The indicator says "1 fact
   loaded, verify command."
-- **Run N+2 and N+3 (goal).** Two goal runs abort with the same
-  `step.aborted.reason` ("child result body lacks a non-empty string
-  'verdict' field"). On the second abort, consolidation sees the
-  `(goal, verdict-missing)` cluster hit two independent runs with fresh
-  sources, records a `prior_failure` fact, and announces it.
+- **Run N+2 and N+3 (goal), illustrative.** Suppose two later goal runs
+  abort with the same `step.aborted.reason` ("child result body lacks a
+  non-empty string 'verdict' field"). On the second such abort,
+  consolidation would see the `(goal, verdict-missing)` cluster reach two
+  independent runs with fresh sources, record a `prior_failure` fact, and
+  announce it. In the current corpus this has not happened: the
+  verdict-missing abort has occurred once, so the fact is not yet eligible.
 - **Run N+4 (goal).** The recurring-failure fact is injected for the goal
   flow. The agent is warned about the verdict requirement before it trips
   over it, like a teammate who left a note: "this is how builds abort
@@ -409,10 +431,10 @@ self-report:
 3. **Staleness precision.** Inject a fact, mutate its source, re-run the
    flow, assert the injected fact reports `stale` and is de-prioritized.
    Deterministic, no agent needed.
-4. **Recurrence honesty.** Replay the real abort pair (both runs carry
-   the verdict-missing reason): assert consolidation produces exactly one
-   `goal` recurring-failure fact citing both runs, and that a single
-   isolated abort produces none.
+4. **Recurrence honesty.** Using a synthetic two-run fixture that shares an
+   abort reason, assert consolidation produces exactly one recurring-failure
+   fact citing both runs, and that a single isolated abort (as in the real
+   corpus, where the verdict-missing reason appears once) produces none.
 5. **Misled guard.** Assert no `recorded` fact survives when a more
    recent same-flow run closed `complete` on the same condition
    (contradiction leads to `skipped`).
