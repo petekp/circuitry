@@ -54776,7 +54776,6 @@ function requiredEvidenceKindForProcess(processId) {
       return "review";
     case "pursue":
     case "prototype":
-    case "create":
       return "report";
     default:
       return "report";
@@ -54931,10 +54930,11 @@ function followupProcessId(primaryProcessId) {
 function followupPlannedAttempt(input) {
   if (input.missingEvidence === void 0)
     return void 0;
+  const followupProcess = followupProcessId(input.primaryProcessId);
   return {
     attempt_id: "attempt-followup-1",
-    process_id: followupProcessId(input.primaryProcessId),
-    goal: `Review whether Run has enough evidence to close: ${input.operatorIntent}`,
+    process_id: followupProcess,
+    goal: `Run ${followupProcess} to produce the missing evidence to close: ${input.operatorIntent}`,
     expected_evidence: [PROCESS_EVIDENCE_RELATIVE_PATH, ...input.missingEvidence.missing_refs],
     depends_on_attempt_ids: ["attempt-primary"],
     followup_for: {
@@ -55287,7 +55287,7 @@ async function runContinuationLoop(input) {
     }
     if (attemptNumber >= maxAttempts)
       break;
-    const unmetKinds = result.unmetKinds ?? [requiredEvidenceKindForProcess(currentProcess)];
+    const unmetKinds = result.unmetKinds ?? [requiredEvidenceKindForProcess(result.process_id)];
     const nextRoute = recoveryRouteForUnmetKinds(unmetKinds);
     if (nextRoute === "checkpoint") {
       return {
@@ -55306,10 +55306,10 @@ async function runContinuationLoop(input) {
 }
 
 // dist/run-envelope/autonomous-run.js
-function attemptOutcomeFromProjection(projection) {
+function attemptOutcomeFromProjection(projection, missing) {
   switch (projection.outcome) {
     case "complete":
-      return missingRunEvidence(projection) === void 0 ? "complete" : "needs_followup";
+      return missing === void 0 ? "complete" : "needs_followup";
     case "checkpoint_waiting":
       return "checkpoint";
     case "handoff":
@@ -55323,10 +55323,14 @@ function attemptOutcomeFromProjection(projection) {
 }
 function attemptResultFromProjection(processId, projection) {
   const missing = missingRunEvidence(projection);
+  const outcome = attemptOutcomeFromProjection(projection, missing);
+  if (missing === void 0) {
+    return { process_id: processId, outcome, unmetEvidence: [] };
+  }
   return {
     process_id: processId,
-    outcome: attemptOutcomeFromProjection(projection),
-    unmetEvidence: missing === void 0 ? [] : [...missing.missing_refs],
+    outcome,
+    unmetEvidence: missing.missing_refs,
     unmetKinds: [requiredEvidenceKindForProcess(processId)]
   };
 }
@@ -55335,7 +55339,7 @@ async function runAutonomousContinuation(input) {
     contract: input.contract,
     primaryProcessId: input.primaryProcessId,
     runAttempt: async ({ processId, attemptNumber }) => {
-      const run = await input.runFlow({ processId, attemptNumber, goal: input.goal });
+      const run = await input.runFlow({ processId, attemptNumber });
       return attemptResultFromProjection(processId, run.projection);
     }
   });
@@ -60889,28 +60893,40 @@ async function main(argv, options = {}) {
     if (selectedAxes(args, route).autonomous === true && processEvidence !== void 0 && runEnvelope !== void 0) {
       const primaryProjection = processEvidence.projection;
       const contract = runEnvelope.record.goal_contract;
+      const parentAxes = selectedAxes(args, route);
+      const recoveryFlowCache = /* @__PURE__ */ new Map();
       try {
         autonomousLoop = await runAutonomousContinuation({
           contract,
           primaryProcessId: flow.id,
-          goal: operatorGoal,
           runFlow: async ({ processId, attemptNumber }) => {
             if (attemptNumber === 1) {
               return { projection: primaryProjection };
             }
+            let recoveryFlow = recoveryFlowCache.get(processId);
+            if (recoveryFlow === void 0) {
+              const path = resolveFixturePath(processId, fixtureSelectionName, void 0, args.flowRoot);
+              const loaded = loadFixture(path);
+              recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
+              recoveryFlowCache.set(processId, recoveryFlow);
+            }
+            const support = axisSupportFromFlow({ flow: recoveryFlow.flow });
+            const recoveryAxes = Axes.parse({
+              rigor: support.allowedRigors.includes(parentAxes.rigor) ? parentAxes.rigor : "standard",
+              tournament: false,
+              autonomous: parentAxes.autonomous && support.supportsAutonomous
+            });
             const attemptFolder = join23(runFolder, "attempts", `attempt-${attemptNumber}-${processId}`);
-            const recoveryFixturePath = resolveFixturePath(processId, fixtureSelectionName, void 0, args.flowRoot);
-            const { bytes: recoveryBytes } = loadFixture(recoveryFixturePath);
             const recoveryResult = await runCompiledFlowWithWaiting({
-              flowBytes: recoveryBytes,
-              compiledFlowPath: recoveryFixturePath,
+              flowBytes: recoveryFlow.bytes,
+              compiledFlowPath: recoveryFlow.path,
               runDir: attemptFolder,
               runId: RunId.parse(randomUUID7()),
               goal: operatorGoal,
               now,
               projectRoot,
               childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
-              axes: selectedAxes(args, route),
+              axes: recoveryAxes,
               ...options.relayer === void 0 ? {} : { relayer: options.relayer },
               ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
               ...selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers },
@@ -60923,7 +60939,7 @@ async function main(argv, options = {}) {
                   runId: RunId.parse(recoveryResult.runId),
                   flowId: recoveryResult.flowId,
                   traceEntriesObserved: recoveryResult.traceEntriesObserved,
-                  manifestHash: computeManifestHash(recoveryBytes),
+                  manifestHash: computeManifestHash(recoveryFlow.bytes),
                   checkpoint: {
                     stepId: recoveryResult.checkpoint.stepId,
                     requestPath: recoveryResult.checkpoint.requestPath,

@@ -188,6 +188,10 @@ function selectionSourceFor(
 // which recovery flow an unmet required-evidence entry should route to. Keeping
 // it a pure function of the process id means the kind is always recoverable from
 // the envelope without enriching the (kind-blind) process evidence projection.
+// This is a deliberate hardcoded table for the single-claim model; deriving it
+// from each flow's declared proof capabilities is a deferred refinement (see
+// docs/specs/run-envelope-goal-loop-migration-v1.md). Unknown process ids fall
+// through to the conservative 'report' default.
 export function requiredEvidenceKindForProcess(processId: string): RunRequiredEvidenceKind {
   switch (processId) {
     case 'fix':
@@ -198,7 +202,6 @@ export function requiredEvidenceKindForProcess(processId: string): RunRequiredEv
       return 'review';
     case 'pursue':
     case 'prototype':
-    case 'create':
       return 'report';
     default:
       return 'report';
@@ -392,10 +395,11 @@ function followupPlannedAttempt(input: {
   readonly missingEvidence?: MissingRunEvidence;
 }): RunEnvelopeRecordValue['process_plan']['planned_attempts'][number] | undefined {
   if (input.missingEvidence === undefined) return undefined;
+  const followupProcess = followupProcessId(input.primaryProcessId);
   return {
     attempt_id: 'attempt-followup-1',
-    process_id: followupProcessId(input.primaryProcessId),
-    goal: `Review whether Run has enough evidence to close: ${input.operatorIntent}`,
+    process_id: followupProcess,
+    goal: `Run ${followupProcess} to produce the missing evidence to close: ${input.operatorIntent}`,
     expected_evidence: [PROCESS_EVIDENCE_RELATIVE_PATH, ...input.missingEvidence.missing_refs],
     depends_on_attempt_ids: ['attempt-primary'],
     followup_for: {

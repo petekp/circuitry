@@ -1,10 +1,18 @@
 import type { RunGoalContract } from '../schemas/run-envelope.js';
 
-// S3: lock the proof contract authored at intake. An autonomous continuation loop
-// (S7) must not be able to weaken its own done_when between attempts to declare
-// victory. These pure functions compare an intake snapshot against the current
-// contract and report any weakening. The loop consumes the decision: a weakened
-// contract routes to a checkpoint instead of silently continuing.
+// S3: lock the proof contract authored at intake. An autonomous continuation
+// loop must not be able to weaken its own done_when between attempts to declare
+// victory. These pure functions compare an intake snapshot against a later
+// contract and report any weakening; a weakened contract is meant to route to a
+// checkpoint instead of silently continuing.
+//
+// Integration status: the in-process continuation loop (continuation-loop.ts)
+// holds one immutable contract for the whole run and never re-derives it between
+// attempts, so the proof bar is fixed by construction and there is no live
+// weakening path for these checks to guard yet. They are the guard for the
+// deferred path where Run re-derives required evidence per attempt from an
+// enriched evidence projection (see docs/specs/run-envelope-goal-loop-migration-v1.md,
+// deferred refinements), and are exercised directly by run-envelope-contract-lock.test.ts.
 //
 // Reordering required evidence is intentionally NOT treated as weakening: with a
 // single claim the order carries no proof strength, and entries are matched by

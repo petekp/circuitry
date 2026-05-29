@@ -5,7 +5,7 @@ import {
   runAutonomousContinuation,
 } from '../../src/run-envelope/autonomous-run.js';
 import type { ProcessEvidenceProjection } from '../../src/schemas/process-evidence.js';
-import type { RunGoalContract } from '../../src/schemas/run-envelope.js';
+import { goalContract as contract } from './run-envelope-fixtures.js';
 
 function projection(overrides: {
   outcome: ProcessEvidenceProjection['outcome'];
@@ -29,35 +29,6 @@ function projection(overrides: {
     trace_entries_observed: 4,
     manifest_hash: 'runtime:build@0.1.0',
   } as unknown as ProcessEvidenceProjection;
-}
-
-function contract(overrides: Partial<RunGoalContract> = {}): RunGoalContract {
-  return {
-    schema: 'run.goal-contract@v0',
-    objective: 'Implement the dashboard filter',
-    scope: { in: ['dashboard filter'], out: [], assumptions: [] },
-    constraints: [],
-    done_when: [
-      {
-        id: 'process-evidence',
-        claim: 'done',
-        required_evidence: [
-          { kind: 'command', description: 'A passing verification command', required: true },
-        ],
-      },
-    ],
-    recovery_policy: {
-      max_process_attempts: 2,
-      allowed_routes: ['retry-process', 'run-review', 'checkpoint', 'handoff', 'blocked'],
-    },
-    stop_conditions: [],
-    completion_gate: {
-      required_passes: 2,
-      blocking_severities: ['critical', 'high', 'medium'],
-      reset_on_blocking_finding: true,
-    },
-    ...overrides,
-  } as RunGoalContract;
 }
 
 describe('attemptResultFromProjection (S10)', () => {
@@ -109,7 +80,6 @@ describe('runAutonomousContinuation (S10)', () => {
     const result = await runAutonomousContinuation({
       contract: contract(),
       primaryProcessId: 'build',
-      goal: 'Implement the dashboard filter',
       runFlow: async ({ processId }) => {
         processIds.push(processId);
         return {
@@ -130,7 +100,6 @@ describe('runAutonomousContinuation (S10)', () => {
     const result = await runAutonomousContinuation({
       contract: contract(),
       primaryProcessId: 'build',
-      goal: 'Implement the dashboard filter',
       // Always complete-but-missing the same evidence: the loop must route the
       // follow-up by unmet kind (command -> fix) and then escalate on no-progress
       // rather than silently looping or claiming completion.
@@ -156,7 +125,6 @@ describe('runAutonomousContinuation (S10)', () => {
     const result = await runAutonomousContinuation({
       contract: contract(),
       primaryProcessId: 'build',
-      goal: 'Implement the dashboard filter',
       runFlow: async () => ({ projection: projection({ outcome: 'checkpoint_waiting' }) }),
     });
     expect(result.outcome).toBe('needs_attention');

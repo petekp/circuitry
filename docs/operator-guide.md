@@ -43,9 +43,9 @@ Unsupported combinations fail before the run starts.
 
 With `--autonomous`, Run auto-resolves supported checkpoints and drives a
 bounded continuation loop instead of stopping after one process. Run frames
-task-specific required evidence at intake, locks that proof contract so it
-cannot be weakened mid-run, and refuses to start the loop on a contract too
-weak to prove the objective. It then checks completion against the evidence,
+task-specific required evidence at intake, holds that proof contract fixed for
+the run, and refuses to start the loop on a contract too weak to prove the
+objective. It then checks completion against the evidence,
 and when required evidence is still unmet it runs a recovery flow chosen by the
 kind of evidence missing. Run escalates when attempts stop making progress and
 never reports complete by running out of attempts. The loop result is written

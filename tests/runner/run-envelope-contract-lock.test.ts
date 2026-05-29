@@ -4,36 +4,7 @@ import {
   contractLockDecision,
   detectContractWeakening,
 } from '../../src/run-envelope/contract-lock.js';
-import type { RunGoalContract } from '../../src/schemas/run-envelope.js';
-
-function contract(overrides: Partial<RunGoalContract> = {}): RunGoalContract {
-  return {
-    schema: 'run.goal-contract@v0',
-    objective: 'Fix the flaky auth refresh test',
-    scope: { in: ['auth refresh'], out: [], assumptions: [] },
-    constraints: [],
-    done_when: [
-      {
-        id: 'process-evidence',
-        claim: 'The fix work is complete with the required proof.',
-        required_evidence: [
-          { kind: 'command', description: 'A passing verification command', required: true },
-        ],
-      },
-    ],
-    recovery_policy: {
-      max_process_attempts: 2,
-      allowed_routes: ['retry-process', 'run-review', 'checkpoint', 'handoff', 'blocked'],
-    },
-    stop_conditions: [],
-    completion_gate: {
-      required_passes: 2,
-      blocking_severities: ['critical', 'high', 'medium'],
-      reset_on_blocking_finding: true,
-    },
-    ...overrides,
-  } as RunGoalContract;
-}
+import { goalContract as contract } from './run-envelope-fixtures.js';
 
 describe('Run proof-contract lock (S3)', () => {
   it('treats an identical contract as not weakened and routes continue', () => {

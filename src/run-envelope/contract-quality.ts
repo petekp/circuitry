@@ -23,7 +23,13 @@ export function objectiveKind(objective: string): ObjectiveKind {
 }
 
 // Minimum required evidence kind an objective of a given kind must demand before
-// Run may close it complete. Objectives without an entry impose no minimum.
+// Run may close it complete. The gate is intentionally asymmetric: it only fires
+// where a missing kind would clearly mean the objective is unproven, namely an
+// implementation that has no passing command, or a review with no review pass.
+// 'explore' and 'other' objectives impose no hard minimum here because their
+// proof is investigation/decision evidence with no single mandatory kind; a
+// too-weak explore contract is caught by the operator, not this lens. Objectives
+// without an entry impose no minimum.
 const MIN_REQUIRED_KIND_BY_OBJECTIVE: Partial<Record<ObjectiveKind, RunRequiredEvidenceKind>> = {
   implementation: 'command',
   review: 'review',

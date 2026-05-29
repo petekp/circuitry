@@ -1194,37 +1194,62 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     ) {
       const primaryProjection = processEvidence.projection;
       const contract = runEnvelope.record.goal_contract;
+      const parentAxes = selectedAxes(args, route);
+      // Cache each routed recovery flow so a repeated route does not re-read and
+      // re-parse the same compiled flow from disk on every attempt.
+      const recoveryFlowCache = new Map<
+        string,
+        { flow: CompiledFlow; bytes: Buffer; path: string }
+      >();
       try {
         autonomousLoop = await runAutonomousContinuation({
           contract,
           primaryProcessId: flow.id,
-          goal: operatorGoal,
           runFlow: async ({ processId, attemptNumber }) => {
             if (attemptNumber === 1) {
               return { projection: primaryProjection };
             }
+            let recoveryFlow = recoveryFlowCache.get(processId);
+            if (recoveryFlow === undefined) {
+              const path = resolveFixturePath(
+                processId,
+                fixtureSelectionName,
+                undefined,
+                args.flowRoot,
+              );
+              const loaded = loadFixture(path);
+              recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
+              recoveryFlowCache.set(processId, recoveryFlow);
+            }
+            // A recovery attempt is a single bounded child run inside the parent
+            // loop, not itself an autonomous loop. Run it with axes the recovery
+            // flow actually supports: a routed recovery flow may differ from the
+            // parent (for example review does not support --autonomous), and the
+            // parent's up-front validateFlowAxes does not cover it. Never pass an
+            // axis the flow does not declare.
+            const support = axisSupportFromFlow({ flow: recoveryFlow.flow });
+            const recoveryAxes = Axes.parse({
+              rigor: support.allowedRigors.includes(parentAxes.rigor)
+                ? parentAxes.rigor
+                : 'standard',
+              tournament: false,
+              autonomous: parentAxes.autonomous && support.supportsAutonomous,
+            });
             const attemptFolder = join(
               runFolder,
               'attempts',
               `attempt-${attemptNumber}-${processId}`,
             );
-            const recoveryFixturePath = resolveFixturePath(
-              processId,
-              fixtureSelectionName,
-              undefined,
-              args.flowRoot,
-            );
-            const { bytes: recoveryBytes } = loadFixture(recoveryFixturePath);
             const recoveryResult = await runCompiledFlowWithWaiting({
-              flowBytes: recoveryBytes,
-              compiledFlowPath: recoveryFixturePath,
+              flowBytes: recoveryFlow.bytes,
+              compiledFlowPath: recoveryFlow.path,
               runDir: attemptFolder,
               runId: RunId.parse(randomUUID()),
               goal: operatorGoal,
               now,
               projectRoot,
               childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
-              axes: selectedAxes(args, route),
+              axes: recoveryAxes,
               ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
               ...(options.runtimeExecutors === undefined
                 ? {}
@@ -1239,7 +1264,7 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
                   runId: RunId.parse(recoveryResult.runId),
                   flowId: recoveryResult.flowId,
                   traceEntriesObserved: recoveryResult.traceEntriesObserved,
-                  manifestHash: computeManifestHash(recoveryBytes),
+                  manifestHash: computeManifestHash(recoveryFlow.bytes),
                   checkpoint: {
                     stepId: recoveryResult.checkpoint.stepId,
                     requestPath: recoveryResult.checkpoint.requestPath,

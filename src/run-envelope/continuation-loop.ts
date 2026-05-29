@@ -97,7 +97,10 @@ export async function runContinuationLoop(input: {
 
     if (attemptNumber >= maxAttempts) break;
 
-    const unmetKinds = result.unmetKinds ?? [requiredEvidenceKindForProcess(currentProcess)];
+    // Derive the fallback kind from the process that actually produced this
+    // attempt (result.process_id), not the route we asked for; a runner is free
+    // to report a different process than requested.
+    const unmetKinds = result.unmetKinds ?? [requiredEvidenceKindForProcess(result.process_id)];
     const nextRoute = recoveryRouteForUnmetKinds(unmetKinds);
     if (nextRoute === 'checkpoint') {
       return {
