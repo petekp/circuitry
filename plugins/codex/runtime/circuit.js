@@ -55321,17 +55321,18 @@ function attemptOutcomeFromProjection(projection, missing) {
       return "blocked";
   }
 }
-function attemptResultFromProjection(processId, projection) {
+function attemptResultFromProjection(projection) {
   const missing = missingRunEvidence(projection);
   const outcome = attemptOutcomeFromProjection(projection, missing);
+  const ranProcess = projection.flow_id;
   if (missing === void 0) {
-    return { process_id: processId, outcome, unmetEvidence: [] };
+    return { process_id: ranProcess, outcome, unmetEvidence: [] };
   }
   return {
-    process_id: processId,
+    process_id: ranProcess,
     outcome,
     unmetEvidence: missing.missing_refs,
-    unmetKinds: [requiredEvidenceKindForProcess(processId)]
+    unmetKinds: [requiredEvidenceKindForProcess(ranProcess)]
   };
 }
 async function runAutonomousContinuation(input) {
@@ -55340,7 +55341,7 @@ async function runAutonomousContinuation(input) {
     primaryProcessId: input.primaryProcessId,
     runAttempt: async ({ processId, attemptNumber }) => {
       const run = await input.runFlow({ processId, attemptNumber });
-      return attemptResultFromProjection(processId, run.projection);
+      return attemptResultFromProjection(run.projection);
     }
   });
 }
@@ -60907,6 +60908,10 @@ async function main(argv, options = {}) {
             if (recoveryFlow === void 0) {
               const path = resolveFixturePath(processId, fixtureSelectionName, void 0, args.flowRoot);
               const loaded = loadFixture(path);
+              const loadedFlowId = loaded.flow.id;
+              if (loadedFlowId !== processId) {
+                throw new Error(`recovery flow fixture id mismatch: routed to '${processId}' but fixture declares '${loadedFlowId}'`);
+              }
               recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
               recoveryFlowCache.set(processId, recoveryFlow);
             }

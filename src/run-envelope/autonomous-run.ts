@@ -39,28 +39,28 @@ function attemptOutcomeFromProjection(
   }
 }
 
-export function attemptResultFromProjection(
-  processId: string,
-  projection: ProcessEvidenceProjection,
-): AttemptResult {
+export function attemptResultFromProjection(projection: ProcessEvidenceProjection): AttemptResult {
   const missing = missingRunEvidence(projection);
   const outcome = attemptOutcomeFromProjection(projection, missing);
-  // Single-claim model: Run authors one done_when claim whose required evidence
-  // kind is the proof the selected process is expected to produce, so the unmet
-  // kind is derived from the process id. processId is the flow that actually ran
-  // (it matches projection.flow_id). The kind-blind ProcessEvidenceProjection
-  // cannot yet report which specific evidence kind is missing; enriching it is a
-  // deferred refinement (see docs/specs/run-envelope-goal-loop-migration-v1.md).
-  // unmetKinds is only meaningful when evidence is unmet, so it is omitted on a
-  // clean complete rather than asserting an unmet kind that does not exist.
+  // Single-claim model: the unmet evidence kind is the proof the flow that
+  // actually ran was expected to produce, so both the attempt's process_id and
+  // its unmet kind are derived from projection.flow_id (the flow the runtime
+  // actually executed), not the requested route. In the live path the CLI
+  // asserts the routed recovery fixture's id matches the route, so these are the
+  // same; deriving from the projection keeps the loop honest if they ever
+  // diverge. The kind-blind ProcessEvidenceProjection cannot yet report which
+  // specific evidence kind is missing; enriching it is a deferred refinement
+  // (see docs/specs/run-envelope-goal-loop-migration-v1.md). unmetKinds is only
+  // meaningful when evidence is unmet, so it is omitted on a clean complete.
+  const ranProcess = projection.flow_id;
   if (missing === undefined) {
-    return { process_id: processId, outcome, unmetEvidence: [] };
+    return { process_id: ranProcess, outcome, unmetEvidence: [] };
   }
   return {
-    process_id: processId,
+    process_id: ranProcess,
     outcome,
     unmetEvidence: missing.missing_refs,
-    unmetKinds: [requiredEvidenceKindForProcess(processId)],
+    unmetKinds: [requiredEvidenceKindForProcess(ranProcess)],
   };
 }
 
@@ -83,7 +83,7 @@ export async function runAutonomousContinuation(input: {
     primaryProcessId: input.primaryProcessId,
     runAttempt: async ({ processId, attemptNumber }) => {
       const run = await input.runFlow({ processId, attemptNumber });
-      return attemptResultFromProjection(processId, run.projection);
+      return attemptResultFromProjection(run.projection);
     },
   });
 }

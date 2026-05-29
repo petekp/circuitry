@@ -1218,6 +1218,17 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
                 args.flowRoot,
               );
               const loaded = loadFixture(path);
+              // Guard the routed recovery flow the same way the primary run is
+              // guarded: the loaded fixture's declared id must match the routed
+              // process, so the loop can never silently run a different flow than
+              // it routed to. A mismatch degrades the loop to the single-shot
+              // result via the surrounding catch.
+              const loadedFlowId = loaded.flow.id as unknown as string;
+              if (loadedFlowId !== processId) {
+                throw new Error(
+                  `recovery flow fixture id mismatch: routed to '${processId}' but fixture declares '${loadedFlowId}'`,
+                );
+              }
               recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
               recoveryFlowCache.set(processId, recoveryFlow);
             }

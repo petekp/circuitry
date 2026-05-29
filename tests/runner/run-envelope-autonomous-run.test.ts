@@ -34,7 +34,6 @@ function projection(overrides: {
 describe('attemptResultFromProjection (S10)', () => {
   it('maps complete-with-satisfied-evidence to complete', () => {
     const result = attemptResultFromProjection(
-      'build',
       projection({
         outcome: 'complete',
         declared: ['reports/x.json'],
@@ -47,7 +46,6 @@ describe('attemptResultFromProjection (S10)', () => {
 
   it('maps complete-with-missing-evidence to needs_followup with the missing refs', () => {
     const result = attemptResultFromProjection(
-      'build',
       projection({ outcome: 'complete', declared: ['reports/x.json'], evidence: [] }),
     );
     expect(result.outcome).toBe('needs_followup');
@@ -56,21 +54,13 @@ describe('attemptResultFromProjection (S10)', () => {
   });
 
   it('maps non-complete outcomes faithfully', () => {
-    expect(
-      attemptResultFromProjection('build', projection({ outcome: 'checkpoint_waiting' })).outcome,
-    ).toBe('checkpoint');
-    expect(attemptResultFromProjection('build', projection({ outcome: 'failed' })).outcome).toBe(
-      'failed',
+    expect(attemptResultFromProjection(projection({ outcome: 'checkpoint_waiting' })).outcome).toBe(
+      'checkpoint',
     );
-    expect(attemptResultFromProjection('build', projection({ outcome: 'aborted' })).outcome).toBe(
-      'failed',
-    );
-    expect(attemptResultFromProjection('build', projection({ outcome: 'blocked' })).outcome).toBe(
-      'blocked',
-    );
-    expect(attemptResultFromProjection('build', projection({ outcome: 'handoff' })).outcome).toBe(
-      'handoff',
-    );
+    expect(attemptResultFromProjection(projection({ outcome: 'failed' })).outcome).toBe('failed');
+    expect(attemptResultFromProjection(projection({ outcome: 'aborted' })).outcome).toBe('failed');
+    expect(attemptResultFromProjection(projection({ outcome: 'blocked' })).outcome).toBe('blocked');
+    expect(attemptResultFromProjection(projection({ outcome: 'handoff' })).outcome).toBe('handoff');
   });
 });
 
