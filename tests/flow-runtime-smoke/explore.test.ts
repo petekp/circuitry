@@ -19,7 +19,7 @@ import {
   readTrace,
   runSimpleCompiledFlow,
   withTempRun,
-} from './runtime-parity-helpers.js';
+} from '../helpers/runtime-flow.js';
 
 async function loadTournamentFixture() {
   const bytes = await readFile(

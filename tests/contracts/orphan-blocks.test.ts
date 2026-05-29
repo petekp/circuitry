@@ -32,7 +32,7 @@ import {
   FlowSchematic,
   validateFlowSchematicCatalogCompatibility,
 } from '../../src/schemas/flow-schematic.js';
-import { runSimpleCompiledFlow } from '../parity/runtime-parity-helpers.js';
+import { runSimpleCompiledFlow } from '../helpers/runtime-flow.js';
 
 function singleCompiledFlow(result: CompileResult): CompiledFlow {
   if (result.kind === 'single') return result.flow;

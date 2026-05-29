@@ -18,7 +18,7 @@ import {
   readTrace,
   runSimpleCompiledFlow,
   withTempRun,
-} from './runtime-parity-helpers.js';
+} from '../helpers/runtime-flow.js';
 
 describe('build runtime parity', () => {
   it('runs the generated build flow through the runtime compiled-flow path', async () => {

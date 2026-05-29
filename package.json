@@ -23,7 +23,7 @@
     "check-evals": "node scripts/evals/check.ts",
     "evals:fix:dry-run": "node evals/fix-vs-vanilla/run-fix-comparison.ts --set held-out --dry-run",
     "evals:fix:matrix:dry-run": "node scripts/evals/fix-matrix.ts --dry-run",
-    "soak:runtime:fast": "vitest run tests/soak tests/runner/cli-runtime.test.ts tests/runtime tests/parity",
+    "soak:runtime:fast": "vitest run tests/soak tests/runner/cli-runtime.test.ts tests/runtime tests/flow-runtime-smoke",
     "soak:runtime": "vitest run tests/soak && npm run verify && npm run check-flow-drift",
     "lint": "biome check .",
     "format": "biome format --write .",

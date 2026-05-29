@@ -128,7 +128,7 @@ const fixCommandResult = {
   env: commandSpec.env,
 };
 
-export { withTempRun } from '../helpers/runtime-fixtures.js';
+export { withTempRun } from './runtime-fixtures.js';
 
 export async function loadCompiledFlowFixture(flowId: string): Promise<CompiledFlowFixture> {
   const bytes = await readFile(join(process.cwd(), 'generated', 'flows', flowId, 'circuit.json'));

@@ -13,7 +13,7 @@ import {
   runFileExists,
   runSimpleCompiledFlow,
   withTempRun,
-} from './runtime-parity-helpers.js';
+} from '../helpers/runtime-flow.js';
 
 describe('review runtime parity', () => {
   it('runs the generated review flow through the runtime compiled-flow path', async () => {

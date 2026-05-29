@@ -291,7 +291,7 @@ Blockers / high:
 - host-specific flow behavior creeping into flow definitions (grep src/flows for 'claude-code'/'codex' branching - flows must be host-agnostic; host specifics belong only in hooks/connectors).
 - the Codex plugin cache not synced: a plugins/codex/** change without acknowledging 'npm run sync:codex-plugin-cache' (the cache at ~/.codex is hash-verified by check:codex-plugin-cache).
 - a parity-matrix gap (status partial/missing in docs/release/parity-matrix.generated.md) with no matching exception (with readiness_ref) in docs/release/parity/exceptions.yaml.
-Proofs: check:codex-plugin-cache, check-flow-drift, check-parity (via check-release-infra), tests/parity, the host smoke scripts.`,
+Proofs: check:codex-plugin-cache, check-flow-drift, check-parity (via check-release-infra), tests/flow-runtime-smoke, the host smoke scripts.`,
   },
   {
     key: 'schema-contract',
@@ -327,7 +327,7 @@ Proof: targeted vitest over tests/contracts/ (name the specific files).`,
 - Checkpoint resume must reload flow bytes from the run folder (not from generated/) and compare the manifest snapshot
   hash correctly (=== ). Trace projection (run-status) must validate sequence contiguity and tolerate damaged state.
 - Evidence policy flag (includeUntrackedFileContent) must thread CLI -> compiled-flow-runner -> graph-runner -> executors.
-Proofs: tests/runner/{cli-router,cli-runtime,runtime-smoke,checkpoint-auto-resolution,history-cli}.test.ts, tests/runtime, tests/parity.`,
+Proofs: tests/runner/{cli-router,cli-runtime,runtime-smoke,checkpoint-auto-resolution,history-cli}.test.ts, tests/runtime, tests/flow-runtime-smoke.`,
   },
   {
     key: 'tests',
@@ -336,7 +336,7 @@ Proofs: tests/runner/{cli-router,cli-runtime,runtime-smoke,checkpoint-auto-resol
     knowledge: `Project rules (AGENTS.md): fixing a bug => a failing test FIRST; changing behavior => the test changes with it.
 verify is the canonical gate. Pick the right layer:
 - flow authoring -> tests/runner/flow-facts.test.ts + tests/contracts/catalog-completeness.test.ts + check-flow-drift
-- runtime path -> tests/runtime/ + tests/parity/
+- runtime path -> tests/runtime/ + tests/flow-runtime-smoke/
 - schema/contract -> tests/contracts/
 - generated host package -> check-flow-drift; release surface -> check-release-infra; evals -> check-evals.
 Flag: a behavior change in src/ with no new/changed test; a bug fix with no reproducing test; a test placed in a
@@ -504,7 +504,7 @@ Touched surfaces: ${touched.join(', ')}.
 Mapping (run a command only if its trigger surface was touched):
 - flows / catalog / generated / plugins / commands changed -> \`npm run check-flow-drift\` (build + emit --check + check-plugin-runtime). Highest-value drift signal.
 - schemas / contracts / run-envelope|status|process-evidence changed -> \`npx vitest run tests/contracts\` (or the specific *.test.ts files for the changed schemas).
-- runtime / cli / hooks / history changed -> \`npx vitest run tests/runtime tests/parity\`. Add \`npx vitest run tests/runner/cli-runtime.test.ts\` for CLI wiring (avoid the slow cli-router subprocess test unless routing changed).
+- runtime / cli / hooks / history changed -> \`npx vitest run tests/runtime tests/flow-runtime-smoke\`. Add \`npx vitest run tests/runner/cli-runtime.test.ts\` for CLI wiring (avoid the slow cli-router subprocess test unless routing changed).
 - release / catalog / router / connectors / publicDocs changed -> \`npm run check-release-infra\`.
 - evals changed -> \`npm run check-evals\`.
 If nothing maps, run \`npm run check && npm run lint\` as a baseline and say so.
@@ -543,7 +543,7 @@ Write markdown with these sections:
 2. **Summary** - 2-3 sentences on what the PR does and the headline risk, if any.
 3. **Findings** - grouped by severity (Blockers, High, Medium, Low, Nits), each as: file:line - title; why (the Circuit rule it touches); suggested fix. Skip empty groups. Note '(unverified)' for low/nit that were not adversarially checked.
 4. **Proof results** - a short table of command -> pass/fail and the key line.
-5. **Remaining gate** - the exact commands the author must run before merge, chosen for what changed: always end with the canonical \`npm run verify\`, and list the focused proofs (check-flow-drift, vitest tests/contracts, vitest tests/runtime tests/parity, check-release-infra, check-evals, sync:codex-plugin-cache) that apply. If a schema/contract or migration change is present, note that AGENTS.md rule 6 makes this a candidate for explicit /codex review.
+5. **Remaining gate** - the exact commands the author must run before merge, chosen for what changed: always end with the canonical \`npm run verify\`, and list the focused proofs (check-flow-drift, vitest tests/contracts, vitest tests/runtime tests/flow-runtime-smoke, check-release-infra, check-evals, sync:codex-plugin-cache) that apply. If a schema/contract or migration change is present, note that AGENTS.md rule 6 makes this a candidate for explicit /codex review.
 6. **Not reviewed** - surfaces NOT touched (so not reviewed) and any proofs skipped, so the reader knows the coverage boundary.
 
 Set verdict to the matching enum value and put the whole report in markdown.
