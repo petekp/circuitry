@@ -131,6 +131,36 @@ describe('runtime progress projection', () => {
     });
   });
 
+  it('emits the relay.started progress line for the cursor-agent connector', () => {
+    // Regression: connectorFromTrace previously recognized only claude-code
+    // and codex as built-in connectors, so a cursor-agent relay silently
+    // dropped its relay.started progress line that the other connectors emit.
+    const progress = projectProgress('explore', [
+      trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'explore' }),
+      trace({ sequence: 1, kind: 'step.entered', step_id: 'synthesize-step', attempt: 1 }),
+      trace({
+        sequence: 2,
+        kind: 'relay.started',
+        step_id: 'synthesize-step',
+        role: 'implementer',
+        connector: { kind: 'builtin', name: 'cursor-agent' },
+      }),
+    ]);
+
+    const relayStarted = progress.find((event) => event.type === 'relay.started');
+    expect(relayStarted).toBeDefined();
+    expect(relayStarted).toMatchObject({
+      type: 'relay.started',
+      role: 'implementer',
+      connector_name: 'cursor-agent',
+      connector_kind: 'builtin',
+      filesystem_capability: 'trusted-write',
+    });
+    expect(relayStarted?.display.text).toBe(
+      'Circuit: Asking the specialist to draft the recommendation...',
+    );
+  });
+
   it('keeps non-Explore relay started and completed copy stable', () => {
     const progress = projectProgress('review', [
       trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'review' }),

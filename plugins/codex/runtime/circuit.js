@@ -33669,11 +33669,27 @@ var PromptTransport = external_exports.enum(["prompt-file"]);
 var ConnectorOutputExtraction = external_exports.object({
   kind: external_exports.literal("output-file")
 }).strict();
-var BUILTIN_CONNECTOR_CAPABILITIES = {
-  "claude-code": { filesystem: "trusted-write", structured_output: "json" },
-  codex: { filesystem: "trusted-write", structured_output: "json" },
-  "cursor-agent": { filesystem: "trusted-write", structured_output: "json" }
+var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+var CURSOR_AGENT_SUPPORTED_EFFORTS = ["none"];
+var BUILTIN_CONNECTOR_SPECS = {
+  "claude-code": {
+    provider: "anthropic",
+    supportedEfforts: CLAUDE_CODE_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  },
+  codex: {
+    provider: "openai",
+    supportedEfforts: CODEX_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  },
+  "cursor-agent": {
+    provider: "gemini",
+    supportedEfforts: CURSOR_AGENT_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  }
 };
+var BUILTIN_CONNECTOR_CAPABILITIES = Object.fromEntries(EnabledConnector.options.map((name) => [name, BUILTIN_CONNECTOR_SPECS[name].capabilities]));
 var RESERVED_CONNECTOR_NAMES = [
   ...EnabledConnector.options,
   "auto"
@@ -37922,867 +37938,6 @@ var prototypeVariantChoiceOptionsComposeBuilder = {
   }
 };
 
-// dist/shared/json-extraction.js
-function extractJsonObject(text) {
-  let cursor = 0;
-  while (cursor < text.length) {
-    const start = text.indexOf("{", cursor);
-    if (start === -1)
-      break;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    let end = -1;
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i];
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (inString) {
-        if (ch === "\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === '"')
-          inString = false;
-        continue;
-      }
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-      if (ch === "{")
-        depth++;
-      else if (ch === "}") {
-        depth--;
-        if (depth === 0) {
-          end = i + 1;
-          break;
-        }
-      }
-    }
-    if (end === -1)
-      break;
-    const candidate = text.slice(start, end);
-    try {
-      JSON.parse(candidate);
-      return candidate;
-    } catch {
-      cursor = start + 1;
-    }
-  }
-  return text;
-}
-
-// dist/connectors/subprocess.js
-import { spawn } from "node:child_process";
-import { performance } from "node:perf_hooks";
-var ConnectorSubprocessSpawnError = class extends Error {
-  phase;
-  constructor(phase, message) {
-    super(message);
-    this.phase = phase;
-    this.name = "ConnectorSubprocessSpawnError";
-  }
-};
-function isConnectorSubprocessSpawnError(error51) {
-  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
-}
-function appendCapped(current, currentBytes, chunk, maxBytes) {
-  const chunkBytes = Buffer.byteLength(chunk, "utf8");
-  if (currentBytes + chunkBytes <= maxBytes) {
-    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
-  }
-  const remaining = maxBytes - currentBytes;
-  if (remaining <= 0) {
-    return { text: current, bytes: currentBytes, capped: true };
-  }
-  return {
-    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
-    bytes: maxBytes,
-    capped: true
-  };
-}
-async function runConnectorSubprocess(input) {
-  const start = performance.now();
-  return await new Promise((resolve16, reject) => {
-    let child;
-    try {
-      child = spawn(input.executable, [...input.args], {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: input.env ?? process.env,
-        detached: true,
-        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-      });
-    } catch (error51) {
-      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
-      return;
-    }
-    let stdout = "";
-    let stdoutBytes = 0;
-    let stderr = "";
-    let stderrBytes = 0;
-    let stdoutCapped = false;
-    let stderrCapped = false;
-    let timedOut = false;
-    let killGroupSucceeded = false;
-    const killProcessGroup = (signal) => {
-      const pid = child.pid;
-      if (typeof pid !== "number")
-        return false;
-      try {
-        process.kill(-pid, signal);
-        return true;
-      } catch {
-        try {
-          child.kill(signal);
-          return true;
-        } catch {
-          return false;
-        }
-      }
-    };
-    let killGraceTimer;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroupSucceeded = killProcessGroup("SIGTERM");
-      killGraceTimer = setTimeout(() => {
-        killProcessGroup("SIGKILL");
-        killGraceTimer = void 0;
-      }, input.sigtermToSigkillGraceMs);
-    }, input.timeoutMs);
-    const clearAllTimers = () => {
-      clearTimeout(timer);
-      if (killGraceTimer !== void 0) {
-        clearTimeout(killGraceTimer);
-        killGraceTimer = void 0;
-      }
-    };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (chunk) => {
-      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
-      stdout = next.text;
-      stdoutBytes = next.bytes;
-      stdoutCapped = stdoutCapped || next.capped;
-    });
-    child.stderr?.on("data", (chunk) => {
-      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
-      stderr = next.text;
-      stderrBytes = next.bytes;
-      stderrCapped = stderrCapped || next.capped;
-    });
-    child.on("error", (error51) => {
-      clearAllTimers();
-      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
-    });
-    child.on("close", (code, signal) => {
-      clearAllTimers();
-      resolve16({
-        stdout,
-        stderr,
-        stdoutCapped,
-        stderrCapped,
-        timedOut,
-        killGroupSucceeded,
-        code,
-        signal,
-        durationMs: performance.now() - start
-      });
-    });
-  });
-}
-
-// dist/connectors/claude-code.js
-var CLAUDE_CODE_DISPATCH_FLAGS = [
-  "-p",
-  "--permission-mode",
-  "bypassPermissions",
-  "--strict-mcp-config",
-  "--disable-slash-commands",
-  "--setting-sources",
-  "",
-  "--settings",
-  "{}",
-  "--output-format",
-  "stream-json",
-  "--verbose",
-  "--no-session-persistence"
-];
-var CLAUDE_CODE_EXECUTABLE = "claude";
-var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
-var DEFAULT_TIMEOUT_MS = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
-var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES = 1024 * 1024;
-function selectedAnthropicModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "anthropic") {
-    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
-  }
-  return model.model;
-}
-function assertClaudeCodeEffort(effort) {
-  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function buildClaudeCodeArgs(input) {
-  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
-  const model = selectedAnthropicModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("--model", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertClaudeCodeEffort(effort);
-    args.push("--effort", effort);
-  }
-  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
-    args.push("--json-schema", JSON.stringify(input.responseSchema));
-  }
-  args.push(input.prompt);
-  return args;
-}
-function claudeCodeStdoutDiagnostic(stdout) {
-  try {
-    parseClaudeCodeStdout(stdout, "", 0);
-    return void 0;
-  } catch (error51) {
-    return error51 instanceof Error ? error51.message : String(error51);
-  }
-}
-function isClaudeCodeStructuredOutputCompatible(schema) {
-  return schema.type === "object";
-}
-async function relayClaudeCode(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const args = buildClaudeCodeArgs(input);
-  let result;
-  try {
-    result = await runConnectorSubprocess({
-      executable: CLAUDE_CODE_EXECUTABLE,
-      args,
-      timeoutMs: timeoutMs2,
-      stdoutMaxBytes: STDOUT_MAX_BYTES,
-      stderrMaxBytes: STDERR_MAX_BYTES,
-      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
-      env: process.env
-    });
-  } catch (error51) {
-    if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
-    }
-    throw error51;
-  }
-  if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
-    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
-    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.stdoutCapped) {
-    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-  }
-  try {
-    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
-  } catch (error51) {
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-  }
-}
-function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("stream-json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
-  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
-  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
-  if (initTraceEntry === void 0) {
-    throw new Error("system/init trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry === void 0) {
-    throw new Error("result trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry.is_error === true) {
-    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
-    throw new Error(`subprocess reported is_error: ${message}`);
-  }
-  const mcpServers = initTraceEntry.mcp_servers;
-  const slashCommands = initTraceEntry.slash_commands;
-  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
-    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
-  }
-  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
-    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
-  }
-  const receipt_id = initTraceEntry.session_id;
-  const cli_version = initTraceEntry.claude_code_version;
-  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
-    throw new Error("init.session_id missing or empty");
-  }
-  if (typeof cli_version !== "string" || cli_version.length === 0) {
-    throw new Error("init.claude_code_version missing or empty");
-  }
-  const structuredOutput = resultTraceEntry.structured_output;
-  let result_body;
-  if (structuredOutput !== void 0 && structuredOutput !== null) {
-    if (typeof structuredOutput !== "object") {
-      throw new Error("result.structured_output present but not an object");
-    }
-    result_body = JSON.stringify(structuredOutput);
-  } else {
-    const result_body_raw = resultTraceEntry.result;
-    if (typeof result_body_raw !== "string") {
-      throw new Error("result.result missing or not a string");
-    }
-    result_body = extractJsonObject(result_body_raw);
-  }
-  return {
-    request_payload: prompt,
-    receipt_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
-// dist/connectors/codex.js
-import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join as joinPath } from "node:path";
-var CODEX_WRITE_FLAGS = Object.freeze([
-  "exec",
-  "--json",
-  "-s",
-  "workspace-write",
-  "--ephemeral",
-  "--skip-git-repo-check",
-  "--ignore-user-config",
-  "--ignore-rules"
-]);
-var CODEX_EXECUTABLE = "codex";
-var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
-  "--dangerously-bypass-approvals-and-sandbox",
-  "--full-auto",
-  "--add-dir",
-  "-o",
-  "--output-last-message",
-  "-c",
-  "--config",
-  "-p",
-  "--profile",
-  "--sandbox"
-]);
-var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
-var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
-if (!CODEX_WRITE_FLAGS.includes("-s") || !CODEX_WRITE_FLAGS.includes("workspace-write") || !CODEX_WRITE_FLAGS.includes("--ignore-user-config") || !CODEX_WRITE_FLAGS.includes("--ignore-rules")) {
-  throw new Error('CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"');
-}
-var flagsAsStringArray = CODEX_WRITE_FLAGS;
-for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
-  if (flagsAsStringArray.includes(forbidden)) {
-    throw new Error(`CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
-  }
-}
-var DEFAULT_TIMEOUT_MS2 = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
-var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES2 = 1024 * 1024;
-var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
-var cachedCodexVersion;
-function captureCodexVersion() {
-  if (cachedCodexVersion !== void 0)
-    return cachedCodexVersion;
-  let stdout;
-  try {
-    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
-      encoding: "utf8",
-      timeout: VERSION_CAPTURE_TIMEOUT_MS,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (err) {
-    throw new Error(`codex --version failed: ${err.message}`);
-  }
-  const version2 = stdout.trim();
-  if (version2.length === 0) {
-    throw new Error("codex --version produced empty output");
-  }
-  cachedCodexVersion = version2;
-  return version2;
-}
-function assertCodexEffort(effort) {
-  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function selectedOpenAIModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "openai") {
-    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
-  }
-  return model.model;
-}
-function codexReasoningEffortConfigValue(effort) {
-  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
-}
-function isForbiddenCodexArg(arg) {
-  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
-    if (token === "-c")
-      return false;
-    if (arg === token)
-      return true;
-    return token.startsWith("--") && arg.startsWith(`${token}=`);
-  });
-}
-function isAllowedCodexConfigOverride(value) {
-  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
-}
-function assertCodexSpawnArgvBoundary(args) {
-  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
-  const sandboxFlagIndex = sandboxFlagIndexes[0];
-  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "workspace-write") {
-    throw new Error('codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required');
-  }
-  let configOverrideCount = 0;
-  for (let idx = 0; idx < args.length; idx += 1) {
-    const arg = args[idx];
-    if (arg === void 0)
-      continue;
-    if (arg === "-c") {
-      configOverrideCount += 1;
-      if (configOverrideCount > 1) {
-        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
-      }
-      const value = args[idx + 1];
-      if (!isAllowedCodexConfigOverride(value)) {
-        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
-      }
-      idx += 1;
-      continue;
-    }
-    if (isForbiddenCodexArg(arg)) {
-      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
-    }
-  }
-}
-function buildCodexArgs(input, schemaPath) {
-  const args = [...CODEX_WRITE_FLAGS];
-  if (input.cwd !== void 0) {
-    args.push("--cd", input.cwd);
-  }
-  const model = selectedOpenAIModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("-m", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertCodexEffort(effort);
-    args.push("-c", codexReasoningEffortConfigValue(effort));
-  }
-  if (schemaPath !== void 0) {
-    args.push("--output-schema", schemaPath);
-  }
-  args.push(input.prompt);
-  assertCodexSpawnArgvBoundary(args);
-  return args;
-}
-var CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
-  "$id",
-  "$ref",
-  "$schema",
-  "$defs",
-  "allOf",
-  "anyOf",
-  "const",
-  "contains",
-  "definitions",
-  "dependentRequired",
-  "dependentSchemas",
-  "exclusiveMaximum",
-  "exclusiveMinimum",
-  "format",
-  "if",
-  "maxContains",
-  "maxItems",
-  "maxLength",
-  "maxProperties",
-  "maximum",
-  "minContains",
-  "minItems",
-  "minLength",
-  "minProperties",
-  "minimum",
-  "multipleOf",
-  "not",
-  "oneOf",
-  "pattern",
-  "patternProperties",
-  "propertyNames",
-  "then",
-  "uniqueItems"
-]);
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function everyObjectPropertyIsRequired(schema) {
-  if (!isRecord(schema.properties))
-    return true;
-  if (!Array.isArray(schema.required))
-    return false;
-  const required2 = new Set(schema.required.filter((value) => typeof value === "string"));
-  const propertyNames = Object.keys(schema.properties);
-  return propertyNames.length === required2.size && propertyNames.every((property) => required2.has(property));
-}
-function isCodexOutputSchemaNodeCompatible(node) {
-  if (Array.isArray(node))
-    return node.every(isCodexOutputSchemaNodeCompatible);
-  if (!isRecord(node))
-    return true;
-  for (const key of Object.keys(node)) {
-    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key))
-      return false;
-  }
-  if (Array.isArray(node.type))
-    return false;
-  if (node.type === "object") {
-    if (node.additionalProperties !== void 0 && node.additionalProperties !== false) {
-      return false;
-    }
-    if (!everyObjectPropertyIsRequired(node))
-      return false;
-  }
-  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
-}
-function isCodexOutputSchemaCompatible(schema) {
-  return schema.type === "object" && isCodexOutputSchemaNodeCompatible(schema);
-}
-async function writeSchemaTempFile(schema) {
-  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
-  try {
-    const path = joinPath(dir, "schema.json");
-    await writeFile(path, JSON.stringify(schema), "utf8");
-    return { dir, path };
-  } catch (err) {
-    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
-    throw err;
-  }
-}
-async function cleanupSchemaTempDir(dir) {
-  if (dir === void 0)
-    return;
-  try {
-    await rm(dir, { recursive: true, force: true });
-  } catch {
-  }
-}
-async function relayCodex(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
-  const cli_version = captureCodexVersion();
-  let tempDir;
-  let schemaPath;
-  try {
-    if (input.responseSchema !== void 0 && isCodexOutputSchemaCompatible(input.responseSchema)) {
-      const allocated = await writeSchemaTempFile(input.responseSchema);
-      tempDir = allocated.dir;
-      schemaPath = allocated.path;
-    }
-    const args = buildCodexArgs(input, schemaPath);
-    let result;
-    try {
-      result = await runConnectorSubprocess({
-        executable: CODEX_EXECUTABLE,
-        args,
-        timeoutMs: timeoutMs2,
-        stdoutMaxBytes: STDOUT_MAX_BYTES2,
-        stderrMaxBytes: STDERR_MAX_BYTES2,
-        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
-        env: process.env,
-        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-      });
-    } catch (error51) {
-      if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
-      }
-      throw error51;
-    }
-    if (result.timedOut) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
-    }
-    if (result.code !== 0) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
-    }
-    if (result.stdoutCapped) {
-      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-    }
-    try {
-      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
-    } catch (error51) {
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-    }
-  } finally {
-    await cleanupSchemaTempDir(tempDir);
-  }
-}
-var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set([
-  "agent_message",
-  "command_execution",
-  "reasoning",
-  "file_change",
-  "todo_list"
-]);
-var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "thread.started",
-  "turn.started",
-  "item.started",
-  "item.updated",
-  "item.completed",
-  "turn.completed"
-]);
-var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
-function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("codex --json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  for (const [idx, trace_entry] of trace_entries.entries()) {
-    const type = trace_entry.type;
-    if (typeof type !== "string") {
-      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
-    }
-    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
-      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
-      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
-    }
-    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
-      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
-    }
-  }
-  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
-  if (threadStarted === void 0) {
-    throw new Error("thread.started trace_entry missing from codex --json stdout");
-  }
-  const thread_id = threadStarted.thread_id;
-  if (typeof thread_id !== "string" || thread_id.length === 0) {
-    throw new Error("thread.started.thread_id missing or empty");
-  }
-  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
-  if (turnCompleted === void 0) {
-    throw new Error("turn.completed trace_entry missing from codex --json stdout");
-  }
-  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
-  for (const [idx, e] of itemCompleted.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.completed[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.completed[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
-  for (const [idx, e] of itemUpdated.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.updated[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.updated[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const agentMessages = itemCompleted.filter((e) => {
-    const item2 = e.item;
-    return item2.type === "agent_message";
-  });
-  const terminalMessage = agentMessages[agentMessages.length - 1];
-  if (terminalMessage === void 0) {
-    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
-  }
-  const item = terminalMessage.item;
-  const result_body_raw = item.text;
-  if (typeof result_body_raw !== "string") {
-    throw new Error("terminal agent_message item.text missing or not a string");
-  }
-  const result_body = extractJsonObject(result_body_raw);
-  return {
-    request_payload: prompt,
-    receipt_id: thread_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
-// dist/connectors/cursor-agent.js
-import { execFileSync as execFileSync2 } from "node:child_process";
-var CURSOR_AGENT_EXECUTABLE = "cursor-agent";
-var CURSOR_AGENT_SUPPORTED_EFFORTS = ["none"];
-var CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
-  "--print",
-  "--output-format",
-  "text",
-  "--trust",
-  "--force"
-]);
-var DEFAULT_TIMEOUT_MS3 = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
-var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES3 = 1024 * 1024;
-var VERSION_CAPTURE_TIMEOUT_MS2 = 5e3;
-var cachedCursorAgentVersion;
-function captureCursorAgentVersion() {
-  if (cachedCursorAgentVersion !== void 0)
-    return cachedCursorAgentVersion;
-  let stdout;
-  try {
-    stdout = execFileSync2(CURSOR_AGENT_EXECUTABLE, ["--version"], {
-      encoding: "utf8",
-      timeout: VERSION_CAPTURE_TIMEOUT_MS2,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (err) {
-    throw new Error(`cursor-agent --version failed: ${err.message}`);
-  }
-  const version2 = stdout.trim();
-  if (version2.length === 0) {
-    throw new Error("cursor-agent --version produced empty output");
-  }
-  cachedCursorAgentVersion = version2;
-  return version2;
-}
-function selectedGeminiModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "gemini") {
-    throw new Error(`cursor-agent connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'gemini'`);
-  }
-  return model.model;
-}
-function assertCursorAgentEffort(effort) {
-  if (!CURSOR_AGENT_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`cursor-agent connector cannot honor effort '${effort}'; supported efforts: ${CURSOR_AGENT_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function buildCursorAgentArgs(input) {
-  const args = [...CURSOR_AGENT_DISPATCH_FLAGS];
-  const model = selectedGeminiModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("--model", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertCursorAgentEffort(effort);
-  }
-  if (input.cwd !== void 0) {
-    args.push("--workspace", input.cwd);
-  }
-  args.push(input.prompt);
-  return args;
-}
-async function relayCursorAgent(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
-  const cliVersion = captureCursorAgentVersion();
-  const args = buildCursorAgentArgs(input);
-  let result;
-  try {
-    result = await runConnectorSubprocess({
-      executable: CURSOR_AGENT_EXECUTABLE,
-      args,
-      timeoutMs: timeoutMs2,
-      stdoutMaxBytes: STDOUT_MAX_BYTES3,
-      stderrMaxBytes: STDERR_MAX_BYTES3,
-      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
-      env: process.env,
-      ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-    });
-  } catch (error51) {
-    if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`cursor-agent subprocess ${verb}: ${error51.message}`);
-    }
-    throw error51;
-  }
-  if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.stdoutCapped) {
-    throw new Error(`cursor-agent subprocess stdout exceeded ${STDOUT_MAX_BYTES3} bytes; connector output cannot be evaluated on truncated stream`);
-  }
-  const resultBodyRaw = result.stdout.trim();
-  if (resultBodyRaw.length === 0) {
-    throw new Error("cursor-agent stdout is empty");
-  }
-  return {
-    request_payload: input.prompt,
-    receipt_id: sha256Hex(resultBodyRaw),
-    result_body: extractJsonObject(resultBodyRaw),
-    duration_ms: result.durationMs,
-    cli_version: cliVersion
-  };
-}
-
 // dist/runtime/connectors/resolver.js
 function mergedRelayConfig(layers) {
   const merged = {
@@ -38871,22 +38026,14 @@ function resolveConnectorForGuidanceInput(input) {
   return decision({ kind: "builtin", name: "claude-code" }, { source: "auto" }, input.role);
 }
 function expectedProvider(connectorName) {
-  if (connectorName === "claude-code")
-    return "anthropic";
-  if (connectorName === "codex")
-    return "openai";
-  if (connectorName === "cursor-agent")
-    return "gemini";
-  return void 0;
+  if (!isEnabledConnector(connectorName))
+    return void 0;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].provider;
 }
 function supportedEfforts(connectorName) {
-  if (connectorName === "claude-code")
-    return CLAUDE_CODE_SUPPORTED_EFFORTS;
-  if (connectorName === "codex")
-    return CODEX_SUPPORTED_EFFORTS;
-  if (connectorName === "cursor-agent")
-    return CURSOR_AGENT_SUPPORTED_EFFORTS;
-  return void 0;
+  if (!isEnabledConnector(connectorName))
+    return void 0;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].supportedEfforts;
 }
 function assertConnectorSelectionCompatible(connectorName, selection) {
   const expected = expectedProvider(connectorName);
@@ -45567,7 +44714,7 @@ function rubricResultFields(rubric, resultBody) {
 }
 function buildRubricResult(rubric, resultBody) {
   const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
-  if (!isRecord2(rawJudgments)) {
+  if (!isRecord(rawJudgments)) {
     throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
   }
   const dims = {};
@@ -45601,12 +44748,12 @@ function runtimeSignalForSource(resultBody, source) {
 }
 function readPath(source, path) {
   return path.split(".").reduce((current, segment) => {
-    if (!isRecord2(current))
+    if (!isRecord(current))
       return void 0;
     return current[segment];
   }, source);
 }
-function isRecord2(value) {
+function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isRubricJudgment(value) {
@@ -45766,6 +44913,864 @@ function parseReport(schemaName, resultBody) {
     };
   }
   return { kind: "ok" };
+}
+
+// dist/shared/json-extraction.js
+function extractJsonObject(text) {
+  let cursor = 0;
+  while (cursor < text.length) {
+    const start = text.indexOf("{", cursor);
+    if (start === -1)
+      break;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (inString) {
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"')
+          inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{")
+        depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+    if (end === -1)
+      break;
+    const candidate = text.slice(start, end);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      cursor = start + 1;
+    }
+  }
+  return text;
+}
+
+// dist/connectors/subprocess.js
+import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
+var ConnectorSubprocessSpawnError = class extends Error {
+  phase;
+  constructor(phase, message) {
+    super(message);
+    this.phase = phase;
+    this.name = "ConnectorSubprocessSpawnError";
+  }
+};
+function isConnectorSubprocessSpawnError(error51) {
+  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
+}
+function appendCapped(current, currentBytes, chunk, maxBytes) {
+  const chunkBytes = Buffer.byteLength(chunk, "utf8");
+  if (currentBytes + chunkBytes <= maxBytes) {
+    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
+  }
+  const remaining = maxBytes - currentBytes;
+  if (remaining <= 0) {
+    return { text: current, bytes: currentBytes, capped: true };
+  }
+  return {
+    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
+    bytes: maxBytes,
+    capped: true
+  };
+}
+async function runConnectorSubprocess(input) {
+  const start = performance.now();
+  return await new Promise((resolve16, reject) => {
+    let child;
+    try {
+      child = spawn(input.executable, [...input.args], {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: input.env ?? process.env,
+        detached: true,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
+      return;
+    }
+    let stdout = "";
+    let stdoutBytes = 0;
+    let stderr = "";
+    let stderrBytes = 0;
+    let stdoutCapped = false;
+    let stderrCapped = false;
+    let timedOut = false;
+    let killGroupSucceeded = false;
+    const killProcessGroup = (signal) => {
+      const pid = child.pid;
+      if (typeof pid !== "number")
+        return false;
+      try {
+        process.kill(-pid, signal);
+        return true;
+      } catch {
+        try {
+          child.kill(signal);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+    let killGraceTimer;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killGroupSucceeded = killProcessGroup("SIGTERM");
+      killGraceTimer = setTimeout(() => {
+        killProcessGroup("SIGKILL");
+        killGraceTimer = void 0;
+      }, input.sigtermToSigkillGraceMs);
+    }, input.timeoutMs);
+    const clearAllTimers = () => {
+      clearTimeout(timer);
+      if (killGraceTimer !== void 0) {
+        clearTimeout(killGraceTimer);
+        killGraceTimer = void 0;
+      }
+    };
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk) => {
+      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
+      stdout = next.text;
+      stdoutBytes = next.bytes;
+      stdoutCapped = stdoutCapped || next.capped;
+    });
+    child.stderr?.on("data", (chunk) => {
+      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
+      stderr = next.text;
+      stderrBytes = next.bytes;
+      stderrCapped = stderrCapped || next.capped;
+    });
+    child.on("error", (error51) => {
+      clearAllTimers();
+      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
+    });
+    child.on("close", (code, signal) => {
+      clearAllTimers();
+      resolve16({
+        stdout,
+        stderr,
+        stdoutCapped,
+        stderrCapped,
+        timedOut,
+        killGroupSucceeded,
+        code,
+        signal,
+        durationMs: performance.now() - start
+      });
+    });
+  });
+}
+
+// dist/connectors/claude-code.js
+var CLAUDE_CODE_DISPATCH_FLAGS = [
+  "-p",
+  "--permission-mode",
+  "bypassPermissions",
+  "--strict-mcp-config",
+  "--disable-slash-commands",
+  "--setting-sources",
+  "",
+  "--settings",
+  "{}",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--no-session-persistence"
+];
+var CLAUDE_CODE_EXECUTABLE = "claude";
+var DEFAULT_TIMEOUT_MS = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
+var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES = 1024 * 1024;
+function selectedAnthropicModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "anthropic") {
+    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
+  }
+  return model.model;
+}
+function assertClaudeCodeEffort(effort) {
+  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildClaudeCodeArgs(input) {
+  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
+  const model = selectedAnthropicModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertClaudeCodeEffort(effort);
+    args.push("--effort", effort);
+  }
+  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
+    args.push("--json-schema", JSON.stringify(input.responseSchema));
+  }
+  args.push(input.prompt);
+  return args;
+}
+function claudeCodeStdoutDiagnostic(stdout) {
+  try {
+    parseClaudeCodeStdout(stdout, "", 0);
+    return void 0;
+  } catch (error51) {
+    return error51 instanceof Error ? error51.message : String(error51);
+  }
+}
+function isClaudeCodeStructuredOutputCompatible(schema) {
+  return schema.type === "object";
+}
+async function relayClaudeCode(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const args = buildClaudeCodeArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CLAUDE_CODE_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES,
+      stderrMaxBytes: STDERR_MAX_BYTES,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
+      env: process.env
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
+    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
+    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+  }
+  try {
+    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
+  } catch (error51) {
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+  }
+}
+function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    throw new Error("stream-json stdout is empty");
+  }
+  const trace_entries = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
+    }
+    trace_entries.push(parsed);
+  }
+  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
+  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
+  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
+  if (initTraceEntry === void 0) {
+    throw new Error("system/init trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry === void 0) {
+    throw new Error("result trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry.is_error === true) {
+    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
+    throw new Error(`subprocess reported is_error: ${message}`);
+  }
+  const mcpServers = initTraceEntry.mcp_servers;
+  const slashCommands = initTraceEntry.slash_commands;
+  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
+    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
+  }
+  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
+    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
+  }
+  const receipt_id = initTraceEntry.session_id;
+  const cli_version = initTraceEntry.claude_code_version;
+  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
+    throw new Error("init.session_id missing or empty");
+  }
+  if (typeof cli_version !== "string" || cli_version.length === 0) {
+    throw new Error("init.claude_code_version missing or empty");
+  }
+  const structuredOutput = resultTraceEntry.structured_output;
+  let result_body;
+  if (structuredOutput !== void 0 && structuredOutput !== null) {
+    if (typeof structuredOutput !== "object") {
+      throw new Error("result.structured_output present but not an object");
+    }
+    result_body = JSON.stringify(structuredOutput);
+  } else {
+    const result_body_raw = resultTraceEntry.result;
+    if (typeof result_body_raw !== "string") {
+      throw new Error("result.result missing or not a string");
+    }
+    result_body = extractJsonObject(result_body_raw);
+  }
+  return {
+    request_payload: prompt,
+    receipt_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/codex.js
+import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
+var CODEX_WRITE_FLAGS = Object.freeze([
+  "exec",
+  "--json",
+  "-s",
+  "workspace-write",
+  "--ephemeral",
+  "--skip-git-repo-check",
+  "--ignore-user-config",
+  "--ignore-rules"
+]);
+var CODEX_EXECUTABLE = "codex";
+var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
+  "--dangerously-bypass-approvals-and-sandbox",
+  "--full-auto",
+  "--add-dir",
+  "-o",
+  "--output-last-message",
+  "-c",
+  "--config",
+  "-p",
+  "--profile",
+  "--sandbox"
+]);
+var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
+if (!CODEX_WRITE_FLAGS.includes("-s") || !CODEX_WRITE_FLAGS.includes("workspace-write") || !CODEX_WRITE_FLAGS.includes("--ignore-user-config") || !CODEX_WRITE_FLAGS.includes("--ignore-rules")) {
+  throw new Error('CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"');
+}
+var flagsAsStringArray = CODEX_WRITE_FLAGS;
+for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
+  if (flagsAsStringArray.includes(forbidden)) {
+    throw new Error(`CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
+  }
+}
+var DEFAULT_TIMEOUT_MS2 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
+var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES2 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
+var cachedCodexVersion;
+function captureCodexVersion() {
+  if (cachedCodexVersion !== void 0)
+    return cachedCodexVersion;
+  let stdout;
+  try {
+    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`codex --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("codex --version produced empty output");
+  }
+  cachedCodexVersion = version2;
+  return version2;
+}
+function assertCodexEffort(effort) {
+  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function selectedOpenAIModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "openai") {
+    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
+  }
+  return model.model;
+}
+function codexReasoningEffortConfigValue(effort) {
+  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
+}
+function isForbiddenCodexArg(arg) {
+  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
+    if (token === "-c")
+      return false;
+    if (arg === token)
+      return true;
+    return token.startsWith("--") && arg.startsWith(`${token}=`);
+  });
+}
+function isAllowedCodexConfigOverride(value) {
+  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
+}
+function assertCodexSpawnArgvBoundary(args) {
+  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
+  const sandboxFlagIndex = sandboxFlagIndexes[0];
+  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "workspace-write") {
+    throw new Error('codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required');
+  }
+  let configOverrideCount = 0;
+  for (let idx = 0; idx < args.length; idx += 1) {
+    const arg = args[idx];
+    if (arg === void 0)
+      continue;
+    if (arg === "-c") {
+      configOverrideCount += 1;
+      if (configOverrideCount > 1) {
+        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
+      }
+      const value = args[idx + 1];
+      if (!isAllowedCodexConfigOverride(value)) {
+        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
+      }
+      idx += 1;
+      continue;
+    }
+    if (isForbiddenCodexArg(arg)) {
+      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
+    }
+  }
+}
+function buildCodexArgs(input, schemaPath) {
+  const args = [...CODEX_WRITE_FLAGS];
+  if (input.cwd !== void 0) {
+    args.push("--cd", input.cwd);
+  }
+  const model = selectedOpenAIModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("-m", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCodexEffort(effort);
+    args.push("-c", codexReasoningEffortConfigValue(effort));
+  }
+  if (schemaPath !== void 0) {
+    args.push("--output-schema", schemaPath);
+  }
+  args.push(input.prompt);
+  assertCodexSpawnArgvBoundary(args);
+  return args;
+}
+var CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
+  "$id",
+  "$ref",
+  "$schema",
+  "$defs",
+  "allOf",
+  "anyOf",
+  "const",
+  "contains",
+  "definitions",
+  "dependentRequired",
+  "dependentSchemas",
+  "exclusiveMaximum",
+  "exclusiveMinimum",
+  "format",
+  "if",
+  "maxContains",
+  "maxItems",
+  "maxLength",
+  "maxProperties",
+  "maximum",
+  "minContains",
+  "minItems",
+  "minLength",
+  "minProperties",
+  "minimum",
+  "multipleOf",
+  "not",
+  "oneOf",
+  "pattern",
+  "patternProperties",
+  "propertyNames",
+  "then",
+  "uniqueItems"
+]);
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function everyObjectPropertyIsRequired(schema) {
+  if (!isRecord2(schema.properties))
+    return true;
+  if (!Array.isArray(schema.required))
+    return false;
+  const required2 = new Set(schema.required.filter((value) => typeof value === "string"));
+  const propertyNames = Object.keys(schema.properties);
+  return propertyNames.length === required2.size && propertyNames.every((property) => required2.has(property));
+}
+function isCodexOutputSchemaNodeCompatible(node) {
+  if (Array.isArray(node))
+    return node.every(isCodexOutputSchemaNodeCompatible);
+  if (!isRecord2(node))
+    return true;
+  for (const key of Object.keys(node)) {
+    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key))
+      return false;
+  }
+  if (Array.isArray(node.type))
+    return false;
+  if (node.type === "object") {
+    if (node.additionalProperties !== void 0 && node.additionalProperties !== false) {
+      return false;
+    }
+    if (!everyObjectPropertyIsRequired(node))
+      return false;
+  }
+  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
+}
+function isCodexOutputSchemaCompatible(schema) {
+  return schema.type === "object" && isCodexOutputSchemaNodeCompatible(schema);
+}
+async function writeSchemaTempFile(schema) {
+  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
+  try {
+    const path = joinPath(dir, "schema.json");
+    await writeFile(path, JSON.stringify(schema), "utf8");
+    return { dir, path };
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
+    throw err;
+  }
+}
+async function cleanupSchemaTempDir(dir) {
+  if (dir === void 0)
+    return;
+  try {
+    await rm(dir, { recursive: true, force: true });
+  } catch {
+  }
+}
+async function relayCodex(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
+  const cli_version = captureCodexVersion();
+  let tempDir;
+  let schemaPath;
+  try {
+    if (input.responseSchema !== void 0 && isCodexOutputSchemaCompatible(input.responseSchema)) {
+      const allocated = await writeSchemaTempFile(input.responseSchema);
+      tempDir = allocated.dir;
+      schemaPath = allocated.path;
+    }
+    const args = buildCodexArgs(input, schemaPath);
+    let result;
+    try {
+      result = await runConnectorSubprocess({
+        executable: CODEX_EXECUTABLE,
+        args,
+        timeoutMs: timeoutMs2,
+        stdoutMaxBytes: STDOUT_MAX_BYTES2,
+        stderrMaxBytes: STDERR_MAX_BYTES2,
+        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
+        env: process.env,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      if (isConnectorSubprocessSpawnError(error51)) {
+        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
+      }
+      throw error51;
+    }
+    if (result.timedOut) {
+      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.code !== 0) {
+      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.stdoutCapped) {
+      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+    }
+    try {
+      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
+    } catch (error51) {
+      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+    }
+  } finally {
+    await cleanupSchemaTempDir(tempDir);
+  }
+}
+var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set([
+  "agent_message",
+  "command_execution",
+  "reasoning",
+  "file_change",
+  "todo_list"
+]);
+var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "thread.started",
+  "turn.started",
+  "item.started",
+  "item.updated",
+  "item.completed",
+  "turn.completed"
+]);
+var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
+function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    throw new Error("codex --json stdout is empty");
+  }
+  const trace_entries = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
+    }
+    trace_entries.push(parsed);
+  }
+  for (const [idx, trace_entry] of trace_entries.entries()) {
+    const type = trace_entry.type;
+    if (typeof type !== "string") {
+      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
+    }
+    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
+      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
+      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
+    }
+    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
+      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
+    }
+  }
+  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
+  if (threadStarted === void 0) {
+    throw new Error("thread.started trace_entry missing from codex --json stdout");
+  }
+  const thread_id = threadStarted.thread_id;
+  if (typeof thread_id !== "string" || thread_id.length === 0) {
+    throw new Error("thread.started.thread_id missing or empty");
+  }
+  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
+  if (turnCompleted === void 0) {
+    throw new Error("turn.completed trace_entry missing from codex --json stdout");
+  }
+  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
+  for (const [idx, e] of itemCompleted.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.completed[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.completed[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
+  for (const [idx, e] of itemUpdated.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.updated[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.updated[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const agentMessages = itemCompleted.filter((e) => {
+    const item2 = e.item;
+    return item2.type === "agent_message";
+  });
+  const terminalMessage = agentMessages[agentMessages.length - 1];
+  if (terminalMessage === void 0) {
+    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
+  }
+  const item = terminalMessage.item;
+  const result_body_raw = item.text;
+  if (typeof result_body_raw !== "string") {
+    throw new Error("terminal agent_message item.text missing or not a string");
+  }
+  const result_body = extractJsonObject(result_body_raw);
+  return {
+    request_payload: prompt,
+    receipt_id: thread_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/cursor-agent.js
+import { execFileSync as execFileSync2 } from "node:child_process";
+var CURSOR_AGENT_EXECUTABLE = "cursor-agent";
+var CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
+  "--print",
+  "--output-format",
+  "text",
+  "--trust",
+  "--force"
+]);
+var DEFAULT_TIMEOUT_MS3 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
+var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES3 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS2 = 5e3;
+var cachedCursorAgentVersion;
+function captureCursorAgentVersion() {
+  if (cachedCursorAgentVersion !== void 0)
+    return cachedCursorAgentVersion;
+  let stdout;
+  try {
+    stdout = execFileSync2(CURSOR_AGENT_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS2,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`cursor-agent --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("cursor-agent --version produced empty output");
+  }
+  cachedCursorAgentVersion = version2;
+  return version2;
+}
+function selectedGeminiModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "gemini") {
+    throw new Error(`cursor-agent connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'gemini'`);
+  }
+  return model.model;
+}
+function assertCursorAgentEffort(effort) {
+  if (!CURSOR_AGENT_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`cursor-agent connector cannot honor effort '${effort}'; supported efforts: ${CURSOR_AGENT_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildCursorAgentArgs(input) {
+  const args = [...CURSOR_AGENT_DISPATCH_FLAGS];
+  const model = selectedGeminiModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCursorAgentEffort(effort);
+  }
+  if (input.cwd !== void 0) {
+    args.push("--workspace", input.cwd);
+  }
+  args.push(input.prompt);
+  return args;
+}
+async function relayCursorAgent(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
+  const cliVersion = captureCursorAgentVersion();
+  const args = buildCursorAgentArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CURSOR_AGENT_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES3,
+      stderrMaxBytes: STDERR_MAX_BYTES3,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
+      env: process.env,
+      ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+      throw new Error(`cursor-agent subprocess ${verb}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
+    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`cursor-agent subprocess stdout exceeded ${STDOUT_MAX_BYTES3} bytes; connector output cannot be evaluated on truncated stream`);
+  }
+  const resultBodyRaw = result.stdout.trim();
+  if (resultBodyRaw.length === 0) {
+    throw new Error("cursor-agent stdout is empty");
+  }
+  return {
+    request_payload: input.prompt,
+    receipt_id: sha256Hex(resultBodyRaw),
+    result_body: extractJsonObject(resultBodyRaw),
+    duration_ms: result.durationMs,
+    cli_version: cliVersion
+  };
 }
 
 // dist/connectors/custom.js
@@ -48720,20 +48725,16 @@ async function relayWithResolvedConnector(connector, input) {
     ...input.resolvedSelection === void 0 ? {} : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) },
     ...input.responseSchema === void 0 ? {} : { responseSchema: input.responseSchema }
   };
-  if (connector.kind === "builtin" && connector.name === "claude-code") {
-    return relayClaudeCode(relayInput);
-  }
-  if (connector.kind === "builtin" && connector.name === "codex") {
-    return relayCodex(relayInput);
-  }
-  if (connector.kind === "builtin" && connector.name === "cursor-agent") {
-    return relayCursorAgent(relayInput);
-  }
   if (connector.kind === "custom") {
     return relayCustom({ ...relayInput, descriptor: connector });
   }
-  throw new Error(`unsupported relay connector '${connector.name}'`);
+  return BUILTIN_CONNECTOR_RELAYERS[connector.name](relayInput);
 }
+var BUILTIN_CONNECTOR_RELAYERS = {
+  "claude-code": relayClaudeCode,
+  codex: relayCodex,
+  "cursor-agent": relayCursorAgent
+};
 function timeoutMs(step) {
   const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === "number" ? wallClock : void 0;
@@ -50929,7 +50930,7 @@ function connectorFromTrace(entry) {
     return void 0;
   }
   const record2 = connector;
-  if (record2.kind === "builtin" && (record2.name === "claude-code" || record2.name === "codex")) {
+  if (record2.kind === "builtin" && typeof record2.name === "string" && EnabledConnector.options.includes(record2.name)) {
     return { kind: "builtin", name: record2.name };
   }
   if (record2.kind === "custom" && typeof record2.name === "string" && Array.isArray(record2.command) && record2.capabilities !== void 0) {

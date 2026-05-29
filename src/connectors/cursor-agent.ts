@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { CURSOR_AGENT_SUPPORTED_EFFORTS } from '../schemas/connector.js';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import {
@@ -14,7 +15,10 @@ import {
 } from './subprocess.js';
 
 export const CURSOR_AGENT_EXECUTABLE = 'cursor-agent';
-export const CURSOR_AGENT_SUPPORTED_EFFORTS = ['none'] as const;
+// Re-exported from the built-in connector registry (the single source of
+// truth); kept under this name for the connector's own effort guard and for
+// call sites bound to the cursor-agent connector.
+export { CURSOR_AGENT_SUPPORTED_EFFORTS };
 export const CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
   '--print',
   '--output-format',

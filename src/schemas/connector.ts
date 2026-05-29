@@ -29,13 +29,61 @@ export const ConnectorOutputExtraction = z
   .strict();
 export type ConnectorOutputExtraction = z.infer<typeof ConnectorOutputExtraction>;
 
+// Model provider a built-in connector binds to. Mirrors the closed provider
+// enum on `SelectionPolicy.Model.provider`; a connector cannot honor a model
+// from a different provider.
+export type ConnectorProvider = 'anthropic' | 'openai' | 'gemini';
+
+// Single source of truth for built-in connector identity. Every built-in
+// connector carries exactly this much identity: the model provider it binds
+// to, the effort levels it can honor, and its filesystem / structured-output
+// capabilities. The executable name and dispatch flags stay in the connector
+// modules (they are subprocess-spawn mechanics, not selection-time identity).
+//
+// `satisfies Record<EnabledConnector, ConnectorSpec>` is the load-bearing
+// guard: adding a value to the `EnabledConnector` enum without a matching
+// entry here — or adding an entry whose key is not in the enum — is a `tsc`
+// error, so the registry can never silently drift out of sync with the enum.
+export interface ConnectorSpec {
+  readonly provider: ConnectorProvider;
+  readonly supportedEfforts: readonly string[];
+  readonly capabilities: ConnectorCapabilities;
+}
+
+// Effort tuples are declared here as the single source of truth and
+// re-exported from the connector modules under their established names
+// (CLAUDE_CODE_SUPPORTED_EFFORTS, etc.). The `as const` preserves the literal
+// tuple type those modules rely on for their `asserts effort is ...` guards.
+export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export const CODEX_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
+export const CURSOR_AGENT_SUPPORTED_EFFORTS = ['none'] as const;
+
+export const BUILTIN_CONNECTOR_SPECS = {
+  'claude-code': {
+    provider: 'anthropic',
+    supportedEfforts: CLAUDE_CODE_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: 'trusted-write', structured_output: 'json' },
+  },
+  codex: {
+    provider: 'openai',
+    supportedEfforts: CODEX_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: 'trusted-write', structured_output: 'json' },
+  },
+  'cursor-agent': {
+    provider: 'gemini',
+    supportedEfforts: CURSOR_AGENT_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: 'trusted-write', structured_output: 'json' },
+  },
+} as const satisfies Record<EnabledConnector, ConnectorSpec>;
+
+// Derived capability view, preserved for callers that only need the
+// filesystem / structured-output capabilities. Single source of truth is
+// `BUILTIN_CONNECTOR_SPECS`; this projection cannot drift from it.
 export const BUILTIN_CONNECTOR_CAPABILITIES: Readonly<
   Record<EnabledConnector, ConnectorCapabilities>
-> = {
-  'claude-code': { filesystem: 'trusted-write', structured_output: 'json' },
-  codex: { filesystem: 'trusted-write', structured_output: 'json' },
-  'cursor-agent': { filesystem: 'trusted-write', structured_output: 'json' },
-} as const;
+> = Object.fromEntries(
+  EnabledConnector.options.map((name) => [name, BUILTIN_CONNECTOR_SPECS[name].capabilities]),
+) as Record<EnabledConnector, ConnectorCapabilities>;
 
 // connector-I2: the `'auto'` literal is a reserved sentinel for
 // `RelayConfig.default`; connector names must not collide with it.

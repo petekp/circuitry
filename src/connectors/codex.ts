@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join as joinPath } from 'node:path';
+import { CODEX_SUPPORTED_EFFORTS } from '../schemas/connector.js';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import type { ConnectorRelayInput, RelayResult } from '../shared/connector-relay.js';
@@ -84,7 +85,10 @@ export const CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
   '--sandbox',
 ] as const);
 export const CODEX_REASONING_EFFORT_CONFIG_KEY = 'model_reasoning_effort';
-export const CODEX_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
+// Re-exported from the built-in connector registry (the single source of
+// truth); kept under this name for the connector's own effort guard, the
+// allowlisted -c override builder, and call sites bound to the codex connector.
+export { CODEX_SUPPORTED_EFFORTS };
 
 // Fail-closed module-load assertion. The `CODEX_WRITE_FLAGS` constant
 // is frozen (see `Object.freeze` above) so this is a static-shape

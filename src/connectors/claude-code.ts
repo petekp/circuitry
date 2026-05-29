@@ -1,3 +1,4 @@
+import { CLAUDE_CODE_SUPPORTED_EFFORTS } from '../schemas/connector.js';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import {
@@ -81,7 +82,10 @@ export const CLAUDE_CODE_DISPATCH_FLAGS = [
 ] as const;
 
 export const CLAUDE_CODE_EXECUTABLE = 'claude';
-export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+// Re-exported from the built-in connector registry (the single source of
+// truth); kept under this name for the connector's own effort guard and for
+// call sites bound to the claude-code connector.
+export { CLAUDE_CODE_SUPPORTED_EFFORTS };
 
 // Default wall-clock budget for a single relay. With the open tool
 // surface, workers do real file inspection / edits / verification before

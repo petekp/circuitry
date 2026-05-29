@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { CompiledFlowProgressStep, CompiledFlowProgressSurface } from '../../flows/types.js';
 import {
   BUILTIN_CONNECTOR_CAPABILITIES,
+  EnabledConnector,
   type FilesystemCapability,
   type ResolvedConnector,
 } from '../../schemas/connector.js';
@@ -42,8 +43,12 @@ function connectorFromTrace(entry: TraceEntry): ResolvedConnector | undefined {
     return undefined;
   }
   const record = connector as Record<string, unknown>;
-  if (record.kind === 'builtin' && (record.name === 'claude-code' || record.name === 'codex')) {
-    return { kind: 'builtin', name: record.name };
+  if (
+    record.kind === 'builtin' &&
+    typeof record.name === 'string' &&
+    (EnabledConnector.options as readonly string[]).includes(record.name)
+  ) {
+    return { kind: 'builtin', name: record.name as EnabledConnector };
   }
   if (
     record.kind === 'custom' &&

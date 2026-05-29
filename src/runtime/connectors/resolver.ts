@@ -3,9 +3,6 @@
 // Relay connector choice is layered: explicit invocation, role config, flow
 // config, default config, then the auto fallback. Keep capability and provider
 // checks here so executors can assume the selected connector can run the role.
-import { CLAUDE_CODE_SUPPORTED_EFFORTS } from '../../connectors/claude-code.js';
-import { CODEX_SUPPORTED_EFFORTS } from '../../connectors/codex.js';
-import { CURSOR_AGENT_SUPPORTED_EFFORTS } from '../../connectors/cursor-agent.js';
 import type { WorkRootKind } from '../../schemas/change-packet.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import type { ConnectorReference } from '../../schemas/config.js';
@@ -17,6 +14,8 @@ import type {
 } from '../../schemas/connector.js';
 import {
   BUILTIN_CONNECTOR_CAPABILITIES,
+  BUILTIN_CONNECTOR_SPECS,
+  type ConnectorProvider,
   EnabledConnector as EnabledConnectorSchema,
 } from '../../schemas/connector.js';
 import type { CompiledFlowId } from '../../schemas/ids.js';
@@ -205,18 +204,18 @@ export function resolveConnectorForGuidanceInput(input: {
   return decision({ kind: 'builtin', name: 'claude-code' }, { source: 'auto' }, input.role);
 }
 
-function expectedProvider(connectorName: string): 'anthropic' | 'openai' | 'gemini' | undefined {
-  if (connectorName === 'claude-code') return 'anthropic';
-  if (connectorName === 'codex') return 'openai';
-  if (connectorName === 'cursor-agent') return 'gemini';
-  return undefined;
+// Provider / supported-effort lookups are now registry-driven. A custom
+// connector name is not in the built-in registry and resolves to `undefined`,
+// which the callers treat as "no built-in compatibility constraint to assert"
+// — identical to the prior if-chain fall-through.
+function expectedProvider(connectorName: string): ConnectorProvider | undefined {
+  if (!isEnabledConnector(connectorName)) return undefined;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].provider;
 }
 
 function supportedEfforts(connectorName: string): readonly string[] | undefined {
-  if (connectorName === 'claude-code') return CLAUDE_CODE_SUPPORTED_EFFORTS;
-  if (connectorName === 'codex') return CODEX_SUPPORTED_EFFORTS;
-  if (connectorName === 'cursor-agent') return CURSOR_AGENT_SUPPORTED_EFFORTS;
-  return undefined;
+  if (!isEnabledConnector(connectorName)) return undefined;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].supportedEfforts;
 }
 
 export function assertConnectorSelectionCompatible(

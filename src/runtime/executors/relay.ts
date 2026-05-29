@@ -5,7 +5,7 @@ import { relayCustom } from '../../connectors/custom.js';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
 import { findReportZodSchema, parseReport } from '../../flows/registries/report-schemas.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
-import type { ResolvedConnector } from '../../schemas/connector.js';
+import type { EnabledConnector, ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
@@ -20,6 +20,7 @@ import type { Ref } from '../../schemas/ref.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
 import { CheckEvaluatedTraceEntry } from '../../schemas/trace-entry.js';
+import type { ConnectorRelayInput } from '../../shared/connector-relay.js';
 import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
 import { evidenceFromAcceptanceCriteriaTrace } from '../../shared/proof-assessment.js';
 import {
@@ -89,20 +90,22 @@ export async function relayWithResolvedConnector(
       : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) }),
     ...(input.responseSchema === undefined ? {} : { responseSchema: input.responseSchema }),
   };
-  if (connector.kind === 'builtin' && connector.name === 'claude-code') {
-    return relayClaudeCode(relayInput);
-  }
-  if (connector.kind === 'builtin' && connector.name === 'codex') {
-    return relayCodex(relayInput);
-  }
-  if (connector.kind === 'builtin' && connector.name === 'cursor-agent') {
-    return relayCursorAgent(relayInput);
-  }
   if (connector.kind === 'custom') {
     return relayCustom({ ...relayInput, descriptor: connector });
   }
-  throw new Error(`unsupported relay connector '${connector.name}'`);
+  return BUILTIN_CONNECTOR_RELAYERS[connector.name](relayInput);
 }
+
+// Built-in connector dispatch table. Keyed by `EnabledConnector` and pinned
+// with `satisfies Record<EnabledConnector, ...>`: adding a built-in connector
+// to the enum without wiring its relayer here — or wiring one whose key is not
+// in the enum — is a `tsc` error, so dispatch can never silently fall through
+// to the old `unsupported relay connector` throw.
+const BUILTIN_CONNECTOR_RELAYERS = {
+  'claude-code': relayClaudeCode,
+  codex: relayCodex,
+  'cursor-agent': relayCursorAgent,
+} as const satisfies Record<EnabledConnector, (input: ConnectorRelayInput) => Promise<RelayResult>>;
 
 function timeoutMs(step: RelayStep): number | undefined {
   const wallClock = step.budgets?.wall_clock_ms;
