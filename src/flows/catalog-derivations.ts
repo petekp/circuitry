@@ -167,6 +167,9 @@ export function buildRoutablePackages(
   const out: RoutablePackage[] = [];
   for (const pkg of packages) {
     if (pkg.routing === undefined) continue;
+    // S9: internal flows (e.g. the frozen goal flow) stay reachable explicitly
+    // but must never be auto-selected by the classifier. Run owns the goal loop.
+    if (pkg.visibility === 'internal') continue;
     out.push({ pkg, routing: pkg.routing });
   }
   return out.sort((a, b) => a.routing.order - b.routing.order);

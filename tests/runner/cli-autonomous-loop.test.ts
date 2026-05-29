@@ -1,0 +1,122 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { main } from '../../src/cli/circuit.js';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+
+// Build's autonomous run auto-resolves its checkpoint and accepts a uniform
+// verdict body across steps (mirrors the existing build-autonomous CLI test).
+const relayer: RelayFn = {
+  connectorName: 'claude-code',
+  relay: async (input: RelayInput): Promise<RelayResult> => ({
+    request_payload: input.prompt,
+    receipt_id: 'stub-receipt-autonomous-loop',
+    result_body: '{"verdict":"accept"}',
+    duration_ms: 1,
+    cli_version: '0.0.0-stub',
+  }),
+};
+
+let tempDir: string;
+
+beforeEach(() => {
+  tempDir = mkdtempSync(join(tmpdir(), 'circuit-cli-autonomous-loop-'));
+});
+
+afterEach(() => {
+  rmSync(tempDir, { recursive: true, force: true });
+});
+
+function deterministicNow(startMs: number): () => Date {
+  let n = 0;
+  return () => new Date(startMs + n++ * 1000);
+}
+
+function createProofProject(name: string): string {
+  const projectRoot = join(tempDir, name);
+  mkdirSync(projectRoot, { recursive: true });
+  writeFileSync(
+    join(projectRoot, 'package.json'),
+    `${JSON.stringify({ private: true, scripts: { verify: 'node -e "process.exit(0)"' } }, null, 2)}\n`,
+  );
+  return projectRoot;
+}
+
+async function runMainJson(
+  argv: readonly string[],
+  configCwd: string,
+): Promise<Record<string, unknown>> {
+  let stdout = '';
+  const originalStdout = process.stdout.write;
+  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    const exit = await main(argv, {
+      relayer,
+      now: deterministicNow(Date.UTC(2026, 4, 28, 5, 0, 0)),
+      runId: '84000000-0000-0000-0000-000000000777',
+      configHomeDir: join(tempDir, 'empty-home'),
+      configCwd,
+    });
+    expect(exit).toBe(0);
+  } finally {
+    process.stdout.write = originalStdout;
+  }
+  return JSON.parse(stdout) as Record<string, unknown>;
+}
+
+describe('CLI autonomous continuation loop (S10)', () => {
+  it('drives the loop live in autonomous mode and persists the loop result', async () => {
+    const runFolder = join(tempDir, 'auto-run');
+    const projectRoot = createProofProject('auto-project');
+    const output = await runMainJson(
+      [
+        'run',
+        'build',
+        '--goal',
+        'Add a tiny Build feature with autonomous checkpoints',
+        '--autonomous',
+        '--run-folder',
+        runFolder,
+      ],
+      projectRoot,
+    );
+
+    // The loop fired live: it drove the primary attempt and surfaced a typed,
+    // honest outcome (never silently claiming completion).
+    const loopField = output.autonomous_loop as
+      | { outcome: string; attempts: number; stop_reason: string }
+      | undefined;
+    expect(loopField).toBeDefined();
+    expect(typeof loopField?.outcome).toBe('string');
+    expect(['complete', 'needs_attention', 'blocked', 'failed', 'handoff']).toContain(
+      loopField?.outcome,
+    );
+    expect(loopField?.attempts).toBeGreaterThanOrEqual(1);
+
+    expect(existsSync(join(runFolder, 'reports/autonomous-loop.json'))).toBe(true);
+    const loop = JSON.parse(
+      readFileSync(join(runFolder, 'reports/autonomous-loop.json'), 'utf8'),
+    ) as { outcome: string; attempts: Array<{ process_id: string }>; stopReason: string };
+    expect(loop.attempts.length).toBeGreaterThanOrEqual(1);
+    expect(loop.attempts[0]?.process_id).toBe('build'); // attempt 1 is the primary flow
+    expect(typeof loop.stopReason).toBe('string');
+  }, 30_000);
+
+  it('does not run the loop when --autonomous is absent (default path unchanged)', async () => {
+    const runFolder = join(tempDir, 'manual-run');
+    const projectRoot = createProofProject('manual-project');
+    const output = await runMainJson(
+      ['run', 'build', '--goal', 'Add a tiny Build feature', '--run-folder', runFolder],
+      projectRoot,
+    );
+
+    expect(output).not.toHaveProperty('autonomous_loop');
+    expect(existsSync(join(runFolder, 'reports/autonomous-loop.json'))).toBe(false);
+  }, 30_000);
+});

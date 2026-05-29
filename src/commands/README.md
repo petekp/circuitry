@@ -1,11 +1,13 @@
 # Command Sources
 
 This directory contains hand-authored source files for direct Circuit commands
-that are not owned by a flow package.
+that are not owned by a flow package: `run`, `handoff`, and the CLI-only
+`create` utility.
 
-Flow-owned command sources live beside their flows at
-`src/flows/<id>/command.md` and are declared with `paths.command` in that
-flow's `data.ts`.
+A flow package can own its own command source at `src/flows/<id>/command.md`,
+declared with `paths.command` in that flow's `data.ts`. No built-in flow
+declares one today; the built-in flows are not published as separate host
+commands and route through Run instead.
 
 For generated Claude and Codex command/skill destinations, edit rules, and drift
 checks, use [docs/generated-surfaces.md](../../docs/generated-surfaces.md). For

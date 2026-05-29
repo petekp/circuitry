@@ -22,7 +22,7 @@ The CLI can still start a specific flow when the flow choice is clear:
 | --- | --- | --- |
 | CLI | `./bin/circuit run fix --goal "checkout total is wrong"` | Fix. |
 | CLI | `./bin/circuit run review --goal "current diff"` | Review. |
-| CLI | `./bin/circuit run goal --goal "finish the scoped objective"` | Goal. |
+| CLI | `./bin/circuit run build --goal "add a focused feature"` | Build. |
 | CLI | `./bin/circuit run pursue --goal "coordinate these cleanup goals"` | Pursue. |
 
 Use `/circuit:run` for bounded objectives and completion discipline. From the
@@ -35,11 +35,22 @@ can also pass these controls when the selected flow supports them:
 
 | Control | CLI flag | Supported by |
 | --- | --- | --- |
-| Lite, standard, or deep depth | `--rigor <lite|standard|deep>` | Build, Explore, Fix, and Goal. Prototype supports standard or deep. Review and Pursue only support standard depth. |
+| Lite, standard, or deep depth | `--rigor <lite|standard|deep>` | Build, Explore, and Fix. Prototype supports standard or deep. Review and Pursue only support standard depth. |
 | Tournament | `--tournament --tournament-n <2|3|4>` | Explore and Prototype. |
-| Autonomous checkpoint handling | `--autonomous` | Build, Explore, Fix, Goal, Prototype, and Pursue. |
+| Autonomous continuation | `--autonomous` | Build, Explore, Fix, Prototype, and Pursue. |
 
 Unsupported combinations fail before the run starts.
+
+With `--autonomous`, Run auto-resolves supported checkpoints and drives a
+bounded continuation loop instead of stopping after one process. Run frames
+task-specific required evidence at intake, locks that proof contract so it
+cannot be weakened mid-run, and refuses to start the loop on a contract too
+weak to prove the objective. It then checks completion against the evidence,
+and when required evidence is still unmet it runs a recovery flow chosen by the
+kind of evidence missing. Run escalates when attempts stop making progress and
+never reports complete by running out of attempts. The loop result is written
+to `reports/autonomous-loop.json` and surfaced as `autonomous_loop` in the run
+output. Without `--autonomous`, Run runs a single process and is unchanged.
 
 ## Flow Guide
 
@@ -50,7 +61,6 @@ Unsupported combinations fail before the run starts.
 | Fix | Bugs, regressions, failing tests, crashes, flaky behavior, or production issues. | May invoke a write-capable worker. |
 | Build | Features, refactors, docs, tests, or focused code changes that are not mainly bug fixes. | May invoke a write-capable worker. |
 | Prototype | Disposable local prototypes, mockups, UI sketches, or model-comparison variants before Build. | May invoke a write-capable worker and writes local prototype evidence. |
-| Goal | Existing Goal use cases and old Goal run folders. Run is the normal front door for bounded objectives and completion discipline. | May run child flows; child flow write behavior applies. |
 | Pursue | Broad goals with several coordinated pieces of work that need ordering. | May invoke a write-capable worker. |
 
 Circuit also ships one visible host utility:

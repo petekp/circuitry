@@ -55,7 +55,6 @@ describe('ProcessEvidenceProjection', () => {
       'build',
       'explore',
       'fix',
-      'goal',
       'prototype',
       'pursue',
       'review',
