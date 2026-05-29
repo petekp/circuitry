@@ -34731,6 +34731,19 @@ var CheckEvaluatedTraceEntry = TraceEntryBase.extend({
   missing_sections: external_exports.array(external_exports.string()).optional(),
   reason: external_exports.string().optional()
 }).strict();
+var VerificationCommandEvaluatedTraceEntry = TraceEntryBase.extend({
+  kind: external_exports.literal("verification.command_evaluated"),
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  command_id: external_exports.string().min(1),
+  cwd: external_exports.string().min(1),
+  argv: external_exports.array(external_exports.string().min(1)).min(1),
+  exit_code: external_exports.number().int().nonnegative(),
+  status: external_exports.enum(["passed", "failed"]),
+  duration_ms: external_exports.number().int().nonnegative(),
+  stdout_summary: external_exports.string(),
+  stderr_summary: external_exports.string()
+}).strict();
 var ProofAssessmentRef = Ref.refine((ref) => ref.kind === "evidence" || ref.kind === "report", {
   message: "proof assessment refs must use evidence or report refs"
 });
@@ -35018,6 +35031,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   StepEnteredTraceEntry,
   StepReportWrittenTraceEntry,
   CheckEvaluatedTraceEntry,
+  VerificationCommandEvaluatedTraceEntry,
   ProofAssessedTraceEntry,
   SafeApplyResultTraceEntry,
   CheckpointRequestedTraceEntry,
@@ -35042,6 +35056,17 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
 ]).superRefine((ev, ctx) => {
   if (ev.kind === "guidance.decision") {
     refineGuidanceDecisionTraceEntry(ev, ctx);
+    return;
+  }
+  if (ev.kind === "verification.command_evaluated") {
+    const expected = ev.exit_code === 0 ? "passed" : "failed";
+    if (ev.status !== expected) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["status"],
+        message: `status must be '${expected}' when exit_code is ${ev.exit_code}`
+      });
+    }
     return;
   }
   if (ev.kind === "proof.assessed") {
@@ -50488,7 +50513,25 @@ async function executeVerificationResult(step, context) {
       step: indexedStep2
     };
     const commands = builder.loadCommands(builderContext);
-    observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
+    observations = [];
+    for (const command of commands) {
+      const observation = runProofPlanCommand(command, projectRoot);
+      observations.push(observation);
+      await context.trace.append({
+        run_id: context.runId,
+        kind: "verification.command_evaluated",
+        step_id: step.id,
+        attempt,
+        command_id: observation.command.id,
+        cwd: observation.command.cwd,
+        argv: [...observation.command.argv],
+        exit_code: observation.exit_code,
+        status: observation.status,
+        duration_ms: observation.duration_ms,
+        stdout_summary: observation.stdout_summary,
+        stderr_summary: observation.stderr_summary
+      });
+    }
     body = builder.buildResult(observations, builderContext);
     await context.files.writeJson(report, body);
   } catch (error51) {

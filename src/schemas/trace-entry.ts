@@ -84,6 +84,23 @@ export const CheckEvaluatedTraceEntry = TraceEntryBase.extend({
 }).strict();
 export type CheckEvaluatedTraceEntry = z.infer<typeof CheckEvaluatedTraceEntry>;
 
+export const VerificationCommandEvaluatedTraceEntry = TraceEntryBase.extend({
+  kind: z.literal('verification.command_evaluated'),
+  step_id: StepId,
+  attempt: z.number().int().positive(),
+  command_id: z.string().min(1),
+  cwd: z.string().min(1),
+  argv: z.array(z.string().min(1)).min(1),
+  exit_code: z.number().int().nonnegative(),
+  status: z.enum(['passed', 'failed']),
+  duration_ms: z.number().int().nonnegative(),
+  stdout_summary: z.string(),
+  stderr_summary: z.string(),
+}).strict();
+export type VerificationCommandEvaluatedTraceEntry = z.infer<
+  typeof VerificationCommandEvaluatedTraceEntry
+>;
+
 const ProofAssessmentRef = Ref.refine((ref) => ref.kind === 'evidence' || ref.kind === 'report', {
   message: 'proof assessment refs must use evidence or report refs',
 });
@@ -511,6 +528,7 @@ export const TraceEntry = z
     StepEnteredTraceEntry,
     StepReportWrittenTraceEntry,
     CheckEvaluatedTraceEntry,
+    VerificationCommandEvaluatedTraceEntry,
     ProofAssessedTraceEntry,
     SafeApplyResultTraceEntry,
     CheckpointRequestedTraceEntry,
@@ -536,6 +554,17 @@ export const TraceEntry = z
   .superRefine((ev, ctx) => {
     if (ev.kind === 'guidance.decision') {
       refineGuidanceDecisionTraceEntry(ev, ctx);
+      return;
+    }
+    if (ev.kind === 'verification.command_evaluated') {
+      const expected = ev.exit_code === 0 ? 'passed' : 'failed';
+      if (ev.status !== expected) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: `status must be '${expected}' when exit_code is ${ev.exit_code}`,
+        });
+      }
       return;
     }
     if (ev.kind === 'proof.assessed') {

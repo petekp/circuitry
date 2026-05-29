@@ -87,6 +87,50 @@ describe('TraceEntry has change_kind + manifest_hash at bootstrap', () => {
 
     expect(ok.success).toBe(true);
   });
+
+  it('verification command trace_entry carries command result evidence', () => {
+    const ok = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 5,
+      recorded_at: '2026-04-18T05:00:00.000Z',
+      run_id: '0191d2f0-aaaa-7fff-8aaa-000000000000',
+      kind: 'verification.command_evaluated',
+      step_id: 'verify-step',
+      attempt: 1,
+      command_id: 'unit-check',
+      cwd: '.',
+      argv: ['node', '-e', 'process.exit(0)'],
+      exit_code: 0,
+      status: 'passed',
+      duration_ms: 12,
+      stdout_summary: 'ok',
+      stderr_summary: '',
+    });
+
+    expect(ok.success).toBe(true);
+  });
+
+  it('verification command trace_entry keeps status tied to exit_code', () => {
+    const bad = TraceEntry.safeParse({
+      schema_version: 1,
+      sequence: 5,
+      recorded_at: '2026-04-18T05:00:00.000Z',
+      run_id: '0191d2f0-aaaa-7fff-8aaa-000000000000',
+      kind: 'verification.command_evaluated',
+      step_id: 'verify-step',
+      attempt: 1,
+      command_id: 'unit-check',
+      cwd: '.',
+      argv: ['node', '-e', 'process.exit(1)'],
+      exit_code: 1,
+      status: 'passed',
+      duration_ms: 12,
+      stdout_summary: '',
+      stderr_summary: 'nope',
+    });
+
+    expect(bad.success).toBe(false);
+  });
 });
 
 describe('RelayStartedTraceEntry accepts resolved write-capable built-ins', () => {

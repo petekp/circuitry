@@ -244,7 +244,7 @@ export async function executeVerificationResult(
   let body: {
     readonly overall_status?: unknown;
   };
-  let observations: readonly VerificationCommandObservation[];
+  let observations: VerificationCommandObservation[];
   try {
     const stepReport = step.writes?.report;
     if (stepReport === undefined || stepReport.schema === undefined) {
@@ -271,7 +271,25 @@ export async function executeVerificationResult(
       step: indexedStep,
     };
     const commands = builder.loadCommands(builderContext);
-    observations = commands.map((command) => runProofPlanCommand(command, projectRoot));
+    observations = [];
+    for (const command of commands) {
+      const observation = runProofPlanCommand(command, projectRoot);
+      observations.push(observation);
+      await context.trace.append({
+        run_id: context.runId,
+        kind: 'verification.command_evaluated',
+        step_id: step.id,
+        attempt,
+        command_id: observation.command.id,
+        cwd: observation.command.cwd,
+        argv: [...observation.command.argv],
+        exit_code: observation.exit_code,
+        status: observation.status,
+        duration_ms: observation.duration_ms,
+        stdout_summary: observation.stdout_summary,
+        stderr_summary: observation.stderr_summary,
+      });
+    }
     body = builder.buildResult(observations, builderContext) as {
       readonly overall_status?: unknown;
     };

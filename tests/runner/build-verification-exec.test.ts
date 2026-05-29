@@ -42,21 +42,37 @@ function commandPlan(command: {
   cwd?: string;
   env?: Record<string, string>;
 }) {
+  return commandsPlan([
+    {
+      id: 'node-check',
+      ...command,
+    },
+  ]);
+}
+
+function commandsPlan(
+  commands: Array<{
+    id: string;
+    argv: string[];
+    timeout_ms?: number;
+    max_output_bytes?: number;
+    cwd?: string;
+    env?: Record<string, string>;
+  }>,
+) {
   return BuildPlan.parse({
     objective: 'Verify a Build run',
     approach: 'Run the planned command directly',
     slices: ['Execute verification'],
     verification: {
-      commands: [
-        {
-          id: 'node-check',
-          cwd: command.cwd ?? '.',
-          argv: command.argv,
-          timeout_ms: command.timeout_ms ?? 1_000,
-          max_output_bytes: command.max_output_bytes ?? 20_000,
-          env: command.env ?? {},
-        },
-      ],
+      commands: commands.map((command) => ({
+        id: command.id,
+        cwd: command.cwd ?? '.',
+        argv: command.argv,
+        timeout_ms: command.timeout_ms ?? 5_000,
+        max_output_bytes: command.max_output_bytes ?? 20_000,
+        env: command.env ?? {},
+      })),
     },
   });
 }
@@ -226,10 +242,36 @@ describe('Build verification command execution', () => {
     });
     const trace = await new TraceStore(runFolder).load();
     expect(trace.map((entry) => entry.kind)).toEqual(
-      expect.arrayContaining(['guidance.decision', 'proof.assessed', 'run.closed']),
+      expect.arrayContaining([
+        'guidance.decision',
+        'verification.command_evaluated',
+        'proof.assessed',
+        'run.closed',
+      ]),
+    );
+    const commandEntry = trace.find((entry) => entry.kind === 'verification.command_evaluated');
+    expect(commandEntry).toMatchObject({
+      step_id: 'verify-step',
+      attempt: 1,
+      command_id: 'node-check',
+      cwd: '.',
+      argv: [process.execPath, '-e', "process.stdout.write('verified')"],
+      exit_code: 0,
+      status: 'passed',
+      stdout_summary: 'verified',
+      stderr_summary: '',
+    });
+    expect(commandEntry?.duration_ms).toEqual(expect.any(Number));
+    const commandIndex = trace.findIndex(
+      (entry) => entry.kind === 'verification.command_evaluated',
+    );
+    const reportIndex = trace.findIndex(
+      (entry) => entry.kind === 'step.report_written' && entry.step_id === 'verify-step',
     );
     const proofIndex = trace.findIndex((entry) => entry.kind === 'proof.assessed');
     const closeIndex = trace.findIndex((entry) => entry.kind === 'run.closed');
+    expect(commandIndex).toBeGreaterThan(-1);
+    expect(reportIndex).toBeGreaterThan(commandIndex);
     expect(proofIndex).toBeGreaterThan(-1);
     expect(closeIndex).toBeGreaterThan(proofIndex);
     expect(RunTrace.safeParse(trace).success).toBe(true);
@@ -286,6 +328,17 @@ describe('Build verification command execution', () => {
         }),
       ],
     });
+    const trace = await new TraceStore(runFolder).load();
+    const commandEntry = trace.find((entry) => entry.kind === 'verification.command_evaluated');
+    expect(commandEntry).toMatchObject({
+      step_id: 'verify-step',
+      attempt: 1,
+      command_id: 'node-check',
+      exit_code: 2,
+      status: 'failed',
+      stderr_summary: 'nope',
+    });
+    expect(RunTrace.safeParse(trace).success).toBe(true);
   });
 
   it('blocks the proof plan when an npm script is missing before spawn', async () => {
@@ -319,6 +372,58 @@ describe('Build verification command execution', () => {
     expect(outcome.reason).toMatch(/missing package script "check"/);
     expect(outcome.reason).not.toMatch(/failed one or more commands|retry/);
     expect(existsSync(join(runFolder, 'reports/build/verification.json'))).toBe(false);
+  });
+
+  it('keeps completed command trace evidence when a later command blocks', async () => {
+    const { bytes } = verificationCompiledFlow({
+      verifyRoutes: { pass: '@complete', retry: 'seed-plan-step' },
+    });
+    const runFolder = join(runFolderBase, 'partial-command-trace');
+    const projectRoot = join(runFolderBase, 'partial-command-project');
+    mkdirSync(projectRoot, { recursive: true });
+    writeFileSync(
+      join(projectRoot, 'package.json'),
+      `${JSON.stringify({ private: true, scripts: { test: 'node -e "process.exit(0)"' } })}\n`,
+    );
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      projectRoot,
+      runId: 'b2000000-0000-0000-0000-000000000010',
+      goal: 'Run partially blocked verification',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 3, 25, 2, 47, 0)),
+      executors: planWriter(
+        commandsPlan([
+          {
+            id: 'first-check',
+            argv: [process.execPath, '-e', "process.stdout.write('first')"],
+          },
+          {
+            id: 'missing-script',
+            argv: ['npm', 'run', 'check'],
+          },
+        ]),
+      ),
+    });
+
+    expect(outcome.outcome).toBe('aborted');
+    expect(outcome.reason).toMatch(/missing package script "check"/);
+    expect(existsSync(join(runFolder, 'reports/build/verification.json'))).toBe(false);
+
+    const trace = await new TraceStore(runFolder).load();
+    const commandEntries = trace.filter((entry) => entry.kind === 'verification.command_evaluated');
+    expect(commandEntries).toHaveLength(1);
+    expect(commandEntries[0]).toMatchObject({
+      step_id: 'verify-step',
+      attempt: 1,
+      command_id: 'first-check',
+      exit_code: 0,
+      status: 'passed',
+      stdout_summary: 'first',
+    });
+    expect(RunTrace.safeParse(trace).success).toBe(true);
   });
 
   it('blocks the proof plan when the command binary cannot launch', async () => {
