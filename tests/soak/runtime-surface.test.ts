@@ -7,6 +7,7 @@ import { main } from '../../src/cli/circuit.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -22,11 +23,6 @@ const BUILD_RELAY_BODY = JSON.stringify({
   evidence: ['soak relay'],
 });
 const RUNTIME_SURFACE_SOAK_TIMEOUT_MS = 15_000;
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function relayerWithBody(body: string): RelayFn {
   return {

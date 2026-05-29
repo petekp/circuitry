@@ -22,6 +22,7 @@ import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -40,11 +41,6 @@ function writeBuildProofPackage(root: string): void {
       2,
     )}\n`,
   );
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function checkpointFixtureFlow(

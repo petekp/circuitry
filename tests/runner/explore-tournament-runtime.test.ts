@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { executeCompose } from '../../src/runtime/executors/compose.js';
 import { resumeCompiledFlow } from '../../src/runtime/run/checkpoint-resume.js';
@@ -27,11 +28,6 @@ function loadTournamentFixtureRaw(): Record<string, unknown> {
 
 function readJson(runFolder: string, path: string): unknown {
   return JSON.parse(readFileSync(join(runFolder, path), 'utf8'));
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 const PASSING_RUBRIC_MODEL_JUDGMENTS = {

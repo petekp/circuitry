@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { relayClaudeCode } from '../../src/connectors/claude-code.js';
 import type { TraceEntry } from '../../src/runtime/domain/trace.js';
@@ -24,11 +25,6 @@ const FIXTURE_PATH = resolve('generated/flows/runtime-proof/circuit.json');
 
 function loadRuntimeProofBytes(): Buffer {
   return readFileSync(FIXTURE_PATH);
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function claudeCodeRelayer(): RelayFn {

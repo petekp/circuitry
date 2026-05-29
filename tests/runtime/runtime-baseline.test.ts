@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TERMINAL_TARGETS } from '../../src/runtime/domain/route.js';
@@ -22,6 +21,7 @@ import { computeManifestHash } from '../../src/schemas/manifest.js';
 import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
 import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
+import { withTempRun } from '../helpers/runtime-fixtures.js';
 
 const change_kind = {
   change_kind: 'ratchet-advance' as const,
@@ -40,15 +40,6 @@ function bootstrapTraceInput(runId: string) {
     change_kind,
     manifest_hash: 'runtime:baseline@0.1.0',
   };
-}
-
-async function withTempRun<T>(fn: (runDir: string) => Promise<T>): Promise<T> {
-  const runDir = await mkdtemp(join(tmpdir(), 'circuit-runtime-'));
-  try {
-    return await fn(runDir);
-  } finally {
-    await rm(runDir, { recursive: true, force: true });
-  }
 }
 
 function validFlow(): ExecutableFlow {

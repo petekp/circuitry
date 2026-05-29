@@ -9,6 +9,7 @@ import { runCompiledFlowWithWaiting } from '../../src/runtime/run/compiled-flow-
 import { isGraphCheckpointWaitingResult } from '../../src/runtime/run/graph-runner.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 import {
   completedStepIds,
   createSimpleParityExecutors,
@@ -29,11 +30,6 @@ async function loadTournamentFixture() {
 
 async function readJson(runDir: string, path: string): Promise<unknown> {
   return JSON.parse(await readFile(join(runDir, path), 'utf8'));
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function relayResult(input: RelayInput, receiptId: string, body: unknown): RelayResult {

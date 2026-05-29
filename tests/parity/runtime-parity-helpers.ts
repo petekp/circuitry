@@ -1,5 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
   BuildBrief,
@@ -129,14 +128,7 @@ const fixCommandResult = {
   env: commandSpec.env,
 };
 
-export async function withTempRun<T>(fn: (runDir: string) => Promise<T>): Promise<T> {
-  const runDir = await mkdtemp(join(tmpdir(), 'circuit-runtime-parity-'));
-  try {
-    return await fn(runDir);
-  } finally {
-    await rm(runDir, { recursive: true, force: true });
-  }
-}
+export { withTempRun } from '../helpers/runtime-fixtures.js';
 
 export async function loadCompiledFlowFixture(flowId: string): Promise<CompiledFlowFixture> {
   const bytes = await readFile(join(process.cwd(), 'generated', 'flows', flowId, 'circuit.json'));

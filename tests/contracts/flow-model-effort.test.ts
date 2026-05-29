@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { ExploreCompose, ExploreReviewVerdict } from '../../src/flows/explore/reports.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
@@ -26,11 +27,6 @@ type MutableCompiledFlowFixture = Record<string, unknown> & {
 function loadRawFixture(): { raw: MutableCompiledFlowFixture; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);
   return { raw: JSON.parse(bytes.toString('utf8')) as MutableCompiledFlowFixture, bytes };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function layeredConfigs(): LayeredConfig[] {

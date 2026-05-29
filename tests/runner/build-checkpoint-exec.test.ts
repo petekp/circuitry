@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
@@ -27,11 +28,6 @@ import { manifestSnapshotPath, writeManifestSnapshot } from '../../src/shared/ma
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const INVALID_RUN_FOLDER_MESSAGE = 'run folder is not a resumable Circuit run folder';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function change_kind(): ChangeKindDeclaration {
   return {

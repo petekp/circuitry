@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { materializeRelay } from '../../src/connectors/relay-materializer.js';
 import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
@@ -108,11 +109,6 @@ function relayGuidanceExecution(input: {
     compiledStep,
     depth: Depth.parse('standard'),
   }).relayExecution;
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function stubRelayer(): RelayFn {

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { relayCodex } from '../../src/connectors/codex.js';
 import type { TraceEntry } from '../../src/runtime/domain/trace.js';
@@ -43,11 +44,6 @@ function loadCodexRuntimeProofBytes(): Buffer {
   relayStep.role = 'reviewer';
   CompiledFlow.parse(raw);
   return Buffer.from(`${JSON.stringify(raw)}\n`, 'utf8');
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function codexRelayer(): RelayFn {

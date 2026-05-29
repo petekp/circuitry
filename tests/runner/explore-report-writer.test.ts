@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import {
   ExploreAnalysis,
@@ -27,11 +28,6 @@ function loadFixture(mutator?: (raw: { steps: Array<{ id: string; reads: string[
   const mutated = Buffer.from(JSON.stringify(raw));
   CompiledFlow.parse(raw);
   return { bytes: mutated };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function stubRelayer(): RelayFn {

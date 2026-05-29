@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TerminalTarget } from '../../src/runtime/domain/route.js';
@@ -19,17 +18,9 @@ import { RunTrace } from '../../src/schemas/run.js';
 import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { NO_VERDICT_SENTINEL } from '../../src/shared/relay-support.js';
+import { withTempRun } from '../helpers/runtime-fixtures.js';
 
 type RichCheckpointRoute = 'ask' | 'retry' | 'revise' | 'stop' | 'handoff' | 'escalate';
-
-async function withTempRun<T>(prefix: string, fn: (runDir: string) => Promise<T>): Promise<T> {
-  const runDir = await mkdtemp(join(tmpdir(), prefix));
-  try {
-    return await fn(runDir);
-  } finally {
-    await rm(runDir, { recursive: true, force: true });
-  }
-}
 
 function terminalFlow(target: TerminalTarget): ExecutableFlow {
   return {

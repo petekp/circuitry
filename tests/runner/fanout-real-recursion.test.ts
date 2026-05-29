@@ -19,6 +19,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
 import type {
@@ -33,11 +34,6 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const PARENT_WORKFLOW_ID = 'parent-fanout-recursion-test';
 const CHILD_WORKFLOW_ID = 'child-fanout-recursion-test';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 // Fake relayer serves every branch child's single relay step.
 function acceptingRelayer(): RelayFn {

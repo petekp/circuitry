@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { ReviewIntake } from '../../src/flows/review/reports.js';
@@ -84,11 +85,6 @@ const REVIEW_RELAY_BODY = JSON.stringify({
   verification: ['Inspected the relayed intake report.'],
   confidence_limitations: [],
 });
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function createProofProject(name: string): string {
   const projectRoot = join(runFolderBase, name);

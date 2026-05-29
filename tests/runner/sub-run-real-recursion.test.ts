@@ -21,6 +21,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { ClaudeCodeRelayInput } from '../../src/connectors/claude-code.js';
 import type { ChildCompiledFlowResolver } from '../../src/runtime/run/child-runner.js';
@@ -32,11 +33,6 @@ import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const PARENT_WORKFLOW_ID = 'parent-recursion-test';
 const CHILD_WORKFLOW_ID = 'child-recursion-test';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 // Fake relayer serves both parent and child. The parent's only
 // step is a sub-run (no relay path), so this relayer is

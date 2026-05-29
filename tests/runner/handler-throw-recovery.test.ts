@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import type { ExecutableFlow } from '../../src/runtime/manifest/executable-flow.js';
@@ -13,11 +14,6 @@ import { RunResult } from '../../src/schemas/result.js';
 // leave the run-folder half-bootstrapped. Runtime should close the run with
 // step.aborted, run.closed, and reports/result.json for both handler lookup
 // failures and mid-handler throws.
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function oneStepFlow(step: ExecutableFlow['steps'][number]): ExecutableFlow {
   return {

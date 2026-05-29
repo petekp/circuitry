@@ -39,6 +39,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { FixBrief, type FixRegressionContract, FixResult } from '../../src/flows/fix/reports.js';
 import { executeCompose } from '../../src/runtime/executors/compose.js';
@@ -52,11 +53,6 @@ const LIVE_FALSE_DONE_TIMEOUT_MS = 20_000;
 
 function loadLiteFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIX_LITE_FIXTURE_PATH) };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function git(cwd: string, args: readonly string[]): string {

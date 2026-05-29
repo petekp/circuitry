@@ -10,6 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { resolveRunFilePath } from '../../src/runtime/run-files/paths.js';
@@ -28,11 +29,6 @@ function loadFixture(): { flow: CompiledFlow } {
 
 function bytesFor(flow: CompiledFlow): Buffer {
   return Buffer.from(JSON.stringify(flow));
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function relayerWithCapture(capture: string[]): RelayFn {
