@@ -2,12 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { LayeredConfig } from '../../src/schemas/config.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 let root: string;
@@ -86,19 +85,10 @@ function flowBytes(
 }
 
 function capturingRelayer(captured: RelayInput[]): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => {
-      captured.push(input);
-      return {
-        request_payload: input.prompt,
-        receipt_id: `receipt-${captured.length}`,
-        result_body: '{"verdict":"accept"}',
-        duration_ms: 1,
-        cli_version: '0.0.0-test',
-      };
-    },
-  };
+  return makeStubRelayer((input) => {
+    captured.push(input);
+    return '{"verdict":"accept"}';
+  });
 }
 
 async function runSkillFlow(

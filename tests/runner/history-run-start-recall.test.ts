@@ -8,8 +8,8 @@ import { HISTORY_RECALL_REPORT_PATH } from '../../src/history/run-start-recall.j
 import { HistoryRecallReportV1, MemoryInputV0 } from '../../src/index.js';
 import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord } from '../../src/schemas/run-envelope.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const PRIOR_RUN_ID = '22222222-2222-4222-8222-222222222222';
@@ -101,19 +101,10 @@ function writePriorHistoryFixture(projectRoot: string): void {
 }
 
 function captureRelayer(prompts: string[]): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      prompts.push(input.prompt);
-      return {
-        request_payload: input.prompt,
-        receipt_id: `stub-history-recall-${prompts.length}`,
-        result_body: REVIEW_RELAY_BODY,
-        duration_ms: 1,
-        cli_version: 'stub',
-      };
-    },
-  };
+  return makeStubRelayer((input) => {
+    prompts.push(input.prompt);
+    return REVIEW_RELAY_BODY;
+  });
 }
 
 async function captureMain(

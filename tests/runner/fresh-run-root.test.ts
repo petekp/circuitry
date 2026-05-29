@@ -10,12 +10,11 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { runtimeManifestSnapshotPath } from '../../src/runtime/run/manifest-snapshot.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { runResultPath as resultPath } from '../../src/shared/result-path.js';
 
@@ -26,16 +25,7 @@ function loadFixture(): { bytes: Buffer } {
 }
 
 function stubRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-fresh-run-folder',
-      result_body: '{"verdict":"ok"}',
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer('{"verdict":"ok"}', { receipt_id: 'stub-receipt-fresh-run-folder' });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {

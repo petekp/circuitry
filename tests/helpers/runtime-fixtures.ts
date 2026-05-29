@@ -1,6 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { RelayResult } from '../../src/shared/connector-relay.js';
+import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 /**
  * Shared runtime-test fixtures.
@@ -43,4 +45,45 @@ export async function withTempRun<T>(
   } finally {
     await rm(runDir, { recursive: true, force: true });
   }
+}
+
+/**
+ * The common stub `RelayResult` literal, previously hand-built byte-for-byte
+ * across ~40 test files. Tests assert on `result_body` (and, via the relayer,
+ * `request_payload`) — never on `receipt_id`, `duration_ms`, or `cli_version` —
+ * so those three carry stable, arbitrary defaults. Pass `overrides` (shallow
+ * merged) for the per-site `result_body`/`receipt_id` a given test needs.
+ */
+export function stubRelayResult(overrides: Partial<RelayResult> = {}): RelayResult {
+  return {
+    request_payload: '',
+    receipt_id: 'stub-receipt',
+    result_body: '',
+    duration_ms: 1,
+    cli_version: '0.0.0-stub',
+    ...overrides,
+  };
+}
+
+/**
+ * Build a `RelayFn` whose `relay` yields `stubRelayResult` with `request_payload`
+ * bound to the live `input.prompt` and `result_body` taken from `body` — either a
+ * constant string or a function of the relay input (for prompt-dependent stubs).
+ * `connectorName` defaults to `claude-code`; pass `overrides` for a different
+ * `receipt_id`, connector identity, or any other RelayResult field.
+ */
+export function makeStubRelayer(
+  body: string | ((input: RelayInput) => string),
+  overrides: Partial<RelayResult> & { connectorName?: string } = {},
+): RelayFn {
+  const { connectorName = 'claude-code', ...resultOverrides } = overrides;
+  return {
+    connectorName,
+    relay: async (input: RelayInput): Promise<RelayResult> =>
+      stubRelayResult({
+        request_payload: input.prompt,
+        result_body: typeof body === 'function' ? body(input) : body,
+        ...resultOverrides,
+      }),
+  };
 }

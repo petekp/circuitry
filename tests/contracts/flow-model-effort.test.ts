@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { ExploreCompose, ExploreReviewVerdict } from '../../src/flows/explore/reports.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
@@ -12,7 +12,6 @@ import { LayeredConfig } from '../../src/schemas/config.js';
 import { SkillId } from '../../src/schemas/ids.js';
 import type { ResolvedSelection } from '../../src/schemas/selection-policy.js';
 import { SelectionOverride } from '../../src/schemas/selection-policy.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 import { resolveSelectionForGuidanceInput } from '../../src/shared/selection-resolver.js';
 
@@ -294,20 +293,14 @@ describe('P2-MODEL-EFFORT — full selection precedence resolver', () => {
         }),
       ),
     ];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         const resultBody = resultBodies[relayInputs.length] ?? resultBodies.at(-1);
         relayInputs.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'model-effort-receipt',
-          result_body: resultBody ?? '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return resultBody ?? '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'model-effort-receipt' },
+    );
 
     const runDir = join(runFolderBase, 'runtime-evidence');
     const outcome = await runCompiledFlow({

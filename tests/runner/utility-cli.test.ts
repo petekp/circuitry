@@ -12,9 +12,9 @@ import {
   ContinuityRecord,
   RunId,
 } from '../../src/index.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import { writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const BUILD_IMPLEMENTATION_BODY = JSON.stringify({
@@ -110,18 +110,11 @@ function writeStartedTraceOnlyInvalidRunFolder(runFolder: string): void {
 }
 
 function relayerWithBuildBodies(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-custom-flow-runtime',
-      result_body: input.prompt.includes('Step: review-step')
-        ? BUILD_REVIEW_BODY
-        : BUILD_IMPLEMENTATION_BODY,
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer(
+    (input) =>
+      input.prompt.includes('Step: review-step') ? BUILD_REVIEW_BODY : BUILD_IMPLEMENTATION_BODY,
+    { receipt_id: 'stub-custom-flow-runtime' },
+  );
 }
 
 afterEach(() => {

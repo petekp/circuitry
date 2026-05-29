@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 import { validateCompiledFlowKindPolicy } from '../../src/shared/flow-kind-policy.js';
+import { makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 // `explore` end-to-end fixture run.
 //
@@ -86,44 +86,28 @@ function loadExploreFixture(): { flow: CompiledFlow; bytes: Buffer } {
 }
 
 function deterministicRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      if (input.prompt.includes('Step: synthesize-step')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'golden-compose',
-          result_body: JSON.stringify({
-            verdict: 'accept',
-            subject: 'explore: deterministic close-result parity run',
-            recommendation: 'Keep the explore close aggregate deterministic',
-            success_condition_alignment: 'The close result summarizes the typed reports',
-            supporting_aspects: [
-              {
-                aspect: 'report-shape',
-                contribution: 'The prior reports give the close step stable inputs',
-                evidence_refs: ['reports/analysis.json'],
-              },
-            ],
-          }),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-      return {
-        request_payload: input.prompt,
-        receipt_id: 'golden-review',
-        result_body: JSON.stringify({
+  return makeStubRelayer((input) =>
+    input.prompt.includes('Step: synthesize-step')
+      ? JSON.stringify({
+          verdict: 'accept',
+          subject: 'explore: deterministic close-result parity run',
+          recommendation: 'Keep the explore close aggregate deterministic',
+          success_condition_alignment: 'The close result summarizes the typed reports',
+          supporting_aspects: [
+            {
+              aspect: 'report-shape',
+              contribution: 'The prior reports give the close step stable inputs',
+              evidence_refs: ['reports/analysis.json'],
+            },
+          ],
+        })
+      : JSON.stringify({
           verdict: 'accept',
           overall_assessment: 'The compose is usable',
           objections: [],
           missed_angles: [],
         }),
-        duration_ms: 1,
-        cli_version: '0.0.0-stub',
-      };
-    },
-  };
+  );
 }
 
 describe('explore fixture static declarations (ratchet-floor contribution)', () => {

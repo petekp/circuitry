@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { CompiledFlowId, SkillId } from '../../src/schemas/ids.js';
@@ -13,7 +13,6 @@ import {
   projectConfigPath,
   userGlobalConfigPath,
 } from '../../src/shared/config-loader.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 let root: string;
@@ -241,19 +240,13 @@ circuits:
 `);
 
     const relayInputs: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         relayInputs.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'config-loader-receipt',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'config-loader-receipt' },
+    );
     const runFolder = join(root, 'run');
     const stdout = captureStdout();
     const originalHome = process.env.HOME;
@@ -363,19 +356,13 @@ policy:
 `);
 
     const relayInputs: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         relayInputs.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'policy-v2-receipt',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'policy-v2-receipt' },
+    );
     const runFolder = join(root, 'policy-v2-run');
     const stdout = captureStdout();
     const originalHome = process.env.HOME;
@@ -435,19 +422,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-connector-rejected-run');
     const stdout = captureStdout();
     const originalHome = process.env.HOME;
@@ -518,19 +499,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'codex',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { connectorName: 'codex', receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-provider-rejected-run');
     const stdout = captureStdout();
     const originalHome = process.env.HOME;
@@ -584,19 +559,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-effort-rejected-run');
     const output = await runReviewWithCapturedOutput({
       relayer,
@@ -634,19 +603,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-skill-rejected-run');
     const output = await runReviewWithCapturedOutput({
       relayer,
@@ -669,19 +632,13 @@ policy:
     writeProjectConfig('schema_version: 1\nbad: [unterminated\n');
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
 
     await expect(
       main(['run', 'explore', '--goal', 'invalid config must stop before relay'], {

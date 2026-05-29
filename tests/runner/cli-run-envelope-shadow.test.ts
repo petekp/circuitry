@@ -2,14 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/run-envelope/shadow-record.js';
 import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord, RunEnvelopeShadowRecord } from '../../src/schemas/run-envelope.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -29,16 +27,9 @@ afterEach(() => {
   rmSync(tempDir, { recursive: true, force: true });
 });
 
-const relayer: RelayFn = {
-  connectorName: 'claude-code',
-  relay: async (input: RelayInput): Promise<RelayResult> => ({
-    request_payload: input.prompt,
-    receipt_id: 'stub-receipt-run-envelope-shadow',
-    result_body: REVIEW_RELAY_BODY,
-    duration_ms: 1,
-    cli_version: '0.0.0-stub',
-  }),
-};
+const relayer = makeStubRelayer(REVIEW_RELAY_BODY, {
+  receipt_id: 'stub-receipt-run-envelope-shadow',
+});
 
 async function runMainJson(argv: readonly string[]): Promise<Record<string, unknown>> {
   return runMainJsonInProject(argv, process.cwd());

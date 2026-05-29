@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
@@ -23,7 +23,7 @@ import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { SkillId } from '../../src/schemas/ids.js';
-import { type RelayResult, sha256Hex } from '../../src/shared/connector-relay.js';
+import { sha256Hex } from '../../src/shared/connector-relay.js';
 import { manifestSnapshotPath, writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
@@ -1058,19 +1058,13 @@ describe('Build checkpoint execution substrate', () => {
     const { flow, bytes } = checkpointToRelayCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-relay-context');
     const captured: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         captured.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'resume-relay-context',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-test',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'resume-relay-context' },
+    );
 
     await runCompiledFlow({
       runFolder,
@@ -1147,19 +1141,13 @@ describe('Build checkpoint execution substrate', () => {
     const { flow, bytes } = checkpointToRelayCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-empty-relay-context');
     const captured: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         captured.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'resume-empty-relay-context',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-test',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'resume-empty-relay-context' },
+    );
 
     await runCompiledFlow({
       runFolder,

@@ -5,9 +5,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -25,35 +24,21 @@ const BUILD_RELAY_BODY = JSON.stringify({
 const RUNTIME_SURFACE_SOAK_TIMEOUT_MS = 15_000;
 
 function relayerWithBody(body: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-soak',
-      result_body: body,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+  return makeStubRelayer(body, { receipt_id: 'stub-receipt-runtime-soak' });
 }
 
 function buildRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-soak-build',
-      result_body: input.prompt.includes('Step: review-step')
+  return makeStubRelayer(
+    (input) =>
+      input.prompt.includes('Step: review-step')
         ? JSON.stringify({
             verdict: 'accept',
             summary: 'No blocking issue found',
             findings: [],
           })
         : BUILD_RELAY_BODY,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+    { receipt_id: 'stub-receipt-runtime-soak-build' },
+  );
 }
 
 async function captureMain(

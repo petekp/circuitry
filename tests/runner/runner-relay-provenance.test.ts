@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { materializeRelay } from '../../src/connectors/relay-materializer.js';
 import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
@@ -112,16 +112,7 @@ function relayGuidanceExecution(input: {
 }
 
 function stubRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt',
-      result_body: '{"verdict":"ok"}',
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer('{"verdict":"ok"}', { receipt_id: 'stub-receipt' });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {

@@ -2,24 +2,15 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 // Build's autonomous run auto-resolves its checkpoint and accepts a uniform
 // verdict body across steps (mirrors the existing build-autonomous CLI test).
-const relayer: RelayFn = {
-  connectorName: 'claude-code',
-  relay: async (input: RelayInput): Promise<RelayResult> => ({
-    request_payload: input.prompt,
-    receipt_id: 'stub-receipt-autonomous-loop',
-    result_body: '{"verdict":"accept"}',
-    duration_ms: 1,
-    cli_version: '0.0.0-stub',
-  }),
-};
+const relayer = makeStubRelayer('{"verdict":"accept"}', {
+  receipt_id: 'stub-receipt-autonomous-loop',
+});
 
 let tempDir: string;
 

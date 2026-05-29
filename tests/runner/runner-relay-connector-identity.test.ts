@@ -2,11 +2,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Connector-identity plumbing through `runCompiledFlow`. `RelayFn` is a
@@ -46,16 +45,10 @@ function loadFixture(): { bytes: Buffer } {
 }
 
 function codexShapedStub(): RelayFn {
-  return {
+  return makeStubRelayer('{"verdict":"ok"}', {
     connectorName: 'codex',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-codex-thread-id',
-      result_body: '{"verdict":"ok"}',
-      duration_ms: 1,
-      cli_version: '0.0.0-codex-stub',
-    }),
-  };
+    receipt_id: 'stub-codex-thread-id',
+  });
 }
 
 async function runConnectorIdentityCase(input: {

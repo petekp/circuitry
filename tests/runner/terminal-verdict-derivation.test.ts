@@ -2,13 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Adversarial-review fix #2: deriveTerminalVerdict had no direct
@@ -36,38 +35,22 @@ function loadDogfood(): { bytes: Buffer } {
 }
 
 function fixedRelayer(verdict: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-verdict-derivation',
-      result_body: JSON.stringify({ verdict }),
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer(JSON.stringify({ verdict }), {
+    receipt_id: 'stub-receipt-verdict-derivation',
+  });
 }
 
 function sequenceRelayer(verdicts: string[]): RelayFn {
   let call = 0;
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => {
-      const verdict = verdicts[call++];
-      if (verdict === undefined) {
-        throw new Error(
-          `sequenceRelayer exhausted at call ${call}; provided ${verdicts.length} verdicts`,
-        );
-      }
-      return {
-        request_payload: input.prompt,
-        receipt_id: `stub-receipt-verdict-${call}`,
-        result_body: JSON.stringify({ verdict }),
-        duration_ms: 1,
-        cli_version: '0.0.0-stub',
-      };
-    },
-  };
+  return makeStubRelayer(() => {
+    const verdict = verdicts[call++];
+    if (verdict === undefined) {
+      throw new Error(
+        `sequenceRelayer exhausted at call ${call}; provided ${verdicts.length} verdicts`,
+      );
+    }
+    return JSON.stringify({ verdict });
+  });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {

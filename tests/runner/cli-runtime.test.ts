@@ -11,9 +11,8 @@ import {
 } from '../../src/cli/runtime-routing-policy.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { ComposeWriterFn, RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import type { ComposeWriterFn, RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -24,16 +23,7 @@ const REVIEW_RELAY_BODY = JSON.stringify({
 });
 
 function relayerWithBody(body: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-cli-runtime',
-      result_body: body,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+  return makeStubRelayer(body, { receipt_id: 'stub-receipt-cli-runtime' });
 }
 
 function buildRelayer(): RelayFn {
@@ -48,18 +38,11 @@ function buildRelayer(): RelayFn {
     summary: 'No blocking issue found',
     findings: [],
   });
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-cli-runtime-build',
-      result_body: input.prompt.includes('Step: review-step')
-        ? buildReviewBody
-        : buildImplementationBody,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+  return makeStubRelayer(
+    (input) =>
+      input.prompt.includes('Step: review-step') ? buildReviewBody : buildImplementationBody,
+    { receipt_id: 'stub-receipt-cli-runtime-build' },
+  );
 }
 
 async function captureMain(
@@ -180,19 +163,13 @@ describe('CLI runtime', () => {
 
   it('keeps successful run stdout when post-run artifact writers fail', async () => {
     const runFolder = join(runFolderBase, 'review-post-run-writer-failure');
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer = makeStubRelayer(
+      () => {
         mkdirSync(join(runFolder, 'reports', 'operator-summary.json'), { recursive: true });
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-receipt-cli-runtime',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: 'stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'stub-receipt-cli-runtime' },
+    );
     const result = await captureMain(
       ['run', 'review', '--goal', 'review this patch', '--run-folder', runFolder],
       { relayer },
@@ -214,19 +191,13 @@ describe('CLI runtime', () => {
 
   it('keeps progress JSONL parseable when post-run artifact writers fail', async () => {
     const runFolder = join(runFolderBase, 'review-post-run-writer-failure-progress');
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer = makeStubRelayer(
+      () => {
         mkdirSync(join(runFolder, 'reports', 'operator-summary.json'), { recursive: true });
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-receipt-cli-runtime-progress',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: 'stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'stub-receipt-cli-runtime-progress' },
+    );
     const result = await captureMain(
       [
         'run',

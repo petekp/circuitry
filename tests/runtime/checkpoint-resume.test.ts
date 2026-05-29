@@ -21,8 +21,8 @@ import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -241,19 +241,13 @@ function fixtureBytes(flow: unknown = checkpointFixtureFlow()): Buffer {
 }
 
 function fixtureRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput) => ({
-      request_payload: input.prompt,
-      receipt_id: 'checkpoint-fixture-receipt',
-      result_body: JSON.stringify({
-        verdict: 'accept',
-        summary: 'Resumed relay accepted the checkpoint selection.',
-      }),
-      duration_ms: 1,
-      cli_version: '0.0.0-test',
+  return makeStubRelayer(
+    JSON.stringify({
+      verdict: 'accept',
+      summary: 'Resumed relay accepted the checkpoint selection.',
     }),
-  };
+    { receipt_id: 'checkpoint-fixture-receipt' },
+  );
 }
 
 function fixtureExecutors(

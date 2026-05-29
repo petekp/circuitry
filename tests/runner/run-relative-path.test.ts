@@ -10,13 +10,12 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { deterministicNow } from '../helpers/runtime-fixtures.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { resolveRunFilePath } from '../../src/runtime/run-files/paths.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import type { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { resolveRunRelative } from '../../src/shared/run-relative-path.js';
 
@@ -32,19 +31,13 @@ function bytesFor(flow: CompiledFlow): Buffer {
 }
 
 function relayerWithCapture(capture: string[]): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => {
+  return makeStubRelayer(
+    (input) => {
       capture.push(input.prompt);
-      return {
-        request_payload: input.prompt,
-        receipt_id: 'stub-receipt-run-relative',
-        result_body: '{"verdict":"ok"}',
-        duration_ms: 1,
-        cli_version: '0.0.0-stub',
-      };
+      return '{"verdict":"ok"}';
     },
-  };
+    { receipt_id: 'stub-receipt-run-relative' },
+  );
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
