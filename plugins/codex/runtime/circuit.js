@@ -60917,7 +60917,11 @@ async function main(argv, options = {}) {
             }
             const support = axisSupportFromFlow({ flow: recoveryFlow.flow });
             const recoveryAxes = Axes.parse({
-              rigor: support.allowedRigors.includes(parentAxes.rigor) ? parentAxes.rigor : "standard",
+              // Keep the parent's rigor only if the recovery flow allows it;
+              // otherwise fall back to the recovery flow's own default rigor,
+              // which the axes schema guarantees is in its allowed set (never a
+              // hardcoded value the flow might not declare).
+              rigor: support.allowedRigors.includes(parentAxes.rigor) ? parentAxes.rigor : recoveryFlow.flow.axes.default.rigor,
               tournament: false,
               autonomous: parentAxes.autonomous && support.supportsAutonomous
             });

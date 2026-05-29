@@ -9,7 +9,8 @@ export type AttemptProgress = {
   // Stable keys (e.g. evidence refs) of the required evidence still unmet after
   // this attempt.
   readonly unmetEvidence: readonly string[];
-  // The recovery route that produced this attempt (or the primary process id).
+  // The process the loop ran for this attempt: the primary process id on the
+  // first attempt, or the routed recovery flow afterward.
   readonly route: string;
 };
 
