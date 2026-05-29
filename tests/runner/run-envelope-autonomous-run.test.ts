@@ -11,10 +11,11 @@ function projection(overrides: {
   outcome: ProcessEvidenceProjection['outcome'];
   declared?: readonly string[];
   evidence?: readonly string[];
+  flowId?: string;
 }): ProcessEvidenceProjection {
   return {
     schema: 'process.evidence@v0',
-    flow_id: 'build',
+    flow_id: overrides.flowId ?? 'build',
     attempt_id: 'attempt',
     outcome: overrides.outcome,
     summary: 'summary',
@@ -51,6 +52,23 @@ describe('attemptResultFromProjection (S10)', () => {
     expect(result.outcome).toBe('needs_followup');
     expect(result.unmetEvidence).toEqual(['reports/x.json']);
     expect(result.unmetKinds).toEqual(['command']);
+  });
+
+  it('derives process and unmet kind from projection.flow_id, not the requested route', () => {
+    // A projection whose flow_id differs from the requested route must drive the
+    // attempt's process and unmet kind, so recovery routes by the flow that
+    // actually ran. flow_id 'explore' maps to kind 'review', distinct from
+    // 'build' -> 'command'; this fails if derivation reverts to the requested route.
+    const result = attemptResultFromProjection(
+      projection({
+        outcome: 'complete',
+        flowId: 'explore',
+        declared: ['reports/x.json'],
+        evidence: [],
+      }),
+    );
+    expect(result.process_id).toBe('explore');
+    expect(result.unmetKinds).toEqual(['review']);
   });
 
   it('maps non-complete outcomes faithfully', () => {
