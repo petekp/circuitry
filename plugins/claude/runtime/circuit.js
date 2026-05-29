@@ -55276,7 +55276,7 @@ async function runContinuationLoop(input) {
     if (result.outcome === "blocked") {
       return { outcome: "blocked", attempts, stopReason: "process blocked" };
     }
-    progress.push({ unmetEvidence: result.unmetEvidence, route: currentProcess });
+    progress.push({ unmetEvidence: result.unmetEvidence, route: result.process_id });
     const noProgress = detectNoProgress(progress);
     if (noProgress.escalate) {
       return {

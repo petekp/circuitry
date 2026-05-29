@@ -84,8 +84,10 @@ export async function runContinuationLoop(input: {
       return { outcome: 'blocked', attempts, stopReason: 'process blocked' };
     }
 
-    // needs_followup: decide whether continuing is worthwhile.
-    progress.push({ unmetEvidence: result.unmetEvidence, route: currentProcess });
+    // needs_followup: decide whether continuing is worthwhile. Record the
+    // process that actually ran (result.process_id), not the route we requested,
+    // so oscillation detection compares real run history if the two ever diverge.
+    progress.push({ unmetEvidence: result.unmetEvidence, route: result.process_id });
     const noProgress = detectNoProgress(progress);
     if (noProgress.escalate) {
       return {
