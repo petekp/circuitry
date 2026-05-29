@@ -1,15 +1,6 @@
-import type { RunClosedOutcome, RuntimeRunStatus } from '../domain/run.js';
+import type { RuntimeRunStatus } from '../domain/run.js';
 import type { TraceEntry } from '../domain/trace.js';
-
-function isRunClosedOutcome(value: unknown): value is RunClosedOutcome {
-  return (
-    value === 'complete' ||
-    value === 'aborted' ||
-    value === 'handoff' ||
-    value === 'stopped' ||
-    value === 'escalated'
-  );
-}
+import { isRunClosedOutcome } from '../trace/trace-fields.js';
 
 export function projectStatusFromTrace(entries: readonly TraceEntry[]): RuntimeRunStatus {
   const closed = [...entries].reverse().find((entry) => entry.kind === 'run.closed');

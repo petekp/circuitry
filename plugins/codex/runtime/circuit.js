@@ -43108,6 +43108,74 @@ function fromCompiledFlow(flow) {
   return executable;
 }
 
+// dist/runtime/trace/trace-fields.js
+function fieldView(entry) {
+  return entry;
+}
+function traceString(entry, key) {
+  const value = fieldView(entry)[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function stringArrayValue(value) {
+  if (!Array.isArray(value))
+    return void 0;
+  const entries = value.filter((item) => typeof item === "string");
+  return entries.length === value.length && entries.length > 0 ? entries : void 0;
+}
+var RUN_CLOSED_OUTCOMES = RunClosedOutcome.options;
+function isRunClosedOutcome(value) {
+  return RUN_CLOSED_OUTCOMES.includes(value);
+}
+function runOutcome(entry) {
+  const outcome = fieldView(entry).outcome;
+  return isRunClosedOutcome(outcome) ? outcome : "aborted";
+}
+function runReason(entry) {
+  const reason = fieldView(entry).reason;
+  return typeof reason === "string" && reason.length > 0 ? reason : void 0;
+}
+function optionalRunClosedOutcome(value) {
+  return isRunClosedOutcome(value) ? value : void 0;
+}
+var PROGRESS_RELAY_ROLES = [
+  "researcher",
+  "reviewer",
+  "implementer"
+];
+function relayRoleFromTrace(entry) {
+  const role = fieldView(entry).role;
+  return PROGRESS_RELAY_ROLES.includes(role) ? role : void 0;
+}
+function connectorFromTrace(entry) {
+  const connector = fieldView(entry).connector;
+  if (connector === void 0 || connector === null || typeof connector !== "object") {
+    return void 0;
+  }
+  const record2 = connector;
+  if (record2.kind === "builtin" && typeof record2.name === "string" && EnabledConnector.options.includes(record2.name)) {
+    return { kind: "builtin", name: record2.name };
+  }
+  if (record2.kind === "custom" && typeof record2.name === "string" && Array.isArray(record2.command) && record2.capabilities !== void 0) {
+    return connector;
+  }
+  return void 0;
+}
+function connectorFilesystemCapability(connector) {
+  return connector.kind === "builtin" ? BUILTIN_CONNECTOR_CAPABILITIES[connector.name].filesystem : connector.capabilities.filesystem;
+}
+var FANOUT_JOIN_POLICIES = [
+  "pick-winner",
+  "disjoint-merge",
+  "aggregate-only",
+  "aggregate-survivors"
+];
+function fanoutPolicy(value) {
+  return FANOUT_JOIN_POLICIES.includes(value) ? value : void 0;
+}
+function fanoutBranchKind(value) {
+  return value === "relay" || value === "sub-run" ? value : void 0;
+}
+
 // dist/runtime/trace/trace-store.js
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { join as join4 } from "node:path";
@@ -44819,7 +44887,7 @@ function evaluateFanoutJoinPolicy(input) {
       failureReason: `tournament collapsed: fanout step '${stepId}' had ${parseableSurvivors.length} parseable survivor(s), need at least 2${detail}`
     };
   }
-  const allClosed = outcomes.every((outcome) => ["complete", "aborted", "handoff", "stopped", "escalated"].includes(outcome.child_outcome));
+  const allClosed = outcomes.every((outcome) => RunClosedOutcome.options.includes(outcome.child_outcome));
   const allParseable = parseableSurvivors.length === outcomes.length;
   if (!allClosed) {
     return {
@@ -50921,27 +50989,6 @@ function tournamentCheckpointPresentation(input) {
 }
 
 // dist/runtime/projections/progress.js
-function connectorFilesystemCapability(connector) {
-  return connector.kind === "builtin" ? BUILTIN_CONNECTOR_CAPABILITIES[connector.name].filesystem : connector.capabilities.filesystem;
-}
-function connectorFromTrace(entry) {
-  const connector = entry.connector;
-  if (connector === void 0 || connector === null || typeof connector !== "object") {
-    return void 0;
-  }
-  const record2 = connector;
-  if (record2.kind === "builtin" && typeof record2.name === "string" && EnabledConnector.options.includes(record2.name)) {
-    return { kind: "builtin", name: record2.name };
-  }
-  if (record2.kind === "custom" && typeof record2.name === "string" && Array.isArray(record2.command) && record2.capabilities !== void 0) {
-    return connector;
-  }
-  return void 0;
-}
-function relayRoleFromTrace(entry) {
-  const role = entry.role;
-  return role === "researcher" || role === "reviewer" || role === "implementer" ? role : void 0;
-}
 function stepTitle(input) {
   if (input.stepId === void 0)
     return "<unknown step>";
@@ -51087,23 +51134,6 @@ function reportEvidenceProgress(input) {
     });
   }
 }
-function runOutcome(entry) {
-  const outcome = entry.outcome;
-  if (outcome === "complete" || outcome === "stopped" || outcome === "handoff" || outcome === "escalated" || outcome === "aborted") {
-    return outcome;
-  }
-  return "aborted";
-}
-function runReason(entry) {
-  const reason = entry.reason;
-  return typeof reason === "string" && reason.length > 0 ? reason : void 0;
-}
-function stringArray(value) {
-  if (!Array.isArray(value))
-    return void 0;
-  const entries = value.filter((entry) => typeof entry === "string");
-  return entries.length === value.length && entries.length > 0 ? entries : void 0;
-}
 function checkpointPrompt(files, requestPath) {
   try {
     const text = files.readText(requestPath);
@@ -51124,23 +51154,6 @@ function checkpointChoiceLabel(choice) {
 }
 function checkpointRequestPath(runDir, requestPath) {
   return requestPath.startsWith("/") ? requestPath : join11(runDir, requestPath);
-}
-function fanoutChildOutcome(value) {
-  if (value === "complete" || value === "aborted" || value === "handoff" || value === "stopped" || value === "escalated") {
-    return value;
-  }
-  return void 0;
-}
-function fanoutPolicy(value) {
-  if (value === "pick-winner" || value === "disjoint-merge" || value === "aggregate-only" || value === "aggregate-survivors") {
-    return value;
-  }
-  return void 0;
-}
-function fanoutBranchKind(value) {
-  if (value === "relay" || value === "sub-run")
-    return value;
-  return void 0;
 }
 function shouldWarnAboutWriteCapableWorker(flow) {
   return flowMayInvokeWriteCapableWorker(flow.id) || flow.steps.some((step) => step.kind === "relay" && step.role === "implementer");
@@ -51303,7 +51316,7 @@ function createProgressProjector(input) {
       }
       case "fanout.started": {
         const stepId = entry.step_id;
-        const branchIds = stringArray(entry.branch_ids);
+        const branchIds = stringArrayValue(entry.branch_ids);
         if (stepId === void 0 || branchIds === void 0)
           break;
         const title = stepTitle({ flow: input.flow, stepId });
@@ -51350,7 +51363,7 @@ function createProgressProjector(input) {
       }
       case "fanout.branch_completed": {
         const stepId = entry.step_id;
-        const childOutcome = fanoutChildOutcome(entry.child_outcome);
+        const childOutcome = optionalRunClosedOutcome(entry.child_outcome);
         const branchKind = fanoutBranchKind(entry.branch_kind);
         if (stepId === void 0 || entry.branch_id === void 0 || branchKind === void 0 || childOutcome === void 0 || entry.verdict === void 0 || entry.duration_ms === void 0) {
           break;
@@ -51404,7 +51417,7 @@ function createProgressProjector(input) {
       }
       case "checkpoint.requested": {
         const stepId = entry.step_id;
-        const allowedChoices = stringArray(entry.options);
+        const allowedChoices = stringArrayValue(entry.options);
         if (stepId === void 0 || entry.request_path === void 0 || allowedChoices === void 0) {
           break;
         }
@@ -52607,16 +52620,6 @@ function isCheckpointResumeRejectedResult(result) {
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-function traceString(entry, key) {
-  const value = entry?.[key];
-  return typeof value === "string" && value.length > 0 ? value : void 0;
-}
-function stringArray2(value) {
-  if (!Array.isArray(value))
-    return void 0;
-  const entries = value.filter((entry) => typeof entry === "string");
-  return entries.length === value.length && entries.length > 0 ? entries : void 0;
-}
 function sameStringArray(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -52695,7 +52698,7 @@ function readCheckpointRequestContextResult(input) {
   if (raw.schema_version !== 1 || raw.step_id !== input.step.id) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request for '${input.step.id}' is stale`);
   }
-  const requestChoices = stringArray2(raw.allowed_choices);
+  const requestChoices = stringArrayValue(raw.allowed_choices);
   const expectedChoices = input.step.choices.length === 0 && requestChoices !== void 0 ? requestChoices : input.step.choices;
   if (requestChoices === void 0 || requestChoices.length !== expectedChoices.length || requestChoices.some((choice, index) => choice !== expectedChoices[index])) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request choices for '${input.step.id}' are stale`);
@@ -52906,7 +52909,7 @@ async function resumeCompiledFlowResult(options) {
   const attempt = requested.attempt;
   const requestPath = traceString(requested, "request_path");
   const requestHash = traceString(requested, "request_report_hash");
-  const allowedChoices = stringArray2(requested.options);
+  const allowedChoices = stringArrayValue(requested.options);
   if (stepId === void 0 || attempt === void 0 || requestPath === void 0 || requestHash === void 0 || allowedChoices === void 0) {
     return checkpointResumeRejected("runtime checkpoint resume rejected: checkpoint request trace is incomplete");
   }
@@ -58346,7 +58349,7 @@ function traceStringArray(entry, key) {
   const entries = value.filter((item) => typeof item === "string");
   return entries.length === value.length && entries.length > 0 ? entries : void 0;
 }
-function stringArray3(value) {
+function stringArray(value) {
   if (!Array.isArray(value))
     return void 0;
   const entries = value.filter((item) => typeof item === "string");
@@ -58377,11 +58380,7 @@ function runtimeLastEvent(log) {
   };
 }
 function runtimeRunOutcome(entry) {
-  const outcome = traceString2(entry, "outcome");
-  if (outcome === "complete" || outcome === "aborted" || outcome === "handoff" || outcome === "stopped" || outcome === "escalated") {
-    return outcome;
-  }
-  return void 0;
+  return optionalRunClosedOutcome(entry.outcome);
 }
 function runtimeCurrentStepProjection(log, flow) {
   const completed = /* @__PURE__ */ new Set();
@@ -58538,7 +58537,7 @@ function runtimeWaitingCheckpointProjection(input) {
       manifestIdentity: input.manifestIdentity
     });
   }
-  const requestChoices = stringArray3(requestRecord.allowed_choices);
+  const requestChoices = stringArray(requestRecord.allowed_choices);
   if (requestChoices === void 0 || !sameStringArray2(requestChoices, savedChoices)) {
     return invalidProjection({
       runFolder: input.runFolder,

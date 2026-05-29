@@ -1,6 +1,12 @@
 import type { FanoutStep } from '../schemas/step.js';
+import {
+  type RunClosedOutcome,
+  RunClosedOutcome as RunClosedOutcomeEnum,
+} from '../schemas/trace-entry.js';
 
-export type FanoutJoinChildOutcome = 'complete' | 'aborted' | 'handoff' | 'stopped' | 'escalated';
+// A fanout child closes with the same outcome set as any run; alias the
+// canonical run-closed outcome rather than re-enumerating it.
+export type FanoutJoinChildOutcome = RunClosedOutcome;
 
 // Pure-function inputs for the join policy decision. Every field listed here
 // is either a literal from the flow, a per-branch summary derived from
@@ -103,7 +109,7 @@ export function evaluateFanoutJoinPolicy(input: FanoutJoinInput): FanoutJoinResu
   }
 
   const allClosed = outcomes.every((outcome) =>
-    ['complete', 'aborted', 'handoff', 'stopped', 'escalated'].includes(outcome.child_outcome),
+    (RunClosedOutcomeEnum.options as readonly string[]).includes(outcome.child_outcome),
   );
   const allParseable = parseableSurvivors.length === outcomes.length;
   if (!allClosed) {

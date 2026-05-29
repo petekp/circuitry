@@ -35,6 +35,7 @@ import type { RelayConnector } from '../executors/relay.js';
 import type { CheckpointStep, ExecutableFlow } from '../manifest/executable-flow.js';
 import { fromCompiledFlow } from '../manifest/from-compiled-flow.js';
 import { resolveRunFilePath } from '../run-files/paths.js';
+import { stringArrayValue, traceString } from '../trace/trace-fields.js';
 import { TraceStore } from '../trace/trace-store.js';
 import type {
   ChildCompiledFlowResolver,
@@ -126,17 +127,6 @@ export function isCheckpointResumeRejectedResult(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function traceString(entry: TraceEntry | undefined, key: keyof TraceEntry): string | undefined {
-  const value = entry?.[key];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function stringArray(value: unknown): readonly string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const entries = value.filter((entry): entry is string => typeof entry === 'string');
-  return entries.length === value.length && entries.length > 0 ? entries : undefined;
 }
 
 function sameStringArray(left: readonly string[], right: readonly string[]): boolean {
@@ -261,7 +251,7 @@ function readCheckpointRequestContextResult(input: {
       `runtime checkpoint resume rejected: request for '${input.step.id}' is stale`,
     );
   }
-  const requestChoices = stringArray(raw.allowed_choices);
+  const requestChoices = stringArrayValue(raw.allowed_choices);
   const expectedChoices =
     input.step.choices.length === 0 && requestChoices !== undefined
       ? requestChoices
@@ -559,7 +549,7 @@ export async function resumeCompiledFlowResult(
   const attempt = requested.attempt;
   const requestPath = traceString(requested, 'request_path');
   const requestHash = traceString(requested, 'request_report_hash');
-  const allowedChoices = stringArray(requested.options);
+  const allowedChoices = stringArrayValue(requested.options);
   if (
     stepId === undefined ||
     attempt === undefined ||

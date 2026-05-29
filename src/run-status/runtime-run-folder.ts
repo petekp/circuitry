@@ -8,9 +8,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tournamentCheckpointPresentation } from '../runtime/projections/tournament-checkpoint-context.js';
 import { resolveRunFilePath } from '../runtime/run-files/paths.js';
+import { optionalRunClosedOutcome } from '../runtime/trace/trace-fields.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { RunStatusProjectionV1 } from '../schemas/run-status.js';
-import { TraceEntry as TraceEntrySchema } from '../schemas/trace-entry.js';
+import { type RunClosedOutcome, TraceEntry as TraceEntrySchema } from '../schemas/trace-entry.js';
 import { sha256Hex } from '../shared/connector-relay.js';
 import type { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
 import {
@@ -110,20 +111,11 @@ function runtimeLastEvent(log: readonly RawTraceEntry[]): {
   };
 }
 
-function runtimeRunOutcome(
-  entry: RawTraceEntry,
-): 'complete' | 'aborted' | 'handoff' | 'stopped' | 'escalated' | undefined {
-  const outcome = traceString(entry, 'outcome');
-  if (
-    outcome === 'complete' ||
-    outcome === 'aborted' ||
-    outcome === 'handoff' ||
-    outcome === 'stopped' ||
-    outcome === 'escalated'
-  ) {
-    return outcome;
-  }
-  return undefined;
+function runtimeRunOutcome(entry: RawTraceEntry): RunClosedOutcome | undefined {
+  // Reads the raw on-disk `outcome` field; `optionalRunClosedOutcome` returns
+  // it only when it is one of the canonical run-closed literals (all
+  // non-empty), matching the prior non-empty-string + literal-set check.
+  return optionalRunClosedOutcome(entry.outcome);
 }
 
 function runtimeCurrentStepProjection(
