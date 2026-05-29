@@ -26,6 +26,30 @@ hand.
 
 This is a migration plan. It does not implement the Run envelope.
 
+## Ratification: envelope-as-loop (2026-05-28)
+
+The autonomy continuation loop is owned by the Run envelope, not by host `/goal`
+and not by a separate public Goal flow peer. This ratifies two dispositions
+already recorded in this plan: the "Goal contract and gate semantics | Move" row
+and the "Goal as public flow peer | Collapse later" row in the Keep/Move/Collapse
+table below. It also rests on the host boundary in
+[goal-block-v1.md](goal-block-v1.md) lines 20-22, which states that native host
+`/goal` must not own Circuit's goal state, completion decision, proof standard,
+recovery policy, or final close.
+
+Rejected alternatives:
+
+- A separate public Goal flow peer as the loop owner. This would keep two
+  goal-state writers and two report namespaces alive, competing with Run as the
+  product surface and risking a second runtime.
+- Host `/goal` as the completion authority. The host evaluator judges
+  conversation text, not Circuit's typed evidence, so it cannot own the
+  proof-backed completion decision.
+
+Implementation lands as the autonomy continuation loop slices S1 through S9,
+tracked in the migration ledger Phase 13 block and specified in
+[run-envelope-goal-loop-migration-v1.md](run-envelope-goal-loop-migration-v1.md).
+
 ## Evidence Used
 
 Current-source evidence:

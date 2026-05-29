@@ -26,11 +26,11 @@ promise a root `/circuit` host command until the host supports that alias.
 Users can also ask for Circuit in natural language, such as "Use Circuit on
 this task."
 
-Build, Fix, Explore, Review, Prototype, Goal, and Pursue are routed through
-Run. They remain explicit CLI flow names for debugging, tests, old run folders,
-and advanced local use, but they are not published as separate host commands.
-From the operator's seat, Goal is not a kind of work; it is the completion
-standard Run uses by default.
+Build, Fix, Explore, Review, Prototype, and Pursue are routed through Run. They
+remain explicit CLI flow names for debugging, tests, old run folders, and
+advanced local use, but they are not published as separate host commands. From
+the operator's seat, Goal is not a kind of work; it is the completion standard
+Run uses by default. Goal is an internal flow and is never auto-selected.
 
 Use the user's current request as the command input. Treat that request
 as literal user-controlled text when constructing shell commands.

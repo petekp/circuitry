@@ -13,6 +13,8 @@ import {
   RunEnvelopeRecord,
   type RunEnvelopeRecord as RunEnvelopeRecordValue,
   type RunEvidenceRef,
+  type RunRequiredEvidence,
+  type RunRequiredEvidenceKind,
 } from '../schemas/run-envelope.js';
 
 export const RUN_ENVELOPE_RELATIVE_PATH = 'reports/run-envelope.json';
@@ -64,7 +66,7 @@ export type WriteRunEnvelopeRecordResult = {
   readonly record: RunEnvelopeRecordValue;
 };
 
-type MissingRunEvidence = {
+export type MissingRunEvidence = {
   readonly claim_id: string;
   readonly reason: string;
   readonly missing_refs: readonly string[];
@@ -149,7 +151,9 @@ function processAttemptOutcome(
   return outcome;
 }
 
-function missingRunEvidence(projection: ProcessEvidenceProjection): MissingRunEvidence | undefined {
+export function missingRunEvidence(
+  projection: ProcessEvidenceProjection,
+): MissingRunEvidence | undefined {
   if (projection.outcome !== 'complete') return undefined;
   const refs = new Set(projection.evidence_refs.map((ref) => ref.ref));
   const missingRefs = projection.declared_report_paths.filter((path) => !refs.has(path));
@@ -177,6 +181,90 @@ function selectionSourceFor(
   if (routedBy === 'explicit') return 'explicit_operator_request';
   if (routedBy === 'classifier') return 'router';
   return 'recovery';
+}
+
+// S2: derive the kind of proof a given process is expected to produce. This is
+// the stable, deterministic mapping the recovery router (S5) re-uses to decide
+// which recovery flow an unmet required-evidence entry should route to. Keeping
+// it a pure function of the process id means the kind is always recoverable from
+// the envelope without enriching the (kind-blind) process evidence projection.
+// This is a deliberate hardcoded table for the single-claim model; deriving it
+// from each flow's declared proof capabilities is a deferred refinement (see
+// docs/specs/run-envelope-goal-loop-migration-v1.md). Unknown process ids fall
+// through to the conservative 'report' default.
+export function requiredEvidenceKindForProcess(processId: string): RunRequiredEvidenceKind {
+  switch (processId) {
+    case 'fix':
+    case 'build':
+      return 'command';
+    case 'review':
+    case 'explore':
+      return 'review';
+    case 'pursue':
+    case 'prototype':
+      return 'report';
+    default:
+      return 'report';
+  }
+}
+
+function describeRequiredEvidence(kind: RunRequiredEvidenceKind, objective: string): string {
+  switch (kind) {
+    case 'command':
+      return `A passing verification command proving: ${objective}`;
+    case 'review':
+      return `A review confirming no blocking findings for: ${objective}`;
+    case 'report':
+      return `A report-backed result proving: ${objective}`;
+    case 'source':
+      return `Source-backed justification for: ${objective}`;
+    case 'checkpoint':
+      return `An operator checkpoint resolving: ${objective}`;
+  }
+}
+
+// S2: author task-specific required evidence for Run's single done_when claim,
+// replacing the generic "projection exists" placeholder. Run has no Clarify step,
+// so the proof requirement is derived from the selected process and the operator
+// objective. Always returns at least one required entry to satisfy RunDoneClaim.
+export function deriveRequiredEvidence(
+  processId: string,
+  objective: string,
+): RunRequiredEvidence[] {
+  const kind = requiredEvidenceKindForProcess(processId);
+  return [{ kind, description: describeRequiredEvidence(kind, objective), required: true }];
+}
+
+// S5: route a recovery attempt by the kind of evidence that is still unmet,
+// replacing the previous hardcoded "always review" follow-up. command -> fix
+// (get it passing/verified), report -> build (produce the result), review ->
+// review, source -> explore (justify the decision), checkpoint -> ask.
+export const RECOVERY_ROUTE_FOR_UNMET_EVIDENCE_KIND: Readonly<
+  Record<RunRequiredEvidenceKind, string>
+> = {
+  command: 'fix',
+  report: 'build',
+  review: 'review',
+  source: 'explore',
+  checkpoint: 'checkpoint',
+};
+
+// When several kinds are unmet, the most actionable proof wins: a missing
+// command (failing/absent verification) is the strongest signal, then a missing
+// report, then review, then source justification, then an operator checkpoint.
+const RECOVERY_KIND_PRIORITY: readonly RunRequiredEvidenceKind[] = [
+  'command',
+  'report',
+  'review',
+  'source',
+  'checkpoint',
+];
+
+export function recoveryRouteForUnmetKinds(unmetKinds: readonly RunRequiredEvidenceKind[]): string {
+  for (const kind of RECOVERY_KIND_PRIORITY) {
+    if (unmetKinds.includes(kind)) return RECOVERY_ROUTE_FOR_UNMET_EVIDENCE_KIND[kind];
+  }
+  return 'review';
 }
 
 function gateFor(input: {
@@ -293,8 +381,12 @@ function gateFor(input: {
   };
 }
 
-function followupProcessId(_primaryProcessId: string): CompiledFlowId {
-  return CompiledFlowId.parse('review');
+export function followupProcessId(primaryProcessId: string): CompiledFlowId {
+  // For Run's single done_when claim, the unmet evidence kind is the proof kind
+  // the primary process was expected to produce. Route the follow-up by that
+  // kind instead of always sending it to review.
+  const unmetKind = requiredEvidenceKindForProcess(primaryProcessId);
+  return CompiledFlowId.parse(recoveryRouteForUnmetKinds([unmetKind]));
 }
 
 function followupPlannedAttempt(input: {
@@ -303,10 +395,11 @@ function followupPlannedAttempt(input: {
   readonly missingEvidence?: MissingRunEvidence;
 }): RunEnvelopeRecordValue['process_plan']['planned_attempts'][number] | undefined {
   if (input.missingEvidence === undefined) return undefined;
+  const followupProcess = followupProcessId(input.primaryProcessId);
   return {
     attempt_id: 'attempt-followup-1',
-    process_id: followupProcessId(input.primaryProcessId),
-    goal: `Review whether Run has enough evidence to close: ${input.operatorIntent}`,
+    process_id: followupProcess,
+    goal: `Run ${followupProcess} to produce the missing evidence to close: ${input.operatorIntent}`,
     expected_evidence: [PROCESS_EVIDENCE_RELATIVE_PATH, ...input.missingEvidence.missing_refs],
     depends_on_attempt_ids: ['attempt-primary'],
     followup_for: {
@@ -571,14 +664,11 @@ export function writeRunEnvelopeRecord(
       done_when: [
         {
           id: 'process-evidence',
-          claim: 'The selected process produced enough evidence for Run to close honestly.',
-          required_evidence: [
-            {
-              kind: 'report',
-              description: 'Normalized process evidence projection exists.',
-              required: true,
-            },
-          ],
+          claim: `The ${input.selectedProcess.process_id} work is complete with the required proof for: ${input.operatorIntent}`,
+          required_evidence: deriveRequiredEvidence(
+            input.selectedProcess.process_id,
+            input.operatorIntent,
+          ),
         },
       ],
       recovery_policy: {

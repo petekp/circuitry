@@ -84,14 +84,16 @@ describe('generated host surface framing', () => {
     expect(claudeManifest).not.toContain('selects the best flow');
   });
 
-  it('keeps Goal as a routed flow and not a separate host command', () => {
+  it('freezes Goal to an internal flow with no separate host surface (S8)', () => {
     const generatedSurfaceMap = readRepoFile('docs/generated-surfaces.md');
     const runSkill = readRepoFile('plugins/codex/skills/run/SKILL.md');
 
-    expect(generatedSurfaceMap).toContain('| `goal` | `public` |');
+    expect(generatedSurfaceMap).toContain('| `goal` | `internal` |');
     expect(generatedSurfaceMap).toContain(
-      '`plugins/claude/skills/goal/circuit.json`<br>`plugins/codex/flows/goal/circuit.json` | none | none |',
+      '`generated/flows/goal/circuit.json`<br>`generated/flows/goal/circuit.work-contract.v0.json` | none; internal flow | none | none |',
     );
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/claude/skills/goal'))).toBe(false);
+    expect(existsSync(resolve(REPO_ROOT, 'plugins/codex/flows/goal'))).toBe(false);
     expect(runSkill).toContain('Goal is not a kind of work');
     expect(runSkill).toMatch(/completion\s+standard\s+Run\s+uses\s+by\s+default/);
   });

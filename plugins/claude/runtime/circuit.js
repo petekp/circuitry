@@ -10767,7 +10767,7 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync22, readFileSync as readFileSync38 } from "node:fs";
+import { existsSync as existsSync22, mkdirSync as mkdirSync8, readFileSync as readFileSync38, writeFileSync as writeFileSync9 } from "node:fs";
 import { dirname as dirname12, join as join23, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
@@ -10888,6 +10888,8 @@ function buildRoutablePackages(packages) {
   const out = [];
   for (const pkg of packages) {
     if (pkg.routing === void 0)
+      continue;
+    if (pkg.visibility === "internal")
       continue;
     out.push({ pkg, routing: pkg.routing });
   }
@@ -36100,7 +36102,11 @@ function childRunStep(input) {
 }
 var goalFlowData = {
   id: "goal",
-  visibility: "public",
+  // S8: frozen to internal. Goal's contract/gate semantics moved into the Run
+  // envelope (Phase 13). The flow stays in the catalog and keeps its manifest for
+  // reader-compat and explicit/internal runs, but no longer publishes a public
+  // host command/skill surface. Classifier selection is gated separately (S9).
+  visibility: "internal",
   paths: {
     schematic: "src/flows/goal/schematic.json"
   },
@@ -54595,126 +54601,93 @@ function writeProcessEvidenceProjection(input) {
   return { path: outPath, projection };
 }
 
-// dist/run-envelope/shadow-record.js
-import { createHash as createHash10 } from "node:crypto";
-import { mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync3 } from "node:fs";
-import { dirname as dirname6, isAbsolute as isAbsolute9, join as join14, relative as relative9 } from "node:path";
-var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
-function sha256File3(path) {
-  return Sha256.parse(createHash10("sha256").update(readFileSync28(path)).digest("hex"));
+// dist/run-envelope/contract-quality.js
+var IMPLEMENTATION_INTENT = /\b(build|fix|implement|add|change|create|refactor|ship|integrate|update|wire)\b/;
+var REVIEW_INTENT2 = /\b(review|audit|assess|inspect|findings?)\b/;
+var EXPLORE_INTENT2 = /\b(explore|compare|decide|decision|tradeoffs?|options?)\b/;
+function objectiveKind(objective) {
+  const text = objective.toLowerCase();
+  if (IMPLEMENTATION_INTENT.test(text))
+    return "implementation";
+  if (REVIEW_INTENT2.test(text))
+    return "review";
+  if (EXPLORE_INTENT2.test(text))
+    return "explore";
+  return "other";
 }
-function runRelativePath2(runFolder, path) {
-  return isAbsolute9(path) ? relative9(runFolder, path) : path;
+var MIN_REQUIRED_KIND_BY_OBJECTIVE = {
+  implementation: "command",
+  review: "review"
+};
+function hasRequiredEvidenceOfKind(contract, kind) {
+  return contract.done_when.some((claim) => claim.required_evidence.some((entry) => entry.required && entry.kind === kind));
 }
-function reportRef2(input) {
-  return {
-    kind: "report",
-    ref: runRelativePath2(input.runFolder, input.path),
-    sha256: sha256File3(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId)
-  };
-}
-function requestRef2(input) {
-  return {
-    kind: "request",
-    ref: runRelativePath2(input.runFolder, input.path),
-    sha256: sha256File3(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId),
-    step_id: StepId.parse(input.stepId)
-  };
-}
-function childResultEvidence(input) {
-  return {
-    source: "child_result",
-    ref: reportRef2(input)
-  };
-}
-function writeRunEnvelopeShadowRecord(input) {
-  const selectedProcess = {
-    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
-    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
-    router_reason: input.selectedProcess.router_reason,
-    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
-  };
-  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
-    const resultRef = childResultEvidence({
-      runFolder: input.runFolder,
-      path: input.child.resultPath,
-      runId: input.child.runResult.run_id,
-      flowId: input.child.runResult.flow_id
+function contractQualityReview(contract) {
+  const findings = [];
+  const kind = objectiveKind(contract.objective);
+  const minKind = MIN_REQUIRED_KIND_BY_OBJECTIVE[kind];
+  if (minKind !== void 0 && !hasRequiredEvidenceOfKind(contract, minKind)) {
+    findings.push({
+      severity: "high",
+      text: `A ${kind} objective needs at least one required '${minKind}' evidence entry, but the contract has none. Satisfying this contract would not prove the objective.`
     });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.runResult.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
-        outcome: input.child.runResult.outcome,
-        trace_entries_observed: input.child.runResult.trace_entries_observed,
-        manifest_hash: input.child.runResult.manifest_hash,
-        result_ref: resultRef
-      },
-      artifactLinks: [resultRef.ref]
-    };
-  })() : (() => {
-    const checkpointRequestRef = requestRef2({
-      runFolder: input.runFolder,
-      path: input.child.checkpoint.request_path,
-      runId: input.child.run_id,
-      flowId: input.child.flow_id,
-      stepId: input.child.checkpoint.step_id
-    });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.flow_id),
-        outcome: "checkpoint_waiting",
-        trace_entries_observed: input.child.trace_entries_observed,
-        manifest_hash: input.child.manifest_hash,
-        checkpoint: {
-          step_id: StepId.parse(input.child.checkpoint.step_id),
-          request_ref: checkpointRequestRef,
-          allowed_choices: [...input.child.checkpoint.allowed_choices]
-        }
-      },
-      artifactLinks: [checkpointRequestRef]
-    };
-  })();
-  const record2 = RunEnvelopeShadowRecord.parse({
-    schema: "run.envelope-shadow@v0",
-    mode: "shadow",
-    shadow_reason: "source-owned-run-not-active",
-    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
-    operator_intent: input.operatorIntent,
-    recorded_at: input.recordedAt,
-    selected_process: selectedProcess,
-    child_run: childRun,
-    artifact_links: artifactLinks
-  });
-  const outPath = join14(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
-  mkdirSync3(dirname6(outPath), { recursive: true });
-  writeFileSync3(outPath, `${JSON.stringify(record2, null, 2)}
-`);
-  return { path: outPath, record: record2 };
+  }
+  const blocking = findings.some((finding) => finding.severity === "critical" || finding.severity === "high" || finding.severity === "medium");
+  return {
+    verdict: blocking ? "blocked" : "gate-pass",
+    attack_lens: "contract-quality",
+    findings
+  };
+}
+
+// dist/run-envelope/no-progress.js
+function sameSet(a, b) {
+  if (a.length !== b.length)
+    return false;
+  const seen = new Set(a);
+  return b.every((value) => seen.has(value));
+}
+function shrank(from, to) {
+  return to.length < from.length;
+}
+function detectNoProgress(attempts) {
+  if (attempts.length >= 2) {
+    const last = attempts[attempts.length - 1];
+    const prev = attempts[attempts.length - 2];
+    if (last !== void 0 && prev !== void 0 && sameSet(last.unmetEvidence, prev.unmetEvidence)) {
+      return { escalate: true, reason: "no-progress" };
+    }
+  }
+  if (attempts.length >= 3) {
+    const first = attempts[attempts.length - 3];
+    const middle = attempts[attempts.length - 2];
+    const last = attempts[attempts.length - 1];
+    if (first !== void 0 && middle !== void 0 && last !== void 0) {
+      const oscillating = last.route === first.route && last.route !== middle.route;
+      const noNetProgress = !shrank(first.unmetEvidence, last.unmetEvidence);
+      if (oscillating && noNetProgress) {
+        return { escalate: true, reason: "oscillation" };
+      }
+    }
+  }
+  return { escalate: false, reason: null };
 }
 
 // dist/run-envelope/source-record.js
-import { createHash as createHash11 } from "node:crypto";
-import { mkdirSync as mkdirSync4, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname7, isAbsolute as isAbsolute10, join as join15, relative as relative10 } from "node:path";
+import { createHash as createHash10 } from "node:crypto";
+import { mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync3 } from "node:fs";
+import { dirname as dirname6, isAbsolute as isAbsolute9, join as join14, relative as relative9 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
 var RUN_SURFACE_RELATIVE_PATH = "reports/run-surface.md";
 var RUN_DECISION_PACKET_RELATIVE_DIR = "reports/decision-packets";
-function sha256File4(path) {
-  return Sha256.parse(createHash11("sha256").update(readFileSync29(path)).digest("hex"));
+function sha256File3(path) {
+  return Sha256.parse(createHash10("sha256").update(readFileSync28(path)).digest("hex"));
 }
 function sha256Text(text) {
-  return Sha256.parse(createHash11("sha256").update(text).digest("hex"));
+  return Sha256.parse(createHash10("sha256").update(text).digest("hex"));
 }
-function runRelativePath3(runFolder, path) {
-  return isAbsolute10(path) ? relative10(runFolder, path) : path;
+function runRelativePath2(runFolder, path) {
+  return isAbsolute9(path) ? relative9(runFolder, path) : path;
 }
 function childRunIdFromProjection(projection) {
   return RunId.parse(projection.child_run_ref.run_id);
@@ -54722,8 +54695,8 @@ function childRunIdFromProjection(projection) {
 function evidenceFileRef(input) {
   return {
     kind: "evidence",
-    ref: runRelativePath3(input.runFolder, input.path),
-    sha256: sha256File4(input.path),
+    ref: runRelativePath2(input.runFolder, input.path),
+    sha256: sha256File3(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId)
   };
@@ -54756,7 +54729,7 @@ function renderSurfaceMarkdown(input) {
     ...input.record.surface_output.artifact_links
   ];
   const uniqueArtifactRefs = artifactRefs.filter((ref, index, refs) => refs.findIndex((candidate) => candidate.ref === ref.ref) === index);
-  const artifactLine = uniqueArtifactRefs.map((ref) => markdownLink(artifactLabel(ref), join15(input.runFolder, ref.ref))).join(" \xB7 ");
+  const artifactLine = uniqueArtifactRefs.map((ref) => markdownLink(artifactLabel(ref), join14(input.runFolder, ref.ref))).join(" \xB7 ");
   return ["Circuit", `\u23BF ${input.record.surface_output.status_text}`, "", artifactLine, ""].join("\n");
 }
 function processAttemptOutcome(outcome) {
@@ -54792,6 +54765,60 @@ function selectionSourceFor(routedBy) {
   if (routedBy === "classifier")
     return "router";
   return "recovery";
+}
+function requiredEvidenceKindForProcess(processId) {
+  switch (processId) {
+    case "fix":
+    case "build":
+      return "command";
+    case "review":
+    case "explore":
+      return "review";
+    case "pursue":
+    case "prototype":
+      return "report";
+    default:
+      return "report";
+  }
+}
+function describeRequiredEvidence(kind, objective) {
+  switch (kind) {
+    case "command":
+      return `A passing verification command proving: ${objective}`;
+    case "review":
+      return `A review confirming no blocking findings for: ${objective}`;
+    case "report":
+      return `A report-backed result proving: ${objective}`;
+    case "source":
+      return `Source-backed justification for: ${objective}`;
+    case "checkpoint":
+      return `An operator checkpoint resolving: ${objective}`;
+  }
+}
+function deriveRequiredEvidence(processId, objective) {
+  const kind = requiredEvidenceKindForProcess(processId);
+  return [{ kind, description: describeRequiredEvidence(kind, objective), required: true }];
+}
+var RECOVERY_ROUTE_FOR_UNMET_EVIDENCE_KIND = {
+  command: "fix",
+  report: "build",
+  review: "review",
+  source: "explore",
+  checkpoint: "checkpoint"
+};
+var RECOVERY_KIND_PRIORITY = [
+  "command",
+  "report",
+  "review",
+  "source",
+  "checkpoint"
+];
+function recoveryRouteForUnmetKinds(unmetKinds) {
+  for (const kind of RECOVERY_KIND_PRIORITY) {
+    if (unmetKinds.includes(kind))
+      return RECOVERY_ROUTE_FOR_UNMET_EVIDENCE_KIND[kind];
+  }
+  return "review";
 }
 function gateFor(input) {
   if (input.projection.outcome === "complete") {
@@ -54896,16 +54923,18 @@ function gateFor(input) {
     next_action: failed ? "failed" : "blocked"
   };
 }
-function followupProcessId(_primaryProcessId) {
-  return CompiledFlowId.parse("review");
+function followupProcessId(primaryProcessId) {
+  const unmetKind = requiredEvidenceKindForProcess(primaryProcessId);
+  return CompiledFlowId.parse(recoveryRouteForUnmetKinds([unmetKind]));
 }
 function followupPlannedAttempt(input) {
   if (input.missingEvidence === void 0)
     return void 0;
+  const followupProcess = followupProcessId(input.primaryProcessId);
   return {
     attempt_id: "attempt-followup-1",
-    process_id: followupProcessId(input.primaryProcessId),
-    goal: `Review whether Run has enough evidence to close: ${input.operatorIntent}`,
+    process_id: followupProcess,
+    goal: `Run ${followupProcess} to produce the missing evidence to close: ${input.operatorIntent}`,
     expected_evidence: [PROCESS_EVIDENCE_RELATIVE_PATH, ...input.missingEvidence.missing_refs],
     depends_on_attempt_ids: ["attempt-primary"],
     followup_for: {
@@ -55120,14 +55149,8 @@ function writeRunEnvelopeRecord(input) {
       done_when: [
         {
           id: "process-evidence",
-          claim: "The selected process produced enough evidence for Run to close honestly.",
-          required_evidence: [
-            {
-              kind: "report",
-              description: "Normalized process evidence projection exists.",
-              required: true
-            }
-          ]
+          claim: `The ${input.selectedProcess.process_id} work is complete with the required proof for: ${input.operatorIntent}`,
+          required_evidence: deriveRequiredEvidence(input.selectedProcess.process_id, input.operatorIntent)
         }
       ],
       recovery_policy: {
@@ -55199,18 +55222,18 @@ function writeRunEnvelopeRecord(input) {
     }),
     outcome
   });
-  const outPath = join15(input.runFolder, RUN_ENVELOPE_RELATIVE_PATH);
-  mkdirSync4(dirname7(outPath), { recursive: true });
+  const outPath = join14(input.runFolder, RUN_ENVELOPE_RELATIVE_PATH);
+  mkdirSync3(dirname6(outPath), { recursive: true });
   const decisionPacketPaths = decisionArtifacts.map((artifact) => {
-    const path = join15(input.runFolder, artifact.ref.ref);
-    mkdirSync4(dirname7(path), { recursive: true });
-    writeFileSync4(path, artifact.body);
+    const path = join14(input.runFolder, artifact.ref.ref);
+    mkdirSync3(dirname6(path), { recursive: true });
+    writeFileSync3(path, artifact.body);
     return path;
   });
-  writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
+  writeFileSync3(outPath, `${JSON.stringify(record2, null, 2)}
 `);
-  const surfacePath = join15(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
-  writeFileSync4(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record: record2 }));
+  const surfacePath = join14(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
+  writeFileSync3(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record: record2 }));
   return {
     path: outPath,
     processEvidencePath,
@@ -55218,6 +55241,214 @@ function writeRunEnvelopeRecord(input) {
     decisionPacketPaths,
     record: record2
   };
+}
+
+// dist/run-envelope/continuation-loop.js
+async function runContinuationLoop(input) {
+  const quality = contractQualityReview(input.contract);
+  if (quality.verdict === "blocked") {
+    const detail = quality.findings[0]?.text ?? "The contract is too weak to prove the objective.";
+    return {
+      outcome: "needs_attention",
+      attempts: [],
+      stopReason: `contract-quality blocked before any attempt: ${detail}`
+    };
+  }
+  const maxAttempts = input.contract.recovery_policy.max_process_attempts;
+  const attempts = [];
+  const progress = [];
+  let currentProcess = input.primaryProcessId;
+  for (let attemptNumber = 1; attemptNumber <= maxAttempts; attemptNumber += 1) {
+    const result = await input.runAttempt({ processId: currentProcess, attemptNumber });
+    attempts.push(result);
+    if (result.outcome === "complete") {
+      return { outcome: "complete", attempts, stopReason: "required evidence satisfied" };
+    }
+    if (result.outcome === "checkpoint") {
+      return { outcome: "needs_attention", attempts, stopReason: "stopped at operator checkpoint" };
+    }
+    if (result.outcome === "handoff") {
+      return { outcome: "handoff", attempts, stopReason: "process handed off before closure" };
+    }
+    if (result.outcome === "failed") {
+      return { outcome: "failed", attempts, stopReason: "process failed" };
+    }
+    if (result.outcome === "blocked") {
+      return { outcome: "blocked", attempts, stopReason: "process blocked" };
+    }
+    progress.push({ unmetEvidence: result.unmetEvidence, route: result.process_id });
+    const noProgress = detectNoProgress(progress);
+    if (noProgress.escalate) {
+      return {
+        outcome: "needs_attention",
+        attempts,
+        stopReason: `escalated on no-progress (${noProgress.reason})`
+      };
+    }
+    if (attemptNumber >= maxAttempts)
+      break;
+    const unmetKinds = result.unmetKinds ?? [requiredEvidenceKindForProcess(result.process_id)];
+    const nextRoute = recoveryRouteForUnmetKinds(unmetKinds);
+    if (nextRoute === "checkpoint") {
+      return {
+        outcome: "needs_attention",
+        attempts,
+        stopReason: "recovery requires an operator checkpoint"
+      };
+    }
+    currentProcess = nextRoute;
+  }
+  return {
+    outcome: "needs_attention",
+    attempts,
+    stopReason: `stopped at attempt limit: ran ${attempts.length} attempt(s); required evidence remains unmet`
+  };
+}
+
+// dist/run-envelope/autonomous-run.js
+function attemptOutcomeFromProjection(projection, missing) {
+  switch (projection.outcome) {
+    case "complete":
+      return missing === void 0 ? "complete" : "needs_followup";
+    case "checkpoint_waiting":
+      return "checkpoint";
+    case "handoff":
+      return "handoff";
+    case "failed":
+    case "aborted":
+      return "failed";
+    default:
+      return "blocked";
+  }
+}
+function attemptResultFromProjection(projection) {
+  const missing = missingRunEvidence(projection);
+  const outcome = attemptOutcomeFromProjection(projection, missing);
+  const ranProcess = projection.flow_id;
+  if (missing === void 0) {
+    return { process_id: ranProcess, outcome, unmetEvidence: [] };
+  }
+  return {
+    process_id: ranProcess,
+    outcome,
+    unmetEvidence: missing.missing_refs,
+    unmetKinds: [requiredEvidenceKindForProcess(ranProcess)]
+  };
+}
+async function runAutonomousContinuation(input) {
+  return runContinuationLoop({
+    contract: input.contract,
+    primaryProcessId: input.primaryProcessId,
+    runAttempt: async ({ processId, attemptNumber }) => {
+      const run = await input.runFlow({ processId, attemptNumber });
+      return attemptResultFromProjection(run.projection);
+    }
+  });
+}
+
+// dist/run-envelope/shadow-record.js
+import { createHash as createHash11 } from "node:crypto";
+import { mkdirSync as mkdirSync4, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
+import { dirname as dirname7, isAbsolute as isAbsolute10, join as join15, relative as relative10 } from "node:path";
+var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
+function sha256File4(path) {
+  return Sha256.parse(createHash11("sha256").update(readFileSync29(path)).digest("hex"));
+}
+function runRelativePath3(runFolder, path) {
+  return isAbsolute10(path) ? relative10(runFolder, path) : path;
+}
+function reportRef2(input) {
+  return {
+    kind: "report",
+    ref: runRelativePath3(input.runFolder, input.path),
+    sha256: sha256File4(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId)
+  };
+}
+function requestRef2(input) {
+  return {
+    kind: "request",
+    ref: runRelativePath3(input.runFolder, input.path),
+    sha256: sha256File4(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId),
+    step_id: StepId.parse(input.stepId)
+  };
+}
+function childResultEvidence(input) {
+  return {
+    source: "child_result",
+    ref: reportRef2(input)
+  };
+}
+function writeRunEnvelopeShadowRecord(input) {
+  const selectedProcess = {
+    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
+    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
+    router_reason: input.selectedProcess.router_reason,
+    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
+  };
+  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
+    const resultRef = childResultEvidence({
+      runFolder: input.runFolder,
+      path: input.child.resultPath,
+      runId: input.child.runResult.run_id,
+      flowId: input.child.runResult.flow_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.runResult.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
+        outcome: input.child.runResult.outcome,
+        trace_entries_observed: input.child.runResult.trace_entries_observed,
+        manifest_hash: input.child.runResult.manifest_hash,
+        result_ref: resultRef
+      },
+      artifactLinks: [resultRef.ref]
+    };
+  })() : (() => {
+    const checkpointRequestRef = requestRef2({
+      runFolder: input.runFolder,
+      path: input.child.checkpoint.request_path,
+      runId: input.child.run_id,
+      flowId: input.child.flow_id,
+      stepId: input.child.checkpoint.step_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.flow_id),
+        outcome: "checkpoint_waiting",
+        trace_entries_observed: input.child.trace_entries_observed,
+        manifest_hash: input.child.manifest_hash,
+        checkpoint: {
+          step_id: StepId.parse(input.child.checkpoint.step_id),
+          request_ref: checkpointRequestRef,
+          allowed_choices: [...input.child.checkpoint.allowed_choices]
+        }
+      },
+      artifactLinks: [checkpointRequestRef]
+    };
+  })();
+  const record2 = RunEnvelopeShadowRecord.parse({
+    schema: "run.envelope-shadow@v0",
+    mode: "shadow",
+    shadow_reason: "source-owned-run-not-active",
+    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
+    operator_intent: input.operatorIntent,
+    recorded_at: input.recordedAt,
+    selected_process: selectedProcess,
+    child_run: childRun,
+    artifact_links: artifactLinks
+  });
+  const outPath = join15(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
+  mkdirSync4(dirname7(outPath), { recursive: true });
+  writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
+`);
+  return { path: outPath, record: record2 };
 }
 
 // dist/shared/config-loader.js
@@ -59833,6 +60064,7 @@ async function runRunsCommand(argv) {
 
 // dist/cli/circuit.js
 var DEFAULT_RUNS_BASE2 = ".circuit/runs";
+var AUTONOMOUS_LOOP_RELATIVE_PATH = "reports/autonomous-loop.json";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
 function tryPostRunArtifact(label, context, write) {
   try {
@@ -59867,7 +60099,7 @@ function usage() {
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     "       circuit version [--json]",
     "",
-    "Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` asks the flow to auto-resolve supported checkpoints. Unsupported tuples are rejected per flow with the flow allow-list.",
+    "Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` auto-resolves supported checkpoints and runs a bounded continuation loop (recovery routed by unmet evidence kind; never completes by exhaustion). Unsupported tuples are rejected per flow with the flow allow-list.",
     "",
     "With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/pursue flows and then composes the runtime boundary using the configured relay connector.",
     "",
@@ -60658,6 +60890,97 @@ async function main(argv, options = {}) {
       recordedAt,
       ...runEnvelopeMemoryContext(historyRecall)
     }));
+    let autonomousLoop;
+    if (selectedAxes(args, route).autonomous === true && processEvidence !== void 0 && runEnvelope !== void 0) {
+      const primaryProjection = processEvidence.projection;
+      const contract = runEnvelope.record.goal_contract;
+      const parentAxes = selectedAxes(args, route);
+      const recoveryFlowCache = /* @__PURE__ */ new Map();
+      try {
+        autonomousLoop = await runAutonomousContinuation({
+          contract,
+          primaryProcessId: flow.id,
+          runFlow: async ({ processId, attemptNumber }) => {
+            if (attemptNumber === 1) {
+              return { projection: primaryProjection };
+            }
+            let recoveryFlow = recoveryFlowCache.get(processId);
+            if (recoveryFlow === void 0) {
+              const path = resolveFixturePath(processId, fixtureSelectionName, void 0, args.flowRoot);
+              const loaded = loadFixture(path);
+              const loadedFlowId = loaded.flow.id;
+              if (loadedFlowId !== processId) {
+                throw new Error(`recovery flow fixture id mismatch: routed to '${processId}' but fixture declares '${loadedFlowId}'`);
+              }
+              recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
+              recoveryFlowCache.set(processId, recoveryFlow);
+            }
+            const support = axisSupportFromFlow({ flow: recoveryFlow.flow });
+            const recoveryAxes = Axes.parse({
+              // Keep the parent's rigor only if the recovery flow allows it;
+              // otherwise fall back to the recovery flow's own default rigor,
+              // which the axes schema guarantees is in its allowed set (never a
+              // hardcoded value the flow might not declare).
+              rigor: support.allowedRigors.includes(parentAxes.rigor) ? parentAxes.rigor : recoveryFlow.flow.axes.default.rigor,
+              tournament: false,
+              autonomous: parentAxes.autonomous && support.supportsAutonomous
+            });
+            const attemptFolder = join23(runFolder, "attempts", `attempt-${attemptNumber}-${processId}`);
+            const recoveryResult = await runCompiledFlowWithWaiting({
+              flowBytes: recoveryFlow.bytes,
+              compiledFlowPath: recoveryFlow.path,
+              runDir: attemptFolder,
+              runId: RunId.parse(randomUUID7()),
+              goal: operatorGoal,
+              now,
+              projectRoot,
+              childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
+              axes: recoveryAxes,
+              ...options.relayer === void 0 ? {} : { relayer: options.relayer },
+              ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
+              ...selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers },
+              ...policyLayers.length === 0 ? {} : { policyLayers }
+            });
+            if (isGraphCheckpointWaitingResult(recoveryResult)) {
+              return {
+                projection: projectCheckpointWaitingProcessEvidence({
+                  runFolder: attemptFolder,
+                  runId: RunId.parse(recoveryResult.runId),
+                  flowId: recoveryResult.flowId,
+                  traceEntriesObserved: recoveryResult.traceEntriesObserved,
+                  manifestHash: computeManifestHash(recoveryFlow.bytes),
+                  checkpoint: {
+                    stepId: recoveryResult.checkpoint.stepId,
+                    requestPath: recoveryResult.checkpoint.requestPath,
+                    allowedChoices: recoveryResult.checkpoint.allowedChoices
+                  }
+                })
+              };
+            }
+            const recoveryRunResult = RunResult.parse(JSON.parse(readFileSync38(recoveryResult.resultPath, "utf8")));
+            return {
+              projection: projectClosedProcessEvidence({
+                runFolder: attemptFolder,
+                runResult: recoveryRunResult,
+                resultPath: recoveryResult.resultPath
+              })
+            };
+          }
+        });
+        const autonomousLoopPath = join23(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH);
+        mkdirSync8(dirname12(autonomousLoopPath), { recursive: true });
+        writeFileSync9(autonomousLoopPath, `${JSON.stringify(autonomousLoop, null, 2)}
+`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        postRunArtifactWarnings.push({ label: "autonomous-loop", message });
+        if (args.progress !== "jsonl") {
+          process.stderr.write(`warning: autonomous loop failed: ${message}
+`);
+        }
+        autonomousLoop = void 0;
+      }
+    }
     process.stdout.write(`${JSON.stringify({
       schema_version: 1,
       run_id: runResult.run_id,
@@ -60681,7 +61004,15 @@ async function main(argv, options = {}) {
       ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
       ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
       ...operatorSummary === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary }),
-      ...runEnvelope === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope })
+      ...runEnvelope === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope }),
+      ...autonomousLoop === void 0 ? {} : {
+        autonomous_loop: {
+          outcome: autonomousLoop.outcome,
+          attempts: autonomousLoop.attempts.length,
+          stop_reason: autonomousLoop.stopReason,
+          path: join23(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH)
+        }
+      }
     }, null, 2)}
 `);
     return 0;

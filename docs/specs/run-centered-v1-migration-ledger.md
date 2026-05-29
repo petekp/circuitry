@@ -479,6 +479,87 @@ Checkpoint YYYY-MM-DD:
   growing into a second runtime.
 - Next: prepare a commit or PR from this branch.
 
+## Phase 13: Autonomy Continuation Loop
+
+Status: in progress. Specified in
+[run-envelope-goal-loop-migration-v1.md](run-envelope-goal-loop-migration-v1.md).
+Prior anchor: Slice 12 Unified Host Command Surface (above).
+
+This phase turns the Run envelope from a single-shot recorder into a bounded,
+evidence-driven continuation loop. It implements the "Goal contract and gate
+semantics | Move" disposition and executes the "Goal as public flow peer |
+Collapse later" structural cut.
+
+### Slice order
+
+| Slice | State | Depends on | Scope | Proof gate | Rollback |
+| --- | --- | --- | --- | --- | --- |
+| S1 | done | none | Ratify envelope-as-loop in the migration plan; add this Phase 13 block | git diff --check clean; note and table present | revert doc edits |
+| S2 | done | S1 | Author task-specific required_evidence in Run's done_when with a stable evidence-to-path mapping | fixture: task-specific evidence, mapping, missing-required yields needs_followup; verify:fast | restore generic-claim writer |
+| S3 | done | S2 | Lock the proof contract at intake against mid-run weakening | fixture: reject post-intake weakening; checkpoint on scope change; verify:fast | disable immutability check |
+| S4 | done | S2 | Add a contract-quality gate lens with objective_kind classifier | fixture: weak contract yields blocking finding; verify:fast | remove lens |
+| S5 | done | S2, S3 | Replace hardcoded follow-up with an evidence-kind-aware recovery router | fixture: kind-to-route mapping and priority; verify:fast | restore 'review' follow-up |
+| S6 | done | S5 | No-progress and oscillation escalation | fixture: repeated unmet set or oscillation yields escalation; verify:fast | disable detector |
+| S7 | done | S5, S6, S4 | Bounded in-process continuation loop in the orchestration path | fixture: exhaustion yields honest non-complete stop; clean complete within budget; verify:fast | flag loop off (single-attempt) |
+| S8 | done | S1 | Freeze the Goal flow's public visibility; preserve reader-compat | check-flow-drift green; reader test on old artifact; goal not auto-selected; verify | flip visibility back |
+| S9 | done | S8 | Gate classifier selection away from goal | fixture: classifier never returns goal for representative intents; verify | restore classifier set |
+
+Each slice updates its State on completion. Migration close for this phase
+requires S9 (classifier gating), which fully retires the dual-writer risk. The
+end-to-end measure is fewer complete outcomes without required evidence on the
+held-out false-done set, anchored by evals/false-done-fix.
+
+### Checkpoint 2026-05-28: Phase 13 slices S1-S9 implemented
+
+- Completed: all nine autonomy-continuation-loop slices. New source modules
+  `src/run-envelope/contract-lock.ts`, `contract-quality.ts`, `no-progress.ts`,
+  and `continuation-loop.ts`; the Run envelope writer now authors task-specific
+  `required_evidence` and routes follow-ups by unmet evidence kind; the goal flow
+  is frozen to internal and gated out of classifier selection.
+- Now true: Run can frame a task-specific proof contract, lock it at intake,
+  refuse a too-weak contract, route recovery by the unmet evidence kind, detect
+  no-progress/oscillation, and run a bounded in-process loop that never closes
+  complete by exhaustion. Goal remains in the catalog with its manifest for
+  reader-compat and explicit runs, but publishes no public host surface and is
+  never auto-selected.
+- Verification: `git diff --check` clean; full `npm run verify` passed (212 test
+  files, 2,219 passing tests + 6 skipped, generated flow/plugin/release drift
+  checks, public-claims and proof-coverage checks, marketplace-safety audit).
+  ~33 new focused tests were added across the nine slices, each written
+  failing-first.
+- Next: wire the CLI orchestration adapter (done in S10 below), then run the
+  false-done value test to measure the reduction in false-complete outcomes
+  before any public claim.
+
+### Checkpoint 2026-05-28: S10 continuation loop wired live in the CLI
+
+- Completed: the continuation loop now runs live. New module
+  `src/run-envelope/autonomous-run.ts` adapts a real flow run (projected as
+  `ProcessEvidenceProjection`) into a loop `AttemptResult` and drives
+  `runContinuationLoop` with an injected flow runner. `runContinuationLoop` is now
+  async. `src/cli/circuit.ts` builds a real runner behind `--autonomous`: attempt
+  1 reuses the primary run; follow-up attempts run the routed recovery flow in a
+  sub-folder, project evidence, and feed the loop. The loop result is written to
+  `reports/autonomous-loop.json` and surfaced in the run output as
+  `autonomous_loop`.
+- Now true: `./bin/circuit run --autonomous` is governed by the loop end to end.
+  It owns the completion decision from evidence, routes recovery by unmet evidence
+  kind, escalates on no-progress, and never closes complete by exhaustion. The
+  default (non-autonomous) path is byte-for-byte unchanged. Loop failures degrade
+  gracefully to the normal single-shot result with a recorded warning.
+- Verification: `git diff --check` clean; full `npm run verify` passed (214 test
+  files, 2,227 passing tests + 6 skipped). New tests: the driver/mapping
+  (`run-envelope-autonomous-run.test.ts`), the async loop
+  (`run-envelope-continuation-loop.test.ts`), and an in-process CLI integration
+  test proving the loop fires live and persists its result behind `--autonomous`
+  while the default path stays clean (`cli-autonomous-loop.test.ts`).
+- Known follow-up: the in-process integration test exercises the wiring with a
+  flow that does not fully complete under the stub relay (the loop honestly
+  reports the non-complete outcome); the happy-path completion is unit-proven in
+  the driver. A real end-to-end autonomous multi-flow recovery run (side-effecting
+  recovery flows) and the false-done value-test comparison should be run by the
+  operator before any public superiority claim.
+
 ## Handoff
 
 If a session stops mid-migration, record:

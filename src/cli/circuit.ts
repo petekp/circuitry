@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError } from 'commander';
@@ -31,6 +31,7 @@ import {
   projectClosedProcessEvidence,
   writeProcessEvidenceProjection,
 } from '../process-evidence/projection.js';
+import { runAutonomousContinuation } from '../run-envelope/autonomous-run.js';
 import { writeRunEnvelopeShadowRecord } from '../run-envelope/shadow-record.js';
 import { writeRunEnvelopeRecord as writeSourceRunEnvelopeRecord } from '../run-envelope/source-record.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
@@ -75,6 +76,7 @@ import {
 // flag stays rejected until real dry-run support lands.
 
 const DEFAULT_RUNS_BASE = '.circuit/runs';
+const AUTONOMOUS_LOOP_RELATIVE_PATH = 'reports/autonomous-loop.json';
 const DEFAULT_DEV_VERSION = '0.0.0-dev';
 
 interface ParsedArgs {
@@ -184,7 +186,7 @@ export function usage(): string {
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     '       circuit version [--json]',
     '',
-    'Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` asks the flow to auto-resolve supported checkpoints. Unsupported tuples are rejected per flow with the flow allow-list.',
+    'Axes: `--rigor` controls care level (`lite`, `standard`, `deep`); `--tournament` turns on option fan-out; `--tournament-n` sets the option count in the v1 range [2, 4]; `--autonomous` auto-resolves supported checkpoints and runs a bounded continuation loop (recovery routed by unmet evidence kind; never completes by exhaustion). Unsupported tuples are rejected per flow with the flow allow-list.',
     '',
     'With an explicit flow name, loads generated/flows/<name>/circuit.json. Without one, classifies the free-form goal across the registered explore/review/fix/build/pursue flows and then composes the runtime boundary using the configured relay connector.',
     '',
@@ -1180,6 +1182,136 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
               ...runEnvelopeMemoryContext(historyRecall),
             }),
           );
+    // S10: in autonomous mode, drive the continuation loop. Attempt 1 reuses the
+    // primary run above; follow-up attempts run the routed recovery flow for real
+    // in a sub-folder. The loop owns the completion decision and never closes
+    // complete by exhaustion. Failures degrade to the normal single-shot result.
+    let autonomousLoop: Awaited<ReturnType<typeof runAutonomousContinuation>> | undefined;
+    if (
+      selectedAxes(args, route).autonomous === true &&
+      processEvidence !== undefined &&
+      runEnvelope !== undefined
+    ) {
+      const primaryProjection = processEvidence.projection;
+      const contract = runEnvelope.record.goal_contract;
+      const parentAxes = selectedAxes(args, route);
+      // Cache each routed recovery flow so a repeated route does not re-read and
+      // re-parse the same compiled flow from disk on every attempt.
+      const recoveryFlowCache = new Map<
+        string,
+        { flow: CompiledFlow; bytes: Buffer; path: string }
+      >();
+      try {
+        autonomousLoop = await runAutonomousContinuation({
+          contract,
+          primaryProcessId: flow.id,
+          runFlow: async ({ processId, attemptNumber }) => {
+            if (attemptNumber === 1) {
+              return { projection: primaryProjection };
+            }
+            let recoveryFlow = recoveryFlowCache.get(processId);
+            if (recoveryFlow === undefined) {
+              const path = resolveFixturePath(
+                processId,
+                fixtureSelectionName,
+                undefined,
+                args.flowRoot,
+              );
+              const loaded = loadFixture(path);
+              // Guard the routed recovery flow the same way the primary run is
+              // guarded: the loaded fixture's declared id must match the routed
+              // process, so the loop can never silently run a different flow than
+              // it routed to. A mismatch degrades the loop to the single-shot
+              // result via the surrounding catch.
+              const loadedFlowId = loaded.flow.id as unknown as string;
+              if (loadedFlowId !== processId) {
+                throw new Error(
+                  `recovery flow fixture id mismatch: routed to '${processId}' but fixture declares '${loadedFlowId}'`,
+                );
+              }
+              recoveryFlow = { flow: loaded.flow, bytes: loaded.bytes, path };
+              recoveryFlowCache.set(processId, recoveryFlow);
+            }
+            // A recovery attempt is a single bounded child run inside the parent
+            // loop, not itself an autonomous loop. Run it with axes the recovery
+            // flow actually supports: a routed recovery flow may differ from the
+            // parent (for example review does not support --autonomous), and the
+            // parent's up-front validateFlowAxes does not cover it. Never pass an
+            // axis the flow does not declare.
+            const support = axisSupportFromFlow({ flow: recoveryFlow.flow });
+            const recoveryAxes = Axes.parse({
+              // Keep the parent's rigor only if the recovery flow allows it;
+              // otherwise fall back to the recovery flow's own default rigor,
+              // which the axes schema guarantees is in its allowed set (never a
+              // hardcoded value the flow might not declare).
+              rigor: support.allowedRigors.includes(parentAxes.rigor)
+                ? parentAxes.rigor
+                : recoveryFlow.flow.axes.default.rigor,
+              tournament: false,
+              autonomous: parentAxes.autonomous && support.supportsAutonomous,
+            });
+            const attemptFolder = join(
+              runFolder,
+              'attempts',
+              `attempt-${attemptNumber}-${processId}`,
+            );
+            const recoveryResult = await runCompiledFlowWithWaiting({
+              flowBytes: recoveryFlow.bytes,
+              compiledFlowPath: recoveryFlow.path,
+              runDir: attemptFolder,
+              runId: RunId.parse(randomUUID()),
+              goal: operatorGoal,
+              now,
+              projectRoot,
+              childCompiledFlowResolver: defaultChildCompiledFlowResolver(args.flowRoot),
+              axes: recoveryAxes,
+              ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
+              ...(options.runtimeExecutors === undefined
+                ? {}
+                : { executors: options.runtimeExecutors }),
+              ...(selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers }),
+              ...(policyLayers.length === 0 ? {} : { policyLayers }),
+            });
+            if (isGraphCheckpointWaitingResult(recoveryResult)) {
+              return {
+                projection: projectCheckpointWaitingProcessEvidence({
+                  runFolder: attemptFolder,
+                  runId: RunId.parse(recoveryResult.runId),
+                  flowId: recoveryResult.flowId,
+                  traceEntriesObserved: recoveryResult.traceEntriesObserved,
+                  manifestHash: computeManifestHash(recoveryFlow.bytes),
+                  checkpoint: {
+                    stepId: recoveryResult.checkpoint.stepId,
+                    requestPath: recoveryResult.checkpoint.requestPath,
+                    allowedChoices: recoveryResult.checkpoint.allowedChoices,
+                  },
+                }),
+              };
+            }
+            const recoveryRunResult = RunResult.parse(
+              JSON.parse(readFileSync(recoveryResult.resultPath, 'utf8')),
+            );
+            return {
+              projection: projectClosedProcessEvidence({
+                runFolder: attemptFolder,
+                runResult: recoveryRunResult,
+                resultPath: recoveryResult.resultPath,
+              }),
+            };
+          },
+        });
+        const autonomousLoopPath = join(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH);
+        mkdirSync(dirname(autonomousLoopPath), { recursive: true });
+        writeFileSync(autonomousLoopPath, `${JSON.stringify(autonomousLoop, null, 2)}\n`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        postRunArtifactWarnings.push({ label: 'autonomous-loop', message });
+        if (args.progress !== 'jsonl') {
+          process.stderr.write(`warning: autonomous loop failed: ${message}\n`);
+        }
+        autonomousLoop = undefined;
+      }
+    }
     process.stdout.write(
       `${JSON.stringify(
         {
@@ -1214,6 +1346,16 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
             ? {}
             : operatorSummaryOutputFields({ operatorSummary })),
           ...(runEnvelope === undefined ? {} : runEnvelopeOutputFields({ runEnvelope })),
+          ...(autonomousLoop === undefined
+            ? {}
+            : {
+                autonomous_loop: {
+                  outcome: autonomousLoop.outcome,
+                  attempts: autonomousLoop.attempts.length,
+                  stop_reason: autonomousLoop.stopReason,
+                  path: join(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH),
+                },
+              }),
         },
         null,
         2,

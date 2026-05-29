@@ -22,7 +22,7 @@ const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/codex');
 const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const EXPECTED_CODEX_COMMANDS = ['handoff', 'run'];
 const CLI_ONLY_UTILITIES = ['create'];
-const ROUTED_ONLY_FLOWS = ['build', 'explore', 'fix', 'goal', 'prototype', 'review'];
+const ROUTED_ONLY_FLOWS = ['build', 'explore', 'fix', 'prototype', 'review'];
 const EXPECTED_CODEX_SKILL_TITLES: Record<string, string> = {
   handoff: 'Circuit Handoff',
   run: 'Circuit Run',
@@ -62,6 +62,7 @@ function publicHostFlowFiles(files: string[]): string[] {
   return files.filter(
     (file) =>
       !file.startsWith('runtime-proof/') &&
+      !file.startsWith('goal/') &&
       !file.endsWith('.work-contract.v0.json') &&
       !file.includes('never-a-mode'),
   );

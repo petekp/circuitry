@@ -198,14 +198,17 @@ describe('flow catalog completeness', () => {
     const visibilityById = new Map(flowPackages.map((pkg) => [pkg.id, pkg.visibility]));
 
     expect(visibilityById.get('runtime-proof')).toBe('internal');
-    for (const flow of ['build', 'explore', 'fix', 'goal', 'prototype', 'pursue', 'review']) {
+    // S8: goal is frozen to internal (Run owns the goal loop); it keeps its
+    // manifest but no longer publishes a public host surface.
+    expect(visibilityById.get('goal')).toBe('internal');
+    for (const flow of ['build', 'explore', 'fix', 'prototype', 'pursue', 'review']) {
       expect(visibilityById.get(flow), `${flow} should be host-visible`).toBe('public');
     }
   });
 
   it('compiled fixtures carry the Section 3 axis allow-lists', () => {
     const scopedPackages = flowPackages.filter(
-      (pkg) => pkg.visibility === 'public' || pkg.id === 'runtime-proof',
+      (pkg) => pkg.visibility === 'public' || pkg.id === 'runtime-proof' || pkg.id === 'goal',
     );
     expect(scopedPackages.map((pkg) => pkg.id).sort()).toEqual(
       [...EXPECTED_AXES_BY_FLOW.keys()].sort(),

@@ -79,7 +79,11 @@ function childRunStep(input: {
 
 export const goalFlowData = {
   id: 'goal',
-  visibility: 'public',
+  // S8: frozen to internal. Goal's contract/gate semantics moved into the Run
+  // envelope (Phase 13). The flow stays in the catalog and keeps its manifest for
+  // reader-compat and explicit/internal runs, but no longer publishes a public
+  // host command/skill surface. Classifier selection is gated separately (S9).
+  visibility: 'internal',
   paths: {
     schematic: 'src/flows/goal/schematic.json',
   },

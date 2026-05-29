@@ -122,6 +122,14 @@ describe('Run envelope source writer', () => {
     expect(written.decisionPacketPaths).toEqual([]);
     expect(record.outcome).toBe('complete');
     expect(record.goal_contract.done_when[0]?.id).toBe('process-evidence');
+    // S2: the done_when carries task-specific required evidence, not a generic placeholder.
+    expect(record.goal_contract.done_when[0]?.required_evidence[0]?.kind).toBe('review');
+    expect(record.goal_contract.done_when[0]?.required_evidence[0]?.description).toContain(
+      'Review the patch.',
+    );
+    expect(record.goal_contract.done_when[0]?.required_evidence[0]?.description).not.toBe(
+      'Normalized process evidence projection exists.',
+    );
     expect(record.completion_gate).toMatchObject({
       verdict: 'complete',
       clean_streak: 2,
