@@ -109,8 +109,8 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
     if (step.kind === 'relay' && step.report !== undefined) {
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
-    if (step.kind === 'fanout' && typeof step.join === 'object' && step.join !== null) {
-      const aggregate = step.join.aggregate;
+    if (step.kind === 'fanout') {
+      const aggregate = step.writes?.aggregate;
       if (
         typeof aggregate === 'object' &&
         aggregate !== null &&

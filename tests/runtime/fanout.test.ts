@@ -119,10 +119,6 @@ function dynamicRelayFanoutFlow(
         },
         concurrency: { kind: 'bounded', max: 2 },
         onChildFailure: options.onChildFailure ?? 'abort-all',
-        join: {
-          aggregate: { path: 'reports/aggregate.json' },
-          on_child_failure: options.onChildFailure ?? 'abort-all',
-        },
         check: {
           kind: 'fanout_aggregate',
           source: { kind: 'fanout_results', ref: 'aggregate' },
@@ -292,10 +288,6 @@ function subRunFanoutFlow(
         },
         concurrency: { kind: 'bounded', max: options.concurrencyMax ?? 2 },
         onChildFailure: options.onChildFailure ?? 'continue-others',
-        join: {
-          aggregate: { path: 'reports/aggregate.json' },
-          on_child_failure: options.onChildFailure ?? 'continue-others',
-        },
         check: {
           kind: 'fanout_aggregate',
           source: { kind: 'fanout_results', ref: 'aggregate' },

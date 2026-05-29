@@ -42933,8 +42933,8 @@ function validateExecutableFlow(flow) {
     if (step.kind === "relay" && step.report !== void 0) {
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
-    if (step.kind === "fanout" && typeof step.join === "object" && step.join !== null) {
-      const aggregate2 = step.join.aggregate;
+    if (step.kind === "fanout") {
+      const aggregate2 = step.writes?.aggregate;
       if (typeof aggregate2 === "object" && aggregate2 !== null && typeof aggregate2.path === "string") {
         addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate2);
       }
@@ -43070,10 +43070,6 @@ function convertStep(step) {
     ...base,
     kind: "fanout",
     branches: step.branches,
-    join: {
-      aggregate: toRunFileRef(step.writes.aggregate),
-      on_child_failure: step.on_child_failure
-    },
     concurrency: step.concurrency,
     onChildFailure: step.on_child_failure,
     ...step.rubric === void 0 ? {} : { rubric: step.rubric }
@@ -49951,9 +49947,6 @@ function aggregateRef(step) {
   const aggregate2 = step.writes?.aggregate;
   if (aggregate2 !== void 0)
     return aggregate2;
-  const joinAggregate = step.join.aggregate;
-  if (joinAggregate !== void 0)
-    return joinAggregate;
   throw new Error(`fanout step '${step.id}' is missing writes.aggregate`);
 }
 function branchesDir(step) {

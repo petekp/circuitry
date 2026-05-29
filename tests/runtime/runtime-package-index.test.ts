@@ -58,10 +58,6 @@ function flowWithFanoutAggregate() {
             },
           ],
         },
-        join: {
-          aggregate: { path: 'reports/aggregate.json', schema: 'aggregate@v1' },
-          on_child_failure: 'continue-others' as const,
-        },
         concurrency: { kind: 'bounded' as const, max: 4 },
         onChildFailure: 'continue-others' as const,
         routes: { pass: { kind: 'terminal' as const, target: '@complete' as const } },

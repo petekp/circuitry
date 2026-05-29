@@ -27,8 +27,6 @@ import {
 function aggregateRef(step: FanoutStep): RunFileRef {
   const aggregate = step.writes?.aggregate;
   if (aggregate !== undefined) return aggregate;
-  const joinAggregate = step.join.aggregate;
-  if (joinAggregate !== undefined) return joinAggregate;
   throw new Error(`fanout step '${step.id}' is missing writes.aggregate`);
 }
 

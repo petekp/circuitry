@@ -144,10 +144,6 @@ function convertStep(step: CompiledStep): ExecutableStep {
     ...base,
     kind: 'fanout',
     branches: step.branches,
-    join: {
-      aggregate: toRunFileRef(step.writes.aggregate),
-      on_child_failure: step.on_child_failure,
-    },
     concurrency: step.concurrency,
     onChildFailure: step.on_child_failure,
     ...(step.rubric === undefined ? {} : { rubric: step.rubric }),

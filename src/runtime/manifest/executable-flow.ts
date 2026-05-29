@@ -81,18 +81,9 @@ export interface SubRunStep extends BaseStep {
   readonly check: ResultVerdictCheck;
 }
 
-// The runtime synthesizes `join` at conversion time from the compiled step's
-// `writes.aggregate` slot and `on_child_failure` policy; it has no direct Zod
-// schema counterpart (the fanout join *policy* lives under `check.join`).
-export interface FanoutJoin {
-  readonly aggregate: RunFileRef;
-  readonly on_child_failure: FanoutFailurePolicy;
-}
-
 export interface FanoutStep extends BaseStep {
   readonly kind: 'fanout';
   readonly branches: FanoutBranches;
-  readonly join: FanoutJoin;
   readonly concurrency: FanoutConcurrency;
   readonly onChildFailure?: FanoutFailurePolicy;
   readonly rubric?: FanoutRubric;
