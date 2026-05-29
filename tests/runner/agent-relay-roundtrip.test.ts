@@ -38,8 +38,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
   return {
     compose: async (step, context) => {
       if (step.kind !== 'compose') throw new Error('expected compose step');
-      const attempt =
-        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const attempt = { attempt: context.activeStepAttempt ?? 1 };
       const report = step.writes?.report;
       if (report !== undefined) {
         const reportPath = context.files.resolve(report);
@@ -51,7 +50,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
           step_id: step.id,
           ...attempt,
           report_path: report.path,
-          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+          report_schema: report.schema ?? 'runtime.compose',
         });
       }
       await context.trace.append({
@@ -71,10 +70,13 @@ async function readTrace(runFolder: string): Promise<readonly TraceEntry[]> {
   return await new TraceStore(runFolder).load();
 }
 
-function relayEntry(trace: readonly TraceEntry[], kind: TraceEntry['kind']): TraceEntry {
+function relayEntry<K extends TraceEntry['kind']>(
+  trace: readonly TraceEntry[],
+  kind: K,
+): Extract<TraceEntry, { kind: K }> {
   const entry = trace.find((candidate) => candidate.kind === kind);
   if (entry === undefined) throw new Error(`expected ${kind} trace entry`);
-  return entry;
+  return entry as Extract<TraceEntry, { kind: K }>;
 }
 
 let runFolderBase: string;

@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { findCompiledFlowPackageById } from '../../flows/catalog.js';
 import type { Axes } from '../../schemas/axes.js';
 import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
+import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
 import type {
@@ -16,6 +17,7 @@ import type {
   RecoveryRouteBindingV0,
 } from '../../schemas/recovery-route-kind.js';
 import type { Ref } from '../../schemas/ref.js';
+import type { ProofAssessedTraceEntry } from '../../schemas/trace-entry.js';
 import { isProofPlanBlockedError } from '../../shared/proof-plan.js';
 import { type AcceptanceRetryFeedback, isAcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { RouteTarget, TerminalTarget } from '../domain/route.js';
@@ -254,8 +256,10 @@ function latestRecoveryFailureEvidence(input: {
   readonly details: Record<string, unknown>;
 }): RecoveryFailureEvidence | undefined {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.kind !== 'check.evaluated' && entry.kind !== 'relay.failed') continue;
     if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
-    if (entry.kind === 'check.evaluated' && entry.outcome === 'fail') {
+    if (entry.kind === 'check.evaluated') {
+      if (entry.outcome !== 'fail') continue;
       return {
         ref: traceRefForEntry({
           context: input.context,
@@ -268,17 +272,15 @@ function latestRecoveryFailureEvidence(input: {
           : 'failed_check',
       };
     }
-    if (entry.kind === 'relay.failed') {
-      return {
-        ref: traceRefForEntry({
-          context: input.context,
-          stepId: input.stepId,
-          attempt: input.attempt,
-          sequence: entry.sequence,
-        }),
-        cause: 'relay_connector_failed',
-      };
-    }
+    return {
+      ref: traceRefForEntry({
+        context: input.context,
+        stepId: input.stepId,
+        attempt: input.attempt,
+        sequence: entry.sequence,
+      }),
+      cause: 'relay_connector_failed',
+    };
   }
   return undefined;
 }
@@ -289,8 +291,8 @@ function latestStepReportOrRelayRef(input: {
   readonly attempt: number;
 }): Ref | undefined {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
-    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
     if (entry.kind !== 'step.report_written' && entry.kind !== 'relay.result') continue;
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
     return traceRefForEntry({
       context: input.context,
       stepId: input.stepId,
@@ -501,11 +503,13 @@ function routeSelectedFromReport(details: Record<string, unknown>): boolean {
   return details.route_source === 'report';
 }
 
-function traceScope(entry: TraceEntry): Record<string, unknown> {
+function traceScope(
+  entry: GuidanceDecisionTraceEntryBody | ProofAssessedTraceEntry,
+): Record<string, unknown> {
   return recordValue(entry.scope);
 }
 
-function proofPolicyRequirementKey(entry: TraceEntry): string {
+function proofPolicyRequirementKey(entry: GuidanceDecisionTraceEntryBody): string {
   const scope = traceScope(entry);
   const selected = recordValue(entry.selected);
   return JSON.stringify({
@@ -521,7 +525,7 @@ function completeCloseProofGap(context: RunContext): string | undefined {
   const entries = context.trace.getAll();
   const latestRequiredProofByRequirement = new Map<
     string,
-    { readonly entry: TraceEntry; readonly index: number }
+    { readonly entry: GuidanceDecisionTraceEntryBody; readonly index: number }
   >();
   for (const [index, entry] of entries.entries()) {
     if (entry.kind !== 'guidance.decision' || entry.subject !== 'proof_policy') continue;

@@ -1,11 +1,12 @@
 import { join } from 'node:path';
 import type { CompiledFlowProgressStep, CompiledFlowProgressSurface } from '../../flows/types.js';
-import type { CompiledFlowId, RunId as ProgressRunId, StepId } from '../../schemas/ids.js';
+import type { CompiledFlowId, RunId as ProgressRunId } from '../../schemas/ids.js';
 import type {
   ProgressPresentation,
   ProgressTask,
   ProgressTaskStatus,
 } from '../../schemas/progress-event.js';
+import type { StepReportWrittenTraceEntry } from '../../schemas/trace-entry.js';
 import {
   progressDisplay,
   progressPresentation,
@@ -187,16 +188,9 @@ function reportEvidenceProgress(input: {
   readonly flowId: CompiledFlowId;
   readonly runId: ProgressRunId;
   readonly recordedAt: string;
-  readonly traceEntry: TraceEntry;
+  readonly traceEntry: StepReportWrittenTraceEntry;
   readonly files: ProgressProjectionFiles;
 }): void {
-  if (
-    input.traceEntry.step_id === undefined ||
-    input.traceEntry.report_path === undefined ||
-    input.traceEntry.report_schema === undefined
-  ) {
-    return;
-  }
   let body: unknown;
   try {
     body = readJsonReport(input.files, input.runDir, input.traceEntry.report_path);
@@ -230,7 +224,7 @@ function reportEvidenceProgress(input: {
             `Collected evidence with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}.`,
           )
         : suppressStatus(input.runId),
-    step_id: input.traceEntry.step_id as StepId,
+    step_id: input.traceEntry.step_id,
     report_path: input.traceEntry.report_path,
     report_schema: input.traceEntry.report_schema,
     warning_count: warnings.length,
@@ -245,7 +239,7 @@ function reportEvidenceProgress(input: {
       label: 'Evidence warning',
       display: progressDisplay(`Circuit: Evidence warning: ${warning.message}`, 'major', 'warning'),
       presentation: appendStatus(input.runId, `Evidence warning: ${warning.message}`),
-      step_id: input.traceEntry.step_id as StepId,
+      step_id: input.traceEntry.step_id,
       report_path: input.traceEntry.report_path,
       warning_kind: warning.kind,
       message: warning.message,
@@ -393,7 +387,7 @@ export function createProgressProjector(input: {
           label: display.title,
           display: progressDisplay(`Circuit: ${display.activeText}...`, 'major', 'info'),
           presentation: appendStatus(runId, `${display.activeText}...`),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
         });
@@ -428,7 +422,7 @@ export function createProgressProjector(input: {
           label: `Running ${role} relay with ${connector.name}`,
           display: progressDisplay(circuitDisplayText(statusText), 'major', 'info'),
           presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
           role,
@@ -459,7 +453,7 @@ export function createProgressProjector(input: {
           label: `Relay completed with ${entry.verdict}`,
           display: progressDisplay(circuitDisplayText(statusText), 'major', 'success'),
           presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
           verdict: entry.verdict,
@@ -501,7 +495,7 @@ export function createProgressProjector(input: {
             `${stepId}:fanout`,
             `Comparing ${branchIds.length} option${branchIds.length === 1 ? '' : 's'}...`,
           ),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_count: branchIds.length,
           branch_ids: branchIds,
@@ -524,7 +518,7 @@ export function createProgressProjector(input: {
           label: `Started branch ${entry.branch_id}`,
           display: progressDisplay(`Circuit: Started branch ${entry.branch_id}.`, 'detail', 'info'),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
           branch_kind: branchKind,
@@ -563,7 +557,7 @@ export function createProgressProjector(input: {
             childOutcome === 'complete' ? 'success' : 'error',
           ),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
           branch_kind: branchKind,
@@ -598,7 +592,7 @@ export function createProgressProjector(input: {
           label: `Joined ${title}`,
           display: progressDisplay('Circuit: Finished comparing the options.', 'major', 'success'),
           presentation: replaceStatus(runId, `${stepId}:fanout`, 'Finished comparing the options.'),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           policy,
           aggregate_path: entry.aggregate_path,
@@ -656,7 +650,7 @@ export function createProgressProjector(input: {
             'checkpoint',
           ),
           presentation: appendStatus(runId, 'Waiting for your choice...'),
-          step_id: stepId as StepId,
+          step_id: stepId,
           request_path: requestPath,
           allowed_choices: allowedChoices,
         });
@@ -670,7 +664,7 @@ export function createProgressProjector(input: {
           display: progressDisplay(presentation.prompt, 'major', 'checkpoint'),
           presentation: suppressStatus(runId),
           checkpoint: {
-            step_id: stepId as StepId,
+            step_id: stepId,
             request_path: requestPath,
             allowed_choices: allowedChoices,
           },
@@ -731,7 +725,7 @@ export function createProgressProjector(input: {
             'success',
           ),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
           route_taken: entry.route_taken,
@@ -770,7 +764,7 @@ export function createProgressProjector(input: {
             'error',
           ),
           presentation: appendStatus(runId, `Marked ${display.taskTitle} as failed.`),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
           reason: entry.reason,

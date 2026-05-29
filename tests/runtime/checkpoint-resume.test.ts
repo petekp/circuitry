@@ -443,7 +443,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
       request_path: 'reports/checkpoints/checkpoint-step-request.json',
       options: ['continue'],
     });
-    expect(requested?.report_path).toBeUndefined();
+    expect((requested as Record<string, unknown> | undefined)?.report_path).toBeUndefined();
 
     expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
       engine_state: 'waiting_checkpoint',
@@ -956,7 +956,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
         auto_resolved: false,
         resolution_source: 'operator',
         response_path: 'reports/checkpoints/checkpoint-step-response.json',
-      },
+      } as TraceEntry,
     ]);
 
     await expect(
@@ -981,7 +981,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
         kind: 'run.closed',
         outcome: 'aborted',
         reason: 'closed for rejection coverage',
-      },
+      } as TraceEntry,
     ]);
 
     await expect(

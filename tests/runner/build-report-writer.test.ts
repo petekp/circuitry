@@ -439,7 +439,7 @@ function seedThenDefaultWriter(
         run_id: context.runId,
         kind: 'step.report_written',
         step_id: step.id,
-        ...(context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt }),
+        attempt: context.activeStepAttempt ?? 1,
         report_path: report.path,
         report_schema: report.schema,
       });

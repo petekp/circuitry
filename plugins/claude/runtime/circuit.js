@@ -51086,9 +51086,6 @@ function warningRecordsFromReport(body) {
   });
 }
 function reportEvidenceProgress(input) {
-  if (input.traceEntry.step_id === void 0 || input.traceEntry.report_path === void 0 || input.traceEntry.report_schema === void 0) {
-    return;
-  }
   let body;
   try {
     body = readJsonReport2(input.files, input.runDir, input.traceEntry.report_path);
@@ -51926,9 +51923,13 @@ function traceRefForEntry(input) {
 }
 function latestRecoveryFailureEvidence(input) {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.kind !== "check.evaluated" && entry.kind !== "relay.failed")
+      continue;
     if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
       continue;
-    if (entry.kind === "check.evaluated" && entry.outcome === "fail") {
+    if (entry.kind === "check.evaluated") {
+      if (entry.outcome !== "fail")
+        continue;
       return {
         ref: traceRefForEntry({
           context: input.context,
@@ -51939,25 +51940,23 @@ function latestRecoveryFailureEvidence(input) {
         cause: isAcceptanceRetryFeedback(input.details.acceptance_feedback) ? "failed_acceptance_criteria" : "failed_check"
       };
     }
-    if (entry.kind === "relay.failed") {
-      return {
-        ref: traceRefForEntry({
-          context: input.context,
-          stepId: input.stepId,
-          attempt: input.attempt,
-          sequence: entry.sequence
-        }),
-        cause: "relay_connector_failed"
-      };
-    }
+    return {
+      ref: traceRefForEntry({
+        context: input.context,
+        stepId: input.stepId,
+        attempt: input.attempt,
+        sequence: entry.sequence
+      }),
+      cause: "relay_connector_failed"
+    };
   }
   return void 0;
 }
 function latestStepReportOrRelayRef(input) {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
-    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
-      continue;
     if (entry.kind !== "step.report_written" && entry.kind !== "relay.result")
+      continue;
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
       continue;
     return traceRefForEntry({
       context: input.context,

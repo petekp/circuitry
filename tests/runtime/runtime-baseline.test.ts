@@ -369,7 +369,13 @@ describe('runtime baseline', () => {
 
       expect(trace.getAll().map((entry) => entry.sequence)).toEqual([0, 1, 2]);
       await expect(
-        trace.append({ run_id: 'run-trace', kind: 'step.completed', step_id: 'compose' }),
+        trace.append({
+          run_id: 'run-trace',
+          kind: 'step.completed',
+          step_id: 'compose',
+          attempt: 1,
+          route_taken: 'pass',
+        }),
       ).rejects.toThrow('cannot append trace entry after run close');
 
       const reloaded = new TraceStore(runDir);
@@ -1311,7 +1317,12 @@ describe('runtime baseline', () => {
   });
 
   it('derives status from trace entries', () => {
-    const entries: TraceEntry[] = [
+    // projectStatusFromTrace reads only `kind` and `outcome`; these fixtures
+    // are deliberately minimal (and the final case carries an intentionally
+    // invalid outcome) so they are fabricated as loose TraceEntry values.
+    const statusEntries = (entries: readonly Record<string, unknown>[]): TraceEntry[] =>
+      entries as unknown as TraceEntry[];
+    const entries = statusEntries([
       { sequence: 0, run_id: 'run-status', kind: 'run.bootstrapped' },
       {
         sequence: 1,
@@ -1319,34 +1330,38 @@ describe('runtime baseline', () => {
         kind: 'run.closed',
         outcome: 'complete',
       },
-    ];
+    ]);
 
     expect(projectStatusFromTrace([])).toBe('not_started');
     expect(projectStatusFromTrace(entries.slice(0, 1))).toBe('running');
     expect(projectStatusFromTrace(entries)).toBe('complete');
     for (const outcome of ['aborted', 'handoff', 'stopped', 'escalated'] as const) {
       expect(
-        projectStatusFromTrace([
-          { sequence: 0, run_id: `run-${outcome}`, kind: 'run.bootstrapped' },
-          {
-            sequence: 1,
-            run_id: `run-${outcome}`,
-            kind: 'run.closed',
-            outcome,
-          },
-        ]),
+        projectStatusFromTrace(
+          statusEntries([
+            { sequence: 0, run_id: `run-${outcome}`, kind: 'run.bootstrapped' },
+            {
+              sequence: 1,
+              run_id: `run-${outcome}`,
+              kind: 'run.closed',
+              outcome,
+            },
+          ]),
+        ),
       ).toBe(outcome);
     }
     expect(
-      projectStatusFromTrace([
-        { sequence: 0, run_id: 'run-unknown', kind: 'run.bootstrapped' },
-        {
-          sequence: 1,
-          run_id: 'run-unknown',
-          kind: 'run.closed',
-          outcome: 'checkpoint_waiting',
-        },
-      ]),
+      projectStatusFromTrace(
+        statusEntries([
+          { sequence: 0, run_id: 'run-unknown', kind: 'run.bootstrapped' },
+          {
+            sequence: 1,
+            run_id: 'run-unknown',
+            kind: 'run.closed',
+            outcome: 'checkpoint_waiting',
+          },
+        ]),
+      ),
     ).toBe('aborted');
   });
 });

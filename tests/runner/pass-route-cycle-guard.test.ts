@@ -144,7 +144,7 @@ describe('WF-I11 runtime-safety-floor pass-route cycle guard', () => {
     expect(outcome.reason).toContain(firstStep.id);
 
     const stepKinds = trace_entries
-      .filter((trace_entry) => trace_entry.step_id === firstStep.id)
+      .filter((trace_entry) => 'step_id' in trace_entry && trace_entry.step_id === firstStep.id)
       .map((trace_entry) => trace_entry.kind);
     expect(stepKinds).toEqual(['step.entered', 'step.aborted']);
     expect(

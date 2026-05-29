@@ -208,11 +208,15 @@ describe('Build runtime wiring', () => {
       expect(outcome.outcome).toBe('complete');
       const trace_entries = await readTraceEntries(runFolder);
       const actCompletions = trace_entries.filter(
-        (trace_entry) =>
+        (
+          trace_entry,
+        ): trace_entry is Extract<(typeof trace_entries)[number], { kind: 'step.completed' }> =>
           trace_entry.kind === 'step.completed' && trace_entry.step_id === 'act-step',
       );
       const verifyCompletions = trace_entries.filter(
-        (trace_entry) =>
+        (
+          trace_entry,
+        ): trace_entry is Extract<(typeof trace_entries)[number], { kind: 'step.completed' }> =>
           trace_entry.kind === 'step.completed' && trace_entry.step_id === 'verify-step',
       );
       expect(actCompletions.map((entry) => entry.attempt)).toEqual([1, 2]);

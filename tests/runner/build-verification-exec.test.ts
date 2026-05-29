@@ -157,9 +157,9 @@ function planWriter(plan: unknown): Pick<ExecutorRegistry, 'compose'> {
         run_id: context.runId,
         kind: 'step.report_written',
         step_id: step.id,
-        ...(context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt }),
+        attempt: context.activeStepAttempt ?? 1,
         report_path: report.path,
-        ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+        report_schema: report.schema ?? 'runtime.compose',
       });
       return { route: 'pass', details: { report: report.path } };
     },

@@ -209,10 +209,11 @@ export async function readTrace(runDir: string) {
 
 export async function completedStepIds(runDir: string): Promise<string[]> {
   const entries = await readTrace(runDir);
-  return entries
-    .filter((entry) => entry.kind === 'step.completed')
-    .map((entry) => entry.step_id)
-    .filter((stepId): stepId is string => stepId !== undefined);
+  const stepIds: string[] = [];
+  for (const entry of entries) {
+    if (entry.kind === 'step.completed') stepIds.push(entry.step_id);
+  }
+  return stepIds;
 }
 
 export async function runFileExists(runDir: string, runFilePath: string): Promise<boolean> {

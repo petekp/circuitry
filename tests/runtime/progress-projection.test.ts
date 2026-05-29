@@ -24,12 +24,19 @@ function generatedFlow(flowId: string) {
   return fromCompiledFlow(CompiledFlow.parse(body));
 }
 
-function trace(entry: Omit<TraceEntry, 'run_id' | 'recorded_at'>): TraceEntry {
+// The progress projector reads each entry defensively (kind-narrowed field
+// reads with fallbacks), so these fixtures are intentionally minimal per
+// variant. They are fabricated as loose trace bodies and completed with the
+// auto-filled run_id/recorded_at here, then handed to the projector as
+// TraceEntry values.
+function trace(
+  entry: { readonly sequence: number; readonly kind: TraceEntry['kind'] } & Record<string, unknown>,
+): TraceEntry {
   return {
     run_id: RUN_ID,
     recorded_at: RECORDED_AT,
     ...entry,
-  };
+  } as unknown as TraceEntry;
 }
 
 function projectProgress(flowId: string, entries: readonly TraceEntry[]): ProgressEvent[] {

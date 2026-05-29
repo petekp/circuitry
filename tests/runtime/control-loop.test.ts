@@ -1016,7 +1016,8 @@ describe('runtime control-loop parity twins', () => {
     expect(result.reason).toBe("route 'retry' for step 'checkpoint-step' exhausted max_attempts=2");
     expect(resultJson.reason).toBe(result.reason);
     const completedRetries = trace.filter(
-      (entry) => entry.kind === 'step.completed' && entry.route_taken === 'retry',
+      (entry): entry is Extract<(typeof trace)[number], { kind: 'step.completed' }> =>
+        entry.kind === 'step.completed' && entry.route_taken === 'retry',
     );
     expect(completedRetries).toHaveLength(2);
     expect(completedRetries.map((entry) => entry.attempt)).toEqual([1, 2]);
@@ -1873,7 +1874,8 @@ describe('runtime control-loop parity twins', () => {
     expect(
       trace
         .filter(
-          (entry) => entry.kind === 'check.evaluated' && entry.check_kind === 'acceptance_criteria',
+          (entry): entry is Extract<(typeof trace)[number], { kind: 'check.evaluated' }> =>
+            entry.kind === 'check.evaluated' && entry.check_kind === 'acceptance_criteria',
         )
         .map((entry) => ({ attempt: entry.attempt, outcome: entry.outcome })),
     ).toEqual([

@@ -206,7 +206,8 @@ describe('fix runtime parity', () => {
 
       const entries = await readTrace(runDir);
       const completedFixAct = entries.filter(
-        (entry) => entry.kind === 'step.completed' && entry.step_id === 'fix-act',
+        (entry): entry is Extract<(typeof entries)[number], { kind: 'step.completed' }> =>
+          entry.kind === 'step.completed' && entry.step_id === 'fix-act',
       );
       expect(completedFixAct).toHaveLength(2);
       expect(completedFixAct.map((entry) => entry.attempt)).toEqual([1, 2]);

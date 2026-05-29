@@ -21,6 +21,7 @@ import {
 } from '../../schemas/policy-envelope.js';
 import { Ref, type Ref as RefValue, Sha256 } from '../../schemas/ref.js';
 import { CheckpointStep as SchemaCheckpointStep } from '../../schemas/step.js';
+import type { CheckpointRequestedTraceEntry } from '../../schemas/trace-entry.js';
 import { projectCheckpointBoundaryV0 } from '../../shared/checkpoint-boundary.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
@@ -174,7 +175,7 @@ export async function isRuntimeRunFolder(runDir: string): Promise<boolean> {
 
 function latestUnresolvedCheckpointResult(
   entries: readonly TraceEntry[],
-): CheckpointResumeValidation<TraceEntry> {
+): CheckpointResumeValidation<CheckpointRequestedTraceEntry> {
   const resolved = new Set<string>();
   for (const entry of entries) {
     if (entry.kind !== 'checkpoint.resolved' || entry.step_id === undefined) continue;
@@ -347,7 +348,7 @@ function readCheckpointRequestContextResult(input: {
 }
 
 function checkpointRequestTraceBoundaryResult(input: {
-  readonly requested: TraceEntry;
+  readonly requested: CheckpointRequestedTraceEntry;
   readonly stepId: string;
 }): CheckpointResumeValidation<{
   readonly boundaryRef: RefValue;
